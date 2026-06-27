@@ -31,6 +31,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'ServiceRequestComment',
   'B2BAccessRequest',
   'B2BAccessRequestFile',
+  'MailDelivery',
 ]);
 
 @Injectable()

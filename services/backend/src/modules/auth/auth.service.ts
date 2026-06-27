@@ -20,6 +20,7 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { IdentityRepository } from '../identity/identity.repository.js';
 import { IdentityService } from '../identity/identity.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { AuthAuditService } from './auth-audit.service.js';
 import { AuthPrincipalService } from './auth-principal.service.js';
 import { AuthSessionService } from './auth-session.service.js';
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly principals: AuthPrincipalService,
     private readonly sessions: AuthSessionService,
     private readonly audit: AuthAuditService,
+    private readonly mail: MailService,
   ) {}
 
   async bootstrapTenant(input: BootstrapTenantInput): Promise<AuthSession> {
@@ -167,6 +169,12 @@ export class AuthService {
       this.logger.log('auth', 'password_reset.requested', 'Password reset token created', {
         principal_id: principal.id,
         principal_type: principal.type,
+      });
+      await this.mail.sendPasswordReset({
+        to: principal.email,
+        recipientName: `${principal.firstName} ${principal.lastName}`.trim(),
+        token: devToken,
+        surface: input.surface,
       });
     }
 

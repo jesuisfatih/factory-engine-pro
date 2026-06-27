@@ -18,6 +18,7 @@ import { prefixedId } from '../../shared/id.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { MailService } from '../mail/mail.service.js';
 import { IdentityRepository } from './identity.repository.js';
 
 @Injectable()
@@ -29,6 +30,7 @@ export class IdentityService {
     private readonly password: PasswordService,
     private readonly authTokens: AuthTokenService,
     private readonly crypto: CryptoService,
+    private readonly mail: MailService,
   ) {}
 
   async seedDefaultRoles() {
@@ -321,10 +323,39 @@ export class IdentityService {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdById: this.tenantContext.get()?.principalId,
     });
+    const principal = await this.principalsForInvitation(principalId, principalType);
+    const delivery = await this.mail.sendInvitation({
+      to: principal.email,
+      recipientName: `${principal.firstName} ${principal.lastName}`.trim(),
+      token,
+      surface: principalType === 'member' ? 'admin' : 'accounts',
+      eventKey: principalType === 'member' ? 'identity.member_invitation' : 'identity.customer_invitation',
+      metadata: { principalId, principalType },
+    });
     return {
       token,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      delivery: {
+        id: delivery.id,
+        status: delivery.status,
+      },
     };
+  }
+
+  private async principalsForInvitation(principalId: string, principalType: 'member' | 'customer_user' | 'sub_user') {
+    if (principalType === 'member') {
+      const member = await this.prisma.db.member.findFirst({ where: { id: principalId } });
+      if (!member) throw new NotFoundException('Invitation member not found');
+      return member;
+    }
+    if (principalType === 'customer_user') {
+      const user = await this.prisma.db.customerUser.findFirst({ where: { id: principalId } });
+      if (!user) throw new NotFoundException('Invitation customer user not found');
+      return user;
+    }
+    const subUser = await this.prisma.db.subUser.findFirst({ where: { id: principalId } });
+    if (!subUser) throw new NotFoundException('Invitation sub-user not found');
+    return subUser;
   }
 }
 

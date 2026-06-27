@@ -92,9 +92,19 @@ export function AdminResetPasswordPanel() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const token = new URLSearchParams(window.location.search).get('token') ?? '';
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token') ?? '';
+  const isInvitation = params.get('flow') === 'invitation';
   const reset = useMutation({
-    mutationFn: () => adminApi.resetPassword({ token, password }),
+    mutationFn: () => isInvitation
+      ? adminApi.acceptInvitation({ token, password })
+      : adminApi.resetPassword({ token, password }),
+    onSuccess: (response: unknown) => {
+      if (isInvitation && response && typeof response === 'object' && 'accessToken' in response) {
+        adminTokenStore.setSession(response as Parameters<typeof adminTokenStore.setSession>[0]);
+        window.location.assign('/dashboard');
+      }
+    },
     onError: (err) => setError(apiErrorMessage(err)),
   });
   const passwordsMatch = password.length > 0 && password === confirm;
@@ -103,7 +113,7 @@ export function AdminResetPasswordPanel() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!token) return setError('Reset token is missing.');
+    if (!token) return setError(isInvitation ? 'Invitation token is missing.' : 'Reset token is missing.');
     if (!strongEnough) return setError('Password must be 8+ characters with upper, lower and a number.');
     if (!passwordsMatch) return setError('Passwords do not match.');
     reset.mutate();
@@ -112,12 +122,12 @@ export function AdminResetPasswordPanel() {
   return (
     <div className="auth-card">
       <Brand muted="Back panel" />
-      {reset.isSuccess ? (
+      {reset.isSuccess && !isInvitation ? (
         <SuccessPanel title="Password updated" body="Your new password is active." footer={<a className="auth-submit" href="/login" style={{ marginTop: 18, textDecoration: 'none' }}>Sign in</a>} />
       ) : (
         <>
           <div className="auth-icon-circle"><ShieldCheck size={28} /></div>
-          <h2>Set a new password</h2>
+          <h2>{isInvitation ? 'Accept invitation' : 'Set a new password'}</h2>
           <AuthForm onSubmit={submit}>
             {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
             <PasswordInput id="reset-new" label="New password" value={password} onChange={setPassword} showStrength autoComplete="new-password" required />

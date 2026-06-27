@@ -32,6 +32,14 @@ enum AuthTokenKind {
   invitation
 }
 
+enum MailDeliveryStatus {
+  queued
+  sending
+  sent
+  failed
+  skipped
+}
+
 model Tenant {
   id        String       @id
   name      String
@@ -68,6 +76,7 @@ model Tenant {
   serviceRequestComments  ServiceRequestComment[]
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
+  mailDeliveries          MailDelivery[]
 
   @@map("tenants")
 }
@@ -820,4 +829,31 @@ model B2BAccessRequestFile {
 
   @@index([tenantId, requestId])
   @@map("b2b_access_request_files")
+}
+
+model MailDelivery {
+  id                String             @id
+  tenantId          String             @map("tenant_id")
+  eventKey          String             @map("event_key")
+  category          String             @default("system")
+  recipientEmail    String             @map("recipient_email")
+  subject           String
+  html              String
+  text              String?
+  status            MailDeliveryStatus @default(queued)
+  provider          String?
+  providerMessageId String?            @map("provider_message_id")
+  errorMessage      String?            @map("error_message")
+  attemptCount      Int                @default(0) @map("attempt_count")
+  metadata          Json               @default("{}")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  sentAt            DateTime?          @map("sent_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, eventKey, createdAt])
+  @@index([tenantId, recipientEmail])
+  @@map("mail_deliveries")
 }

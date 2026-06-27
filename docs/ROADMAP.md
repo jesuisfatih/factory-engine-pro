@@ -14,8 +14,8 @@ modüle dokunma — gerekirse önce kullanıcıya sor.
 
 | Surface | Email | Password | Tenant | Rol |
 |---|---|---|---|---|
-| admin (5189) — owner | `<doldur>` | `<doldur>` | `dtfbank` | owner |
-| accounts (5187) — customer | `<doldur>` | `<doldur>` | `dtfbank` | b2b_admin |
+| admin (5189) — owner | `owner.prodtest+20260627184047@dtfbank.com` | `FepOwner20260627184047` | `dtfbank` | owner |
+| accounts (5187) — customer | `customer.prodtest+20260627184047@dtfbank.com` | `FepBuyer20260627184047` | `dtfbank` | b2b_admin |
 
 > Şifreler tek seferlik olarak bu doc'a yazılır + kullanıcı ilk login'de
 > değiştirir. Üretilen değerleri agent buraya iliştirir.
@@ -54,7 +54,7 @@ modüle dokunma — gerekirse önce kullanıcıya sor.
 - `accounts.dtfbank.com` → customer panel (dtfbank müşterileri)
 - `accounts.eagledtfprint.com` → customer panel (eagledtfprint müşterileri)
 - `api.dtfbank.com` → API (admin + accounts + person bu endpoint'i çağırır)
-- ...her 6 tenant için aynı pattern (`<tenant>` = `dtfbank` / `eagledtfprint` / `fastdtfsupply` / `fastdtftransfer` / `gangsheetbuilder` / `ssactivewear`).
+- ...her 6 tenant için aynı pattern (`<tenant>` = `dtfbank` / `dtfprintdepot` / `eagledtfprint` / `eagledtfsupply` / `fastdtfsupply` / `fastdtftransfer`).
 
 Tenant context request-time'da subdomain'den çözülür (`app.dtfbank.com` → `tenant_id = ten_dtfbank` → JWT'ye gömülür). Eski sistemin `factoryengine-<tenant>-app` container'larının her biri kendi domain ailesine bağlı (3.6).
 
@@ -115,8 +115,8 @@ yetenekler **çalışır halde teslim edilir**:
 
 ## 3. Sunucu + Managed DB + Redis
 
-Eski sistem (`eagledtfprint` + 5 tenant: `dtfbank`, `fastdtfsupply`,
-`fastdtftransfer`, `gangsheetbuilder`, `ssactivewear`) bu çalışma bitince
+Eski sistem 6 tenant (`eagledtfprint`, `dtfbank`, `dtfprintdepot`,
+`eagledtfsupply`, `fastdtfsupply`, `fastdtftransfer`) bu çalışma bitince
 **retire edilecek**. Yeni Factory Engine Pro **aynı host'lara** deploy
 edilecek; eski tenant'lar yeni sistemin tenant'ı olarak göç eder.
 
@@ -180,8 +180,8 @@ codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
 | `factoryengine-eagledtfprint-app` | Prod | Depot |
 | `factoryengine-fastdtfsupply-app` | Prod | Depot |
 | `factoryengine-fastdtftransfer-app` | Prod | Depot |
-| `factoryengine-gangsheetbuilder-app` | Prod | Depot |
-| `factoryengine-ssactivewear-app` | Prod | Depot |
+| `factoryengine-dtfprintdepot-app` | Prod | Depot |
+| `factoryengine-eagledtfsupply-app` | Prod | Depot |
 
 > Container içinde tek base image koşar; tenant context her HTTP isteğinde
 > JWT'den / `x-tenant-id` header'ından çözülür. `tenantId` Prisma
@@ -230,8 +230,8 @@ codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
 
 - dtfbank'te geliştirme + test bitince → **Depot ile imaj build**
   edilir → registry'ye basılır.
-- Prod tenant container'ları (`eagledtfprint`, `fastdtfsupply`,
-  `fastdtftransfer`, `gangsheetbuilder`, `ssactivewear`) bu yeni imajla
+- Prod tenant container'ları (`eagledtfprint`, `dtfprintdepot`,
+  `eagledtfsupply`, `fastdtfsupply`, `fastdtftransfer`) bu yeni imajla
   remote compose üzerinden restart edilir.
 - Per-container image tag farkı **beklenir** — image sadece base;
   dtfbank Mutagen sync'ten geldiği için image tag'i prod'la aynı olmayabilir.
@@ -243,8 +243,8 @@ codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
   # Prod tenant'larını yeni imajla başlat
   ssh root@144.202.125.169 "cd /opt/apps/custom/factoryengine && \
     FACTORYENGINE_IMAGE_TAG=<yeni-tag> docker compose up -d \
-    eagledtfprint-app fastdtfsupply-app fastdtftransfer-app \
-    gangsheetbuilder-app ssactivewear-app"
+    eagledtfprint-app dtfprintdepot-app eagledtfsupply-app \
+    fastdtfsupply-app fastdtftransfer-app"
   ```
 
 #### Deploy disiplin kuralları
@@ -905,4 +905,43 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 ### 2026-06-27 — Commit `b7d486c` sonrası
 
 **8. Yorum: artık UI'de canlı Shopify verileri olmalı ve işlem yapılabilmeli**
+→
+
+---
+
+### 2026-06-27 — Commit `3d61b753` sonrası canlı dtfbank deploy + test hesapları
+
+**Factory Engine Pro dtfbank runtime smoke**
+- Deploy kapsamı: sadece `factoryengine-dtfbank-app`; non-factoryengine gangsheet/upload/diğer app container'larına dokunulmadı.
+- Container iç port smoke:
+  - `4000 /api/v1/health` → `200 {"ok":true,"service":"factory-engine-pro-backend"}`
+  - `3000 /` → `200` admin HTML
+  - `3001 /` → `200` accounts HTML
+  - `3002 /` → `200` person HTML
+- Public smoke:
+  - `https://api.dtfbank.com/api/v1/health` → `200`
+  - `https://api.dtfbank.com/api/v1/identity/workspace-brand` → `200 {"workspaceName":"DTF Bank","brandBadge":"DB","brandLogo":null}`
+  - `https://app.dtfbank.com` → `200`
+  - `https://accounts.dtfbank.com` → `200`
+- Runtime log özeti: Prisma `4 migrations found`, `No pending migrations to apply`; PM2 `factory-engine-pro-api`, `factory-engine-pro-admin`, `factory-engine-pro-person`, `factory-engine-pro-accounts` online; Nest `Nest application successfully started`.
+
+**Test hesapları oluşturuldu ve login doğrulandı**
+- Admin owner: `owner.prodtest+20260627184047@dtfbank.com` / `FepOwner20260627184047`.
+  - `POST https://api.dtfbank.com/api/v1/auth/member/login` (`x-tenant-id: ten_dtfbank`, `x-request-id: prodtest-admin`) → `201`.
+  - `GET https://api.dtfbank.com/api/v1/auth/me` → `200`, `type=member`, `permissions=23`.
+- Accounts customer: `customer.prodtest+20260627184047@dtfbank.com` / `FepBuyer20260627184047`.
+  - `POST https://api.dtfbank.com/api/v1/auth/customer/login` (`x-tenant-id: ten_dtfbank`, `x-request-id: prodtest-customer`) → `201`.
+  - `GET https://api.dtfbank.com/api/v1/auth/me` → `200`, `type=customer_user`, `permissions=7`.
+- Not: `ten_dtfbank` içinde eksik olan sistem roller (`owner`, `admin`, `agent`, `b2b_admin`, `b2b_user`) canlı container içinden Prisma ile seed edildi; secret/env değeri basılmadı.
+→
+
+**Akış 1 — User ekleme / invite smoke**
+- Owner login: `POST /api/v1/auth/member/login` → `201`.
+- Role lookup: `GET /api/v1/identity/member-roles` → `200`, invite testinde `admin` rolü kullanıldı.
+- Invite member: `POST /api/v1/identity/members` (`sendInvite=true`) → `201`, invitation token üretildi, `mail_deliveries` kaydı açıldı.
+- Invitation accept: `POST /api/v1/auth/invitations/accept` → `201`.
+- Davetli member login: `POST /api/v1/auth/member/login` → `201`, `type=member`, `permissions=20`.
+- Mail delivery: `GET /api/v1/mail/deliveries?eventKey=identity.member_invitation&limit=10` → kayıt bulundu ama `status=failed`, `error="API key is invalid"`.
+- Ek Resend doğrulaması (secret değeri basmadan): `factoryengine-dtfbank-app`, `factoryengine-dtfprint-app`, `factoryengine-fastdtftransfer-app` Resend `/domains` probe → `403 "This API key is suspended"`; `factoryengine-eagledtfsupply-app`, `factoryengine-fastdtfsupply-app`, `factoryengine-dtfprintdepot-app` içinde `RESEND_API_KEY` yok.
+- Sonuç: backend invite + accept + login akışı çalışıyor; **gerçek mail gönderimi canlı Resend key suspended olduğu için tamamlanmadı**. Geçerli Resend key verilmeden Akış 1 prod-ready kapanmaz.
 →

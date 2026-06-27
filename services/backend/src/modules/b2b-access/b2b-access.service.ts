@@ -5,6 +5,7 @@ import { AuthTokenService } from '../../shared/auth-token.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { MailService } from '../mail/mail.service.js';
 import { B2BAccessRepository } from './b2b-access.repository.js';
 
 interface UploadFile {
@@ -22,6 +23,7 @@ export class B2BAccessService {
     private readonly authTokens: AuthTokenService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly mail: MailService,
   ) {}
 
   async create(input: CreateB2BAccessRequestInput, file?: UploadFile) {
@@ -123,6 +125,14 @@ export class B2BAccessService {
       metadata: { source: 'b2b_access_approval', requestId: request.id },
       createdById: this.tenantContext.get()?.principalId,
     });
+    const delivery = await this.mail.sendInvitation({
+      to: user.email,
+      recipientName: `${user.firstName} ${user.lastName}`.trim(),
+      token: invitationToken,
+      surface: 'accounts',
+      eventKey: 'b2b_access.approved',
+      metadata: { requestId: request.id, customerId: customer.id, customerUserId: user.id },
+    });
     await this.repository.update(id, {
       status: 'approved',
       reviewedAt: new Date(),
@@ -142,7 +152,8 @@ export class B2BAccessService {
       invitation: {
         token: invitationToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        delivery: 'pending_system_mail_6_4',
+        delivery: delivery.status,
+        deliveryId: delivery.id,
       },
     };
   }

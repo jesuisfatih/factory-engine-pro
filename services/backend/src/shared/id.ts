@@ -26,7 +26,8 @@ export type IdPrefix =
   | 'sr'
   | 'srcm'
   | 'b2br'
-  | 'b2bf';
+  | 'b2bf'
+  | 'mail';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;

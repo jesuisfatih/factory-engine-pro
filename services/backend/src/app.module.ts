@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { MailModule } from './modules/mail/mail.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { SegmentsModule } from './modules/segments/segments.module.js';
@@ -25,6 +26,7 @@ import { HealthController } from './health.controller.js';
     SharedModule,
     QueueModule,
     IdentityModule,
+    MailModule,
     AuthModule,
     OrdersModule,
     CustomersModule,
