@@ -1810,3 +1810,40 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   from live `https://api.dtfbank.com` endpoints. No mock/static UI path is used.
 - Screenshot capture was attempted, but the in-app browser control failed with
   `transport closed`; no localhost/Vite screenshot was used as evidence.
+
+---
+
+### 2026-06-27 - Resend credential audit live
+
+**What was checked**
+- Read-only scope was limited to `factoryengine-dtfbank-app`,
+  `/opt/apps/custom/factoryengine`, old `public` schema mail/settings data, and
+  factoryengine env backup archives. No non-factoryengine container was touched.
+- Old DB checks:
+  - `public.merchants.settings`
+  - `public.merchant_mail_settings.category_system`
+  - `public.merchant_mail_settings.category_b2b`
+  - `public.merchant_mail_settings.category_marketing`
+- No embedded Resend API key was found in those old DB settings.
+
+**Provider probe result**
+- Regular env sources exposed `3` unique Resend key candidates.
+- Backup env archives exposed `2` candidates, both duplicates of already seen
+  keys.
+- Every candidate was probed against `https://api.resend.com/domains` without
+  printing the key. Every candidate returned `403`, provider error
+  `suspended_api_key`.
+- Evidence JSON: `docs/evidence/20260627-resend-credential-audit-live.json`.
+
+**Live mail smoke**
+- `GET /api/v1/identity/tenant-config` -> `200`, `hasResendApiKey=true`.
+- `POST /api/v1/mail/test` -> `201`, delivery
+  `mail_bt7bn21k826on3ej644hhe9n`, initial `queued`.
+- `GET /api/v1/mail/deliveries/mail_bt7bn21k826on3ej644hhe9n` -> `200`,
+  final `status=failed`, `errorMessage="API key is invalid"`.
+
+**Conclusion**
+- Resend could not be moved to `status=sent` from the allowed server sources:
+  all available keys are suspended or invalid at the provider. A valid /
+  unsuspended Resend API key is required before 6.4 mail delivery can be called
+  production-ready.
