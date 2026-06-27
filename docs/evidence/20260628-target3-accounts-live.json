@@ -1,0 +1,107 @@
+﻿{
+    "generatedAt":  "2026-06-27T22:48:13.8835830Z",
+    "target":  "ROADMAP 9 Hedef 3 - Accounts UI prod-ready API live smoke",
+    "tenantId":  "ten_dtfbank",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "testEmail":  "target3.accounts+20260628014808@dtfbank.test",
+    "registeredPrincipal":  {
+                                "type":  "customer_user",
+                                "idPrefix":  "cusr_nh5fo...",
+                                "permissionsCount":  7
+                            },
+    "loginPrincipal":  {
+                           "type":  "customer_user",
+                           "idPrefix":  "cusr_nh5fo...",
+                           "permissionsCount":  7
+                       },
+    "profile":  {
+                    "email":  "target3.accounts+20260628014808@dtfbank.test",
+                    "companyName":  "Target 3 Accounts Proof 20260628014808",
+                    "principalType":  "customer_user",
+                    "role":  "B2B Admin",
+                    "addressesCount":  2
+                },
+    "checks":  [
+                   {
+                       "name":  "profile",
+                       "method":  "GET",
+                       "path":  "/accounts/profile",
+                       "status":  200,
+                       "count":  null,
+                       "sampleId":  "cusr_nh5fosldwsqsmq2z7wt4hary"
+                   },
+                   {
+                       "name":  "addresses",
+                       "method":  "GET",
+                       "path":  "/accounts/addresses",
+                       "status":  200,
+                       "count":  2,
+                       "sampleId":  "shipping"
+                   },
+                   {
+                       "name":  "products",
+                       "method":  "GET",
+                       "path":  "/accounts/products",
+                       "status":  200,
+                       "count":  121,
+                       "sampleId":  "var_ftjkeurppviikffz4d4xv7z7"
+                   },
+                   {
+                       "name":  "orders",
+                       "method":  "GET",
+                       "path":  "/accounts/orders",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "tracking",
+                       "method":  "GET",
+                       "path":  "/accounts/tracking",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "pickup",
+                       "method":  "GET",
+                       "path":  "/accounts/pickup",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "invoices",
+                       "method":  "GET",
+                       "path":  "/accounts/invoices",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "documents",
+                       "method":  "GET",
+                       "path":  "/accounts/documents",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "support-list",
+                       "method":  "GET",
+                       "path":  "/accounts/support",
+                       "status":  200,
+                       "count":  0,
+                       "sampleId":  null
+                   },
+                   {
+                       "name":  "support-create",
+                       "method":  "POST",
+                       "path":  "/accounts/support",
+                       "status":  201,
+                       "count":  null,
+                       "sampleId":  "sr_arw49y6qrj7ufy3i7itfkdre"
+                   }
+               ],
+    "tokenPolicy":  "accessToken and refreshToken intentionally omitted from evidence"
+}

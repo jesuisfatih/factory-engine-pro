@@ -1,0 +1,60 @@
+﻿{
+    "target":  "ROADMAP 9 Hedef 3 - Accounts UI live proof",
+    "capturedAt":  "2026-06-27T22:51:11.8053567Z",
+    "baseUrl":  "https://accounts.dtfbank.com",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "testEmail":  "target3.accounts+20260628014808@dtfbank.test",
+    "session":  {
+                    "principalType":  "customer_user",
+                    "permissionsCount":  7,
+                    "tokensOmitted":  true
+                },
+    "pages":  {
+                  "login":  {
+                                "url":  "https://accounts.dtfbank.com/login",
+                                "title":  "Buyer Portal",
+                                "bodyText":  "W\nWorkspace\nBuyer portal\nB2B PORTAL\nWelcome back to your buying workspace.\n\nOrders, sub-users, spending caps and B2B pricing live behind this sign-in.\n\nLive order history\nReview synced Shopify orders, invoices and pickup status.\nTeam controls\nCreate sub-users and keep buyer access scoped to your company.\nTracking workspace\nFollow shipping and pickup milestones from one portal.\nWholesale pricing\nSecure access\nPriority support\nW\nWorkspace\nBuyer portal\nWelcome back\n\nBuyer and sub-buyer accounts use the same login.\n\nEMAIL\nPASSWORD\nRemember me\nForgot password?\nSign in\nOR\nCreate Account\nRequest B2B Access",
+                                "hasEmail":  true,
+                                "hasPassword":  true
+                            },
+                  "requestAccess":  {
+                                        "url":  "https://accounts.dtfbank.com/request-invitation",
+                                        "title":  "Buyer Portal",
+                                        "bodyText":  "D\nDTF Bank\nBuyer portal\nB2B ONBOARDING\nApply for a B2B account\n\nWe unlock B2B pricing, dedicated reps, and priority production for verified buyers.\n\nVolume discounts up to 12% off catalog\nDedicated rep \u0026 SLA-backed support\nNet-30 terms after first 3 orders\nPickup + delivery flexibility\nTell us about your business\n\nWe review applications within 1 business day.\n\nFIRST NAME\nLAST NAME\nWORK EMAIL\nPHONE\nCOMPANY NAME\nLEGAL ENTITY\nWEBSITE\nINDUSTRY\nApparel\nPromotional\nPrint shop\nReseller\nOther\nESTIMATED MONTHLY VOLUME\nCHOOSE A PASSWORD\nCONFIRM PASSWORD\nTAX CERTIFICATE (PDF)\nCLICK TO UPLOAD\nANYTHING ELSE WE SHOULD KNOW?\nSubmit application\nAlready have an account? Sign in",
+                                        "hasSubmit":  true
+                                    },
+                  "profile":  {
+                                  "url":  "https://accounts.dtfbank.com/profile",
+                                  "bodyText":  "D\nDTF Bank\nBuyer portal\nCOMMERCE\nOrders\nCatalog\nReorder templates\nLOGISTICS\nTracking\nPickup\nBILLING\nInvoices\nDocuments\nACCOUNT\nProfile\nAddresses\nTeam\nHELP\nSupport\nTT\ntarget3.accounts+20260628014808@dtfbank.test\nB2B Admin\nProfile\nD\nDTF Bank\nProfile\nYour personal information, security and notification preferences\nTT\nTarget Three\ntarget3.accounts+20260628014808@dtfbank.test\nB2B Admin\nTarget 3 Accounts Proof 20260628014808\nORDERS\n0\nQUOTES\n0\nLIFETIME SPEND\n$0\nProfile\nSecurity\nFIRST NAME\nLAST NAME\nEMAIL\nPHONE\nSave changes",
+                                  "hasEmail":  true,
+                                  "hasError":  false
+                              },
+                  "products":  {
+                                   "url":  "https://accounts.dtfbank.com/products",
+                                   "bodyText":  "D\nDTF Bank\nBuyer portal\nCOMMERCE\nOrders\nCatalog\nReorder templates\nLOGISTICS\nTracking\nPickup\nBILLING\nInvoices\nDocuments\nACCOUNT\nProfile\nAddresses\nTeam\nHELP\nSupport\nTT\ntarget3.accounts+20260628014808@dtfbank.test\nB2B Admin\nCatalog\nD\nDTF Bank\nCatalog\nBrowse the catalog with your B2B pricing applied\nPRODUCTS\n121\nin catalog\nON SALE\n12\ndiscounted\nAVG DISCOUNT\n1%\noff list\nYOUR SAVINGS\n$1,205.71\nacross catalog\nAll vendors\nDTF BANK\nEPSON\nHOSONSOFT\nPRESSLY\nPRINTIUM\nSCHNEIDER\nMost popular\nPrice ↑\nPrice ↓\nBiggest discount\nDiscounted only\n Grid\n List\nPRINTIUM\n4 Channel Ink Delivery Tube for UV DTF Printer - 1 foot\nSKU SP-P604U-006\n$2.99\nIn stock\nAdd to cart\nPRINTIUM\nActivated Carbon Filter Cartridge for P50H Smoke Extract Filter Purifier\nSKU SP-PJS50H-01\n$44.99\nIn stock\nAdd to cart\nPRINTIUM\nAdhesive Insulation Acetate Cloth Tape\nSKU SP-P604-0023\n$14.99\nIn stock\nAdd to cart\nPRINTIUM\nAdjustable Leveling Foot\nSKU SP-P6501-010\n$19.99\nIn stock\nAdd to cart\nPRINTIUM\nAluminum Shaft Collar\nSKU SP-P604D-016\n$9.99\nIn stock\nAdd to cart\nPRESSLY\nAtmospheric Pressure Directional Valve\nSKU SP-H1620-005\n$109.99\nIn stock\nAdd to cart\nPRESSLY\nAtmospheric Pressure Sensor Switch\nSKU SP-H1620-007\n$19.99\nIn stock\nAdd ",
+                                   "hasProductRows":  true,
+                                   "hasError":  false
+                               },
+                  "ordersEmpty":  {
+                                      "url":  "https://accounts.dtfbank.com/orders",
+                                      "bodyText":  "D\nDTF Bank\nBuyer portal\nCOMMERCE\nOrders\nCatalog\nReorder templates\nLOGISTICS\nTracking\nPickup\nBILLING\nInvoices\nDocuments\nACCOUNT\nProfile\nAddresses\nTeam\nHELP\nSupport\nTT\ntarget3.accounts+20260628014808@dtfbank.test\nB2B Admin\nOrders\nD\nDTF Bank\nOrders\nOrder history, status, and quick reorder\nTOTAL\n0\norders placed\nTOTAL SPENT\n$0.00\ngross\nAVG ORDER\n$0.00\nacross all\nPENDING\n0\nawaiting payment\nAll\nPending\nPaid\nFulfilled\nSort by date\nNo orders yet. Use the catalog to place your first order.\nQuick reorder\nNo templates yet — save a frequent basket to reorder it in one click.\nOrder summary\nThis month\n$0.00\nLast 30 days\n$0.00\nLifetime\n$0.00",
+                                      "hasEmptyState":  true,
+                                      "hasError":  false
+                                  }
+              },
+    "screenshots":  {
+                        "login":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-accounts-login-urlbar-live-20260628.png",
+                        "requestAccess":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-accounts-request-access-urlbar-live-20260628.png",
+                        "profile":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-accounts-profile-urlbar-live-20260628.png",
+                        "products":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-accounts-products-urlbar-live-20260628.png",
+                        "ordersEmpty":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-accounts-orders-empty-urlbar-live-20260628.png"
+                    },
+    "assertions":  {
+                       "loginLoadedOnRealSubdomain":  true,
+                       "requestAccessLoadedOnRealSubdomain":  true,
+                       "profileBoundToLiveSession":  true,
+                       "productsBoundToLiveApi":  true,
+                       "ordersEmptyStateVisible":  true
+                   }
+}

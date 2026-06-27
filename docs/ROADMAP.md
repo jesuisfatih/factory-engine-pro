@@ -1981,3 +1981,51 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - `docs/evidence/20260628-target2-rbac-ui-live.json`
 - Lokal app/test runtime kullanilmadi; kanitlar `https://app.dtfbank.com` ve
   `https://api.dtfbank.com` uzerinden alindi.
+
+### 2026-06-28 - Hedef 3 live proof (dtfbank)
+
+-> COZULDU `70344a71728e3be0dbcf847796c6434c2ab1b734`.
+
+- Accounts portal mock kalintisi kaldirildi: `apps/accounts/src/lib/mock.ts`
+  silindi; profile, addresses, orders, reorder templates, products, tracking,
+  pickup, invoices, documents ve support ekranlari TanStack Query ile gercek
+  API'ye baglandi.
+- Backend accounts portal API eklendi: `GET/PATCH /api/v1/accounts/profile`,
+  `GET/PUT/DELETE /api/v1/accounts/addresses`, `GET /accounts/orders`,
+  `GET /accounts/products`, `GET /accounts/tracking`, `GET /accounts/pickup`,
+  `GET /accounts/invoices`, `GET /accounts/documents`,
+  `GET/POST /accounts/support`. Principal tipi `customer_user/sub_user`
+  disinda ise 403 donuyor; tenant context merkezi Prisma extension uzerinden
+  korunuyor.
+- Auth ekranlari eski accounts akisi referans alinarak canliya baglandi:
+  `login`, `request-invitation`, `register`, tokenli `register/$token`.
+- Prisma migration gerekmedi; mevcut tenant-scoped tablolar kullanildi
+  (`Customer`, `CustomerUser`, `CommerceOrder`, `CommercePickupOrder`,
+  `CatalogProduct`, `B2BAccessRequestFile`, `ServiceRequest`).
+- Deploy scope: yalnizca `factoryengine-dtfbank-app` restart edildi. Caddy,
+  gangsheet, upload ve non-dtfbank app container'larina dokunulmadi.
+- Remote `.build-sha`: `70344a71728e3be0dbcf847796c6434c2ab1b734`.
+- Local build/typecheck:
+  - `pnpm --filter @factory-engine-pro/contracts build` -> pass
+  - `pnpm --filter @factory-engine-pro/backend typecheck` -> pass
+  - `pnpm --filter @factory-engine-pro/accounts build` -> pass
+- Live smoke:
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+  - Nest log: `AccountsController {/api/v1/accounts}` ve tum accounts route'lari mapped.
+  - Customer register/login -> `201`, principal `customer_user`, permissions `7`.
+  - `GET /api/v1/accounts/profile` -> `200`
+  - `GET /api/v1/accounts/addresses` -> `200`, count `2`
+  - `GET /api/v1/accounts/products` -> `200`, count `121`
+  - Empty-state endpointleri `orders/tracking/pickup/invoices/documents` -> `200`, count `0`
+  - `POST /api/v1/accounts/support` -> `201`, ticket `sr_arw49y6qrj7ufy3i7itfkdre`
+- URL bar screenshot evidence:
+  - `docs/evidence/target3-accounts-login-urlbar-live-20260628.png`
+  - `docs/evidence/target3-accounts-request-access-urlbar-live-20260628.png`
+  - `docs/evidence/target3-accounts-profile-urlbar-live-20260628.png`
+  - `docs/evidence/target3-accounts-products-urlbar-live-20260628.png`
+  - `docs/evidence/target3-accounts-orders-empty-urlbar-live-20260628.png`
+- Machine-readable evidence:
+  - `docs/evidence/20260628-target3-accounts-live.json`
+  - `docs/evidence/20260628-target3-accounts-ui-live.json`
+- Lokal app/test runtime kullanilmadi; kanitlar `https://accounts.dtfbank.com`
+  ve `https://api.dtfbank.com` uzerinden alindi.
