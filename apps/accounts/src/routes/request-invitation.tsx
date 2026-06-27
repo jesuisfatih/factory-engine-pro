@@ -41,7 +41,7 @@ function RequestInvitationView() {
   const industries = t('auth.invite.industries', { returnObjects: true }) as string[];
   const update = (patch: Partial<FormShape>) => setForm((current) => ({ ...current, ...patch }));
 
-  const canSubmit = form.firstName && form.lastName && form.email && form.companyName
+  const canSubmit = form.firstName && form.lastName && form.email && form.companyName && form.legalName
     && form.password && form.password === form.confirmPassword;
 
   if (submitted) {
@@ -53,7 +53,7 @@ function RequestInvitationView() {
         </div>
         <h2>{t('auth.invite.success_title')}</h2>
         <p className="muted">{t('auth.invite.success_body', { email: form.email })}</p>
-        <a className="btn primary" href="#" style={{ marginTop: 16, justifyContent: 'center' }}>
+        <a className="btn primary" href="/login" style={{ marginTop: 16, justifyContent: 'center' }}>
           <ArrowLeft size={14} /> {t('auth.invite.back_to_login')}
         </a>
       </div>
@@ -211,7 +211,7 @@ function RequestInvitationView() {
             {submitting ? t('common.loading') : t('auth.invite.submit')}
           </button>
 
-          <a href="#" className="auth-link" style={{ justifyContent: 'center' }}>
+          <a href="/login" className="auth-link" style={{ justifyContent: 'center' }}>
             {t('auth.invite.back_to_login')}
           </a>
         </form>

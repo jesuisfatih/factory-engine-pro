@@ -26,6 +26,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RegisterTokenRouteImport } from './routes/register.$token'
 
 const TrackingRoute = TrackingRouteImport.update({
   id: '/tracking',
@@ -112,6 +113,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterTokenRoute = RegisterTokenRouteImport.update({
+  id: '/$token',
+  path: '/$token',
+  getParentRoute: () => RegisterRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,13 +130,14 @@ export interface FileRoutesByFullPath {
   '/pickup': typeof PickupRoute
   '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
   '/reorder': typeof ReorderRoute
   '/request-invitation': typeof RequestInvitationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/support': typeof SupportRoute
   '/team': typeof TeamRoute
   '/tracking': typeof TrackingRoute
+  '/register/$token': typeof RegisterTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -143,13 +150,14 @@ export interface FileRoutesByTo {
   '/pickup': typeof PickupRoute
   '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
   '/reorder': typeof ReorderRoute
   '/request-invitation': typeof RequestInvitationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/support': typeof SupportRoute
   '/team': typeof TeamRoute
   '/tracking': typeof TrackingRoute
+  '/register/$token': typeof RegisterTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -163,13 +171,14 @@ export interface FileRoutesById {
   '/pickup': typeof PickupRoute
   '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
   '/reorder': typeof ReorderRoute
   '/request-invitation': typeof RequestInvitationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/support': typeof SupportRoute
   '/team': typeof TeamRoute
   '/tracking': typeof TrackingRoute
+  '/register/$token': typeof RegisterTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/team'
     | '/tracking'
+    | '/register/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/team'
     | '/tracking'
+    | '/register/$token'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/team'
     | '/tracking'
+    | '/register/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -242,7 +254,7 @@ export interface RootRouteChildren {
   PickupRoute: typeof PickupRoute
   ProductsRoute: typeof ProductsRoute
   ProfileRoute: typeof ProfileRoute
-  RegisterRoute: typeof RegisterRoute
+  RegisterRoute: typeof RegisterRouteWithChildren
   ReorderRoute: typeof ReorderRoute
   RequestInvitationRoute: typeof RequestInvitationRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -372,8 +384,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register/$token': {
+      id: '/register/$token'
+      path: '/$token'
+      fullPath: '/register/$token'
+      preLoaderRoute: typeof RegisterTokenRouteImport
+      parentRoute: typeof RegisterRoute
+    }
   }
 }
+
+interface RegisterRouteChildren {
+  RegisterTokenRoute: typeof RegisterTokenRoute
+}
+
+const RegisterRouteChildren: RegisterRouteChildren = {
+  RegisterTokenRoute: RegisterTokenRoute,
+}
+
+const RegisterRouteWithChildren = RegisterRoute._addFileChildren(
+  RegisterRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -386,7 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   PickupRoute: PickupRoute,
   ProductsRoute: ProductsRoute,
   ProfileRoute: ProfileRoute,
-  RegisterRoute: RegisterRoute,
+  RegisterRoute: RegisterRouteWithChildren,
   ReorderRoute: ReorderRoute,
   RequestInvitationRoute: RequestInvitationRoute,
   ResetPasswordRoute: ResetPasswordRoute,

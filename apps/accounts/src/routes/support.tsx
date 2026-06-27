@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  Search, Send, ChevronDown, ChevronUp, Sparkles, MessageCircle,
+  Search, Send, ChevronDown, ChevronUp, MessageCircle,
   CreditCard, Truck, Package, UserCog, HelpCircle, Star,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { ErrorState } from '@/components/QueryState';
 import {
-  fetchSupportTickets, fetchSupportFaqs, createSupportTicket,
+  fetchSupportTickets, createSupportTicket,
   type SupportTicket, type TicketStatus, type TicketPriority, type TicketCategory,
-} from '@/lib/mock';
+} from '@/lib/portal';
 
 const QK_TICKETS = ['support', 'tickets'] as const;
-const QK_FAQS = ['support', 'faqs'] as const;
 
 const STATUS_TONE: Record<TicketStatus, string> = {
   open: 'info', in_progress: 'warn', resolved: 'success', closed: '',
@@ -105,13 +105,11 @@ function TicketRow({ ticket, expanded, onToggle }: { ticket: SupportTicket; expa
 function SupportView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const { data: tickets = [], isLoading } = useQuery({ queryKey: QK_TICKETS, queryFn: fetchSupportTickets });
-  const { data: faqs = [] } = useQuery({ queryKey: QK_FAQS, queryFn: fetchSupportFaqs });
+  const { data: tickets = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK_TICKETS, queryFn: fetchSupportTickets });
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TicketStatus>('all');
   const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const [form, setForm] = useState({
     category: 'shipping' as TicketCategory,
@@ -244,7 +242,9 @@ function SupportView() {
             </select>
           </div>
 
-          {filtered.length === 0 ? (
+          {isError ? (
+            <ErrorState title="Could not load support tickets" error={error} retry={() => refetch()} />
+          ) : filtered.length === 0 ? (
             <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
               {isLoading ? t('common.loading') : t('support.empty_state')}
             </div>
@@ -260,23 +260,6 @@ function SupportView() {
               ))}
             </div>
           )}
-
-          <section className="support-faq">
-            <h3>
-              <Sparkles size={13} /> {t('support.faq_title')}
-            </h3>
-            <div className="faq-list">
-              {faqs.map((entry, index) => (
-                <div key={entry.question} className={`faq-entry${openFaq === index ? ' open' : ''}`}>
-                  <button type="button" onClick={() => setOpenFaq((current) => current === index ? null : index)}>
-                    {entry.question}
-                    {openFaq === index ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                  </button>
-                  {openFaq === index && <p>{entry.answer}</p>}
-                </div>
-              ))}
-            </div>
-          </section>
         </main>
       </div>
     </>

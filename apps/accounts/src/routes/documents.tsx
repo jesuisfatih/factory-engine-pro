@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, Download, FileText, FileImage, FileType2 } from 'lucide-react';
+import { Download, FileText, FileImage, FileType2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchDocuments, type DocumentCategory } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { downloadDocument, fetchDocuments, type BuyerDocument, type DocumentCategory } from '@/lib/portal';
 
 const QK = ['documents'] as const;
 
@@ -36,22 +37,15 @@ function fmtSize(bytes: number) {
 
 function DocumentsView() {
   const { t } = useTranslation();
-  const { data: documents = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchDocuments });
+  const { data: documents = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchDocuments });
   const [tab, setTab] = useState<typeof TABS[number]>('all');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => tab === 'all' ? documents : documents.filter((doc) => doc.category === tab), [documents, tab]);
 
   return (
     <>
-      <PageHeader
-        titleI18nKey="documents.title"
-        subtitleI18nKey="documents.subtitle"
-        actions={(
-          <button type="button" className="btn primary">
-            <Upload size={14} /> {t('documents.upload')}
-          </button>
-        )}
-      />
+      <PageHeader titleI18nKey="documents.title" subtitleI18nKey="documents.subtitle" />
 
       <div className="tabs" role="tablist" style={{ marginBottom: 14 }}>
         {TABS.map((value) => (
@@ -67,11 +61,6 @@ function DocumentsView() {
         ))}
       </div>
 
-      <div className="documents-dropzone">
-        <Upload size={16} />
-        <span>{t('documents.drag_drop_hint')}</span>
-      </div>
-
       <div className="data-card" style={{ marginTop: 14 }}>
         <table className="data-table" id="table-documents">
           <thead>
@@ -85,7 +74,9 @@ function DocumentsView() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {isError ? (
+              <tr><td colSpan={6}><ErrorState title="Could not load documents" error={error} retry={() => refetch()} /></td></tr>
+            ) : filtered.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
                 {isLoading ? t('common.loading') : t('documents.empty_state')}
               </td></tr>
@@ -104,8 +95,14 @@ function DocumentsView() {
                   <td className="muted">{doc.uploadedAt}</td>
                   <td className="muted">{doc.uploadedBy}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <button type="button" className="btn ghost" title={t('documents.download')}>
-                      <Download size={12} />
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      title={t('documents.download')}
+                      disabled={downloadingId === doc.id}
+                      onClick={() => void handleDownload(doc)}
+                    >
+                      <Download size={12} /> {downloadingId === doc.id ? '...' : null}
                     </button>
                   </td>
                 </tr>
@@ -116,6 +113,15 @@ function DocumentsView() {
       </div>
     </>
   );
+
+  async function handleDownload(doc: BuyerDocument) {
+    setDownloadingId(doc.id);
+    try {
+      await downloadDocument(doc);
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 }
 
 export const Route = createFileRoute('/documents')({ component: DocumentsView });

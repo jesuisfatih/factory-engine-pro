@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Eye, RotateCw, ChevronDown, ChevronUp, ArrowUpDown,
+  RotateCw, ChevronDown, ChevronUp, ArrowUpDown,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchBuyerOrders, fetchReorderTemplates, type BuyerOrder, type OrderStatusValue } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchBuyerOrders, fetchReorderTemplates, type BuyerOrder, type OrderStatusValue } from '@/lib/portal';
 
 const QK = ['orders'] as const;
 const QK_TEMPLATES = ['reorder-templates'] as const;
@@ -61,10 +62,6 @@ function OrderRow({ order, expanded, onToggle }: { order: BuyerOrder; expanded: 
               ))}
             </tbody>
           </table>
-          <div className="buyer-order-actions">
-            <button type="button" className="btn"><Eye size={13} /> {t('orders.view')}</button>
-            <button type="button" className="btn primary"><RotateCw size={13} /> {t('orders.reorder')}</button>
-          </div>
         </div>
       )}
     </div>
@@ -73,7 +70,7 @@ function OrderRow({ order, expanded, onToggle }: { order: BuyerOrder; expanded: 
 
 function OrdersView() {
   const { t } = useTranslation();
-  const { data: orders = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchBuyerOrders });
+  const { data: orders = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchBuyerOrders });
   const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates });
 
   const [tab, setTab] = useState<'all' | OrderStatusValue>('all');
@@ -102,15 +99,7 @@ function OrdersView() {
 
   return (
     <>
-      <PageHeader
-        titleI18nKey="orders.title"
-        subtitleI18nKey="orders.subtitle"
-        actions={(
-          <button type="button" className="btn primary">
-            <Plus size={14} /> {t('orders.new_order')}
-          </button>
-        )}
-      />
+      <PageHeader titleI18nKey="orders.title" subtitleI18nKey="orders.subtitle" />
 
       <div className="kpis" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 14 }}>
         <div className="kpi"><div className="label">{t('orders.kpi_count')}</div><div className="val">{total}</div><div className="sub">orders placed</div></div>
@@ -145,7 +134,9 @@ function OrdersView() {
             </button>
           </div>
 
-          {sortedRows.length === 0 ? (
+          {isError ? (
+            <ErrorState title="Could not load orders" error={error} retry={() => refetch()} />
+          ) : sortedRows.length === 0 ? (
             <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
               {isLoading ? t('common.loading') : t('orders.empty_state')}
             </div>
@@ -171,7 +162,7 @@ function OrdersView() {
                       <div className="name">{template.name}</div>
                       <div className="muted">{template.items.length} items</div>
                     </div>
-                    <button type="button" className="btn primary"><RotateCw size={11} /> {t('reorder.use_template')}</button>
+                    <button type="button" className="btn primary" disabled title="Reorder checkout confirmation is not enabled for this portal yet"><RotateCw size={11} /> {t('reorder.use_template')}</button>
                   </li>
                 ))}
               </ul>

@@ -1,11 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Plus, RotateCw, Trash2, ChevronRight } from 'lucide-react';
+import { RotateCw, ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchReorderTemplates, deleteReorderTemplate, type ReorderTemplate } from '@/lib/mock';
+import { fetchReorderTemplates, type ReorderTemplate } from '@/lib/portal';
 
 const QK = ['reorder-templates'] as const;
 
@@ -15,19 +14,8 @@ function fmtMoney(value: number) {
 
 function ReorderView() {
   const { t } = useTranslation();
-  const qc = useQueryClient();
-  const { data: templates = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchReorderTemplates });
+  const { data: templates = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchReorderTemplates });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const remove = useMutation({
-    mutationFn: deleteReorderTemplate,
-    onSuccess: () => {
-      toast.success('Template deleted');
-      qc.invalidateQueries({ queryKey: QK });
-      setSelectedId(null);
-    },
-    onError: (error) => toast.error('Delete failed', { description: (error as Error).message }),
-  });
 
   const selected: ReorderTemplate | null = templates.find((template) => template.id === selectedId) ?? templates[0] ?? null;
 
@@ -40,11 +28,6 @@ function ReorderView() {
       <PageHeader
         titleI18nKey="reorder.title"
         subtitleI18nKey="reorder.subtitle"
-        actions={(
-          <button type="button" className="btn primary">
-            <Plus size={14} /> {t('reorder.create')}
-          </button>
-        )}
       />
 
       <div className="kpis" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 14 }}>
@@ -66,7 +49,11 @@ function ReorderView() {
               </tr>
             </thead>
             <tbody>
-              {templates.length === 0 ? (
+              {isError ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--danger)', padding: 32 }}>
+                  {(error as Error).message} <button type="button" className="btn" onClick={() => refetch()} style={{ marginLeft: 8 }}>Retry</button>
+                </td></tr>
+              ) : templates.length === 0 ? (
                 <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
                   {isLoading ? t('common.loading') : t('reorder.empty_state')}
                 </td></tr>
@@ -113,14 +100,7 @@ function ReorderView() {
               <strong>{fmtMoney(selected.items.reduce((sum, item) => sum + item.qty * item.unitPriceUsd, 0))}</strong>
             </div>
             <div className="reorder-detail-actions">
-              <button
-                type="button"
-                className="btn danger-outline"
-                onClick={() => { if (confirm(t('reorder.delete_confirm'))) remove.mutate(selected.id); }}
-              >
-                <Trash2 size={12} />
-              </button>
-              <button type="button" className="save-btn" style={{ flex: 1 }}>
+              <button type="button" className="save-btn" style={{ flex: 1 }} disabled title="Reorder checkout confirmation is not enabled for this portal yet">
                 <RotateCw size={13} /> {t('reorder.use_template')}
               </button>
             </div>

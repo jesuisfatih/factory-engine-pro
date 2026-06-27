@@ -1,9 +1,17 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound, PackageCheck, Truck, Users2, BadgeCheck } from 'lucide-react';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
+
+const LOGIN_FEATURES = [
+  { icon: PackageCheck, title: 'Live order history', body: 'Review synced Shopify orders, invoices and pickup status.' },
+  { icon: Users2, title: 'Team controls', body: 'Create sub-users and keep buyer access scoped to your company.' },
+  { icon: Truck, title: 'Tracking workspace', body: 'Follow shipping and pickup milestones from one portal.' },
+] as const;
+
+const LOGIN_TRUST = ['Wholesale pricing', 'Secure access', 'Priority support'] as const;
 
 export function AccountsLoginPanel() {
   const rememberedEmail = readRememberedEmail();
@@ -32,10 +40,26 @@ export function AccountsLoginPanel() {
     <div className="invite-shell">
       <aside className="invite-hero">
         <Brand hero />
-        <div className="invite-hero-body"><div className="eyebrow">B2B portal</div><h1>Welcome back to your buying workspace.</h1><p>Orders, sub-users, spending caps and B2B pricing live behind this sign-in.</p></div>
+        <div className="invite-hero-body">
+          <div className="eyebrow">B2B portal</div>
+          <h1>Welcome back to your buying workspace.</h1>
+          <p>Orders, sub-users, spending caps and B2B pricing live behind this sign-in.</p>
+        </div>
+        <div className="auth-feature-stack">
+          {LOGIN_FEATURES.map(({ icon: Icon, title, body }) => (
+            <div className="auth-feature-card" key={title}>
+              <Icon size={15} />
+              <div><strong>{title}</strong><span>{body}</span></div>
+            </div>
+          ))}
+        </div>
+        <div className="auth-trust-pills">
+          {LOGIN_TRUST.map((item) => <span key={item}><BadgeCheck size={11} />{item}</span>)}
+        </div>
       </aside>
       <main className="invite-form" style={{ maxWidth: 560, margin: '0 auto', alignSelf: 'center' }}>
-        <h2>Sign in to your account</h2>
+        <Brand />
+        <h2>Welcome back</h2>
         <p className="muted">Buyer and sub-buyer accounts use the same login.</p>
         <AuthForm onSubmit={submit}>
           {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
@@ -51,17 +75,61 @@ export function AccountsLoginPanel() {
           <AuthSubmit pending={login.isPending}>Sign in <ArrowRight size={14} /></AuthSubmit>
         </AuthForm>
         <div className="auth-divider"><span>or</span></div>
-        <a href="/register" className="btn" style={{ justifyContent: 'center', textDecoration: 'none' }}>Create a new account</a>
+        <div className="auth-link-grid">
+          <a href="/register" className="btn" style={{ justifyContent: 'center', textDecoration: 'none' }}>Create Account</a>
+          <a href="/request-invitation" className="btn ghost" style={{ justifyContent: 'center', textDecoration: 'none' }}>Request B2B Access</a>
+        </div>
       </main>
     </div>
   );
 }
 
 export function AccountsRegisterPanel() {
-  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', phone: '', companyName: '', taxId: '' });
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '',
+    companyName: '', taxId: '',
+    billingAddress1: '', billingAddress2: '', billingCity: '', billingState: '', billingPostalCode: '', billingCountry: 'US',
+    shippingSameAsBilling: true,
+    shippingAddress1: '', shippingAddress2: '', shippingCity: '', shippingState: '', shippingPostalCode: '', shippingCountry: 'US',
+  });
   const [error, setError] = useState<string | null>(null);
   const register = useMutation({
-    mutationFn: () => accountsApi.customerRegister(form),
+    mutationFn: () => accountsApi.customerRegister({
+      email: form.email,
+      password: form.password,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      phone: form.phone || undefined,
+      companyName: form.companyName,
+      taxId: form.taxId || undefined,
+      billingAddress: {
+        address1: form.billingAddress1,
+        address2: form.billingAddress2,
+        city: form.billingCity,
+        province: form.billingState,
+        zip: form.billingPostalCode,
+        country: form.billingCountry,
+        phone: form.phone,
+        company: form.companyName,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        isDefault: true,
+      },
+      shippingAddress: form.shippingSameAsBilling ? undefined : {
+        address1: form.shippingAddress1,
+        address2: form.shippingAddress2,
+        city: form.shippingCity,
+        province: form.shippingState,
+        zip: form.shippingPostalCode,
+        country: form.shippingCountry,
+        phone: form.phone,
+        company: form.companyName,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        isDefault: true,
+      },
+    }),
     onSuccess: (session) => {
       accountsTokenStore.setSession(session);
       window.location.assign('/');
@@ -71,29 +139,86 @@ export function AccountsRegisterPanel() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!isEmail(form.email)) return setError('Enter a valid email address.');
+    if (step < 5) {
+      const nextError = validateRegisterStep(step, form);
+      if (nextError) return setError(nextError);
+      setStep((current) => current + 1);
+      return;
+    }
+    const finalError = validateRegisterStep(step, form);
+    if (finalError) return setError(finalError);
     register.mutate();
   };
 
   return (
-    <div className="auth-card" style={{ maxWidth: 560 }}>
+    <div className="auth-card" style={{ maxWidth: 620 }}>
       <Brand />
       <h2>Create your B2B account</h2>
-      <p className="muted">This creates a Customer and the first B2B admin user for the tenant.</p>
+      <p className="muted">Step {step} of 5. Your company, billing and portal credentials are created through the live API.</p>
+      <div className="auth-progress"><div style={{ width: `${(step / 5) * 100}%` }} /></div>
       <AuthForm onSubmit={submit}>
         {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
-        <div className="field-row">
-          <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
-          <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
+        {step === 1 && (
+          <>
+            <EmailField id="register-email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
+            <div className="auth-choice active">
+              <strong>B2B Account</strong>
+              <span>Company buying portal with team seats and order visibility.</span>
+            </div>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <div className="field-row">
+              <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
+              <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
+            </div>
+            <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
+          </>
+        )}
+        {step === 3 && (
+          <>
+            <Field label="Company" value={form.companyName} onChange={(companyName) => setForm({ ...form, companyName })} />
+            <Field label="Tax ID / VAT" value={form.taxId} onChange={(taxId) => setForm({ ...form, taxId })} />
+          </>
+        )}
+        {step === 4 && (
+          <>
+            <Field label="Billing address line 1" value={form.billingAddress1} onChange={(billingAddress1) => setForm({ ...form, billingAddress1 })} />
+            <Field label="Billing address line 2" value={form.billingAddress2} onChange={(billingAddress2) => setForm({ ...form, billingAddress2 })} required={false} />
+            <div className="field-row">
+              <Field label="City" value={form.billingCity} onChange={(billingCity) => setForm({ ...form, billingCity })} />
+              <Field label="State / Province" value={form.billingState} onChange={(billingState) => setForm({ ...form, billingState })} required={false} />
+            </div>
+            <div className="field-row">
+              <Field label="Postal code" value={form.billingPostalCode} onChange={(billingPostalCode) => setForm({ ...form, billingPostalCode })} />
+              <Field label="Country" value={form.billingCountry} onChange={(billingCountry) => setForm({ ...form, billingCountry })} />
+            </div>
+            <label className="auth-check" htmlFor="register-ship-same">
+              <input id="register-ship-same" type="checkbox" checked={form.shippingSameAsBilling} onChange={(event) => setForm({ ...form, shippingSameAsBilling: event.target.checked })} />
+              <span>Shipping address is the same as billing</span>
+            </label>
+            {!form.shippingSameAsBilling && (
+              <>
+                <Field label="Shipping address line 1" value={form.shippingAddress1} onChange={(shippingAddress1) => setForm({ ...form, shippingAddress1 })} />
+                <div className="field-row">
+                  <Field label="Shipping city" value={form.shippingCity} onChange={(shippingCity) => setForm({ ...form, shippingCity })} />
+                  <Field label="Shipping postal code" value={form.shippingPostalCode} onChange={(shippingPostalCode) => setForm({ ...form, shippingPostalCode })} />
+                </div>
+              </>
+            )}
+          </>
+        )}
+        {step === 5 && (
+          <>
+            <PasswordInput id="register-password" label="Password" value={form.password} onChange={(password) => setForm({ ...form, password })} showStrength autoComplete="new-password" required />
+            <PasswordInput id="register-confirm-password" label="Confirm password" value={form.confirmPassword} onChange={(confirmPassword) => setForm({ ...form, confirmPassword })} autoComplete="new-password" required />
+          </>
+        )}
+        <div className="auth-register-actions">
+          {step > 1 && <button className="btn" type="button" onClick={() => { setError(null); setStep((current) => current - 1); }}><ArrowLeft size={13} /> Back</button>}
+          <AuthSubmit pending={register.isPending}>{step === 5 ? 'Create account' : 'Next step'} <ArrowRight size={14} /></AuthSubmit>
         </div>
-        <EmailField id="register-email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
-        <div className="field-row">
-          <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
-          <Field label="Company" value={form.companyName} onChange={(companyName) => setForm({ ...form, companyName })} />
-        </div>
-        <Field label="Tax ID" value={form.taxId} onChange={(taxId) => setForm({ ...form, taxId })} />
-        <PasswordInput id="register-password" label="Password" value={form.password} onChange={(password) => setForm({ ...form, password })} showStrength autoComplete="new-password" required />
-        <AuthSubmit pending={register.isPending}>Create account <ArrowRight size={14} /></AuthSubmit>
       </AuthForm>
       <a href="/login" className="auth-link"><ArrowLeft size={12} /> Back to sign in</a>
     </div>
@@ -136,13 +261,13 @@ export function AccountsForgotPasswordPanel() {
   );
 }
 
-export function AccountsResetPasswordPanel() {
+export function AccountsResetPasswordPanel({ tokenOverride, invitation = false }: { tokenOverride?: string; invitation?: boolean } = {}) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('token') ?? '';
-  const isInvitation = params.get('flow') === 'invitation';
+  const token = tokenOverride ?? params.get('token') ?? '';
+  const isInvitation = invitation || params.get('flow') === 'invitation';
   const reset = useMutation({
     mutationFn: () => isInvitation
       ? accountsApi.acceptInvitation({ token, password })
@@ -227,10 +352,41 @@ function persistRememberedEmail(remember: boolean, email: string) {
   }
 }
 
+function validateRegisterStep(step: number, form: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  companyName: string;
+  billingAddress1: string;
+  billingCity: string;
+  billingPostalCode: string;
+  shippingSameAsBilling: boolean;
+  shippingAddress1: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  password: string;
+  confirmPassword: string;
+}) {
+  if (step === 1 && !isEmail(form.email)) return 'Enter a valid email address.';
+  if (step === 2 && (!form.firstName.trim() || !form.lastName.trim() || !form.phone.trim())) return 'Personal information is required.';
+  if (step === 3 && !form.companyName.trim()) return 'Company name is required.';
+  if (step === 4) {
+    if (!form.billingAddress1.trim() || !form.billingCity.trim() || !form.billingPostalCode.trim()) return 'Billing address is required.';
+    if (!form.shippingSameAsBilling && (!form.shippingAddress1.trim() || !form.shippingCity.trim() || !form.shippingPostalCode.trim())) return 'Shipping address is required.';
+  }
+  if (step === 5) {
+    const strong = form.password.length >= 8 && /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) && /\d/.test(form.password);
+    if (!strong) return 'Password must be 8+ characters with upper, lower and a number.';
+    if (form.password !== form.confirmPassword) return 'Passwords do not match.';
+  }
+  return null;
+}
+
 function EmailField({ id, value, onChange }: { id: string; value: string; onChange: (next: string) => void }) {
   return <div className="field"><label htmlFor={id}>Email</label><div className="auth-password-wrap"><Mail className="auth-input-icon" size={14} /><input id={id} type="email" value={value} onChange={(event) => onChange(event.target.value)} placeholder="you@company.com" required /></div></div>;
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (next: string) => void }) {
-  return <div className="field"><label>{label}</label><input value={value} onChange={(event) => onChange(event.target.value)} required /></div>;
+function Field({ label, value, onChange, required = true }: { label: string; value: string; onChange: (next: string) => void; required?: boolean }) {
+  return <div className="field"><label>{label}</label><input value={value} onChange={(event) => onChange(event.target.value)} required={required} /></div>;
 }

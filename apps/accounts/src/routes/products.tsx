@@ -2,12 +2,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import {
   Search, Grid3x3, List as ListIcon, ShoppingCart, X,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchBuyerProducts, uniqueVendors, type BuyerProduct } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchBuyerProducts, uniqueVendors, type BuyerProduct } from '@/lib/portal';
 
 const QK = ['products'] as const;
 
@@ -25,7 +25,7 @@ function discountPct(product: BuyerProduct) {
 
 function ProductsView() {
   const { t } = useTranslation();
-  const { data: products = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchBuyerProducts });
+  const { data: products = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchBuyerProducts });
 
   const [search, setSearch] = useState('');
   const [vendor, setVendor] = useState('');
@@ -103,7 +103,9 @@ function ProductsView() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {isError ? (
+        <ErrorState title="Could not load catalog" error={error} retry={() => refetch()} />
+      ) : filtered.length === 0 ? (
         <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32, marginTop: 14 }}>
           {isLoading ? t('common.loading') : t('products.empty_state')}
         </div>
@@ -132,9 +134,9 @@ function ProductsView() {
                     </span>
                     <button
                       type="button"
-                      className="btn primary"
-                      disabled={!product.inStock}
-                      onClick={() => toast.success('Added to cart', { description: product.name })}
+                      className="btn"
+                      disabled
+                      title="Portal checkout is not enabled for catalog items yet"
                     >
                       <ShoppingCart size={12} /> {t('products.add_to_cart')}
                     </button>
@@ -188,9 +190,9 @@ function ProductsView() {
                     <td style={{ textAlign: 'right' }}>
                       <button
                         type="button"
-                        className="btn primary"
-                        disabled={!product.inStock}
-                        onClick={() => toast.success('Added to cart', { description: product.name })}
+                        className="btn"
+                        disabled
+                        title="Portal checkout is not enabled for catalog items yet"
                       >
                         <ShoppingCart size={12} /> {t('products.add_to_cart')}
                       </button>

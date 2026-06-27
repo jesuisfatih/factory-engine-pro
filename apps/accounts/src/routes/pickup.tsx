@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  QrCode, ChevronDown, ChevronUp, CheckCircle2, Circle, FileImage, ExternalLink,
+  ChevronDown, ChevronUp, CheckCircle2, Circle, FileImage, ExternalLink,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchPickups, type PickupOrder } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchPickups, type PickupOrder } from '@/lib/portal';
 
 const QK = ['pickup'] as const;
 
@@ -84,7 +85,7 @@ function PickupCard({ order, expanded, onToggle }: { order: PickupOrder; expande
 
 function PickupView() {
   const { t } = useTranslation();
-  const { data: orders = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchPickups });
+  const { data: orders = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchPickups });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const active = orders.filter((order) => order.status !== 'picked_up');
@@ -99,15 +100,7 @@ function PickupView() {
 
   return (
     <>
-      <PageHeader
-        titleI18nKey="pickup.title"
-        subtitleI18nKey="pickup.subtitle"
-        actions={(
-          <button type="button" className="btn primary">
-            <QrCode size={14} /> {t('pickup.qr_kiosk')}
-          </button>
-        )}
-      />
+      <PageHeader titleI18nKey="pickup.title" subtitleI18nKey="pickup.subtitle" />
 
       <div className="section" style={{ marginBottom: 14, padding: 14 }}>
         <h3 style={{ margin: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -116,7 +109,9 @@ function PickupView() {
         </h3>
       </div>
 
-      {active.length === 0 ? (
+      {isError ? (
+        <ErrorState title="Could not load pickup orders" error={error} retry={() => refetch()} />
+      ) : active.length === 0 ? (
         <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
           {isLoading ? t('common.loading') : t('pickup.empty_active')}
         </div>

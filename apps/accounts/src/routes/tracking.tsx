@@ -6,7 +6,8 @@ import {
   Search, ExternalLink, Truck, CheckCircle2, Circle, Package, MapPin,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchTrackingOrders, type TrackingOrder } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchTrackingOrders, type TrackingOrder } from '@/lib/portal';
 
 const QK = ['tracking'] as const;
 
@@ -20,7 +21,7 @@ const STATUS_TONE: Record<TrackingOrder['status'], string> = {
 
 function TrackingView() {
   const { t } = useTranslation();
-  const { data: orders = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchTrackingOrders });
+  const { data: orders = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchTrackingOrders });
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -70,7 +71,9 @@ function TrackingView() {
 
       <div className="tracking-shell">
         <aside className="tracking-list">
-          {filtered.length === 0 ? (
+          {isError ? (
+            <ErrorState title="Could not load tracking" error={error} retry={() => refetch()} />
+          ) : filtered.length === 0 ? (
             <div className="muted" style={{ padding: 16, textAlign: 'center' }}>
               {isLoading ? t('common.loading') : t('tracking.empty_state')}
             </div>

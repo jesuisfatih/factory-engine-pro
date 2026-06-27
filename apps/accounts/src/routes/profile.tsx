@@ -3,13 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Save, ShieldCheck, Bell, User, AlertCircle } from 'lucide-react';
+import { Save, ShieldCheck, User, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchProfile, saveProfile, type BuyerProfile } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchProfile, saveProfile, updateAccountPassword, type BuyerProfile } from '@/lib/portal';
 
 const QK = ['profile'] as const;
 
-type TabKey = 'profile' | 'security' | 'notifications';
+type TabKey = 'profile' | 'security';
 
 function fmtMoney(value: number) {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -18,7 +19,7 @@ function fmtMoney(value: number) {
 function ProfileView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const { data: profile, isLoading } = useQuery({ queryKey: QK, queryFn: fetchProfile });
+  const { data: profile, isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchProfile });
   const [tab, setTab] = useState<TabKey>('profile');
 
   const [form, setForm] = useState<BuyerProfile | null>(null);
@@ -32,6 +33,18 @@ function ProfileView() {
 
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
   const pwdMismatch = pwd.next.length > 0 && pwd.next !== pwd.confirm;
+  const passwordUpdate = useMutation({
+    mutationFn: () => updateAccountPassword({ currentPassword: pwd.current, newPassword: pwd.next }),
+    onSuccess: () => {
+      toast.success('Password updated');
+      setPwd({ current: '', next: '', confirm: '' });
+    },
+    onError: (error) => toast.error('Password update failed', { description: (error as Error).message }),
+  });
+
+  if (isError) {
+    return <ErrorState title="Could not load profile" error={error} retry={() => refetch()} />;
+  }
 
   if (isLoading || !form) {
     return <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('common.loading')}</div>;
@@ -71,7 +84,7 @@ function ProfileView() {
 
         <main className="profile-main">
           <div className="tabs" role="tablist">
-            {(['profile', 'security', 'notifications'] as TabKey[]).map((value) => (
+            {(['profile', 'security'] as TabKey[]).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -79,7 +92,7 @@ function ProfileView() {
                 className={`tab${tab === value ? ' active' : ''}`}
                 onClick={() => setTab(value)}
               >
-                {value === 'profile' ? <User size={11} /> : value === 'security' ? <ShieldCheck size={11} /> : <Bell size={11} />}
+                {value === 'profile' ? <User size={11} /> : <ShieldCheck size={11} />}
                 {t(`profile.tabs.${value}`)}
               </button>
             ))}
@@ -141,48 +154,10 @@ function ProfileView() {
                 <button
                   type="button"
                   className="save-btn"
-                  disabled={!pwd.current || !pwd.next || pwdMismatch}
-                  onClick={() => { toast.success('Password updated'); setPwd({ current: '', next: '', confirm: '' }); }}
+                  disabled={!pwd.current || !pwd.next || pwdMismatch || passwordUpdate.isPending}
+                  onClick={() => passwordUpdate.mutate()}
                 >
-                  <Save size={14} /> {t('profile.update_password')}
-                </button>
-              </div>
-            </section>
-          )}
-
-          {tab === 'notifications' && (
-            <section className="section" style={{ padding: 18 }}>
-              <h3 style={{ marginTop: 0 }}>{t('profile.notif_title')}</h3>
-              <p className="subtitle" style={{ marginTop: -4 }}>{t('profile.notif_subtitle')}</p>
-              {([
-                ['notifyOrderUpdates', 'profile.notif_order_updates'],
-                ['notifyQuoteAlerts', 'profile.notif_quote_alerts'],
-                ['notifyTeamActivity', 'profile.notif_team_activity'],
-                ['notifyPromotions', 'profile.notif_promotions'],
-                ['notifyWeeklyDigest', 'profile.notif_weekly_digest'],
-              ] as const).map(([key, labelKey]) => (
-                <label key={key} className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={(event) => setForm((current) => current && { ...current, [key]: event.target.checked })}
-                  />
-                  {t(labelKey)}
-                </label>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-                <button
-                  type="button"
-                  className="save-btn"
-                  onClick={() => save.mutate({
-                    notifyOrderUpdates: form.notifyOrderUpdates,
-                    notifyQuoteAlerts: form.notifyQuoteAlerts,
-                    notifyTeamActivity: form.notifyTeamActivity,
-                    notifyPromotions: form.notifyPromotions,
-                    notifyWeeklyDigest: form.notifyWeeklyDigest,
-                  })}
-                >
-                  <Save size={14} /> {t('profile.save_changes')}
+                  <Save size={14} /> {passwordUpdate.isPending ? 'Updating...' : t('profile.update_password')}
                 </button>
               </div>
             </section>

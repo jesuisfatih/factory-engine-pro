@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Download, ExternalLink, CreditCard } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchInvoices, type BuyerInvoice, type InvoiceStatus } from '@/lib/mock';
+import { ErrorState } from '@/components/QueryState';
+import { fetchInvoices, type BuyerInvoice, type InvoiceStatus } from '@/lib/portal';
 
 const QK = ['invoices'] as const;
 
@@ -21,7 +21,7 @@ function balance(invoice: BuyerInvoice) {
 
 function InvoicesView() {
   const { t } = useTranslation();
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchInvoices });
+  const { data: invoices = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchInvoices });
 
   const total = invoices.length;
   const outstanding = invoices.reduce((sum, invoice) => sum + balance(invoice), 0);
@@ -51,12 +51,13 @@ function InvoicesView() {
               <th>{t('invoices.columns.total')}</th>
               <th>{t('invoices.columns.paid')}</th>
               <th>{t('invoices.columns.balance')}</th>
-              <th />
             </tr>
           </thead>
           <tbody>
-            {invoices.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
+            {isError ? (
+              <tr><td colSpan={8}><ErrorState title="Could not load invoices" error={error} retry={() => refetch()} /></td></tr>
+            ) : invoices.length === 0 ? (
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
                 {isLoading ? t('common.loading') : t('invoices.empty_state')}
               </td></tr>
             ) : invoices.map((invoice) => {
@@ -79,21 +80,6 @@ function InvoicesView() {
                     {bal > 0
                       ? <strong style={{ color: invoice.status === 'overdue' ? 'var(--danger)' : 'var(--text)' }}>{fmtMoney(bal)}</strong>
                       : <span className="muted">—</span>}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: 4 }}>
-                      <button type="button" className="btn ghost" title={t('invoices.view_details')}>
-                        <ExternalLink size={12} />
-                      </button>
-                      {bal > 0 && (
-                        <button type="button" className="btn primary" style={{ padding: '4px 10px', fontSize: 11 }}>
-                          <CreditCard size={12} /> {t('invoices.pay')}
-                        </button>
-                      )}
-                      <button type="button" className="btn ghost" title={t('invoices.open_file')}>
-                        <Download size={12} />
-                      </button>
-                    </div>
                   </td>
                 </tr>
               );

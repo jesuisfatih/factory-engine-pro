@@ -1,5 +1,6 @@
 import type {
   AcceptInvitationInput,
+  AccountAddressInput,
   AiHealthResponse,
   AircallLinkUserInput,
   AircallNumbersResponse,
@@ -14,6 +15,7 @@ import type {
   CreateMemberInput,
   CreateMemberRoleInput,
   CreateB2BAccessRequestInput,
+  CreateAccountSupportTicketInput,
   CreatePricingRuleInput,
   CreateSegmentInput,
   CreateServiceRequestInput,
@@ -25,6 +27,8 @@ import type {
   ResolveReorderInput,
   ResetPasswordInput,
   TenantConfigInput,
+  UpdateAccountPasswordInput,
+  UpdateAccountProfileInput,
   UpdateSegmentInput,
   UpdateServiceRequestInput,
   UpdateMemberInput,
@@ -163,6 +167,70 @@ export class ApiClient {
 
   updateTenantConfig(input: TenantConfigInput) {
     return this.patch('/identity/tenant-config', input);
+  }
+
+  accountProfile() {
+    return this.get('/accounts/profile');
+  }
+
+  updateAccountProfile(input: UpdateAccountProfileInput) {
+    return this.patch('/accounts/profile', input);
+  }
+
+  updateAccountPassword(input: UpdateAccountPasswordInput) {
+    return this.post('/accounts/password', input);
+  }
+
+  accountAddresses() {
+    return this.get('/accounts/addresses');
+  }
+
+  saveAccountAddress(input: AccountAddressInput) {
+    return this.put(`/accounts/addresses/${encodeURIComponent(input.type)}`, input);
+  }
+
+  deleteAccountAddress(type: string) {
+    return this.delete(`/accounts/addresses/${encodeURIComponent(type)}`);
+  }
+
+  accountOrders() {
+    return this.get('/accounts/orders');
+  }
+
+  accountReorderTemplates() {
+    return this.get('/accounts/reorder-templates');
+  }
+
+  accountProducts() {
+    return this.get('/accounts/products');
+  }
+
+  accountTracking() {
+    return this.get('/accounts/tracking');
+  }
+
+  accountPickups() {
+    return this.get('/accounts/pickup');
+  }
+
+  accountInvoices() {
+    return this.get('/accounts/invoices');
+  }
+
+  accountDocuments() {
+    return this.get('/accounts/documents');
+  }
+
+  accountDocumentDownload(id: string) {
+    return this.requestBlob(`/accounts/documents/${encodeURIComponent(id)}/download`);
+  }
+
+  accountSupportTickets() {
+    return this.get('/accounts/support');
+  }
+
+  createAccountSupportTicket(input: CreateAccountSupportTicketInput) {
+    return this.post('/accounts/support', input);
   }
 
   orders(query = '') {

@@ -1,4 +1,5 @@
 export * from './auth.js';
+export * from './accounts.js';
 export * from './ai.js';
 export * from './aircall.js';
 export * from './commerce.js';

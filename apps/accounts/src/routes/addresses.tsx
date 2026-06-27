@@ -8,10 +8,11 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Dialog, DialogTitle, DialogClose } from '@/components/Dialog';
+import { ErrorState } from '@/components/QueryState';
 import {
   fetchAccountAddresses, saveAccountAddress, deleteAccountAddress,
   type AccountAddress, type AddressType,
-} from '@/lib/mock';
+} from '@/lib/portal';
 
 const QK = ['addresses'] as const;
 
@@ -191,7 +192,7 @@ function AddressModal({ open, draft, onClose, onSave }: {
 function AddressesView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const { data: addresses = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchAccountAddresses });
+  const { data: addresses = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchAccountAddresses });
 
   const [tab, setTab] = useState<'all' | AddressType>('all');
   const [editing, setEditing] = useState<AccountAddress | null>(null);
@@ -253,7 +254,9 @@ function AddressesView() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {isError ? (
+        <ErrorState title="Could not load addresses" error={error} retry={() => refetch()} />
+      ) : filtered.length === 0 ? (
         <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
           {isLoading ? t('common.loading') : t('addresses.empty_state')}
         </div>

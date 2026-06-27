@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AircallModule } from './modules/aircall/aircall.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
+import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
@@ -29,6 +30,7 @@ import { HealthController } from './health.controller.js';
     SharedModule,
     QueueModule,
     AiModule,
+    AccountsModule,
     AircallModule,
     IdentityModule,
     MailModule,

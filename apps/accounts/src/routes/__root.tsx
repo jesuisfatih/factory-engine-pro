@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 import { useMemo, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
+import { readSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/addresses/, key: 'nav.addresses' },
@@ -29,13 +30,23 @@ function RootLayout() {
   }, [pathname]);
 
   const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
+  const hasSession = Boolean(readSession()?.accessToken);
 
   if (isAuth) {
+    if (hasSession) {
+      window.location.assign('/');
+      return null;
+    }
     return (
       <div className="auth-shell">
         <Outlet />
       </div>
     );
+  }
+
+  if (!hasSession) {
+    window.location.assign('/login');
+    return null;
   }
 
   return (
