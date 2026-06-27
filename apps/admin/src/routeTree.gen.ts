@@ -33,6 +33,7 @@ import { Route as TasksMessagesRouteImport } from './routes/tasks/messages'
 import { Route as TasksEmailRouteImport } from './routes/tasks/email'
 import { Route as TasksCustomerRouteImport } from './routes/tasks/customer'
 import { Route as TasksCalendarRouteImport } from './routes/tasks/calendar'
+import { Route as SettingsWorkspaceRouteImport } from './routes/settings/workspace'
 import { Route as SettingsShopifyRouteImport } from './routes/settings/shopify'
 import { Route as SettingsAircallRouteImport } from './routes/settings/aircall'
 import { Route as SettingsAiRouteImport } from './routes/settings/ai'
@@ -171,6 +172,11 @@ const TasksCalendarRoute = TasksCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => TasksRoute,
 } as any)
+const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsShopifyRoute = SettingsShopifyRouteImport.update({
   id: '/shopify',
   path: '/shopify',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/shopify': typeof SettingsShopifyRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/tasks/customer': typeof TasksCustomerRoute
   '/tasks/email': typeof TasksEmailRoute
@@ -318,6 +325,7 @@ export interface FileRoutesByTo {
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/shopify': typeof SettingsShopifyRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/tasks/customer': typeof TasksCustomerRoute
   '/tasks/email': typeof TasksEmailRoute
@@ -361,6 +369,7 @@ export interface FileRoutesById {
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/shopify': typeof SettingsShopifyRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/tasks/customer': typeof TasksCustomerRoute
   '/tasks/email': typeof TasksEmailRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/settings/ai'
     | '/settings/aircall'
     | '/settings/shopify'
+    | '/settings/workspace'
     | '/tasks/calendar'
     | '/tasks/customer'
     | '/tasks/email'
@@ -448,6 +458,7 @@ export interface FileRouteTypes {
     | '/settings/ai'
     | '/settings/aircall'
     | '/settings/shopify'
+    | '/settings/workspace'
     | '/tasks/calendar'
     | '/tasks/customer'
     | '/tasks/email'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/settings/ai'
     | '/settings/aircall'
     | '/settings/shopify'
+    | '/settings/workspace'
     | '/tasks/calendar'
     | '/tasks/customer'
     | '/tasks/email'
@@ -704,6 +716,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksCalendarRouteImport
       parentRoute: typeof TasksRoute
     }
+    '/settings/workspace': {
+      id: '/settings/workspace'
+      path: '/workspace'
+      fullPath: '/settings/workspace'
+      preLoaderRoute: typeof SettingsWorkspaceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/shopify': {
       id: '/settings/shopify'
       path: '/shopify'
@@ -874,12 +893,14 @@ interface SettingsRouteChildren {
   SettingsAiRoute: typeof SettingsAiRouteWithChildren
   SettingsAircallRoute: typeof SettingsAircallRouteWithChildren
   SettingsShopifyRoute: typeof SettingsShopifyRoute
+  SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAiRoute: SettingsAiRouteWithChildren,
   SettingsAircallRoute: SettingsAircallRouteWithChildren,
   SettingsShopifyRoute: SettingsShopifyRoute,
+  SettingsWorkspaceRoute: SettingsWorkspaceRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(

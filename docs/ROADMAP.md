@@ -4,6 +4,22 @@ Bu doc sadece **şu an yapılacak transferleri** tarif eder. Hafta/saat tahmini,
 test planı, gelecek faz spekülasyonu **yoktur**. Bu listede olmayan bir
 modüle dokunma — gerekirse önce kullanıcıya sor.
 
+---
+
+## 0. Test hesapları (agent dolduracak)
+
+> Agent prod-ready aşamasında ilk admin hesabını + örnek customer hesabını
+> oluşturur ve buraya yazar. Kullanıcı bu bilgilerle giriş yapıp tüm
+> akışları manuel test eder.
+
+| Surface | Email | Password | Tenant | Rol |
+|---|---|---|---|---|
+| admin (5189) — owner | `<doldur>` | `<doldur>` | `dtfbank` | owner |
+| accounts (5187) — customer | `<doldur>` | `<doldur>` | `dtfbank` | b2b_admin |
+
+> Şifreler tek seferlik olarak bu doc'a yazılır + kullanıcı ilk login'de
+> değiştirir. Üretilen değerleri agent buraya iliştirir.
+
 > ⚠ **AGENT İÇİN ANA KURAL — KAPALI LİSTE**
 > Bu doc'ta 6. bölümde açıkça transfer edilecek olarak listelenmeyen
 > hiçbir şey yeni sisteme alınmaz. Eski sistem (`eagledtfprint/`) çok
@@ -25,11 +41,24 @@ modüle dokunma — gerekirse önce kullanıcıya sor.
 
 3 ayrı Vite uygulaması:
 
-| App | Port | Kullanıcı tipi |
-|---|---|---|
-| admin | 5189 | İç ekip yönetimi (owner / admin / agent) |
-| person | 5188 | Personel çalışma alanı (CallQueue + Messages + Calendar + …) |
-| accounts | 5187 | Müşteri self-service (B2B kullanıcısı) |
+| App | Lokal port | Prod subdomain (per-tenant) | Kullanıcı tipi |
+|---|---|---|---|
+| admin | 5189 | `app.<tenant>.com` | İç ekip yönetimi (owner / admin / agent) |
+| person | 5188 | `app.<tenant>.com/staff` _(varsayım — kullanıcı netleştirecek)_ | Personel çalışma alanı (CallQueue + Messages + Calendar + …) |
+| accounts | 5187 | `accounts.<tenant>.com` | Müşteri self-service (B2B kullanıcısı) |
+| backend API | 4100 | `api.<tenant>.com` | NestJS (3 app'in çağırdığı) |
+
+**Subdomain yapısı eski sistemden BİREBİR korunur:**
+- `app.dtfbank.com` → admin panel (dtfbank tenant'ı)
+- `app.eagledtfprint.com` → admin panel (eagledtfprint tenant'ı)
+- `accounts.dtfbank.com` → customer panel (dtfbank müşterileri)
+- `accounts.eagledtfprint.com` → customer panel (eagledtfprint müşterileri)
+- `api.dtfbank.com` → API (admin + accounts + person bu endpoint'i çağırır)
+- ...her 6 tenant için aynı pattern (`<tenant>` = `dtfbank` / `eagledtfprint` / `fastdtfsupply` / `fastdtftransfer` / `gangsheetbuilder` / `ssactivewear`).
+
+Tenant context request-time'da subdomain'den çözülür (`app.dtfbank.com` → `tenant_id = ten_dtfbank` → JWT'ye gömülür). Eski sistemin `factoryengine-<tenant>-app` container'larının her biri kendi domain ailesine bağlı (3.6).
+
+> Person app için subdomain belirsiz — eski sistemde person ayrı bir app değildi (sales sayfaları admin'in altındaydı). Yeni sistemde person ayrı app: ya `app.<tenant>.com/staff` path'i ya da `staff.<tenant>.com` subdomain'i olur. **Kullanıcı netleştirecek.**
 
 Backend (henüz kurulmadı): NestJS + Prisma + Postgres + Redis, multi-tenant
 (tek DB + `tenantId` field).
@@ -71,6 +100,7 @@ yetenekler **çalışır halde teslim edilir**:
 - Aircall çağrı ingest + transcript pull çalışır (sonrasında task'a dönüştüren TM ayrı çalışmada)
 - AI sync (Claude çağrı + budget + kill switch) çalışır (prompt registry hariç)
 - Tüm UI ekranları boş / dolu / hata durumlarında sağlam çalışır (5.2)
+- **Workspace/Brand ayarları** — UI'da "DTF Bank", "DB" gibi statik brand metinleri yok. Hepsi `TenantConfig.brand` / `TenantConfig.workspaceName` üstünden gelir. Admin sol-alttaki user-card'a yakın bir yerden (örn. `routes/settings/workspace.tsx`) brand adı / kısa kod / logo'yu düzenler; sidebar + topbar bu değerlerden okur. (Sidebar'ın `.workspace` bloğundaki "DB" badge ve "FactoryEngine" metni hard-coded — dinamikleşmeli.)
 
 ---
 
@@ -511,6 +541,52 @@ Yetki **role'a değil permission'a bağlıdır**. JWT payload'daki
 - `eagledtfprint/backend/src/team/` (permission registry + resolver mantığı)
 - `eagledtfprint/backend/src/accounts/` (customer account akışı)
 - `eagledtfprint/admin/app/sellerusers/`, `team/` (member UI akışı)
+
+#### Accounts auth ekranları — **eski sistemden BİREBİR transfer (zorunlu)**
+
+Aşağıdaki 3 sayfa eski sistemde detaylı tasarlanmış; yeni Vite + TanStack
+sürümüne **görsel + akış olarak birebir** port edilir. Sadeleştirme yok,
+"daha temiz yapalım" yok — eski paneldeki bütün öğeler (sol koyu hero
+paneli, brand badge, benefit kartları, pill etiketler, form alanları,
+footer copyright) korunur. Brand bilgisi (logo / isim / renk) `TenantConfig`
+üstünden dinamik gelir — "DTF BANK" gibi statik metin **yazılmaz**.
+
+| Sayfa | Eski yol | Yeni hedef | Eski satır |
+|---|---|---|---|
+| **Accounts login** ("Welcome back") | `eagledtfprint/accounts/app/login/page.tsx` | `apps/accounts/src/routes/login.tsx` (+ features/auth wrapper) | 402 |
+| **Request B2B Access** | `eagledtfprint/accounts/app/request-invitation/page.tsx` | `apps/accounts/src/routes/request-invitation.tsx` (+ features/auth wrapper) | 1170 |
+| **Customer register** (davet token ile) | `eagledtfprint/accounts/app/register/page.tsx` + `register/[token]/page.tsx` | `apps/accounts/src/routes/register.tsx` | 657 + token sayfası |
+
+**Login sayfasında korunacak öğeler (eski paneldeki tasarımdan):**
+- Sol koyu hero: brand badge ("D" gibi tek harf badge) + brand adı ("DTF BANK") + alt başlık ("Company Portal") + üst pill ("B2B ACCOUNT WORKSPACE") + büyük tagline ("Order and track every DTF job from one place.") + paragraf açıklama
+- Sol hero alt 3 feature kartı: ikon + başlık + açıklama (Wholesale pricing / Net terms / Team purchasing)
+- Sol hero alt 3 küçük pill: Secure checkout · Order tracking · Priority support
+- Sağ form: brand badge tekrar + "Welcome back" h1 + "Sign in to your `<brand>` account" + Email input (mail ikonu prefix) + Password input (kilit ikonu prefix + show/hide eye toggle) + "Forgot password?" link (sağ üstte) + Remember me checkbox + Sign In button (arrow icon) + "OR" divider + Create Account button (secondary) + Request B2B Access button (secondary) + footer "© `<year>` `<brand>`. All rights reserved."
+
+**Request B2B Access sayfasında korunacak öğeler:**
+- Sol mavi/koyu hero: büyük brand badge (tek harf) + "`<brand>` Partner Program" h1 + paragraf ("Join our exclusive B2B network...") + 5 benefit kartı (ikon + başlık + açıklama): Wholesale Pricing (Up to 40% off retail prices) · Net 30 Terms (Flexible payment options) · Team Management (Add unlimited team members) · Priority Support (Dedicated account manager) · Free Shipping (On orders over $500)
+- Sağ form: "Request B2B Access" h1 + "Tell us about your business to get started" + info banner ("If you already have a storefront account, use the same email address here.") + Form alanları:
+  - First Name * | Last Name * (yan yana)
+  - Email Address * | Phone Number (yan yana)
+  - Company Name * | Legal Name * (yan yana)
+  - Website | Industry select (yan yana)
+  - Estimated Monthly Volume select (tek satır)
+  - Tax Exemption Certificate (file upload — PDF/JPEG/PNG/WebP max 10MB)
+  - Password * | Confirm Password * (yan yana, kilit ikonu + show/hide eye)
+  - Additional Information (textarea, opsiyonel)
+  - Submit Application button (büyük primary)
+  - "Already have an account? **Sign in**" link
+
+**Transfer disiplini:**
+- Eski sistemin `FormFieldConfig` + `BenefitConfig` tip yapılarını taşı; renderer'ı Vite + React Hook Form / TanStack Form'a uyarla — **dinamik field renderer kalmalı** (Next.js'in `useSearchParams`'i TanStack Router'ın `useSearch`'üne çevrilir).
+- Brand bilgisi `useBranding()` ekvivalenti olarak `useTenantBranding()` hook'u: `TenantConfig.brand` / `workspaceName` / `brandBadge` / `accentColor`'u TanStack Query ile çeker (1. bölüm hedef sistem listesi ile uyumlu).
+- "DTF BANK" / "company.com" / "$500" gibi metinler **i18n key + brand interpolation** olarak gelir (5.4 i18n disiplini). Hardcoded yasak.
+- Form submit hedefleri:
+  - Login → `POST /api/v1/auth/customer/login` (6.1)
+  - Request B2B Access → `POST /api/v1/b2b-access-requests` (6.3; file upload için multipart/form-data, Tax Exemption Certificate field'ı dahil)
+  - Register (token ile) → `POST /api/v1/auth/invitations/accept` (6.1)
+- 3 UI durumu (5.2): loading skeleton (form fetching) / dolu (default) / hata (request_id + retry CTA).
+- Permission check yok (public sayfalar) — login token yokken erişilebilir; token varsa otomatik `/dashboard`'a redirect.
 
 ### 6.2 Commerce
 

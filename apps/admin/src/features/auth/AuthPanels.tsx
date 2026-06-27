@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 import { adminApi, adminTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/auth/AuthShell';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 export function AdminLoginPanel() {
   const [email, setEmail] = useState('');
@@ -131,11 +132,14 @@ export function AdminResetPasswordPanel() {
 }
 
 function Brand({ muted }: { muted: string }) {
+  const brandQuery = useWorkspaceBrand();
+  const name = workspaceName(brandQuery.data?.workspaceName);
+  const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
   return (
     <div className="auth-brand">
-      <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>FE</div>
+      {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: 40, height: 40 }} /> : <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>{badge}</div>}
       <div>
-        <div className="name">FactoryEngine</div>
+        <div className="name">{name}</div>
         <div className="muted">{muted}</div>
       </div>
     </div>

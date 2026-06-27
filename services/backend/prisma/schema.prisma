@@ -75,6 +75,9 @@ model Tenant {
 model TenantConfig {
   id                         String   @id
   tenantId                   String   @unique @map("tenant_id")
+  workspaceName              String?  @map("workspace_name")
+  brandBadge                 String?  @map("brand_badge")
+  brandLogo                  String?  @map("brand_logo")
   shopifyDomain              String?  @map("shopify_domain")
   shopifyAdminTokenEncrypted String?  @map("shopify_admin_token_encrypted")
   shopifyApiKeyEncrypted     String?  @map("shopify_api_key_encrypted")

@@ -11,6 +11,7 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/dashboard/, key: 'nav.dashboard' },
   { test: /^\/team\/users\/add/, key: 'team.users.wizard.title' },
   { test: /^\/team/, key: 'nav.team' },
+  { test: /^\/settings\/workspace/, key: 'nav.workspace_settings' },
   { test: /^\/settings/, key: 'nav.integrations' },
   { test: /^\/segments/, key: 'nav.segments' },
   { test: /^\/tasks\/messages/, key: 'messages.title' },
@@ -26,7 +27,7 @@ function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const titleKey = useMemo(() => {
     for (const item of TITLE_BY_PATH) if (item.test.test(pathname)) return item.key;
-    return 'app.brand';
+    return 'nav.dashboard';
   }, [pathname]);
 
   const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));

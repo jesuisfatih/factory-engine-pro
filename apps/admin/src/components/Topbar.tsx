@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { PanelLeft, Bell, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { adminRoleLabel, useCurrentPrincipal } from '@/lib/current-principal';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface Props {
   titleI18nKey: string;
@@ -12,6 +13,9 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
   const { t } = useTranslation();
   const { theme, toggle } = useTheme();
   const principal = useCurrentPrincipal().data;
+  const brandQuery = useWorkspaceBrand();
+  const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const roleLabel = adminRoleLabel(principal);
 
   return (
@@ -27,6 +31,10 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
         placeholder={t('common.search_placeholder')}
       />
       <div className="right">
+        <div className="topbar-workspace" title={brandQuery.isError ? t('workspace.brand_unavailable') : brandName}>
+          {brandQuery.data?.brandLogo ? <img src={brandQuery.data.brandLogo} alt="" /> : <span>{brandBadge}</span>}
+          <strong>{brandName}</strong>
+        </div>
         <span className="role-badge">{roleLabel}</span>
         <button id="btn-notifications" type="button" className="icon-btn" title={t('common.notifications')}>
           <Bell size={16} />

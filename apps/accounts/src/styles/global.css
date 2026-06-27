@@ -72,6 +72,7 @@ a { color: inherit; text-decoration: none; }
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
 .workspace { padding: 14px 14px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
 .ws-badge { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 11px; letter-spacing: .5px; flex-shrink: 0; }
+.ws-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); background: var(--surface-2); flex-shrink: 0; }
 .ws-meta { min-width: 0; }
 .ws-meta .name { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
 .ws-meta .role { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
@@ -110,6 +111,11 @@ a { color: inherit; text-decoration: none; }
 .topbar .search:focus { border-color: var(--accent); }
 .topbar .role-badge { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; border: 1px solid var(--border); }
 .topbar .right { display: flex; align-items: center; gap: 6px; }
+.topbar-workspace { display: inline-flex; align-items: center; gap: 7px; max-width: 220px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 9px 3px 4px; color: var(--text); }
+.topbar-workspace span, .topbar-workspace img { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
+.topbar-workspace span { display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .2px; }
+.topbar-workspace img { object-fit: cover; border: 1px solid var(--border); background: var(--surface); }
+.topbar-workspace strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; }
 
 /* ─── Content / Page ─────────────────────────────────────── */
 .content { padding: 18px 20px; overflow-y: auto; min-height: 0; }
@@ -1593,6 +1599,7 @@ a { color: inherit; text-decoration: none; }
 }
 .invite-brand { display: flex; align-items: center; gap: 10px; }
 .invite-brand .ws-badge { background: rgba(255,255,255,.18); color: #fff; }
+.invite-brand .ws-logo { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.12); }
 .invite-brand .name { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .3px; }
 .invite-brand .muted { color: rgba(255,255,255,.7); font-size: 11px; }
 .invite-hero-body .eyebrow {

@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Mail, ArrowRight } from 'lucide-react';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, isEmail } from '../../components/auth/AuthShell';
+import { WorkspaceBrand } from '../../components/WorkspaceBrand';
 import { apiErrorMessage, personApi, personTokenStore } from '../../lib/api';
 
 interface Props {
@@ -32,10 +33,7 @@ export function LoginView({ onSuccess, onForgot }: Props) {
 
   return (
     <div className="auth-card">
-      <div className="auth-brand">
-        <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14, background: '#DC2626' }}>DB</div>
-        <div><div className="name">DTF BANK</div><div className="muted">Customer service workspace</div></div>
-      </div>
+      <WorkspaceBrand />
       <h2>Welcome back</h2>
       <p className="muted">Sign in with your member account to pick up your shift.</p>
       <AuthForm onSubmit={onSubmit}>

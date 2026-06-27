@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { accountsTokenStore } from '@/lib/api';
 import { customerRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface NavLeaf {
   to: string;
@@ -63,6 +64,9 @@ export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
   const principal = useCurrentPrincipal().data;
+  const brandQuery = useWorkspaceBrand();
+  const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const roleLabel = customerRoleLabel(principal);
   const logout = () => {
     accountsTokenStore.clear();
@@ -72,9 +76,9 @@ export function Sidebar({ collapsed }: Props) {
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
       <div className="workspace">
-        <div className="ws-badge">DB</div>
+        {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" /> : <div className="ws-badge">{brandBadge}</div>}
         <div className="ws-meta">
-          <div className="name">{t('app.brand')}</div>
+          <div className="name">{brandName}</div>
           <div className="role">{t('app.workspace')}</div>
         </div>
       </div>

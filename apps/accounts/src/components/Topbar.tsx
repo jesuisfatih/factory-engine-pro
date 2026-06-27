@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { PanelLeft, Bell } from 'lucide-react';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface Props {
   titleI18nKey: string;
@@ -8,6 +9,9 @@ interface Props {
 
 export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
   const { t } = useTranslation();
+  const brandQuery = useWorkspaceBrand();
+  const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   return (
     <header className="topbar" data-i18n-section="topbar">
       <button id="btn-toggle-sidebar" type="button" className="toggle" onClick={onToggleSidebar}>
@@ -21,6 +25,10 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
         data-i18n-key="common.search_placeholder"
       />
       <div className="right">
+        <div className="topbar-workspace" title={brandName}>
+          {brandQuery.data?.brandLogo ? <img src={brandQuery.data.brandLogo} alt="" /> : <span>{brandBadge}</span>}
+          <strong>{brandName}</strong>
+        </div>
         <button id="btn-notifications" type="button" className="icon-btn" title={t('common.notifications')}>
           <Bell size={16} />
         </button>

@@ -1,0 +1,35 @@
+sync:
+  defaults:
+    mode: one-way-replica
+    ignore:
+      vcs: true
+      paths:
+        - node_modules
+        - "**/node_modules"
+        - dist
+        - "**/dist"
+        - build
+        - "**/build"
+        - .turbo
+        - "**/.turbo"
+        - .local
+        - uploads
+        - "**/uploads"
+        - .env
+        - ".env.*"
+        - docker-compose.yml
+        - docker-compose.*.yml
+        - depot.json
+        - build-meta.json
+        - "*.log"
+        - "*.dump"
+        - "*.sqlite"
+        - .claude
+        - .agent
+        - .gemini
+        - .shopify
+        - .funclib
+
+  factory-engine-pro-dtfbank:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank"

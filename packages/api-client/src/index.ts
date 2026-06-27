@@ -142,8 +142,12 @@ export class ApiClient {
     return this.get('/identity/tenant-config');
   }
 
+  workspaceBrand() {
+    return this.get<{ workspaceName: string | null; brandBadge: string | null; brandLogo: string | null }>('/identity/workspace-brand', false);
+  }
+
   updateTenantConfig(input: TenantConfigInput) {
-    return this.put('/identity/tenant-config', input);
+    return this.patch('/identity/tenant-config', input);
   }
 
   orders(query = '') {

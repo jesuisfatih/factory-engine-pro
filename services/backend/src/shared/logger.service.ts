@@ -5,7 +5,7 @@ type LogLevel = 'log' | 'warn' | 'error' | 'debug';
 
 @Injectable()
 export class AppLogger {
-  private readonly logger = new Logger('FactoryEngine');
+  private readonly logger = new Logger('AppLogger');
 
   constructor(private readonly tenantContext: TenantContextService) {}
 

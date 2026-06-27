@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { adminTokenStore } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface NavLeaf {
   to: string;
@@ -57,6 +58,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_system',
     children: [
+      { to: '/settings/workspace', matchPrefix: '/settings/workspace', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read' },
       { to: '/settings/aircall', matchPrefix: '/settings/aircall', i18nKey: 'nav.aircall_settings', id: 'nav-aircall', icon: Cable },
       { to: '/settings/ai', matchPrefix: '/settings/ai', i18nKey: 'nav.ai_settings_legacy', id: 'nav-ai-old', icon: Sparkles },
       { to: '/settings/shopify', matchPrefix: '/settings/shopify', i18nKey: 'nav.shopify_settings', id: 'nav-shopify', icon: Store },
@@ -70,6 +72,9 @@ export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
   const principal = useCurrentPrincipal().data;
+  const brandQuery = useWorkspaceBrand();
+  const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const permissions = new Set(principal?.permissions ?? []);
   const roleLabel = adminRoleLabel(principal);
   const logout = () => {
@@ -80,10 +85,10 @@ export function Sidebar({ collapsed }: Props) {
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
       <div className="workspace">
-        <div className="ws-badge">DB</div>
+        {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" /> : <div className="ws-badge">{brandBadge}</div>}
         <div className="ws-meta">
-          <div className="name">{t('app.brand')}</div>
-          <div className="role">{t('app.workspace')}</div>
+          <div className="name">{brandName}</div>
+          <div className="role">{brandQuery.isError ? t('workspace.brand_unavailable') : t('workspace.back_panel')}</div>
         </div>
       </div>
 
@@ -116,6 +121,10 @@ export function Sidebar({ collapsed }: Props) {
         <div className="user-meta">
           <div className="name">{principal?.email ?? 'No active session'}</div>
           <div className="role">{roleLabel}</div>
+          <Link id="link-workspace-settings" to="/settings/workspace" className="user-settings-link">
+            <SettingsIcon size={11} />
+            <span>{t('workspace.settings_link')}</span>
+          </Link>
         </div>
         <button id="btn-logout" data-i18n-key="common.logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
           <LogOut size={14} />

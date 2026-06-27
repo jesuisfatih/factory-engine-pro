@@ -84,6 +84,11 @@ button { font-family: inherit; }
   display: grid; place-items: center; font-weight: 700; font-size: 11px; letter-spacing: .5px;
   flex-shrink: 0;
 }
+.ws-logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  object-fit: cover; border: 1px solid var(--border); background: var(--surface-2);
+  flex-shrink: 0;
+}
 .ws-meta { min-width: 0; }
 .ws-meta .name { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
 .ws-meta .role { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
@@ -152,6 +157,11 @@ button { font-family: inherit; }
 }
 .topbar .search:focus { border-color: var(--accent); }
 .topbar .right { display: flex; align-items: center; gap: 6px; }
+.topbar-workspace { display: inline-flex; align-items: center; gap: 7px; max-width: 220px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 9px 3px 4px; color: var(--text); }
+.topbar-workspace span, .topbar-workspace img { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
+.topbar-workspace span { display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .2px; }
+.topbar-workspace img { object-fit: cover; border: 1px solid var(--border); background: var(--surface); }
+.topbar-workspace strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; }
 
 /* ─── Generic content ────────────────────────────────────── */
 .content { padding: 16px 18px; overflow-y: auto; min-height: 0; }

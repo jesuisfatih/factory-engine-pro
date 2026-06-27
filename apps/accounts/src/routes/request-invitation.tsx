@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, ArrowLeft, Tag, Truck, ShieldCheck, MapPin, Upload } from 'lucide-react';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface FormShape {
   firstName: string;
@@ -46,13 +47,7 @@ function RequestInvitationView() {
   if (submitted) {
     return (
       <div className="auth-card" style={{ maxWidth: 480 }}>
-        <div className="auth-brand">
-          <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>DB</div>
-          <div>
-            <div className="name">DTF BANK</div>
-            <div className="muted">Buyer portal</div>
-          </div>
-        </div>
+        <BrandBlock />
         <div className="auth-icon-circle success">
           <CheckCircle2 size={32} />
         </div>
@@ -68,13 +63,7 @@ function RequestInvitationView() {
   return (
     <div className="invite-shell">
       <aside className="invite-hero">
-        <div className="invite-brand">
-          <div className="ws-badge" style={{ width: 44, height: 44, fontSize: 14 }}>DB</div>
-          <div>
-            <div className="name">DTF BANK</div>
-            <div className="muted">Buyer portal</div>
-          </div>
-        </div>
+        <BrandBlock hero />
 
         <div className="invite-hero-body">
           <div className="eyebrow">{t('auth.invite.hero_eyebrow')}</div>
@@ -232,3 +221,22 @@ function RequestInvitationView() {
 }
 
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
+
+function BrandBlock({ hero = false }: { hero?: boolean }) {
+  const brandQuery = useWorkspaceBrand();
+  const name = workspaceName(brandQuery.data?.workspaceName);
+  const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
+  const className = hero ? 'invite-brand' : 'auth-brand';
+  const size = hero ? 44 : 40;
+  return (
+    <div className={className}>
+      {brandQuery.data?.brandLogo
+        ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: size, height: size }} />
+        : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
+      <div>
+        <div className="name">{name}</div>
+        <div className="muted">Buyer portal</div>
+      </div>
+    </div>
+  );
+}

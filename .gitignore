@@ -6,6 +6,7 @@ dist/
 !.env.example
 coverage/
 *.log
+mutagen.yml.lock
 .local/
 apps/*/.tanstack/tmp/
 apps/*/dist/

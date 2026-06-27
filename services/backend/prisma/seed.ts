@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { pbkdf2Sync, randomBytes } from 'node:crypto';
+import { createCipheriv, createHash, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 const prisma = new PrismaClient();
 
@@ -8,9 +8,14 @@ async function main() {
   const suffix = tenantId.replace(/[^a-zA-Z0-9]/g, '_');
   await prisma.tenant.upsert({
     where: { id: tenantId },
-    create: { id: tenantId, name: 'Factory Engine Test Tenant', slug: suffix.toLowerCase() },
+    create: {
+      id: tenantId,
+      name: process.env.BRAND_NAME ?? 'Factory Engine Test Tenant',
+      slug: suffix.toLowerCase().replace(/^ten_/, '') || 'dtfbank',
+    },
     update: {},
   });
+  await seedTenantConfig(tenantId, suffix);
 
   const customerId = `cust_${suffix}_northstar`;
   await prisma.customer.upsert({
@@ -356,6 +361,77 @@ function hashSeedPassword(password: string) {
   const salt = randomBytes(24).toString('base64url');
   const derived = pbkdf2Sync(password, salt, 210_000, 64, 'sha512');
   return `pbkdf2$sha512$210000$${salt}$${derived.toString('base64url')}`;
+}
+
+async function seedTenantConfig(tenantId: string, suffix: string) {
+  const workspaceName = firstEnv('WORKSPACE_NAME', 'BRAND_NAME');
+  const config = {
+    workspaceName,
+    brandBadge: firstEnv('BRAND_BADGE') ?? initialsFromName(workspaceName),
+    brandLogo: firstEnv('BRAND_LOGO_URL', 'BRAND_LOGO'),
+    shopifyDomain: firstEnv('SHOPIFY_STORE_DOMAIN', 'SHOPIFY_DOMAIN'),
+    shopifyAdminTokenEncrypted: encryptEnv('SHOPIFY_ACCESS_TOKEN', 'SHOPIFY_ADMIN_TOKEN', 'SHOPIFY_ADMIN_ACCESS_TOKEN'),
+    shopifyApiKeyEncrypted: encryptEnv('SHOPIFY_API_KEY'),
+    shopifyApiSecretEncrypted: encryptEnv('SHOPIFY_API_SECRET'),
+    webhookHmacKeyEncrypted: encryptEnv('SHOPIFY_WEBHOOK_SECRET', 'SHOPIFY_WEBHOOK_HMAC_KEY', 'SHOPIFY_API_SECRET'),
+    aircallApiIdEncrypted: encryptEnv('AIRCALL_API_ID'),
+    aircallApiTokenEncrypted: encryptEnv('AIRCALL_API_TOKEN'),
+    aircallWebhookSecretEncrypted: encryptEnv('AIRCALL_WEBHOOK_SECRET'),
+    anthropicApiKeyEncrypted: encryptEnv('ANTHROPIC_API_KEY', 'CLAUDE_API_KEY'),
+    resendApiKeyEncrypted: encryptEnv('RESEND_API_KEY'),
+  };
+
+  if (!Object.values(config).some(Boolean)) return;
+
+  await prisma.tenantConfig.upsert({
+    where: { tenantId },
+    create: {
+      id: `tcfg_${suffix}`,
+      tenantId,
+      ...config,
+    },
+    update: config,
+  });
+}
+
+function firstEnv(...keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function initialsFromName(name: string | null) {
+  if (!name) return null;
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+}
+
+function encryptEnv(...keys: string[]) {
+  const value = firstEnv(...keys);
+  return value ? encrypt(value) : null;
+}
+
+function encrypt(value: string) {
+  const rawKey = firstEnv('CONFIG_ENCRYPTION_KEY', 'SETTINGS_ENCRYPTION_KEY', 'TOKEN_ENCRYPTION_KEY', 'JWT_SECRET');
+  if (!rawKey) {
+    throw new Error('CONFIG_ENCRYPTION_KEY, SETTINGS_ENCRYPTION_KEY, TOKEN_ENCRYPTION_KEY, or JWT_SECRET is required to seed tenant secrets');
+  }
+  const key = /^[a-f0-9]{64}$/i.test(rawKey)
+    ? Buffer.from(rawKey, 'hex')
+    : Buffer.from(rawKey, 'base64').length === 32
+      ? Buffer.from(rawKey, 'base64')
+      : createHash('sha256').update(rawKey).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `v1:${iv.toString('base64')}:${tag.toString('base64')}:${encrypted.toString('base64')}`;
 }
 
 main()

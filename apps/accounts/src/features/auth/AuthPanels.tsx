@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 export function AccountsLoginPanel() {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export function AccountsLoginPanel() {
   return (
     <div className="invite-shell">
       <aside className="invite-hero">
-        <div className="invite-brand"><div className="ws-badge" style={{ width: 44, height: 44, fontSize: 14 }}>DB</div><div><div className="name">DTF BANK</div><div className="muted">Buyer portal</div></div></div>
+        <Brand hero />
         <div className="invite-hero-body"><div className="eyebrow">B2B portal</div><h1>Welcome back to your buying workspace.</h1><p>Orders, sub-users, spending caps and B2B pricing live behind this sign-in.</p></div>
       </aside>
       <main className="invite-form" style={{ maxWidth: 560, margin: '0 auto', alignSelf: 'center' }}>
@@ -166,8 +167,23 @@ export function AccountsResetPasswordPanel() {
   );
 }
 
-function Brand() {
-  return <div className="auth-brand"><div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>DB</div><div><div className="name">DTF BANK</div><div className="muted">Buyer portal</div></div></div>;
+function Brand({ hero = false }: { hero?: boolean }) {
+  const brandQuery = useWorkspaceBrand();
+  const name = workspaceName(brandQuery.data?.workspaceName);
+  const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
+  const className = hero ? 'invite-brand' : 'auth-brand';
+  const size = hero ? 44 : 40;
+  return (
+    <div className={className}>
+      {brandQuery.data?.brandLogo
+        ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: size, height: size }} />
+        : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
+      <div>
+        <div className="name">{name}</div>
+        <div className="muted">Buyer portal</div>
+      </div>
+    </div>
+  );
 }
 
 function EmailField({ id, value, onChange }: { id: string; value: string; onChange: (next: string) => void }) {

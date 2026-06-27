@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand": "FactoryEngine",
+    "brand": "Workspace",
     "workspace": "Back Panel"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "team_members": "Members",
     "team_roles": "Roles",
     "team_commissions": "Commissions",
+    "workspace_settings": "Workspace",
     "aircall_settings": "Aircall",
     "ai_settings_legacy": "AI keys",
     "shopify_settings": "Shopify"
@@ -75,6 +76,11 @@
     "section_recent_tasks": "Recent tasks",
     "section_recent_calls": "Recent calls",
     "section_shopify_sales": "Shopify sales — last 14 days"
+  },
+  "workspace": {
+    "back_panel": "Back panel",
+    "brand_unavailable": "Workspace brand unavailable",
+    "settings_link": "Workspace settings"
   },
   "team": {
     "title": "Team",
@@ -434,6 +440,7 @@
     "title": "Settings",
     "subtitle": "API keys, integrations, and provider configuration",
     "tabs": {
+      "workspace": "Workspace",
       "ai": "AI",
       "aircall": "Aircall",
       "shopify": "Shopify"

@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand": "DTF BANK",
+    "brand": "Workspace",
     "workspace": "Buyer portal"
   },
   "user": {
@@ -344,7 +344,7 @@
     },
     "invite": {
       "hero_eyebrow": "B2B onboarding",
-      "hero_title": "Apply for a DTF Bank account",
+      "hero_title": "Apply for a B2B account",
       "hero_subtitle": "We unlock B2B pricing, dedicated reps, and priority production for verified buyers.",
       "hero_benefits": [
         "Volume discounts up to 12% off catalog",

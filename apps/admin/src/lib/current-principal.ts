@@ -21,7 +21,7 @@ export function principalName(principal: Principal | undefined) {
 }
 
 export function principalInitials(principal: Principal | undefined) {
-  const source = principal ? principalName(principal) : 'FE';
+  const source = principal ? principalName(principal) : 'Workspace';
   return source
     .split(' ')
     .map((part) => part[0])

@@ -20,6 +20,7 @@ import {
   type UpdateMemberRoleInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
+import { Public } from '../../shared/public.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { IdentityService } from './identity.service.js';
 
@@ -103,6 +104,12 @@ export class IdentityController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   tenantConfig() {
     return this.identity.getTenantConfig();
+  }
+
+  @Public()
+  @Get('workspace-brand')
+  workspaceBrand() {
+    return this.identity.getWorkspaceBrand();
   }
 
   @Patch('tenant-config')

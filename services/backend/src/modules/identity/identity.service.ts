@@ -220,6 +220,9 @@ export class IdentityService {
     const config = await this.prisma.db.tenantConfig.findFirst({});
     if (!config) {
       return {
+        workspaceName: null,
+        brandBadge: null,
+        brandLogo: null,
         shopifyDomain: null,
         hasShopifyAdminToken: false,
         hasShopifyApiKey: false,
@@ -233,6 +236,9 @@ export class IdentityService {
       };
     }
     return {
+      workspaceName: config.workspaceName,
+      brandBadge: config.brandBadge,
+      brandLogo: config.brandLogo,
       shopifyDomain: config.shopifyDomain,
       hasShopifyAdminToken: Boolean(config.shopifyAdminTokenEncrypted),
       hasShopifyApiKey: Boolean(config.shopifyApiKeyEncrypted),
@@ -246,11 +252,29 @@ export class IdentityService {
     };
   }
 
+  async getWorkspaceBrand() {
+    const config = await this.prisma.db.tenantConfig.findFirst({
+      select: {
+        workspaceName: true,
+        brandBadge: true,
+        brandLogo: true,
+      },
+    });
+    return {
+      workspaceName: config?.workspaceName ?? null,
+      brandBadge: config?.brandBadge ?? null,
+      brandLogo: config?.brandLogo ?? null,
+    };
+  }
+
   async updateTenantConfig(input: TenantConfigInput) {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new BadRequestException('Tenant context is required');
     const existing = await this.prisma.db.tenantConfig.findFirst({});
     const data = {
+      workspaceName: input.workspaceName,
+      brandBadge: input.brandBadge,
+      brandLogo: input.brandLogo,
       shopifyDomain: input.shopifyDomain,
       shopifyAdminTokenEncrypted: this.crypto.encrypt(input.shopifyAdminToken),
       shopifyApiKeyEncrypted: this.crypto.encrypt(input.shopifyApiKey),

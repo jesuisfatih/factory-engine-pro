@@ -64,6 +64,9 @@ export const createSubUserSchema = z.object({
 export type CreateSubUserInput = z.infer<typeof createSubUserSchema>;
 
 export const tenantConfigSchema = z.object({
+  workspaceName: z.string().trim().min(1).optional(),
+  brandBadge: z.string().trim().min(1).max(6).optional(),
+  brandLogo: z.string().trim().url().optional(),
   shopifyDomain: z.string().trim().optional(),
   shopifyAdminToken: z.string().optional(),
   shopifyApiKey: z.string().optional(),

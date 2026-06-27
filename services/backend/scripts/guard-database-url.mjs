@@ -13,6 +13,7 @@ try {
 
 const host = parsed.hostname.toLowerCase();
 const database = parsed.pathname.replace(/^\//, '');
+const schema = parsed.searchParams.get('schema') ?? 'public';
 const legacyDatabases = new Set([
   'eagle_print_db',
   'eagle_dtfbank_db',
@@ -27,7 +28,10 @@ if (host === '127.0.0.1' || host === 'localhost') {
 }
 
 if (legacyDatabases.has(database)) {
-  fail(`Refusing to run Factory Engine Pro migrations against legacy database "${database}".`);
+  if (schema !== 'factory_engine_pro') {
+    fail(`Refusing legacy database "${database}" without schema=factory_engine_pro. This prevents touching legacy public tables.`);
+  }
+  process.exit(0);
 }
 
 if (!database.startsWith('factory_engine_pro')) {
