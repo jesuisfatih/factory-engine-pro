@@ -12,9 +12,9 @@ interface Props {
 
 const SOURCE_LABEL: Record<TaskSource, string> = {
   manual: 'Manual',
-  ai_transcript: 'AI · Transcript',
-  ai_segment: 'AI · Segment',
-  ai_stale: 'AI · Stale follow-up',
+  ai_transcript: 'AI - Transcript',
+  ai_segment: 'AI - Segment',
+  ai_stale: 'AI - Stale follow-up',
 };
 
 function riskTier(priority: number) {
@@ -117,7 +117,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <span className={`brief-source brief-source-${card.source}`}>
                 {card.source === 'manual' ? null : <Sparkles size={10} />} {SOURCE_LABEL[card.source]}
               </span>
-              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} · P{card.priority}</span>
+              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{card.priority}</span>
               <span className="chip" style={{ background: card.segmentColor }}>{card.segment}</span>
             </div>
             <h2 id="task-brief-title" style={{ marginTop: 6 }}>{card.title}</h2>
@@ -189,7 +189,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   <span className="lbl">Manual task</span>
                 </div>
                 <div className="brief-val brief-val-muted">
-                  Created by an operator. No AI brief — add dial notes as the call progresses to feed
+                  Created by an operator. No AI brief - add dial notes as the call progresses to feed
                   the next cycle of intelligence.
                 </div>
               </div>
@@ -202,7 +202,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <textarea
                 className="brief-edit"
                 rows={3}
-                placeholder="Notes during the call (saved to customer history)…"
+                placeholder="Notes during the call (saved to customer history)..."
               />
             </div>
           </div>
@@ -239,14 +239,14 @@ export function TaskBriefModal({ card, onClose }: Props) {
                 <ShoppingBag size={11} />
                 <div>
                   <div className="lbl">Orders</div>
-                  <div className="val">{card.ordersCount ?? '—'}</div>
+                  <div className="val">{card.ordersCount ?? 'N/A'}</div>
                 </div>
               </div>
               <div className="brief-stat">
                 <DollarSign size={11} />
                 <div>
                   <div className="lbl">LTV</div>
-                  <div className="val">{card.totalSpent ? `$${card.totalSpent.toLocaleString()}` : '—'}</div>
+                  <div className="val">{card.totalSpent ? `$${card.totalSpent.toLocaleString()}` : 'N/A'}</div>
                 </div>
               </div>
             </div>
@@ -256,7 +256,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                 <div className="brief-card-head"><Sparkles size={12} /> AI metadata</div>
                 <div className="brief-card-row">
                   <span className="lbl">Prompt</span>
-                  <span className="val">{card.aiBrief.promptKey} · {card.aiBrief.promptVersion}</span>
+                  <span className="val">{card.aiBrief.promptKey} - {card.aiBrief.promptVersion}</span>
                 </div>
                 <div className="brief-card-row">
                   <span className="lbl">Model</span>

@@ -13,7 +13,7 @@ export function EmailView() {
         <h2>E-mail threads</h2>
         <div className="sub">
           <Mail size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
-          {emails.length} threads · {unread} unread · syncs from connected mailbox
+          {emails.length} threads - {unread} unread - syncs from connected mailbox
         </div>
       </div>
 

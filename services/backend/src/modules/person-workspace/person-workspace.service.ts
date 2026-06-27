@@ -541,7 +541,7 @@ export class PersonWorkspaceService {
     return {
       id: row.id,
       title: customerName,
-      summary: `${ticket} · ${titleize(row.priority)} · ${titleize(row.status)} · ${relative(row.updatedAt)}`,
+      summary: `${ticket} - ${titleize(row.priority)} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
       segment: String(metadata.category ?? row.surface ?? 'Support'),
       segmentColor: colorFor(row.priority),
       priority: PRIORITY_SCORE[row.priority] ?? 5,

@@ -19,7 +19,7 @@ export function NotificationsView() {
     <>
       <div className="page-head">
         <h2>Notifications</h2>
-        <div className="sub">{unread} unread · mentions, assignments, SLA, pins and system events</div>
+        <div className="sub">{unread} unread - mentions, assignments, SLA, pins and system events</div>
       </div>
 
       <QueryState

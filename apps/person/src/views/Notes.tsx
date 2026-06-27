@@ -119,17 +119,17 @@ export function NotesView() {
               <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Note title" />
               {selected.linkedCustomer && (
                 <div className="linked">
-                  Linked to <strong>{selected.linkedCustomer}</strong> · queue item <strong>{selected.linkedQueueId}</strong>
+                  Linked to <strong>{selected.linkedCustomer}</strong> - queue item <strong>{selected.linkedQueueId}</strong>
                 </div>
               )}
-              <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body…" />
+              <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." />
               <div className="actions">
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  {selected.kind === 'queue' ? 'Team-visible · syncs to customer history' : 'Personal · only you can see this'}
+                  {selected.kind === 'queue' ? 'Team-visible - syncs to customer history' : 'Personal - only you can see this'}
                 </span>
                 <button type="button" className="save" onClick={onSave} disabled={save.isPending}>
                   <Save size={12} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
-                  {save.isPending ? 'Saving…' : 'Save'}
+                  {save.isPending ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </>

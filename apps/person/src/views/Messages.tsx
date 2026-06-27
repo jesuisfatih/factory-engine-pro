@@ -61,7 +61,7 @@ export function MessagesView() {
     <>
       <div className="page-head">
         <h2>Messages</h2>
-        <div className="sub">Internal chat with teammates · see who is online right now</div>
+        <div className="sub">Internal chat with teammates - see who is online right now</div>
       </div>
 
       <QueryState
@@ -75,11 +75,11 @@ export function MessagesView() {
         <aside className="msg-list">
           <div className="msg-list-head">
             <h3>Directory</h3>
-            <span className="count">{onlineCount} online · {people.length} total</span>
+            <span className="count">{onlineCount} online - {people.length} total</span>
           </div>
           <div className="msg-search">
             <Search size={13} className="icon" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search teammates…" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search teammates..." />
           </div>
           <div className="msg-people">
             {filtered.map((person) => (
@@ -115,7 +115,7 @@ export function MessagesView() {
                 </div>
                 <div>
                   <div className="name">{selected.name}</div>
-                  <div className="meta">{presenceLabel(selected.status)} · {selected.lastSeen}</div>
+                  <div className="meta">{presenceLabel(selected.status)} - {selected.lastSeen}</div>
                 </div>
               </header>
 
@@ -123,7 +123,7 @@ export function MessagesView() {
                 onSubmit={(event) => { event.preventDefault(); onSend(); }}>
                 <textarea
                   value={text} onChange={(event) => setText(event.target.value)}
-                  placeholder="Type a message… (Enter to send, Shift+Enter newline)"
+                  placeholder="Type a message... (Enter to send, Shift+Enter newline)"
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault();

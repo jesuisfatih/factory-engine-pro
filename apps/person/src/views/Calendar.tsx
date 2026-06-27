@@ -9,9 +9,9 @@ import { QueryState } from '../components/QueryState';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
   manual: 'Manual',
-  ai_transcript: 'AI · Transcript',
-  ai_segment: 'AI · Segment',
-  ai_stale: 'AI · Stale follow-up',
+  ai_transcript: 'AI - Transcript',
+  ai_segment: 'AI - Segment',
+  ai_stale: 'AI - Stale follow-up',
 };
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -47,7 +47,7 @@ export function CalendarView() {
     const start = new Date(weekStart);
     const end = new Date(weekStart + 6 * 86_400_000);
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)} ${end.getFullYear()}`;
+    return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)} ${end.getFullYear()}`;
   }, [weekStart]);
 
   const aiCount = events.filter((event) => event.source !== 'manual').length;
@@ -57,7 +57,7 @@ export function CalendarView() {
     <>
       <div className="page-head">
         <h2>Calendar</h2>
-        <div className="sub">Your week · AI-tasked calls show their brief on click</div>
+        <div className="sub">Your week - AI-tasked calls show their brief on click</div>
       </div>
 
       <div className="cal-shell">
@@ -135,7 +135,7 @@ export function CalendarView() {
                   </span>
                   <span style={{ background: 'var(--surface-3)', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, color: 'var(--text)' }}>{selected.kind}</span>
                   <span><Clock size={10} style={{ verticalAlign: 'text-top', marginRight: 3 }} />
-                    {selected.dayIso} · {selected.startHour.toString().padStart(2, '0')}:00 · {selected.durationMinutes} min
+                    {selected.dayIso} - {selected.startHour.toString().padStart(2, '0')}:00 - {selected.durationMinutes} min
                   </span>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export function CalendarView() {
             <div className="modal-body">
               <div>
                 <section className="event-summary">
-                  <h4>{selected.customer ?? '—'}</h4>
+                  <h4>{selected.customer ?? 'N/A'}</h4>
                   <div className="meta">{selected.customerEmail}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                     {selected.customerPhone && (
@@ -163,7 +163,7 @@ export function CalendarView() {
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Notes during the call (saved to customer history)…"
+                    placeholder="Notes during the call (saved to customer history)..."
                     style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 12, resize: 'none', fontFamily: 'inherit' }} />
                 </div>
               </div>

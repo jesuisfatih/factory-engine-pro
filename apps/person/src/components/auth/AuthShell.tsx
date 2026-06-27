@@ -71,8 +71,8 @@ function computeStrength(value: string): { score: number; tier: 'weak' | 'fair' 
   if (/\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
   score = Math.min(4, score);
-  if (score <= 1) return { score, tier: 'weak', label: 'Weak — needs 8+ chars + mix' };
-  if (score === 2) return { score, tier: 'fair', label: 'Fair — add a number or symbol' };
+  if (score <= 1) return { score, tier: 'weak', label: 'Weak - needs 8+ chars + mix' };
+  if (score === 2) return { score, tier: 'fair', label: 'Fair - add a number or symbol' };
   if (score === 3) return { score, tier: 'good', label: 'Good' };
   return { score, tier: 'strong', label: 'Strong' };
 }

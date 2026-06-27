@@ -18,7 +18,7 @@ export function Topbar({ title, onToggleSidebar }: Props) {
         <Icon name="sidebar" size={16} />
       </button>
       <h1>{title}</h1>
-      <input className="search" placeholder="Search customer, order no, phone…" />
+      <input className="search" placeholder="Search customer, order no, phone..." />
       <div className="right">
         <div className="topbar-workspace" title={brandName}>
           {brandQuery.data?.brandLogo ? <img src={brandQuery.data.brandLogo} alt="" /> : <span>{brandBadge}</span>}
