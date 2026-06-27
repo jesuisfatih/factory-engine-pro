@@ -1384,6 +1384,15 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   `API key is invalid`.
 - dtfbank `.env` Aircall fields are empty:
   `AIRCALL_API_ID`, `AIRCALL_API_TOKEN`, `AIRCALL_WEBHOOK_TOKEN`.
+- Extended source audit:
+  - Local old repo `eagledtfprint` only contains Resend env values in
+    `.env.eagledtfprint` and `.env.fastdtftransfer`; both provider probes
+    return `403`.
+  - Remote `/opt/apps/custom/factoryengine` has 3 unique Resend keys across
+    old dtfbank/eagledtfprint/fastdtftransfer env files; all provider probes
+    return `403`.
+  - Remote and local old sources do not contain a populated Aircall API
+    ID/token for dtfbank.
 - Result: Flow 1 internal UI/backend/RBAC chain is now live and evidence-backed,
   including custom permission review. **Flow 1 still cannot be marked
   prod-ready until valid Resend and Aircall tenant credentials are supplied or
