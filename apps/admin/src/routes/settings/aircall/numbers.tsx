@@ -1,23 +1,18 @@
+import type { ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState } from 'react';
-import { Phone, Hash, Globe2, Search } from 'lucide-react';
-import { fetchAircallNumbers } from '@/lib/mock';
+import { AlertTriangle, Globe2, Hash, Phone, RefreshCw } from 'lucide-react';
+import { apiErrorMessage } from '@/lib/api';
+import { aircallTenantConfigQueryKey, fetchAircallTenantConfig, hasAircallCredentials } from '@/features/integrations/aircallTenantConfig';
 
 function NumbersView() {
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const { data: numbers = [] } = useQuery({ queryKey: ['aircall', 'numbers'], queryFn: fetchAircallNumbers });
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return numbers;
-    return numbers.filter((row) => `${row.name} ${row.digits} ${row.country}`.toLowerCase().includes(q));
-  }, [numbers, search]);
-
-  const ivrCount = numbers.filter((row) => row.type === 'IVR').length;
-  const countries = new Set(numbers.map((row) => row.country)).size;
+  const config = useQuery({
+    queryKey: aircallTenantConfigQueryKey,
+    queryFn: fetchAircallTenantConfig,
+  });
+  const ready = hasAircallCredentials(config.data);
 
   return (
     <>
@@ -25,66 +20,72 @@ function NumbersView() {
         <div className="card" id="num-total">
           <div>
             <div className="lbl" data-i18n-key="aircall_hub.numbers_tab.total_numbers">{t('aircall_hub.numbers_tab.total_numbers')}</div>
-            <div className="v">{numbers.length}</div>
+            <div className="v">0</div>
           </div>
           <Phone size={20} color="var(--text-faint)" />
         </div>
         <div className="card" id="num-ivr">
           <div>
             <div className="lbl" data-i18n-key="aircall_hub.numbers_tab.ivr_numbers">{t('aircall_hub.numbers_tab.ivr_numbers')}</div>
-            <div className="v">{ivrCount}</div>
+            <div className="v">0</div>
           </div>
           <Hash size={20} color="var(--text-faint)" />
         </div>
         <div className="card" id="num-countries">
           <div>
             <div className="lbl" data-i18n-key="aircall_hub.numbers_tab.countries">{t('aircall_hub.numbers_tab.countries')}</div>
-            <div className="v">{countries}</div>
+            <div className="v">0</div>
           </div>
           <Globe2 size={20} color="var(--text-faint)" />
         </div>
       </div>
 
-      <div className="config-card" style={{ padding: 0 }}>
-        <div style={{ padding: 14, borderBottom: '1px solid var(--border)' }}>
+      <section className="config-card" id="aircall-numbers-status">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
             <h3 data-i18n-key="aircall_hub.numbers_tab.numbers_title">{t('aircall_hub.numbers_tab.numbers_title')}</h3>
             <div className="sub" data-i18n-key="aircall_hub.numbers_tab.numbers_sub">{t('aircall_hub.numbers_tab.numbers_sub')}</div>
           </div>
-          <div style={{ position: 'relative', marginTop: 12 }}>
-            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)' }} />
-            <input id="aircall-numbers-search"
-              value={search} onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('aircall_hub.numbers_tab.search')}
-              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px 8px 32px', color: 'var(--text)', fontSize: 12, outline: 'none' }} />
-          </div>
+          <button id="btn-aircall-numbers-refresh" type="button" className="btn ghost" onClick={() => config.refetch()} disabled={config.isFetching}>
+            <RefreshCw size={13} /> {t('common.refresh')}
+          </button>
         </div>
-        <table className="data-table" id="aircall-numbers-table">
-          <thead>
-            <tr>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_name">{t('aircall_hub.numbers_tab.col_name')}</th>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_digits">{t('aircall_hub.numbers_tab.col_digits')}</th>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_country">{t('aircall_hub.numbers_tab.col_country')}</th>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_type">{t('aircall_hub.numbers_tab.col_type')}</th>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_tenant_slug">{t('aircall_hub.numbers_tab.col_tenant_slug')}</th>
-              <th data-i18n-key="aircall_hub.numbers_tab.col_last_synced">{t('aircall_hub.numbers_tab.col_last_synced')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((row) => (
-              <tr key={row.id} id={`ac-num-${row.id}`}>
-                <td className="name">{row.name}</td>
-                <td className="muted">{row.digits}</td>
-                <td className="muted">{row.country}</td>
-                <td className="muted">{row.type}</td>
-                <td className="muted">{row.tenantSlug}</td>
-                <td className="muted">{row.lastSyncedAt}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+        {config.isLoading && <StateBlock title={t('common.loading')} body={t('aircall_hub.numbers_tab.loading_body')} />}
+        {config.isError && (
+          <StateBlock
+            title={t('common.error')}
+            body={apiErrorMessage(config.error)}
+            action={<button type="button" className="btn" onClick={() => config.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+          />
+        )}
+        {config.isSuccess && !ready && (
+          <StateBlock
+            title={t('aircall_hub.numbers_tab.credentials_required_title')}
+            body={t('aircall_hub.numbers_tab.credentials_required_body')}
+            icon={<AlertTriangle size={18} color="var(--warn)" />}
+            action={<a className="btn primary" href="/settings/aircall/connection">{t('aircall_hub.numbers_tab.credentials_required_cta')}</a>}
+          />
+        )}
+        {config.isSuccess && ready && (
+          <StateBlock
+            title={t('aircall_hub.numbers_tab.unavailable_title')}
+            body={t('aircall_hub.numbers_tab.unavailable_body')}
+          />
+        )}
+      </section>
     </>
+  );
+}
+
+function StateBlock({ title, body, action, icon }: { title: string; body: string; action?: ReactNode; icon?: ReactNode }) {
+  return (
+    <div className="pricing-list-empty">
+      {icon && <div style={{ marginBottom: 10 }}>{icon}</div>}
+      <div className="title">{title}</div>
+      <div className="note">{body}</div>
+      {action && <div style={{ marginTop: 14 }}>{action}</div>}
+    </div>
   );
 }
 

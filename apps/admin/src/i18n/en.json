@@ -622,7 +622,13 @@
         "col_country": "Country",
         "col_type": "Type",
         "col_tenant_slug": "Tenant slug",
-        "col_last_synced": "Last synced"
+        "col_last_synced": "Last synced",
+        "loading_body": "Loading Aircall credential status from TenantConfig.",
+        "credentials_required_title": "Aircall credentials required",
+        "credentials_required_body": "Numbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.",
+        "credentials_required_cta": "Open connection settings",
+        "unavailable_title": "Number sync is not connected yet",
+        "unavailable_body": "Credentials are saved, but the number sync endpoint is not available in this release. No synthetic Aircall numbers are shown."
       },
       "webhooks_tab": {
         "title": "Webhook status",
@@ -635,12 +641,26 @@
         "last_event": "LAST EVENT",
         "failure_count": "FAILURE COUNT",
         "last_failure": "LAST FAILURE",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "loading_body": "Loading Aircall credential status from TenantConfig.",
+        "api_credentials": "API credentials",
+        "webhook_secret": "Webhook secret",
+        "saved": "Saved",
+        "missing": "Missing",
+        "pending_registration": "Pending registration",
+        "credentials_required_body": "Webhook registration is inactive because this tenant is missing Aircall credentials.",
+        "pending_body": "Credentials are saved, but webhook registration and delivery metrics are not connected in this release."
       },
       "sync_logs_tab": {
         "title": "Aircall sync logs",
         "sub": "Latest health counts from the call ingestion pipeline.",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "loading_body": "Loading Aircall credential status from TenantConfig.",
+        "credentials_required_title": "Aircall credentials required",
+        "credentials_required_body": "Sync logs cannot be loaded until this tenant has Aircall API credentials.",
+        "credentials_required_cta": "Open connection settings",
+        "empty_title": "No live sync log endpoint",
+        "empty_body": "Credentials are saved, but Aircall sync log persistence is not connected in this release. No mock JSON is shown."
       }
     },
     "shopify": {
@@ -1322,7 +1342,13 @@
       "col_country": "Country",
       "col_type": "Type",
       "col_tenant_slug": "Tenant slug",
-      "col_last_synced": "Last synced"
+      "col_last_synced": "Last synced",
+      "loading_body": "Loading Aircall credential status from TenantConfig.",
+      "credentials_required_title": "Aircall credentials required",
+      "credentials_required_body": "Numbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.",
+      "credentials_required_cta": "Open connection settings",
+      "unavailable_title": "Number sync is not connected yet",
+      "unavailable_body": "Credentials are saved, but the number sync endpoint is not available in this release. No synthetic Aircall numbers are shown."
     },
     "webhooks_tab": {
       "title": "Webhook status",
@@ -1335,12 +1361,26 @@
       "last_event": "LAST EVENT",
       "failure_count": "FAILURE COUNT",
       "last_failure": "LAST FAILURE",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "loading_body": "Loading Aircall credential status from TenantConfig.",
+      "api_credentials": "API credentials",
+      "webhook_secret": "Webhook secret",
+      "saved": "Saved",
+      "missing": "Missing",
+      "pending_registration": "Pending registration",
+      "credentials_required_body": "Webhook registration is inactive because this tenant is missing Aircall credentials.",
+      "pending_body": "Credentials are saved, but webhook registration and delivery metrics are not connected in this release."
     },
     "sync_logs_tab": {
       "title": "Aircall sync logs",
       "sub": "Latest health counts from the call ingestion pipeline.",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "loading_body": "Loading Aircall credential status from TenantConfig.",
+      "credentials_required_title": "Aircall credentials required",
+      "credentials_required_body": "Sync logs cannot be loaded until this tenant has Aircall API credentials.",
+      "credentials_required_cta": "Open connection settings",
+      "empty_title": "No live sync log endpoint",
+      "empty_body": "Credentials are saved, but Aircall sync log persistence is not connected in this release. No mock JSON is shown."
     }
   }
 }
