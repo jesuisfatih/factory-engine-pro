@@ -1401,6 +1401,61 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 
 ---
 
+### 2026-06-27 - Aircall connection TenantConfig live proof (dtfbank)
+
+**What changed**
+- Commit `e0f7c47`: `/settings/aircall/connection` no longer imports
+  `@/lib/mock` or shows local-only webhook/backfill state.
+- The page now reads `GET /api/v1/identity/tenant-config` and renders real
+  encrypted credential presence flags:
+  `hasAircallApiId`, `hasAircallApiToken`, `hasAircallWebhookSecret`.
+- Credential save uses the existing real
+  `PATCH /api/v1/identity/tenant-config` path; blank fields keep existing
+  encrypted values. No fake Aircall credentials were written.
+- Fake tenant routing/backfill form state was removed from the page. Test ping
+  and backfill actions stay disabled until valid Aircall credentials exist.
+
+**Deploy scope**
+- Deployed to the remote path mounted only by `factoryengine-dtfbank-app`:
+  `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank`.
+- Preserved `.env`, `uploads`, and `node_modules`; restarted only
+  `factoryengine-dtfbank-app`.
+- Gangsheet/upload/other non-factoryengine containers were not touched.
+- Runtime build log: contracts, integrations, api-client, backend, admin,
+  person, accounts builds passed; Prisma `No pending migrations to apply`;
+  PM2 `factory-engine-pro-api/admin/person/accounts` online; Nest
+  `Nest application successfully started`.
+- Public smoke after build:
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+  - `GET https://app.dtfbank.com/login` -> `200`
+  - `GET https://accounts.dtfbank.com/login` -> `200`
+- `/app/.build-sha` inside `factoryengine-dtfbank-app`:
+  `e0f7c47faaa04e001427d504d42c17ef9656992f`.
+
+**Live UI/API evidence**
+- Browser UI URL: `https://app.dtfbank.com/settings/aircall/connection`.
+- Owner login: `POST /api/v1/auth/member/login` -> `201`.
+- Tenant config: `GET /api/v1/identity/tenant-config` -> `200`, with:
+  - `hasAircallApiId=false`
+  - `hasAircallApiToken=false`
+  - `hasAircallWebhookSecret=false`
+  - Shopify/Anthropic/Resend presence flags still read from TenantConfig.
+- UI screenshot: `docs/evidence/aircall-connection-tenantconfig-live-20260627.png`.
+- API/UI summary: `docs/evidence/aircall-connection-tenantconfig-live-20260627.json`.
+- UI assertions from live run:
+  - `Credential Status` visible.
+  - Missing warning visible.
+  - Three Aircall credential fields show `Missing`.
+  - `Save credentials`, `Test ping`, and `Start backfill` are disabled without
+    input/valid credentials.
+- Result: Aircall connection page is no longer mock-backed. It truthfully
+  exposes the remaining blocker: dtfbank has no saved Aircall API ID/token/
+  webhook secret, so Aircall user sync and call ingest cannot become prod-ready
+  until valid tenant credentials are supplied.
+→
+
+---
+
 ### 2026-06-27 — Kontrol turu (commit `36fe67b4` sonrası, doc-only)
 
 > **Kullanıcı dtfbank container'ında manuel test yaparken iki kritik

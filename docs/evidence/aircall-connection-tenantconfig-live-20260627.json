@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-06-27T17:36:57.879Z",
+  "url": "https://app.dtfbank.com/settings/aircall/connection",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\aircall-connection-tenantconfig-live-20260627.png",
+  "loginStatus": 201,
+  "tenantConfigStatus": 200,
+  "tenantConfig": {
+    "workspaceName": "DTF Bank",
+    "brandBadge": "DB",
+    "brandLogo": null,
+    "shopifyDomain": "dtf-bank.myshopify.com",
+    "hasShopifyAdminToken": true,
+    "hasShopifyApiKey": true,
+    "hasShopifyApiSecret": true,
+    "hasWebhookHmacKey": true,
+    "hasAircallApiId": false,
+    "hasAircallApiToken": false,
+    "hasAircallWebhookSecret": false,
+    "hasAnthropicApiKey": true,
+    "hasResendApiKey": true
+  },
+  "visible": {
+    "credentialStatus": true,
+    "missingWarning": true,
+    "runtimeActions": true
+  },
+  "controls": {
+    "saveDisabled": true,
+    "testPingDisabled": true,
+    "backfillDisabled": true
+  },
+  "finalUrl": "https://app.dtfbank.com/settings/aircall/connection",
+  "missingCount": 3
+}
