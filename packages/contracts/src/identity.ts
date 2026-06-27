@@ -56,7 +56,7 @@ export const createSubUserSchema = z.object({
   firstName: z.string().trim().min(1),
   lastName: z.string().trim().min(1),
   phone: z.string().trim().optional(),
-  roleIds: z.array(z.string()).min(1),
+  roleIds: z.array(z.string()).default([]),
   password: passwordSchema.optional(),
   sendInvite: z.boolean().default(false),
   spendingLimitCents: z.number().int().min(0).optional(),

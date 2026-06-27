@@ -40,7 +40,7 @@ export const customerRegisterSchema = z.object({
   password: passwordSchema,
   firstName: z.string().trim().min(1),
   lastName: z.string().trim().min(1),
-  phone: z.string().trim().min(3),
+  phone: z.string().trim().min(3).optional(),
   companyName: z.string().trim().min(1),
   taxId: z.string().trim().optional(),
   billingAddress: z.record(z.string(), z.unknown()).optional(),
