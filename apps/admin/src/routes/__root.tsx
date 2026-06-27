@@ -8,6 +8,7 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/orders/, key: 'nav.orders' },
   { test: /^\/customers/, key: 'nav.customers' },
   { test: /^\/pricing/, key: 'nav.pricing' },
+  { test: /^\/system-mail/, key: 'nav.system_mail' },
   { test: /^\/dashboard/, key: 'nav.dashboard' },
   { test: /^\/team\/users\/add/, key: 'team.users.wizard.title' },
   { test: /^\/team/, key: 'nav.team' },

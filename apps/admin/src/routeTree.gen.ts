@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as SystemMailRouteImport } from './routes/system-mail'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RulesRouteImport } from './routes/rules'
@@ -60,6 +61,11 @@ const TeamRoute = TeamRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SystemMailRoute = SystemMailRouteImport.update({
+  id: '/system-mail',
+  path: '/system-mail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/support': typeof SupportRouteWithChildren
+  '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
@@ -320,6 +327,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/support': typeof SupportRouteWithChildren
+  '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/support'
+    | '/system-mail'
     | '/tasks'
     | '/team'
     | '/settings/ai'
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/rules'
     | '/settings'
+    | '/system-mail'
     | '/tasks'
     | '/team'
     | '/settings/ai'
@@ -496,6 +507,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/support'
+    | '/system-mail'
     | '/tasks'
     | '/team'
     | '/settings/ai'
@@ -541,6 +553,7 @@ export interface RootRouteChildren {
   RulesRoute: typeof RulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SupportRoute: typeof SupportRouteWithChildren
+  SystemMailRoute: typeof SystemMailRoute
   TasksRoute: typeof TasksRouteWithChildren
   TeamRoute: typeof TeamRouteWithChildren
   SegmentsIndexRoute: typeof SegmentsIndexRoute
@@ -560,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/system-mail': {
+      id: '/system-mail'
+      path: '/system-mail'
+      fullPath: '/system-mail'
+      preLoaderRoute: typeof SystemMailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -977,6 +997,7 @@ const rootRouteChildren: RootRouteChildren = {
   RulesRoute: RulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SupportRoute: SupportRouteWithChildren,
+  SystemMailRoute: SystemMailRoute,
   TasksRoute: TasksRouteWithChildren,
   TeamRoute: TeamRouteWithChildren,
   SegmentsIndexRoute: SegmentsIndexRoute,

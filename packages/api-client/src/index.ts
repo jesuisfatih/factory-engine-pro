@@ -32,6 +32,7 @@ import type {
   CloseServiceRequestInput,
   RejectB2BAccessInput,
   PreviewSegmentInput,
+  SendTestMailInput,
 } from '@factory-engine-pro/contracts';
 
 export interface TokenStore {
@@ -344,6 +345,18 @@ export class ApiClient {
 
   b2bAccessCertificate(id: string) {
     return this.requestBlob(`/b2b-access/${id}/certificate`);
+  }
+
+  mailDeliveries(query = '') {
+    return this.get(`/mail/deliveries${query}`);
+  }
+
+  mailDelivery(id: string) {
+    return this.get(`/mail/deliveries/${id}`);
+  }
+
+  sendTestMail(input: SendTestMailInput) {
+    return this.post('/mail/test', input);
   }
 
   private get<T>(path: string, auth = true) {

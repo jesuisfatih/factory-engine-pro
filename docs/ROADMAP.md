@@ -945,3 +945,31 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 - Ek Resend doğrulaması (secret değeri basmadan): `factoryengine-dtfbank-app`, `factoryengine-dtfprint-app`, `factoryengine-fastdtftransfer-app` Resend `/domains` probe → `403 "This API key is suspended"`; `factoryengine-eagledtfsupply-app`, `factoryengine-fastdtfsupply-app`, `factoryengine-dtfprintdepot-app` içinde `RESEND_API_KEY` yok.
 - Sonuç: backend invite + accept + login akışı çalışıyor; **gerçek mail gönderimi canlı Resend key suspended olduğu için tamamlanmadı**. Geçerli Resend key verilmeden Akış 1 prod-ready kapanmaz.
 →
+
+---
+
+### 2026-06-27 — System Mail admin UI canlı smoke
+
+**Deploy kapsamı**
+- Kod deploy: sadece `factoryengine-dtfbank-app` recreate edildi; gangsheet/upload/diğer app container'larına dokunulmadı.
+- Caddy düzeltmesi: sadece `api.dtfbank.com` bloğunda CORS preflight header seti güncellendi ve actual response tarafındaki duplicate CORS header kaldırıldı. Diğer Caddy site bloklarına dokunulmadı.
+
+**Container/runtime kanıtı**
+- Remote build: `@factory-engine-pro/api-client`, `backend`, `admin`, `person`, `accounts` build geçti.
+- Prisma: `eagle_dtfbank_db`, schema `factory_engine_pro`, `No pending migrations to apply`.
+- Nest log: `MailController {/api/v1/mail}` altında `GET /mail/deliveries`, `GET /mail/deliveries/:id`, `POST /mail/test` route'ları map edildi.
+- PM2 log: `factory-engine-pro-api`, `factory-engine-pro-admin`, `factory-engine-pro-person`, `factory-engine-pro-accounts` online.
+
+**CORS/UI smoke**
+- `OPTIONS https://api.dtfbank.com/api/v1/auth/member/login` (`Origin: https://app.dtfbank.com`, `Access-Control-Request-Headers: content-type,x-tenant-id,authorization`) → `204`, `Access-Control-Allow-Headers` içinde `X-Tenant-Id`.
+- `GET https://api.dtfbank.com/api/v1/health` (`Origin: https://app.dtfbank.com`) → `200`, tek `Access-Control-Allow-Origin: https://app.dtfbank.com`.
+- Browser UI login: `https://app.dtfbank.com/login` → owner hesabıyla login → `POST /api/v1/auth/member/login` `201` → `/dashboard` redirect.
+- Browser UI route: `https://app.dtfbank.com/system-mail` → `200`, sidebar'da `TRANSACTIONAL MAIL > System mail` görünüyor.
+- UI screenshot: `docs/evidence/system-mail-live-20260627.png` (`System mail`, tablo var, `rowCount=2`, `failedRows=2`).
+
+**Mail center API smoke**
+- `GET /api/v1/mail/deliveries?limit=3` → `200`.
+- `POST /api/v1/mail/test` → `201`, `deliveryId=mail_azs8372udi5os3pesgw9hvl8`, ilk durum `queued`.
+- 3 sn sonra `GET /api/v1/mail/deliveries/mail_azs8372udi5os3pesgw9hvl8` → `status=failed`, `error="API key is invalid"`.
+- Sonuç: System Mail UI/API gerçek backend'e bağlı ve canlıda çalışıyor; gerçek gönderim yine canlı Resend key geçersiz/suspended olduğu için tamamlanmıyor. Geçerli Resend key gelmeden mail akışı prod-ready kapanmaz.
+→

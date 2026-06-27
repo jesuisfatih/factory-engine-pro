@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
   ShoppingCart, UserSquare2, Workflow, Sparkles, Cable, KeyRound, Store, FileCheck2,
+  Mail,
 } from 'lucide-react';
 import { adminTokenStore } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
@@ -53,6 +54,12 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
       { to: '/team/users', matchPrefix: '/team/users', i18nKey: 'nav.team_members', id: 'nav-team-users', icon: Users },
       { to: '/team/roles', matchPrefix: '/team/roles', i18nKey: 'nav.team_roles', id: 'nav-team-roles', icon: KeyRound },
       { to: '/team/commissions', matchPrefix: '/team/commissions', i18nKey: 'nav.team_commissions', id: 'nav-team-commissions', icon: DollarSign },
+    ],
+  },
+  {
+    groupKey: 'nav.group_transactional_mail',
+    children: [
+      { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: 'settings.read' },
     ],
   },
   {
