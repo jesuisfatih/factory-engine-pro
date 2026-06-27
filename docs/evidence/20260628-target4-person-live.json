@@ -1,0 +1,188 @@
+﻿{
+    "generatedAt":  "2026-06-27T23:43:10.5522231Z",
+    "target":  "ROADMAP 9 Hedef 4 - Person workspace API live smoke",
+    "liveBuildSha":  "46e9919b2c800bcbe9a23372a9ac6c655f3d707f",
+    "tenantId":  "ten_dtfbank",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "loginPrincipal":  {
+                           "type":  "member",
+                           "email":  "owner.prodtest+20260627184047@dtfbank.com",
+                           "permissionsCount":  24
+                       },
+    "checks":  [
+                   {
+                       "path":  "/person/workspace/summary",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  null,
+                       "sampleId":  null
+                   },
+                   {
+                       "path":  "/person/workspace/queue",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  6,
+                       "sampleId":  "sr_ten_dtfbank_welcome"
+                   },
+                   {
+                       "path":  "/person/workspace/customers",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  120,
+                       "sampleId":  "cust_n3ygxqmt2cit40ci24jn3q0b"
+                   },
+                   {
+                       "path":  "/person/workspace/calendar",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  26,
+                       "sampleId":  "sr-sr_ten_dtfbank_welcome"
+                   },
+                   {
+                       "path":  "/person/workspace/messages/teammates",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  5,
+                       "sampleId":  "tmbr_emx64m3u1orn46wdtrghrxjl"
+                   },
+                   {
+                       "path":  "/person/workspace/notes",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  4,
+                       "sampleId":  "sr_zttu2kioixoz76iy36usq4r2"
+                   },
+                   {
+                       "path":  "/person/workspace/emails",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  14,
+                       "sampleId":  "mail_pck0lj8uciuh18ijn9ebjl7r"
+                   },
+                   {
+                       "path":  "/person/workspace/announcements",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  11,
+                       "sampleId":  "aircall-webhook-awcfg_38ba4c193499b7c99c2450b7"
+                   },
+                   {
+                       "path":  "/person/workspace/notifications",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  10,
+                       "sampleId":  "assigned-sr_ten_dtfbank_welcome"
+                   },
+                   {
+                       "path":  "/person/workspace/training",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  6,
+                       "sampleId":  "segment-seg_ten_dtfbank_vip"
+                   },
+                   {
+                       "path":  "/person/workspace/requests",
+                       "method":  "GET",
+                       "status":  200,
+                       "count":  4,
+                       "sampleId":  "sr_jgxgfv86qdseqh554hqdhz79"
+                   },
+                   {
+                       "path":  "/support",
+                       "method":  "POST",
+                       "status":  201,
+                       "count":  null,
+                       "sampleId":  null
+                   },
+                   {
+                       "path":  "/person/workspace/queue/:id/pin",
+                       "method":  "POST",
+                       "status":  201,
+                       "count":  null,
+                       "sampleId":  null
+                   },
+                   {
+                       "path":  "/person/workspace/queue/:id/move",
+                       "method":  "PATCH",
+                       "status":  200,
+                       "count":  null,
+                       "sampleId":  null,
+                       "columnId":  "in_progress"
+                   },
+                   {
+                       "path":  "/person/workspace/notes",
+                       "method":  "POST",
+                       "status":  201,
+                       "count":  null,
+                       "sampleId":  null
+                   },
+                   {
+                       "path":  "/person/workspace/requests",
+                       "method":  "POST",
+                       "status":  201,
+                       "count":  5,
+                       "sampleId":  "sr_c630tkllazpiy02kl2epuraz"
+                   },
+                   {
+                       "path":  "/person/workspace/messages",
+                       "method":  "POST",
+                       "status":  201,
+                       "count":  null,
+                       "sampleId":  null
+                   }
+               ],
+    "mutations":  {
+                      "supportRequestId":  "sr_rzw005k7b8bn3hlzw8j9u2gh",
+                      "noteId":  "sr_jql2t70g14g7h4jxai004mp4",
+                      "requestCountAfterPost":  5,
+                      "message":  {
+                                      "teammateId":  "tmbr_emx64m3u1orn46wdtrghrxjl",
+                                      "postStatus":  201,
+                                      "messageId":  "srcm_j2tjh5jb8kh9jo4j2jn36mve",
+                                      "threadCount":  5
+                                  }
+                  },
+    "queueAfter":  {
+                       "count":  7,
+                       "proofCard":  {
+                                         "id":  "sr_rzw005k7b8bn3hlzw8j9u2gh",
+                                         "title":  "Target 4 person queue proof 20260628024306",
+                                         "summary":  "SR-MQX09O2F - High - In Progress - Now",
+                                         "segment":  "target4-proof",
+                                         "segmentColor":  "#b45309",
+                                         "priority":  7,
+                                         "columnId":  "in_progress",
+                                         "pinned":  true,
+                                         "pinnedAt":  1782603786243,
+                                         "source":  "ai_segment",
+                                         "aiBrief":  {
+                                                         "whyCalling":  "Created by live target 4 API smoke to prove queue bind, pin and move.",
+                                                         "upsetAbout":  "No explicit complaint captured.",
+                                                         "painPoints":  [
+                                                                            "High",
+                                                                            "In Progress",
+                                                                            "target4-proof"
+                                                                        ],
+                                                         "callGoal":  "Move the service request to the next accountable status.",
+                                                         "suggestedActions":  [
+                                                                                  "Review customer context",
+                                                                                  "Add an internal note",
+                                                                                  "Update status before leaving the screen"
+                                                                              ],
+                                                         "promptKey":  "person.workspace.live-context",
+                                                         "promptVersion":  "live",
+                                                         "modelUsed":  "not-generated",
+                                                         "confidence":  1,
+                                                         "transcriptSnippet":  "Created by live target 4 API smoke to prove queue bind, pin and move."
+                                                     }
+                                     }
+                   },
+    "summaryAfter":  {
+                         "queue":  7,
+                         "customers":  5954,
+                         "notifications":  15,
+                         "assigned":  1,
+                         "failedMail":  14
+                     },
+    "tokenPolicy":  "accessToken and refreshToken intentionally omitted from evidence"
+}

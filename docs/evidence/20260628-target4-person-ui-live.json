@@ -1,0 +1,190 @@
+﻿{
+    "target":  "ROADMAP 9 Hedef 4 - Person UI live proof",
+    "capturedAt":  "2026-06-27T23:44:07.1623922Z",
+    "liveBuildSha":  "46e9919b2c800bcbe9a23372a9ac6c655f3d707f",
+    "baseUrl":  "https://app.dtfbank.com",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "session":  {
+                    "principalType":  "member",
+                    "principalEmail":  "owner.prodtest+20260627184047@dtfbank.com",
+                    "permissionsCount":  24,
+                    "tokensOmitted":  true
+                },
+    "pages":  {
+                  "customers":  {
+                                    "url":  "https://app.dtfbank.com/staff/customers",
+                                    "title":  "Factory Engine Pro Staff",
+                                    "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nCustomers\nD\nDTF Bank\nCUSTOMERS\n120\nin your segments\nTOTAL SPENT\n$83,888\nacross portfolio\nAT RISK\n0\nneeds outreach\nAVG ORDERS\n2\nper customer\nSEGMENTS\n1\nowned\nCUSTOMER\tSEGMENT\tLIFECYCLE\tORDERS\tSPENT\tPHONE\tLAST CONTACT\t\n\nTarget 3 Accounts Proof 20260628014808\ntarget3.accounts+20260628014808@dtfbank.test\n\tGeneral\tLead\t0\t$0\t+15555550303\t2026-06-27\t\n\n\nismail baysal\nbaysaltx@gmail.com\n\tGeneral\tEngaged\t2\t$0\t+17133445115\t2026-06-27\t\n\n\nibaysal5@gmail.com\nibaysal5@gmail.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nSelman E\ns.erdem0861@gmail.com\n\tGeneral\tEngaged\t2\t$0\t+13464347784\t2026-06-27\t\n\n\nJonah Stone\njonahkrts@gmail.com\n\tGeneral\tEngaged\t2\t$0\t\t2026-06-27\t\n\n\ncmbaskurt@gmail.com\ncmbaskurt@gmail.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nSteve Vu\nduongtv@bsscommerce.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nEmrullah Kulac\nemrekulac@gmail.com\n\tGeneral\tEngaged\t12\t$15,588\t+13463491289\t2026-06-27\t\n\n\ninfo@dtfbank.com\ninfo@dtfbank.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nSarah Mae Specially Made For You\nsarahmaemade@gmail.com\n\tGeneral\tEngaged\t185\t$66,563\t+15017739543\t2026-06-27\t\n\n\ninfo@grantcardone.com\ninfo@grantcardone.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nAyo Migh\npepeyeee12@gmail.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nDwayne Fuller\nfuller.spaceman.dwayne24@gmail.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nConnie Najera Silva\nlashorty1000@yahoo.com\n\tGeneral\tLead\t0\t$0\t\t2026-06-27\t\n\n\nMAE",
+                                    "hasExpectedText":  true,
+                                    "stillLoading":  false,
+                                    "hasQueryStateError":  false,
+                                    "onAuthScreen":  false
+                                },
+                  "queue":  {
+                                "url":  "https://app.dtfbank.com/staff/queue",
+                                "title":  "Factory Engine Pro Staff",
+                                "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nCUSTOMERS\n7\nin your queue\nOVERDUE\n0\nP9 priority\nAI-TASKED\n5\nclick to open brief\nPINNED\n5\non board\nSTATUS\nLive\nAPI bound\nUnassigned\n2\nNorthstar Print Supply\nP7\nSR-TEN_DTFBANK-001 - High - Open - 1m\noperations\nPin\nTarget 3 Accounts Proof 20260628014808\nP3\nSR-7ITFKDRE - Low - Open - 55m\naccount\nPin\nIn progress\n5\nTarget 4 person queue proof 20260628024306\nAI - Segment\nP7\nSR-MQX09O2F - High - In Progress - Now\ntarget4-proof\nPinned\nTarget 4 person queue proof 20260628023339\nAI - Segment\nP7\nSR-MQWZXIPC - High - In Progress - 10m\ntarget4-proof\nPinned\nTarget 4 person queue proof 20260628022819\nAI - Segment\nP7\nSR-MQWZQNXA - High - In Progress - 15m\ntarget4-proof\nPinned\nTarget 4 person queue proof 20260628022133\nAI - Segment\nP7\nSR-MQWZHYYH - High - In Progress - 22m\ntarget4-proof\nPinned\nTarget 4 live queue proof 20260628021546\nAI - Segment\nP7\nSR-MQWZAM59 - High - In Progress - 28m\ntarget4-proof\nPinned\nPositive\n0\nClosed\n0\nPinned board\n5\nPINNED CARD\t\n\nTarget 4 person queue proof 20260628024306\ntarget4-proof - P7\n\t\nUnpin\n\n\nTarget 4 person queue proof 20260628023339\ntarget4-proof - P7\n\t\nUnpin\n\n\nTarget 4 person queue proof 20260628022819\ntarget4-proof - P7\n\t\nUnpin\n\n\nTarget 4 person queue proof 20260628022133\ntarget4-proof - P7\n\t\nUnpin\n\n\nTarget 4 live queue proof 20260628021546\ntarget4-proof - P7\n\t\nUnpin",
+                                "hasExpectedText":  true,
+                                "stillLoading":  false,
+                                "hasQueryStateError":  false,
+                                "onAuthScreen":  false
+                            },
+                  "calendar":  {
+                                   "url":  "https://app.dtfbank.com/staff/calendar",
+                                   "title":  "Factory Engine Pro Staff",
+                                   "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nCalendar\nD\nDTF Bank\nCalendar\nYour week - AI-tasked calls show their brief on click\nToday\nJun 22 - Jun 28 2026\n5 AI-tasked\nMON\n22\nTUE\n23\nWED\n24\nTHU\n25\nFRI\n26\nSAT\n27\nSUN\n28\n09:00\n10:00\n11:00\n12:00\n13:00\n14:00\n15:00\nManual\nMail delivery failed: DTF Bank invitation\ninvite.prodtest+1782575676710@dtfbank.com\n16:00\nManual\nCall.Ended call +16463633906\n+16463633906\nManual\nCall.Ringing On Agent call +16463633906\n+16463633906\nManual\nCall.Ringing On Agent call +16463633906\n+16463633906\nManual\nMail delivery failed: DTF Bank invitation\nflow1.ui+20260627120260627165759@dtfbank.com\nManual\nMail delivery failed: DTF Bank invitation\nflow1.member+20260627165606@dtfbank.com\nManual\nMail delivery failed: Factory Engine Pro retry smoke\nowner.prodtest+20260627184047@dtfbank.com\nManual\nMail delivery failed: Factory Engine Pro live mail center smoke\nowner.prodtest+20260627184047@dtfbank.com\n17:00\nAI - Segment\nTarget 4 person queue proof 20260628024306\nManual\nSeed support follow-up\nNorthstar Print Supply\nAI - Segment\nTarget 4 person queue proof 20260628023339\nAI - Segment\nTarget 4 person queue proof 20260628022819\nAI - Segment\nTarget 4 person queue proof 20260628022133\nAI - Segment\nTarget 4 live queue proof 20260628021546\nManual\nTarget 3 live proof 20260628014808\nTarget 3 Accounts Proof 20260628014808\nManual\nCall.Ended call +15128452012\n+15128452012\nManual\nCall.Hungup call",
+                                   "hasExpectedText":  true,
+                                   "stillLoading":  false,
+                                   "hasQueryStateError":  false,
+                                   "onAuthScreen":  false
+                               },
+                  "messaging":  {
+                                    "url":  "https://app.dtfbank.com/staff/messaging",
+                                    "title":  "Factory Engine Pro Staff",
+                                    "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nMessaging\nD\nDTF Bank\nMessages\nInternal chat with teammates - see who is online right now\nDirectory\n0 online - 5 total\nFI\nFlow Invite\n1m\nTarget 4 live message proof 20260628024306\nFU\nFlow Ui\n7h\nNo internal messages yet.\nFW\nFlow Wizard\n6h\nNo internal messages yet.\nIP\nInvite Prodtest\n8h\nNo internal messages yet.\nTR\nTarget2 RBAC\n1h\nNo internal messages yet.\nFI\nFlow Invite\nAway - last login 7h\nSend\nTarget 4 live message proof 20260628021546\n28m\nTarget 4 live message proof 20260628022133\n22m\nTarget 4 live message proof 20260628022819\n15m\nTarget 4 live message proof 20260628023339\n10m\nTarget 4 live message proof 20260628024306\n1m",
+                                    "hasExpectedText":  true,
+                                    "stillLoading":  false,
+                                    "hasQueryStateError":  false,
+                                    "onAuthScreen":  false
+                                },
+                  "notes":  {
+                                "url":  "https://app.dtfbank.com/staff/notes",
+                                "title":  "Factory Engine Pro Staff",
+                                "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nNotes\nD\nDTF Bank\nNotes\nScratch (personal) + Queue notes (team-visible, linked to customer/queue item)\nAll\nScratch\nQueue\nScratch\nQueue\nTarget 4 live note 20260628024306\nscratch\n1m\nTarget 4 live note 20260628023339\nscratch\n10m\nTarget 4 live note 20260628022819\nscratch\n15m\nTarget 4 live note 20260628022133\nscratch\n22m\nTarget 4 note proof 20260628021546\nscratch\n28m\nPersonal - only you can see this\nSave",
+                                "hasExpectedText":  true,
+                                "stillLoading":  false,
+                                "hasQueryStateError":  false,
+                                "onAuthScreen":  false
+                            },
+                  "email":  {
+                                "url":  "https://app.dtfbank.com/staff/email",
+                                "title":  "Factory Engine Pro Staff",
+                                "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nE-mail\nD\nDTF Bank\nE-mail threads\n14 threads - 14 unread - syncs from connected mailbox\nsystem\nmelis@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n14m\nsystem\nowner.prodtest+20260627184047@dtfbank.com\nFactory Engine Pro Resend smoke 2026-06-27\nAPI key is invalid\n4h\nsystem\nowner.prodtest+20260627184047@dtfbank.com\nFactory Engine Pro provider final smoke\nAPI key is invalid\n5h\nsystem\nowner.prodtest+20260627184047@dtfbank.com\nFactory Engine Pro credential smoke\nAPI key is invalid\n5h\nsystem\nflow1.wizard+20260627171903@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n6h\nsystem\nflow1.wizard+20260627171646@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n6h\nsystem\nflow1.wizard+20260627171449@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n6h\nsystem\nflow1.wizard+20260627171322@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n7h\nsystem\nflow1.ui+20260627165928@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n7h\nsystem\nflow1.ui+20260627120260627165759@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n7h\nsystem\nflow1.member+20260627165606@dtfbank.com\nDTF Bank invitation\nAPI key is invalid\n7h\nsystem\nowner.prodtest+20260627184047@dtfbank.com\nFactory Engine Pro retry smoke\nAPI key is invalid\n7h\nsystem\nowner.prodtest+20260627184047@dtfbank.com\nFactory Engine Pro live mail center smoke\nAPI key is invalid\n8h\nsystem\ninvite.prodtest+1782575676710@dtfb",
+                                "hasExpectedText":  true,
+                                "stillLoading":  false,
+                                "hasQueryStateError":  false,
+                                "onAuthScreen":  false
+                            },
+                  "announcements":  {
+                                        "url":  "https://app.dtfbank.com/staff/announcements",
+                                        "title":  "Factory Engine Pro Staff",
+                                        "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nAnnouncements\nD\nDTF Bank\nAnnouncements\n3 unread - broadcasts from owner + engineering\nAircall integration\n8m\nAircall webhook active\n\n28 events configured. Last event 8m.\n\nShopify sync\n2h\nShopify orders sync completed\n\n637 records synced total, 637 in last run.\n\nShopify sync\n2h\nShopify products sync completed\n\n303 records synced total, 303 in last run.\n\nShopify sync\n2h\nShopify customers sync completed\n\n5951 records synced total, 5951 in last run.\n\nMail pipeline\nNow\n14 mail deliveries need attention\n\nProvider send flow remains out of this target, but failed delivery state is visible to staff.\n\nSystem sync\n4h\nshopify initial.orders completed\n\norders initial sync completed.\n\nSystem sync\n4h\nshopify initial.products completed\n\nproducts initial sync completed.\n\nSystem sync\n4h\nshopify initial.customers completed\n\ncustomers initial sync completed.\n\nSystem sync\n4h\naircall numbers.sync success\n\nSynced 2 Aircall numbers.\n\nSystem sync\n4h\nshopify initial.products failed\n\nShopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\n\nSystem sync\n4h\nshopify initial.orders failed\n\nShopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)",
+                                        "hasExpectedText":  true,
+                                        "stillLoading":  false,
+                                        "hasQueryStateError":  false,
+                                        "onAuthScreen":  false
+                                    },
+                  "notifications":  {
+                                        "url":  "https://app.dtfbank.com/staff/notifications",
+                                        "title":  "Factory Engine Pro Staff",
+                                        "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nNotifications\nD\nDTF Bank\nNotifications\n11 unread - mentions, assignments, SLA, pins and system events\nAssigned: Seed support follow-up\nVerify VIP customer artwork and pickup workflow.\n1m\nHIGH unassigned request\nTarget 4 person queue proof 20260628024306\n1m\nHIGH unassigned request\nTarget 4 person queue proof 20260628023339\n10m\nHIGH unassigned request\nTarget 4 person queue proof 20260628022819\n16m\nHIGH unassigned request\nTarget 4 person queue proof 20260628022133\n22m\nHIGH unassigned request\nTarget 4 live queue proof 20260628021546\n28m\nMail delivery failed\nmelis@dtfbank.com: API key is invalid\n13m\nMail delivery failed\nowner.prodtest+20260627184047@dtfbank.com: API key is invalid\n4h\nMail delivery failed\nowner.prodtest+20260627184047@dtfbank.com: API key is invalid\n5h\nMail delivery failed\nowner.prodtest+20260627184047@dtfbank.com: API key is invalid\n5h\nMail delivery failed\nflow1.wizard+20260627171903@dtfbank.com: API key is invalid\n6h",
+                                        "hasExpectedText":  true,
+                                        "stillLoading":  false,
+                                        "hasQueryStateError":  false,
+                                        "onAuthScreen":  false
+                                    },
+                  "training":  {
+                                   "url":  "https://app.dtfbank.com/staff/training",
+                                   "title":  "Factory Engine Pro Staff",
+                                   "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nTraining\nD\nDTF Bank\nTraining\n6 high-priority cases shaping today\u0027s coaching queue\nsegment\n1m\nVIP B2B Customers outreach script\n\nSeed segment for high value B2B customers\n\nsupport\n1m\nHIGH case review\n\nTarget 4 person queue proof 20260628024306\n\nsupport\n1m\nHIGH case review\n\nSeed support follow-up\n\nsupport\n10m\nHIGH case review\n\nTarget 4 person queue proof 20260628023339\n\nsupport\n16m\nHIGH case review\n\nTarget 4 person queue proof 20260628022819\n\nsupport\n22m\nHIGH case review\n\nTarget 4 person queue proof 20260628022133\n\nsupport\n28m\nHIGH case review\n\nTarget 4 live queue proof 20260628021546",
+                                   "hasExpectedText":  true,
+                                   "stillLoading":  false,
+                                   "hasQueryStateError":  false,
+                                   "onAuthScreen":  false
+                               },
+                  "requests":  {
+                                   "url":  "https://app.dtfbank.com/staff/requests",
+                                   "title":  "Factory Engine Pro Staff",
+                                   "bodyText":  "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n7\nCustomers\n5954\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n15\nPO\nowner.prodtest+20260627184047@dtfbank.com\nCustomer Service\nSubmit Request\nD\nDTF Bank\nSubmit Request\nPTO, equipment, access and exception requests create internal service requests.\nTITLE\nCATEGORY\nOther\nPTO\nEquipment\nException\nAccess\nPRIORITY\nLow\nMedium\nHigh\nUrgent\nCritical\nDESCRIPTION\nSubmit request\naccess\nmedium\nTarget 4 staff request 20260628024306\nCreated through the real person request form endpoint.\nopen\n1m\naccess\nmedium\nTarget 4 staff request 20260628023339\nCreated through the real person request form endpoint.\nopen\n10m\naccess\nmedium\nTarget 4 staff request 20260628022819\nCreated through the real person request form endpoint.\nopen\n16m\naccess\nmedium\nTarget 4 staff request 20260628022133\nCreated through the real person request form endpoint.\nopen\n22m\nother\nlow\nTarget 4 staff request proof 20260628021546\nCreated by live person workspace smoke.\nopen\n28m",
+                                   "hasExpectedText":  true,
+                                   "stillLoading":  false,
+                                   "hasQueryStateError":  false,
+                                   "onAuthScreen":  false
+                               }
+              },
+    "screenshots":  {
+                        "customers":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-customers-urlbar-live-20260628.png",
+                        "queue":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-queue-urlbar-live-20260628.png",
+                        "calendar":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-calendar-urlbar-live-20260628.png",
+                        "messaging":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-messaging-urlbar-live-20260628.png",
+                        "notes":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-notes-urlbar-live-20260628.png",
+                        "email":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-email-urlbar-live-20260628.png",
+                        "announcements":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-announcements-urlbar-live-20260628.png",
+                        "notifications":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-notifications-urlbar-live-20260628.png",
+                        "training":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-training-urlbar-live-20260628.png",
+                        "requests":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target4-person-requests-urlbar-live-20260628.png"
+                    },
+    "assertions":  {
+                       "customers":  {
+                                         "realSubdomain":  true,
+                                         "expectedText":  true,
+                                         "noQueryError":  true,
+                                         "authenticated":  true,
+                                         "notLoading":  true
+                                     },
+                       "queue":  {
+                                     "realSubdomain":  true,
+                                     "expectedText":  true,
+                                     "noQueryError":  true,
+                                     "authenticated":  true,
+                                     "notLoading":  true
+                                 },
+                       "calendar":  {
+                                        "realSubdomain":  true,
+                                        "expectedText":  true,
+                                        "noQueryError":  true,
+                                        "authenticated":  true,
+                                        "notLoading":  true
+                                    },
+                       "messaging":  {
+                                         "realSubdomain":  true,
+                                         "expectedText":  true,
+                                         "noQueryError":  true,
+                                         "authenticated":  true,
+                                         "notLoading":  true
+                                     },
+                       "notes":  {
+                                     "realSubdomain":  true,
+                                     "expectedText":  true,
+                                     "noQueryError":  true,
+                                     "authenticated":  true,
+                                     "notLoading":  true
+                                 },
+                       "email":  {
+                                     "realSubdomain":  true,
+                                     "expectedText":  true,
+                                     "noQueryError":  true,
+                                     "authenticated":  true,
+                                     "notLoading":  true
+                                 },
+                       "announcements":  {
+                                             "realSubdomain":  true,
+                                             "expectedText":  true,
+                                             "noQueryError":  true,
+                                             "authenticated":  true,
+                                             "notLoading":  true
+                                         },
+                       "notifications":  {
+                                             "realSubdomain":  true,
+                                             "expectedText":  true,
+                                             "noQueryError":  true,
+                                             "authenticated":  true,
+                                             "notLoading":  true
+                                         },
+                       "training":  {
+                                        "realSubdomain":  true,
+                                        "expectedText":  true,
+                                        "noQueryError":  true,
+                                        "authenticated":  true,
+                                        "notLoading":  true
+                                    },
+                       "requests":  {
+                                        "realSubdomain":  true,
+                                        "expectedText":  true,
+                                        "noQueryError":  true,
+                                        "authenticated":  true,
+                                        "notLoading":  true
+                                    }
+                   }
+}

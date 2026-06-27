@@ -2029,3 +2029,77 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - `docs/evidence/20260628-target3-accounts-ui-live.json`
 - Lokal app/test runtime kullanilmadi; kanitlar `https://accounts.dtfbank.com`
   ve `https://api.dtfbank.com` uzerinden alindi.
+
+### 2026-06-28 - Hedef 4 live proof (dtfbank)
+
+-> COZULDU `46e9919b2c800bcbe9a23372a9ac6c655f3d707f`.
+
+- Person workspace mock kalintisi kaldirildi: `apps/person/src/api/mock.ts`
+  ve `apps/person/src/views/Stub.tsx` silindi; Calendar, Messages, Support
+  kanban, Customers, Notes, E-mail, Announcements, Notifications, Training ve
+  Submit Request ekranlari TanStack Query ile gercek API'ye baglandi.
+- Backend `PersonWorkspaceModule` eklendi: `/api/v1/person/workspace/*`
+  endpointleri `support.read`, `support.write`, `customers.read` ve
+  `identity.read` permission'lariyla korundu. Tenant context merkezi Prisma
+  extension uzerinden uygulanmaya devam ediyor.
+- Queue JSON path filtresi duzeltildi: `message_thread`, `note` ve
+  `staff_request` gibi person-internal service request kayitlari TS tarafinda
+  filtreleniyor; normal support kayitlarinda `personWorkspaceKind` yoksa
+  kanban'a giriyor. Canli smoke'ta queue 0'dan 7 karta cikti.
+- Person app URL sync tamamlandi: `https://app.dtfbank.com/staff/queue`,
+  `/staff/calendar`, `/staff/messaging` ve diger staff route'lari dogrudan
+  acilabiliyor; browser title `Factory Engine Pro Staff`.
+- Prisma migration gerekmedi; mevcut tenant-scoped tablolar kullanildi
+  (`ServiceRequest`, `ServiceRequestComment`, `Customer`, `Member`,
+  `MailDelivery`, `Aircall*`, `ShopifySyncState`, `SyncLog`, `Segment`).
+- Deploy scope: yalnizca `factoryengine-dtfbank-app` restart edildi. Caddy,
+  gangsheet, upload ve non-dtfbank app container'larina dokunulmadi.
+- Remote `.build-sha`: `46e9919b2c800bcbe9a23372a9ac6c655f3d707f`.
+- Remote build/runtime:
+  - person/admin/accounts Vite builds -> `built in`
+  - backend `prisma migrate deploy` -> `No pending migrations to apply`
+  - PM2 `factory-engine-pro-api`, `factory-engine-pro-admin`,
+    `factory-engine-pro-person`, `factory-engine-pro-accounts` -> `online`
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+- Live API smoke (`owner.prodtest+20260627184047@dtfbank.com`, tokens omitted):
+  - `GET /api/v1/person/workspace/summary` -> `200`
+  - `GET /api/v1/person/workspace/queue` -> `200`, count `6`
+  - `GET /api/v1/person/workspace/customers` -> `200`, count `120`
+  - `GET /api/v1/person/workspace/calendar` -> `200`, count `26`
+  - `GET /api/v1/person/workspace/messages/teammates` -> `200`, count `5`
+  - `GET /api/v1/person/workspace/notes` -> `200`, count `4`
+  - `GET /api/v1/person/workspace/emails` -> `200`, count `14`
+  - `GET /api/v1/person/workspace/announcements` -> `200`, count `11`
+  - `GET /api/v1/person/workspace/notifications` -> `200`, count `10`
+  - `GET /api/v1/person/workspace/training` -> `200`, count `6`
+  - `GET /api/v1/person/workspace/requests` -> `200`, count `4`
+  - `POST /api/v1/support` -> `201`, ticket `sr_rzw005k7b8bn3hlzw8j9u2gh`
+  - `POST /api/v1/person/workspace/queue/:id/pin` -> `201`
+  - `PATCH /api/v1/person/workspace/queue/:id/move` -> `200`, `in_progress`
+  - `POST /api/v1/person/workspace/notes` -> `201`
+  - `POST /api/v1/person/workspace/requests` -> `201`
+  - `POST /api/v1/person/workspace/messages` -> `201`
+  - Queue after mutation -> count `7`, proof card pinned and `in_progress`.
+- URL bar screenshot evidence from `https://app.dtfbank.com/staff/*`:
+  - `docs/evidence/target4-person-customers-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-queue-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-calendar-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-messaging-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-notes-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-email-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-announcements-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-notifications-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-training-urlbar-live-20260628.png`
+  - `docs/evidence/target4-person-requests-urlbar-live-20260628.png`
+- UI assertions: tum 10 staff route icin `realSubdomain=true`,
+  `expectedText=true`, `noQueryError=true`, `authenticated=true`,
+  `notLoading=true`; title `Factory Engine Pro Staff`.
+- Machine-readable evidence:
+  - `docs/evidence/20260628-target4-person-live.json`
+  - `docs/evidence/20260628-target4-person-ui-live.json`
+- Not: E-mail/Announcements/Notifications ekranlari mevcut Resend provider
+  hatasini (`API key is invalid`) gercek delivery state olarak gosteriyor.
+  Mail icerik gonderme akisi Hedef 4 disinda; bu turda yeni mail send flow
+  calistirilmadi.
+- Lokal app/test runtime kullanilmadi; kanitlar `https://app.dtfbank.com` ve
+  `https://api.dtfbank.com` uzerinden alindi.
