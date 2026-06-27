@@ -1941,3 +1941,43 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - `docs/evidence/target1-person-reset-urlbar-live-20260628.png`
 - Machine-readable evidence: `docs/evidence/20260628-target1-auth-helpers-live.json`.
 - Lokal app/test runtime kullanılmadı.
+### 2026-06-28 - Hedef 2 live proof (dtfbank)
+
+-> COZULDU `0bd617de3742038c1034668431f549366430b7a7`.
+
+- Backend RBAC runtime degisti: access JWT artik login aninda cozulmus
+  `permissions[]` tasiyor; `JwtAuthGuard` her request'te role assignment DB
+  sorgusu yapmiyor. `PermissionsGuard` request context'teki token permission
+  setini kullanmaya devam ediyor.
+- Role CRUD tamamlandi: `DELETE /api/v1/identity/member-roles/:id`
+  `roles.write` ile korundu; system role delete `400 System roles cannot be
+  deleted`, custom role delete `200 {"ok":true}`.
+- Admin UI session permission'a baglandi: `useCurrentPrincipal` otomatik
+  `/auth/me` query'sini kaldirdi; sidebar, team tabs, team invite action ve
+  route guard session permission setinden karar veriyor. Permission eksikse
+  Team/Roles linki render edilmiyor ve direkt `/team/roles` acilisi
+  `/dashboard`'a donuyor.
+- Role UI create/edit/delete gercek API'ye bagli: owner role ekraninda custom
+  role create edildi, permission edit ile `roles.read` eklendi, UI delete ile
+  listeden kaldirildi. UI test role kalintisi canli DB'de birakilmadi.
+- Deploy scope: yalnizca `factoryengine-dtfbank-app` restart edildi. Caddy,
+  gangsheet, upload ve non-dtfbank app container'larina dokunulmadi.
+- Remote `.build-sha`: `0bd617de3742038c1034668431f549366430b7a7`.
+- Live smoke:
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+  - backend log: `Mapped {/api/v1/identity/member-roles/:id, DELETE} route`
+- Login-time permission kaniti:
+  - Owner login -> `201`; JWT permission count `24`.
+  - Custom role ilk hali: sadece `customers.read`.
+  - Limited member login -> JWT permission count `1`; `GET /identity/member-roles` -> `403`, missing `roles.read`.
+  - Role'a `roles.read` eklendikten sonra eski access token ayni endpointte
+    yine `403` kaldi.
+  - Ayni member re-login -> JWT permission count `2`; `GET /identity/member-roles` -> `200`.
+- URL bar screenshot evidence:
+  - `docs/evidence/target2-owner-roles-urlbar-live-20260628.png`
+  - `docs/evidence/target2-member-route-guard-urlbar-live-20260628.png`
+- Machine-readable evidence:
+  - `docs/evidence/20260628-target2-rbac-live.json`
+  - `docs/evidence/20260628-target2-rbac-ui-live.json`
+- Lokal app/test runtime kullanilmadi; kanitlar `https://app.dtfbank.com` ve
+  `https://api.dtfbank.com` uzerinden alindi.

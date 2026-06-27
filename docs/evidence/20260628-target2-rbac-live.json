@@ -1,0 +1,208 @@
+{
+  "target": "ROADMAP 9 Hedef 2 - RBAC login-time permission and role UI/API",
+  "startedAt": "2026-06-27T22:03:37.020Z",
+  "finishedAt": "2026-06-27T22:03:43.327Z",
+  "deploy": {
+    "commit": "0bd617de3742038c1034668431f549366430b7a7",
+    "apiBase": "https://api.dtfbank.com/api/v1",
+    "tenantId": "ten_dtfbank",
+    "container": "factoryengine-dtfbank-app",
+    "scope": "dtfbank live only; no local app/test server used"
+  },
+  "health": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "service": "factory-engine-pro-backend"
+    }
+  },
+  "owner": {
+    "email": "owner.prodtest+20260627184047@dtfbank.com",
+    "loginStatus": 201,
+    "jwtPermissionSummary": {
+      "count": 24,
+      "hasCustomersRead": true,
+      "hasRolesRead": true,
+      "values": [
+        "aircall.users.read",
+        "aircall.users.write",
+        "b2b_access.read",
+        "b2b_access.write",
+        "customers.read",
+        "customers.write",
+        "identity.read",
+        "identity.write",
+        "members.read",
+        "members.write",
+        "orders.read",
+        "orders.write",
+        "pricing.read",
+        "pricing.write",
+        "roles.read",
+        "roles.write",
+        "segments.read",
+        "segments.write",
+        "settings.read",
+        "settings.write",
+        "support.read",
+        "support.write",
+        "sync.trigger",
+        "task.assign"
+      ]
+    },
+    "sessionPermissionSummary": {
+      "count": 24,
+      "hasCustomersRead": true,
+      "hasRolesRead": true,
+      "values": [
+        "aircall.users.read",
+        "aircall.users.write",
+        "b2b_access.read",
+        "b2b_access.write",
+        "customers.read",
+        "customers.write",
+        "identity.read",
+        "identity.write",
+        "members.read",
+        "members.write",
+        "orders.read",
+        "orders.write",
+        "pricing.read",
+        "pricing.write",
+        "roles.read",
+        "roles.write",
+        "segments.read",
+        "segments.write",
+        "settings.read",
+        "settings.write",
+        "support.read",
+        "support.write",
+        "sync.trigger",
+        "task.assign"
+      ]
+    }
+  },
+  "roleCrud": {
+    "systemDeleteAttempt": {
+      "endpoint": "DELETE https://api.dtfbank.com/api/v1/identity/member-roles/mrol_prodtest_1782574849867_5d819c38",
+      "status": 400,
+      "requestId": "target2-delete-system-role-20260627220337",
+      "code": "bad_request",
+      "message": "System roles cannot be deleted"
+    },
+    "created": {
+      "endpoint": "POST https://api.dtfbank.com/api/v1/identity/member-roles",
+      "status": 201,
+      "requestId": "target2-create-role-20260627220337",
+      "roleId": "mrol_z6wxdcfglh1drpnkq83i38gw",
+      "slug": "hedef2_rbac_20260627220337",
+      "permissionSummary": {
+        "count": 1,
+        "hasCustomersRead": true,
+        "hasRolesRead": false,
+        "values": [
+          "customers.read"
+        ]
+      }
+    },
+    "edited": {
+      "endpoint": "PATCH https://api.dtfbank.com/api/v1/identity/member-roles/mrol_z6wxdcfglh1drpnkq83i38gw",
+      "status": 200,
+      "requestId": "target2-edit-role-20260627220337",
+      "name": "Hedef 2 RBAC Edited 20260627220337",
+      "description": "Target 2 live proof role edited through PATCH"
+    },
+    "addedPermission": {
+      "endpoint": "PATCH https://api.dtfbank.com/api/v1/identity/member-roles/mrol_z6wxdcfglh1drpnkq83i38gw",
+      "status": 200,
+      "requestId": "target2-add-roles-read-20260627220337",
+      "permissionSummary": {
+        "count": 2,
+        "hasCustomersRead": true,
+        "hasRolesRead": true,
+        "values": [
+          "customers.read",
+          "roles.read"
+        ]
+      }
+    },
+    "deleted": {
+      "endpoint": "DELETE https://api.dtfbank.com/api/v1/identity/member-roles/mrol_z6wxdcfglh1drpnkq83i38gw",
+      "status": 200,
+      "requestId": "target2-delete-role-20260627220337",
+      "body": {
+        "ok": true
+      }
+    }
+  },
+  "member": {
+    "email": "target2.rbac.20260627220337@dtfbank.com",
+    "createdStatus": 201,
+    "createdRequestId": "target2-create-member-20260627220337",
+    "loginBeforeStatus": 201,
+    "jwtBeforePermissionSummary": {
+      "count": 1,
+      "hasCustomersRead": true,
+      "hasRolesRead": false,
+      "values": [
+        "customers.read"
+      ]
+    },
+    "sessionBeforePermissionSummary": {
+      "count": 1,
+      "hasCustomersRead": true,
+      "hasRolesRead": false,
+      "values": [
+        "customers.read"
+      ]
+    },
+    "rolesEndpointBeforePatch": {
+      "status": 403,
+      "requestId": "target2-member-roles-before-20260627220337",
+      "code": "permission_denied",
+      "missing": [
+        "roles.read"
+      ]
+    },
+    "oldTokenAfterRolePatch": {
+      "status": 403,
+      "requestId": "target2-old-token-after-patch-20260627220337",
+      "code": "permission_denied",
+      "missing": [
+        "roles.read"
+      ]
+    },
+    "loginAfterStatus": 201,
+    "jwtAfterPermissionSummary": {
+      "count": 2,
+      "hasCustomersRead": true,
+      "hasRolesRead": true,
+      "values": [
+        "customers.read",
+        "roles.read"
+      ]
+    },
+    "sessionAfterPermissionSummary": {
+      "count": 2,
+      "hasCustomersRead": true,
+      "hasRolesRead": true,
+      "values": [
+        "customers.read",
+        "roles.read"
+      ]
+    },
+    "rolesEndpointAfterRelogin": {
+      "status": 200,
+      "requestId": "target2-member-roles-after-20260627220337",
+      "count": 9
+    }
+  },
+  "assertions": {
+    "ownerJwtContainsPermissions": true,
+    "limitedMemberOldTokenDeniedBeforePatch": true,
+    "limitedMemberOldTokenStillDeniedAfterRolePatch": true,
+    "limitedMemberReloginAllowedAfterRolePatch": true,
+    "deleteCustomRoleOk": true,
+    "deleteSystemRoleBlocked": true
+  }
+}

@@ -1,0 +1,41 @@
+﻿{
+    "target":  "ROADMAP 9 Hedef 2 - RBAC UI live proof",
+    "capturedAt":  "2026-06-28T01:19:39.9943947+03:00",
+    "urls":  {
+                 "ownerRoles":  "https://app.dtfbank.com/team/roles",
+                 "restrictedMemberAttempt":  "https://app.dtfbank.com/team/roles"
+             },
+    "ownerRoleUi":  {
+                        "url":  "https://app.dtfbank.com/team/roles",
+                        "hasEditedRole":  false,
+                        "hasCreatedRole":  true,
+                        "roleText":  "UI Hedef 2 20260628011843\nrole.ui_hedef_2_20260628011843_mqwx99js\n\tcustom\t2\t\nEdit\nDelete",
+                        "hasEditButton":  true,
+                        "hasDeleteButton":  true,
+                        "hasCreateForm":  true,
+                        "bodyText":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nnav.team\nD\nDTF Bank\nOwner\nTeam\nRoles, users, and commission rules\nRoles\nUsers\nCommissions\nROLE\tTYPE\tPERMISSIONS\tACTIONS\n\nAdmin\nrole.admin\n\tsystem\t21\t\n\nAgent\nrole.agent\n\tsystem\t10\t\n\nOwner\nrole.owner\n\tsystem\t24\t\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171449_mqwmeij4\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171903_mqwmjxzw\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171646_mqwmh0wp\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_debug_20260627171557_mqwmfxq3\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171322_mqwmcne5\n\tcustom\t19\t\nEdit\nDelete\n\n\nUI Hedef 2 20260628011843\nrole.ui_hedef_2_20260628011843_mqwx99js\n\tcustom\t2\t\nEdit\nDelete\nCreate role\nROLE NAME\nDESCRIPTION\nPERMISSIONS\nIDENTITY.RE"
+                    },
+    "ownerDeleteUi":  {
+                          "url":  "https://app.dtfbank.com/team/roles",
+                          "roleRemovedFromUi":  true,
+                          "bodyText":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nnav.team\nD\nDTF Bank\nOwner\nTeam\nRoles, users, and commission rules\nRoles\nUsers\nCommissions\nROLE\tTYPE\tPERMISSIONS\tACTIONS\n\nAdmin\nrole.admin\n\tsystem\t21\t\n\nAgent\nrole.agent\n\tsystem\t10\t\n\nOwner\nrole.owner\n\tsystem\t24\t\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171449_mqwmeij4\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_wizard_20260627171646_mqwmh0wp\n\tcustom\t19\t\nEdit\nDelete\n\n\nFlow Wizard custom access\nrole.admin_flow1_wi"
+                      },
+    "restrictedMemberUi":  {
+                               "url":  "https://app.dtfbank.com/dashboard",
+                               "hasTeamRolesLink":  false,
+                               "hasTeamUsersLink":  false,
+                               "hasOrganizationText":  false,
+                               "bodyText":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nTR\ntarget2.rbac.20260627220337@dtfbank.com\nMember\nDashboard\nD\nDTF Bank\nMember\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading…\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\nLoading…\nLoading recent Shopify orders from the API.\nRecent support\n0 records\nLoading…\nLoading recent service requests from the API.\nRecent mail\n0 records\nLoading…\nLoading recent transactional deliveries from the API."
+                           },
+    "screenshots":  {
+                        "ownerRoles":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-owner-roles-urlbar-live-20260628.png",
+                        "restrictedMemberRouteGuard":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-member-route-guard-urlbar-live-20260628.png"
+                    },
+    "assertions":  {
+                       "ownerSeesCreatedOrEditedRole":  true,
+                       "ownerSeesEditDeleteButtons":  true,
+                       "ownerDeletedRoleFromUi":  true,
+                       "restrictedMemberRedirectedToDashboard":  true,
+                       "restrictedMemberHasNoTeamRoleLinks":  true
+                   }
+}
