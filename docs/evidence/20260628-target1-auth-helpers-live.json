@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-06-28T00:44:00+03:00",
+  "scope": "ROADMAP 9 Hedef 1 - environmental UI helpers across admin, accounts, person",
+  "commit": "69e40f5efca3565eaeab42f743f8a06923be8380",
+  "deployedBuildSha": "69e40f5efca3565eaeab42f743f8a06923be8380",
+  "deployScope": {
+    "containerRestarted": "factoryengine-dtfbank-app",
+    "caddyScope": "app.dtfbank.com only; /staff routes to factoryengine-dtfbank-app:3002",
+    "untouched": [
+      "gangsheet containers",
+      "upload containers",
+      "non-dtfbank app containers"
+    ]
+  },
+  "liveSmoke": {
+    "https://api.dtfbank.com/api/v1/health": 200,
+    "https://app.dtfbank.com/login": 200,
+    "https://accounts.dtfbank.com/login": 200,
+    "https://app.dtfbank.com/staff/login": 200
+  },
+  "runtime": {
+    "pm2Online": [
+      "factory-engine-pro-api",
+      "factory-engine-pro-admin",
+      "factory-engine-pro-person",
+      "factory-engine-pro-accounts"
+    ]
+  },
+  "browserEvidence": [
+    {
+      "surface": "admin",
+      "url": "https://app.dtfbank.com/login",
+      "screenshot": "docs/evidence/target1-admin-login-urlbar-live-20260628.png",
+      "assertions": {
+        "rememberMeChecked": true,
+        "capsLockWarning": "Caps Lock is on",
+        "errorMessage": "Invalid email or password (request_id: 95763b3e-236a-42d3-be53-08b2d90c8273)"
+      }
+    },
+    {
+      "surface": "accounts",
+      "url": "https://accounts.dtfbank.com/login",
+      "screenshot": "docs/evidence/target1-accounts-login-urlbar-live-20260628.png",
+      "assertions": {
+        "rememberMeChecked": true,
+        "capsLockWarning": "Caps Lock is on",
+        "errorMessage": "Invalid email or password (request_id: 9560f0a4-54ea-4e6c-b14d-1b138889d0d4)"
+      }
+    },
+    {
+      "surface": "person",
+      "url": "https://app.dtfbank.com/staff/login",
+      "screenshot": "docs/evidence/target1-person-login-urlbar-live-20260628.png",
+      "assertions": {
+        "rememberMeChecked": true,
+        "capsLockWarning": "Caps Lock is on",
+        "errorMessage": "Invalid email or password (request_id: f11cbb4f-3a7c-467e-ada8-2999a7dffcfa)"
+      }
+    },
+    {
+      "surface": "admin",
+      "url": "https://app.dtfbank.com/reset-password?token=proof-token",
+      "screenshot": "docs/evidence/target1-admin-reset-urlbar-live-20260628.png",
+      "assertions": {
+        "passwordStrength": "Strong"
+      }
+    },
+    {
+      "surface": "accounts",
+      "url": "https://accounts.dtfbank.com/reset-password?token=proof-token",
+      "screenshot": "docs/evidence/target1-accounts-reset-urlbar-live-20260628.png",
+      "assertions": {
+        "passwordStrength": "Strong"
+      }
+    },
+    {
+      "surface": "person",
+      "url": "https://app.dtfbank.com/staff/reset-password?token=proof-token",
+      "screenshot": "docs/evidence/target1-person-reset-urlbar-live-20260628.png",
+      "assertions": {
+        "passwordStrength": "Strong"
+      }
+    }
+  ],
+  "localAppRuntime": "not used"
+}

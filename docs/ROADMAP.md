@@ -1896,3 +1896,48 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - `docs/evidence/shopify-sync-live-20260627.png`
 - Machine-readable evidence:
   `docs/evidence/20260627-mail-health-aircall-shopify-live.json`.
+
+---
+
+
+
+## 9. Şu anki tur — hedefler
+
+> Aircall ingest canlı + Shopify sync canlı veri akıtıyor. Resend bu turun dışında. Mail içerik gönderme akışı hariç her şey gerçek subdomain üzerinden screenshot ile doğrulanır.
+
+**Hedef 1 — Çevresel UI yardımcıları.** Beni hatırla, caps lock uyarısı, şifre güç göstergesi, form akıcılığı, anlamlı hata bildirimleri — admin + accounts + person üçünde de.
+
+**Hedef 2 — Rol sistemi UI'da tamamen etkili.** Roller UI'dan oluşturulup düzenlenir, silinir, member'a atanır. Sidebar + her UI etkileşim rol/permission'a göre kendini ayarlar. Permission çözümü **login'de bir kez** olur — sayfa başına yeniden istek yok.
+
+**Hedef 3 — Accounts UI prod-ready.** Eski paneldeki auth ekranları birebir, iç sayfalar gerçek API'ye bağlı. Mock kalıntısı yok.
+
+**Hedef 4 — Person app prod-ready.** Calendar + Messages + Support kanban + diğer çalışma sayfaları gerçek backend'e bağlı, mock kalıntısı yok.
+
+**Hedef 5 — Mail templates + Mail marketing transfer.** Eski sistemden tam aktarım + UI bağlama. (Path'ler 6.4.2 + 6.4.3'te yazılı.)
+
+**Hedef 6 — Products UI.** Sidebar'da yer alır, eski paneldeki catalog ekranı çalışır.
+
+7.1'den **Person app sayfaları çıkarıldı** — artık bu turda yapılacak. Resend bu turun dışındadır.
+
+### 2026-06-28 - Hedef 1 live proof (dtfbank)
+
+→ ÇÖZÜLDÜ `69e40f5efca3565eaeab42f743f8a06923be8380`.
+
+- Admin, accounts ve person auth ekranlarında çevresel yardımcılar canlıda doğrulandı: remember me checkbox, Caps Lock uyarısı, anlamlı invalid-login error + `request_id`, reset password strength meter.
+- Person app public route canlıya bağlandı: `https://app.dtfbank.com/staff/*` sadece `factoryengine-dtfbank-app:3002` person preview'a gider; admin fallback ayrı kaldı.
+- Deploy scope: yalnızca `factoryengine-dtfbank-app` restart edildi; Caddy değişikliği yalnızca `app.dtfbank.com` staff route'u için yapıldı. Gangsheet, upload ve non-dtfbank app container'larına dokunulmadı.
+- Remote `.build-sha`: `69e40f5efca3565eaeab42f743f8a06923be8380`; PM2 `factory-engine-pro-api`, `factory-engine-pro-admin`, `factory-engine-pro-person`, `factory-engine-pro-accounts` online.
+- Live smoke:
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+  - `GET https://app.dtfbank.com/login` -> `200`
+  - `GET https://accounts.dtfbank.com/login` -> `200`
+  - `GET https://app.dtfbank.com/staff/login` -> `200`
+- URL bar screenshot evidence:
+  - `docs/evidence/target1-admin-login-urlbar-live-20260628.png`
+  - `docs/evidence/target1-accounts-login-urlbar-live-20260628.png`
+  - `docs/evidence/target1-person-login-urlbar-live-20260628.png`
+  - `docs/evidence/target1-admin-reset-urlbar-live-20260628.png`
+  - `docs/evidence/target1-accounts-reset-urlbar-live-20260628.png`
+  - `docs/evidence/target1-person-reset-urlbar-live-20260628.png`
+- Machine-readable evidence: `docs/evidence/20260628-target1-auth-helpers-live.json`.
+- Lokal app/test runtime kullanılmadı.
