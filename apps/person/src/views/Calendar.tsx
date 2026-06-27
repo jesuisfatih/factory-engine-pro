@@ -4,7 +4,8 @@ import {
   ChevronLeft, ChevronRight, Sparkles, X, Phone, ExternalLink,
   Clock, AlarmClockOff, RefreshCw, CheckCircle2,
 } from 'lucide-react';
-import { fetchCalEvents, type EventSource, type CalEvent } from '../api/mock';
+import { fetchCalEvents, friendlyError, type EventSource, type CalEvent } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
   manual: 'Manual',
@@ -17,7 +18,7 @@ const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
 
 function weekDaysFrom(startMs: number) {
   const days: { iso: string; label: string; dayNum: number; isToday: boolean }[] = [];
-  const todayIso = '2026-06-22';
+  const todayIso = new Date().toISOString().slice(0, 10);
   for (let i = 0; i < 7; i += 1) {
     const d = new Date(startMs + i * 86_400_000);
     const iso = d.toISOString().slice(0, 10);
@@ -32,10 +33,10 @@ function weekDaysFrom(startMs: number) {
 }
 
 export function CalendarView() {
-  const [weekStart, setWeekStart] = useState<number>(new Date('2026-06-22').getTime());
+  const [weekStart, setWeekStart] = useState<number>(() => startOfWeek(new Date()).getTime());
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: events = [] } = useQuery({ queryKey: ['cal', 'events'], queryFn: fetchCalEvents });
+  const { data: events = [], isLoading, error } = useQuery({ queryKey: ['person', 'cal', 'events'], queryFn: fetchCalEvents });
 
   const days = useMemo(() => weekDaysFrom(weekStart), [weekStart]);
 
@@ -64,7 +65,7 @@ export function CalendarView() {
           <button type="button" className="nav-btn" onClick={() => setWeekStart((value) => value - 7 * 86_400_000)}>
             <ChevronLeft size={14} />
           </button>
-          <button type="button" className="today-btn" onClick={() => setWeekStart(new Date('2026-06-22').getTime())}>
+          <button type="button" className="today-btn" onClick={() => setWeekStart(startOfWeek(new Date()).getTime())}>
             Today
           </button>
           <button type="button" className="nav-btn" onClick={() => setWeekStart((value) => value + 7 * 86_400_000)}>
@@ -76,6 +77,13 @@ export function CalendarView() {
           </span>
         </div>
 
+        <QueryState
+          isLoading={isLoading}
+          error={error ? new Error(friendlyError(error)) : null}
+          empty={events.length === 0}
+          emptyTitle="No calendar items"
+          emptyBody="Open service requests, Aircall activity and failed delivery tasks will appear here."
+        >
         <div className="cal-grid">
           <div className="cal-col-head" />
           {days.map((day) => (
@@ -111,6 +119,7 @@ export function CalendarView() {
             </div>
           ))}
         </div>
+        </QueryState>
       </div>
 
       {selected && (
@@ -164,7 +173,7 @@ export function CalendarView() {
                   <div className="head">
                     <Sparkles size={14} style={{ color: '#7c3aed' }} />
                     <h4>AI Task Brief</h4>
-                    <span className="badge">Sonnet 4.6</span>
+                    <span className="badge">{selected.aiBrief.modelUsed}</span>
                   </div>
                   <div className="row">
                     <div className="lbl">Why calling</div>
@@ -214,4 +223,13 @@ export function CalendarView() {
       )}
     </>
   );
+}
+
+function startOfWeek(date: Date) {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+  copy.setDate(diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 }

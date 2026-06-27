@@ -2,6 +2,8 @@ import { NAV, type NavId } from '../types';
 import { readSession } from '../lib/api';
 import { Icon } from './Icon';
 import { WorkspaceBrand } from './WorkspaceBrand';
+import { useQuery } from '@tanstack/react-query';
+import { fetchSummary } from '../api/live';
 
 interface Props {
   current: NavId;
@@ -23,6 +25,7 @@ const NAV_ICONS: Record<NavId, Parameters<typeof Icon>[0]['name']> = {
 };
 
 export function Sidebar({ current, onSelect, collapsed }: Props) {
+  const { data: summary } = useQuery({ queryKey: ['person', 'summary'], queryFn: fetchSummary });
   const principal = readSession()?.principal;
   const name = principal ? `${principal.firstName} ${principal.lastName}`.trim() || principal.email : 'Signed out';
   const initials = name
@@ -31,7 +34,17 @@ export function Sidebar({ current, onSelect, collapsed }: Props) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
-  const groups = NAV.reduce<Record<string, typeof NAV>>((acc, item) => {
+  const navItems = NAV.map((item) => ({
+    ...item,
+    badge: item.id === 'queue'
+      ? summary?.queue
+      : item.id === 'customers'
+        ? summary?.customers
+        : item.id === 'notifications'
+          ? summary?.notifications
+          : undefined,
+  }));
+  const groups = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     const key = item.group ?? 'General';
     if (!acc[key]) acc[key] = [];
     acc[key].push(item);

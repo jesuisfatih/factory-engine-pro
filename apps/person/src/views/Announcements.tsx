@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Megaphone } from 'lucide-react';
-import { fetchAnnouncements } from '../api/mock';
+import { fetchAnnouncements, friendlyError } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 export function AnnouncementsView() {
-  const { data: rows = [] } = useQuery({ queryKey: ['announcements'], queryFn: fetchAnnouncements });
+  const { data: rows = [], isLoading, error } = useQuery({ queryKey: ['person', 'announcements'], queryFn: fetchAnnouncements });
   const unread = rows.filter((row) => !row.read).length;
 
   return (
@@ -16,6 +17,13 @@ export function AnnouncementsView() {
         </div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={error ? new Error(friendlyError(error)) : null}
+        empty={rows.length === 0}
+        emptyTitle="No operational announcements"
+        emptyBody="Aircall, Shopify, sync and mail pipeline events will appear here."
+      >
       <div className="announce-feed">
         {rows.map((row) => (
           <article key={row.id} className={`announce-card severity-${row.severity}${row.read ? '' : ' unread'}`}>
@@ -28,6 +36,7 @@ export function AnnouncementsView() {
           </article>
         ))}
       </div>
+      </QueryState>
     </>
   );
 }

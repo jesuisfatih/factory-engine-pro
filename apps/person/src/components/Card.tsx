@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Sparkles, Tags, AlarmClockOff } from 'lucide-react';
+import { AlarmClockOff, Sparkles, Tags } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
 interface Props {
@@ -9,32 +9,30 @@ interface Props {
   onOpen?: (id: string) => void;
 }
 
-function priorityClass(p: number) {
-  if (p >= 9) return 'priority p9';
-  if (p >= 7) return 'priority p7';
-  if (p >= 5) return 'priority p5';
+function priorityClass(priority: number) {
+  if (priority >= 9) return 'priority p9';
+  if (priority >= 7) return 'priority p7';
+  if (priority >= 5) return 'priority p5';
   return 'priority p3';
 }
 
 const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: typeof Sparkles }> = {
-  ai_transcript: { label: 'AI · Transcript', icon: Sparkles },
-  ai_segment: { label: 'AI · Segment', icon: Tags },
-  ai_stale: { label: 'AI · Stale', icon: AlarmClockOff },
+  ai_transcript: { label: 'AI - Transcript', icon: Sparkles },
+  ai_segment: { label: 'AI - Segment', icon: Tags },
+  ai_stale: { label: 'AI - Stale', icon: AlarmClockOff },
 };
 
 export function Card({ card, onTogglePin, onOpen }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id });
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`card${isDragging ? ' dragging' : ''}`}
-      onClick={() => { if (!isDragging) onOpen?.(card.id); }}
+      onClick={() => {
+        if (!isDragging) onOpen?.(card.id);
+      }}
       {...attributes}
       {...listeners}
     >
@@ -60,7 +58,7 @@ export function Card({ card, onTogglePin, onOpen }: Props) {
             onTogglePin(card.id);
           }}
         >
-          {card.pinned ? '★ Pinned' : '☆ Pin'}
+          {card.pinned ? 'Pinned' : 'Pin'}
         </button>
       </div>
     </div>

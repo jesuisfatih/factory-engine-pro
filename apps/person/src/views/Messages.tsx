@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, SendHorizonal } from 'lucide-react';
-import { fetchTeammates, fetchThread, sendChatMessage, type PresenceStatus } from '../api/mock';
+import { fetchTeammates, fetchThread, friendlyError, sendChatMessage, type PresenceStatus } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 function presenceLabel(status: PresenceStatus) {
   return status === 'online' ? 'Online'
@@ -17,8 +18,8 @@ export function MessagesView() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: people = [] } = useQuery({ queryKey: ['msg', 'people'], queryFn: fetchTeammates });
-  const { data: thread = [] } = useQuery({
+  const { data: people = [], isLoading, error } = useQuery({ queryKey: ['person', 'msg', 'people'], queryFn: fetchTeammates });
+  const { data: thread = [], error: threadError } = useQuery({
     queryKey: ['msg', 'thread', selectedId],
     queryFn: () => fetchThread(selectedId!),
     enabled: !!selectedId,
@@ -63,6 +64,13 @@ export function MessagesView() {
         <div className="sub">Internal chat with teammates · see who is online right now</div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={(error || threadError) ? new Error(friendlyError(error || threadError)) : null}
+        empty={people.length === 0}
+        emptyTitle="No active teammates"
+        emptyBody="Active members appear here after they are invited and accept access."
+      >
       <div className="msg-shell">
         <aside className="msg-list">
           <div className="msg-list-head">
@@ -140,6 +148,7 @@ export function MessagesView() {
           )}
         </section>
       </div>
+      </QueryState>
     </>
   );
 }

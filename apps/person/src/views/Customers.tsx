@@ -1,8 +1,9 @@
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCustomers } from '../api/mock';
+import { fetchCustomers, friendlyError } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
+import { QueryState } from '../components/QueryState';
 
 const LIFECYCLE_LABEL: Record<CustomerRow['lifecycle'], string> = {
   lead: 'Lead', engaged: 'Engaged', active: 'Active', at_risk: 'At risk', churned: 'Churned',
@@ -13,7 +14,7 @@ function fmtMoney(value: number) {
 }
 
 export function CustomersView() {
-  const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: fetchCustomers });
+  const { data: customers = [], isLoading, error } = useQuery({ queryKey: ['person', 'customers'], queryFn: fetchCustomers });
 
   const columns: ColumnDef<CustomerRow>[] = [
     {
@@ -67,6 +68,13 @@ export function CustomersView() {
         <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">owned</div></div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={error ? new Error(friendlyError(error)) : null}
+        empty={customers.length === 0}
+        emptyTitle="No customers in this workspace"
+        emptyBody="Shopify sync or customer import needs to add customers before this table fills."
+      >
       <div className="data-card">
         <table className="data-table">
           <thead>
@@ -89,6 +97,7 @@ export function CustomersView() {
           </tbody>
         </table>
       </div>
+      </QueryState>
     </>
   );
 }

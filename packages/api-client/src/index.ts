@@ -43,10 +43,15 @@ import type {
   RejectB2BAccessInput,
   PreviewSegmentInput,
   MailProviderHealthResponse,
+  MovePersonQueueCardInput,
+  SendPersonMessageInput,
   SendTestMailInput,
   ShopifyInitialSyncInput,
   ShopifyInitialSyncResponse,
   ShopifySyncStatus,
+  SavePersonNoteInput,
+  TogglePersonQueuePinInput,
+  CreatePersonRequestInput,
 } from '@factory-engine-pro/contracts';
 
 export interface TokenStore {
@@ -359,6 +364,74 @@ export class ApiClient {
 
   supportStats(query = '') {
     return this.get(`/support/stats/overview${query}`);
+  }
+
+  personWorkspaceSummary() {
+    return this.get('/person/workspace/summary');
+  }
+
+  personQueueCards() {
+    return this.get('/person/workspace/queue');
+  }
+
+  movePersonQueueCard(id: string, input: MovePersonQueueCardInput) {
+    return this.patch(`/person/workspace/queue/${encodeURIComponent(id)}/move`, input);
+  }
+
+  togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {
+    return this.post(`/person/workspace/queue/${encodeURIComponent(id)}/pin`, input);
+  }
+
+  personCustomers() {
+    return this.get('/person/workspace/customers');
+  }
+
+  personCalendarEvents() {
+    return this.get('/person/workspace/calendar');
+  }
+
+  personTeammates() {
+    return this.get('/person/workspace/messages/teammates');
+  }
+
+  personThread(threadId: string) {
+    return this.get(`/person/workspace/messages/threads/${encodeURIComponent(threadId)}`);
+  }
+
+  sendPersonMessage(input: SendPersonMessageInput) {
+    return this.post('/person/workspace/messages', input);
+  }
+
+  personNotes() {
+    return this.get('/person/workspace/notes');
+  }
+
+  savePersonNote(input: SavePersonNoteInput) {
+    return this.post('/person/workspace/notes', input);
+  }
+
+  personEmails() {
+    return this.get('/person/workspace/emails');
+  }
+
+  personAnnouncements() {
+    return this.get('/person/workspace/announcements');
+  }
+
+  personNotifications() {
+    return this.get('/person/workspace/notifications');
+  }
+
+  personTraining() {
+    return this.get('/person/workspace/training');
+  }
+
+  personRequests() {
+    return this.get('/person/workspace/requests');
+  }
+
+  createPersonRequest(input: CreatePersonRequestInput) {
+    return this.post('/person/workspace/requests', input);
   }
 
   supportCustomers(query = '') {

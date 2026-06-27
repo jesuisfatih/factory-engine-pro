@@ -11,6 +11,7 @@ import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { MailModule } from './modules/mail/mail.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
+import { PersonWorkspaceModule } from './modules/person-workspace/person-workspace.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { SegmentsModule } from './modules/segments/segments.module.js';
 import { SupportModule } from './modules/support/support.module.js';
@@ -36,6 +37,7 @@ import { HealthController } from './health.controller.js';
     MailModule,
     AuthModule,
     OrdersModule,
+    PersonWorkspaceModule,
     CustomersModule,
     PricingModule,
     SegmentsModule,

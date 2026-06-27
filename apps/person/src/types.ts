@@ -77,8 +77,8 @@ export interface NavItem {
 }
 
 export const NAV: NavItem[] = [
-  { id: 'queue', label: 'Call Queue', badge: 372, group: 'Workspace' },
-  { id: 'customers', label: 'Customers', badge: 17, group: 'Workspace' },
+  { id: 'queue', label: 'Call Queue', group: 'Workspace' },
+  { id: 'customers', label: 'Customers', group: 'Workspace' },
   { id: 'email', label: 'E-mail', group: 'Workspace' },
   { id: 'calendar', label: 'Calendar', group: 'Workspace' },
   { id: 'notes', label: 'Notes', group: 'Workspace' },
@@ -86,5 +86,5 @@ export const NAV: NavItem[] = [
   { id: 'announcements', label: 'Announcements', group: 'Knowledge' },
   { id: 'messaging', label: 'Messaging', group: 'Knowledge' },
   { id: 'requests', label: 'Submit Request', group: 'Account' },
-  { id: 'notifications', label: 'Notifications', badge: 3, group: 'Account' },
+  { id: 'notifications', label: 'Notifications', group: 'Account' },
 ];

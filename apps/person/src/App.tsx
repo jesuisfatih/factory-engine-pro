@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
+import { AnnouncementsView } from './views/Announcements';
+import { CalendarView } from './views/Calendar';
 import { CallQueueView } from './views/CallQueue';
 import { CustomersView } from './views/Customers';
-import { MessagesView } from './views/Messages';
-import { CalendarView } from './views/Calendar';
-import { NotesView } from './views/Notes';
 import { EmailView } from './views/Email';
-import { AnnouncementsView } from './views/Announcements';
+import { MessagesView } from './views/Messages';
+import { NotesView } from './views/Notes';
 import { NotificationsView } from './views/Notifications';
-import { StubView } from './views/Stub';
-import { LoginView } from './views/auth/LoginView';
+import { RequestsView } from './views/Requests';
+import { TrainingView } from './views/Training';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
+import { LoginView } from './views/auth/LoginView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
 import { readSession } from './lib/api';
-import { NAV, type NavId } from './types';
+import { type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
   queue: 'Call Queue',
@@ -29,17 +30,6 @@ const TITLES: Record<NavId, string> = {
   notifications: 'Notifications',
 };
 
-const STUB_COPY: Record<string, { title: string; description: string }> = {
-  email: { title: 'E-mail threads', description: 'Live IMAP sync ile gelen iş kutusu burada görünecek. Yanıt drafting + signature templates + linked customer card.' },
-  training: { title: 'Training & playbooks', description: 'Senior reps tarafından assign edilen training cards + call scripts. Tamamlanma oranı leaderboard\'a yansır.' },
-  calendar: { title: 'Calendar', description: 'Tüm reminder\'lar + scheduled callbacks + meet links tek görünüm. Drag-resize ile süre değişir.' },
-  notes: { title: 'Notes', description: 'Scratch notes (personal, kimseyle paylaşılmaz) + Queue notes (team-visible) ayrı tabs.' },
-  announcements: { title: 'Announcements', description: 'Yönetimden gelen broadcast mesajlar. Okundu bildirimi + linked playbook.' },
-  messaging: { title: 'Internal messaging', description: 'Rep ↔ admin chat, customer card mention\'ları (@Cynthia), reaction\'lar.' },
-  requests: { title: 'Submit a request', description: 'PTO, equipment, exception ticket\'ları. Statü + onay zinciri görünür.' },
-  notifications: { title: 'Notifications', description: 'Pin\'lendi, atandı, mention\'landı, SR breach. Filter + okundu işaretle.' },
-};
-
 type AuthScreen = 'login' | 'forgot' | 'reset';
 
 export default function App() {
@@ -48,8 +38,6 @@ export default function App() {
   const [current, setCurrent] = useState<NavId>('queue');
   const [collapsed, setCollapsed] = useState(false);
   const title = TITLES[current];
-
-  void NAV;
 
   if (!authed) {
     return (
@@ -76,10 +64,9 @@ export default function App() {
       case 'email': return <EmailView />;
       case 'announcements': return <AnnouncementsView />;
       case 'notifications': return <NotificationsView />;
-      default: {
-        const copy = STUB_COPY[current] ?? { title, description: 'Yakında.' };
-        return <StubView title={copy.title} description={copy.description} />;
-      }
+      case 'training': return <TrainingView />;
+      case 'requests': return <RequestsView />;
+      default: return <CallQueueView />;
     }
   };
 
@@ -87,7 +74,7 @@ export default function App() {
     <div className={`layout${collapsed ? ' collapsed' : ''}`}>
       <Sidebar current={current} onSelect={setCurrent} collapsed={collapsed} />
       <div className="main">
-        <Topbar title={title} onToggleSidebar={() => setCollapsed((v) => !v)} />
+        <Topbar title={title} onToggleSidebar={() => setCollapsed((value) => !value)} />
         <div className="content">{renderView()}</div>
       </div>
     </div>

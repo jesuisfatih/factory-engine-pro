@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { AtSign, Briefcase, ShieldAlert, Star, Bell } from 'lucide-react';
-import { fetchNotifications } from '../api/mock';
+import { fetchNotifications, friendlyError } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 const ICONS = {
   mention: AtSign,
@@ -11,7 +12,7 @@ const ICONS = {
 };
 
 export function NotificationsView() {
-  const { data: rows = [] } = useQuery({ queryKey: ['notifications'], queryFn: fetchNotifications });
+  const { data: rows = [], isLoading, error } = useQuery({ queryKey: ['person', 'notifications'], queryFn: fetchNotifications });
   const unread = rows.filter((row) => !row.read).length;
 
   return (
@@ -21,6 +22,13 @@ export function NotificationsView() {
         <div className="sub">{unread} unread · mentions, assignments, SLA, pins and system events</div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={error ? new Error(friendlyError(error)) : null}
+        empty={rows.length === 0}
+        emptyTitle="No notifications"
+        emptyBody="Assignments, urgent unassigned cases and system events will appear here."
+      >
       <div className="notif-feed">
         {rows.map((row) => {
           const Icon = ICONS[row.kind];
@@ -36,6 +44,7 @@ export function NotificationsView() {
           );
         })}
       </div>
+      </QueryState>
     </>
   );
 }

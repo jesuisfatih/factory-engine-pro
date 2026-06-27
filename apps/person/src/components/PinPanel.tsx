@@ -14,7 +14,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       cell: ({ row }) => (
         <>
           <div className="name">{row.original.title}</div>
-          <div className="seg">{row.original.segment} · P{row.original.priority}</div>
+          <div className="seg">{row.original.segment} - P{row.original.priority}</div>
         </>
       ),
     },
@@ -38,9 +38,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
     data: pinned,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    state: {
-      rowPinning: { top: pinned.map((c) => c.id) },
-    },
+    state: { rowPinning: { top: pinned.map((card) => card.id) } },
     keepPinnedRows: true,
     getRowId: (row) => row.id,
   });
@@ -51,14 +49,14 @@ export function PinPanel({ pinned, onUnpin }: Props) {
         Pinned board <span className="badge">{pinned.length}</span>
       </h2>
       {pinned.length === 0 ? (
-        <div className="empty">Hiç pin yok. Karttaki ☆ Pin'e bas, en üste sabitlensin.</div>
+        <div className="empty">Pin a live queue card to keep it visible here.</div>
       ) : (
         <table className="table">
           <thead>
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((h) => (
-                  <th key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</th>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</th>
                 ))}
               </tr>
             ))}

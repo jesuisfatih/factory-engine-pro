@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Save } from 'lucide-react';
-import { fetchNotes, saveNote, type NoteRow } from '../api/mock';
+import { fetchNotes, friendlyError, saveNote, type NoteRow } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 type Tab = 'all' | 'scratch' | 'queue';
 
@@ -12,12 +13,12 @@ export function NotesView() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
 
-  const { data: notes = [] } = useQuery({ queryKey: ['notes'], queryFn: fetchNotes });
+  const { data: notes = [], isLoading, error } = useQuery({ queryKey: ['person', 'notes'], queryFn: fetchNotes });
 
   const save = useMutation({
     mutationFn: saveNote,
     onSuccess: (note) => {
-      qc.invalidateQueries({ queryKey: ['notes'] });
+      qc.invalidateQueries({ queryKey: ['person', 'notes'] });
       setSelectedId(note.id);
     },
   });
@@ -62,6 +63,11 @@ export function NotesView() {
         <div className="sub">Scratch (personal) + Queue notes (team-visible, linked to customer/queue item)</div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={error ? new Error(friendlyError(error)) : null}
+        empty={false}
+      >
       <div className="notes-shell">
         <aside className="notes-list">
           <div className="notes-tabs">
@@ -82,6 +88,13 @@ export function NotesView() {
               <Plus size={11} /> Queue
             </button>
           </div>
+
+          {filtered.length === 0 && (
+            <div className="state-panel empty">
+              <strong>No notes yet</strong>
+              <span>Create a scratch or queue note to start a persisted workspace record.</span>
+            </div>
+          )}
 
           {filtered.map((note) => (
             <button key={note.id} type="button"
@@ -123,6 +136,7 @@ export function NotesView() {
           )}
         </section>
       </div>
+      </QueryState>
     </>
   );
 }

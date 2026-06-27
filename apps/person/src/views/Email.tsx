@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Mail } from 'lucide-react';
-import { fetchEmails } from '../api/mock';
+import { fetchEmails, friendlyError } from '../api/live';
+import { QueryState } from '../components/QueryState';
 
 export function EmailView() {
-  const { data: emails = [] } = useQuery({ queryKey: ['emails'], queryFn: fetchEmails });
+  const { data: emails = [], isLoading, error } = useQuery({ queryKey: ['person', 'emails'], queryFn: fetchEmails });
   const unread = emails.filter((email) => email.unread).length;
 
   return (
@@ -16,6 +17,13 @@ export function EmailView() {
         </div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        error={error ? new Error(friendlyError(error)) : null}
+        empty={emails.length === 0}
+        emptyTitle="No mail delivery records"
+        emptyBody="Transactional delivery rows will appear here after the backend queues mail."
+      >
       <div className="email-list">
         {emails.map((email) => (
           <div key={email.id} className={`email-row${email.unread ? ' unread' : ''}`}>
@@ -31,6 +39,7 @@ export function EmailView() {
           </div>
         ))}
       </div>
+      </QueryState>
     </>
   );
 }
