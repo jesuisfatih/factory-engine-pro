@@ -15,6 +15,22 @@ const TENANT_SCOPED_MODELS = new Set([
   'SubUserRoleAssignment',
   'AuthToken',
   'AuthAuditLog',
+  'CatalogProduct',
+  'CatalogVariant',
+  'CommerceOrder',
+  'CommercePickupOrder',
+  'CommerceActivityLog',
+  'CustomerInsight',
+  'CustomerList',
+  'CustomerListItem',
+  'PricingRule',
+  'Segment',
+  'SegmentOwnership',
+  'SegmentCustomerMembership',
+  'ServiceRequest',
+  'ServiceRequestComment',
+  'B2BAccessRequest',
+  'B2BAccessRequestFile',
 ]);
 
 @Injectable()

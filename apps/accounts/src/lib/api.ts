@@ -19,8 +19,8 @@ export const accountsTokenStore: TokenStore = {
 };
 
 export const accountsApi = new ApiClient({
-  baseUrl: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:4100/api/v1',
-  tenantId: import.meta.env.VITE_TENANT_ID ?? 'ten_local',
+  baseUrl: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:4120/api/v1',
+  tenantId: import.meta.env.VITE_TENANT_ID ?? 'ten_remote_test',
   tokenStore: accountsTokenStore,
 });
 

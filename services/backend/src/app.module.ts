@@ -3,7 +3,13 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
+import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
+import { PricingModule } from './modules/pricing/pricing.module.js';
+import { SegmentsModule } from './modules/segments/segments.module.js';
+import { SupportModule } from './modules/support/support.module.js';
 import { JwtAuthGuard } from './shared/auth.guard.js';
 import { HttpExceptionFilter } from './shared/http-exception.filter.js';
 import { PermissionsGuard } from './shared/permissions.guard.js';
@@ -20,6 +26,12 @@ import { HealthController } from './health.controller.js';
     QueueModule,
     IdentityModule,
     AuthModule,
+    OrdersModule,
+    CustomersModule,
+    PricingModule,
+    SegmentsModule,
+    SupportModule,
+    B2BAccessModule,
   ],
   controllers: [HealthController],
   providers: [

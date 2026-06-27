@@ -4,6 +4,7 @@ import { Queue, type ConnectionOptions } from 'bullmq';
 
 export const REDIS_CONNECTION = Symbol('REDIS_CONNECTION');
 export const AUTH_EVENTS_QUEUE = Symbol('AUTH_EVENTS_QUEUE');
+export const PRICING_RULE_SYNC_QUEUE = Symbol('PRICING_RULE_SYNC_QUEUE');
 
 @Global()
 @Module({
@@ -25,8 +26,16 @@ export const AUTH_EVENTS_QUEUE = Symbol('AUTH_EVENTS_QUEUE');
         return new Queue('auth.events', { connection });
       },
     },
+    {
+      provide: PRICING_RULE_SYNC_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue('pricing-rule-sync', { connection });
+      },
+    },
   ],
-  exports: [REDIS_CONNECTION, AUTH_EVENTS_QUEUE],
+  exports: [REDIS_CONNECTION, AUTH_EVENTS_QUEUE, PRICING_RULE_SYNC_QUEUE],
 })
 export class QueueModule {}
 

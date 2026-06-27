@@ -1,21 +1,11 @@
 import { createContext, useContext } from 'react';
+import { useCurrentPrincipal } from '@/lib/current-principal';
 
 export type RoleId = 'admin' | 'customer_service' | 'sales_service' | 'accounting' | 'support_lead' | 'viewer';
 
 export const ROLES: RoleId[] = ['admin', 'customer_service', 'sales_service', 'accounting', 'support_lead', 'viewer'];
 
-export type Permission =
-  | '*'
-  | 'dashboard.view'
-  | 'team.view' | 'team.create' | 'team.update' | 'team.delete'
-  | 'team.roles.write' | 'team.commissions.write'
-  | 'segments.view' | 'segments.create' | 'segments.update' | 'segments.delete'
-  | 'settings.view' | 'settings.write'
-  | 'tasks.view.self' | 'tasks.view.team' | 'tasks.view.all'
-  | 'tasks.update.self' | 'tasks.assign'
-  | 'commissions.view.self' | 'commissions.view.all'
-  | 'messages.send' | 'support.read.team' | 'support.write'
-  | 'calendar.write';
+export type Permission = string;
 
 export const ROLE_PERMISSIONS: Record<RoleId, Permission[]> = {
   admin: ['*'],
@@ -61,8 +51,8 @@ export function useCurrentRole() {
 }
 
 export function useCan(permission: Permission): boolean {
-  const role = useCurrentRole();
-  const perms = ROLE_PERMISSIONS[role.id];
-  if (perms.includes('*')) return true;
-  return perms.includes(permission);
+  const principal = useCurrentPrincipal();
+  const perms = new Set(principal.data?.permissions ?? []);
+  if (perms.has('*')) return true;
+  return perms.has(permission);
 }

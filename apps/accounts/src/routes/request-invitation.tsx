@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, ArrowLeft, Tag, Truck, ShieldCheck, MapPin, Upload } from 'lucide-react';
+import { accountsApi, apiErrorMessage } from '@/lib/api';
 
 interface FormShape {
   firstName: string;
@@ -32,6 +33,8 @@ function RequestInvitationView() {
   const { t } = useTranslation();
   const [form, setForm] = useState<FormShape>(EMPTY);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const benefits = t('auth.invite.hero_benefits', { returnObjects: true }) as string[];
   const industries = t('auth.invite.industries', { returnObjects: true }) as string[];
@@ -99,7 +102,35 @@ function RequestInvitationView() {
         </header>
 
         <form
-          onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setError(null);
+            if (!canSubmit) return;
+            setSubmitting(true);
+            try {
+              await accountsApi.submitB2BAccessRequest({
+                firstName: form.firstName,
+                lastName: form.lastName,
+                email: form.email,
+                phone: form.phone || undefined,
+                companyName: form.companyName,
+                legalName: form.legalName || form.companyName,
+                website: form.website || undefined,
+                industry: form.industry || undefined,
+                estimatedMonthlyVolume: form.estimatedMonthlyVolume || undefined,
+                password: form.password,
+                message: form.message || undefined,
+                flowIntent: 'request-invitation',
+                sourceSurface: 'accounts-request-invitation',
+                sourcePath: '/request-invitation',
+              }, form.taxCertificate ?? undefined);
+              setSubmitted(true);
+            } catch (requestError) {
+              setError(apiErrorMessage(requestError));
+            } finally {
+              setSubmitting(false);
+            }
+          }}
         >
           <div className="field-row">
             <div className="field">
@@ -185,8 +216,10 @@ function RequestInvitationView() {
             <textarea id="iv-message" rows={3} value={form.message} onChange={(event) => update({ message: event.target.value })} />
           </div>
 
-          <button type="submit" className="save-btn" disabled={!canSubmit} style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}>
-            {t('auth.invite.submit')}
+          {error ? <div className="error-state">{error}</div> : null}
+
+          <button type="submit" className="save-btn" disabled={!canSubmit || submitting} style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}>
+            {submitting ? t('common.loading') : t('auth.invite.submit')}
           </button>
 
           <a href="#" className="auth-link" style={{ justifyContent: 'center' }}>

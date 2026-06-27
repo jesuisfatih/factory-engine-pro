@@ -21,6 +21,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as B2bRequestsRouteImport } from './routes/b2b-requests'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SupportIndexRouteImport } from './routes/support/index'
 import { Route as SegmentsIndexRouteImport } from './routes/segments/index'
@@ -108,6 +109,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const CustomersRoute = CustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const B2bRequestsRoute = B2bRequestsRouteImport.update({
+  id: '/b2b-requests',
+  path: '/b2b-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -254,6 +260,7 @@ const SettingsAiBudgetRoute = SettingsAiBudgetRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/b2b-requests': typeof B2bRequestsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/b2b-requests': typeof B2bRequestsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -337,6 +345,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/b2b-requests': typeof B2bRequestsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/b2b-requests'
     | '/customers'
     | '/dashboard'
     | '/forgot-password'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/b2b-requests'
     | '/customers'
     | '/dashboard'
     | '/forgot-password'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/b2b-requests'
     | '/customers'
     | '/dashboard'
     | '/forgot-password'
@@ -506,6 +518,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  B2bRequestsRoute: typeof B2bRequestsRoute
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -605,6 +618,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/customers'
       preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b2b-requests': {
+      id: '/b2b-requests'
+      path: '/b2b-requests'
+      fullPath: '/b2b-requests'
+      preLoaderRoute: typeof B2bRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -925,6 +945,7 @@ const TeamRouteWithChildren = TeamRoute._addFileChildren(TeamRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  B2bRequestsRoute: B2bRequestsRoute,
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,

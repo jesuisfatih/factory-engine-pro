@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@factory-engine-pro/contracts": "workspace:*",
+    "@factory-engine-pro/integrations": "workspace:*",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",

@@ -104,39 +104,27 @@ ssh root@144.202.125.169   # uygulama host'u (factoryengine-* container'lar)
 > Diğerlerinin process'lerini durdurma, restart etme, dosyalarını silme,
 > port'larını taşıma — **hiçbir şey yapma**. Şüphedeysen kullanıcıya sor.
 
-### 3.2 Managed Postgres (Vultr)
+### 3.2 Postgres + Redis — managed (canlı container env'lerinden alınır)
 
-Lokal/self-hosted Postgres **kullanılmaz** — test/staging/prod hepsi Vultr
-managed instance üzerinden gider. Host + credential Vultr Console'dan alınır.
+> ⚠ **Lokal makinede Postgres veya Redis KURULMAZ.** Lokal makine
+> sadece kod yazma ortamıdır. Backend / DB / Redis hiçbir zaman lokal'de
+> çalışmaz (bkz. 3.7 Mutagen).
 
-- **Port:** `16751`
-- **SSL:** `sslmode=require` (zorunlu)
-- **DB adı kuralı:** `factory_engine_pro` ile başlamak **zorunlu**:
-  - `factory_engine_pro_test` — test
-  - `factory_engine_pro_staging` — staging
-  - `factory_engine_pro` — prod
-- **DATABASE_URL formatı:**
-  ```
-  postgresql://USER:PASSWORD@VULTR_HOST:16751/factory_engine_pro_test?sslmode=require&schema=public
-  ```
-- **Guard** (`services/backend/scripts/guard-database-url.mjs`) — Prisma
-  migrate öncesi otomatik çalışır, şunları reddeder:
-  - `127.0.0.1` / `localhost` → ❌ (lokal Postgres yasak)
-  - Legacy isimler (`eagle_print_db`, `eagle_dtfbank_db`,
-    `eagle_dtfprintdepot_db`, `eagle_dtfsupply_db`, `eagle_fastdtfsupply_db`,
-    `fast_dtf_transfer`) → ❌ (eski tenant DB'lerine yazmayı engeller)
-  - `factory_engine_pro` prefix'i yok → ❌
+**Bağlantı bilgileri (managed Postgres URL, managed Redis URL ve diğer
+secret'lar) `144.202.125.169`'da çalışan canlı tenant container'larının
+`.env` dosyalarından gelir.** Tüm tenant'lar (dtfbank dahil) için kaynak
+aynı: ilgili container'ın kendi `.env`'i. Yeni sistem bu env'leri olduğu
+gibi kullanır; lokalde `.env` üretmek/uydurmak yok.
 
-### 3.3 Managed Redis (Vultr)
+#### Guard (`services/backend/scripts/guard-database-url.mjs`) — agent'ın koruması
 
-Lokal Redis opsiyonel (queue dev için); test/staging/prod yine Vultr managed.
-
-- **Port:** `16752`
-- **TLS:** `rediss://` (zorunlu)
-- **REDIS_URL formatı:**
-  ```
-  rediss://USER:PASSWORD@VULTR_HOST:16752
-  ```
+Eski Eagle DB'leri ile yeni DB'ler **aynı managed cluster'da yan yana**
+duracağı için Prisma migrate'in yanlış DB'ye vurmasını engelliyor.
+Reddediyor:
+- `127.0.0.1` / `localhost` → ❌ (lokal Postgres yok)
+- Legacy isimler (`eagle_print_db`, `eagle_dtfbank_db`, `eagle_dtfprintdepot_db`,
+  `eagle_dtfsupply_db`, `eagle_fastdtfsupply_db`, `fast_dtf_transfer`) → ❌
+- `factory_engine_pro` ile başlamayan DB adı → ❌
 
 ### 3.4 Per-tenant entegrasyon ayarları
 
@@ -169,19 +157,34 @@ codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
 > JWT'den / `x-tenant-id` header'ından çözülür. `tenantId` Prisma
 > extension tarafından her query'ye otomatik enjekte edilir.
 
-### 3.7 Deploy süreci — Mutagen (dtfbank) + Depot (prod tenant'lar)
+### 3.7 Geliştirme + Deploy — Mutagen (dtfbank) + Depot (prod tenant'lar)
+
+> ⚠ **TEMEL KURAL — Lokal makinede backend ÇALIŞTIRILMAZ.**
+> Lokal makine **sadece kod editörü**. Postgres, Redis, NestJS hiçbir
+> zaman lokal'de koşmaz. `pnpm dev` lokal'de denenmez. `docker-compose`
+> lokal'de başlatılmaz. Tüm geliştirme + test akışı **sunucudaki
+> `factoryengine-dtfbank-app` container'ında** gerçekleşir; bu container
+> zaten ayakta + managed Postgres + managed Redis'e bağlı.
 
 İki ayrı yol birlikte kullanılır:
 
-#### (a) dtfbank — Mutagen (development path)
+#### (a) dtfbank — Mutagen (geliştirme + test ortamı)
 
-- `factoryengine-dtfbank-app` container'ı **bind-mount** ile çalışır:
-  lokal `apps/`, `services/`, `packages/` dizinleri Mutagen tarafından
-  sunucudaki dtfbank container'ının `/app/` dizinine sync edilir.
-- Live code = Mutagen-synced host tree. Imaj **sadece base** — gerçek
-  çalışan kod sync'tendir.
-- Akış: lokalde kod yaz → Mutagen otomatik push → container içinde
-  HMR / process restart.
+- `factoryengine-dtfbank-app` **zaten sunucuda çalışıyor** (eski sistem
+  canlı kaldığı için container ayakta, eski kod + `.env` + managed
+  cluster bağlantısı kurulu).
+- Bu çalışmada container **yeniden kurulmaz**. İçindeki eski kod
+  temizlenir, yerine Mutagen sync ile yeni Factory Engine Pro kodu
+  basılır. Container'ın mevcut `.env`'i (managed DB/Redis URL'leri +
+  secret'lar) yerinde kalır.
+- Akış: lokalde kod yaz → Mutagen anlık push → container içinde
+  process restart / HMR.
+
+> **Bu kısımdaki spesifik deploy detayları (eski kod temizleme adımları,
+> Mutagen config dosyası, container path'leri, Prisma migrate tetikleme
+> komutu) deploy zamanı ihtiyaçlarıdır.** Agent 6. bölümdeki kod
+> transferine başlamak için bunları beklemez — kodlama yapar, deploy
+> zamanı geldiğinde bu detaylar uygulanır.
 - Komutlar (placeholder — gerçek `mutagen.yml` yazılacak):
   ```bash
   mutagen project start          # sync oturumunu başlat
@@ -243,7 +246,18 @@ endpoint. Okumadan kod yazma.
 Agent'ın ana hedefi sistemi **backend çöplüğüne** çevirmek değildir.
 Aşağıdaki kurallar her transfer maddesinde **istisnasız** uygulanır.
 
-### 5.1 Prod-ready olmadan bir sonrakine geçme
+### 5.1 Prod-ready olmadan bir sonrakine geçme — **MUTLAK KURAL**
+
+> ⚠ **Bir madde bitmeden diğerine ASLA geçilmez.** "Bitmiş" demek:
+> hem UI hem backend o iş için **tam olarak var** + birbirleriyle
+> **gerçek etkileşim halinde**. Mock yok, statik yok, "gerisini sonra
+> bağlarız" yok. Bu kural mutlak — duraksat, sertleştir, sonra geç.
+
+> ⚠ **6. bölümdeki kod transferi 3. bölümün deploy detaylarını
+> beklemez.** Bölüm 3 (Sunucu / Managed DB / Container / Deploy) deploy
+> zamanı bilgisidir; eksik ya da "sonra netleşecek" yazsa bile agent
+> kod yazmaya devam eder. 6'daki maddeler kod transferi — bunlar deploy
+> komutlarına bağımlı değildir.
 
 Bir transfer maddesi, **tüm yönleriyle** prod-ready olmadan bir sonraki
 maddeye **geçilmez**.
@@ -255,11 +269,23 @@ Prod-ready demek, tek bir madde için şunların hepsi tamamlanmış demek:
 - Prisma model'leri migrate edilmiş
 - BullMQ queue / worker (gerekirse) çalışıyor
 - UI o backend'e bağlandı — **mock data yok, gerçek API çağrısı**
-- UI'nın **her detayı** (her buton, her tab, her filtre, her column, her modal) backend'le çalışır durumda
-- Hata durumları UI'da gösteriliyor (loading, empty, error, retry)
+- UI'nın **her detayı** (her buton, her tab, her filtre, her column, her modal, her bulk action) backend'le çalışır durumda
+- **UI ↔ backend canlı çift yönlü etkileşim çalışıyor**: kullanıcı UI'dan tetikler → backend'de iş yapılır → response döner → TanStack Query invalidate olur → UI canlı olarak değişikliği gösterir. Bu döngü her create/update/delete/list akışı için sağlanmış olmalı.
+- Hata durumları UI'da gösteriliyor (loading, empty, error, retry — 5.2'deki 3 durum)
 - Multi-tenant kuralı uygulanıyor (`tenantId` enforced)
+- i18n key'leri eklenmiş (5.4)
+- Permission guard + UI `useCan` kontrolü her noktada (5.5)
 
 Yarım kalmış bir madde "sonra döneriz" denmez. Bitir, kanıtla, sonraki maddeye geç.
+
+> **İzin isteme, ama önce gerçekten bittiğine emin ol.** Bir madde
+> yukarıdaki kriterleri **eksiksiz** karşılıyorsa: kısa rapor düş (ne
+> yapıldı + kanıt: endpoint test / UI screenshot / log özeti) ve bir
+> sonraki maddeye **otomatik geç** — "Geçebilir miyim?" sorma. Ama
+> kriterlerden **biri bile eksikse** sonraki maddeye geçme; bitir önce.
+> Kullanıcı sadece kontrolde yanlış gördüğünde araya girer. İzin
+> gerektiren tek durum: ROADMAP'te listelenmeyen / belirsiz / 7.2'deki
+> kapalı listeyle çelişen bir iş — o zaman dur, sor.
 
 ### 5.2 Statik / mock UI bırakmak yasak
 
@@ -765,10 +791,42 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 
 ---
 
+### 2026-06-27 — ROADMAP düzeltme turu (commit'siz, doc-only)
+
+**5. 3.2 / 3.7 yeniden yazıldı — önceki versiyonlar yanlış anlama içeriyordu**
+- Önceki ROADMAP'te "Vultr managed Postgres" + "lokal Postgres yasak" yazıyordu, ama lokal'de Postgres KURMA ihtiyacı **niye yoktu** net değildi — agent muhtemelen bu yüzden ne lokal ne Vultr'a bağlanabildi (`.env` bile yok).
+- Doğru kavram: **lokal makine sadece kod editörü**; backend hiç lokal'de çalışmaz. Tüm geliştirme + test akışı sunucudaki `factoryengine-dtfbank-app` container'ında. Bağlantı bilgileri (managed Postgres URL, Redis URL, secret'lar) o container'ın **mevcut `.env`'inden** alınır — hiçbir bilgi uydurulmaz, lokalde yeni `.env` üretilmez.
+- **Aksiyon (agent için):** `.env` lokalde **aranmaz/yaratılmaz**. `pnpm dev` lokalde denenmez. Geliştirme akışı için Mutagen + dtfbank container kullanılır (3.7).
+- **Aksiyon (kullanıcı için):** 3.2 ve 3.7'de açıkça "kullanıcı netleştirecek" diye bıraktığım noktalar var (env nasıl indirilecek, container'da eski kod nasıl temizlenecek, Mutagen config). Bu detayları verince doc tamamlanır.
+→
+
+**7. "Kullanıcı netleştirecek" notları agent'ı blokladı — silindi**
+- 3.2 ve 3.7'ye varsayım yapmamak adına "spesifik komut/path/Mutagen config kullanıcı netleştirecek" diye notlar bırakmıştım.
+- Agent bu notları "iş açık değil, izin gelmedi" olarak yorumlayıp 6.2'ye geçmedi (sohbet kanıtı: "Güncel ROADMAP'te 6.2 Commerce var, ama aynı dosyada dtfbank + Mutagen akışı için 'kullanıcı netleştirecek' noktalar duruyor").
+- Bu yanlış davranışın iki sebebi vardı: (a) ben bu notları üst seviyede 6'yı bloklamayacak şekilde işaretlemedim, (b) 5.1'de deploy detaylarının kod yazımını bloklamayacağı belirtilmemişti.
+- **Aksiyon:** ROADMAP'ten "kullanıcı netleştirecek" notları silindi. 5.1'e yeni uyarı: "6. bölümdeki kod transferi 3. bölümün deploy detaylarını beklemez". Agent'ın 6'da kod yazmaya başlaması için 3 tamamlanmış olması gerekmiyor.
+→
+
+**6. UYDURMA / VARSAYIM YASAĞI — agent + denetçi için**
+- ROADMAP'e **kullanıcının net olarak söylemediği** hiçbir spesifik komut / path / kural / değer yazılmaz.
+- Örneğin (yapılmaması gerekenler): "BullMQ prefix `factoryengine:` olur", "scp `/opt/apps/...`'tan indir", "ilk kurulum sırası: 1. eski kodu sil 2. ..." — bunlar agent için **konfigürasyon**, kullanıcı söylemeden uydurma değil.
+- Bilinmeyen veya kullanıcının netleştirmesi gereken nokta varsa → "→ kullanıcı netleştirecek" notu düşülür, **boş bırakılır**.
+- Bu kural her not, her tablo, her örnek komut için geçerli.
+→
+
+---
+
 ### 2026-06-27 — Commit `395a76c` sonrası
 
 **4. 5.5 RBAC sürekliliği — `adminRoleLabel` türetimi `DEFAULT_MEMBER_ROLES`'ten bağımsız**
 - `apps/admin/src/lib/current-principal.ts` içindeki `adminRoleLabel(principal)` permission seti üstünden rol etiketi türetiyor (`roles.write + settings.write → Owner`, `members.write → Admin`, `task.assign → Agent`, geri kalan → Member).
 - Bu permission'lara dayalı etiket akıllı bir choice ama **`packages/contracts/permissions.ts` → `DEFAULT_MEMBER_ROLES` matrisindeki rol slug'ı (owner / admin / agent) doğrudan** kullanılmıyor. İleride owner'a yeni permission eklerse veya admin'den `members.write` çekilirse etiket türetimi yanlış sonuç döndürebilir.
 - **Aksiyon (kritik değil, izleme):** rol matrisi değiştiğinde `adminRoleLabel` da gözden geçirilsin. Veya principal response'una `roleSlug` eklenip etiket onun üstünden çekilsin (daha sağlam). Şimdilik çalışıyor.
+→
+
+---
+
+### 2026-06-27 — Commit `b7d486c` sonrası
+
+**8. Yorum: artık UI'de canlı Shopify verileri olmalı ve işlem yapılabilmeli**
 →

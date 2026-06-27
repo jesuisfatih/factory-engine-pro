@@ -1,6 +1,32 @@
 import { createId } from '@paralleldrive/cuid2';
 
-export type IdPrefix = 'ten' | 'tmbr' | 'cust' | 'cusr' | 'csub' | 'mrol' | 'crol' | 'tok' | 'cfg' | 'alog' | 'asgn';
+export type IdPrefix =
+  | 'ten'
+  | 'tmbr'
+  | 'cust'
+  | 'cusr'
+  | 'csub'
+  | 'mrol'
+  | 'crol'
+  | 'tok'
+  | 'cfg'
+  | 'alog'
+  | 'asgn'
+  | 'prod'
+  | 'var'
+  | 'ord'
+  | 'pick'
+  | 'cins'
+  | 'clst'
+  | 'clit'
+  | 'prule'
+  | 'seg'
+  | 'sown'
+  | 'smem'
+  | 'sr'
+  | 'srcm'
+  | 'b2br'
+  | 'b2bf';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;

@@ -1,14 +1,361 @@
 import { PrismaClient } from '@prisma/client';
+import { pbkdf2Sync, randomBytes } from 'node:crypto';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const tenantId = 'ten_local';
+  const tenantId = process.env.SEED_TENANT_ID ?? 'ten_local';
+  const suffix = tenantId.replace(/[^a-zA-Z0-9]/g, '_');
   await prisma.tenant.upsert({
     where: { id: tenantId },
-    create: { id: tenantId, name: 'Local Factory Engine', slug: 'local' },
+    create: { id: tenantId, name: 'Factory Engine Test Tenant', slug: suffix.toLowerCase() },
     update: {},
   });
+
+  const customerId = `cust_${suffix}_northstar`;
+  await prisma.customer.upsert({
+    where: { id: customerId },
+    create: {
+      id: customerId,
+      tenantId,
+      shopifyCustomerId: '1000000001',
+      companyName: 'Northstar Print Supply',
+      firstName: 'Aylin',
+      lastName: 'Kara',
+      email: 'orders+northstar@example.com',
+      phone: '+15555550101',
+      tags: ['b2b', 'vip', 'wholesale'],
+      totalSpent: 1842.5,
+      ordersCount: 2,
+      averageOrderValue: 921.25,
+      lastOrderAt: new Date('2026-06-20T12:00:00.000Z'),
+      syncedAt: new Date(),
+    },
+    update: {
+      totalSpent: 1842.5,
+      ordersCount: 2,
+      averageOrderValue: 921.25,
+      lastOrderAt: new Date('2026-06-20T12:00:00.000Z'),
+      tags: ['b2b', 'vip', 'wholesale'],
+      syncedAt: new Date(),
+    },
+  });
+
+  const productId = `prod_${suffix}_dtf`;
+  const variantId = `var_${suffix}_dtf_22`;
+  await prisma.catalogProduct.upsert({
+    where: { id: productId },
+    create: {
+      id: productId,
+      tenantId,
+      shopifyProductId: '9000000001',
+      title: 'Premium DTF Transfer',
+      handle: 'premium-dtf-transfer',
+      vendor: 'Factory Engine',
+      productType: 'DTF Transfer',
+      tags: ['dtf', 'transfer'],
+      status: 'active',
+    },
+    update: {},
+  });
+  await prisma.catalogVariant.upsert({
+    where: { id: variantId },
+    create: {
+      id: variantId,
+      tenantId,
+      productId,
+      shopifyVariantId: '9100000001',
+      sku: 'DTF-22',
+      title: '22 inch gang sheet',
+      price: 42,
+      availableForSale: true,
+      position: 1,
+    },
+    update: {
+      price: 42,
+      availableForSale: true,
+    },
+  });
+
+  const orderId = `ord_${suffix}_1001`;
+  await prisma.commerceOrder.upsert({
+    where: { id: orderId },
+    create: {
+      id: orderId,
+      tenantId,
+      customerId,
+      shopifyOrderId: '8000001001',
+      shopifyOrderNumber: '#FEP-1001',
+      shopifyCustomerId: '1000000001',
+      source: 'shopify',
+      email: 'orders+northstar@example.com',
+      phone: '+15555550101',
+      subtotal: 420,
+      totalDiscounts: 42,
+      totalTax: 0,
+      totalPrice: 378,
+      totalShipping: 0,
+      totalRefunded: 0,
+      currency: 'USD',
+      financialStatus: 'paid',
+      fulfillmentStatus: 'unfulfilled',
+      fulfillmentMode: 'pickup',
+      tags: ['pickup', 'b2b'],
+      lineItems: [{ title: '22 inch gang sheet', sku: 'DTF-22', quantity: 10, unitPrice: 42, shopifyVariantId: '9100000001' }],
+      designFiles: [{ name: 'Artwork URL', value: 'https://cdn.example.com/designs/fep-1001.pdf' }],
+      fulfillmentEvidence: { matchedTags: ['pickup'], hasShippingAddress: false },
+      processedAt: new Date('2026-06-20T12:00:00.000Z'),
+    },
+    update: {
+      totalPrice: 378,
+      fulfillmentMode: 'pickup',
+      fulfillmentStatus: 'unfulfilled',
+      designFiles: [{ name: 'Artwork URL', value: 'https://cdn.example.com/designs/fep-1001.pdf' }],
+    },
+  });
+  await prisma.commercePickupOrder.upsert({
+    where: { orderId },
+    create: {
+      id: `pick_${suffix}_1001`,
+      tenantId,
+      orderId,
+      customerId,
+      status: 'pending',
+      orderNumber: '#FEP-1001',
+      customerName: 'Northstar Print Supply',
+      customerEmail: 'orders+northstar@example.com',
+      designFiles: [{ name: 'Artwork URL', value: 'https://cdn.example.com/designs/fep-1001.pdf' }],
+      metadata: {},
+    },
+    update: {
+      status: 'pending',
+    },
+  });
+
+  await prisma.customerInsight.upsert({
+    where: { customerId },
+    create: {
+      id: `cins_${suffix}_northstar`,
+      tenantId,
+      customerId,
+      clvScore: 37,
+      projectedClv: 2211,
+      clvTier: 'growth',
+      rfmRecency: 5,
+      rfmFrequency: 2,
+      rfmMonetary: 4,
+      rfmSegment: 'vip',
+      healthScore: 88,
+      churnRisk: 'low',
+      daysSinceLastOrder: 7,
+      avgOrderValue: 921.25,
+      maxOrderValue: 1464.5,
+      orderTrend: 'rising',
+      firstOrderAt: new Date('2026-06-01T12:00:00.000Z'),
+      lastOrderAt: new Date('2026-06-20T12:00:00.000Z'),
+      customerSince: new Date('2026-06-01T12:00:00.000Z'),
+      isReturning: true,
+      deepMetrics: { seeded: true },
+    },
+    update: {
+      rfmSegment: 'vip',
+      healthScore: 88,
+      churnRisk: 'low',
+      calculatedAt: new Date(),
+    },
+  });
+
+  const seedMember = await prisma.member.findFirst({
+    where: { tenantId, status: 'active' },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const segmentId = `seg_${suffix}_vip`;
+  const segmentConditions = [
+    { field: 'shopifyCustomerTags', operator: 'contains', value: 'vip', scopeType: 'all', scopeValues: [] },
+    { field: 'totalRevenue', operator: 'gte', value: 1000, scopeType: 'all', scopeValues: [] },
+  ];
+  await prisma.segment.upsert({
+    where: { id: segmentId },
+    create: {
+      id: segmentId,
+      tenantId,
+      name: 'VIP B2B Customers',
+      description: 'Seed segment for high value B2B customers',
+      color: '#2f80ed',
+      priority: 20,
+      priorityGlobal: 20,
+      audienceType: 'customer',
+      matchMode: 'all',
+      conditions: segmentConditions,
+      rules: { matchMode: 'all', conditions: segmentConditions },
+      rulesHash: 'seed-vip-b2b',
+      customerCount: 1,
+      lastEvaluatedAt: new Date(),
+      isActive: true,
+    },
+    update: {
+      conditions: segmentConditions,
+      rules: { matchMode: 'all', conditions: segmentConditions },
+      customerCount: 1,
+      lastEvaluatedAt: new Date(),
+      isActive: true,
+    },
+  });
+  await prisma.segmentCustomerMembership.upsert({
+    where: { tenantId_segmentId_customerId: { tenantId, segmentId, customerId } },
+    create: {
+      id: `smem_${suffix}_vip_northstar`,
+      tenantId,
+      segmentId,
+      customerId,
+      score: 1,
+    },
+    update: {
+      matchedAt: new Date(),
+      score: 1,
+    },
+  });
+  if (seedMember) {
+    await prisma.segmentOwnership.upsert({
+      where: { tenantId_segmentId_memberId: { tenantId, segmentId, memberId: seedMember.id } },
+      create: {
+        id: `sown_${suffix}_vip_owner`,
+        tenantId,
+        segmentId,
+        memberId: seedMember.id,
+        priority: 10,
+        importance: 'high',
+        dailyCap: 25,
+        autoAssignNew: true,
+      },
+      update: {
+        priority: 10,
+        importance: 'high',
+        dailyCap: 25,
+        autoAssignNew: true,
+      },
+    });
+  }
+
+  const serviceRequestId = `sr_${suffix}_welcome`;
+  await prisma.serviceRequest.upsert({
+    where: { id: serviceRequestId },
+    create: {
+      id: serviceRequestId,
+      tenantId,
+      customerId,
+      assignedMemberId: seedMember?.id,
+      source: 'manual',
+      surface: 'internal',
+      title: 'Seed support follow-up',
+      description: 'Verify VIP customer artwork and pickup workflow.',
+      status: 'open',
+      priority: 'high',
+      createdByActorId: seedMember?.id,
+      metadata: { category: 'operations', ticketNumber: `SR-${suffix.toUpperCase()}-001` },
+    },
+    update: {
+      priority: 'high',
+      status: 'open',
+      assignedMemberId: seedMember?.id,
+      metadata: { category: 'operations', ticketNumber: `SR-${suffix.toUpperCase()}-001` },
+    },
+  });
+  await prisma.serviceRequestComment.upsert({
+    where: { id: `srcm_${suffix}_welcome` },
+    create: {
+      id: `srcm_${suffix}_welcome`,
+      tenantId,
+      serviceRequestId,
+      actorId: seedMember?.id,
+      actorType: seedMember ? 'member' : 'system',
+      body: 'Seed support request is ready for operations smoke testing.',
+      internal: true,
+      attachmentsJson: [],
+    },
+    update: {
+      body: 'Seed support request is ready for operations smoke testing.',
+      internal: true,
+    },
+  });
+
+  const b2bRequestId = `b2br_${suffix}_seed`;
+  await prisma.b2BAccessRequest.upsert({
+    where: { id: b2bRequestId },
+    create: {
+      id: b2bRequestId,
+      tenantId,
+      status: 'pending',
+      email: `b2b.seed+${suffix}@example.com`,
+      firstName: 'Seed',
+      lastName: 'Buyer',
+      phone: '+15555550199',
+      companyName: 'Seed B2B Buyer',
+      legalName: 'Seed B2B Buyer LLC',
+      website: 'https://example.com',
+      industry: 'Apparel',
+      estimatedMonthlyVolume: '$5,000 / month',
+      message: 'Seed application for B2B approval smoke testing.',
+      passwordHash: hashSeedPassword('SeedB2B!2026'),
+      metadata: { sourceSurface: 'seed', flowIntent: 'request-invitation' },
+    },
+    update: {
+      status: 'pending',
+      reviewNotes: null,
+      reviewedAt: null,
+      resolvedCustomerId: null,
+      resolvedCustomerUserId: null,
+      metadata: { sourceSurface: 'seed', flowIntent: 'request-invitation' },
+    },
+  });
+  await prisma.b2BAccessRequestFile.upsert({
+    where: { id: `b2bf_${suffix}_seed_cert` },
+    create: {
+      id: `b2bf_${suffix}_seed_cert`,
+      tenantId,
+      requestId: b2bRequestId,
+      storageKey: `seed/${b2bRequestId}/certificate.txt`,
+      originalFilename: 'seed-certificate.txt',
+      mimeType: 'text/plain',
+      sizeBytes: 28,
+      contentBase64: Buffer.from('seed certificate placeholder').toString('base64'),
+    },
+    update: {
+      contentBase64: Buffer.from('seed certificate placeholder').toString('base64'),
+    },
+  });
+
+  await prisma.pricingRule.upsert({
+    where: { id: `prule_${suffix}_vip10` },
+    create: {
+      id: `prule_${suffix}_vip10`,
+      tenantId,
+      name: 'VIP B2B 10% off',
+      description: 'Tenant-scoped seed rule for B2B VIP customers',
+      targetType: 'customer_tag',
+      targetTags: ['vip'],
+      scopeType: 'all',
+      discountType: 'percentage',
+      discountPercentage: 10,
+      discountPolicy: 'best',
+      priority: 20,
+      isActive: true,
+      executionMode: 'draft_order',
+      shopifySyncState: 'not_applicable',
+    },
+    update: {
+      isActive: true,
+      discountPercentage: 10,
+      shopifySyncState: 'not_applicable',
+    },
+  });
+}
+
+function hashSeedPassword(password: string) {
+  const salt = randomBytes(24).toString('base64url');
+  const derived = pbkdf2Sync(password, salt, 210_000, 64, 'sha512');
+  return `pbkdf2$sha512$210000$${salt}$${derived.toString('base64url')}`;
 }
 
 main()

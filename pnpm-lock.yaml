@@ -253,6 +253,9 @@ importers:
       '@factory-engine-pro/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@factory-engine-pro/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       '@nestjs/common':
         specifier: ^11.1.9
         version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -308,6 +311,15 @@ importers:
       tsx:
         specifier: ^4.21.0
         version: 4.22.4
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  services/integrations:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.13.2
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

@@ -2,7 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
-  ShoppingCart, UserSquare2, Workflow, Sparkles, Cable, KeyRound, Store,
+  ShoppingCart, UserSquare2, Workflow, Sparkles, Cable, KeyRound, Store, FileCheck2,
 } from 'lucide-react';
 import { adminTokenStore } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
@@ -13,6 +13,7 @@ interface NavLeaf {
   i18nKey: string;
   id: string;
   icon: typeof LayoutDashboard;
+  permission?: string;
 }
 
 const NAV: { groupKey: string; children: NavLeaf[] }[] = [
@@ -25,16 +26,17 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_commerce',
     children: [
-      { to: '/orders', matchPrefix: '/orders', i18nKey: 'nav.orders', id: 'nav-orders', icon: ShoppingCart },
-      { to: '/customers', matchPrefix: '/customers', i18nKey: 'nav.customers', id: 'nav-customers', icon: UserSquare2 },
-      { to: '/pricing', matchPrefix: '/pricing', i18nKey: 'nav.pricing', id: 'nav-pricing', icon: DollarSign },
+      { to: '/orders', matchPrefix: '/orders', i18nKey: 'nav.orders', id: 'nav-orders', icon: ShoppingCart, permission: 'orders.read' },
+      { to: '/customers', matchPrefix: '/customers', i18nKey: 'nav.customers', id: 'nav-customers', icon: UserSquare2, permission: 'customers.read' },
+      { to: '/pricing', matchPrefix: '/pricing', i18nKey: 'nav.pricing', id: 'nav-pricing', icon: DollarSign, permission: 'pricing.read' },
     ],
   },
   {
     groupKey: 'nav.group_operations',
     children: [
-      { to: '/segments', matchPrefix: '/segments', i18nKey: 'nav.segments', id: 'nav-segments', icon: Tag },
-      { to: '/support', matchPrefix: '/support', i18nKey: 'nav.support', id: 'nav-support', icon: LifeBuoy },
+      { to: '/segments', matchPrefix: '/segments', i18nKey: 'nav.segments', id: 'nav-segments', icon: Tag, permission: 'segments.read' },
+      { to: '/support', matchPrefix: '/support', i18nKey: 'nav.support', id: 'nav-support', icon: LifeBuoy, permission: 'support.read' },
+      { to: '/b2b-requests', matchPrefix: '/b2b-requests', i18nKey: 'nav.b2b_applications', id: 'nav-b2b-requests', icon: FileCheck2, permission: 'b2b_access.read' },
       { to: '/tasks/customer', matchPrefix: '/tasks', i18nKey: 'nav.tasks', id: 'nav-tasks', icon: ClipboardList },
     ],
   },
@@ -68,6 +70,7 @@ export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
   const principal = useCurrentPrincipal().data;
+  const permissions = new Set(principal?.permissions ?? []);
   const roleLabel = adminRoleLabel(principal);
   const logout = () => {
     adminTokenStore.clear();
@@ -88,7 +91,7 @@ export function Sidebar({ collapsed }: Props) {
         {NAV.map((section) => (
           <div key={section.groupKey}>
             <div className="group-label">{t(section.groupKey)}</div>
-            {section.children.map((leaf) => {
+            {section.children.filter((leaf) => !leaf.permission || permissions.has(leaf.permission)).map((leaf) => {
               const Icon = leaf.icon;
               const active = router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
               return (

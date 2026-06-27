@@ -1,0 +1,151 @@
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
+import { prefixedId } from '../../shared/id.js';
+import { PrismaService } from '../../shared/prisma.service.js';
+import { TenantContextService } from '../../shared/tenant-context.js';
+
+@Injectable()
+export class B2BAccessRepository {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
+
+  findPendingByEmail(email: string) {
+    return this.prisma.db.b2BAccessRequest.findFirst({ where: { email, status: 'pending' } });
+  }
+
+  create(data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    companyName: string;
+    legalName: string;
+    website?: string | null;
+    industry?: string | null;
+    estimatedMonthlyVolume?: string | null;
+    message?: string | null;
+    passwordHash: string;
+    shopifyCustomerId?: string | null;
+    metadata: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.db.b2BAccessRequest.create({
+      data: {
+        id: prefixedId('b2br'),
+        tenantId: this.tenantId(),
+        ...data,
+      },
+    });
+  }
+
+  createFile(data: {
+    requestId: string;
+    storageKey: string;
+    originalFilename: string;
+    mimeType: string;
+    sizeBytes: number;
+    contentBase64?: string | null;
+  }) {
+    return this.prisma.db.b2BAccessRequestFile.create({
+      data: {
+        id: prefixedId('b2bf'),
+        tenantId: this.tenantId(),
+        ...data,
+      },
+    });
+  }
+
+  list(status?: string) {
+    return this.prisma.db.b2BAccessRequest.findMany({
+      where: status ? { status } : undefined,
+      include: { files: true },
+      orderBy: { submittedAt: 'desc' },
+    });
+  }
+
+  findById(id: string) {
+    return this.prisma.db.b2BAccessRequest.findFirst({
+      where: { id },
+      include: { files: true },
+    });
+  }
+
+  async update(id: string, data: Prisma.B2BAccessRequestUpdateManyMutationInput) {
+    await this.prisma.db.b2BAccessRequest.updateMany({ where: { id }, data });
+    return this.findById(id);
+  }
+
+  findCustomerByEmail(email: string) {
+    return this.prisma.db.customer.findFirst({ where: { email } });
+  }
+
+  findCustomerUserByEmail(email: string) {
+    return this.prisma.db.customerUser.findFirst({ where: { email } });
+  }
+
+  createCustomer(data: {
+    companyName: string;
+    legalName?: string | null;
+    email: string;
+    phone?: string | null;
+    status?: string;
+  }) {
+    return this.prisma.db.customer.create({
+      data: {
+        id: prefixedId('cust'),
+        tenantId: this.tenantId(),
+        companyName: data.companyName,
+        legalName: data.legalName,
+        email: data.email,
+        phone: data.phone,
+        status: data.status ?? 'active',
+      },
+    });
+  }
+
+  createCustomerUser(data: {
+    customerId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    passwordHash: string;
+  }) {
+    return this.prisma.db.customerUser.create({
+      data: {
+        id: prefixedId('cusr'),
+        tenantId: this.tenantId(),
+        customerId: data.customerId,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        passwordHash: data.passwordHash,
+        status: 'active',
+      },
+    });
+  }
+
+  findCustomerRoleBySlug(slug: string) {
+    return this.prisma.db.customerRole.findFirst({ where: { slug } });
+  }
+
+  assignCustomerRole(customerUserId: string, roleId: string) {
+    return this.prisma.db.customerUserRoleAssignment.createMany({
+      data: [{
+        id: prefixedId('asgn'),
+        tenantId: this.tenantId(),
+        customerUserId,
+        roleId,
+      }],
+      skipDuplicates: true,
+    });
+  }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new Error('Tenant context is required');
+    return tenantId;
+  }
+}
