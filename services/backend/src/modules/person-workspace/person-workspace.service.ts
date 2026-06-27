@@ -248,9 +248,11 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const other = await this.requireMember(input.threadId);
     const thread = await this.findThread(member.id, other.id) ?? await this.createMessageThread(member, other);
+    const tenantId = this.tenantId();
     const created = await this.prisma.db.serviceRequestComment.create({
       data: {
         id: prefixedId('srcm'),
+        tenantId,
         serviceRequestId: thread.id,
         actorId: member.id,
         actorType: 'member',
@@ -305,6 +307,7 @@ export class PersonWorkspaceService {
     const created = await this.prisma.db.serviceRequest.create({
       data: {
         id: prefixedId('sr'),
+        tenantId: this.tenantId(),
         source: 'manual',
         surface: 'internal',
         title: input.title,
@@ -478,6 +481,7 @@ export class PersonWorkspaceService {
     const created = await this.prisma.db.serviceRequest.create({
       data: {
         id: prefixedId('sr'),
+        tenantId: this.tenantId(),
         source: 'manual',
         surface: 'internal',
         title: input.title,
@@ -622,6 +626,7 @@ export class PersonWorkspaceService {
     return this.prisma.db.serviceRequest.create({
       data: {
         id: prefixedId('sr'),
+        tenantId: this.tenantId(),
         source: 'manual',
         surface: 'internal',
         title: `Internal chat: ${member.email} / ${other.email}`,
@@ -641,6 +646,12 @@ export class PersonWorkspaceService {
 
   private record(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new ForbiddenException('Tenant context is required');
+    return tenantId;
   }
 }
 
