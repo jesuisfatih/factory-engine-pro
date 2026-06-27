@@ -1,0 +1,86 @@
+export const MEMBER_PERMISSIONS = {
+  identityRead: 'identity.read',
+  identityWrite: 'identity.write',
+  membersRead: 'members.read',
+  membersWrite: 'members.write',
+  rolesRead: 'roles.read',
+  rolesWrite: 'roles.write',
+  customersRead: 'customers.read',
+  customersWrite: 'customers.write',
+  settingsRead: 'settings.read',
+  settingsWrite: 'settings.write',
+  taskAssign: 'task.assign',
+  aircallUsersRead: 'aircall.users.read',
+  aircallUsersWrite: 'aircall.users.write',
+} as const;
+
+export const CUSTOMER_PERMISSIONS = {
+  accountRead: 'account.read',
+  accountWrite: 'account.write',
+  subUsersRead: 'subusers.read',
+  subUsersWrite: 'subusers.write',
+  ordersRead: 'orders.read',
+  ordersCreate: 'orders.create',
+  spendingLimitsWrite: 'spending_limits.write',
+} as const;
+
+export type MemberPermission = (typeof MEMBER_PERMISSIONS)[keyof typeof MEMBER_PERMISSIONS];
+export type CustomerPermission = (typeof CUSTOMER_PERMISSIONS)[keyof typeof CUSTOMER_PERMISSIONS];
+export type Permission = MemberPermission | CustomerPermission;
+
+export const DEFAULT_MEMBER_ROLES = [
+  {
+    slug: 'owner',
+    name: 'Owner',
+    description: 'Full workspace administration',
+    permissions: Object.fromEntries(Object.values(MEMBER_PERMISSIONS).map((permission) => [permission, true])),
+  },
+  {
+    slug: 'admin',
+    name: 'Admin',
+    description: 'Manage daily operations without tenant ownership controls',
+    permissions: {
+      [MEMBER_PERMISSIONS.identityRead]: true,
+      [MEMBER_PERMISSIONS.membersRead]: true,
+      [MEMBER_PERMISSIONS.membersWrite]: true,
+      [MEMBER_PERMISSIONS.rolesRead]: true,
+      [MEMBER_PERMISSIONS.customersRead]: true,
+      [MEMBER_PERMISSIONS.customersWrite]: true,
+      [MEMBER_PERMISSIONS.settingsRead]: true,
+      [MEMBER_PERMISSIONS.taskAssign]: true,
+      [MEMBER_PERMISSIONS.aircallUsersRead]: true,
+      [MEMBER_PERMISSIONS.aircallUsersWrite]: true,
+    },
+  },
+  {
+    slug: 'agent',
+    name: 'Agent',
+    description: 'Personnel workspace access',
+    permissions: {
+      [MEMBER_PERMISSIONS.identityRead]: true,
+      [MEMBER_PERMISSIONS.customersRead]: true,
+      [MEMBER_PERMISSIONS.taskAssign]: true,
+      [MEMBER_PERMISSIONS.aircallUsersRead]: true,
+    },
+  },
+] as const;
+
+export const DEFAULT_CUSTOMER_ROLES = [
+  {
+    slug: 'b2b_admin',
+    name: 'B2B Admin',
+    description: 'Manage company users and account settings',
+    permissions: Object.fromEntries(Object.values(CUSTOMER_PERMISSIONS).map((permission) => [permission, true])),
+  },
+  {
+    slug: 'b2b_user',
+    name: 'B2B User',
+    description: 'Place and review orders within assigned spending limits',
+    permissions: {
+      [CUSTOMER_PERMISSIONS.accountRead]: true,
+      [CUSTOMER_PERMISSIONS.accountWrite]: true,
+      [CUSTOMER_PERMISSIONS.ordersRead]: true,
+      [CUSTOMER_PERMISSIONS.ordersCreate]: true,
+    },
+  },
+] as const;

@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: factory-engine-pro-postgres
+    ports:
+      - "54329:5432"
+    environment:
+      POSTGRES_USER: factory
+      POSTGRES_PASSWORD: factory
+      POSTGRES_DB: factory_engine_pro
+    volumes:
+      - factory_engine_pro_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U factory -d factory_engine_pro"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: factory-engine-pro-redis
+    ports:
+      - "6389:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - factory_engine_pro_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  factory_engine_pro_pg:
+  factory_engine_pro_redis:

@@ -1,0 +1,23 @@
+{
+  "name": "factory-engine-pro",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "turbo dev --parallel",
+    "dev:backend": "pnpm --filter @factory-engine-pro/backend dev",
+    "dev:admin": "pnpm --filter @factory-engine-pro/admin dev",
+    "dev:person": "pnpm --filter @factory-engine-pro/person dev",
+    "dev:accounts": "pnpm --filter @factory-engine-pro/accounts dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @factory-engine-pro/backend prisma:generate",
+    "db:migrate": "pnpm --filter @factory-engine-pro/backend prisma:migrate",
+    "db:deploy": "pnpm --filter @factory-engine-pro/backend prisma:deploy",
+    "seed": "pnpm --filter @factory-engine-pro/backend seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3"
+  }
+}

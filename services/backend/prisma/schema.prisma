@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantStatus {
+  active
+  suspended
+  archived
+}
+
+enum PrincipalType {
+  member
+  customer_user
+  sub_user
+}
+
+enum PrincipalStatus {
+  invited
+  active
+  disabled
+  archived
+}
+
+enum AuthTokenKind {
+  refresh
+  password_reset
+  invitation
+}
+
+model Tenant {
+  id        String       @id
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  config                  TenantConfig?
+  members                 Member[]
+  memberRoles             MemberRole[]
+  memberRoleAssignments   MemberRoleAssignment[]
+  customers               Customer[]
+  customerUsers           CustomerUser[]
+  subUsers                SubUser[]
+  customerRoles           CustomerRole[]
+  customerUserRoleAssignments CustomerUserRoleAssignment[]
+  subUserRoleAssignments  SubUserRoleAssignment[]
+  authTokens              AuthToken[]
+  authAuditLogs           AuthAuditLog[]
+
+  @@map("tenants")
+}
+
+model TenantConfig {
+  id                         String   @id
+  tenantId                   String   @unique @map("tenant_id")
+  shopifyDomain              String?  @map("shopify_domain")
+  shopifyAdminTokenEncrypted String?  @map("shopify_admin_token_encrypted")
+  shopifyApiKeyEncrypted     String?  @map("shopify_api_key_encrypted")
+  shopifyApiSecretEncrypted  String?  @map("shopify_api_secret_encrypted")
+  webhookHmacKeyEncrypted    String?  @map("webhook_hmac_key_encrypted")
+  aircallApiIdEncrypted      String?  @map("aircall_api_id_encrypted")
+  aircallApiTokenEncrypted   String?  @map("aircall_api_token_encrypted")
+  aircallWebhookSecretEncrypted String? @map("aircall_webhook_secret_encrypted")
+  anthropicApiKeyEncrypted   String?  @map("anthropic_api_key_encrypted")
+  resendApiKeyEncrypted      String?  @map("resend_api_key_encrypted")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_configs")
+}
+
+model Member {
+  id                  String          @id
+  tenantId            String          @map("tenant_id")
+  email               String
+  firstName           String          @map("first_name")
+  lastName            String          @map("last_name")
+  phone               String?
+  passwordHash        String?         @map("password_hash")
+  status              PrincipalStatus @default(invited)
+  lastLoginAt         DateTime?       @map("last_login_at")
+  invitationAcceptedAt DateTime?      @map("invitation_accepted_at")
+  aircallUserId       String?         @map("aircall_user_id")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roleAssignments MemberRoleAssignment[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+  @@index([tenantId, aircallUserId])
+  @@map("members")
+}
+
+model MemberRole {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  slug        String
+  name        String
+  description String?
+  permissions Json     @default("{}")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments MemberRoleAssignment[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("member_roles")
+}
+
+model MemberRoleAssignment {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  memberId  String   @map("member_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role   MemberRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, memberId, roleId])
+  @@index([tenantId, memberId])
+  @@index([tenantId, roleId])
+  @@map("member_role_assignments")
+}
+
+model Customer {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  shopifyCustomerId String?  @map("shopify_customer_id")
+  companyName       String   @map("company_name")
+  legalName         String?  @map("legal_name")
+  taxId             String?  @map("tax_id")
+  email             String?
+  phone             String?
+  billingAddress    Json?    @map("billing_address")
+  shippingAddress   Json?    @map("shipping_address")
+  status            String   @default("active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUsers CustomerUser[]
+  subUsers      SubUser[]
+
+  @@unique([tenantId, shopifyCustomerId])
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@map("customers")
+}
+
+model CustomerUser {
+  id            String          @id
+  tenantId      String          @map("tenant_id")
+  customerId    String          @map("customer_id")
+  email         String
+  firstName     String          @map("first_name")
+  lastName      String          @map("last_name")
+  phone         String?
+  passwordHash  String?         @map("password_hash")
+  status        PrincipalStatus @default(invited)
+  spendingLimitCents Int?       @map("spending_limit_cents")
+  spendingUsedCents  Int        @default(0) @map("spending_used_cents")
+  lastLoginAt   DateTime?       @map("last_login_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer        Customer                     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subUsers        SubUser[]
+  roleAssignments CustomerUserRoleAssignment[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, customerId])
+  @@index([tenantId, status])
+  @@map("customer_users")
+}
+
+model SubUser {
+  id            String          @id
+  tenantId      String          @map("tenant_id")
+  customerId    String          @map("customer_id")
+  parentUserId  String          @map("parent_user_id")
+  email         String
+  firstName     String          @map("first_name")
+  lastName      String          @map("last_name")
+  phone         String?
+  passwordHash  String?         @map("password_hash")
+  status        PrincipalStatus @default(invited)
+  spendingLimitCents Int?       @map("spending_limit_cents")
+  spendingUsedCents  Int        @default(0) @map("spending_used_cents")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer        Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  parentUser      CustomerUser            @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  roleAssignments SubUserRoleAssignment[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, customerId])
+  @@index([tenantId, parentUserId])
+  @@index([tenantId, status])
+  @@map("sub_users")
+}
+
+model CustomerRole {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  slug        String
+  name        String
+  description String?
+  permissions Json     @default("{}")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant                  Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUserAssignments CustomerUserRoleAssignment[]
+  subUserAssignments      SubUserRoleAssignment[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("customer_roles")
+}
+
+model CustomerUserRoleAssignment {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  customerUserId String   @map("customer_user_id")
+  roleId         String   @map("role_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUser CustomerUser @relation(fields: [customerUserId], references: [id], onDelete: Cascade)
+  role         CustomerRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, customerUserId, roleId])
+  @@index([tenantId, customerUserId])
+  @@index([tenantId, roleId])
+  @@map("customer_user_role_assignments")
+}
+
+model SubUserRoleAssignment {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  subUserId String   @map("sub_user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subUser SubUser      @relation(fields: [subUserId], references: [id], onDelete: Cascade)
+  role    CustomerRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, subUserId, roleId])
+  @@index([tenantId, subUserId])
+  @@index([tenantId, roleId])
+  @@map("sub_user_role_assignments")
+}
+
+model AuthToken {
+  id            String        @id
+  tenantId      String        @map("tenant_id")
+  kind          AuthTokenKind
+  principalType PrincipalType @map("principal_type")
+  principalId   String        @map("principal_id")
+  tokenHash     String        @unique @map("token_hash")
+  expiresAt     DateTime      @map("expires_at")
+  usedAt        DateTime?     @map("used_at")
+  revokedAt     DateTime?     @map("revoked_at")
+  metadata      Json          @default("{}")
+  createdById   String?       @map("created_by_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, kind, principalType, principalId])
+  @@index([tenantId, expiresAt])
+  @@map("auth_tokens")
+}
+
+model AuthAuditLog {
+  id            String         @id
+  tenantId      String         @map("tenant_id")
+  principalType PrincipalType? @map("principal_type")
+  principalId   String?        @map("principal_id")
+  email         String?
+  action        String
+  requestId     String?        @map("request_id")
+  ipAddress     String?        @map("ip_address")
+  userAgent     String?        @map("user_agent")
+  success       Boolean
+  metadata      Json           @default("{}")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, action, createdAt])
+  @@index([tenantId, email])
+  @@map("auth_audit_logs")
+}

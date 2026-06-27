@@ -1,0 +1,26 @@
+import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Tabs } from '@/components/Tabs';
+import { PageHeader } from '@/components/PageHeader';
+
+function SettingsLayout() {
+  return (
+    <>
+      <PageHeader titleI18nKey="settings.title" subtitleI18nKey="settings.subtitle" />
+      <Tabs
+        tabs={[
+          { to: '/settings/ai', i18nKey: 'settings.tabs.ai', id: 'tab-settings-ai' },
+          { to: '/settings/aircall', i18nKey: 'settings.tabs.aircall', id: 'tab-settings-aircall' },
+          { to: '/settings/shopify', i18nKey: 'settings.tabs.shopify', id: 'tab-settings-shopify' },
+        ]}
+      />
+      <Outlet />
+    </>
+  );
+}
+
+export const Route = createFileRoute('/settings')({
+  component: SettingsLayout,
+  beforeLoad: ({ location }) => {
+    if (location.pathname === '/settings') throw redirect({ to: '/settings/ai' });
+  },
+});

@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "services/*"
+  - "packages/*"
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+minimumReleaseAgeExclude:
+  - '@tanstack/react-virtual@3.14.4'
+  - '@tanstack/virtual-core@3.17.2'

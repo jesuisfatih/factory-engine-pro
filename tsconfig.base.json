@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@factory-engine-pro/contracts": ["packages/contracts/src/index.ts"],
+      "@factory-engine-pro/contracts/*": ["packages/contracts/src/*"],
+      "@factory-engine-pro/api-client": ["packages/api-client/src/index.ts"],
+      "@factory-engine-pro/api-client/*": ["packages/api-client/src/*"]
+    }
+  }
+}
