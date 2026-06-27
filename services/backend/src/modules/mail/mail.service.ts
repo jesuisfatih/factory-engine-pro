@@ -2,7 +2,9 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 import type { Prisma } from '@prisma/client';
+import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
+import { PrismaService } from '../../shared/prisma.service.js';
 import { MAIL_OUTBOUND_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { MailRepository } from './mail.repository.js';
@@ -23,6 +25,8 @@ export class MailService {
   constructor(
     private readonly repository: MailRepository,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly crypto: CryptoService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
     @Inject(MAIL_OUTBOUND_QUEUE) private readonly outboundQueue: Queue | null,
@@ -61,6 +65,15 @@ export class MailService {
     const delivery = await this.repository.findById(id);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
     return delivery;
+  }
+
+  async retryDelivery(id: string) {
+    await this.findOne(id);
+    try {
+      return await this.deliverQueued(id);
+    } catch {
+      return this.findOne(id);
+    }
   }
 
   async sendTest(to: string, subject: string) {
@@ -128,11 +141,14 @@ export class MailService {
   }
 
   async deliverQueued(deliveryId: string) {
+    const existing = await this.repository.findById(deliveryId);
+    if (!existing) throw new NotFoundException('Mail delivery not found');
+    if (existing.status === 'sent') return existing;
+
     const delivery = await this.repository.markSending(deliveryId);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
-    if (delivery.status === 'sent') return delivery;
 
-    const apiKey = this.config.get<string>('RESEND_API_KEY')?.trim();
+    const apiKey = await this.resolveResendApiKey();
     if (!apiKey) {
       this.logger.warn('mail', 'resend_missing', 'RESEND_API_KEY is not configured; delivery skipped', { mail_delivery_id: delivery.id });
       return this.repository.markSkipped(delivery.id, 'RESEND_API_KEY is not configured');
@@ -173,8 +189,17 @@ export class MailService {
   }
 
   private async resolveBrandName() {
+    const tenantBrand = await this.prisma.db.tenantConfig.findFirst({ select: { workspaceName: true } });
+    if (tenantBrand?.workspaceName?.trim()) return tenantBrand.workspaceName.trim();
     const workspaceName = this.config.get<string>('WORKSPACE_NAME') ?? this.config.get<string>('BRAND_NAME');
     return workspaceName?.trim() || 'Factory Engine Pro';
+  }
+
+  private async resolveResendApiKey() {
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({ select: { resendApiKeyEncrypted: true } });
+    const tenantKey = this.crypto.decrypt(tenantConfig?.resendApiKeyEncrypted)?.trim();
+    if (tenantKey) return tenantKey;
+    return this.config.get<string>('RESEND_API_KEY')?.trim() || '';
   }
 
   private async resolveFromAddress() {

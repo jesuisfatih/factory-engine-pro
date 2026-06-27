@@ -355,6 +355,10 @@ export class ApiClient {
     return this.get(`/mail/deliveries/${id}`);
   }
 
+  retryMailDelivery(id: string) {
+    return this.post(`/mail/deliveries/${id}/retry`, {});
+  }
+
   sendTestMail(input: SendTestMailInput) {
     return this.post('/mail/test', input);
   }

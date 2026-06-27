@@ -26,6 +26,12 @@ export class MailController {
     return this.mail.findOne(id);
   }
 
+  @Post('deliveries/:id/retry')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  retry(@Param('id') id: string) {
+    return this.mail.retryDelivery(id);
+  }
+
   @Post('test')
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   test(@Body(new ZodValidationPipe(sendTestMailSchema)) body: SendTestMailInput) {

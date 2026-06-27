@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Mail, RefreshCw, Search, Send, XCircle } from 'lucide-react';
+import { AlertTriangle, KeyRound, Mail, RefreshCw, Save, Send, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { sendTestMailSchema, type SendTestMailInput } from '@factory-engine-pro/contracts';
@@ -33,20 +33,27 @@ interface MailDelivery {
   sentAt: string | null;
 }
 
+interface TenantConfigResponse {
+  hasResendApiKey: boolean;
+}
+
 const DELIVERY_QUERY_KEY = ['system-mail', 'deliveries'] as const;
+const TENANT_CONFIG_QUERY_KEY = ['identity', 'tenant-config'] as const;
 const STATUS_FILTERS: StatusFilter[] = ['all', 'queued', 'sending', 'sent', 'failed', 'skipped'];
 
 export function SystemMailPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const principal = useCurrentPrincipal().data;
-  const canSendTest = useCan('settings.write');
+  const canWrite = useCan('settings.write');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [recipient, setRecipient] = useState('');
   const [eventKey, setEventKey] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState({ to: '', subject: '' });
+  const [settingsForm, setSettingsForm] = useState({ resendApiKey: '' });
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [settingsValidationError, setSettingsValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setForm((current) => ({
@@ -67,6 +74,12 @@ export function SystemMailPage() {
   const deliveries = useQuery({
     queryKey: [...DELIVERY_QUERY_KEY, queryString],
     queryFn: () => adminApi.mailDeliveries(queryString) as Promise<MailDelivery[]>,
+    retry: false,
+  });
+
+  const tenantConfig = useQuery({
+    queryKey: TENANT_CONFIG_QUERY_KEY,
+    queryFn: () => adminApi.tenantConfig() as Promise<TenantConfigResponse>,
     retry: false,
   });
 
@@ -106,6 +119,33 @@ export function SystemMailPage() {
     onError: (error) => toast.error(t('system_mail.test_failed'), { description: apiErrorMessage(error) }),
   });
 
+  const saveSettings = useMutation({
+    mutationFn: () => adminApi.updateTenantConfig({ resendApiKey: settingsForm.resendApiKey.trim() }),
+    onSuccess: async () => {
+      setSettingsForm({ resendApiKey: '' });
+      toast.success(t('system_mail.settings_saved'));
+      await qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY });
+    },
+    onError: (error) => toast.error(t('system_mail.settings_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const retryDelivery = useMutation({
+    mutationFn: (id: string) => adminApi.retryMailDelivery(id) as Promise<MailDelivery>,
+    onSuccess: async (delivery) => {
+      setSelectedId(delivery.id);
+      if (delivery.status === 'sent') {
+        toast.success(t('system_mail.retry_sent'), { description: delivery.id });
+      } else {
+        toast.error(t('system_mail.retry_not_sent'), { description: delivery.errorMessage ?? delivery.status });
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: DELIVERY_QUERY_KEY }),
+        qc.invalidateQueries({ queryKey: [...DELIVERY_QUERY_KEY, 'detail', delivery.id] }),
+      ]);
+    },
+    onError: (error) => toast.error(t('system_mail.retry_failed'), { description: apiErrorMessage(error) }),
+  });
+
   const submitTest = (event: React.FormEvent) => {
     event.preventDefault();
     setValidationError(null);
@@ -118,6 +158,16 @@ export function SystemMailPage() {
       return;
     }
     testMail.mutate(parsed.data);
+  };
+
+  const submitSettings = (event: React.FormEvent) => {
+    event.preventDefault();
+    setSettingsValidationError(null);
+    if (settingsForm.resendApiKey.trim().length < 12) {
+      setSettingsValidationError(t('system_mail.resend_key_invalid'));
+      return;
+    }
+    saveSettings.mutate();
   };
 
   const clearFilters = () => {
@@ -182,35 +232,66 @@ export function SystemMailPage() {
           )}
         </section>
 
-        <form className="section" onSubmit={submitTest}>
-          <h3>{t('system_mail.test_title')}</h3>
-          {validationError && <div className="error-state">{validationError}</div>}
-          <div className="field">
-            <label htmlFor="field-mail-to">{t('system_mail.field_to')}</label>
-            <input
-              id="field-mail-to"
-              type="email"
-              value={form.to}
-              onChange={(event) => setForm((current) => ({ ...current, to: event.target.value }))}
-              placeholder={t('system_mail.placeholder_to')}
-              disabled={!canSendTest || testMail.isPending}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="field-mail-subject">{t('system_mail.field_subject')}</label>
-            <input
-              id="field-mail-subject"
-              value={form.subject}
-              onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))}
-              placeholder={t('system_mail.default_subject')}
-              disabled={!canSendTest || testMail.isPending}
-            />
-          </div>
-          <button type="submit" className="btn primary" disabled={!canSendTest || testMail.isPending}>
-            <Send size={14} /> {testMail.isPending ? t('system_mail.sending') : t('system_mail.send_test')}
-          </button>
-          {!canSendTest && <div className="hint" style={{ marginTop: 8 }}>{t('system_mail.no_write_permission')}</div>}
-        </form>
+        <div className="row-stack">
+          <form className="section" onSubmit={submitTest}>
+            <h3>{t('system_mail.test_title')}</h3>
+            {validationError && <div className="error-state">{validationError}</div>}
+            <div className="field">
+              <label htmlFor="field-mail-to">{t('system_mail.field_to')}</label>
+              <input
+                id="field-mail-to"
+                type="email"
+                value={form.to}
+                onChange={(event) => setForm((current) => ({ ...current, to: event.target.value }))}
+                placeholder={t('system_mail.placeholder_to')}
+                disabled={!canWrite || testMail.isPending}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="field-mail-subject">{t('system_mail.field_subject')}</label>
+              <input
+                id="field-mail-subject"
+                value={form.subject}
+                onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))}
+                placeholder={t('system_mail.default_subject')}
+                disabled={!canWrite || testMail.isPending}
+              />
+            </div>
+            <button type="submit" className="btn primary" disabled={!canWrite || testMail.isPending}>
+              <Send size={14} /> {testMail.isPending ? t('system_mail.sending') : t('system_mail.send_test')}
+            </button>
+            {!canWrite && <div className="hint" style={{ marginTop: 8 }}>{t('system_mail.no_write_permission')}</div>}
+          </form>
+
+          <form className="section" onSubmit={submitSettings}>
+            <h3>
+              <span>{t('system_mail.settings_title')}</span>
+              <span className={`pill ${tenantConfig.data?.hasResendApiKey ? 'success' : 'warn'}`}>
+                {tenantConfig.data?.hasResendApiKey ? t('system_mail.resend_key_saved') : t('system_mail.resend_key_missing')}
+              </span>
+            </h3>
+            {settingsValidationError && <div className="error-state">{settingsValidationError}</div>}
+            {tenantConfig.isError && <div className="error-state">{apiErrorMessage(tenantConfig.error)}</div>}
+            <div className="field">
+              <label htmlFor="field-resend-api-key">{t('system_mail.field_resend_api_key')}</label>
+              <div className="auth-password-wrap">
+                <KeyRound className="auth-input-icon" size={14} />
+                <input
+                  id="field-resend-api-key"
+                  type="password"
+                  value={settingsForm.resendApiKey}
+                  onChange={(event) => setSettingsForm({ resendApiKey: event.target.value })}
+                  placeholder={t('system_mail.placeholder_resend_api_key')}
+                  disabled={!canWrite || saveSettings.isPending}
+                />
+              </div>
+              <span className="hint">{t('system_mail.resend_key_hint')}</span>
+            </div>
+            <button type="submit" className="btn" disabled={!canWrite || saveSettings.isPending}>
+              <Save size={14} /> {saveSettings.isPending ? t('system_mail.saving_settings') : t('system_mail.save_settings')}
+            </button>
+          </form>
+        </div>
       </div>
 
       {deliveries.isLoading && <StateBlock title={t('common.loading')} body={t('system_mail.loading_body')} />}
@@ -277,6 +358,13 @@ export function SystemMailPage() {
                   <DetailLine label={t('system_mail.detail_created')} value={fmtDate(selected.createdAt)} />
                   <DetailLine label={t('system_mail.detail_sent')} value={fmtDate(selected.sentAt)} />
                 </div>
+                {canWrite && selected.status !== 'sent' && (
+                  <div style={{ marginTop: 14 }}>
+                    <button type="button" className="btn" disabled={retryDelivery.isPending} onClick={() => retryDelivery.mutate(selected.id)}>
+                      <RefreshCw size={14} /> {retryDelivery.isPending ? t('system_mail.retrying_delivery') : t('system_mail.retry_delivery')}
+                    </button>
+                  </div>
+                )}
                 {selected.errorMessage && (
                   <div className="modal-section" style={{ marginTop: 14, borderColor: 'var(--danger)' }}>
                     <h3>{t('system_mail.detail_error')}</h3>

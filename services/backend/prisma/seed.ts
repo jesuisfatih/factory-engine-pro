@@ -383,15 +383,24 @@ async function seedTenantConfig(tenantId: string, suffix: string) {
 
   if (!Object.values(config).some(Boolean)) return;
 
-  await prisma.tenantConfig.upsert({
-    where: { tenantId },
-    create: {
-      id: `tcfg_${suffix}`,
-      tenantId,
-      ...config,
-    },
-    update: config,
-  });
+  const existing = await prisma.tenantConfig.findUnique({ where: { tenantId } });
+  if (!existing) {
+    await prisma.tenantConfig.create({
+      data: {
+        id: `tcfg_${suffix}`,
+        tenantId,
+        ...config,
+      },
+    });
+    return;
+  }
+
+  const update = Object.fromEntries(
+    Object.entries(config).filter(([key, value]) => value && !existing[key as keyof typeof existing]),
+  );
+  if (Object.keys(update).length > 0) {
+    await prisma.tenantConfig.update({ where: { tenantId }, data: update });
+  }
 }
 
 function firstEnv(...keys: string[]) {
