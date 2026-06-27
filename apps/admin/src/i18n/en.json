@@ -504,6 +504,26 @@
       "aircall": "Aircall",
       "shopify": "Shopify"
     },
+    "workspace": {
+      "loading_title": "Loading workspace settings",
+      "loading_body": "Reading the tenant configuration from the API.",
+      "error_title": "Workspace settings unavailable",
+      "form_title": "Workspace identity",
+      "empty_title": "No workspace brand saved yet.",
+      "empty_body": "Save a name and badge so navigation, auth and topbar use the tenant record.",
+      "field_name": "Workspace name",
+      "field_name_placeholder": "Workspace name",
+      "field_badge": "Badge",
+      "field_badge_hint": "Shown when no logo URL is set.",
+      "field_logo": "Logo URL",
+      "save": "Save workspace",
+      "saving": "Saving",
+      "preview_title": "Live preview",
+      "no_write_permission": "You need settings.write permission to update workspace settings.",
+      "toast_saved": "Workspace settings saved",
+      "toast_failed": "Workspace settings failed",
+      "validation_invalid": "Workspace settings are invalid"
+    },
     "ai": {
       "title": "AI provider keys",
       "subtitle": "Used by transcript analysis, task proposal, and customer intelligence.",

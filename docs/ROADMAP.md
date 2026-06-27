@@ -234,6 +234,40 @@ secret'lar) `144.202.125.169`'da çalışan canlı tenant container'larının
 aynı: ilgili container'ın kendi `.env`'i. Yeni sistem bu env'leri olduğu
 gibi kullanır; lokalde `.env` üretmek/uydurmak yok.
 
+> ⛔ **"Yeni deploy dizininde env yok" durumu CREDENTIAL EKSİKLİĞİ DEĞİLDİR.**
+> Sunucudaki **iki ayrı yer** vardır:
+>
+> 1. **Eski tenant container'ı:** `factoryengine-dtfbank-app` (ve
+>    `factoryengine-eagledtfprint-app`, `factoryengine-dtfprintdepot-app`,
+>    `factoryengine-eagledtfsupply-app`, `factoryengine-fastdtfsupply-app`,
+>    `factoryengine-fastdtftransfer-app`) — **eski sistem hâlâ canlı**;
+>    içindeki `.env` Shopify token + Aircall apiId/apiToken/webhookSecret +
+>    Anthropic key + Resend key + JWT secret + managed Postgres/Redis URL
+>    hepsini içerir.
+>
+> 2. **Yeni deploy dizini:** `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank`
+>    (ve diğer 5 tenant için aynı pattern) — yeni codebase'in çalıştığı
+>    yer; ilk deploy'da `.env` boş olabilir.
+>
+> **Agent bu iki yeri karıştırmamalı.** Yeni deploy'un `.env`'i boş ise
+> credential "yok" değildir — **eski tenant container'ının `.env`'inden
+> ilgili credential'lar yeni deploy'a kopyalanır** (Shopify, Aircall,
+> Anthropic, Resend, JWT, managed DB/Redis URL'leri — hepsi). Bu kopyalama
+> her tenant için aynı: kendi eski container'ından kendi credential'ı.
+>
+> **UI'da `credentialRequired=true` gözlemlenirse** (Aircall, Shopify,
+> AI, Mail provider — herhangi biri): agent eski `factoryengine-<tenant>-app`
+> container'ından `.env`'i okur, ilgili credential anahtarlarını yeni
+> deploy'un `.env`'ine eşler **veya** `TenantConfig`'e encrypted yazar
+> (Shopify/Aircall/AI/Resend için TenantConfig zaten 6.1'de tanımlı).
+> Restart sonrası UI `credentialRequired=false` döndüğünde madde tamamlanmış
+> sayılır — aksi halde **o transfer maddesi bitmemiştir** (5.1 kuralı).
+>
+> Bu kural Aircall, Shopify, AI Hub, Mail (Resend) — **her external
+> provider için aynı**. "Eski container'da var, yeni deploy'a kopyala,
+> bitir" zinciri her seferinde uygulanır; agent "yok, kullanıcı eklesin"
+> diye bırakmaz.
+
 #### Guard (`services/backend/scripts/guard-database-url.mjs`) — agent'ın koruması
 
 Eski Eagle DB'leri ile yeni DB'ler **aynı managed cluster'da yan yana**

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Save, RefreshCw, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { tenantConfigSchema, type TenantConfigInput } from '@factory-engine-pro/contracts';
@@ -28,6 +29,7 @@ const emptyForm: WorkspaceFormState = {
 };
 
 export function WorkspaceSettingsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const principal = useCurrentPrincipal().data;
   const canWrite = new Set(principal?.permissions ?? []).has('settings.write');
@@ -52,13 +54,13 @@ export function WorkspaceSettingsPage() {
   const save = useMutation({
     mutationFn: (input: TenantConfigInput) => adminApi.updateTenantConfig(input),
     onSuccess: async () => {
-      toast.success('Workspace settings saved');
+      toast.success(t('settings.workspace.toast_saved'));
       await Promise.all([
         qc.invalidateQueries({ queryKey: tenantConfigQueryKey }),
         qc.invalidateQueries({ queryKey: workspaceBrandQueryKey }),
       ]);
     },
-    onError: (error) => toast.error('Workspace settings failed', { description: apiErrorMessage(error) }),
+    onError: (error) => toast.error(t('settings.workspace.toast_failed'), { description: apiErrorMessage(error) }),
   });
 
   const previewName = workspaceName(form.workspaceName);
@@ -75,7 +77,7 @@ export function WorkspaceSettingsPage() {
     };
     const parsed = tenantConfigSchema.safeParse(input);
     if (!parsed.success) {
-      setValidationError(parsed.error.issues[0]?.message ?? 'Workspace settings are invalid');
+      setValidationError(parsed.error.issues[0]?.message ?? t('settings.workspace.validation_invalid'));
       return;
     }
     save.mutate(parsed.data);
@@ -86,8 +88,8 @@ export function WorkspaceSettingsPage() {
       <div className="section workspace-state">
         <RefreshCw className="spin" size={18} />
         <div>
-          <h3>Loading workspace settings</h3>
-          <p>Reading the tenant configuration from the API.</p>
+          <h3>{t('settings.workspace.loading_title')}</h3>
+          <p>{t('settings.workspace.loading_body')}</p>
         </div>
       </div>
     );
@@ -98,11 +100,11 @@ export function WorkspaceSettingsPage() {
       <div className="section workspace-state error-state">
         <AlertTriangle size={18} />
         <div>
-          <h3>Workspace settings unavailable</h3>
+          <h3>{t('settings.workspace.error_title')}</h3>
           <p>{apiErrorMessage(config.error)}</p>
           <button type="button" className="btn" onClick={() => config.refetch()}>
             <RefreshCw size={14} />
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -112,31 +114,31 @@ export function WorkspaceSettingsPage() {
   return (
     <div className="workspace-settings-grid">
       <form className="section" onSubmit={submit}>
-        <h3>Workspace identity</h3>
+        <h3>{t('settings.workspace.form_title')}</h3>
         {!hasSavedBrand && (
           <div className="empty-state workspace-empty">
             <ImageIcon size={18} />
             <div>
-              <strong>No workspace brand saved yet.</strong>
-              <span>Save a name and badge so navigation, auth and topbar use the tenant record.</span>
+              <strong>{t('settings.workspace.empty_title')}</strong>
+              <span>{t('settings.workspace.empty_body')}</span>
             </div>
           </div>
         )}
         {validationError && <div className="error-state">{validationError}</div>}
         <div className="field">
-          <label htmlFor="field-workspace-name">Workspace name</label>
+          <label htmlFor="field-workspace-name">{t('settings.workspace.field_name')}</label>
           <input
             id="field-workspace-name"
             value={form.workspaceName}
             onChange={(event) => setForm((current) => ({ ...current, workspaceName: event.target.value }))}
             disabled={!canWrite || save.isPending}
-            placeholder="Workspace name"
+            placeholder={t('settings.workspace.field_name_placeholder')}
             required
           />
         </div>
         <div className="field-row">
           <div className="field">
-            <label htmlFor="field-brand-badge">Badge</label>
+            <label htmlFor="field-brand-badge">{t('settings.workspace.field_badge')}</label>
             <input
               id="field-brand-badge"
               value={form.brandBadge}
@@ -144,10 +146,10 @@ export function WorkspaceSettingsPage() {
               disabled={!canWrite || save.isPending}
               placeholder={previewBadge}
             />
-            <span className="hint">Shown when no logo URL is set.</span>
+            <span className="hint">{t('settings.workspace.field_badge_hint')}</span>
           </div>
           <div className="field">
-            <label htmlFor="field-brand-logo">Logo URL</label>
+            <label htmlFor="field-brand-logo">{t('settings.workspace.field_logo')}</label>
             <input
               id="field-brand-logo"
               value={form.brandLogo}
@@ -160,19 +162,19 @@ export function WorkspaceSettingsPage() {
         <div className="workspace-form-actions">
           <button id="btn-save-workspace" type="submit" className="btn primary" disabled={!canWrite || save.isPending}>
             <Save size={14} />
-            {save.isPending ? 'Saving' : 'Save workspace'}
+            {save.isPending ? t('settings.workspace.saving') : t('settings.workspace.save')}
           </button>
-          {!canWrite && <span className="hint">You need settings.write permission to update workspace settings.</span>}
+          {!canWrite && <span className="hint">{t('settings.workspace.no_write_permission')}</span>}
         </div>
       </form>
 
       <div className="section workspace-preview">
-        <h3>Live preview</h3>
+        <h3>{t('settings.workspace.preview_title')}</h3>
         <div className="workspace preview-row">
           {form.brandLogo ? <img className="ws-logo" src={form.brandLogo} alt="" /> : <div className="ws-badge">{previewBadge}</div>}
           <div className="ws-meta">
             <div className="name">{previewName}</div>
-            <div className="role">Back panel</div>
+            <div className="role">{t('workspace.back_panel')}</div>
           </div>
         </div>
         <div className="topbar-workspace preview-pill">

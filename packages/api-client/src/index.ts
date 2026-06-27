@@ -1,5 +1,6 @@
 import type {
   AcceptInvitationInput,
+  AiHealthResponse,
   AircallLinkUserInput,
   AircallNumbersResponse,
   AircallSyncLogsResponse,
@@ -398,6 +399,10 @@ export class ApiClient {
 
   aircallSyncLogs() {
     return this.get<AircallSyncLogsResponse>('/aircall/sync-logs');
+  }
+
+  aiHealth() {
+    return this.get<AiHealthResponse>('/ai/health');
   }
 
   private get<T>(path: string, auth = true) {
