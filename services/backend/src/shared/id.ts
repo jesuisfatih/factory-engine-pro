@@ -27,7 +27,16 @@ export type IdPrefix =
   | 'srcm'
   | 'b2br'
   | 'b2bf'
-  | 'mail';
+  | 'mail'
+  | 'acu'
+  | 'acn'
+  | 'awcfg'
+  | 'awin'
+  | 'acev'
+  | 'call'
+  | 'cevt'
+  | 'acss'
+  | 'slog';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;

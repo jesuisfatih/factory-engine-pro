@@ -1,7 +1,10 @@
 import type {
   AcceptInvitationInput,
   AircallLinkUserInput,
+  AircallNumbersResponse,
+  AircallSyncLogsResponse,
   AircallUsersResponse,
+  AircallWebhookStatusResponse,
   AuthSession,
   BootstrapTenantInput,
   CalculatePricesInput,
@@ -379,6 +382,22 @@ export class ApiClient {
 
   unlinkAircallUser(aircallUserId: string) {
     return this.delete<AircallUsersResponse>(`/aircall/users/${aircallUserId}/link`);
+  }
+
+  aircallNumbers() {
+    return this.get<AircallNumbersResponse>('/aircall/numbers');
+  }
+
+  syncAircallNumbers() {
+    return this.post<AircallNumbersResponse>('/aircall/numbers/sync', {});
+  }
+
+  aircallWebhookStatus() {
+    return this.get<AircallWebhookStatusResponse>('/aircall/webhooks/status');
+  }
+
+  aircallSyncLogs() {
+    return this.get<AircallSyncLogsResponse>('/aircall/sync-logs');
   }
 
   private get<T>(path: string, auth = true) {

@@ -961,8 +961,40 @@ Eski sistemin sync motoru `eagledtfprint/backend/src/sync/sync-state.service.ts`
 ##### Webhook (anlık delta — Shopify push)
 
 - Periodik sync delta'yı garanti eder; **webhook anlık güncellemeyi** sağlar (Shopify değişikliği saniye içinde yansır). Bu ikisi tamamlayıcı — webhook gelmese bile periodik sync er ya da geç çeker.
-- `eagledtfprint/backend/src/webhooks/shopify-webhook-sync.service.ts` + `handlers/` — HMAC verify + topic dispatch.
-- Topic'ler: `customers/create|update|delete`, `orders/create|updated|paid|fulfilled`, `inventory_levels/update`, `products/create|update|delete`, `app/uninstalled`. Yeni sistemde `services/backend/src/modules/webhooks/shopify/` aynı topic listesi + tenant subdomain'den çözüm + HMAC verify.
+- Eski hedef dizin: `eagledtfprint/backend/src/webhooks/` (`shopify-webhook-sync.service.ts` + `webhooks.controller.ts` + `webhook-log.service.ts` + `types/shopify-webhook.types.ts` + `handlers/`).
+- **Handler dosyaları (4 entity — birebir transfer):**
+  - `handlers/customers.handler.ts`
+  - `handlers/products.handler.ts`
+  - `handlers/orders.handler.ts`
+  - `handlers/discounts.handler.ts`
+- **Topic listesi (controller'dan birebir, 11 Shopify topic):**
+  - `orders/create`, `orders/updated`, `orders/paid`
+  - `customers/create`, `customers/update`, `customers/delete`
+  - `products/update`, `products/delete`
+  - `discounts/create`, `discounts/update`, `discounts/delete`
+- Yeni hedef: `services/backend/src/modules/webhooks/shopify/` aynı 4 handler + 11 topic + tenant subdomain'den çözüm + HMAC verify + `WebhookLog` audit (her gelen webhook log'lanır).
+
+##### Tüm Shopify entity'leri DB'ye cache'lenir (genelleyici kural)
+
+> **Kural:** Shopify'dan gelen / Shopify'a giden her entity'nin **lokal DB'de cache karşılığı** olur. Hiçbir Shopify ekranı **runtime'da Shopify API'ye dönüp veri çekmez** — UI hep DB'den okur. Shopify ya periodik sync ile (worker + cursor + delta) ya da webhook ile (anlık delta) DB'yi günceller. Bu, **eski sistemde uygulanan disiplin**: periodik sync (`customers`/`products`/`orders` 3 worker) + webhook (4 handler, 11 topic).
+
+**Cache'lenen Prisma modelleri (eski şemadan, yeni sisteme `tenantId` ile taşınır):**
+
+| Shopify entity | Eski lokal model | Yeni hedef model | Sync kanalı |
+|---|---|---|---|
+| Customer | `ShopifyCustomer` (+ `ShopifyCustomerSegment` + `ShopifyCustomerSegmentMember`) | `Customer` (6.2 schema'sında var, `shopify_customer_id` indeksli) | Periodik worker + webhook (3 topic) |
+| Product + Variant | `CatalogProduct` + `CatalogVariant` | `CatalogProduct` + `CatalogVariant` (6.2 schema'sında) | Periodik worker + webhook (2 topic) |
+| Order | `OrderLocal` (+ `OrderStatusEvent`) | `CommerceOrder` (6.2 schema'sında, `shopify_order_id` indeksli) | Periodik worker + webhook (3 topic) |
+| Discount Code | `DiscountCode` | `DiscountCode` — **yeni model eklenmeli** (`shopify_price_rule_id` + `shopify_discount_code_id` indeksli) | Webhook (3 topic) + bizim push (`shopify-admin-discount.service.ts` — 6.2 B2B Discounts) |
+
+**Yeni eklenmesi gereken (6.2 + 6.5.2'nin tamamlayıcısı, schema disiplini):**
+
+- `WebhookLog` — her gelen webhook payload'ı + tenant_id + topic + HMAC verify durumu + handler outcome + retry count. **Eski `webhook-log.service.ts`'in yeni karşılığı**, gerekli (idempotency + audit + DLQ kaynağı).
+- `DiscountCode` modeli — Shopify discount push (admin tarafımız) + Shopify webhook (Shopify tarafında değişen kod) iki yönlü senkron için. Minimum alanlar: `id + tenantId + shopifyPriceRuleId + shopifyDiscountCodeId + code + status + value + appliesTo + startsAt + endsAt + createdAt + updatedAt`.
+
+**Sync ↔ webhook idempotency:** Webhook geldiğinde periodik sync ile çakışmasın diye **her cache tablosunun unique index'i** `@@unique([tenantId, shopifyId])` olmalı (upsert ile delta'yı tek satıra yansıt). Çift yazma yasak, son delta kazanır.
+
+**Sync entity sırasına eklenecek discount:** `sync-state.service.ts`'deki `SyncEntityType` eski'de `'customers' | 'products' | 'orders'` üçü ile sınırlı, **ama discount webhook ile geliyor (worker yok)**. Yeni sistemde isteğe bağlı olarak `discounts` da 4. worker olarak eklenebilir (full backfill için) — şu an webhook tek başına yeterli (Shopify push'u). Karar agent'a değil, kullanıcıya bağlı; varsayılan: webhook-only (eski sistem davranışı).
 
 ##### Permission + UI bağlama
 
@@ -1565,3 +1597,44 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   4. Bundan sonra her commit'in evidence iliştirmesinde **URL bar dahil** screenshot şart; URL bar görünmüyorsa kanıt geçersiz.
 →
 → ÇÖZÜLDÜ / enforced `2026-06-27`: local forbidden listener check for `4100`, `4120`, `5187`, `5188`, `5189` returned `no_forbidden_local_listeners` after removing the stale `ssh -N -L 4120/5187/5188/5189 new-mothership` tunnel. Local `apps/*/tsconfig.tsbuildinfo` artifacts were removed from git and `.gitignore` now blocks `.vite/` + `*.tsbuildinfo`. Evidence for this round was captured only from `https://app.dtfbank.com` with API calls to `https://api.dtfbank.com`; no local UI server was used.
+
+---
+
+### 2026-06-27 — Aircall 6.5.3 backend ingest + no-mock tabs live proof
+
+**What changed**
+- Added Aircall tenant-scoped Prisma models and migration `202606276_aircall_ingest`: `AircallUser`, `AircallNumber`, `AircallWebhookConfig`, `AircallWebhookInbox`, `AircallCallEvent`, `Call`, `CallEvent`, `AircallSyncState`, and `SyncLog`.
+- Added public webhook receiver `POST /api/v1/webhooks/aircall/:tenantSlug`. It always returns 200, writes inbox audit rows, checks the Aircall token claim against encrypted TenantConfig / container env fallback, and queues `aircall-ingest` on managed Redis.
+- Added Aircall ingest worker that mirrors call webhooks into `Call` + `CallEvent` without touching closed-list Task/Sales/EventBus modules.
+- Added real admin endpoints: `GET /aircall/numbers`, `POST /aircall/numbers/sync`, `GET /aircall/webhooks/status`, `GET /aircall/sync-logs`.
+- Rebound `/settings/aircall/numbers`, `/webhooks`, and `/sync-logs` to those endpoints. The tabs now render backend credential-required / empty / data / error states, not static UI.
+
+**Remote deploy scope**
+- Deployed only to `factoryengine-dtfbank-app`.
+- Preserved remote `.env`, `uploads`, and `node_modules`.
+- Verified mount path: `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank -> /app`.
+- Did not touch gangsheet, upload, caddy, or non-`factoryengine-*` containers.
+
+**Build + migration evidence**
+- Local build checks passed: contracts, api-client, backend, admin.
+- Runtime migration proof: `Applying migration 202606276_aircall_ingest`; follow-up deploy on normalized managed DB URL (`eagle_dtfbank_db`, schema `factory_engine_pro`) -> `6 migrations found`, `No pending migrations to apply`.
+- Runtime route map includes `GET /api/v1/aircall/numbers`, `POST /api/v1/aircall/numbers/sync`, `GET /api/v1/aircall/webhooks/status`, `GET /api/v1/aircall/sync-logs`, `POST /api/v1/webhooks/aircall/:tenantSlug`; Nest `Nest application successfully started`.
+
+**Live API evidence**
+- Public webhook smoke: `POST https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank` with an invalid proof token -> `200`, `{"accepted":true,"status":"rejected","reason":"webhook_secret_missing"}`. Reason is expected because dtfbank currently has no Aircall env key and no TenantConfig Aircall secret.
+- Owner login: `POST https://api.dtfbank.com/api/v1/auth/member/login` -> `201`.
+- Authenticated Aircall endpoints:
+  - `GET /api/v1/aircall/webhooks/status` -> `200`, `credentialRequired=true`, `inbox.total=1`, `inbox.rejected=1`, webhook URL `https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank`.
+  - `GET /api/v1/aircall/sync-logs` -> `200`, inbox row `eventType=call.ended`, `status=rejected`, `rejectionReason=webhook_secret_missing`.
+  - `GET /api/v1/aircall/numbers` -> `200`, `credentialRequired=true`, `source=not_configured`, `stats.total=0`.
+
+**Live UI evidence**
+- Authenticated screenshots from `https://app.dtfbank.com`:
+  - `docs/evidence/20260627-aircall-api-auth-webhooks.png`
+  - `docs/evidence/20260627-aircall-api-auth-sync-logs.png`
+  - `docs/evidence/20260627-aircall-api-auth-numbers.png`
+  - JSON summary: `docs/evidence/20260627-aircall-api-auth.json`
+- UI assertions:
+  - Webhooks tab shows API credentials missing, webhook secret missing, inactive status, real webhook URL, and inbox `1 total / 1 rejected`.
+  - Sync Logs tab shows the real rejected webhook inbox row.
+  - Numbers tab shows `0` stats and credential-required CTA.

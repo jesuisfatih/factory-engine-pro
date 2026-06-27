@@ -28,6 +28,20 @@ export class AircallClient {
     });
   }
 
+  listNumbers(page = 1, perPage = 50) {
+    return this.request<{ numbers?: unknown[]; meta?: { next_page_link?: string | null } }>('/numbers', {
+      query: { page, per_page: perPage },
+    });
+  }
+
+  listWebhooks() {
+    return this.request<{ webhooks?: unknown[]; meta?: { next_page_link?: string | null } }>('/webhooks');
+  }
+
+  ping() {
+    return this.request<{ ping?: string }>('/ping');
+  }
+
   private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const queryString = options.query
       ? `?${Object.entries(options.query)

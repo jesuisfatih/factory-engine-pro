@@ -1,0 +1,45 @@
+{
+  "loginStatus": 201,
+  "pages": [
+    {
+      "url": "https://app.dtfbank.com/settings/aircall/webhooks",
+      "file": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260627-aircall-api-auth-webhooks.png",
+      "state": {
+        "href": "https://app.dtfbank.com/settings/aircall/webhooks",
+        "text": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nWebhook registration and live delivery state\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nWebhook status\nRegistration, subscribed events and last failure state.\nRefresh\nAPI CREDENTIALS\nMissing\nWEBHOOK SECRET\nMissing\nSTATUS\nInactive\nLAST EVENT\n27.06.2026 21:16\nWEBHOOK URL\nhttps://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank\nINBOX\n1 total · 0 processed · 1 rejected\nWebhook registration is inactive because this tenant is missing Aircall credentials.",
+        "cards": [
+          "API CREDENTIALS\nMissing",
+          "WEBHOOK SECRET\nMissing",
+          "STATUS\nInactive",
+          "LAST EVENT\n27.06.2026 21:16",
+          "WEBHOOK URL\nhttps://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank",
+          "INBOX\n1 total · 0 processed · 1 rejected",
+          "Webhook registration is inactive because this tenant is missing Aircall credentials."
+        ]
+      }
+    },
+    {
+      "url": "https://app.dtfbank.com/settings/aircall/sync-logs",
+      "file": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260627-aircall-api-auth-sync-logs.png",
+      "state": {
+        "href": "https://app.dtfbank.com/settings/aircall/sync-logs",
+        "text": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nRecent Aircall sync and health signals\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nAircall sync logs\nLatest health counts from the call ingestion pipeline.\nRefresh\nSource\tAction\tStatus\tMessage\tAt\nWebhook\tcall.ended\trejected\twebhook_secret_missing\t27.06.2026 21:16",
+        "cards": []
+      }
+    },
+    {
+      "url": "https://app.dtfbank.com/settings/aircall/numbers",
+      "file": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260627-aircall-api-auth-numbers.png",
+      "state": {
+        "href": "https://app.dtfbank.com/settings/aircall/numbers",
+        "text": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nWorkspace numbers and tenant routing inputs\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nTOTAL NUMBERS\n0\nIVR NUMBERS\n0\nCOUNTRIES\n0\nNumbers\nUse these to configure tenant routing in Configuration tab\nRefresh\nSync\nAircall credentials required\nNumbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.\nOpen connection settings",
+        "cards": [
+          "TOTAL NUMBERS\n0",
+          "IVR NUMBERS\n0",
+          "COUNTRIES\n0",
+          "Aircall credentials required\nNumbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.\nOpen connection settings"
+        ]
+      }
+    }
+  ]
+}

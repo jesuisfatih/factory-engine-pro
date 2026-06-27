@@ -20,6 +20,30 @@ export class AircallController {
     return this.aircall.syncUsers();
   }
 
+  @Get('numbers')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  numbers() {
+    return this.aircall.listNumbers();
+  }
+
+  @Post('numbers/sync')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  syncNumbers() {
+    return this.aircall.syncNumbers();
+  }
+
+  @Get('webhooks/status')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  webhookStatus() {
+    return this.aircall.webhookStatus();
+  }
+
+  @Get('sync-logs')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  syncLogs() {
+    return this.aircall.syncLogs();
+  }
+
   @Post('users/:aircallUserId/link')
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
   linkUser(

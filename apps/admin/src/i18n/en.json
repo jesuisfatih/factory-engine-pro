@@ -627,8 +627,12 @@
         "credentials_required_title": "Aircall credentials required",
         "credentials_required_body": "Numbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.",
         "credentials_required_cta": "Open connection settings",
-        "unavailable_title": "Number sync is not connected yet",
-        "unavailable_body": "Credentials are saved, but the number sync endpoint is not available in this release. No synthetic Aircall numbers are shown."
+        "empty_title": "No Aircall numbers synced",
+        "empty_body": "Run sync after credentials are saved. The table only shows numbers returned by Aircall.",
+        "sync": "Sync",
+        "syncing": "Syncing",
+        "type_ivr": "IVR",
+        "type_direct": "Direct"
       },
       "webhooks_tab": {
         "title": "Webhook status",
@@ -647,9 +651,13 @@
         "webhook_secret": "Webhook secret",
         "saved": "Saved",
         "missing": "Missing",
+        "active": "Active",
         "pending_registration": "Pending registration",
+        "webhook_url": "WEBHOOK URL",
+        "inbox_counters": "INBOX",
+        "inbox_summary": "{{total}} total · {{processed}} processed · {{rejected}} rejected",
         "credentials_required_body": "Webhook registration is inactive because this tenant is missing Aircall credentials.",
-        "pending_body": "Credentials are saved, but webhook registration and delivery metrics are not connected in this release."
+        "pending_body": "Credentials are saved and webhook delivery metrics will appear after Aircall sends an event."
       },
       "sync_logs_tab": {
         "title": "Aircall sync logs",
@@ -659,8 +667,14 @@
         "credentials_required_title": "Aircall credentials required",
         "credentials_required_body": "Sync logs cannot be loaded until this tenant has Aircall API credentials.",
         "credentials_required_cta": "Open connection settings",
-        "empty_title": "No live sync log endpoint",
-        "empty_body": "Credentials are saved, but Aircall sync log persistence is not connected in this release. No mock JSON is shown."
+        "empty_title": "No Aircall sync activity yet",
+        "empty_body": "Webhook inbox and sync activity will appear after the first real Aircall sync or webhook event.",
+        "col_source": "Source",
+        "col_action": "Action",
+        "col_status": "Status",
+        "col_message": "Message",
+        "col_at": "At",
+        "source_webhook": "Webhook"
       }
     },
     "shopify": {
@@ -1347,8 +1361,12 @@
       "credentials_required_title": "Aircall credentials required",
       "credentials_required_body": "Numbers cannot be synced until this tenant has an Aircall API ID, API token, and webhook secret.",
       "credentials_required_cta": "Open connection settings",
-      "unavailable_title": "Number sync is not connected yet",
-      "unavailable_body": "Credentials are saved, but the number sync endpoint is not available in this release. No synthetic Aircall numbers are shown."
+      "empty_title": "No Aircall numbers synced",
+      "empty_body": "Run sync after credentials are saved. The table only shows numbers returned by Aircall.",
+      "sync": "Sync",
+      "syncing": "Syncing",
+      "type_ivr": "IVR",
+      "type_direct": "Direct"
     },
     "webhooks_tab": {
       "title": "Webhook status",
@@ -1367,9 +1385,13 @@
       "webhook_secret": "Webhook secret",
       "saved": "Saved",
       "missing": "Missing",
+      "active": "Active",
       "pending_registration": "Pending registration",
+      "webhook_url": "WEBHOOK URL",
+      "inbox_counters": "INBOX",
+      "inbox_summary": "{{total}} total · {{processed}} processed · {{rejected}} rejected",
       "credentials_required_body": "Webhook registration is inactive because this tenant is missing Aircall credentials.",
-      "pending_body": "Credentials are saved, but webhook registration and delivery metrics are not connected in this release."
+      "pending_body": "Credentials are saved and webhook delivery metrics will appear after Aircall sends an event."
     },
     "sync_logs_tab": {
       "title": "Aircall sync logs",
@@ -1379,8 +1401,14 @@
       "credentials_required_title": "Aircall credentials required",
       "credentials_required_body": "Sync logs cannot be loaded until this tenant has Aircall API credentials.",
       "credentials_required_cta": "Open connection settings",
-      "empty_title": "No live sync log endpoint",
-      "empty_body": "Credentials are saved, but Aircall sync log persistence is not connected in this release. No mock JSON is shown."
+      "empty_title": "No Aircall sync activity yet",
+      "empty_body": "Webhook inbox and sync activity will appear after the first real Aircall sync or webhook event.",
+      "col_source": "Source",
+      "col_action": "Action",
+      "col_status": "Status",
+      "col_message": "Message",
+      "col_at": "At",
+      "source_webhook": "Webhook"
     }
   }
 }

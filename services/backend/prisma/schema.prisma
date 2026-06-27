@@ -77,6 +77,15 @@ model Tenant {
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
   mailDeliveries          MailDelivery[]
+  aircallUsers            AircallUser[]
+  aircallNumbers          AircallNumber[]
+  aircallWebhookConfig    AircallWebhookConfig?
+  aircallWebhookInbox     AircallWebhookInbox[]
+  aircallCallEvents       AircallCallEvent[]
+  calls                   Call[]
+  callEvents              CallEvent[]
+  aircallSyncStates       AircallSyncState[]
+  syncLogs                SyncLog[]
 
   @@map("tenants")
 }
@@ -856,4 +865,227 @@ model MailDelivery {
   @@index([tenantId, eventKey, createdAt])
   @@index([tenantId, recipientEmail])
   @@map("mail_deliveries")
+}
+
+model AircallUser {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  aircallUserId   String   @map("aircall_user_id")
+  email           String?
+  name            String
+  extension       String?
+  availableStatus String?  @map("available_status")
+  timezone        String?
+  language        String?
+  defaultNumberId String?  @map("default_number_id")
+  numbers         Json     @default("[]")
+  rawPayload      Json?    @map("raw_payload")
+  lastSyncedAt    DateTime @default(now()) @map("last_synced_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aircallUserId])
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@map("aircall_users")
+}
+
+model AircallNumber {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  aircallNumberId String   @map("aircall_number_id")
+  name            String
+  digits          String
+  country         String?
+  timezone        String?
+  isIvr           Boolean  @default(false) @map("is_ivr")
+  tenantSlug      String?  @map("tenant_slug")
+  rawPayload      Json?    @map("raw_payload")
+  lastSyncedAt    DateTime @default(now()) @map("last_synced_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aircallNumberId])
+  @@index([tenantId])
+  @@index([tenantId, digits])
+  @@index([tenantSlug])
+  @@map("aircall_numbers")
+}
+
+model AircallWebhookConfig {
+  id                String    @id
+  tenantId          String    @unique @map("tenant_id")
+  aircallWebhookId  String?   @map("aircall_webhook_id")
+  customName        String?   @map("custom_name")
+  url               String?
+  events            String[]  @default([])
+  active            Boolean   @default(false)
+  lastPingAt        DateTime? @map("last_ping_at")
+  lastEventAt       DateTime? @map("last_event_at")
+  lastFailureAt     DateTime? @map("last_failure_at")
+  lastFailureReason String?   @map("last_failure_reason") @db.Text
+  failureCount      Int       @default(0) @map("failure_count")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("aircall_webhook_configs")
+}
+
+model AircallWebhookInbox {
+  id              String    @id
+  tenantId        String?   @map("tenant_id")
+  tenantSlug      String?   @map("tenant_slug")
+  rawBody         String    @map("raw_body") @db.Text
+  headers         Json      @default("{}")
+  signature       String?
+  tokenClaim      String?   @map("token_claim")
+  status          String    @default("received")
+  rejectionReason String?   @map("rejection_reason")
+  eventType       String?   @map("event_type")
+  externalCallId  String?   @map("external_call_id")
+  receivedAt      DateTime  @default(now()) @map("received_at")
+  processedAt     DateTime? @map("processed_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([receivedAt])
+  @@index([tenantSlug])
+  @@index([externalCallId])
+  @@map("aircall_webhook_inbox")
+}
+
+model AircallCallEvent {
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  externalCallId    String    @map("external_call_id")
+  eventType         String    @map("event_type")
+  eventTimestamp    DateTime  @map("event_timestamp")
+  direction         String?
+  status            String?
+  durationSeconds   Int?      @map("duration_seconds")
+  numberId          String?   @map("number_id")
+  aircallUserId     String?   @map("aircall_user_id")
+  contactPhone      String?   @map("contact_phone")
+  contactPhoneE164  String?   @map("contact_phone_e164")
+  contactEmail      String?   @map("contact_email")
+  recordingUrl      String?   @map("recording_url") @db.Text
+  voicemailUrl      String?   @map("voicemail_url") @db.Text
+  transcriptRaw     String?   @map("transcript_raw") @db.Text
+  transcriptVersion Int       @default(0) @map("transcript_version")
+  tags              Json      @default("[]")
+  comments          Json      @default("[]")
+  rawPayload        Json      @map("raw_payload")
+  receivedAt        DateTime  @default(now()) @map("received_at")
+  processedAt       DateTime? @map("processed_at")
+  processingError   String?   @map("processing_error") @db.Text
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, externalCallId, eventType, eventTimestamp])
+  @@index([tenantId])
+  @@index([externalCallId])
+  @@index([eventType])
+  @@index([receivedAt])
+  @@index([contactPhoneE164])
+  @@map("aircall_call_events")
+}
+
+model Call {
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  aircallCallId     String?   @map("aircall_call_id")
+  customerId        String?   @map("customer_id")
+  customerUserId    String?   @map("customer_user_id")
+  currentOperatorId String?   @map("current_operator_id")
+  direction         String?
+  status            String    @default("open")
+  callerNumber      String?   @map("caller_number")
+  callerNumberE164  String?   @map("caller_number_e164")
+  callerEmail       String?   @map("caller_email")
+  startedAt         DateTime? @map("started_at")
+  answeredAt        DateTime? @map("answered_at")
+  endedAt           DateTime? @map("ended_at")
+  durationSeconds   Int?      @map("duration_seconds")
+  transcriptRaw     String?   @map("transcript_raw") @db.Text
+  rawPayload        Json?     @map("raw_payload")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events CallEvent[]
+
+  @@unique([tenantId, aircallCallId])
+  @@index([tenantId])
+  @@index([aircallCallId])
+  @@index([customerId])
+  @@index([customerUserId])
+  @@index([currentOperatorId])
+  @@index([status])
+  @@map("calls")
+}
+
+model CallEvent {
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  callId        String?  @map("call_id")
+  aircallCallId String?  @map("aircall_call_id")
+  sourceEventId String?  @unique @map("source_event_id")
+  eventType     String   @map("event_type")
+  actorId       String?  @map("actor_id")
+  actorType     String?  @map("actor_type")
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  call   Call?  @relation(fields: [callId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([callId])
+  @@index([aircallCallId])
+  @@index([eventType])
+  @@map("call_events")
+}
+
+model AircallSyncState {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  resource     String
+  cursor       String?
+  metadata     Json     @default("{}")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, resource])
+  @@index([tenantId])
+  @@map("aircall_sync_states")
+}
+
+model SyncLog {
+  id         String    @id
+  tenantId   String    @map("tenant_id")
+  service    String
+  action     String
+  status     String
+  message    String?   @db.Text
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  metadata   Json      @default("{}")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, service, createdAt])
+  @@index([tenantId, status])
+  @@map("sync_logs")
 }

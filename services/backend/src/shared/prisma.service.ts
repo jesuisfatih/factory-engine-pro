@@ -32,6 +32,15 @@ const TENANT_SCOPED_MODELS = new Set([
   'B2BAccessRequest',
   'B2BAccessRequestFile',
   'MailDelivery',
+  'AircallUser',
+  'AircallNumber',
+  'AircallWebhookConfig',
+  'AircallWebhookInbox',
+  'AircallCallEvent',
+  'Call',
+  'CallEvent',
+  'AircallSyncState',
+  'SyncLog',
 ]);
 
 @Injectable()
