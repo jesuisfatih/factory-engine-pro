@@ -1,0 +1,86 @@
+{
+  "generatedAt": "2026-06-27T17:41:05.434Z",
+  "unauthenticated": {
+    "requestedUrl": "https://app.dtfbank.com/orders",
+    "finalUrl": "https://app.dtfbank.com/login?redirect=%2Forders",
+    "hasLoginForm": true,
+    "hasMainLayout": false
+  },
+  "authenticated": {
+    "loginRouteFinalUrlWhenSessionExists": "https://app.dtfbank.com/dashboard",
+    "hasDashboardHeading": true,
+    "hasRevenueKpi": true,
+    "hasMailFailuresKpi": true,
+    "hasMainLayout": true,
+    "hasLoginForm": false
+  },
+  "dashboardApi": [
+    {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/auth/member/login",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/support/stats/overview",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/customers/stats",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/orders/stats",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/orders?limit=100",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/mail/deliveries?limit=5",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/orders/stats",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/support/stats/overview",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/customers/stats",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/orders?limit=100",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/mail/deliveries?limit=5",
+      "status": 200
+    }
+  ],
+  "screenshots": {
+    "redirectScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\admin-auth-guard-redirect-live-20260627.png",
+    "dashboardScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\admin-dashboard-real-api-live-20260627.png"
+  },
+  "dashboardApiSummary": {
+    "/api/v1/auth/member/login": 201,
+    "/api/v1/support/stats/overview": 200,
+    "/api/v1/customers/stats": 200,
+    "/api/v1/orders/stats": 200,
+    "/api/v1/orders?limit=100": 200,
+    "/api/v1/mail/deliveries?limit=5": 200
+  }
+}

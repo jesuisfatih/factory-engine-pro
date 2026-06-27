@@ -1475,6 +1475,7 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 - Yani `/dashboard`, `/orders` vs.'e doğrudan URL ile gidilince login ekranı atlanıyor, ana layout açılıyor.
 - **Aksiyon:** `__root.tsx`'te ROOT-level `beforeLoad` guard ekle — `readSession()?.accessToken` yoksa `/login`'e redirect, geldiği URL `redirect` query param'ı olarak hatırlansın; login başarılı olunca o URL'e dönsün. AUTH_ROUTES'a giren sayfaların `beforeLoad`'unda ters durum: token VARSA `/dashboard`'a redirect (login yapmış kullanıcı login ekranını yeniden görmesin).
 →
+→ ÇÖZÜLDÜ `06da4d38` + live verified `2026-06-27`: clean browser opened `https://app.dtfbank.com/orders` and was redirected to `https://app.dtfbank.com/login?redirect=%2Forders`; login form visible, main layout not visible. Evidence: `docs/evidence/admin-auth-guard-redirect-live-20260627.png` and `docs/evidence/admin-auth-dashboard-live-20260627.json`.
 
 **10. Madde 4 İHLALİ — Dashboard mock data kullanıyor (UI ↔ backend etkileşimi yok)**
 - 40 maddenin 4. maddesi: "Doğru giriş yapan kullanıcı `/dashboard`'a yönlenir; sidebar + topbar tenant brand'ıyla, sol-altta gerçek email + rol etiketi görünür."
@@ -1483,6 +1484,7 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 - 5.2 prensibinin (statik/mock UI yasak) doğrudan ihlali. 6.2 Commerce, 6.3 Operations, 6.4 Mail kapanmış görünüyor ama Dashboard 6.1'den beri yarım.
 - **Aksiyon:** `dashboard.tsx` mock'tan ayrılsın; gerçek endpoint'ler — Orders stats (`GET /api/v1/orders/stats`), Customers stats (`GET /api/v1/customers/stats`), Support stats (`GET /api/v1/support/stats`), Mail deliveries son N (`GET /api/v1/mail/deliveries?limit=10`) — TanStack Query ile çekilsin. Boş/dolu/hata üç durumu işlensin (5.2).
 →
+→ ÇÖZÜLDÜ `06da4d38` + live verified `2026-06-27`: `dashboard.tsx` no longer imports `@/lib/mock`; browser dashboard run captured real API calls: `POST /api/v1/auth/member/login -> 201`, `GET /api/v1/orders/stats -> 200`, `GET /api/v1/customers/stats -> 200`, `GET /api/v1/support/stats/overview -> 200`, `GET /api/v1/orders?limit=100 -> 200`, `GET /api/v1/mail/deliveries?limit=5 -> 200`. Screenshot: `docs/evidence/admin-dashboard-real-api-live-20260627.png`; JSON: `docs/evidence/admin-auth-dashboard-live-20260627.json`.
 
 **11. ROADMAP 0 şifresi kabul edilmiyor (kullanıcı raporu)**
 - Kullanıcı doc başındaki test hesabıyla (`owner.prodtest+20260627184047@dtfbank.com` / `FepOwner20260627184047`) login deniyor, kabul edilmiyor.
@@ -1492,6 +1494,7 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   3. Login body + tenant resolve — admin app `x-tenant-id: ten_dtfbank` (veya benzeri) header'ını gönderiyor mu, backend tenant'ı doğru çözüyor mu?
 - **Aksiyon:** Madde 3 (yanlış şifrede anlamlı mesaj + request_id) doğrulamadan önce hesap + auth zincirini end-to-end kanıtla; 8'e curl çıktısı + browser network ekranı iliştir.
 →
+→ ÇÖZÜLDÜ / yeniden doğrulandı `2026-06-27`: ROADMAP 0 admin owner hesabıyla live browser login `POST /api/v1/auth/member/login -> 201` verdi; session varken `/login` açılınca otomatik `https://app.dtfbank.com/dashboard` final URL'ine döndü. Dashboard heading, Revenue KPI, Mail Failures KPI ve main layout göründü; login form görünmedi. Evidence: `docs/evidence/admin-auth-dashboard-live-20260627.json`.
 
 **12. SİSTEMSEL ELEŞTİRİ — Yarım iş + modül atlama**
 - Agent System Mail (6.4.1) ve commerce/operations'ı bitirip kanıt iliştirdi ama **temel akış olan Identity → Dashboard hâlâ yarım**: auth guard yok, Dashboard mock, ROADMAP 0 hesabı doğrulanmamış.
