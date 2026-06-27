@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-06-27T17:55:19.256Z",
+  "loginStatus": 201,
+  "tenantConfigResponses": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": {
+        "workspaceName": "DTF Bank",
+        "brandBadge": "DB",
+        "brandLogo": null,
+        "shopifyDomain": "dtf-bank.myshopify.com",
+        "hasShopifyAdminToken": true,
+        "hasShopifyApiKey": true,
+        "hasShopifyApiSecret": true,
+        "hasWebhookHmacKey": true,
+        "hasAircallApiId": false,
+        "hasAircallApiToken": false,
+        "hasAircallWebhookSecret": false,
+        "hasAnthropicApiKey": true,
+        "hasResendApiKey": true
+      }
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": {
+        "workspaceName": "DTF Bank",
+        "brandBadge": "DB",
+        "brandLogo": null,
+        "shopifyDomain": "dtf-bank.myshopify.com",
+        "hasShopifyAdminToken": true,
+        "hasShopifyApiKey": true,
+        "hasShopifyApiSecret": true,
+        "hasWebhookHmacKey": true,
+        "hasAircallApiId": false,
+        "hasAircallApiToken": false,
+        "hasAircallWebhookSecret": false,
+        "hasAnthropicApiKey": true,
+        "hasResendApiKey": true
+      }
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": {
+        "workspaceName": "DTF Bank",
+        "brandBadge": "DB",
+        "brandLogo": null,
+        "shopifyDomain": "dtf-bank.myshopify.com",
+        "hasShopifyAdminToken": true,
+        "hasShopifyApiKey": true,
+        "hasShopifyApiSecret": true,
+        "hasWebhookHmacKey": true,
+        "hasAircallApiId": false,
+        "hasAircallApiToken": false,
+        "hasAircallWebhookSecret": false,
+        "hasAnthropicApiKey": true,
+        "hasResendApiKey": true
+      }
+    }
+  ],
+  "tabs": {
+    "numbers": {
+      "finalUrl": "https://app.dtfbank.com/settings/aircall/numbers",
+      "credentialsRequiredVisible": true,
+      "noSyntheticNumbersTextAbsent": true,
+      "statTotalText": "0"
+    },
+    "webhooks": {
+      "finalUrl": "https://app.dtfbank.com/settings/aircall/webhooks",
+      "inactiveVisible": true,
+      "missingCount": 2,
+      "fakeActiveAbsent": true,
+      "warningVisible": true
+    },
+    "syncLogs": {
+      "finalUrl": "https://app.dtfbank.com/settings/aircall/sync-logs",
+      "credentialsRequiredVisible": true,
+      "jsonBlockAbsent": true
+    }
+  },
+  "screenshots": {
+    "numbers": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\aircall-numbers-no-mock-live-20260627.png",
+    "webhooks": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\aircall-webhooks-no-mock-live-20260627.png",
+    "syncLogs": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\aircall-sync-logs-no-mock-live-20260627.png"
+  }
+}

@@ -1456,6 +1456,54 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 
 ---
 
+### 2026-06-27 - Aircall secondary tabs no-mock live proof (dtfbank)
+
+**What changed**
+- Commit `dc3b43b`: removed `@/lib/mock` imports from:
+  - `/settings/aircall/numbers`
+  - `/settings/aircall/webhooks`
+  - `/settings/aircall/sync-logs`
+- These tabs now use real `GET /api/v1/identity/tenant-config` status via the
+  shared `aircallTenantConfig` helper.
+- With dtfbank credentials missing, the UI renders honest blocked/empty states:
+  no fake Aircall numbers, no fake active webhook metrics, no fake sync JSON.
+
+**Deploy scope**
+- Deployed to `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank`.
+- Preserved `.env`, `uploads`, and `node_modules`; restarted only
+  `factoryengine-dtfbank-app`.
+- Gangsheet/upload/other non-factoryengine containers were not touched.
+- Remote `/app/.build-sha`: `dc3b43be3140d3d70bbf9f3c66bbb56ddde5241e`.
+- Public smoke after startup:
+  - `GET https://api.dtfbank.com/api/v1/health` -> `200`
+  - `GET https://app.dtfbank.com/login` -> `200`
+  - `GET https://accounts.dtfbank.com/login` -> `200`
+- Runtime log: Nest `IdentityController` mapped `GET /api/v1/identity/tenant-config`;
+  `Nest application successfully started`.
+
+**Live UI/API evidence**
+- Owner login: `POST /api/v1/auth/member/login -> 201`.
+- Three tab visits each called `GET /api/v1/identity/tenant-config -> 200`.
+- Screenshots:
+  - `docs/evidence/aircall-numbers-no-mock-live-20260627.png`
+  - `docs/evidence/aircall-webhooks-no-mock-live-20260627.png`
+  - `docs/evidence/aircall-sync-logs-no-mock-live-20260627.png`
+  - JSON summary: `docs/evidence/aircall-tabs-no-mock-live-20260627.json`
+- Assertions:
+  - Numbers tab final URL `https://app.dtfbank.com/settings/aircall/numbers`;
+    total/IVR/countries all `0`; "Aircall credentials required" visible;
+    synthetic number text absent.
+  - Webhooks tab final URL `https://app.dtfbank.com/settings/aircall/webhooks`;
+    `Inactive` visible; two credential cells `Missing`; fake `Active` absent.
+  - Sync Logs tab final URL `https://app.dtfbank.com/settings/aircall/sync-logs`;
+    "Aircall credentials required" visible; old `#aircall-sync-json` mock block absent.
+- Result: Aircall settings no longer show mock data on connection, users,
+  numbers, webhooks, or sync logs. The remaining blocker is still real tenant
+  Aircall credentials plus the deeper webhook/call-ingest backend.
+→
+
+---
+
 ### 2026-06-27 — Kontrol turu (commit `36fe67b4` sonrası, doc-only)
 
 > **Kullanıcı dtfbank container'ında manuel test yaparken iki kritik
