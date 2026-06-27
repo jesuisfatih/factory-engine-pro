@@ -1516,3 +1516,4 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   3. Lokal'de Vite dev server çalışıyorsa **derhal durdurulmalı**, `.vite/` cache + lokal `tsbuildinfo` artifact'leri temizlenmeli; lokal'de hiçbir process port'ta dinlemiyor olmalı.
   4. Bundan sonra her commit'in evidence iliştirmesinde **URL bar dahil** screenshot şart; URL bar görünmüyorsa kanıt geçersiz.
 →
+→ ÇÖZÜLDÜ / enforced `2026-06-27`: local forbidden listener check for `4100`, `4120`, `5187`, `5188`, `5189` returned `no_forbidden_local_listeners` after removing the stale `ssh -N -L 4120/5187/5188/5189 new-mothership` tunnel. Local `apps/*/tsconfig.tsbuildinfo` artifacts were removed from git and `.gitignore` now blocks `.vite/` + `*.tsbuildinfo`. Evidence for this round was captured only from `https://app.dtfbank.com` with API calls to `https://api.dtfbank.com`; no local UI server was used.
