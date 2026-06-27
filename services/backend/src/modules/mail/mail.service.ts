@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 import type { Prisma } from '@prisma/client';
+import type { MailProviderHealthResponse } from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -88,6 +89,91 @@ export class MailService {
     });
   }
 
+  async health(): Promise<MailProviderHealthResponse> {
+    const startedAt = Date.now();
+    const credentials = await this.resolveResendApiKeyWithSource();
+    const checkedAt = new Date().toISOString();
+    if (!credentials.key) {
+      return {
+        provider: 'resend',
+        credentialRequired: true,
+        configured: false,
+        reachable: false,
+        status: 'missing_credentials',
+        source: 'none',
+        latencyMs: null,
+        checkedAt,
+        providerStatus: null,
+        domainCount: null,
+        error: 'Resend API key is not configured for this tenant.',
+      };
+    }
+
+    try {
+      const response = await fetch(`${this.resendBaseUrl()}/domains`, {
+        headers: {
+          authorization: `Bearer ${credentials.key}`,
+          accept: 'application/json',
+        },
+      });
+      const latencyMs = Date.now() - startedAt;
+      const text = await response.text();
+      const body = parseJson(text);
+      if (response.ok) {
+        return {
+          provider: 'resend',
+          credentialRequired: false,
+          configured: true,
+          reachable: true,
+          status: 'ok',
+          source: credentials.source,
+          latencyMs,
+          checkedAt: new Date().toISOString(),
+          providerStatus: response.status,
+          domainCount: Array.isArray(body?.data) ? body.data.length : null,
+          error: null,
+        };
+      }
+
+      const status = response.status === 401 || response.status === 403 ? 'invalid_credentials' : 'provider_error';
+      const message = providerMessage(body, text) ?? `Resend health check failed with HTTP ${response.status}.`;
+      this.logger.warn('mail', 'health_failed', 'Resend health check failed', {
+        status_code: response.status,
+        source: credentials.source,
+        provider_status: status,
+      });
+      return {
+        provider: 'resend',
+        credentialRequired: false,
+        configured: true,
+        reachable: true,
+        status,
+        source: credentials.source,
+        latencyMs,
+        checkedAt: new Date().toISOString(),
+        providerStatus: response.status,
+        domainCount: null,
+        error: message,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn('mail', 'health_network_failed', 'Resend health check could not reach provider', { error: message });
+      return {
+        provider: 'resend',
+        credentialRequired: false,
+        configured: true,
+        reachable: false,
+        status: 'network_error',
+        source: credentials.source,
+        latencyMs: Date.now() - startedAt,
+        checkedAt: new Date().toISOString(),
+        providerStatus: null,
+        domainCount: null,
+        error: message.slice(0, 300),
+      };
+    }
+  }
+
   async sendInvitation(input: {
     to: string;
     recipientName: string;
@@ -156,7 +242,7 @@ export class MailService {
 
     try {
       const from = await this.resolveFromAddress();
-      const response = await fetch(`${this.config.get<string>('RESEND_API_BASE_URL', 'https://api.resend.com').replace(/\/+$/, '')}/emails`, {
+      const response = await fetch(`${this.resendBaseUrl()}/emails`, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${apiKey}`,
@@ -196,10 +282,16 @@ export class MailService {
   }
 
   private async resolveResendApiKey() {
+    return (await this.resolveResendApiKeyWithSource()).key ?? '';
+  }
+
+  private async resolveResendApiKeyWithSource(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {
     const tenantConfig = await this.prisma.db.tenantConfig.findFirst({ select: { resendApiKeyEncrypted: true } });
     const tenantKey = this.crypto.decrypt(tenantConfig?.resendApiKeyEncrypted)?.trim();
-    if (tenantKey) return tenantKey;
-    return this.config.get<string>('RESEND_API_KEY')?.trim() || '';
+    if (tenantKey) return { key: tenantKey, source: 'tenant_config' };
+    const envKey = this.config.get<string>('RESEND_API_KEY')?.trim();
+    if (envKey) return { key: envKey, source: 'env' };
+    return { key: null, source: 'none' };
   }
 
   private async resolveFromAddress() {
@@ -209,6 +301,25 @@ export class MailService {
     const domain = rootDomain(this.config.get<string>('ADMIN_URL') ?? this.config.get<string>('ACCOUNTS_URL') ?? this.config.get<string>('API_URL') ?? '');
     return `${brand} <noreply@${domain || 'example.com'}>`;
   }
+
+  private resendBaseUrl() {
+    return this.config.get<string>('RESEND_API_BASE_URL', 'https://api.resend.com').replace(/\/+$/, '');
+  }
+}
+
+function parseJson(text: string): { data?: unknown; error?: { message?: unknown }; message?: unknown; name?: unknown } | null {
+  try {
+    return JSON.parse(text) as { data?: unknown; error?: { message?: unknown }; message?: unknown; name?: unknown };
+  } catch {
+    return null;
+  }
+}
+
+function providerMessage(body: { error?: { message?: unknown }; message?: unknown; name?: unknown } | null, fallback: string) {
+  if (typeof body?.message === 'string' && body.message.trim()) return body.message.slice(0, 300);
+  if (typeof body?.error?.message === 'string' && body.error.message.trim()) return body.error.message.slice(0, 300);
+  if (typeof body?.name === 'string' && body.name.trim()) return body.name.slice(0, 300);
+  return fallback.trim().slice(0, 300) || null;
 }
 
 function rootDomain(value: string) {

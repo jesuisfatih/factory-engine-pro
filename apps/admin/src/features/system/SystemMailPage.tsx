@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, KeyRound, Mail, RefreshCw, Save, Send, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { sendTestMailSchema, type SendTestMailInput } from '@factory-engine-pro/contracts';
+import { sendTestMailSchema, type MailProviderHealthResponse, type SendTestMailInput } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCurrentPrincipal } from '@/lib/current-principal';
@@ -39,6 +39,7 @@ interface TenantConfigResponse {
 
 const DELIVERY_QUERY_KEY = ['system-mail', 'deliveries'] as const;
 const TENANT_CONFIG_QUERY_KEY = ['identity', 'tenant-config'] as const;
+const MAIL_HEALTH_QUERY_KEY = ['system-mail', 'provider-health'] as const;
 const STATUS_FILTERS: StatusFilter[] = ['all', 'queued', 'sending', 'sent', 'failed', 'skipped'];
 
 export function SystemMailPage() {
@@ -80,6 +81,11 @@ export function SystemMailPage() {
   const tenantConfig = useQuery({
     queryKey: TENANT_CONFIG_QUERY_KEY,
     queryFn: () => adminApi.tenantConfig() as Promise<TenantConfigResponse>,
+    retry: false,
+  });
+  const providerHealth = useQuery({
+    queryKey: MAIL_HEALTH_QUERY_KEY,
+    queryFn: () => adminApi.mailHealth() as Promise<MailProviderHealthResponse>,
     retry: false,
   });
 
@@ -124,7 +130,10 @@ export function SystemMailPage() {
     onSuccess: async () => {
       setSettingsForm({ resendApiKey: '' });
       toast.success(t('system_mail.settings_saved'));
-      await qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY }),
+        qc.invalidateQueries({ queryKey: MAIL_HEALTH_QUERY_KEY }),
+      ]);
     },
     onError: (error) => toast.error(t('system_mail.settings_failed'), { description: apiErrorMessage(error) }),
   });
@@ -182,7 +191,7 @@ export function SystemMailPage() {
         titleI18nKey="system_mail.title"
         subtitleI18nKey="system_mail.subtitle"
         actions={(
-          <button type="button" className="btn" onClick={() => { deliveries.refetch(); if (selectedId) detail.refetch(); }}>
+          <button type="button" className="btn" onClick={() => { deliveries.refetch(); providerHealth.refetch(); if (selectedId) detail.refetch(); }}>
             <RefreshCw size={14} /> {t('common.refresh')}
           </button>
         )}
@@ -262,6 +271,53 @@ export function SystemMailPage() {
             </button>
             {!canWrite && <div className="hint" style={{ marginTop: 8 }}>{t('system_mail.no_write_permission')}</div>}
           </form>
+
+          <section className="section" id="system-mail-provider-health">
+            <h3>
+              <span>{t('system_mail.health_title')}</span>
+              {providerHealth.data && (
+                <span className={`pill ${healthTone(providerHealth.data.status)}`}>
+                  {t(`system_mail.health_status_${providerHealth.data.status}`)}
+                </span>
+              )}
+            </h3>
+            {providerHealth.isLoading && <StateBlock title={t('common.loading')} body={t('system_mail.health_loading_body')} />}
+            {providerHealth.isError && (
+              <StateBlock
+                title={t('system_mail.health_error_title')}
+                body={apiErrorMessage(providerHealth.error)}
+                action={<button type="button" className="btn" onClick={() => providerHealth.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+              />
+            )}
+            {providerHealth.isSuccess && providerHealth.data.credentialRequired && (
+              <StateBlock
+                title={t('system_mail.health_missing_title')}
+                body={t('system_mail.health_missing_body')}
+                action={<button type="button" className="btn primary" onClick={() => document.getElementById('field-resend-api-key')?.focus()}>{t('system_mail.health_missing_cta')}</button>}
+              />
+            )}
+            {providerHealth.isSuccess && !providerHealth.data.credentialRequired && (
+              <div className="row-stack">
+                {providerHealth.data.status === 'ok' ? (
+                  <div style={{ border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)', background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 'var(--radius)', padding: '10px 12px', marginBottom: 12 }}>
+                    {t('system_mail.health_ok_body')}
+                  </div>
+                ) : (
+                  <div className="error-state">{providerHealth.data.error ?? t(`system_mail.health_status_${providerHealth.data.status}`)}</div>
+                )}
+                <DetailLine label={t('system_mail.health_provider')} value="Resend" />
+                <DetailLine label={t('system_mail.health_source')} value={t(`system_mail.health_source_${providerHealth.data.source}`)} />
+                <DetailLine label={t('system_mail.health_provider_status')} value={providerHealth.data.providerStatus === null ? '-' : String(providerHealth.data.providerStatus)} />
+                <DetailLine label={t('system_mail.health_reachable')} value={providerHealth.data.reachable ? t('common.yes') : t('common.no')} />
+                <DetailLine label={t('system_mail.health_latency')} value={providerHealth.data.latencyMs === null ? '-' : `${providerHealth.data.latencyMs}ms`} />
+                <DetailLine label={t('system_mail.health_domain_count')} value={providerHealth.data.domainCount === null ? '-' : String(providerHealth.data.domainCount)} />
+                <DetailLine label={t('system_mail.health_checked')} value={fmtDate(providerHealth.data.checkedAt)} />
+                <button type="button" className="btn" onClick={() => providerHealth.refetch()} disabled={providerHealth.isFetching}>
+                  <RefreshCw size={14} /> {t('system_mail.health_refresh')}
+                </button>
+              </div>
+            )}
+          </section>
 
           <form className="section" onSubmit={submitSettings}>
             <h3>
@@ -425,6 +481,13 @@ function statusTone(status: MailStatus) {
   if (status === 'failed') return 'danger';
   if (status === 'skipped') return 'info';
   return 'warn';
+}
+
+function healthTone(status: MailProviderHealthResponse['status']) {
+  if (status === 'ok') return 'success';
+  if (status === 'missing_credentials') return 'warn';
+  if (status === 'network_error') return 'warn';
+  return 'danger';
 }
 
 function fmtDate(value: string | null) {

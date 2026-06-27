@@ -38,6 +38,7 @@ import type {
   CloseServiceRequestInput,
   RejectB2BAccessInput,
   PreviewSegmentInput,
+  MailProviderHealthResponse,
   SendTestMailInput,
   ShopifyInitialSyncInput,
   ShopifyInitialSyncResponse,
@@ -366,6 +367,10 @@ export class ApiClient {
 
   retryMailDelivery(id: string) {
     return this.post(`/mail/deliveries/${id}/retry`, {});
+  }
+
+  mailHealth() {
+    return this.get<MailProviderHealthResponse>('/mail/health');
   }
 
   sendTestMail(input: SendTestMailInput) {

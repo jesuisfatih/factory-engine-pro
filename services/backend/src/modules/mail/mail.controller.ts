@@ -14,6 +14,12 @@ import { MailService } from './mail.service.js';
 export class MailController {
   constructor(private readonly mail: MailService) {}
 
+  @Get('health')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  health() {
+    return this.mail.health();
+  }
+
   @Get('deliveries')
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   deliveries(@Query(new ZodValidationPipe(mailListQuerySchema)) query: MailListQuery) {
