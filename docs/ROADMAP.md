@@ -1683,3 +1683,66 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - `GET /api/v1/aircall/webhooks/status` -> `200`, `credentialRequired=true`, `inbox.total=2`, `inbox.rejected=2`.
   - `GET /api/v1/aircall/sync-logs` -> `200`, latest inbox `eventType=call.ended`, `externalCallId=proof-call-redeploy-bb4211b`, `status=rejected`.
   - `GET /api/v1/aircall/numbers` -> `200`, `credentialRequired=true`, `source=not_configured`, `stats.total=0`.
+
+---
+
+### 2026-06-27 — Provider credential transfer audit + AI health live proof
+
+**Credential source audit**
+- Read-only scan was limited to `/opt/apps/custom/factoryengine` and
+  `factoryengine-dtfbank-app`; no gangsheet/upload/caddy/non-factoryengine
+  container was touched.
+- `factoryengine-dtfbank-app` runtime env has managed `DATABASE_URL`,
+  `REDIS_URL`, `JWT_SECRET`, `SHOPIFY_*`, `ANTHROPIC_API_KEY`, and
+  `RESEND_API_KEY`.
+- Aircall is different: all allowed dtfbank sources have Aircall keys present
+  but empty (`AIRCALL_API_ID=`, `AIRCALL_API_TOKEN=`,
+  `AIRCALL_WEBHOOK_TOKEN=`). A full `/opt/apps/custom/factoryengine` `.env*`
+  scan found no non-empty `AIRCALL_*` values. Therefore Aircall cannot be
+  moved to `credentialRequired=false` from the server sources currently
+  available.
+
+**TenantConfig transfer**
+- Used live admin login and `PATCH /api/v1/identity/tenant-config`, so
+  provider values were stored by backend `CryptoService.encrypt()` into
+  `_encrypted` fields.
+- Runtime env values written to TenantConfig:
+  `shopifyDomain`, `shopifyAdminToken`, `shopifyApiKey`,
+  `shopifyApiSecret`, `webhookHmacKey`, `anthropicApiKey`, `resendApiKey`.
+- `GET /api/v1/identity/tenant-config` after transfer:
+  `hasShopifyAdminToken=true`, `hasShopifyApiKey=true`,
+  `hasShopifyApiSecret=true`, `hasWebhookHmacKey=true`,
+  `hasAnthropicApiKey=true`, `hasResendApiKey=true`;
+  Aircall flags remain false because source values are empty.
+
+**AI health endpoint**
+- Added and deployed commit `efca960ff6da0cf03249a15de2b02a80c1085900`
+  (`Add AI provider health endpoint`).
+- Remote `.build-sha` matches `efca960ff6da0cf03249a15de2b02a80c1085900`.
+- Route map includes `Mapped {/api/v1/ai/health, GET}`.
+- Live smoke:
+  `GET https://api.dtfbank.com/api/v1/ai/health` -> `200`,
+  `credentialRequired=false`, `configured=true`, `reachable=true`,
+  `status=ok`, `source=tenant_config`, `modelCount=1`.
+
+**Provider smoke after transfer**
+- Health after restart: `200 https://api.dtfbank.com/api/v1/health`,
+  `200 https://app.dtfbank.com/login`,
+  `200 https://accounts.dtfbank.com/login`.
+- Aircall:
+  `GET /api/v1/aircall/webhooks/status` -> `200`,
+  `credentialRequired=true`, `apiCredentialsPresent=false`,
+  `webhookSecretPresent=false` because no non-empty Aircall credential exists
+  in the allowed dtfbank sources.
+- Shopify:
+  `GET /api/v1/pricing/shopify-discounts` -> `200` from backend, but real
+  Shopify Admin API returns `401`. Both dtfbank token candidates found on the
+  server were probed without printing secrets and both returned `401`.
+- Resend:
+  `POST /api/v1/mail/test` -> `201`, delivery created, then delivery status
+  `failed`, `errorMessage="API key is invalid"`. Unique Resend key candidates
+  on the server were probed without printing secrets and did not produce a
+  valid provider response.
+- Missing backend surface still present:
+  `POST /api/v1/sync/initial` -> `404`; the Shopify initial sync endpoint
+  requested by ROADMAP 3.2 is not implemented yet.
