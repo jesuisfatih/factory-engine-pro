@@ -71,8 +71,8 @@ export class IdentityService {
     return this.repository.listCustomerRoles();
   }
 
-  listMembers(search?: string) {
-    return this.repository.listMembers(search);
+  async listMembers(search?: string) {
+    return (await this.repository.listMembers(search)).map(stripPasswordHash);
   }
 
   async createMember(input: CreateMemberInput) {
@@ -95,8 +95,10 @@ export class IdentityService {
       const invitation = input.sendInvite
         ? await this.createInvitation(member.id, 'member')
         : null;
+      const created = await this.repository.findMemberById(member.id);
+      if (!created) throw new NotFoundException('Member not found after creation');
       return {
-        ...(await this.repository.findMemberById(member.id)),
+        ...stripPasswordHash(created),
         invitation,
       };
     } catch (error) {
@@ -116,7 +118,9 @@ export class IdentityService {
       ...(input.aircallUserId !== undefined && { aircallUserId: input.aircallUserId }),
     });
     if (input.roleIds) await this.repository.setMemberRoles(id, input.roleIds);
-    return this.repository.findMemberById(id);
+    const updated = await this.repository.findMemberById(id);
+    if (!updated) throw new NotFoundException('Member not found');
+    return stripPasswordHash(updated);
   }
 
   async createCustomerUser(input: CreateCustomerUserInput) {
@@ -149,8 +153,10 @@ export class IdentityService {
       const invitation = input.sendInvite
         ? await this.createInvitation(user.id, 'customer_user')
         : null;
+      const created = await this.repository.findCustomerUserById(user.id);
+      if (!created) throw new NotFoundException('Customer user not found after creation');
       return {
-        ...(await this.repository.findCustomerUserById(user.id)),
+        ...stripPasswordHash(created),
         invitation,
       };
     } catch (error) {
@@ -159,15 +165,15 @@ export class IdentityService {
   }
 
   async listCustomerUsers() {
-    return this.repository.listCustomerUsers();
+    return (await this.repository.listCustomerUsers()).map(stripPasswordHash);
   }
 
   async listSubUsersForCurrentPrincipal() {
     const context = this.tenantContext.require();
     if (context.principalType === 'customer_user' && context.principalId) {
-      return this.repository.listSubUsers(context.principalId);
+      return (await this.repository.listSubUsers(context.principalId)).map(stripSubUserSensitiveFields);
     }
-    return this.repository.listSubUsers();
+    return (await this.repository.listSubUsers()).map(stripSubUserSensitiveFields);
   }
 
   async createSubUser(input: CreateSubUserInput) {
@@ -199,8 +205,10 @@ export class IdentityService {
       const invitation = input.sendInvite
         ? await this.createInvitation(subUser.id, 'sub_user')
         : null;
+      const created = await this.prisma.db.subUser.findFirst({ where: { id: subUser.id }, include: { roleAssignments: { include: { role: true } } } });
+      if (!created) throw new NotFoundException('Sub-user not found after creation');
       return {
-        ...(await this.prisma.db.subUser.findFirst({ where: { id: subUser.id }, include: { roleAssignments: { include: { role: true } } } })),
+        ...stripSubUserSensitiveFields(created),
         invitation,
       };
     } catch (error) {
@@ -305,4 +313,17 @@ function uniqueConflict(error: unknown, message: string): never {
 
 function stripUndefined<T extends Record<string, unknown>>(input: T) {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== null)) as Partial<T>;
+}
+
+function stripPasswordHash<T extends { passwordHash?: unknown }>(record: T) {
+  const { passwordHash: _passwordHash, ...safe } = record;
+  return safe;
+}
+
+function stripSubUserSensitiveFields<T extends { passwordHash?: unknown; parentUser?: ({ passwordHash?: unknown } | null) }>(record: T) {
+  const { passwordHash: _passwordHash, parentUser, ...safe } = record;
+  return {
+    ...safe,
+    ...(parentUser !== undefined && { parentUser: parentUser ? stripPasswordHash(parentUser) : parentUser }),
+  };
 }
