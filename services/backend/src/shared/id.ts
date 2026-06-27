@@ -36,6 +36,7 @@ export type IdPrefix =
   | 'call'
   | 'cevt'
   | 'acss'
+  | 'ssync'
   | 'slog';
 
 export function prefixedId(prefix: IdPrefix) {

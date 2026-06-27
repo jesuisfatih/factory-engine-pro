@@ -13,6 +13,7 @@ import { OrdersModule } from './modules/orders/orders.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { SegmentsModule } from './modules/segments/segments.module.js';
 import { SupportModule } from './modules/support/support.module.js';
+import { SyncModule } from './modules/sync/sync.module.js';
 import { JwtAuthGuard } from './shared/auth.guard.js';
 import { HttpExceptionFilter } from './shared/http-exception.filter.js';
 import { PermissionsGuard } from './shared/permissions.guard.js';
@@ -38,6 +39,7 @@ import { HealthController } from './health.controller.js';
     SegmentsModule,
     SupportModule,
     B2BAccessModule,
+    SyncModule,
   ],
   controllers: [HealthController],
   providers: [

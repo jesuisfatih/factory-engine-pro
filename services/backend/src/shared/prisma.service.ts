@@ -40,6 +40,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'Call',
   'CallEvent',
   'AircallSyncState',
+  'ShopifySyncState',
   'SyncLog',
 ]);
 

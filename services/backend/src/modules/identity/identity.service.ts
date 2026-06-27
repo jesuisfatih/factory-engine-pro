@@ -38,12 +38,18 @@ export class IdentityService {
       const existing = await this.prisma.db.memberRole.findFirst({ where: { slug: role.slug } });
       if (!existing) {
         await this.repository.createMemberRole({ ...role, permissions: role.permissions as Record<string, boolean>, isSystem: true });
+      } else if (existing.isSystem) {
+        const permissions = { ...(existing.permissions as Record<string, boolean>), ...(role.permissions as Record<string, boolean>) };
+        await this.prisma.db.memberRole.updateMany({ where: { id: existing.id }, data: { permissions } });
       }
     }
     for (const role of DEFAULT_CUSTOMER_ROLES) {
       const existing = await this.prisma.db.customerRole.findFirst({ where: { slug: role.slug } });
       if (!existing) {
         await this.repository.createCustomerRole({ ...role, permissions: role.permissions as Record<string, boolean>, isSystem: true });
+      } else if (existing.isSystem) {
+        const permissions = { ...(existing.permissions as Record<string, boolean>), ...(role.permissions as Record<string, boolean>) };
+        await this.prisma.db.customerRole.updateMany({ where: { id: existing.id }, data: { permissions } });
       }
     }
   }

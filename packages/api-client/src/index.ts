@@ -39,6 +39,9 @@ import type {
   RejectB2BAccessInput,
   PreviewSegmentInput,
   SendTestMailInput,
+  ShopifyInitialSyncInput,
+  ShopifyInitialSyncResponse,
+  ShopifySyncStatus,
 } from '@factory-engine-pro/contracts';
 
 export interface TokenStore {
@@ -403,6 +406,14 @@ export class ApiClient {
 
   aiHealth() {
     return this.get<AiHealthResponse>('/ai/health');
+  }
+
+  shopifySyncStatus() {
+    return this.get<ShopifySyncStatus>('/sync/status');
+  }
+
+  triggerShopifyInitialSync(input: ShopifyInitialSyncInput = {}) {
+    return this.post<ShopifyInitialSyncResponse>('/sync/initial', input);
   }
 
   private get<T>(path: string, auth = true) {

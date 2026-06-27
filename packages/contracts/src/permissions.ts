@@ -19,6 +19,7 @@ export const MEMBER_PERMISSIONS = {
   b2bAccessWrite: 'b2b_access.write',
   settingsRead: 'settings.read',
   settingsWrite: 'settings.write',
+  syncTrigger: 'sync.trigger',
   taskAssign: 'task.assign',
   aircallUsersRead: 'aircall.users.read',
   aircallUsersWrite: 'aircall.users.write',

@@ -7,6 +7,7 @@ export const AUTH_EVENTS_QUEUE = Symbol('AUTH_EVENTS_QUEUE');
 export const PRICING_RULE_SYNC_QUEUE = Symbol('PRICING_RULE_SYNC_QUEUE');
 export const MAIL_OUTBOUND_QUEUE = Symbol('MAIL_OUTBOUND_QUEUE');
 export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
+export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 
 @Global()
 @Module({
@@ -52,8 +53,16 @@ export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
         return new Queue('aircall-ingest', { connection });
       },
     },
+    {
+      provide: SHOPIFY_SYNC_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue('shopify-sync', { connection });
+      },
+    },
   ],
-  exports: [REDIS_CONNECTION, AUTH_EVENTS_QUEUE, PRICING_RULE_SYNC_QUEUE, MAIL_OUTBOUND_QUEUE, AIRCALL_INGEST_QUEUE],
+  exports: [REDIS_CONNECTION, AUTH_EVENTS_QUEUE, PRICING_RULE_SYNC_QUEUE, MAIL_OUTBOUND_QUEUE, AIRCALL_INGEST_QUEUE, SHOPIFY_SYNC_QUEUE],
 })
 export class QueueModule {}
 

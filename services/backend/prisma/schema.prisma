@@ -85,6 +85,7 @@ model Tenant {
   calls                   Call[]
   callEvents              CallEvent[]
   aircallSyncStates       AircallSyncState[]
+  shopifySyncStates       ShopifySyncState[]
   syncLogs                SyncLog[]
 
   @@map("tenants")
@@ -1069,6 +1070,36 @@ model AircallSyncState {
   @@unique([tenantId, resource])
   @@index([tenantId])
   @@map("aircall_sync_states")
+}
+
+model ShopifySyncState {
+  id                   String   @id
+  tenantId             String   @map("tenant_id")
+  resource             String
+  status               String   @default("idle")
+  isLocked             Boolean  @default(false) @map("is_locked")
+  lockedAt             DateTime? @map("locked_at")
+  lockExpiresAt        DateTime? @map("lock_expires_at")
+  heartbeatAt          DateTime? @map("heartbeat_at")
+  currentSyncLogId     String?  @map("current_sync_log_id")
+  lastCursor           String?  @map("last_cursor") @db.Text
+  lastStartedAt        DateTime? @map("last_started_at")
+  lastCompletedAt      DateTime? @map("last_completed_at")
+  lastFailedAt         DateTime? @map("last_failed_at")
+  totalRecordsSynced   Int      @default(0) @map("total_records_synced")
+  lastRunRecords       Int      @default(0) @map("last_run_records")
+  consecutiveFailures  Int      @default(0) @map("consecutive_failures")
+  lastError            String?  @map("last_error") @db.Text
+  metadata             Json     @default("{}")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, resource])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("shopify_sync_states")
 }
 
 model SyncLog {
