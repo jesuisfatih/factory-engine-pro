@@ -1638,3 +1638,14 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   - Webhooks tab shows API credentials missing, webhook secret missing, inactive status, real webhook URL, and inbox `1 total / 1 rejected`.
   - Sync Logs tab shows the real rejected webhook inbox row.
   - Numbers tab shows `0` stats and credential-required CTA.
+
+**Final commit + redeploy evidence**
+- Code commit: `bb4211bf07855ee487b66baeba0185b32a8c72c2` (`Add Aircall ingest pipeline and live tabs`).
+- Redeployed the committed tree only to `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank`; remote `.build-sha` now matches `bb4211bf07855ee487b66baeba0185b32a8c72c2`.
+- Health after restart: `200 https://api.dtfbank.com/api/v1/health`, `200 https://app.dtfbank.com/login`, `200 https://accounts.dtfbank.com/login`.
+- Managed Vultr Postgres verification from `factoryengine-dtfbank-app`: DB `eagle_dtfbank_db`, schema `factory_engine_pro`, `6 migrations found`, `No pending migrations to apply`.
+- Redeploy API smoke:
+  - `POST /api/v1/webhooks/aircall/dtfbank` -> `200`, `accepted=true`, `status=rejected`, `reason=missing_token_claim`.
+  - `GET /api/v1/aircall/webhooks/status` -> `200`, `credentialRequired=true`, `inbox.total=2`, `inbox.rejected=2`.
+  - `GET /api/v1/aircall/sync-logs` -> `200`, latest inbox `eventType=call.ended`, `externalCallId=proof-call-redeploy-bb4211b`, `status=rejected`.
+  - `GET /api/v1/aircall/numbers` -> `200`, `credentialRequired=true`, `source=not_configured`, `stats.total=0`.
