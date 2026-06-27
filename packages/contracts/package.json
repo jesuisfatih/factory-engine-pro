@@ -3,18 +3,20 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./auth": {
-      "types": "./src/auth.ts",
-      "default": "./src/auth.ts"
+      "types": "./dist/auth.d.ts",
+      "default": "./dist/auth.js"
     },
     "./identity": {
-      "types": "./src/identity.ts",
-      "default": "./src/identity.ts"
+      "types": "./dist/identity.d.ts",
+      "default": "./dist/identity.js"
     }
   },
   "scripts": {
