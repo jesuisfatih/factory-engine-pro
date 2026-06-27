@@ -1743,6 +1743,15 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   `failed`, `errorMessage="API key is invalid"`. Unique Resend key candidates
   on the server were probed without printing secrets and did not produce a
   valid provider response.
-- Missing backend surface still present:
-  `POST /api/v1/sync/initial` -> `404`; the Shopify initial sync endpoint
-  requested by ROADMAP 3.2 is not implemented yet.
+- Shopify initial sync:
+  resolved in commit `158d7191`. Live deploy applied migration
+  `202606277_shopify_sync_state`; Nest mapped
+  `GET /api/v1/sync/status` and `POST /api/v1/sync/initial`. Live owner login
+  returned `201` and principal includes `sync.trigger`. `GET /sync/status`
+  returned `credentialRequired=false`, `configured=true`,
+  `shopifyDomain=dtf-bank.myshopify.com`. `POST /sync/initial` queued
+  customers/products/orders with batch
+  `1c001aba-9cbb-4387-95b2-8217b6fe8d46`; worker then failed all three
+  resources with real Shopify Admin API `401`:
+  `[API] Invalid API key or access token (unrecognized login or wrong password)`.
+  Evidence: `docs/evidence/20260627-shopify-initial-sync-live.json`.

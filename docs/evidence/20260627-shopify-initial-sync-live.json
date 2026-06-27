@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-06-27T19:30:00Z",
+  "commit": "158d7191f00bacf4122fd08c8d4f540c85062f64",
+  "scope": "factoryengine-dtfbank-app only",
+  "buildSha": "158d7191f00bacf4122fd08c8d4f540c85062f64",
+  "deploy": {
+    "releasePath": "/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank",
+    "container": "factoryengine-dtfbank-app",
+    "migration": "202606277_shopify_sync_state",
+    "migrationStatus": "applied",
+    "routeMapping": [
+      "Mapped {/api/v1/sync/status, GET} route",
+      "Mapped {/api/v1/sync/initial, POST} route"
+    ]
+  },
+  "health": {
+    "https://api.dtfbank.com/api/v1/health": 200,
+    "https://app.dtfbank.com/login": 200,
+    "https://accounts.dtfbank.com/login": 200
+  },
+  "authSmoke": {
+    "endpoint": "POST https://api.dtfbank.com/api/v1/auth/member/login",
+    "status": 201,
+    "tenantId": "ten_dtfbank",
+    "principal": "owner.prodtest+20260627184047@dtfbank.com",
+    "hasSyncTrigger": true
+  },
+  "syncSmoke": {
+    "before": {
+      "endpoint": "GET https://api.dtfbank.com/api/v1/sync/status",
+      "credentialRequired": false,
+      "configured": true,
+      "shopifyDomain": "dtf-bank.myshopify.com"
+    },
+    "trigger": {
+      "endpoint": "POST https://api.dtfbank.com/api/v1/sync/initial",
+      "queued": true,
+      "batchId": "1c001aba-9cbb-4387-95b2-8217b6fe8d46",
+      "resources": ["customers", "products", "orders"]
+    },
+    "after": {
+      "endpoint": "GET https://api.dtfbank.com/api/v1/sync/status",
+      "credentialRequired": false,
+      "configured": true,
+      "isAnySyncing": false,
+      "hasErrors": true,
+      "entities": {
+        "customers": {
+          "status": "failed",
+          "snapshotRecords": 2,
+          "lastError": "Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)"
+        },
+        "products": {
+          "status": "failed",
+          "snapshotRecords": 1,
+          "lastError": "Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)"
+        },
+        "orders": {
+          "status": "failed",
+          "snapshotRecords": 1,
+          "lastError": "Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)"
+        }
+      }
+    }
+  },
+  "secretHandling": {
+    "printedSecrets": false,
+    "containerShopifyAccessTokenCandidate": {
+      "present": true,
+      "length": 14,
+      "sha12": "f10f20c68a50"
+    }
+  },
+  "uiEvidence": {
+    "url": "https://app.dtfbank.com/settings/shopify",
+    "screenshotCaptured": false,
+    "reason": "Browser control tool transport closed during screenshot attempt."
+  }
+}
