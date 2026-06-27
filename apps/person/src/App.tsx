@@ -13,6 +13,7 @@ import { StubView } from './views/Stub';
 import { LoginView } from './views/auth/LoginView';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
+import { readSession } from './lib/api';
 import { NAV, type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
@@ -42,8 +43,8 @@ const STUB_COPY: Record<string, { title: string; description: string }> = {
 type AuthScreen = 'login' | 'forgot' | 'reset';
 
 export default function App() {
-  const [authed, setAuthed] = useState(false);
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
+  const [authed, setAuthed] = useState(() => Boolean(readSession()?.accessToken));
+  const [authScreen, setAuthScreen] = useState<AuthScreen>(initialAuthScreen);
   const [current, setCurrent] = useState<NavId>('queue');
   const [collapsed, setCollapsed] = useState(false);
   const title = TITLES[current];
@@ -56,11 +57,11 @@ export default function App() {
         {authScreen === 'login' && (
           <LoginView
             onSuccess={() => setAuthed(true)}
-            onForgot={() => setAuthScreen('forgot')}
+            onForgot={() => showAuthScreen('forgot', setAuthScreen)}
           />
         )}
-        {authScreen === 'forgot' && <ForgotPasswordView onBackToLogin={() => setAuthScreen('login')} />}
-        {authScreen === 'reset' && <ResetPasswordView onBackToLogin={() => setAuthScreen('login')} />}
+        {authScreen === 'forgot' && <ForgotPasswordView onBackToLogin={() => showAuthScreen('login', setAuthScreen)} />}
+        {authScreen === 'reset' && <ResetPasswordView onBackToLogin={() => showAuthScreen('login', setAuthScreen)} />}
       </div>
     );
   }
@@ -91,4 +92,17 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+function initialAuthScreen(): AuthScreen {
+  if (window.location.pathname.endsWith('/forgot-password')) return 'forgot';
+  if (window.location.pathname.endsWith('/reset-password')) return 'reset';
+  return 'login';
+}
+
+function showAuthScreen(screen: AuthScreen, setAuthScreen: (screen: AuthScreen) => void) {
+  const basePath = '/staff';
+  const path = screen === 'login' ? `${basePath}/login` : `${basePath}/${screen === 'forgot' ? 'forgot-password' : 'reset-password'}`;
+  window.history.pushState(null, '', path);
+  setAuthScreen(screen);
 }

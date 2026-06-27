@@ -11,12 +11,15 @@ interface Props {
 }
 
 export function LoginView({ onSuccess, onForgot }: Props) {
-  const [email, setEmail] = useState('');
+  const rememberedEmail = readRememberedEmail();
+  const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [error, setError] = useState<string | null>(null);
   const login = useMutation({
     mutationFn: () => personApi.personLogin({ email, password }),
     onSuccess: (session) => {
+      persistRememberedEmail(rememberMe, email);
       personTokenStore.setSession(session);
       onSuccess();
     },
@@ -42,16 +45,41 @@ export function LoginView({ onSuccess, onForgot }: Props) {
           <label htmlFor="login-email">Work email</label>
           <div className="auth-password-wrap">
             <Mail className="auth-input-icon" size={14} />
-            <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" placeholder="you@workspace.com" required />
+            <input id="login-email" type="email" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(null); }} autoComplete="username" placeholder="you@workspace.com" required />
           </div>
         </div>
-        <PasswordInput id="login-password" label="Password" value={password} onChange={setPassword} required />
+        <PasswordInput id="login-password" label="Password" value={password} onChange={(next) => { setPassword(next); if (error) setError(null); }} required />
         <div className="auth-row">
-          <span />
+          <label className="auth-check" htmlFor="person-remember-me">
+            <input id="person-remember-me" type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+            <span>Remember me</span>
+          </label>
           <button type="button" className="auth-text-link" onClick={onForgot} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Forgot password?</button>
         </div>
         <AuthSubmit pending={login.isPending}>Sign in <ArrowRight size={14} /></AuthSubmit>
       </AuthForm>
     </div>
   );
+}
+
+const REMEMBERED_EMAIL_KEY = 'factory-engine-pro.person.remembered-email';
+
+function readRememberedEmail() {
+  try {
+    return window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function persistRememberedEmail(remember: boolean, email: string) {
+  try {
+    if (remember) {
+      window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim().toLowerCase());
+    } else {
+      window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+  } catch {
+    /* ignore blocked storage */
+  }
 }

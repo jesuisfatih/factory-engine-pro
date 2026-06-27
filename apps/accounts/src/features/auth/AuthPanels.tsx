@@ -6,12 +6,15 @@ import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail }
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 export function AccountsLoginPanel() {
-  const [email, setEmail] = useState('');
+  const rememberedEmail = readRememberedEmail();
+  const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [error, setError] = useState<string | null>(null);
   const login = useMutation({
     mutationFn: () => accountsApi.customerLogin({ email, password }),
     onSuccess: (session) => {
+      persistRememberedEmail(rememberMe, email);
       accountsTokenStore.setSession(session);
       window.location.assign('/');
     },
@@ -36,9 +39,15 @@ export function AccountsLoginPanel() {
         <p className="muted">Buyer and sub-buyer accounts use the same login.</p>
         <AuthForm onSubmit={submit}>
           {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
-          <EmailField id="accounts-login-email" value={email} onChange={setEmail} />
-          <PasswordInput id="accounts-login-password" label="Password" value={password} onChange={setPassword} required />
-          <div className="auth-row"><span /><a href="/forgot-password" className="auth-text-link">Forgot password?</a></div>
+          <EmailField id="accounts-login-email" value={email} onChange={(next) => { setEmail(next); if (error) setError(null); }} />
+          <PasswordInput id="accounts-login-password" label="Password" value={password} onChange={(next) => { setPassword(next); if (error) setError(null); }} required />
+          <div className="auth-row">
+            <label className="auth-check" htmlFor="accounts-remember-me">
+              <input id="accounts-remember-me" type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+              <span>Remember me</span>
+            </label>
+            <a href="/forgot-password" className="auth-text-link">Forgot password?</a>
+          </div>
           <AuthSubmit pending={login.isPending}>Sign in <ArrowRight size={14} /></AuthSubmit>
         </AuthForm>
         <div className="auth-divider"><span>or</span></div>
@@ -194,6 +203,28 @@ function Brand({ hero = false }: { hero?: boolean }) {
       </div>
     </div>
   );
+}
+
+const REMEMBERED_EMAIL_KEY = 'factory-engine-pro.accounts.remembered-email';
+
+function readRememberedEmail() {
+  try {
+    return window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function persistRememberedEmail(remember: boolean, email: string) {
+  try {
+    if (remember) {
+      window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim().toLowerCase());
+    } else {
+      window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+  } catch {
+    /* ignore blocked storage */
+  }
 }
 
 function EmailField({ id, value, onChange }: { id: string; value: string; onChange: (next: string) => void }) {

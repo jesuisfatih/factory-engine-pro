@@ -8,7 +8,7 @@ import { apiErrorMessage, personApi } from '../../lib/api';
 interface Props { onBackToLogin: () => void; }
 
 export function ResetPasswordView({ onBackToLogin }: Props) {
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
