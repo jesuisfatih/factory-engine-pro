@@ -1847,3 +1847,52 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   all available keys are suspended or invalid at the provider. A valid /
   unsuspended Resend API key is required before 6.4 mail delivery can be called
   production-ready.
+
+---
+
+### 2026-06-27 - Mail health + provider UI live proof (dtfbank)
+
+**Code + deploy**
+- Code commit: `04c3902b` (`Add mail provider health surface`).
+- Deployed only to `/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank`;
+  remote `/app/.build-sha` matches
+  `04c3902b9cadc51b5ed61fc9b4c52d8aafaf4628`.
+- Container touched: only `factoryengine-dtfbank-app`. No Caddy,
+  gangsheet/upload, or non-factoryengine container was changed.
+
+**New mail health surface**
+- Added `GET https://api.dtfbank.com/api/v1/mail/health`
+  (`settings.read`) and bound it to the System Mail UI provider health card.
+- Live result:
+  `credentialRequired=false`, `configured=true`, `source=tenant_config`,
+  `providerStatus=403`, `status=invalid_credentials`,
+  `error="This API key is suspended"`.
+- This proves dtfbank has a tenant Resend key stored, but the provider rejects
+  it. Mail remains blocked on a valid/unsuspended Resend key.
+
+**Provider live API proof**
+- `GET /api/v1/health` -> `200`, `service=factory-engine-pro-backend`.
+- Owner login -> `201`, `type=member`, `permissions=24`.
+- Aircall:
+  - `/aircall/webhooks/status` -> `credentialRequired=false`,
+    `apiCredentialsPresent=true`, `webhookSecretPresent=true`,
+    config active.
+  - `/aircall/users` -> source `aircall_api`, `4` users.
+  - `/aircall/numbers` -> source `aircall_api`, `2` numbers.
+- Shopify:
+  - `/sync/status` -> `credentialRequired=false`, `configured=true`,
+    `isAnySyncing=false`, `hasErrors=false`.
+  - customers `completed` (`5951` synced / `5953` snapshot),
+    products `completed` (`303` / `304`), orders `completed`
+    (`637` / `638`).
+- Anthropic:
+  - `/ai/health` -> `credentialRequired=false`, `configured=true`,
+    `reachable=true`, `status=ok`, `source=tenant_config`.
+
+**UI proof**
+- Screenshot evidence, all from `https://app.dtfbank.com` with owner session:
+  - `docs/evidence/system-mail-provider-health-live-20260627.png`
+  - `docs/evidence/aircall-users-live-20260627.png`
+  - `docs/evidence/shopify-sync-live-20260627.png`
+- Machine-readable evidence:
+  `docs/evidence/20260627-mail-health-aircall-shopify-live.json`.

@@ -1,0 +1,180 @@
+{
+    "checkedAt":  "2026-06-27T20:15:42.8698647Z",
+    "scope":  "dtfbank live provider UI/API verification",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "deployedCommit":  "04c3902b9cadc51b5ed61fc9b4c52d8aafaf4628",
+    "remote":  {
+                   "buildSha":  "04c3902b9cadc51b5ed61fc9b4c52d8aafaf4628",
+                   "container":  "factoryengine-dtfbank-app",
+                   "status":  "running",
+                   "startedAt":  "2026-06-27T20:10:13.433746859Z",
+                   "mount":  "/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank -\u003e /app"
+               },
+    "checks":  {
+                   "apiHealth":  {
+                                     "ok":  true,
+                                     "service":  "factory-engine-pro-backend"
+                                 },
+                   "ownerLogin":  {
+                                      "email":  "owner.prodtest+20260627184047@dtfbank.com",
+                                      "type":  "member",
+                                      "permissionCount":  24
+                                  },
+                   "mailHealth":  {
+                                      "provider":  "resend",
+                                      "credentialRequired":  false,
+                                      "configured":  true,
+                                      "reachable":  true,
+                                      "status":  "invalid_credentials",
+                                      "source":  "tenant_config",
+                                      "latencyMs":  119,
+                                      "checkedAt":  "2026-06-27T20:15:42.736Z",
+                                      "providerStatus":  403,
+                                      "domainCount":  null,
+                                      "error":  "This API key is suspended"
+                                  },
+                   "aiHealth":  {
+                                    "provider":  "anthropic",
+                                    "credentialRequired":  false,
+                                    "configured":  true,
+                                    "reachable":  true,
+                                    "status":  "ok",
+                                    "source":  "tenant_config",
+                                    "latencyMs":  214,
+                                    "checkedAt":  "2026-06-27T20:15:43.199Z",
+                                    "modelCount":  1,
+                                    "error":  null
+                                },
+                   "aircallWebhookStatus":  {
+                                                "credentialRequired":  false,
+                                                "apiCredentialsPresent":  true,
+                                                "webhookSecretPresent":  true,
+                                                "tenantSlug":  "dtfbank",
+                                                "webhookUrl":  "https://api.dtfbank.com/api/v1/webhooks/aircall/dtf-bank",
+                                                "config":  {
+                                                               "id":  "awcfg_38ba4c193499b7c99c2450b7",
+                                                               "aircallWebhookId":  "95927b2c-9ce9-4719-a922-e023020dbf4e",
+                                                               "customName":  "factoryengine-dtf-bank",
+                                                               "events":  [
+                                                                              "call.created",
+                                                                              "call.ringing_on_agent",
+                                                                              "call.agent_declined",
+                                                                              "call.answered",
+                                                                              "call.transferred",
+                                                                              "call.external_transferred",
+                                                                              "call.unsuccessful_transfer",
+                                                                              "call.hungup",
+                                                                              "call.ended",
+                                                                              "call.voicemail_left",
+                                                                              "call.commented",
+                                                                              "call.tagged",
+                                                                              "call.untagged",
+                                                                              "call.assigned",
+                                                                              "call.archived",
+                                                                              "call.hold",
+                                                                              "call.unhold",
+                                                                              "call.ivr_option_selected",
+                                                                              "call.comm_assets_generated",
+                                                                              "transcription.created",
+                                                                              "sentiment.created",
+                                                                              "summary.created",
+                                                                              "topics.created",
+                                                                              "action_item.created",
+                                                                              "user.created",
+                                                                              "user.deleted",
+                                                                              "user.connected",
+                                                                              "user.disconnected"
+                                                                          ],
+                                                               "active":  true,
+                                                               "lastEventAt":  "2026-06-26T23:23:16.493Z",
+                                                               "lastPingAt":  "2026-06-10T17:15:52.500Z",
+                                                               "lastFailureAt":  "2026-06-09T19:35:03.228Z",
+                                                               "lastFailureReason":  "auto_reenabled_after_aircall_disable",
+                                                               "failureCount":  5
+                                                           },
+                                                "inbox":  {
+                                                              "total":  4,
+                                                              "processed":  0,
+                                                              "rejected":  4,
+                                                              "pending":  0,
+                                                              "lastReceivedAt":  "2026-06-27T19:17:57.270Z"
+                                                          }
+                                            },
+                   "aircallUsers":  {
+                                        "members":  9,
+                                        "users":  4,
+                                        "source":  "aircall_api"
+                                    },
+                   "aircallNumbers":  {
+                                          "numbers":  2,
+                                          "credentialRequired":  false,
+                                          "source":  "aircall_api",
+                                          "total":  2
+                                      },
+                   "shopifySyncStatus":  {
+                                             "isAnySyncing":  false,
+                                             "entities":  {
+                                                              "customers":  {
+                                                                                "resource":  "customers",
+                                                                                "status":  "completed",
+                                                                                "isRunning":  false,
+                                                                                "lastCompletedAt":  "2026-06-27T19:54:51.476Z",
+                                                                                "lastFailedAt":  null,
+                                                                                "lastError":  null,
+                                                                                "totalRecordsSynced":  5951,
+                                                                                "lastRunRecords":  5951,
+                                                                                "snapshotRecords":  5953,
+                                                                                "consecutiveFailures":  0,
+                                                                                "lastCursor":  null,
+                                                                                "heartbeatAt":  "2026-06-27T19:54:51.476Z"
+                                                                            },
+                                                              "orders":  {
+                                                                             "resource":  "orders",
+                                                                             "status":  "completed",
+                                                                             "isRunning":  false,
+                                                                             "lastCompletedAt":  "2026-06-27T19:55:47.691Z",
+                                                                             "lastFailedAt":  null,
+                                                                             "lastError":  null,
+                                                                             "totalRecordsSynced":  637,
+                                                                             "lastRunRecords":  637,
+                                                                             "snapshotRecords":  638,
+                                                                             "consecutiveFailures":  0,
+                                                                             "lastCursor":  null,
+                                                                             "heartbeatAt":  "2026-06-27T19:55:47.691Z"
+                                                                         },
+                                                              "products":  {
+                                                                               "resource":  "products",
+                                                                               "status":  "completed",
+                                                                               "isRunning":  false,
+                                                                               "lastCompletedAt":  "2026-06-27T19:55:02.959Z",
+                                                                               "lastFailedAt":  null,
+                                                                               "lastError":  null,
+                                                                               "totalRecordsSynced":  303,
+                                                                               "lastRunRecords":  303,
+                                                                               "snapshotRecords":  304,
+                                                                               "consecutiveFailures":  0,
+                                                                               "lastCursor":  null,
+                                                                               "heartbeatAt":  "2026-06-27T19:55:02.959Z"
+                                                                           }
+                                                          },
+                                             "hasErrors":  false,
+                                             "shopifyDomain":  "dtf-bank.myshopify.com",
+                                             "configured":  true,
+                                             "credentialRequired":  false
+                                         },
+                   "appLoginPage":  {
+                                        "statusCode":  200,
+                                        "url":  "https://app.dtfbank.com/login"
+                                    },
+                   "accountsLoginPage":  {
+                                             "statusCode":  200,
+                                             "url":  "https://accounts.dtfbank.com/login"
+                                         }
+               },
+    "screenshots":  [
+                        "docs/evidence/system-mail-provider-health-live-20260627.png",
+                        "docs/evidence/aircall-users-live-20260627.png",
+                        "docs/evidence/shopify-sync-live-20260627.png"
+                    ]
+}
