@@ -83,23 +83,150 @@ yetenekler **çalışır halde teslim edilir**:
 
 ---
 
-## 3. Sunucu / SSH
+## 3. Sunucu + Managed DB + Redis
 
-Yeni sistem **henüz prod'a deploy edilmedi**.
+Eski sistem (`eagledtfprint` + 5 tenant: `dtfbank`, `fastdtfsupply`,
+`fastdtftransfer`, `gangsheetbuilder`, `ssactivewear`) bu çalışma bitince
+**retire edilecek**. Yeni Factory Engine Pro **aynı host'lara** deploy
+edilecek; eski tenant'lar yeni sistemin tenant'ı olarak göç eder.
 
-Eski sistem (yalnız referans / canary):
+### 3.1 SSH host'u
 
 ```bash
 ssh root@144.202.125.169   # uygulama host'u (factoryengine-* container'lar)
-ssh root@45.32.66.125      # worker host'u
 ```
 
-- Postgres: Vultr managed `defaultdb` (tenant başına credentials TenantConfig'te tutulacak)
-- Redis: `rediss://...` (TLS)
+> ⚠ **`144.202.125.169` üzerinde `factoryengine-*` dışındakine ASLA dokunma.**
+> Bu sunucuda Factory Engine Pro'nun **paylaştığı başka projeler** var (örn.
+> `gss-*`, `us-*`, `ssactivewear-*` adlı container'lar, `caddy`, başka
+> servisler). Sadece `factoryengine-` prefix'li container'lara, onların
+> volume'larına, log'larına ve compose dosyalarına müdahale edilir.
+> Diğerlerinin process'lerini durdurma, restart etme, dosyalarını silme,
+> port'larını taşıma — **hiçbir şey yapma**. Şüphedeysen kullanıcıya sor.
 
-**Kural:** `144.202.125.169` üzerinde `factoryengine-*` dışındaki container/dosyalara
-dokunma. Diğer 5 tenant (`dtfbank`, `fastdtfsupply`, `fastdtftransfer`,
-`gangsheetbuilder`, `ssactivewear`) canlı. `eagledtfprint` = canary.
+### 3.2 Managed Postgres (Vultr)
+
+Lokal/self-hosted Postgres **kullanılmaz** — test/staging/prod hepsi Vultr
+managed instance üzerinden gider. Host + credential Vultr Console'dan alınır.
+
+- **Port:** `16751`
+- **SSL:** `sslmode=require` (zorunlu)
+- **DB adı kuralı:** `factory_engine_pro` ile başlamak **zorunlu**:
+  - `factory_engine_pro_test` — test
+  - `factory_engine_pro_staging` — staging
+  - `factory_engine_pro` — prod
+- **DATABASE_URL formatı:**
+  ```
+  postgresql://USER:PASSWORD@VULTR_HOST:16751/factory_engine_pro_test?sslmode=require&schema=public
+  ```
+- **Guard** (`services/backend/scripts/guard-database-url.mjs`) — Prisma
+  migrate öncesi otomatik çalışır, şunları reddeder:
+  - `127.0.0.1` / `localhost` → ❌ (lokal Postgres yasak)
+  - Legacy isimler (`eagle_print_db`, `eagle_dtfbank_db`,
+    `eagle_dtfprintdepot_db`, `eagle_dtfsupply_db`, `eagle_fastdtfsupply_db`,
+    `fast_dtf_transfer`) → ❌ (eski tenant DB'lerine yazmayı engeller)
+  - `factory_engine_pro` prefix'i yok → ❌
+
+### 3.3 Managed Redis (Vultr)
+
+Lokal Redis opsiyonel (queue dev için); test/staging/prod yine Vultr managed.
+
+- **Port:** `16752`
+- **TLS:** `rediss://` (zorunlu)
+- **REDIS_URL formatı:**
+  ```
+  rediss://USER:PASSWORD@VULTR_HOST:16752
+  ```
+
+### 3.4 Per-tenant entegrasyon ayarları
+
+Shopify / Aircall / AI / Resend token'ları **her tenant için ayrı**;
+`TenantConfig` tablosunda AES at-rest şifreli saklanır (bkz. 6.1).
+
+### 3.5 Detaylı referans
+
+[docs/REMOTE_ENVIRONMENT.md](./REMOTE_ENVIRONMENT.md) — agent'ın yazdığı
+managed environment kuralları + guard script'in çalışma mantığı.
+
+### 3.6 Container'lar (tenant başına bir tane)
+
+Eski yapı **aynen korunur**: her tenant için ayrı container, hepsi tek
+codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
+çözülür (Prisma extension + tenant-context middleware).
+
+İsim şeması: `factoryengine-<tenant>-app`
+
+| Container | Rol | Deploy yolu |
+|---|---|---|
+| `factoryengine-dtfbank-app` | **Test / dev ortamı** | **Mutagen** (lokal → sunucu sync) |
+| `factoryengine-eagledtfprint-app` | Prod | Depot |
+| `factoryengine-fastdtfsupply-app` | Prod | Depot |
+| `factoryengine-fastdtftransfer-app` | Prod | Depot |
+| `factoryengine-gangsheetbuilder-app` | Prod | Depot |
+| `factoryengine-ssactivewear-app` | Prod | Depot |
+
+> Container içinde tek base image koşar; tenant context her HTTP isteğinde
+> JWT'den / `x-tenant-id` header'ından çözülür. `tenantId` Prisma
+> extension tarafından her query'ye otomatik enjekte edilir.
+
+### 3.7 Deploy süreci — Mutagen (dtfbank) + Depot (prod tenant'lar)
+
+İki ayrı yol birlikte kullanılır:
+
+#### (a) dtfbank — Mutagen (development path)
+
+- `factoryengine-dtfbank-app` container'ı **bind-mount** ile çalışır:
+  lokal `apps/`, `services/`, `packages/` dizinleri Mutagen tarafından
+  sunucudaki dtfbank container'ının `/app/` dizinine sync edilir.
+- Live code = Mutagen-synced host tree. Imaj **sadece base** — gerçek
+  çalışan kod sync'tendir.
+- Akış: lokalde kod yaz → Mutagen otomatik push → container içinde
+  HMR / process restart.
+- Komutlar (placeholder — gerçek `mutagen.yml` yazılacak):
+  ```bash
+  mutagen project start          # sync oturumunu başlat
+  mutagen sync list              # durum
+  mutagen project terminate      # bağlantıyı sonlandır
+  ```
+- **Mutagen ignore (zorunlu):** `node_modules/`, `dist/`, `.next/`, `.turbo/`,
+  `.local/`, `.env*` (env dosyaları SERVER'da elle yönetilir),
+  `uploads/`, `.agent/`, `.claude/`, `.gemini/`, log/dump/SQL dosyaları
+- **Mutagen sadece dtfbank için.** Başka tenant'a sync ASLA yapılmaz.
+
+#### (b) Diğer tenant'lar — Depot (production path)
+
+- dtfbank'te geliştirme + test bitince → **Depot ile imaj build**
+  edilir → registry'ye basılır.
+- Prod tenant container'ları (`eagledtfprint`, `fastdtfsupply`,
+  `fastdtftransfer`, `gangsheetbuilder`, `ssactivewear`) bu yeni imajla
+  remote compose üzerinden restart edilir.
+- Per-container image tag farkı **beklenir** — image sadece base;
+  dtfbank Mutagen sync'ten geldiği için image tag'i prod'la aynı olmayabilir.
+- Komutlar (placeholder — gerçek Depot project + compose path yazılacak):
+  ```bash
+  # dtfbank içinden Depot build tetikle
+  ssh root@144.202.125.169 "docker exec factoryengine-dtfbank-app <depot-build-cmd>"
+
+  # Prod tenant'larını yeni imajla başlat
+  ssh root@144.202.125.169 "cd /opt/apps/custom/factoryengine && \
+    FACTORYENGINE_IMAGE_TAG=<yeni-tag> docker compose up -d \
+    eagledtfprint-app fastdtfsupply-app fastdtftransfer-app \
+    gangsheetbuilder-app ssactivewear-app"
+  ```
+
+#### Deploy disiplin kuralları
+
+1. **Mutagen oturumu açıkken Depot build tetikleme.** Önce
+   `mutagen project terminate`, sonra build.
+2. **`.env*` server'da elle yönetilir.** Mutagen ignore listesinde +
+   gitignore'da. Asla sync, asla commit.
+3. **Prod tenant'a doğrudan kod basma.** Bütün prod tenant'lar Depot
+   imajından gelir, host'ta canlı kod değişikliği YOK.
+4. **Prisma migrate sadece container içinden.**
+   `docker exec factoryengine-<tenant>-app sh -lc 'cd /app/services/backend && npx prisma migrate deploy'`
+   Host'tan migrate çalıştırma.
+5. **DB değişikliği prod'a gitmeden önce dtfbank'te doğrula** (managed
+   `factory_engine_pro_test` DB'sinde).
 
 ---
 
@@ -220,6 +347,72 @@ apps/admin/src/
 ```
 
 Route dosyaları HTML/JSX karmaşası içermez — `features/`'tan import eder.
+
+### 5.4 i18n — UI'da hard-coded string yasak
+
+UI'lar **i18next** ile i18n destekler (mevcut: admin `i18n/en.json`,
+accounts `i18n/en.json`, person `i18n/index.ts`). Bu çalışma boyunca
+**her metin** i18n key'i üzerinden gelir. Hard-coded string yazma.
+
+- **Her yeni route / feature / component eklenirken** ilgili
+  `i18n/<locale>.json` dosyasına key'ler **eş zamanlı** eklenir. Eksik
+  bırakma — "sonra çevirir" yok.
+- Anahtar şeması: `<grup>.<sayfa>.<eleman>` (örn. `nav.orders`,
+  `orders.empty_state`, `orders.modal.title`, `auth.errors.invalid_credentials`).
+- Backend'den dönen kullanıcıya gösterilecek metinler de i18n'lenebilir:
+  - Sabit/enum sınıfı metinler (status: open / resolved / closed) → UI tarafında i18n
+  - Dinamik metinler (kullanıcı girdiği başlıklar, açıklamalar) → UI'da olduğu gibi gösterilir
+- Backend error mesajları **kod ile** döner (`code: 'permission_denied'`,
+  `code: 'invalid_credentials'`) — UI bunu i18n key'ine çevirir
+  (`errors.permission_denied`, `errors.invalid_credentials`).
+- "Coming soon", "Loading…", "Save", "Cancel" gibi paylaşılan metinler
+  `common.*` altında tek noktada tutulur, route'lardan oraya bakılır.
+- Yeni dil eklenirse (örn. `tr.json`) ilk olarak `en.json`'ın **tüm
+  key'leri** kopyalanır + çevrilir; hiçbir key boş kalmaz.
+
+**Mevcut hâli koru, sürekli güncelle.** Bir feature transfer ederken
+i18n'sini de transfer et — sonraki maddeye geçmeden önce o feature'ın
+hiçbir metni hard-coded değil, hepsi key üstünden mi diye **kontrol et**.
+
+### 5.5 RBAC — Her şey permission ile korunur, sürekli devam
+
+Sistem **permission-based** çalışır (6.1). Bu çalışma boyunca eklenen
+**her endpoint** ve **her UI öğesi** permission kontrolüne tabidir.
+
+**Backend:**
+- Her controller method'una `@RequirePermission('<perm>')` decorator'ı
+  konur. İstisna: public endpoint'ler (`@Public()` ile işaretlenir —
+  login, register, forgot, reset, webhook receivers).
+- Yeni feature → ilgili permission(lar) `packages/contracts/permissions.ts`
+  içine **önce** eklenir, sonra controller'a binilir.
+- `PermissionsGuard` JWT'den çözülen `permissions[]` array'ine bakar;
+  eksik permission → `403 + code: 'permission_denied' + details: { missing }`.
+
+**Frontend:**
+- Her UI etkileşimi (buton, link, form, bulk action, modal aç) ilgili
+  permission'ı kontrol eder. `useCan('customers.write')` hook'u veya
+  `<Can permission="customers.write">…</Can>` wrapper'ı.
+- Yetki yoksa **buton görünmez** (hide) — disabled değil. Tooltip ile
+  "Bu işlem için yetkin yok" mesajı opsiyonel.
+- Sidebar entry'leri de permission gated — yetki yoksa grup/leaf görünmez.
+- Route guard: `beforeLoad` ile yetkisiz route'a girişte `/` veya
+  `/forbidden`'a yönlendir.
+
+**Default roller** (`packages/contracts/permissions.ts` → `DEFAULT_MEMBER_ROLES`):
+- `owner` → tüm member permission'ları (`*` değil, açıkça hepsi)
+- `admin` → owner - settings.write (veya benzer kısıtlama)
+- `agent` → operasyonel permissions (customers.read, support.write,
+  task.assign vs.)
+
+Yeni bir role default permission seti tanımlanırken **mevcut DEFAULT
+matrisi bozulmaz**, üstüne yeni satır eklenir.
+
+**Sürekli devam kuralı:**
+- Her yeni endpoint için permission önce eklenir, sonra controller'a binilir.
+- Her yeni UI etkileşimi için `useCan()` kontrolü yazılır.
+- Permission tanımlanmadan endpoint açma + UI gösterme yasak.
+- `permissions.ts` her transfer maddesinde **büyür** — agent yarım bırakma,
+  feature'ın tüm permission'larını eklemeden bitti deme.
 
 ---
 
@@ -512,3 +705,70 @@ ihtiyaç olduğunu **kendi başına** karar verme. Kullanıcı söylemediyse YOK
 
 Bu listedeki bir şeye dokunma gerekirse **önce kullanıcıya sor**. Bu doc'a
 eklenmedikçe transfer / kod yazımı **başlatma**.
+
+---
+
+## 8. Kontrol Notları (kullanıcı + denetçi agent uyarıları)
+
+Bu bölüm, kontrol turlarında fark edilen **anlık uyarıları** tutar.
+Transfer maddelerini (6) değiştirmez — yan kayıt. Her not bir commit
+hash'ine bağlıdır; agent ilgili noktayı çözünce notu **buradan silmez**,
+altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunur).
+
+**Format:**
+```
+### YYYY-AA-GG — Commit <hash> sonrası
+**<konu başlığı>**
+- Ne fark edildi
+- Aksiyon önerisi
+→ (boş bırak, çözüldüğünde "ÇÖZÜLDÜ <commit-hash>" yazılır)
+```
+
+---
+
+### 2026-06-27 — Commit `c98e722` sonrası
+
+**1. Root `package.json` kirliliği (uncommitted)**
+- Root `package.json`'a 16 gereksiz dependency yanlışlıkla eklenmiş
+  (`react`, `react-dom`, `d3-color`, `d3-dispatch`, `d3-drag`, `d3-ease`,
+  `d3-interpolate`, `d3-selection`, `d3-timer`, `d3-transition`,
+  `d3-zoom`, `classcat`, `zustand`, `scheduler`, `use-sync-external-store`,
+  `js-tokens`, `loose-envify`). Ayrıca `"type": "commonjs"`, `"main": "index.js"`,
+  npm init artıkları (`description`, `author`, `keywords`, `repository`,
+  `homepage`, `bugs`) eklenmiş.
+- Bunlar **app-level dependency** — root'ta olmaz. `"type": "commonjs"`
+  monorepo ESM modüllerini kırar.
+- Büyük olasılıkla yanlışlıkla `npm install <pkg>` veya `npm init`
+  çalıştırılmış.
+- **Aksiyon:** `git checkout package.json` ile geri al, dependency'ler
+  app-level olarak `apps/<app>/package.json`'a girmiş olmalı. `"type"` ve
+  npm init artıkları silinmeli.
+→ ÇÖZÜLDÜ — uncommitted değişiklik geri alındı (commit'e girmedi). Root `package.json` artık sadece `scripts` + `devDependencies: { turbo, typescript }`.
+
+**2. Identity smoke test kanıtı eksik**
+- 6.1 backend tarafı prod-ready görünüyor (auth refactor + audit + session +
+  invitation flow, 4 commit'le sertleşti), ama:
+  - Frontend admin/login + accounts/{login,register} + person/auth backend'e
+    canlı bağlandı mı? Doğrulanmadı.
+  - `bootstrap → member login → /auth/me → member create → role assign`
+    döngüsü gerçekten managed test DB'de 200 dönüyor mu? Kanıt yok.
+- **Aksiyon:** 6.2 Commerce'e geçmeden önce kısa bir smoke test raporu
+  ROADMAP'e iliştirilsin (curl / browser screenshot / log özeti).
+→ ÇÖZÜLDÜ `395a76c` — managed Vultr test DB'de owner/customer login, `/auth/me`, member roles, member list, customer roles, customer users, sub-user list ve invalid-login 401 smoke alındı; `passwordHash`/encrypted secret negatif testi geçti. Playwright admin/accounts/person screenshot seti temiz (`unexpectedFailures: []`, sadece bilinçli invalid login 401). Structured log örneği: `request_id=final-log-proof-001`, `module=auth`, `action=password_reset.requested`.
+
+**3. `services/integrations/src/` hâlâ boş, ama 6.5 sırada değil**
+- 6.5 sıralamada en sonda (Identity → Commerce → Operations → Mail → System).
+  Bu boşluk **normal**, alarm değil. Sadece "6.1 bittikten sonra agent
+  6.5'e atlama, 6.2'den devam etsin" diye not.
+- **Aksiyon:** kontrol amaçlı; agent atlayıcı hareket ederse uyar.
+→ HÂLÂ GEÇERLİ — agent doğru sırada, atlama yok (commit'lere göre 6.1 derinleşmeye devam ediyor).
+
+---
+
+### 2026-06-27 — Commit `395a76c` sonrası
+
+**4. 5.5 RBAC sürekliliği — `adminRoleLabel` türetimi `DEFAULT_MEMBER_ROLES`'ten bağımsız**
+- `apps/admin/src/lib/current-principal.ts` içindeki `adminRoleLabel(principal)` permission seti üstünden rol etiketi türetiyor (`roles.write + settings.write → Owner`, `members.write → Admin`, `task.assign → Agent`, geri kalan → Member).
+- Bu permission'lara dayalı etiket akıllı bir choice ama **`packages/contracts/permissions.ts` → `DEFAULT_MEMBER_ROLES` matrisindeki rol slug'ı (owner / admin / agent) doğrudan** kullanılmıyor. İleride owner'a yeni permission eklerse veya admin'den `members.write` çekilirse etiket türetimi yanlış sonuç döndürebilir.
+- **Aksiyon (kritik değil, izleme):** rol matrisi değiştiğinde `adminRoleLabel` da gözden geçirilsin. Veya principal response'una `roleSlug` eklenip etiket onun üstünden çekilsin (daha sağlam). Şimdilik çalışıyor.
+→
