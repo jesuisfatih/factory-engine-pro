@@ -1755,3 +1755,58 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
   resources with real Shopify Admin API `401`:
   `[API] Invalid API key or access token (unrecognized login or wrong password)`.
   Evidence: `docs/evidence/20260627-shopify-initial-sync-live.json`.
+
+---
+
+### 2026-06-27 - DTFBank provider credential transfer fixed live
+
+**Root cause**
+- Earlier credential scan only checked runtime `.env` style keys. The valid DTFBank
+  provider credentials were in the managed Postgres old schema, not in the new
+  env:
+  - Shopify: `public.merchants.access_token`
+  - Aircall API: `public.merchants.settings.salesManagement.aircall`
+  - Aircall webhook token: `public.aircall_webhook_configs.token`
+- The same managed DB also contains the new `factory_engine_pro` schema, so the
+  transfer was schema-aware: read from `public.*`, write through the live API
+  into `factory_engine_pro.tenant_configs`.
+
+**Secret handling**
+- No secret value was printed. Only length/hash/status proof was recorded.
+- TenantConfig was updated via
+  `PATCH https://api.dtfbank.com/api/v1/identity/tenant-config`, so the backend
+  wrote encrypted `_encrypted` fields with `CryptoService.encrypt()`.
+- Evidence JSON: `docs/evidence/20260627-provider-credential-transfer-live.json`.
+
+**Aircall live result**
+- Old encrypted Aircall API id/token decrypted with the old
+  `SETTINGS_ENCRYPTION_KEY` source and probed against Aircall:
+  provider status `200`.
+- `POST /api/v1/aircall/users/sync` -> `201`, source `aircall_api`, `4` users.
+- `POST /api/v1/aircall/numbers/sync` -> `201`, `credentialRequired=false`,
+  `2` US numbers.
+- `GET /api/v1/aircall/webhooks/status` -> `200`,
+  `credentialRequired=false`, `apiCredentialsPresent=true`,
+  `webhookSecretPresent=true`, config active, webhook URL
+  `https://api.dtfbank.com/api/v1/webhooks/aircall/dtf-bank`.
+
+**Shopify live result**
+- Old DB Shopify Admin token probed against
+  `dtf-bank.myshopify.com/admin/api/2025-01/shop.json`: provider status `200`.
+- TenantConfig now returns `shopifyDomain=dtf-bank.myshopify.com`,
+  `hasShopifyAdminToken=true`, `hasShopifyApiKey=true`,
+  `hasShopifyApiSecret=true`, `hasWebhookHmacKey=true`.
+- `POST /api/v1/sync/initial` queued batch
+  `7f086fd3-4627-4cf5-be9b-724be152711c`.
+- Final `GET /api/v1/sync/status`:
+  `credentialRequired=false`, `configured=true`, `isAnySyncing=false`,
+  `hasErrors=false`.
+  - customers: `completed`, `5951` synced, `5953` snapshot rows
+  - products: `completed`, `303` synced, `304` snapshot rows
+  - orders: `completed`, `637` synced, `638` snapshot rows
+
+**UI impact**
+- The Aircall and Shopify settings pages now have real backend data available
+  from live `https://api.dtfbank.com` endpoints. No mock/static UI path is used.
+- Screenshot capture was attempted, but the in-app browser control failed with
+  `transport closed`; no localhost/Vite screenshot was used as evidence.
