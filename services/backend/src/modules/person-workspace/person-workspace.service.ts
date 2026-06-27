@@ -14,6 +14,7 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
+const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request']);
 const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   unassigned: 'open',
   in_progress: 'in_progress',
@@ -43,8 +44,12 @@ export class PersonWorkspaceService {
 
   async summary() {
     const member = await this.currentMember();
-    const [queue, customers, assigned, failedMail] = await Promise.all([
-      this.prisma.db.serviceRequest.count({ where: { status: { notIn: Array.from(CLOSED) } } }),
+    const [queueRows, customers, assigned, failedMail] = await Promise.all([
+      this.prisma.db.serviceRequest.findMany({
+        where: { status: { notIn: Array.from(CLOSED) } },
+        select: { metadata: true },
+        take: 5000,
+      }),
       this.prisma.db.customer.count({ where: { status: 'active' } }),
       this.prisma.db.serviceRequest.count({
         where: { assignedMemberId: member.id, status: { notIn: Array.from(CLOSED) } },
@@ -52,7 +57,7 @@ export class PersonWorkspaceService {
       this.prisma.db.mailDelivery.count({ where: { status: 'failed' } }),
     ]);
     return {
-      queue,
+      queue: queueRows.filter((row) => this.isQueueVisible(row)).length,
       customers,
       notifications: assigned + failedMail,
       assigned,
@@ -63,18 +68,11 @@ export class PersonWorkspaceService {
   async queue() {
     const member = await this.currentMember();
     const rows = await this.prisma.db.serviceRequest.findMany({
-      where: {
-        NOT: [
-          { metadata: { path: ['personWorkspaceKind'], equals: 'message_thread' } },
-          { metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-          { metadata: { path: ['personWorkspaceKind'], equals: 'staff_request' } },
-        ],
-      },
       include: { customer: true, customerUser: true, assignedMember: true, comments: { orderBy: { createdAt: 'asc' } } },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 120,
+      take: 300,
     });
-    return rows.map((row) => this.queueCard(row, member.id));
+    return rows.filter((row) => this.isQueueVisible(row)).slice(0, 120).map((row) => this.queueCard(row, member.id));
   }
 
   async moveQueueCard(id: string, input: MovePersonQueueCardInput) {
@@ -149,13 +147,13 @@ export class PersonWorkspaceService {
         where: { status: { notIn: Array.from(CLOSED) } },
         include: { customer: true, customerUser: true, assignedMember: true, comments: true },
         orderBy: [{ updatedAt: 'desc' }],
-        take: 50,
+        take: 150,
       }),
       this.prisma.db.aircallCallEvent.findMany({ orderBy: { eventTimestamp: 'desc' }, take: 25 }),
       this.prisma.db.mailDelivery.findMany({ where: { status: 'failed' }, orderBy: { updatedAt: 'desc' }, take: 15 }),
     ]);
     return [
-      ...requests.map((row) => this.calendarFromRequest(row)),
+      ...requests.filter((row) => this.isQueueVisible(row)).slice(0, 50).map((row) => this.calendarFromRequest(row)),
       ...calls.map((row) => ({
         id: `call-${row.id}`,
         title: `${titleize(row.eventType)} call ${row.contactPhoneE164 ?? row.contactPhone ?? ''}`.trim(),
@@ -646,6 +644,11 @@ export class PersonWorkspaceService {
 
   private record(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  }
+
+  private isQueueVisible(row: { metadata: Prisma.JsonValue }) {
+    const kind = this.record(row.metadata).personWorkspaceKind;
+    return typeof kind !== 'string' || !INTERNAL_WORKSPACE_KINDS.has(kind);
   }
 
   private tenantId() {
