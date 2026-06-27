@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
   ShoppingCart, UserSquare2, Workflow, Sparkles, Cable, KeyRound, Store,
 } from 'lucide-react';
-import { useCurrentRole } from '@/lib/permissions';
+import { adminTokenStore } from '@/lib/api';
+import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
 
 interface NavLeaf {
   to: string;
@@ -66,7 +67,12 @@ interface Props { collapsed: boolean; }
 export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
-  const role = useCurrentRole();
+  const principal = useCurrentPrincipal().data;
+  const roleLabel = adminRoleLabel(principal);
+  const logout = () => {
+    adminTokenStore.clear();
+    window.location.assign('/login');
+  };
 
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
@@ -103,12 +109,12 @@ export function Sidebar({ collapsed }: Props) {
       </div>
 
       <div className="user-card">
-        <div className="user-avatar">{role.name.split(' ').map((p) => p[0]).join('').slice(0, 2)}</div>
+        <div className="user-avatar">{principalInitials(principal)}</div>
         <div className="user-meta">
-          <div className="name">{role.email}</div>
-          <div className="role">{role.label}</div>
+          <div className="name">{principal?.email ?? 'No active session'}</div>
+          <div className="role">{roleLabel}</div>
         </div>
-        <button id="btn-logout" data-i18n-key="common.logout" type="button" className="logout" title={t('common.logout')}>
+        <button id="btn-logout" data-i18n-key="common.logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
           <LogOut size={14} />
         </button>
       </div>

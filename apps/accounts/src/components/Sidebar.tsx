@@ -5,6 +5,8 @@ import {
   RotateCw, MapPinned, Truck, FileSpreadsheet, FolderArchive, UserCircle,
   Tag,
 } from 'lucide-react';
+import { accountsTokenStore } from '@/lib/api';
+import { customerRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
 
 interface NavLeaf {
   to: string;
@@ -60,6 +62,12 @@ interface Props { collapsed: boolean; }
 export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
+  const principal = useCurrentPrincipal().data;
+  const roleLabel = customerRoleLabel(principal);
+  const logout = () => {
+    accountsTokenStore.clear();
+    window.location.assign('/login');
+  };
 
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
@@ -96,12 +104,12 @@ export function Sidebar({ collapsed }: Props) {
       </div>
 
       <div className="user-card">
-        <div className="user-avatar">LA</div>
+        <div className="user-avatar">{principalInitials(principal)}</div>
         <div className="user-meta">
-          <div className="name">linda@dtfbank.com</div>
-          <div className="role">{t('user.role_b2b_admin')}</div>
+          <div className="name">{principal?.email ?? 'No active session'}</div>
+          <div className="role">{roleLabel}</div>
         </div>
-        <button id="btn-logout" type="button" className="logout" title={t('common.logout')}>
+        <button id="btn-logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
           <LogOut size={14} />
         </button>
       </div>

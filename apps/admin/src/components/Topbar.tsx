@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { PanelLeft, Bell, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useCurrentRole } from '@/lib/permissions';
+import { adminRoleLabel, useCurrentPrincipal } from '@/lib/current-principal';
 
 interface Props {
   titleI18nKey: string;
@@ -11,7 +11,8 @@ interface Props {
 export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
   const { t } = useTranslation();
   const { theme, toggle } = useTheme();
-  const role = useCurrentRole();
+  const principal = useCurrentPrincipal().data;
+  const roleLabel = adminRoleLabel(principal);
 
   return (
     <header className="topbar" data-i18n-section="topbar">
@@ -26,7 +27,7 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
         placeholder={t('common.search_placeholder')}
       />
       <div className="right">
-        <span className="role-badge" data-i18n-key={`roles.${role.id}`}>{role.label}</span>
+        <span className="role-badge">{roleLabel}</span>
         <button id="btn-notifications" type="button" className="icon-btn" title={t('common.notifications')}>
           <Bell size={16} />
         </button>
