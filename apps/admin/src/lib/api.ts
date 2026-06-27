@@ -2,6 +2,11 @@ import type { AuthSession } from '@factory-engine-pro/contracts';
 import { ApiClient, type TokenStore } from '@factory-engine-pro/api-client';
 
 const SESSION_KEY = 'factory-engine-pro.admin.session';
+const SESSION_CHANGED_EVENT = 'factory-engine-pro.admin.session.changed';
+
+function notifySessionChanged() {
+  window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
+}
 
 export const adminTokenStore: TokenStore = {
   getAccessToken() {
@@ -12,9 +17,11 @@ export const adminTokenStore: TokenStore = {
   },
   setSession(session) {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    notifySessionChanged();
   },
   clear() {
     window.localStorage.removeItem(SESSION_KEY);
+    notifySessionChanged();
   },
 };
 
@@ -25,7 +32,7 @@ export const adminApi = new ApiClient({
 });
 
 export function readSession() {
-  const raw = window.localStorage.getItem(SESSION_KEY);
+  const raw = readSessionSnapshot();
   if (!raw) return null;
   try {
     return JSON.parse(raw) as AuthSession;
@@ -33,6 +40,22 @@ export function readSession() {
     adminTokenStore.clear();
     return null;
   }
+}
+
+export function readSessionSnapshot() {
+  return window.localStorage.getItem(SESSION_KEY);
+}
+
+export function subscribeSession(callback: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === SESSION_KEY) callback();
+  };
+  window.addEventListener(SESSION_CHANGED_EVENT, callback);
+  window.addEventListener('storage', handleStorage);
+  return () => {
+    window.removeEventListener(SESSION_CHANGED_EVENT, callback);
+    window.removeEventListener('storage', handleStorage);
+  };
 }
 
 export function apiErrorMessage(error: unknown) {

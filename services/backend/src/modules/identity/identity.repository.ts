@@ -54,6 +54,12 @@ export class IdentityRepository {
     });
   }
 
+  async deleteMemberRole(id: string) {
+    const result = await this.prisma.db.memberRole.deleteMany({ where: { id, isSystem: false } });
+    if (result.count === 0) throw new NotFoundException('Member role not found');
+    return result;
+  }
+
   async listCustomerRoles() {
     return this.prisma.db.customerRole.findMany({ orderBy: [{ isSystem: 'desc' }, { name: 'asc' }] });
   }

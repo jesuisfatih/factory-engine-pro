@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   createCustomerUserSchema,
   createMemberRoleSchema,
@@ -47,6 +47,12 @@ export class IdentityController {
     @Body(new ZodValidationPipe(updateMemberRoleSchema)) body: UpdateMemberRoleInput,
   ) {
     return this.identity.updateMemberRole(id, body);
+  }
+
+  @Delete('member-roles/:id')
+  @RequirePermission(MEMBER_PERMISSIONS.rolesWrite)
+  deleteMemberRole(@Param('id') id: string) {
+    return this.identity.deleteMemberRole(id);
   }
 
   @Get('customer-roles')

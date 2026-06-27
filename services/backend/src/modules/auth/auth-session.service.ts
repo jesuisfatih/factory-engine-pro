@@ -19,6 +19,7 @@ export class AuthSessionService {
         sub: principal.id,
         tenant_id: tenantId,
         principal_type: principal.type,
+        permissions: principal.permissions,
       },
       {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),

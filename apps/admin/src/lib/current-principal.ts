@@ -1,18 +1,23 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { AuthSession } from '@factory-engine-pro/contracts';
-import { adminApi, readSession } from '@/lib/api';
+import { readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 type Principal = AuthSession['principal'];
 
 export function useCurrentPrincipal() {
-  const session = readSession();
-  return useQuery({
-    queryKey: ['auth', 'me'],
-    queryFn: () => adminApi.me(),
-    enabled: Boolean(session?.accessToken),
-    initialData: session?.principal,
-    retry: false,
-  });
+  const sessionSnapshot = useSyncExternalStore(subscribeSession, readSessionSnapshot, () => null);
+  const session = useMemo(() => readSession(), [sessionSnapshot]);
+  const principal = session?.principal;
+  return useMemo(
+    () => ({
+      data: principal,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: async () => ({ data: principal }),
+    }),
+    [principal],
+  );
 }
 
 export function principalName(principal: Principal | undefined) {

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertTriangle, Check, Mail, Plus, RefreshCw, Save, Search } from 'lucide-react';
+import { AlertTriangle, Check, Edit2, Mail, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-react';
 import { MEMBER_PERMISSIONS, type AircallUsersResponse } from '@factory-engine-pro/contracts';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
@@ -44,6 +44,7 @@ const inviteSteps = [
 export function TeamUsersPage() {
   const [search, setSearch] = useState('');
   const query = useQuery(memberQuery);
+  const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
   const users = query.data ?? [];
   const filtered = useMemo(() => {
     const text = search.trim().toLowerCase();
@@ -53,7 +54,7 @@ export function TeamUsersPage() {
 
   return (
     <>
-      <TeamHeader action={<Link to="/team/users/add" className="btn primary"><Plus size={14} /> Invite member</Link>} />
+      <TeamHeader action={canWrite ? <Link to="/team/users/add" className="btn primary"><Plus size={14} /> Invite member</Link> : undefined} />
       <TeamTabs />
       <div className="orders-toolbar">
         <div className="orders-search" style={{ flex: 1 }}>
@@ -64,7 +65,11 @@ export function TeamUsersPage() {
       {query.isLoading && <StateCard title="Loading members" body="Fetching live team data from the API." />}
       {query.isError && <ErrorCard error={query.error} retry={() => query.refetch()} />}
       {query.isSuccess && users.length === 0 && (
-        <StateCard title="No members yet" body="Invite the first owner, admin, or agent to start using this tenant." action={<Link to="/team/users/add" className="btn primary"><Plus size={14} /> Invite first member</Link>} />
+        <StateCard
+          title="No members yet"
+          body={canWrite ? 'Invite the first owner, admin, or agent to start using this tenant.' : 'No team members are available for your current permissions.'}
+          action={canWrite ? <Link to="/team/users/add" className="btn primary"><Plus size={14} /> Invite first member</Link> : undefined}
+        />
       )}
       {query.isSuccess && users.length > 0 && (
         <div className="data-card">
@@ -265,7 +270,9 @@ export function TeamUserCreatePage() {
                   {!canManageRoles && <div className="error-state">{t('team.users.wizard.no_roles_write_permission')}</div>}
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                     <span className="pill accent">{selectedRole ? selectedRole.name : t('team.users.wizard.select_role')}</span>
-                    <button className="btn" type="button" onClick={resetPermissions} disabled={!selectedRole || !permissionOverrides || !canManageRoles}>{t('team.users.wizard.reset_permissions')}</button>
+                    {canManageRoles && selectedRole && permissionOverrides && (
+                      <button className="btn" type="button" onClick={resetPermissions}>{t('team.users.wizard.reset_permissions')}</button>
+                    )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
                     {permissionKeys.map((permission) => {
@@ -273,12 +280,15 @@ export function TeamUserCreatePage() {
                       const enabled = Boolean(selectedPermissions[permission]);
                       return (
                         <label key={permission} className="checkbox-row" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginBottom: 0 }}>
-                          <input
-                            type="checkbox"
-                            checked={enabled}
-                            disabled={!canManageRoles}
-                            onChange={(event) => setSelectedPermissions({ ...selectedPermissions, [permission]: event.target.checked })}
-                          />
+                          {canManageRoles ? (
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              onChange={(event) => setSelectedPermissions({ ...selectedPermissions, [permission]: event.target.checked })}
+                            />
+                          ) : (
+                            <span className={`pill ${enabled ? 'success' : ''}`}>{enabled ? 'on' : 'off'}</span>
+                          )}
                           <span style={{ flex: 1 }}>{permission}</span>
                           <span className={`pill ${inherited ? 'info' : 'accent'}`}>{inherited ? t('team.users.wizard.inherited') : t('team.users.wizard.custom')}</span>
                         </label>
@@ -328,22 +338,48 @@ export function TeamUserCreatePage() {
 export function TeamRolesPage() {
   const roles = useQuery(roleQuery);
   const qc = useQueryClient();
-  const [name, setName] = useState('');
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
-  const create = useMutation({
-    mutationFn: () => adminApi.createMemberRole({
-      name,
-      slug: slugify(name),
-      permissions,
-      description: 'Custom role',
-    }),
-    onSuccess: () => {
-      setName('');
-      setPermissions({});
-      qc.invalidateQueries({ queryKey: roleQuery.queryKey });
-      toast.success('Role created');
+  const canManageRoles = useCan(MEMBER_PERMISSIONS.rolesWrite);
+  const [draft, setDraft] = useState({ id: '', name: '', description: '', permissions: {} as Record<string, boolean> });
+  const isEditing = Boolean(draft.id);
+  const resetDraft = () => setDraft({ id: '', name: '', description: '', permissions: {} });
+  const chooseRole = (role: Role) => setDraft({
+    id: role.id,
+    name: role.name,
+    description: role.description ?? '',
+    permissions: { ...role.permissions },
+  });
+  const togglePermission = (permission: string, checked: boolean) => {
+    setDraft((current) => ({ ...current, permissions: { ...current.permissions, [permission]: checked } }));
+  };
+  const saveRole = useMutation({
+    mutationFn: () => {
+      const payload = {
+        name: draft.name.trim(),
+        description: draft.description.trim() || undefined,
+        permissions: draft.permissions,
+      };
+      if (draft.id) return adminApi.updateMemberRole(draft.id, payload);
+      return adminApi.createMemberRole({
+        ...payload,
+        slug: slugify(`${draft.name}_${Date.now().toString(36)}`),
+      });
     },
-    onError: (error) => toast.error('Role create failed', { description: apiErrorMessage(error) }),
+    onSuccess: () => {
+      resetDraft();
+      qc.invalidateQueries({ queryKey: roleQuery.queryKey });
+      toast.success(isEditing ? 'Role updated' : 'Role created');
+    },
+    onError: (error) => toast.error(isEditing ? 'Role update failed' : 'Role create failed', { description: apiErrorMessage(error) }),
+  });
+  const deleteRole = useMutation({
+    mutationFn: (role: Role) => adminApi.deleteMemberRole(role.id),
+    onSuccess: (_result, role) => {
+      if (draft.id === role.id) resetDraft();
+      qc.invalidateQueries({ queryKey: roleQuery.queryKey });
+      qc.invalidateQueries({ queryKey: memberQuery.queryKey });
+      toast.success('Role deleted', { description: role.name });
+    },
+    onError: (error) => toast.error('Role delete failed', { description: apiErrorMessage(error) }),
   });
 
   return (
@@ -353,41 +389,83 @@ export function TeamRolesPage() {
       {roles.isLoading && <StateCard title="Loading roles" body="Fetching live RBAC roles." />}
       {roles.isError && <ErrorCard error={roles.error} retry={() => roles.refetch()} />}
       {roles.isSuccess && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
           <div className="data-card">
             {roles.data.length === 0 ? (
               <StateCard title="No roles yet" body="Default roles are created during tenant bootstrap. Create a custom role here if needed." />
             ) : (
               <table className="data-table">
-                <thead><tr><th>Role</th><th>Type</th><th>Permissions</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Role</th>
+                    <th>Type</th>
+                    <th>Permissions</th>
+                    {canManageRoles && <th>Actions</th>}
+                  </tr>
+                </thead>
                 <tbody>
                   {roles.data.map((role) => (
                     <tr key={role.id}>
                       <td><div className="name">{role.name}</div><div className="muted">role.{role.slug}</div></td>
                       <td><span className={`pill ${role.isSystem ? 'info' : 'accent'}`}>{role.isSystem ? 'system' : 'custom'}</span></td>
                       <td>{Object.values(role.permissions).filter(Boolean).length}</td>
+                      {canManageRoles && (
+                        <td>
+                          {!role.isSystem && (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              <button id={`btn-edit-role-${role.slug}`} className="btn" type="button" onClick={() => chooseRole(role)}>
+                                <Edit2 size={13} /> Edit
+                              </button>
+                              <button
+                                id={`btn-delete-role-${role.slug}`}
+                                className="btn danger-outline"
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm('Delete this role? Assigned members will lose this role.')) deleteRole.mutate(role);
+                                }}
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
           </div>
-          <form className="data-card" style={{ padding: 16 }} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-            <h3 style={{ marginTop: 0 }}>Create role</h3>
-            <Field label="Role name" value={name} onChange={setName} />
-            <div className="field">
-              <label>Permissions</label>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {Object.values(MEMBER_PERMISSIONS).map((permission) => (
-                  <label key={permission} className="checkbox-row">
-                    <input type="checkbox" checked={permissions[permission] === true} onChange={(event) => setPermissions({ ...permissions, [permission]: event.target.checked })} />
-                    {permission}
-                  </label>
-                ))}
+          {canManageRoles ? (
+            <form className="data-card" style={{ padding: 16 }} onSubmit={(event) => { event.preventDefault(); saveRole.mutate(); }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <h3 style={{ marginTop: 0 }}>{isEditing ? 'Edit role' : 'Create role'}</h3>
+                {isEditing && (
+                  <button className="btn" type="button" onClick={resetDraft}>
+                    <X size={13} /> Cancel
+                  </button>
+                )}
               </div>
-            </div>
-            <button className="btn primary" type="submit" disabled={!name || create.isPending}><Save size={14} /> Save role</button>
-          </form>
+              <Field label="Role name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
+              <Field label="Description" value={draft.description} onChange={(description) => setDraft({ ...draft, description })} />
+              <div className="field">
+                <label>Permissions</label>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {Object.values(MEMBER_PERMISSIONS).map((permission) => (
+                    <label key={permission} className="checkbox-row">
+                      <input type="checkbox" checked={draft.permissions[permission] === true} onChange={(event) => togglePermission(permission, event.target.checked)} />
+                      {permission}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <button id="btn-save-role" className="btn primary" type="submit" disabled={!draft.name.trim() || saveRole.isPending}>
+                <Save size={14} /> {saveRole.isPending ? 'Saving role' : 'Save role'}
+              </button>
+            </form>
+          ) : (
+            <StateCard title="Role management unavailable" body="You need roles.write permission to create, edit, or delete roles." />
+          )}
         </div>
       )}
     </>
@@ -399,13 +477,16 @@ function TeamHeader({ action }: { action?: React.ReactNode }) {
 }
 
 function TeamTabs() {
+  const canReadRoles = useCan(MEMBER_PERMISSIONS.rolesRead);
+  const canReadMembers = useCan(MEMBER_PERMISSIONS.membersRead);
+  const tabs = [
+    canReadRoles && { to: '/team/roles', i18nKey: 'team.tabs.roles', id: 'tab-team-roles' },
+    canReadMembers && { to: '/team/users', i18nKey: 'team.tabs.users', id: 'tab-team-users' },
+    canReadMembers && { to: '/team/commissions', i18nKey: 'team.tabs.commissions', id: 'tab-team-commissions' },
+  ].filter(Boolean) as Array<{ to: string; i18nKey: string; id: string }>;
   return (
     <Tabs
-      tabs={[
-        { to: '/team/roles', i18nKey: 'team.tabs.roles', id: 'tab-team-roles' },
-        { to: '/team/users', i18nKey: 'team.tabs.users', id: 'tab-team-users' },
-        { to: '/team/commissions', i18nKey: 'team.tabs.commissions', id: 'tab-team-commissions' },
-      ]}
+      tabs={tabs}
     />
   );
 }

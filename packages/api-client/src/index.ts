@@ -133,6 +133,10 @@ export class ApiClient {
     return this.patch(`/identity/member-roles/${id}`, input);
   }
 
+  deleteMemberRole(id: string) {
+    return this.delete(`/identity/member-roles/${id}`);
+  }
+
   customerUsers() {
     return this.get('/identity/customer-users');
   }

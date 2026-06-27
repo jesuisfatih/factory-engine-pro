@@ -1,5 +1,6 @@
 import { Outlet, createRootRoute, redirect, useRouterState } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { readSession } from '@/lib/api';
@@ -23,6 +24,25 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
 ];
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
+const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string }> = [
+  { test: /^\/team\/users\/add/, permission: MEMBER_PERMISSIONS.membersWrite },
+  { test: /^\/team\/users/, permission: MEMBER_PERMISSIONS.membersRead },
+  { test: /^\/team\/roles/, permission: MEMBER_PERMISSIONS.rolesRead },
+  { test: /^\/team\/commissions/, permission: MEMBER_PERMISSIONS.membersRead },
+  { test: /^\/orders/, permission: MEMBER_PERMISSIONS.ordersRead },
+  { test: /^\/customers/, permission: MEMBER_PERMISSIONS.customersRead },
+  { test: /^\/pricing/, permission: MEMBER_PERMISSIONS.pricingRead },
+  { test: /^\/segments/, permission: MEMBER_PERMISSIONS.segmentsRead },
+  { test: /^\/support/, permission: MEMBER_PERMISSIONS.supportRead },
+  { test: /^\/b2b-requests/, permission: MEMBER_PERMISSIONS.b2bAccessRead },
+  { test: /^\/tasks/, permission: MEMBER_PERMISSIONS.taskAssign },
+  { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsWrite },
+  { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },
+  { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.aircallUsersRead },
+  { test: /^\/settings\/ai/, permission: MEMBER_PERMISSIONS.settingsRead },
+  { test: /^\/settings\/shopify/, permission: MEMBER_PERMISSIONS.settingsRead },
+  { test: /^\/settings\/workspace/, permission: MEMBER_PERMISSIONS.settingsRead },
+];
 
 function isAuthRoute(pathname: string) {
   return AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
@@ -31,6 +51,10 @@ function isAuthRoute(pathname: string) {
 function redirectTarget(pathname: string, searchStr: string) {
   const target = `${pathname}${searchStr}`;
   return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard';
+}
+
+function requiredPermission(pathname: string) {
+  return ROUTE_PERMISSIONS.find((item) => item.test.test(pathname))?.permission;
 }
 
 function RootLayout() {
@@ -63,7 +87,8 @@ function RootLayout() {
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
-    const hasSession = Boolean(readSession()?.accessToken);
+    const session = readSession();
+    const hasSession = Boolean(session?.accessToken);
     const authRoute = isAuthRoute(location.pathname);
 
     if (!hasSession && !authRoute) {
@@ -74,6 +99,11 @@ export const Route = createRootRoute({
     }
 
     if (hasSession && authRoute) {
+      throw redirect({ to: '/dashboard' });
+    }
+
+    const permission = requiredPermission(location.pathname);
+    if (hasSession && !authRoute && permission && !session?.principal.permissions.includes(permission)) {
       throw redirect({ to: '/dashboard' });
     }
   },

@@ -75,6 +75,15 @@ export class IdentityService {
     return this.repository.findMemberRoleById(id);
   }
 
+  async deleteMemberRole(id: string) {
+    const role = await this.repository.findMemberRoleById(id);
+    if (role.isSystem) {
+      throw new BadRequestException('System roles cannot be deleted');
+    }
+    await this.repository.deleteMemberRole(id);
+    return { ok: true };
+  }
+
   listCustomerRoles() {
     return this.repository.listCustomerRoles();
   }
