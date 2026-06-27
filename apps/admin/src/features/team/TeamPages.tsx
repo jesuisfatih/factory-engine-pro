@@ -1,9 +1,10 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Check, Mail, Plus, RefreshCw, Save, Search } from 'lucide-react';
-import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, type AircallUsersResponse } from '@factory-engine-pro/contracts';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
@@ -27,7 +28,7 @@ type Member = {
   lastLoginAt?: string | null;
   aircallUserId?: string | null;
   roleAssignments: Array<{ role: Role }>;
-  invitation?: { token: string; expiresAt: string } | null;
+  invitation?: { token: string; expiresAt: string; delivery: { id: string; status: string } } | null;
 };
 
 const roleQuery = { queryKey: ['identity', 'member-roles'], queryFn: () => adminApi.memberRoles() as Promise<Role[]> };
@@ -83,8 +84,14 @@ export function TeamUsersPage() {
 }
 
 export function TeamUserCreatePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const roles = useQuery(roleQuery);
+  const aircallUsers = useQuery({
+    queryKey: ['aircall', 'users', 'team-invite'],
+    queryFn: () => adminApi.aircallUsers() as Promise<AircallUsersResponse>,
+    retry: false,
+  });
   const qc = useQueryClient();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '', password: '', sendInvite: true, aircallUserId: '' });
   const [created, setCreated] = useState<Member | null>(null);
@@ -114,9 +121,14 @@ export function TeamUserCreatePage() {
       <>
         <PageHeader titleI18nKey="team.users.wizard.title" subtitleI18nKey="team.subtitle" />
         <StateCard
-          title="Member created"
-          body={created.invitation ? `Invite token created. Local token: ${created.invitation.token}` : `${created.email} can sign in with the password you set.`}
-          action={<button className="btn primary" type="button" onClick={() => navigate({ to: '/team/users' })}><Check size={14} /> View users</button>}
+          title={t('team.users.invite_created_title')}
+          body={created.invitation ? t('team.users.invite_created_body', { email: created.email, status: created.invitation.delivery.status }) : t('team.users.password_created_body', { email: created.email })}
+          action={
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn primary" type="button" onClick={() => navigate({ to: '/team/users' })}><Check size={14} /> {t('team.users.view_users')}</button>
+              {created.invitation && <Link className="btn" to="/system-mail">{t('team.users.open_mail_center')}</Link>}
+            </div>
+          }
         />
       </>
     );
@@ -146,7 +158,24 @@ export function TeamUserCreatePage() {
                 {roles.data.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
               </select>
             </div>
-            <Field label="Aircall user ID" value={form.aircallUserId} onChange={(aircallUserId) => setForm({ ...form, aircallUserId })} />
+            <div className="field">
+              <label>{t('team.users.field_aircall_user')}</label>
+              <select
+                value={form.aircallUserId}
+                onChange={(event) => setForm({ ...form, aircallUserId: event.target.value })}
+                disabled={aircallUsers.isLoading || aircallUsers.isError}
+              >
+                <option value="">{aircallUsers.isLoading ? t('common.loading') : t('team.users.aircall_none')}</option>
+                {(aircallUsers.data?.users ?? [])
+                  .filter((user) => !user.linkedMember || user.aircallUserId === form.aircallUserId)
+                  .map((user) => <option key={user.aircallUserId} value={user.aircallUserId}>{user.name} - {user.email ?? user.aircallUserId}</option>)}
+              </select>
+              {aircallUsers.isError && (
+                <div className="muted" style={{ marginTop: 6, color: 'var(--danger)' }}>
+                  {t('team.users.aircall_load_failed')}: {apiErrorMessage(aircallUsers.error)}
+                </div>
+              )}
+            </div>
           </div>
           <label className="checkbox-row">
             <input type="checkbox" checked={form.sendInvite} onChange={(event) => setForm({ ...form, sendInvite: event.target.checked })} />

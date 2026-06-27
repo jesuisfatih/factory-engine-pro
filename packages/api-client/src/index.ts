@@ -1,5 +1,7 @@
 import type {
   AcceptInvitationInput,
+  AircallLinkUserInput,
+  AircallUsersResponse,
   AuthSession,
   BootstrapTenantInput,
   CalculatePricesInput,
@@ -361,6 +363,22 @@ export class ApiClient {
 
   sendTestMail(input: SendTestMailInput) {
     return this.post('/mail/test', input);
+  }
+
+  aircallUsers() {
+    return this.get<AircallUsersResponse>('/aircall/users');
+  }
+
+  syncAircallUsers() {
+    return this.post<AircallUsersResponse>('/aircall/users/sync', {});
+  }
+
+  linkAircallUser(aircallUserId: string, input: AircallLinkUserInput) {
+    return this.post<AircallUsersResponse>(`/aircall/users/${aircallUserId}/link`, input);
+  }
+
+  unlinkAircallUser(aircallUserId: string) {
+    return this.delete<AircallUsersResponse>(`/aircall/users/${aircallUserId}/link`);
   }
 
   private get<T>(path: string, auth = true) {

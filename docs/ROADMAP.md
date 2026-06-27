@@ -14,11 +14,17 @@ modüle dokunma — gerekirse önce kullanıcıya sor.
 
 | Surface | Email | Password | Tenant | Rol |
 |---|---|---|---|---|
-| admin (5189) — owner | `owner.prodtest+20260627184047@dtfbank.com` | `FepOwner20260627184047` | `dtfbank` | owner |
-| accounts (5187) — customer | `customer.prodtest+20260627184047@dtfbank.com` | `FepBuyer20260627184047` | `dtfbank` | b2b_admin |
+| admin — owner | `owner.prodtest+20260627184047@dtfbank.com` | `FepOwner20260627184047` | `dtfbank` | owner |
+| accounts — customer | `customer.prodtest+20260627184047@dtfbank.com` | `FepBuyer20260627184047` | `dtfbank` | b2b_admin |
 
 > Şifreler tek seferlik olarak bu doc'a yazılır + kullanıcı ilk login'de
 > değiştirir. Üretilen değerleri agent buraya iliştirir.
+>
+> ⛔ **Hesaplara test URL'lerinden girilir** — `https://app.dtfbank.com/login`
+> ve `https://accounts.dtfbank.com/login`. **`127.0.0.1`, `localhost`,
+> `5189`, `5187` HİÇBİR test/screenshot/kanıtta görünemez.** Lokal port
+> üzerinden test sonucu **GEÇERSİZDİR** — bkz. 3.7'deki "lokalde
+> backend çalıştırma" yasağı.
 
 > ⚠ **AGENT İÇİN ANA KURAL — KAPALI LİSTE**
 > Bu doc'ta 6. bölümde açıkça transfer edilecek olarak listelenmeyen
@@ -28,6 +34,14 @@ modüle dokunma — gerekirse önce kullanıcıya sor.
 > var; **bunların hiçbiri bu çalışmaya dahil değil**. 7.2'deki "ASLA
 > dokunulmayacak" listesini de oku. Şüphedeysen kullanıcıya sor;
 > kendi inisiyatifinle "bunu da alalım" deme.
+
+> ⛔ **AGENT İÇİN İKİNCİ ANA KURAL — LOKAL'DE ÇALIŞTIRMA YASAĞI**
+> `pnpm dev`, `vite`, `tsx watch`, `nest start`, `docker compose up`
+> **hiçbiri** lokal makinede çalıştırılmaz. `127.0.0.1:5187/5188/5189/4100`
+> veya `localhost:*` URL'leri açılmaz, screenshot'larda görünmez,
+> kanıt olarak sunulamaz. Tüm test + kanıt **`https://app.dtfbank.com`
+> ve `https://accounts.dtfbank.com`** üzerinden Mutagen-synced
+> dtfbank container'ında alınır. Detay: 3.7 ⛔ kutusu.
 
 > **Genel kural:** Bu transferdeki modüllerin **hepsi eski sistemde var**. UI
 > ve backend zaten yazılmış durumda. Burada yapılan iş tek tip:
@@ -94,13 +108,87 @@ yetenekler **çalışır halde teslim edilir**:
 - Customer login + register + forgot/reset + B2B alt hesap (SubUser) oluşturma + role atama
 - **B2B Access Request** akışı: accounts public form → admin onay → CustomerUser + `b2b_admin` rolü otomatik oluşur + davet maili gider
 - Shopify orders + customers + products **eski sistemdeki gibi** akıyor (sync + webhook)
+- **Products UI ve permission**: admin sidebar `COMMERCE` grubunda `Products` girdisi var, eski `admin/app/catalog/page.tsx` üzerine kurulu liste/detay/edit ekranı; `products.read` / `products.write` permission'larıyla rol-bazlı görünür; "Push to Shopify" butonu admin'in edit ettiği ürünleri Shopify Admin API'ye basar.
+- **Shopify sync delta mantığı (eski `sync-state.service.ts`'ten birebir)**: 3 entity (customers / products / orders) için per-tenant `SyncState` satırı + `lastCursor` + 60dk lock TTL + heartbeat + `consecutiveFailures` (≥5 → manuel kurtarma). İlk run **full backfill** (tüm history); sonraki run'lar **delta** (sadece `lastCursor`'dan sonrası). Crash recovery garantili (her sayfa sonunda cursor DB'ye yazılır). Webhook ayrıca anlık update sağlar (HMAC verify + topic dispatch). Cached entity tabloları: `Customer`, `CatalogProduct`, `CatalogVariant`, `CommerceOrder` — her biri tenant başına local snapshot tutuyor; sync sayfası UI'da `snapshotRecords` + `lastCompletedAt` + `consecutiveFailures` + retry butonu görünüyor.
+- **Aircall sync delta mantığı (eski 2-stage pipeline'dan birebir)**: Webhook ≤200ms p95'te `AircallWebhookInbox` satırı yazar + BullMQ enqueue + always 200 döner; worker async olarak `AircallCallEvent` upsert eder (event tuple unique → idempotent, aynı webhook iki kez gelse de tekrar yazılmaz); periodic sync `lastSyncedAt` cursor'ından sonraki window'u çeker (webhook'u yedekler); sweeper başarısız Inbox'ları retry'lar; transcript ham `AircallCallEvent.transcript`'te + AI insight Claude ile üretilip `Call.aiInsight`'a yazılır.
 - **B2B Discounts** çalışır: pricing rule motoru aktif + admin "Discount Create" akışı Shopify Admin API üstünden gerçek discount code basar
 - Storefront extensions (**analiz extension'ları hariç**) hazır → customer-account-extension, pricing-kernel-discount
 - Mail kaynağı **tek bir yer** (system mail merkezi gönderim pipeline'ı), email-templates kütüphanesi bağlı, mail marketing ayrı modül çalışır
+- **Mail blokları EKSİKSİZ taşınır** (eski sistemin gerçek envanteri: ~17.700 satır + 66+ endpoint + 33 Prisma modeli — birebir): (a) **system mail / mail-center** — 13 endpoint (delivery-log + suppression CRUD + DLQ retry/discard + provider health + settings + audit) + outbound worker + idempotency key + DLQ tablo; (b) **email-templates** — 13 endpoint (event-key / variants / revisions / preview / test-send / publish / activate / AI edit) + 1.265 satırlık event-key catalog + 588 satırlık starter set; (c) **mail-marketing** — 40+ endpoint (audiences 8 + templates 8 + flows 7 + analytics 7 + contacts + consent + suppression + settings) + 8 servis (orchestration, marketing-templates, flows, flow-processor, flow-events-listener, analytics, settings, defaults) + flow engine (`MailFlow`+`MailFlowVersion`+`MailFlowNode`+`MailFlowRun`+`MailFlowEnrollment`+`MailFlowActionLog`) + audience snapshot/diff motoru + 7 boyutlu analytics + idempotency + DLQ + audit. Servisler **modül dışından çağrılabilir yüzey** olarak duruyor — Commerce / Identity / Segments modüllerinin yaydığı event'leri (`order.placed`, `customer.registered`, `segment.joined`, vs.) `MailMarketingFlowEventsListener` dinler; Dashboard mail KPI satırları `MailMarketingAnalyticsService`'ten beslenir.
 - Aircall çağrı ingest + transcript pull çalışır (sonrasında task'a dönüştüren TM ayrı çalışmada)
 - AI sync (Claude çağrı + budget + kill switch) çalışır (prompt registry hariç)
 - Tüm UI ekranları boş / dolu / hata durumlarında sağlam çalışır (5.2)
 - **Workspace/Brand ayarları** — UI'da "DTF Bank", "DB" gibi statik brand metinleri yok. Hepsi `TenantConfig.brand` / `TenantConfig.workspaceName` üstünden gelir. Admin sol-alttaki user-card'a yakın bir yerden (örn. `routes/settings/workspace.tsx`) brand adı / kısa kod / logo'yu düzenler; sidebar + topbar bu değerlerden okur. (Sidebar'ın `.workspace` bloğundaki "DB" badge ve "FactoryEngine" metni hard-coded — dinamikleşmeli.)
+
+---
+
+## 1.1 Müşteri deneyimi kabul kriterleri (40 madde)
+
+Bu 40 madde **prod-ready'nin tanımıdır**. Teknik anlatım değil — gerçek
+kullanıcının sistemde ne yaşaması gerektiği. Tüm transfer maddeleri bitince
+agent bu listeyi tek tek doğrular (kuralları aşağıda).
+
+1. Kullanıcı `app.dtfbank.com` yazıp girer; tarayıcıda anında DTF Bank'ın kendi logo'su, ismi ve renk şeması yüklenir — başka tenant'a aitmiş gibi görünmez.
+2. Login ekranı 2-panel açılır: sol koyu hero'da brand badge + workspace adı + tagline + 3 özellik kartı, sağ formda email + password + Remember me. Beklenen her şey ilk bakışta yerinde.
+3. Yanlış email/şifre yazılırsa anlamlı bir mesaj ("e-posta veya şifre yanlış" + `request_id`) gelir; "Tekrar dene" sahnesine geçilebilir, hata kullanıcıyı sıkıştırmaz.
+4. Doğru giriş yapan kullanıcı `/dashboard`'a yönlenir; sidebar + topbar tenant brand'ıyla, sol-altta gerçek email + rol etiketi ("Owner" / "Admin" / "Agent") görünür.
+5. Logout butonu tek tıkla session'ı temizler ve login ekranına geri alır — başka iş yapamaz, geri tuşu yedek session açmaz.
+6. Login olmadan `/orders`, `/customers`, `/team/users` gibi sayfalara doğrudan gitmek mümkün değil; otomatik `/login`'e gider, geldiği URL hatırda tutulur, login sonrası oraya döner.
+7. "Şifremi unuttum" tıklayan kullanıcı email yazar; "Eğer bu adres kayıtlıysa link gönderdik" mesajı görür (hesap var/yok bilgisi sızdırılmaz).
+8. Email'deki linke tıklayan kullanıcı yeni şifre belirler; başarı sonrası otomatik login değil, login ekranına döner — yeni şifrenin çalıştığını kendi denemiş olur.
+9. Owner admin `/team/roles`'te yeni bir rol oluşturur: ad + slug + renk + açıklama yazar, permission matrisinden checkbox'larla yetkileri seçer, kaydeder; liste anında güncellenir.
+10. Owner admin `/team/users/add`'e tıklayınca 4 adımlı wizard açılır: önce rol seçer, sonra ad/soyad/email/telefon girer, sonra permission ince-ayarını yapar, sonra review ekranında onaylar — her adım geri gelinebilir.
+11. Davet butonuna basınca mail gider; admin'in ekranında "Davet gönderildi, e-posta: X" rozetli liste güncellenir.
+12. Davet edilen kullanıcı email'deki linke tıklar, "Şifrenizi belirleyin" sayfası açılır; şifresini yazar, hesabı aktifleşir, login olduğunda **kendi rolüne göre** menüleri görür.
+13. Üye eklerken Aircall workspace user dropdown'u dolu olarak gelir; admin uygunsa seçer veya boş bırakır — sonra `/settings/aircall/users`'tan eşleyebileceğini gözler.
+14. Bir üyeden bir permission çekildiğinde, o üye refresh yapınca menüsündeki ilgili kalem **anında kaybolur** — gri/disabled değil, hiç yok.
+15. Aynı şekilde owner'a yeni bir permission eklendiğinde, refresh sonrası yeni menü kalemi sidebar'a çıkar; mevcut iş akışı bozulmaz.
+16. Owner `/settings/workspace`'e girer; workspace adı + brand badge + logo'yu değiştirir; admin + accounts + person uygulamalarındaki sidebar, topbar, login hero ve footer copyright **anında** yeni brand'a geçer.
+17. Hiçbir yerde sabit "DTF BANK" / "FactoryEngine" yazısı kalmaz — her metin tenant config'inden gelir, demo görüntüsü değil canlı veri.
+18. Admin `/customers`'a gider; gerçek Shopify müşteri listesini görür — isim, şirket, harcama toplamı, sipariş sayısı, son sipariş tarihi, etiketler, lifecycle aşaması.
+19. Customer detayına tıklar; insight (churn risk + health score + upsell potential), activity log, sipariş geçmişi, segment chip'leri canlı backend'den dolu olarak gelir.
+20. Admin "Yeni liste oluştur" der; ad + açıklama + renk + ikon seçer; sonra customer'ları toplu olarak listeye ekler; her customer için kişisel bir not düşebilir.
+21. `/orders`'ta üst kısımda 3 sekme (All orders / Pickup / With files) ve gerçek KPI kartları (bugün kaç sipariş, ciro, refund, fulfill oranı, pickup, design file sayısı) görür — hepsi canlı, mock değil.
+22. Order tablosu filter'lanır (financial / fulfillment / mode / customer / has files / pickup only) + sıralanır + sayfalanır; her filtre değişikliğinde tablo canlı güncellenir, loading skeleton ile akıcı.
+23. Sipariş detayını açar; line item'lar, müşteri, ödeme durumu, fulfillment durumu, design files, journey görünür — ekran kalabalık değil, mantıklı gruplanmış.
+24. Admin "Yeni sipariş" der; müşteri seç + ürün/varyant/qty + adres + para birimi + not yazar; kaydedince Shopify draft order olarak müşterinin store'una düşer.
+25. `/segments`'te segment listesinin başında KPI kartları (toplam / aktif / eşleşen şirket / segment başına ortalama) + arama + filter çıkar.
+26. "Yeni segment" modal'ı 3 adımlı: önce kimlik (paket adı + açıklama + renk + öncelik + lifecycle), sonra match rules (alan grubu: Company / Company User / Shopify Customer / Behavior + operator + değer), sonra preview (canlı backend cevabı: kaç şirket, kaç customer, kaç tane unlinked).
+27. Segment'i kaydedince listede çıkar; "Şimdi değerlendir" tıklanınca arka planda eval çalışır, "evaluating…" rozeti görünür, biter bitmez eşleşen sayı güncellenir.
+28. Segment'e selleruser sahibi atanır (öncelik + günlük cap ile); kaydedildiğinde "günlük queue invalidate edildi" mesajı görünür — sales takımı için sıralı görev listesi otomatik tazelenir.
+29. `/pricing`'te indirim kuralı oluşturulur: hedef tip (customer / segment / tag / role) + scope (all / koleksiyon / belirli ürün) + tip (% / sabit / qty break) + min sepet + öncelik + başlangıç/bitiş tarihi + stack ayarları — hepsi tek formda, kafa karıştırmaz.
+30. "Shopify'a aktar" tıklanınca arka planda gerçek discount code Shopify Admin API'ye basılır; UI'da push edilen kodlar listede görünür ("Active on Shopify" rozet + kod metni).
+31. `/support`'ta servis taleplerini SLA breach risk önceliğine göre üstte görür; her satırda durum / öncelik / atanan / son aktivite; bir tıkla detay modal'ı açılır.
+32. Modal'da müşteriye public reply yazar **veya** iç not düşer, status'ü değiştirir (open → in_progress → resolved), başka birine atar; reply yazınca mail otomatik gider, müşteriye varış doğrulanır.
+33. Customer `accounts.dtfbank.com`'a girer; eski paneldekiyle **birebir** "Welcome back" ekranı görür — 2-panel, sol hero'da brand + workspace pill + 3 özellik kartı, sağ formda Sign In + "Forgot password?" + "Create Account" + "Request B2B Access".
+34. Customer "Request B2B Access" tıklar; 2-panel detaylı form sayfası açılır — sol mavi hero'da 5 benefit kartı (Wholesale Pricing %40 / Net 30 Terms / Team Management / Priority Support / Free Shipping $500), sağ formda kişisel + şirket + finansal alanlar + vergi belgesi upload + şifre + ek bilgi.
+35. Admin `/b2b-requests`'te bu başvuruyu görür, başvuruya tıklar, vergi belgesini önizler, müşterinin yazdığı her şeyi gözden geçirir; "Onayla" tıklar — arka planda CustomerUser açılır + `b2b_admin` rolü atanır + davet maili otomatik gider.
+36. Müşteri davet linkine tıklar, şifre belirler, accounts paneline ilk kez login olur; siparişleri, faturaları, profili, takımı sol menüden tek tıkla erişilebilir.
+37. Müşteri kendi panelinde "Takım"a gider; SubUser ekler — email + spending cap ile davet; SubUser de mail aldıktan sonra şifre kurar, kısıtlı yetkilerle login olur.
+38. Person app member için ayrı çalışma alanı — login + brand + auth düzgün; CallQueue / Messages / Calendar gibi sayfalar prototype durumunda olsa bile "Engine henüz bağlı değil" banner'ı ile dürüst bilgilendirme yapar, kafa karıştırmaz.
+39. Her ekran üç durumda da sağlam: ilk açılışta sıfır data ise anlamlı bir empty state + "İlk segment'ini oluştur" / "İlk customer'ını ekle" CTA + opsiyonel onboarding ipucu; dolu durumda liste + filter + bulk action; hata durumda anlamlı mesaj + retry + `request_id`'yi gösteren küçük rozet.
+40. İlk veri eklendiği an UI canlı geçiş yapar — boş state'ten dolu state'e geçiş manuel refresh gerektirmez; yeni segment ekleyince anasayfada KPI sayacı bir artar, yeni customer eklenince liste başına düşer, yeni order gelince dashboard'da "Bugün" sayısı oynar.
+
+### Doğrulama disiplini (transfer bittiğinde)
+
+Tüm 6. bölüm maddeleri bittiğinde agent yukarıdaki 40 maddeyi **tek tek**
+geçer. Her madde için:
+
+- **Önce kod akışını okur** — UI route → feature page → `useQuery` /
+  `useMutation` → `apiClient.<x>()` → backend controller → service →
+  repository → DB / external API çağrısı — tüm zinciri **dosya dosya**
+  takip eder.
+- **Sonra canlı dener** — dtfbank container'ında o senaryoyu gerçek
+  kullanıcı gibi yürütür (login, tıkla, form doldur, submit, sonucu gör).
+- **Kanıt iliştirir** — kod akışındaki ana dosya yolları + canlı çıktının
+  özeti (UI snapshot / API response / log satırı + request_id) **8.
+  Kontrol Notları**'na "Madde X — ÇÖZÜLDÜ" satırı olarak düşülür.
+
+**Bir madde doğrulanmadan bir sonrakine geçmek YASAK.** Sırasıyla 1 → 2
+→ … → 40. Bir maddede tıkanılırsa neyin çalışmadığı tespit edilir,
+backend mi UI mi sebep — bulunur, düzeltilir, yine denenir; düzelmeden
+sonraki maddeye geçilmez. 5.1'in mutlak kuralı bu listeye **birebir**
+uygulanır.
 
 ---
 
@@ -189,12 +277,28 @@ codebase'i çalıştırır, tenant farkı **request-time'da** `tenantId` ile
 
 ### 3.7 Geliştirme + Deploy — Mutagen (dtfbank) + Depot (prod tenant'lar)
 
-> ⚠ **TEMEL KURAL — Lokal makinede backend ÇALIŞTIRILMAZ.**
-> Lokal makine **sadece kod editörü**. Postgres, Redis, NestJS hiçbir
-> zaman lokal'de koşmaz. `pnpm dev` lokal'de denenmez. `docker-compose`
-> lokal'de başlatılmaz. Tüm geliştirme + test akışı **sunucudaki
-> `factoryengine-dtfbank-app` container'ında** gerçekleşir; bu container
-> zaten ayakta + managed Postgres + managed Redis'e bağlı.
+> ⛔ **TEMEL KURAL — LOKAL'DE HİÇBİR ŞEY ÇALIŞTIRMA.**
+> Lokal makine **sadece kod editörü**. Postgres, Redis, NestJS, **Vite
+> dev server** — hiçbiri lokal'de koşmaz. `pnpm dev`, `pnpm --filter
+> ... dev`, `vite`, `tsx watch`, `nest start` lokalde **ASLA**
+> çalıştırılmaz. `127.0.0.1:5187`, `127.0.0.1:5188`, `127.0.0.1:5189`,
+> `127.0.0.1:4100`, `localhost:*` URL'leri **YASAK** — agent tarafından
+> açılması, kanıt olarak sunulması, screenshot'ında görünmesi yasaktır.
+> `docker compose up` lokalde başlatılmaz. **Lokal'de test = GEÇERSİZ.**
+>
+> Tüm geliştirme + test akışı **sunucudaki `factoryengine-dtfbank-app`
+> container'ında** gerçekleşir. Akış: lokalde kod yaz → **Mutagen sync**
+> (`mutagen project start`) → container içinde build/run → tarayıcıdan
+> **`https://app.dtfbank.com` + `https://accounts.dtfbank.com`** (gerçek
+> subdomain) üzerinden denenir. Kanıt screenshot'larında URL bar'da bu
+> subdomain'lerin görünmesi **zorunludur**; URL bar'da `127.0.0.1`,
+> `localhost`, herhangi bir lokal port görülürse o kanıt **REDDEDİLİR**
+> ve madde "doğrulanmadı" sayılır.
+>
+> Lokal'de `pnpm dev` çalıştırılmış izi (`.vite/`, lokal `tsbuildinfo`
+> güncellemesi, dev server log'u, `node` process'inin port'ta
+> dinlemesi) görülürse o iş **çürüktür**, baştan dtfbank container'ında
+> tekrarlanmalı + yeni kanıt iliştirilmelidir.
 
 İki ayrı yol birlikte kullanılır:
 
@@ -594,9 +698,12 @@ footer copyright) korunur. Brand bilgisi (logo / isim / renk) `TenantConfig`
 |---|---|---|---|---|
 | Orders | `eagledtfprint/backend/src/orders/` | `eagledtfprint/admin/app/orders/` | `services/backend/src/modules/orders/` | `apps/admin/src/routes/orders.tsx` |
 | Customers | `eagledtfprint/backend/src/customers/` | `eagledtfprint/admin/app/customers/` | `services/backend/src/modules/customers/` | `apps/admin/src/routes/customers.tsx` |
+| **Products (Catalog)** | (eski'de ayrı backend modül yok — `eagledtfprint/backend/src/sync/workers/products-sync.worker.ts` ile `CatalogProduct/CatalogVariant` doldurulur, görüntü `admin/app/catalog/page.tsx` üstünden `adminFetch` ile gelir) | `eagledtfprint/admin/app/catalog/page.tsx` (482 satır — title/handle/vendor/productType/status/images/tags/inventory/reviews/variants/SEO + sub-nav `CATALOG_NAV`) | `services/backend/src/modules/products/` (controller + service + repository) + sync 6.5.2'de | `apps/admin/src/routes/products.tsx` (+ features/commerce/ProductsPage.tsx) — list + filter + detay + edit + "Push to Shopify" butonu |
 | **B2B Discounts** (pricing rules **+ Discount Create**) | `eagledtfprint/backend/src/pricing/` (rule engine) + `eagledtfprint/backend/src/shopify/shopify-admin-discount.service.ts` (Shopify'a discount code push) | `eagledtfprint/admin/app/pricing/` | `services/backend/src/modules/pricing/` + `services/integrations/src/shopify/admin-discount.service.ts` | `apps/admin/src/routes/pricing.tsx` (rule listesi + Create akışı) |
 
 > **B2B Discounts iki yarı:** (a) pricing rule motoru (segment / tag / role / customer hedefli kuralları üretir, qty break math), (b) **Discount Create** — Shopify Admin API üzerinden gerçek discount code basar. Eski sistemde aynı modül, aynı şekilde transfer edilir.
+
+> **Products sidebar + permission:** Admin sidebar'ında `COMMERCE` grubuna `Products` girdisi eklenir (Orders'ın altına). Yeni permission tanımlanır: `products.read` (liste + detay görme) + `products.write` (edit + Shopify push). `DEFAULT_MEMBER_ROLES`: owner = read+write, admin = read+write, agent = read. UI `useCan('products.write')` ile edit butonlarını ve "Push to Shopify" CTA'yı korur; permission yoksa görünmez (5.5).
 
 ### 6.3 Operations
 
@@ -636,14 +743,48 @@ Marketing (campaign send) hepsi bu pipeline'a job düşürür.
 System mail VE mail marketing'in **ortak kullandığı** template
 kütüphanesi + designer + starter set + AI ile template üretimi.
 
-- **Eski backend:** `eagledtfprint/backend/src/email-templates/`
-  - `email-templates.service.ts`, `email-templates.controller.ts`
-  - `email-template-ai.service.ts` (AI ile template üretimi)
-  - `email-template.catalog.ts` + `email-template.starters.ts` (default starter set)
+> ⚠ **Bu modül devasa (5.413 satır eski backend + 881 satır eski UI)** —
+> "küçük" görünebilir ama içinde event-key registry, variant catalog,
+> revision pipeline, publish/activate, preview, test-send, AI edit
+> akışları var. **Her uç gelecekteki modüllerde (system mail tetikleyiciler,
+> mail marketing campaign'leri, customer journey trigger'ları) çağrılır
+> — eksiksiz transfer zorunlu**, kısa kesme yok.
+
+- **Eski backend (`eagledtfprint/backend/src/email-templates/`, toplam 5.413 satır):**
+  - `email-templates.service.ts` — **3.232 satır**, modülün omurgası. Bilinen public method'lar (controller'dan): workspace list, eventKey detail, variant create/update/duplicate, revision create/update/source/duplicate/delete/publish, event activate, preview, test-send, AI edit. **Bu service'in tüm public method'ları transfer edilir** (uç kullanımı için).
+  - `email-templates.controller.ts` — 151 satır, **13 endpoint:**
+    - `GET /workspace` — workspace template özeti
+    - `GET /events/:eventKey` — event detayı + varyantlar
+    - `POST /events/:eventKey/variants` — varyant oluştur
+    - `PATCH /variants/:variantId` — varyant güncelle
+    - `POST /variants/:variantId/duplicate` — varyant kopyala
+    - `POST /revisions/:revisionId/duplicate` — revision kopyala
+    - `PATCH /revisions/:revisionId/source` — revision kaynak (HTML/JSON) güncelle
+    - `DELETE /revisions/:revisionId` — revision sil
+    - `POST /revisions/:revisionId/publish` — revision yayınla
+    - `POST /events/:eventKey/activate` — eventKey'e bir revision'ı aktif yap
+    - `POST /revisions/:revisionId/preview` — sunucu tarafı render önizleme
+    - `POST /revisions/:revisionId/test-send` — gerçek mail olarak test gönderim
+    - `POST /revisions/:revisionId/ai-edit` — AI ile düzenleme önerisi
+  - `email-template-ai.service.ts` — 156 satır, Claude (AI Core üstünden) ile template üretim/düzenleme akışı
+  - `email-template.catalog.ts` — **1.265 satır** event-key + varyant kataloğu (sistem mailleri için resmi liste — order_confirmation, member_invitation, password_reset, b2b_access_approved vs. + her birinin alanları)
+  - `email-template.starters.ts` — 588 satır, default starter HTML/JSON template seti (yeni tenant açılırken seed'lenir)
+  - `email-templates.module.ts` — 21 satır, NestJS module composition
 - **Eski admin UI:** `eagledtfprint/admin/app/email-templates/page.tsx` (881 satır) + `components/{CodeEditor,WorkspaceMenu}.tsx` + `types.ts` + `workspace-data.ts`
-- **Yeni backend:** `services/backend/src/modules/email-templates/`
-- **Yeni admin UI:** `apps/admin/src/routes/email-templates.tsx`
-- **Sidebar:** `TRANSACTIONAL MAIL` grubuna eklenir
+- **Yeni backend:** `services/backend/src/modules/email-templates/` — controller + service + repository + ai-service + catalog + starters; **tüm 13 endpoint** birebir taşınır, **tüm public service method'ları** korunur (modül-dışı çağrı yüzeyi). Service'i `MailService` (6.4.1) + `MailMarketingService` (6.4.3) hem `EmailTemplatesService.renderForEvent(eventKey, vars)` hem `EmailTemplatesService.activeRevisionFor(eventKey)` benzeri public method'lar üstünden tüketir.
+- **Yeni admin UI:** `apps/admin/src/routes/email-templates.tsx` (+ features/mail/EmailTemplatesPage.tsx) — eski 881 satır UI'in birebir port edilmiş hâli (event-key liste + variant editor + revision history + preview + test-send + AI edit + publish butonu).
+- **Sidebar:** `TRANSACTIONAL MAIL` grubuna eklenir.
+
+##### Prisma şema gereksinimi (eski sistemden birebir alınır)
+
+- `EmailTemplate` (event-key başına)
+- `EmailTemplateVersion` (revision history)
+- `EmailTemplateBinding` (event-key ↔ aktif revision eşleme)
+- `MailTemplateBlock` (reusable content block)
+- `MailTemplateSnippet` (reusable snippet)
+- `MailTemplateApproval` (publish öncesi onay akışı)
+- `MailTemplatePreviewProfile` (test data set — preview için)
+- `EmailDeliveryLog` (her test send + her gerçek send buraya düşer; 6.4.1 mail center ile paylaşılır)
 
 #### 6.4.3 Mail marketing — KAMPANYA / AUDIENCE / FLOW
 
@@ -651,13 +792,34 @@ Müşteri segmentlerine kampanya gönderimi, drip flow'ları, audience
 tanımları, analytics. **System mail'den ayrı bir motor** — burası
 marketing pipeline'ı, ama gönderim için 6.4.1'in queue'sunu kullanır.
 
-- **Eski backend:** `eagledtfprint/backend/src/mail-marketing/`
-  - `mail-marketing.service.ts` + `mail-marketing.controller.ts`
-  - `mail-marketing-templates.service.ts` (marketing'e özel template katmanı, email-templates üstüne biner)
-  - `mail-marketing-flows.service.ts` + `mail-marketing-flow.processor.ts` (BullMQ flow runner)
-  - `mail-marketing-flow-events.listener.ts` (flow trigger event'leri)
-  - `mail-marketing-analytics.service.ts`
-  - `mail-marketing-settings.service.ts`
+> ⚠ **Bu modül DEVASA — eski backend toplam 10.853 satır, 40+ endpoint,
+> ~25 Prisma modeli.** "Kampanya gönder" basit gibi görünebilir ama
+> içinde audience tanımları + snapshot + diff, drip flow engine + node
+> graph + run + enrollment, multi-dimensional analytics (campaign /
+> template / audience / segment / funnel / cohort / attribution),
+> contact + consent + suppression, approval/publish pipeline, AI editör
+> var. **Hiçbir uç atlamadan birebir taşınır** — gelecekteki modüller
+> (customer journey trigger'ları, lifecycle automation, attribution
+> rapor) bu yüzeyleri çağırır.
+
+- **Eski backend (`eagledtfprint/backend/src/mail-marketing/`, toplam 10.853 satır):**
+  - `mail-marketing.service.ts` — **2.892 satır**, ana orchestration servisi (campaign send, audience preview, template publish, flow runtime)
+  - `mail-marketing.controller.ts` — 585 satır, **40+ endpoint**, bölümleri:
+    - **Overview / settings:** `GET /overview`, `GET /settings/bootstrap`, `GET /settings`, `PATCH /settings`
+    - **Analytics (7 endpoint):** `GET /analytics/overview`, `/analytics/campaigns`, `/analytics/templates`, `/analytics/audiences`, `/analytics/segments`, `/analytics/funnel`, `/analytics/cohorts`, `/analytics/attribution`
+    - **Contacts + consent + suppression:** `GET /contacts`, `GET /contacts/:contactId`, `POST /contacts/:contactId/consent`, `POST /contacts/:contactId/suppression`
+    - **Audiences (8 endpoint):** `GET /audiences`, `POST /audiences/preview`, `POST /audiences`, `PATCH /audiences/:audienceId`, `GET /audiences/:audienceId`, `POST /audiences/:audienceId/snapshot`, `GET /audiences/snapshots/:snapshotId`, `GET /audiences/snapshots/:snapshotId/diff`
+    - **Templates (8 endpoint, marketing-özel katman):** `GET /templates`, `GET /templates/:templateId`, `POST /templates`, `PATCH /templates/:templateId`, `POST /templates/:templateId/revisions`, `POST /templates/:templateId/test-send`, `POST /templates/:templateId/ai`, `POST /templates/:templateId/approve`, `POST /templates/:templateId/publish`
+    - **Flows (7 endpoint):** `GET /flows`, `POST /flows`, `GET /flows/:flowId`, `PATCH /flows/:flowId`, `POST /flows/:flowId/publish`, `POST /flows/:flowId/pause`, `POST /flows/:flowId/resume`
+  - `mail-marketing-templates.service.ts` — **1.144 satır**, marketing-özel template katmanı (email-templates üzerine biner; campaign-context'li render + variant routing)
+  - `mail-marketing-flows.service.ts` — **2.082 satır**, drip flow engine (node graph + enrollment + run state machine)
+  - `mail-marketing-flow.processor.ts` — 19 satır, BullMQ processor (flow runtime tetikleyici)
+  - `mail-marketing-flow-events.listener.ts` — 127 satır, trigger event'leri dinler (order placed, customer registered, segment joined vs.)
+  - `mail-marketing-analytics.service.ts` — **1.514 satır**, 7 analytics dimension (campaigns/templates/audiences/segments/funnel/cohorts/attribution)
+  - `mail-marketing-settings.service.ts` — 466 satır, sender identity + brand defaults + sending limits + suppression policy
+  - `mail-marketing.defaults.ts` — 140 satır, default settings seed
+  - `mail-marketing.constants.ts` — 102 satır, sabit kümeleri (trigger event tipleri, status enum'ları vs.)
+  - `dto/` — DTO + zod schema setleri
 - **Eski admin UI:** `eagledtfprint/admin/app/mail-marketing/` — 7 workspace component (~5.700 satır):
   - `components/MailMarketingOverview.tsx`
   - `components/MailMarketingCampaignsWorkspace.tsx`
@@ -667,9 +829,68 @@ marketing pipeline'ı, ama gönderim için 6.4.1'in queue'sunu kullanır.
   - `components/MailMarketingAnalyticsWorkspace.tsx`
   - `components/MailMarketingSettingsWorkspace.tsx`
   - Alt sayfalar (`{campaigns,audiences,flows,analytics,settings,templates}/page.tsx`) hep 11 satır wrapper
-- **Yeni backend:** `services/backend/src/modules/mail-marketing/`
-- **Yeni admin UI:** `apps/admin/src/routes/mail-marketing/{index,campaigns,audiences,templates,flows,analytics,settings}.tsx`
-- **Sidebar grubu:** yeni `MAIL & MARKETING` eklenir, eski paneldeki alt sayfa sıralamasıyla birebir
+- **Yeni backend:** `services/backend/src/modules/mail-marketing/` — **tüm 40+ endpoint + tüm 8 servis dosyası + dto/ + constants + defaults** birebir taşınır. `MailMarketingService` (orchestration), `MailMarketingTemplatesService` (marketing template katmanı), `MailMarketingFlowsService` (flow engine), `MailMarketingFlowProcessor` (BullMQ), `MailMarketingFlowEventsListener` (event dinleyici), `MailMarketingAnalyticsService` (7 dimension), `MailMarketingSettingsService`.
+- **Yeni admin UI:** `apps/admin/src/routes/mail-marketing/{index,campaigns,audiences,templates,flows,analytics,settings}.tsx` + `features/mail-marketing/{Overview,Campaigns,Audiences,Templates,Flows,Analytics,Settings}Workspace.tsx` (eski 7 workspace component birebir port).
+- **Sidebar grubu:** yeni `MAIL & MARKETING` eklenir, eski paneldeki alt sayfa sıralamasıyla birebir.
+
+##### Prisma şema gereksinimi (eski sistemden okunan modeller — birebir taşınır)
+
+- **Audience:** `AudienceDefinition`, `AudienceSnapshot`, `AudienceSnapshotMember`, `AudienceHealthSnapshot`
+- **Contact + consent:** `MailContact`, `MailContactIdentity`, `MailConsentState`, `MailSuppression`
+- **Flow engine:** `MailFlow`, `MailFlowVersion`, `MailFlowNode`, `MailFlowRun`, `MailFlowEnrollment`, `MailFlowActionLog`
+- **Analytics:** `MailAnalyticsRollup`, `MailAttribution`
+- **Audit + sync:** `MailAuditEvent`, `MarketingSync`
+- **Idempotency + DLQ (gönderim güvenilirliği):** `MailIdempotencyKey`, `MailDlq`
+- **Campaign + thread:** `Campaign`, `EmailThread`
+- **Paylaşılan (6.4.2 ile):** `EmailTemplate`, `EmailTemplateVersion`, `EmailTemplateBinding`, `EmailDeliveryLog`, `MailTemplateBlock`, `MailTemplateSnippet`, `MailTemplateApproval`, `MailTemplatePreviewProfile`
+
+**Toplam: ~25 mail-marketing-related Prisma modeli + 8 paylaşılan template modeli = ~33 mail-related model.** Şema bu 33 modeli eksiksiz karşılamalı; eksik bir model = ilgili endpoint çalışmaz = transfer yarım.
+
+##### Servis dışına açık yüzeyler (gelecek modüllerin kullanacağı uçlar)
+
+`MailMarketingService` ve alt servisleri **diğer modüllerden çağrılır** — eksiksiz transferin sebebi bu. Bilinen kullanım örüntüleri (eski sistemden):
+
+- `MailMarketingFlowEventsListener` `@OnEvent('order.placed')`, `@OnEvent('customer.registered')`, `@OnEvent('segment.joined')` gibi trigger event'leri dinler → ilgili flow enrollment'a düşer. Yeni Commerce / Identity / Segments modülleri bu event'leri yayar, bağlantı buradan kurulur.
+- `MailMarketingTemplatesService.renderForCampaign(campaignId, contactContext)` benzeri public method'lar Campaign send + flow node send akışlarında çağrılır.
+- `MailMarketingAnalyticsService` Dashboard'un (1.1 Madde 40 ile uyumlu) mail KPI satırlarını besler (open rate / click rate / suppression count).
+- Audience preview servisi Segments (6.3) ile etkileşir — segment tanımı audience definition'a feed eder.
+
+#### 6.4.4 Mail center (system mail / transactional + DLQ + suppression — admin UI)
+
+> Bu alt-madde 6.4.1'in **admin tarafındaki sahibi** ve dış dünyaya çıkan
+> tüm sistem mail'lerinin gözlem + yönetim arayüzüdür. `mail-center.controller.ts`
+> 13 endpoint barındırır.
+
+- **Eski backend:** `eagledtfprint/backend/src/mail/`
+  - `mail.service.ts` — 363 satır, transactional send orchestration
+  - `mail-outbound.worker.ts` — 94 satır, BullMQ outbound worker
+  - `mail-center.controller.ts` — 243 satır, **13 endpoint:**
+    - `GET /delivery-log` — son gönderimler (filter + paginate)
+    - `GET /delivery-log/:id` — tek gönderim detayı
+    - `GET /suppression` — suppression listesi
+    - `POST /suppression` — adres ekle
+    - `POST /suppression/:id/unsuppress` — suppression kaldır
+    - `GET /health` — provider sağlığı + queue sağlığı
+    - `GET /dlq` — Dead Letter Queue (kalıcı başarısızlar)
+    - `POST /dlq/:id/retry` — DLQ kaydını yeniden işle
+    - `POST /dlq/:id/discard` — DLQ kaydını at
+    - `GET /settings` — mail settings görüntüle
+    - `PATCH /settings` — mail settings güncelle
+    - `POST /settings/reset` — defaults'a sıfırla
+    - `GET /settings/audit` — settings change history
+  - `mail-settings.service.ts` — 353 satır
+  - `mail-settings.defaults.ts` — 145 satır
+  - `mail-category.helper.ts` — 66 satır (mail kategori sınıflandırma)
+- **Yeni backend:** `services/backend/src/modules/mail/` — controller (13 endpoint) + service + outbound worker + settings service + category helper.
+- **Yeni admin UI:** `apps/admin/src/routes/system-mail/` + `features/system/SystemMailPage.tsx` — şu an mevcut (6.4.1 commit'lerinde bağlandı), ama yeni endpoint'ler (suppression CRUD, DLQ retry/discard, settings audit) **henüz UI'da yok** → tamamlanmalı.
+
+##### Prisma şema gereksinimi
+
+- `EmailDeliveryLog` (6.4.2 ile paylaşılan; her gerçek send + her test send)
+- `MailSuppression` (6.4.3 ile paylaşılan)
+- `MailDlq` (6.4.3 ile paylaşılan; outbound worker fail edince buraya düşer)
+- `MailIdempotencyKey` (duplicate prevention)
+- `MailAuditEvent` (settings change + suppression event'leri için audit)
 
 ### 6.5 System — Integrations panosu + 3 sync pipeline
 
@@ -704,6 +925,49 @@ Customer / Order / Product senkronizasyonu + webhook ingestion. Multi-tenant.
   - `services/integrations/src/shopify/` — saf integration katmanı: HTTP client + GraphQL + REST + customer-sync + token-refresh + SSO + storefront + admin-discount
   - `services/backend/src/modules/sync/` — business orchestration + workers + state (`services/integrations/shopify` çağırır)
   - `services/backend/src/modules/webhooks/shopify/` — webhook controller + handler dispatch
+  - `services/backend/src/modules/products/` — Products business modülü (Catalog UI'ı 6.2 ile bağlanır; products-sync worker ürettiği `CatalogProduct/CatalogVariant` kayıtlarını burası okur, "Push to Shopify" edit akışı buradan GraphQL mutation çağırır)
+
+##### Delta / incremental sync mantığı (eski `sync-state.service.ts`'ten birebir transfer)
+
+Eski sistemin sync motoru `eagledtfprint/backend/src/sync/sync-state.service.ts`'te yer alıyor; yeni sisteme **birebir** taşınır (saf TS, `merchantId` → `tenantId` rewire). Mantığın özü:
+
+- **`SyncState` modeli** (per tenant + per entity tek satır, unique `(tenantId, entityType)`):
+  - `entityType`: `'customers' | 'products' | 'orders'`
+  - **`lastCursor`** (string?) — Shopify GraphQL'in `pageInfo.endCursor`'u; **incremental sync**'in çekirdeği
+  - `lastSyncedId` (bigint?) — fallback cursor
+  - `status`: `idle | running | completed | failed`
+  - `isLocked` + `lockedAt` + `lockExpiresAt` + `heartbeatAt` — distributed lock (60 dk TTL; stale lock auto-release + force-acquire)
+  - `lastStartedAt`, `lastCompletedAt`, `lastFailedAt`, `lastError`
+  - `consecutiveFailures` (≥ 5 → `shouldSkip` döner, manuel müdahale şart)
+  - `lastRunRecords` + `totalRecordsSynced`
+  - `currentSyncLogId` — aktif `SyncLog` referansı
+- **`SyncLog` modeli** — her sync run için ayrı satır (audit + history + diag, son N tanesi `getComprehensiveStatus`'ta dönüyor).
+- **Çekme akışı** (her worker `customers-sync.worker.ts` / `products-sync.worker.ts` / `orders-sync.worker.ts` aynı pattern):
+  1. `acquireLock(tenantId, entityType, syncLogId)` — DB-level optimistic lock; alınmazsa `skipped`.
+  2. `const state = await syncState.getState(tenantId, entityType);`
+  3. **`let cursor = isInitial ? undefined : (state.lastCursor || undefined);`** — ilk run'da tüm history çekilir (full backfill), sonraki run'larda **yalnız delta** (`lastCursor`'dan sonrası).
+  4. `while (hasNextPage)` döngüsü: Shopify GraphQL `getOrders/getCustomers/getProductsWithVariants(shopDomain, accessToken, 50, cursor)` — 50/page sayfalama.
+  5. Her sayfa sonunda **`syncState.updateCursor(tenantId, entityType, endCursor, lastSyncedId)`** — DB'ye yazılır, **crash recovery garantili**: süreç ölse bile bir sonraki run kaldığı yerden devam.
+  6. `pageInfo.hasNextPage` false → loop biter → `releaseLock(tenantId, entityType, 'completed')`. Hata → `releaseLock('failed', errorMsg)` + `consecutiveFailures++`.
+- **Snapshot count** (`getSnapshotCounts`): UI'da her entity için DB'deki lokal kayıt sayısı gösterilir (yeni sistemdeki tablolar: `Customer`, `CatalogProduct`, `CommerceOrder` — eski `ShopifyCustomer`/`CatalogProduct`/`OrderLocal` modellerinin yeni karşılıkları).
+- **HTTP endpoint'leri** (eski `sync.controller.ts` → yeni `/api/v1/sync/`):
+  - `POST /sync/initial` — tüm 3 entity için full backfill başlat (admin "ilk kurulum" akışı)
+  - `POST /sync/customers` · `/sync/products` · `/sync/orders` — tek entity için delta sync tetikle
+  - `GET /sync/status` — comprehensive durum (per-entity state + son 20 log + snapshot count + `isAnySyncing` + `hasErrors`)
+  - `POST /sync/reset/:entityType` — `consecutiveFailures = 0` + lock release (manuel kurtarma)
+  - `POST /sync/reset-all` — full re-sync için tüm state sıfırla
+  - `POST /sync/backfill-orders` — date range ile geriye dönük backfill
+
+##### Webhook (anlık delta — Shopify push)
+
+- Periodik sync delta'yı garanti eder; **webhook anlık güncellemeyi** sağlar (Shopify değişikliği saniye içinde yansır). Bu ikisi tamamlayıcı — webhook gelmese bile periodik sync er ya da geç çeker.
+- `eagledtfprint/backend/src/webhooks/shopify-webhook-sync.service.ts` + `handlers/` — HMAC verify + topic dispatch.
+- Topic'ler: `customers/create|update|delete`, `orders/create|updated|paid|fulfilled`, `inventory_levels/update`, `products/create|update|delete`, `app/uninstalled`. Yeni sistemde `services/backend/src/modules/webhooks/shopify/` aynı topic listesi + tenant subdomain'den çözüm + HMAC verify.
+
+##### Permission + UI bağlama
+
+- Yeni `sync.controller.ts` her endpoint'te `@RequirePermission(MEMBER_PERMISSIONS.syncTrigger)` (yeni permission). UI tarafı: `/settings/shopify` (Connection + sync status panel) + sidebar'daki `Products` sayfasında üst kısımda "Sync now" butonu (`useCan('sync.trigger')`).
+- UI sync status: comprehensive endpoint'ten gelen `entities.customers/products/orders` her birinin `lastCompletedAt`, `lastError`, `snapshotRecords`, `consecutiveFailures` UI'da gösterilir; SLA breach risk + retry butonu (`/sync/reset/:entityType`).
 
 #### 6.5.3 Aircall sync (backend) + **Member ↔ Aircall user binding**
 
@@ -729,6 +993,52 @@ buradan bağlanır** (kullanıcı oluşturma sırasında veya sonradan
 - **Yeni admin UI:**
   - `apps/admin/src/routes/settings/aircall/{connection,users,numbers,webhooks,sync-logs}.tsx` (mock mevcut, gerçek backend bağlanır)
   - `apps/admin/src/routes/team/users.add.tsx` invite akışına Aircall user dropdown'u eklenir (opsiyonel — sonradan da bağlanabilir)
+
+##### Aircall sync — 2-stage pipeline mantığı (eski sistemden birebir transfer)
+
+Aircall sync'in çekirdeği eski `aircall-ingest.service.ts`'in başındaki dokümana göre **iki aşamalı**: webhook anlık (≤200ms p95) + worker async (idempotent upsert). Yeni sistem aynı yapıyı taşır.
+
+**Stage 1 — Webhook receive (≤200ms p95, sync, always 200)**
+- Endpoint: `POST /api/v1/webhooks/aircall/:tenantSlug` — public (auth payload `token` claim ile, eski `aircall-webhook.controller.ts` aynısı).
+- Aircall'ın native security model'i: HMAC header yayınlamıyor; `POST /v1/webhooks` registration sırasında dönen `token` payload içinde gelir, `AircallWebhookConfig.token`'la **timing-safe** karşılaştırılır.
+- Akış (sırayla):
+  1. `AircallWebhookInbox` satırı yazılır (raw body + headers + signature + clientIp + parsedPayload). Idempotency: event tuple üzerinde unique.
+  2. Tenant subdomain'den çözülür (`tenantSlug`); token claim eşleşmezse `status='rejected'` ama **yine 200 döner** (Aircall 10 başarısız sonra otomatik disable etmesin diye — bu kritik bir kural, eski koddan).
+  3. BullMQ `aircall-ingest` queue'suna job düşer.
+  4. Response: `{ accepted: true, status: 'queued' | 'rejected' | 'duplicate' }`.
+- Yeni hedef: `services/backend/src/modules/webhooks/aircall/aircall-webhook.controller.ts`.
+
+**Stage 2 — Worker (async, BullMQ, processInboxRow)**
+- Eski: `aircall-ingest.processor.ts`. Yeni: `services/backend/src/modules/aircall/aircall-ingest.processor.ts`.
+- Akış:
+  1. Inbox row'dan envelope parse.
+  2. **`AircallCallEvent` upsert** — event tuple (`callId + eventType + eventTimestamp`) üzerinde **idempotent**; aynı webhook ikinci kez gelse de **tekrar yazılmaz** ("only last/new" garantisi event-tuple unique constraint'iyle).
+  3. Event-specific handler'a dispatch (`aircall-event-handlers.service.ts`'teki `call.created`, `call.ended`, `call.attached`, `conversation_intelligence.available`, `realtime_transcription`).
+  4. Handler → `SalesTruthService.runMutation` (yeni sistemde TM bağlamı dışına çıkıp daha generic bir `CallsService.applyEvent` olabilir; eski koda bağlı kalmadan event payload'ı `Call` + `CallEvent` tablolarına yazılır).
+  5. Inbox row `status='processed'` + `processedAt`.
+
+**Periodic sync (delta backfill — webhook'u yedekler)**
+- Eski: `aircall-sync.service.ts` + `aircall-transcript-backfill.types.ts` (range-based: `from`/`to` date window).
+- Webhook gelmese veya kaybolsa bile periodic worker eksik aramaları çeker:
+  - `AircallClient.listCalls(tenantId, { from, to, per_page: 50 })` — Aircall REST API sayfalama.
+  - Her sayfa → `AircallCallEvent` aynı idempotent upsert + `Call`/`CallEvent` doldurma.
+  - `lastSyncedAt` cursor'ı tenant başına `AircallSyncState` (analog `SyncState` modeli — tek tablo, `tenantId + entity='calls'` unique). Sonraki run yalnız `from = lastSyncedAt` window'unu çeker (**delta**).
+- Sweeper (`aircall-sweeper.service.ts`): başarısız Inbox row'ları belirli aralıkla yeniden işler (`retryCount`, `maxRetries`).
+
+**Transcript pipeline**
+- `aircall-transcript.service.ts` (Claude AI ile insight): summary + sentiment + topics + actionItems + confidence. Yeni sistemde 6.5.4'teki AI sync'le entegre, **prompt registry hariç** olduğu için prompt'lar bizim çalışmamızda yeniden yazılır.
+- Konuşma metni Aircall'dan `conversation_intelligence.available` veya `realtime_transcription` event'leriyle gelir; transcript ham hâli `AircallCallEvent.transcript` JSON kolonunda, formatlı hâli `aircall-transcript.formatter.ts`'in çıkardığı utterance listesi.
+- AI insight Claude çağrısıyla üretilir, `Call.aiInsight` JSON'una yazılır (summary/sentiment/topics/actionItems/confidence). Hata olursa `source: 'fallback'` (sistem failure değil — eski kodda açık).
+
+**Gerekli Prisma modelleri** (eski sistemden mantık birebir, yeni sistem `tenantId` ile):
+- `AircallUser` (workspace user listesi — sync ile dolar), `AircallNumber` (workspace numbers), `AircallWebhookConfig` (token + subscribed events + last failure), `AircallWebhookInbox` (raw webhook log + status + retry), `AircallCallEvent` (event tuple unique — idempotent), `Call` (üst seviye çağrı kaydı + aiInsight + transcript), `CallEvent` (call detay event'leri), `AircallDialRequest` (click-to-call istekleri), `AircallSyncState` (per-tenant cursor + status, analog `SyncState`).
+- Member ↔ Aircall user binding: `Member.aircallUserId` (zaten 6.1 schema'sında yer alıyor) — `/settings/aircall/users` UI'sında eşleme tablosu, `/team/users/add` invite akışında opsiyonel seçim.
+
+**Schema disiplini** — Sync mantığı çalışsın diye Prisma şeması bu beklentileri karşılamalı:
+- `SyncState` (Shopify için) + `AircallSyncState` (Aircall için) ayrı modeller; her ikisinde de `tenantId` + `entityType` + `lastCursor`/`lastSyncedAt` + lock alanları + `consecutiveFailures` zorunlu.
+- `SyncLog` (audit history) eklenmeli — `tenantId`, `entityType`, `status`, `startedAt`, `completedAt`, `heartbeatAt`, `recordsProcessed`, `recordsFailed`, `errorMessage`, `isStale`.
+- `AircallCallEvent` ve `AircallWebhookInbox` event tuple unique constraint'leri olmalı (idempotency).
+- Cached entity tabloları (`Customer`, `CatalogProduct`, `CatalogVariant`, `CommerceOrder`, `Call`, `CallEvent`) `shopify*Id` / `aircall*Id` external ID kolonlarına `@unique([tenantId, externalId])` index'i olmalı — upsert performans + tenant izolasyon için.
 
 #### 6.5.4 AI sync (backend) — **PROMPT REGISTRY HARİÇ**
 
@@ -972,4 +1282,109 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 - `POST /api/v1/mail/test` → `201`, `deliveryId=mail_azs8372udi5os3pesgw9hvl8`, ilk durum `queued`.
 - 3 sn sonra `GET /api/v1/mail/deliveries/mail_azs8372udi5os3pesgw9hvl8` → `status=failed`, `error="API key is invalid"`.
 - Sonuç: System Mail UI/API gerçek backend'e bağlı ve canlıda çalışıyor; gerçek gönderim yine canlı Resend key geçersiz/suspended olduğu için tamamlanmıyor. Geçerli Resend key gelmeden mail akışı prod-ready kapanmaz.
+→
+
+---
+
+### 2026-06-27 - Flow 1 live UI/API proof (dtfbank)
+
+**Deploy scope**
+- Code currently deployed only by recreating `factoryengine-dtfbank-app` from the old
+  factoryengine compose path. Gangsheet/upload/other app containers were not touched.
+- Remote runtime log showed `AircallModule` initialized and `/api/v1/aircall/users`,
+  `/sync`, `/:aircallUserId/link`, `/:aircallUserId/link DELETE` routes mapped.
+
+**Flow 1 - Members -> Invite member**
+- Browser UI URL: `https://app.dtfbank.com/team/users/add`.
+- Screenshot evidence:
+  - `docs/evidence/flow1-member-invite-form-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-success-live-20260627.png`
+  - `docs/evidence/flow1-member-invitee-dashboard-live-20260627.png`
+  - API/UI summary: `docs/evidence/flow1-member-invite-live-20260627.json`
+- UI network:
+  - `GET https://api.dtfbank.com/api/v1/aircall/users` -> `400`,
+    `code=aircall_credentials_missing`,
+    `request_id=c5d3c4ec-6e58-4d97-b80d-1c0f517fbaea`.
+  - UI handled this as an inline error and did not block invite when no Aircall
+    user was selected.
+  - `POST https://api.dtfbank.com/api/v1/identity/members` -> `201`,
+    `request_id=49669081-bebc-4d4c-a540-57cb6a10ed61`,
+    `memberId=tmbr_gu9niu9cld9mkqy1u99bxvo9`,
+    delivery `mail_iwophgf7jnrz362pnqidydxq`, initial `status=queued`.
+- Invitation accept/login:
+  - Invitee opened `https://app.dtfbank.com/reset-password?flow=invitation&token=<redacted>`
+    in a clean browser context, set password, and landed on
+    `https://app.dtfbank.com/dashboard` with Admin role UI.
+  - `POST https://api.dtfbank.com/api/v1/auth/member/login` for invitee -> `201`,
+    `request_id=85cd8c57-598f-4c61-b25c-51f812784233`, `permissions=20`.
+  - Member lookup after accept -> `status=active`, role `admin`.
+- Mail delivery:
+  - `GET https://api.dtfbank.com/api/v1/mail/deliveries?...` -> `200`,
+    `request_id=0811efc6-5d90-4cb0-90c7-c511136f3c39`,
+    delivery `mail_iwophgf7jnrz362pnqidydxq` ended as `failed`,
+    `attemptCount=2`, `errorMessage="API key is invalid"`.
+- Result: UI no longer exposes raw invitation token, backend invite + accept +
+  invitee login works live, and Aircall user selection is now a real API-backed
+  dropdown/error state. **Flow 1 is still not prod-ready until a valid tenant
+  Resend key is configured, because the actual invitation email is not delivered.**
+→
+
+---
+
+### 2026-06-27 — Kontrol turu (commit `36fe67b4` sonrası, doc-only)
+
+> **Kullanıcı dtfbank container'ında manuel test yaparken iki kritik
+> bulgu çıktı.** Agent System Mail (6.4.1) ile uğraşırken, daha temel
+> olan Identity → Dashboard akışı **yarım kalmış olarak** prod'a sürmüş.
+> Bu, agent'ın sistemli zafiyetini gösteriyor (en altta ayrı not).
+
+**9. Madde 6 İHLALİ — Login olmadan giriş yapılabiliyor (auth bypass)**
+- 40 maddenin 6. maddesi: "Login olmadan `/orders`, `/customers`, `/team/users` gibi sayfalara doğrudan gitmek mümkün değil; otomatik `/login`'e gider".
+- Gerçek durum: `apps/admin/src/routes/__root.tsx`'te **session kontrolü yok**. Mevcut mantık:
+  ```ts
+  const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
+  const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
+  if (isAuth) return <auth-shell/>;
+  return <main-layout/>;  // ← session varlığına bakmıyor
+  ```
+- Yani `/dashboard`, `/orders` vs.'e doğrudan URL ile gidilince login ekranı atlanıyor, ana layout açılıyor.
+- **Aksiyon:** `__root.tsx`'te ROOT-level `beforeLoad` guard ekle — `readSession()?.accessToken` yoksa `/login`'e redirect, geldiği URL `redirect` query param'ı olarak hatırlansın; login başarılı olunca o URL'e dönsün. AUTH_ROUTES'a giren sayfaların `beforeLoad`'unda ters durum: token VARSA `/dashboard`'a redirect (login yapmış kullanıcı login ekranını yeniden görmesin).
+→
+
+**10. Madde 4 İHLALİ — Dashboard mock data kullanıyor (UI ↔ backend etkileşimi yok)**
+- 40 maddenin 4. maddesi: "Doğru giriş yapan kullanıcı `/dashboard`'a yönlenir; sidebar + topbar tenant brand'ıyla, sol-altta gerçek email + rol etiketi görünür."
+- Bulgu: `apps/admin/src/routes/dashboard.tsx` hâlâ `fetchKpis`, `fetchRecentTasks`, `fetchRecentCalls`, `fetchShopifyTrend` fonksiyonlarını `@/lib/mock`'tan import ediyor. Yani Dashboard backend'e **hiç istek atmıyor**, mock veri gösteriyor.
+- Yan etki: login bypass'ı destekliyor — kullanıcı login olmasa bile (auth guard yok) mock data sürekli görünüyor, hiç 401 dönmüyor; agent "Dashboard çalışıyor" sanıyor.
+- 5.2 prensibinin (statik/mock UI yasak) doğrudan ihlali. 6.2 Commerce, 6.3 Operations, 6.4 Mail kapanmış görünüyor ama Dashboard 6.1'den beri yarım.
+- **Aksiyon:** `dashboard.tsx` mock'tan ayrılsın; gerçek endpoint'ler — Orders stats (`GET /api/v1/orders/stats`), Customers stats (`GET /api/v1/customers/stats`), Support stats (`GET /api/v1/support/stats`), Mail deliveries son N (`GET /api/v1/mail/deliveries?limit=10`) — TanStack Query ile çekilsin. Boş/dolu/hata üç durumu işlensin (5.2).
+→
+
+**11. ROADMAP 0 şifresi kabul edilmiyor (kullanıcı raporu)**
+- Kullanıcı doc başındaki test hesabıyla (`owner.prodtest+20260627184047@dtfbank.com` / `FepOwner20260627184047`) login deniyor, kabul edilmiyor.
+- Olası sebepler — agent şu üç noktayı net olarak kanıtlamalı:
+  1. Hesap **container DB'sine yazılmış mı?** `docker exec factoryengine-dtfbank-app sh -lc 'cd /app/services/backend && pnpm prisma:studio --port 0' ` veya doğrudan psql ile `SELECT id, email, status FROM members WHERE email = '<owner email>';` (şifre değil sadece varlık).
+  2. Frontend hangi URL'e POST atıyor — `VITE_API_URL` build-time'a ne basıldı? Browser network panel'de `POST /auth/member/login` hangi origin'e gidiyor?
+  3. Login body + tenant resolve — admin app `x-tenant-id: ten_dtfbank` (veya benzeri) header'ını gönderiyor mu, backend tenant'ı doğru çözüyor mu?
+- **Aksiyon:** Madde 3 (yanlış şifrede anlamlı mesaj + request_id) doğrulamadan önce hesap + auth zincirini end-to-end kanıtla; 8'e curl çıktısı + browser network ekranı iliştir.
+→
+
+**12. SİSTEMSEL ELEŞTİRİ — Yarım iş + modül atlama**
+- Agent System Mail (6.4.1) ve commerce/operations'ı bitirip kanıt iliştirdi ama **temel akış olan Identity → Dashboard hâlâ yarım**: auth guard yok, Dashboard mock, ROADMAP 0 hesabı doğrulanmamış.
+- Sıralama ihlali: 6.1 Identity'nin gerçekten kapanması (Madde 1-8) sağlanmadan 6.2-6.4 kapanmış sayılmış. Agent 5.1'in mutlak kuralına ("bir madde bitmeden diğerine geçilmez") **yapı düzeyinde** uydu (her modül için backend + UI yazdı) ama **akış düzeyinde** uymadı (modül arası bağlantıları görmedi: Dashboard Identity ile başlar, mock kalan yer kapanmamış demek).
+- Buna ek olarak agent her modülü kendi içinde bir silo gibi tamamlıyor — Dashboard'ın "sidebar + topbar + KPI + recent" bileşenlerinin **hangi modülden** veri çekeceği uçtan uca düşünülmedi; her modül "kendi sayfası bağlandı, tamam" diye iliştirilip geçildi, Dashboard gibi kompozit ekranlar sahipsiz kaldı.
+- **Aksiyon — agent için kural güncellemesi:**
+  1. Bir modül (örn. Commerce) backend + UI bağlama tamamlandığında, agent ZORUNLU olarak **o modülün veri akıttığı paylaşılan ekranları** (Dashboard, sidebar count badge'leri, topbar bildirimleri) gözden geçirir; mock kalmış yer varsa orayı da bağlar, sonra "Commerce kapandı" der.
+  2. ROADMAP 8'e modül kapanış raporu iliştirilirken, agent **40 maddenin hangileri o modülle ilişkili** açıkça yazar ve her birinin ya "yeşil" ya "henüz değil" durumunu belirtir. Atlama yok.
+  3. Her commit'in kapsamı tek bir modül değil, o modülün **akış-zincirinde değdiği tüm yerler** olmalı; aksi halde Dashboard gibi paylaşılan ekranlar her zaman bir sonraki modülün "sorumluluğu değil" diye atlanıyor.
+→
+
+**13. ⛔ KRİTİK İHLAL — Agent LOKAL'DE çalıştırıp test ediyor**
+- Kullanıcı agent'ın iliştirdiği System Mail screenshot'ı ile dtfbank container'ında gerçekten görünen UI'yi karşılaştırdı: **iki ekran farklı**. Yani agent'ın "canlı kanıt" olarak sunduğu screenshot **dtfbank container'ından değil, lokal makinedeki Vite dev server'dan** (`127.0.0.1:5189` veya benzeri) alınmış.
+- ROADMAP 3.7'de yazılı: lokal'de backend / Vite dev / Postgres / Redis ÇALIŞTIRILMAZ. Agent bu kuralı çiğnedi. Lokalde `pnpm dev` ile UI'yi aç → backend olmadığı için login bypass + mock dashboard veriyor → "çalışıyor" diye iliştirip geçiyor. Container'daki gerçek durumla alakası yok.
+- Bu, **9-12 notlarının kök sebebi** olabilir: agent gerçek container'da test etmediği için Dashboard mock'unu, auth guard eksikliğini, hesabın DB'de olup olmadığını fark etmedi. Lokal'de "çalışıyor gibi göründü" diye geçti.
+- **Aksiyon (zorunlu):**
+  1. ROADMAP 3.7'deki ⛔ kutu güncellendi — `127.0.0.1` / `localhost` / `5187` / `5188` / `5189` / `4100` URL'leri **yasak**; kanıt screenshot'larında URL bar'da `https://app.dtfbank.com` veya `https://accounts.dtfbank.com` görünmek **zorunda**. Aksi halde kanıt geçersiz, madde "doğrulanmadı" sayılır.
+  2. Agent şu ana kadar iliştirdiği tüm kanıt screenshot'larını yeniden çekmeli — bu kez container'da Mutagen sync sonrası gerçek subdomain üzerinden.
+  3. Lokal'de Vite dev server çalışıyorsa **derhal durdurulmalı**, `.vite/` cache + lokal `tsbuildinfo` artifact'leri temizlenmeli; lokal'de hiçbir process port'ta dinlemiyor olmalı.
+  4. Bundan sonra her commit'in evidence iliştirmesinde **URL bar dahil** screenshot şart; URL bar görünmüyorsa kanıt geçersiz.
 →

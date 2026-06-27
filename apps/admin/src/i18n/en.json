@@ -139,6 +139,14 @@
       "subtitle": "People who have access to the back panel",
       "invite": "Invite user",
       "search_placeholder": "Search by name, email, role…",
+      "invite_created_title": "Member invitation created",
+      "invite_created_body": "Invitation email was queued for {{email}}. Delivery status: {{status}}.",
+      "password_created_body": "{{email}} can sign in with the password you set.",
+      "view_users": "View users",
+      "open_mail_center": "Open mail center",
+      "field_aircall_user": "Aircall user",
+      "aircall_none": "No Aircall user",
+      "aircall_load_failed": "Aircall users could not be loaded",
       "columns": {
         "name": "Name",
         "email": "Email",
@@ -1220,7 +1228,16 @@
       "col_linked": "LINKED MEMBER",
       "link_to_member": "Link to member",
       "unlink": "Unlink",
-      "sync_button": "Aircall Sync"
+      "sync_button": "Aircall Sync",
+      "loading_body": "Loading Aircall users from the tenant API credentials.",
+      "empty_title": "No Aircall users found",
+      "empty_body": "Run sync after saving Aircall API credentials for this tenant.",
+      "select_member": "Select member",
+      "no_email": "No email",
+      "no_extension": "No extension",
+      "unknown_status": "Unknown",
+      "no_matches_title": "No matching Aircall users",
+      "no_matches_body": "Clear the search to see every synced Aircall user."
     },
     "numbers_tab": {
       "total_numbers": "TOTAL NUMBERS",

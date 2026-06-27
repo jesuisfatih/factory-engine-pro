@@ -1,0 +1,68 @@
+{
+  "testedAt": "2026-06-27T16:59:52.508Z",
+  "urls": {
+    "login": "https://app.dtfbank.com/login",
+    "invite": "https://app.dtfbank.com/team/users/add",
+    "accept": "https://app.dtfbank.com/reset-password?flow=invitation&token=<redacted>",
+    "dashboardAfterAccept": "https://app.dtfbank.com/dashboard",
+    "apiBase": "https://api.dtfbank.com/api/v1"
+  },
+  "inviteEmail": "flow1.ui+20260627165928@dtfbank.com",
+  "screenshots": {
+    "form": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-form-live-20260627.png",
+    "success": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-success-live-20260627.png",
+    "inviteeDashboard": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invitee-dashboard-live-20260627.png"
+  },
+  "uiNetwork": {
+    "aircallUsers": {
+      "status": 400,
+      "requestId": "c5d3c4ec-6e58-4d97-b80d-1c0f517fbaea",
+      "message": "Aircall credentials are not configured for this tenant.",
+      "code": "aircall_credentials_missing"
+    },
+    "createMember": {
+      "status": 201,
+      "requestId": "49669081-bebc-4d4c-a540-57cb6a10ed61",
+      "memberId": "tmbr_gu9niu9cld9mkqy1u99bxvo9",
+      "memberStatus": "invited",
+      "delivery": {
+        "id": "mail_iwophgf7jnrz362pnqidydxq",
+        "status": "queued"
+      },
+      "hasInvitationToken": true
+    }
+  },
+  "apiVerification": {
+    "ownerLogin": {
+      "status": 201,
+      "requestId": "3ed8d4eb-29fa-4b2b-8283-18369a100dfb",
+      "principal": "owner.prodtest+20260627184047@dtfbank.com"
+    },
+    "mailDelivery": {
+      "status": 200,
+      "requestId": "0811efc6-5d90-4cb0-90c7-c511136f3c39",
+      "id": "mail_iwophgf7jnrz362pnqidydxq",
+      "deliveryStatus": "failed",
+      "attemptCount": 2,
+      "providerMessageId": null,
+      "errorMessage": "API key is invalid"
+    },
+    "member": {
+      "status": 200,
+      "requestId": "3d5a2691-9457-45ca-b487-5145521d3b2b",
+      "id": "tmbr_gu9niu9cld9mkqy1u99bxvo9",
+      "email": "flow1.ui+20260627165928@dtfbank.com",
+      "memberStatus": "active",
+      "lastLoginAt": null,
+      "roles": [
+        "admin"
+      ]
+    },
+    "inviteeLogin": {
+      "status": 201,
+      "requestId": "85cd8c57-598f-4c61-b25c-51f812784233",
+      "principal": "flow1.ui+20260627165928@dtfbank.com",
+      "permissions": 20
+    }
+  }
+}

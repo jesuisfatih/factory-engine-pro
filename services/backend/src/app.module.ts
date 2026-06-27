@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { AircallModule } from './modules/aircall/aircall.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
@@ -25,6 +26,7 @@ import { HealthController } from './health.controller.js';
     JwtModule.register({}),
     SharedModule,
     QueueModule,
+    AircallModule,
     IdentityModule,
     MailModule,
     AuthModule,
