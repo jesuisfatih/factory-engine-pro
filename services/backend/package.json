@@ -9,8 +9,8 @@
     "start": "node dist/services/backend/src/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
+    "prisma:migrate": "node scripts/guard-database-url.mjs && prisma migrate dev",
+    "prisma:deploy": "node scripts/guard-database-url.mjs && prisma migrate deploy",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

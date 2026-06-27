@@ -6,6 +6,7 @@ dist/
 !.env.example
 coverage/
 *.log
+.local/
 apps/*/.tanstack/tmp/
 apps/*/dist/
 services/*/dist/

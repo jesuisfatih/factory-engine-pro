@@ -268,6 +268,13 @@ export class IdentityRepository {
     });
   }
 
+  findSubUserById(id: string) {
+    return this.prisma.db.subUser.findFirst({
+      where: { id },
+      include: { customer: true, parentUser: true, roleAssignments: { include: { role: true } } },
+    });
+  }
+
   async setSubUserRoles(subUserId: string, roleIds: string[]) {
     await this.prisma.db.subUserRoleAssignment.deleteMany({ where: { subUserId } });
     if (roleIds.length === 0) return;

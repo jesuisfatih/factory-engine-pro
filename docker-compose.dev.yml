@@ -1,22 +1,6 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: factory-engine-pro-postgres
-    ports:
-      - "54329:5432"
-    environment:
-      POSTGRES_USER: factory
-      POSTGRES_PASSWORD: factory
-      POSTGRES_DB: factory_engine_pro
-    volumes:
-      - factory_engine_pro_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U factory -d factory_engine_pro"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   redis:
+    # Optional local-only queue dependency. Remote test/staging/prod use Vultr managed Redis via REDIS_URL.
     image: redis:7-alpine
     container_name: factory-engine-pro-redis
     ports:
@@ -31,5 +15,4 @@ services:
       retries: 20
 
 volumes:
-  factory_engine_pro_pg:
   factory_engine_pro_redis:
