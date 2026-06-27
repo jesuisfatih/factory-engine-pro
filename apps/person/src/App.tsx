@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AnnouncementsView } from './views/Announcements';
@@ -35,9 +35,15 @@ type AuthScreen = 'login' | 'forgot' | 'reset';
 export default function App() {
   const [authed, setAuthed] = useState(() => Boolean(readSession()?.accessToken));
   const [authScreen, setAuthScreen] = useState<AuthScreen>(initialAuthScreen);
-  const [current, setCurrent] = useState<NavId>('queue');
+  const [current, setCurrent] = useState<NavId>(initialNav);
   const [collapsed, setCollapsed] = useState(false);
   const title = TITLES[current];
+
+  useEffect(() => {
+    const onPopState = () => setCurrent(initialNav());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   if (!authed) {
     return (
@@ -72,7 +78,7 @@ export default function App() {
 
   return (
     <div className={`layout${collapsed ? ' collapsed' : ''}`}>
-      <Sidebar current={current} onSelect={setCurrent} collapsed={collapsed} />
+      <Sidebar current={current} onSelect={(id) => selectNav(id, setCurrent)} collapsed={collapsed} />
       <div className="main">
         <Topbar title={title} onToggleSidebar={() => setCollapsed((value) => !value)} />
         <div className="content">{renderView()}</div>
@@ -85,6 +91,18 @@ function initialAuthScreen(): AuthScreen {
   if (window.location.pathname.endsWith('/forgot-password')) return 'forgot';
   if (window.location.pathname.endsWith('/reset-password')) return 'reset';
   return 'login';
+}
+
+function initialNav(): NavId {
+  const segment = window.location.pathname.replace(/^\/staff\/?/, '').split('/')[0];
+  const allowed: NavId[] = ['queue', 'customers', 'email', 'training', 'calendar', 'notes', 'announcements', 'messaging', 'requests', 'notifications'];
+  return allowed.includes(segment as NavId) ? segment as NavId : 'queue';
+}
+
+function selectNav(id: NavId, setCurrent: (id: NavId) => void) {
+  const path = `/staff/${id}`;
+  window.history.pushState(null, '', path);
+  setCurrent(id);
 }
 
 function showAuthScreen(screen: AuthScreen, setAuthScreen: (screen: AuthScreen) => void) {
