@@ -1,0 +1,74 @@
+{
+  "testedAt": "2026-06-27T17:19:31.534Z",
+  "urls": {
+    "wizard": "https://app.dtfbank.com/team/users/add",
+    "accept": "https://app.dtfbank.com/reset-password?flow=invitation&token=<redacted>",
+    "dashboardAfterAccept": "https://app.dtfbank.com/dashboard",
+    "apiBase": "https://api.dtfbank.com/api/v1"
+  },
+  "inviteEmail": "flow1.wizard+20260627171903@dtfbank.com",
+  "screenshots": {
+    "step1": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-step1-live-20260627.png",
+    "step2": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-step2-live-20260627.png",
+    "step3": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-step3-live-20260627.png",
+    "review": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-review-live-20260627.png",
+    "success": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-success-live-20260627.png",
+    "inviteeDashboard": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\flow1-member-invite-wizard-dashboard-live-20260627.png"
+  },
+  "uiNetwork": {
+    "aircallUsers": {
+      "status": 400,
+      "requestId": "d36fbc24-4659-4015-beb6-1236da47d44f",
+      "code": "aircall_credentials_missing",
+      "message": "Aircall credentials are not configured for this tenant."
+    },
+    "roleCreate": {
+      "status": 201,
+      "requestId": "eddd103c-6e30-4833-9a75-b9bc75b8109d",
+      "id": "mrol_vck75u7hf9ctsew9posfvyy4",
+      "slug": "admin_flow1_wizard_20260627171903_mqwmjxzw",
+      "permissionPricingWrite": false
+    },
+    "createMember": {
+      "status": 201,
+      "requestId": "0632c620-8d68-422f-8c5d-58b51fb24bca",
+      "id": "tmbr_if0rxlogwbxvq1hc4sz3v6vw",
+      "statusText": "invited",
+      "delivery": {
+        "id": "mail_g76uygguadb6cc2qdjl494hp",
+        "status": "queued"
+      },
+      "hasInvitationToken": true
+    }
+  },
+  "apiVerification": {
+    "member": {
+      "status": 200,
+      "requestId": "d5c4607f-090e-4ec4-ab2e-04cd1123c5b7",
+      "id": "tmbr_if0rxlogwbxvq1hc4sz3v6vw",
+      "email": "flow1.wizard+20260627171903@dtfbank.com",
+      "memberStatus": "active",
+      "roles": [
+        {
+          "slug": "admin_flow1_wizard_20260627171903_mqwmjxzw",
+          "name": "Flow Wizard custom access",
+          "pricingWrite": false
+        }
+      ]
+    },
+    "mailDelivery": {
+      "status": 200,
+      "requestId": "fb5093af-41c2-434b-b24c-a0d8626ec328",
+      "id": "mail_g76uygguadb6cc2qdjl494hp",
+      "deliveryStatus": "failed",
+      "attemptCount": 2,
+      "errorMessage": "API key is invalid"
+    },
+    "inviteeLogin": {
+      "status": 201,
+      "requestId": "3bd832e4-9df5-438f-a842-f48bd6ec7f76",
+      "principal": "flow1.wizard+20260627171903@dtfbank.com",
+      "permissions": 19
+    }
+  }
+}

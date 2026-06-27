@@ -8,6 +8,7 @@ import { MEMBER_PERMISSIONS, type AircallUsersResponse } from '@factory-engine-p
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
+import { useCan } from '@/lib/permissions';
 
 type Role = {
   id: string;
@@ -33,6 +34,12 @@ type Member = {
 
 const roleQuery = { queryKey: ['identity', 'member-roles'], queryFn: () => adminApi.memberRoles() as Promise<Role[]> };
 const memberQuery = { queryKey: ['identity', 'members'], queryFn: () => adminApi.members() as Promise<Member[]> };
+const inviteSteps = [
+  { labelKey: 'team.users.wizard.step1_label', titleKey: 'team.users.wizard.step1_title', subtitleKey: 'team.users.wizard.step1_subtitle' },
+  { labelKey: 'team.users.wizard.step2_label', titleKey: 'team.users.wizard.step2_title', subtitleKey: 'team.users.wizard.step2_subtitle' },
+  { labelKey: 'team.users.wizard.step3_label', titleKey: 'team.users.wizard.step3_title', subtitleKey: 'team.users.wizard.step3_subtitle' },
+  { labelKey: 'team.users.wizard.step4_label', titleKey: 'team.users.wizard.step4_title', subtitleKey: 'team.users.wizard.step4_subtitle' },
+] as const;
 
 export function TeamUsersPage() {
   const [search, setSearch] = useState('');
@@ -87,6 +94,8 @@ export function TeamUserCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const roles = useQuery(roleQuery);
+  const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
+  const canManageRoles = useCan(MEMBER_PERMISSIONS.rolesWrite);
   const aircallUsers = useQuery({
     queryKey: ['aircall', 'users', 'team-invite'],
     queryFn: () => adminApi.aircallUsers() as Promise<AircallUsersResponse>,
@@ -94,27 +103,65 @@ export function TeamUserCreatePage() {
   });
   const qc = useQueryClient();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '', password: '', sendInvite: true, aircallUserId: '' });
+  const [step, setStep] = useState(0);
+  const [selectedPermissions, setSelectedPermissions] = useState<Record<string, boolean>>({});
   const [created, setCreated] = useState<Member | null>(null);
+  const selectedRole = useMemo(() => roles.data?.find((role) => role.id === form.roleId) ?? null, [roles.data, form.roleId]);
+  const permissionKeys = useMemo(() => {
+    const keys = new Set<string>(Object.values(MEMBER_PERMISSIONS));
+    Object.keys(selectedRole?.permissions ?? {}).forEach((permission) => keys.add(permission));
+    Object.keys(selectedPermissions).forEach((permission) => keys.add(permission));
+    return Array.from(keys).sort();
+  }, [selectedRole, selectedPermissions]);
+  const permissionOverrides = Boolean(selectedRole) && permissionKeys.some((permission) => Boolean(selectedPermissions[permission]) !== Boolean(selectedRole?.permissions[permission]));
+  const selectedAircallUser = aircallUsers.data?.users.find((user) => user.aircallUserId === form.aircallUserId) ?? null;
+  const canSubmit = Boolean(form.firstName && form.lastName && form.email && form.roleId && (form.sendInvite || form.password.length >= 8) && canWrite);
+  const stepValid = [
+    Boolean(form.roleId),
+    Boolean(form.firstName && form.lastName && form.email && (form.sendInvite || form.password.length >= 8)),
+    true,
+    canSubmit,
+  ];
   const create = useMutation({
-    mutationFn: () => adminApi.createMember({
-      email: form.email,
-      firstName: form.firstName,
-      lastName: form.lastName,
-      phone: form.phone || undefined,
-      roleIds: [form.roleId],
-      password: form.sendInvite ? undefined : form.password,
-      sendInvite: form.sendInvite,
-      aircallUserId: form.aircallUserId || undefined,
-    }) as Promise<Member>,
+    mutationFn: async () => {
+      let roleId = form.roleId;
+      if (selectedRole && permissionOverrides) {
+        const customRole = await adminApi.createMemberRole({
+          name: t('team.users.wizard.custom_role_name', { name: `${form.firstName} ${form.lastName}`.trim() || form.email }),
+          slug: slugify(`${selectedRole.slug}_${form.email.split('@')[0]}_${Date.now().toString(36)}`),
+          description: t('team.users.wizard.custom_role_description', { role: selectedRole.name }),
+          permissions: selectedPermissions,
+        }) as Role;
+        roleId = customRole.id;
+      }
+      return adminApi.createMember({
+        email: form.email,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone || undefined,
+        roleIds: [roleId],
+        password: form.sendInvite ? undefined : form.password,
+        sendInvite: form.sendInvite,
+        aircallUserId: form.aircallUserId || undefined,
+      }) as Promise<Member>;
+    },
     onSuccess: (member) => {
       setCreated(member);
       qc.invalidateQueries({ queryKey: memberQuery.queryKey });
-      toast.success('Member created', { description: member.email });
+      qc.invalidateQueries({ queryKey: roleQuery.queryKey });
+      toast.success(t('team.users.member_created_toast'), { description: member.email });
     },
-    onError: (error) => toast.error('Member create failed', { description: apiErrorMessage(error) }),
+    onError: (error) => toast.error(t('team.users.member_create_failed'), { description: apiErrorMessage(error) }),
   });
 
-  const canSubmit = form.firstName && form.lastName && form.email && form.roleId && (form.sendInvite || form.password.length >= 8);
+  const chooseRole = (role: Role) => {
+    setForm({ ...form, roleId: role.id });
+    setSelectedPermissions(role.permissions);
+  };
+
+  const goNext = () => setStep((current) => Math.min(current + 1, inviteSteps.length - 1));
+  const goBack = () => setStep((current) => Math.max(current - 1, 0));
+  const resetPermissions = () => setSelectedPermissions(selectedRole?.permissions ?? {});
 
   if (created) {
     return (
@@ -137,52 +184,141 @@ export function TeamUserCreatePage() {
   return (
     <>
       <PageHeader titleI18nKey="team.users.wizard.title" subtitleI18nKey="team.subtitle" />
-      {roles.isLoading && <StateCard title="Loading roles" body="Fetching role choices from the API." />}
+      {roles.isLoading && <StateCard title={t('team.users.loading_roles_title')} body={t('team.users.loading_roles_body')} />}
       {roles.isError && <ErrorCard error={roles.error} retry={() => roles.refetch()} />}
-      {roles.isSuccess && roles.data.length === 0 && <StateCard title="No roles available" body="Create a member role before inviting users." action={<Link to="/team/roles" className="btn primary">Create role</Link>} />}
+      {roles.isSuccess && roles.data.length === 0 && <StateCard title={t('team.users.no_roles_title')} body={t('team.users.no_roles_body')} action={<Link to="/team/roles" className="btn primary">{t('team.users.create_role')}</Link>} />}
       {roles.isSuccess && roles.data.length > 0 && (
-        <form className="data-card" style={{ padding: 16 }} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-          <div className="field-row">
-            <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
-            <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
-          </div>
-          <div className="field-row">
-            <Field label="Email" type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
-            <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Role</label>
-              <select value={form.roleId} onChange={(event) => setForm({ ...form, roleId: event.target.value })}>
-                <option value="">Select role</option>
-                {roles.data.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>{t('team.users.field_aircall_user')}</label>
-              <select
-                value={form.aircallUserId}
-                onChange={(event) => setForm({ ...form, aircallUserId: event.target.value })}
-                disabled={aircallUsers.isLoading || aircallUsers.isError}
+        <form className="wizard" onSubmit={(event) => { event.preventDefault(); if (step === inviteSteps.length - 1) create.mutate(); }}>
+          <div className="wizard-steps">
+            {inviteSteps.map((item, index) => (
+              <button
+                key={item.labelKey}
+                type="button"
+                className={`step${index === step ? ' active' : ''}${index < step ? ' done' : ''}`}
+                onClick={() => index <= step && setStep(index)}
+                disabled={index > step}
               >
-                <option value="">{aircallUsers.isLoading ? t('common.loading') : t('team.users.aircall_none')}</option>
-                {(aircallUsers.data?.users ?? [])
-                  .filter((user) => !user.linkedMember || user.aircallUserId === form.aircallUserId)
-                  .map((user) => <option key={user.aircallUserId} value={user.aircallUserId}>{user.name} - {user.email ?? user.aircallUserId}</option>)}
-              </select>
-              {aircallUsers.isError && (
-                <div className="muted" style={{ marginTop: 6, color: 'var(--danger)' }}>
-                  {t('team.users.aircall_load_failed')}: {apiErrorMessage(aircallUsers.error)}
+                <span className="step-no">{index < step ? <Check size={12} /> : index + 1}</span>
+                {t(item.labelKey)}
+              </button>
+            ))}
+          </div>
+          <div className="wizard-pane">
+            <h3>{t(inviteSteps[step].titleKey)}</h3>
+            <div className="sub">{t(inviteSteps[step].subtitleKey)}</div>
+            <div className="body">
+              {step === 0 && (
+                <div className="role-grid">
+                  {roles.data.map((role) => (
+                    <button key={role.id} type="button" className={`role-card${form.roleId === role.id ? ' selected' : ''}`} onClick={() => chooseRole(role)}>
+                      <div className="label">{role.name}</div>
+                      <div className="meta">{role.description ?? t('team.users.wizard.no_role_description')}</div>
+                      <div className="meta">{t('team.users.wizard.permission_count', { count: Object.values(role.permissions).filter(Boolean).length })}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {step === 1 && (
+                <>
+                  <div className="field-row">
+                    <Field label={t('team.users.wizard.field_first_name')} value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
+                    <Field label={t('team.users.wizard.field_last_name')} value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
+                  </div>
+                  <div className="field-row">
+                    <Field label={t('team.users.wizard.field_email')} type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
+                    <Field label={t('team.users.wizard.field_phone')} value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
+                  </div>
+                  <div className="field-row">
+                    <div className="field">
+                      <label>{t('team.users.field_aircall_user')}</label>
+                      <select
+                        value={form.aircallUserId}
+                        onChange={(event) => setForm({ ...form, aircallUserId: event.target.value })}
+                        disabled={aircallUsers.isLoading || aircallUsers.isError}
+                      >
+                        <option value="">{aircallUsers.isLoading ? t('common.loading') : t('team.users.aircall_none')}</option>
+                        {(aircallUsers.data?.users ?? [])
+                          .filter((user) => !user.linkedMember || user.aircallUserId === form.aircallUserId)
+                          .map((user) => <option key={user.aircallUserId} value={user.aircallUserId}>{user.name} - {user.email ?? user.aircallUserId}</option>)}
+                      </select>
+                      {aircallUsers.isError && (
+                        <div className="muted" style={{ marginTop: 6, color: 'var(--danger)' }}>
+                          {t('team.users.aircall_load_failed')}: {apiErrorMessage(aircallUsers.error)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="checkbox-row" style={{ marginTop: 26 }}>
+                        <input type="checkbox" checked={form.sendInvite} onChange={(event) => setForm({ ...form, sendInvite: event.target.checked })} />
+                        {t('team.users.wizard.send_invite_link')}
+                      </label>
+                      {!form.sendInvite && <Field label={t('team.users.wizard.field_initial_password')} type="password" value={form.password} onChange={(password) => setForm({ ...form, password })} />}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  {permissionOverrides && <div className="empty-state" style={{ marginBottom: 12 }}><strong>{t('team.users.wizard.custom_role_notice_title')}</strong><div>{t('team.users.wizard.custom_role_notice_body')}</div></div>}
+                  {!canManageRoles && <div className="error-state">{t('team.users.wizard.no_roles_write_permission')}</div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <span className="pill accent">{selectedRole ? selectedRole.name : t('team.users.wizard.select_role')}</span>
+                    <button className="btn" type="button" onClick={resetPermissions} disabled={!selectedRole || !permissionOverrides || !canManageRoles}>{t('team.users.wizard.reset_permissions')}</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                    {permissionKeys.map((permission) => {
+                      const inherited = Boolean(selectedRole?.permissions[permission]);
+                      const enabled = Boolean(selectedPermissions[permission]);
+                      return (
+                        <label key={permission} className="checkbox-row" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginBottom: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            disabled={!canManageRoles}
+                            onChange={(event) => setSelectedPermissions({ ...selectedPermissions, [permission]: event.target.checked })}
+                          />
+                          <span style={{ flex: 1 }}>{permission}</span>
+                          <span className={`pill ${inherited ? 'info' : 'accent'}`}>{inherited ? t('team.users.wizard.inherited') : t('team.users.wizard.custom')}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {step === 3 && (
+                <div className="workspace-preview">
+                  {!canWrite && <div className="error-state">{t('team.users.wizard.no_write_permission')}</div>}
+                  <div className="preview-row">
+                    <strong>{t('team.users.wizard.review_identity')}</strong>
+                    <div className="muted">{`${form.firstName} ${form.lastName}`.trim()} - {form.email}</div>
+                    <div className="muted">{form.phone || t('team.users.wizard.no_phone')}</div>
+                  </div>
+                  <div className="preview-row">
+                    <strong>{t('team.users.wizard.review_access')}</strong>
+                    <div className="muted">{selectedRole?.name ?? t('team.users.wizard.select_role')}</div>
+                    <div className="muted">{permissionOverrides ? t('team.users.wizard.review_custom_role') : t('team.users.wizard.review_inherited_role')}</div>
+                    <div className="muted">{t('team.users.wizard.permission_count', { count: Object.values(selectedPermissions).filter(Boolean).length })}</div>
+                  </div>
+                  <div className="preview-row">
+                    <strong>{t('team.users.wizard.review_delivery')}</strong>
+                    <div className="muted">{form.sendInvite ? t('team.users.wizard.review_invite_email') : t('team.users.wizard.review_password_set')}</div>
+                    <div className="muted">{selectedAircallUser ? `${selectedAircallUser.name} - ${selectedAircallUser.email ?? selectedAircallUser.aircallUserId}` : t('team.users.aircall_none')}</div>
+                  </div>
                 </div>
               )}
             </div>
+            <div className="nav">
+              <button className="btn" type="button" onClick={goBack} disabled={step === 0 || create.isPending}>{t('common.back')}</button>
+              {step < inviteSteps.length - 1 ? (
+                <button className="btn primary" type="button" onClick={goNext} disabled={!stepValid[step]}>{t('common.continue')}</button>
+              ) : (
+                <button className="btn primary" type="submit" disabled={!canSubmit || create.isPending}><Mail size={14} /> {create.isPending ? t('team.users.wizard.creating') : t('team.users.wizard.create_member')}</button>
+              )}
+            </div>
           </div>
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.sendInvite} onChange={(event) => setForm({ ...form, sendInvite: event.target.checked })} />
-            Send invite link instead of setting password now
-          </label>
-          {!form.sendInvite && <Field label="Initial password" type="password" value={form.password} onChange={(password) => setForm({ ...form, password })} />}
-          <button className="btn primary" type="submit" disabled={!canSubmit || create.isPending}><Mail size={14} /> {create.isPending ? 'Creating...' : 'Create member'}</button>
         </form>
       )}
     </>

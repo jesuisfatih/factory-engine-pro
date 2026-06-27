@@ -205,6 +205,8 @@ a { color: inherit; text-decoration: none; }
 .wizard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: grid; grid-template-columns: 220px 1fr; min-height: 480px; overflow: hidden; }
 .wizard-steps { background: var(--surface-2); padding: 18px 14px; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid var(--border); }
 .step { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-muted); font-size: 12px; }
+button.step { border: 0; background: transparent; text-align: left; font-family: inherit; cursor: pointer; }
+button.step:disabled { cursor: not-allowed; opacity: .65; }
 .step.active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
 .step.done { color: var(--success); }
 .step .step-no { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-strong); display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--surface); flex-shrink: 0; }
@@ -220,6 +222,7 @@ a { color: inherit; text-decoration: none; }
 /* ─── Role picker cards ─────────────────────────────────── */
 .role-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .role-card { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 14px; cursor: pointer; background: var(--surface); }
+button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .role-card:hover { border-color: var(--accent); }
 .role-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .role-card .label { font-weight: 600; color: var(--text); }

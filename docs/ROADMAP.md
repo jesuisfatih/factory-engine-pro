@@ -1331,6 +1331,67 @@ altına `→ ÇÖZÜLDÜ <commit-hash>` satırı düşer (tarihsel kayıt korunu
 
 ---
 
+### 2026-06-27 - Flow 1 wizard hardening live proof (dtfbank)
+
+**What changed**
+- `/team/users/add` is no longer a single flat form. It is now a 4-step wizard:
+  Role -> Details -> Permissions -> Review.
+- Permission fine-tune is real RBAC, not local UI state. If permissions differ
+  from the selected role, the UI creates a custom `MemberRole` first, then
+  invites the member with that role.
+- Permission toggles are gated by `roles.write`; member creation is gated by
+  `members.write`.
+
+**Live evidence**
+- Browser UI URL: `https://app.dtfbank.com/team/users/add`.
+- Screenshots:
+  - `docs/evidence/flow1-member-invite-wizard-step1-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-wizard-step2-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-wizard-step3-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-wizard-review-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-wizard-success-live-20260627.png`
+  - `docs/evidence/flow1-member-invite-wizard-dashboard-live-20260627.png`
+  - API/UI summary: `docs/evidence/flow1-member-invite-wizard-live-20260627.json`
+- UI network:
+  - `POST https://api.dtfbank.com/api/v1/identity/member-roles` -> `201`,
+    `request_id=eddd103c-6e30-4833-9a75-b9bc75b8109d`,
+    `slug=admin_flow1_wizard_20260627171903_mqwmjxzw`,
+    `pricing.write=false`.
+  - `POST https://api.dtfbank.com/api/v1/identity/members` -> `201`,
+    `request_id=0632c620-8d68-422f-8c5d-58b51fb24bca`,
+    `memberId=tmbr_if0rxlogwbxvq1hc4sz3v6vw`,
+    delivery `mail_g76uygguadb6cc2qdjl494hp`, initial `status=queued`.
+  - `GET https://api.dtfbank.com/api/v1/aircall/users` -> `400`,
+    `code=aircall_credentials_missing`,
+    `request_id=d36fbc24-4659-4015-beb6-1236da47d44f`.
+- Invitation accept/login:
+  - Invitee opened `https://app.dtfbank.com/reset-password?flow=invitation&token=<redacted>`
+    in a clean browser context, set password, and landed on
+    `https://app.dtfbank.com/dashboard`.
+  - `POST https://api.dtfbank.com/api/v1/auth/member/login` for invitee -> `201`,
+    `request_id=3bd832e4-9df5-438f-a842-f48bd6ec328`, `permissions=19`.
+  - Member lookup after accept -> `status=active`, assigned custom role
+    `Flow Wizard custom access`, `pricing.write=false`.
+- Mail delivery:
+  - `GET https://api.dtfbank.com/api/v1/mail/deliveries?...` -> `200`,
+    `request_id=fb5093af-41c2-434b-b24c-a0d8626ec328`,
+    delivery `mail_g76uygguadb6cc2qdjl494hp` ended as `failed`,
+    `attemptCount=2`, `errorMessage="API key is invalid"`.
+
+**Credential blocker audit**
+- Under `/opt/apps/custom/factoryengine`, dtfbank `.env` has `RESEND_API_KEY`
+  set, but provider probe still returns `403`; backend send attempts return
+  `API key is invalid`.
+- dtfbank `.env` Aircall fields are empty:
+  `AIRCALL_API_ID`, `AIRCALL_API_TOKEN`, `AIRCALL_WEBHOOK_TOKEN`.
+- Result: Flow 1 internal UI/backend/RBAC chain is now live and evidence-backed,
+  including custom permission review. **Flow 1 still cannot be marked
+  prod-ready until valid Resend and Aircall tenant credentials are supplied or
+  recovered from an authoritative factoryengine env.**
+→
+
+---
+
 ### 2026-06-27 — Kontrol turu (commit `36fe67b4` sonrası, doc-only)
 
 > **Kullanıcı dtfbank container'ında manuel test yaparken iki kritik
