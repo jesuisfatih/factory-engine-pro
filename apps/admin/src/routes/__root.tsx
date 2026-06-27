@@ -1,7 +1,8 @@
-import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router';
+import { Outlet, createRootRoute, redirect, useRouterState } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
+import { readSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/rules/, key: 'nav.rules' },
@@ -23,6 +24,15 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
 
+function isAuthRoute(pathname: string) {
+  return AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function redirectTarget(pathname: string, searchStr: string) {
+  const target = `${pathname}${searchStr}`;
+  return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard';
+}
+
 function RootLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -31,7 +41,7 @@ function RootLayout() {
     return 'nav.dashboard';
   }, [pathname]);
 
-  const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
+  const isAuth = isAuthRoute(pathname);
   if (isAuth) {
     return (
       <div className="auth-shell">
@@ -51,4 +61,21 @@ function RootLayout() {
   );
 }
 
-export const Route = createRootRoute({ component: RootLayout });
+export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    const hasSession = Boolean(readSession()?.accessToken);
+    const authRoute = isAuthRoute(location.pathname);
+
+    if (!hasSession && !authRoute) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: redirectTarget(location.pathname, location.searchStr) },
+      });
+    }
+
+    if (hasSession && authRoute) {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  component: RootLayout,
+});

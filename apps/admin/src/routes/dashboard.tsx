@@ -1,94 +1,332 @@
+import type { ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/PageHeader';
 import { Kpi } from '@/components/Kpi';
-import { fetchKpis, fetchRecentTasks, fetchRecentCalls, fetchShopifyTrend } from '@/lib/mock';
+import { adminApi, apiErrorMessage } from '@/lib/api';
+
+interface OrderStats {
+  count: number;
+  totalRevenue: number;
+  fulfilledCount: number;
+  fulfillmentRate: number;
+  pickupCount: number;
+  designFileCount: number;
+}
+
+interface CustomerStats {
+  count: number;
+  totalRevenue: number;
+  totalOrders: number;
+  atRiskCount: number;
+  vipCount: number;
+}
+
+interface SupportStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  waiting: number;
+  resolved: number;
+  urgent: number;
+}
+
+interface OrderRow {
+  id: string;
+  orderNumber: string;
+  customerName: string | null;
+  companyName: string | null;
+  totalPrice: number;
+  currency: string;
+  processedAt: string | null;
+  createdAt: string;
+}
+
+interface OrderListResponse {
+  data: OrderRow[];
+  meta: { count: number; limit: number };
+}
+
+interface SupportRow {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  status: string;
+  priority: string;
+  customer: { companyName?: string | null; name?: string | null; email?: string | null } | null;
+  assignedTo: { name?: string | null; email?: string | null } | null;
+  updatedAt: string;
+}
+
+interface SupportListResponse {
+  items: SupportRow[];
+  total: number;
+}
+
+interface MailDelivery {
+  id: string;
+  eventKey: string;
+  recipientEmail: string;
+  subject: string;
+  status: string;
+  createdAt: string;
+  errorMessage: string | null;
+}
+
+interface TrendPoint {
+  date: string;
+  revenue: number;
+  orders: number;
+}
 
 function DashboardView() {
   const { t } = useTranslation();
-  const { data: kpis } = useQuery({ queryKey: ['dashboard', 'kpis'], queryFn: fetchKpis });
-  const { data: tasks = [] } = useQuery({ queryKey: ['dashboard', 'recent-tasks'], queryFn: fetchRecentTasks });
-  const { data: calls = [] } = useQuery({ queryKey: ['dashboard', 'recent-calls'], queryFn: fetchRecentCalls });
-  const { data: trend = [] } = useQuery({ queryKey: ['dashboard', 'shopify-trend'], queryFn: fetchShopifyTrend });
+  const orderStats = useQuery<OrderStats>({
+    queryKey: ['dashboard', 'orders', 'stats'],
+    queryFn: () => adminApi.orderStats() as Promise<OrderStats>,
+  });
+  const customerStats = useQuery<CustomerStats>({
+    queryKey: ['dashboard', 'customers', 'stats'],
+    queryFn: () => adminApi.commerceCustomerStats() as Promise<CustomerStats>,
+  });
+  const supportStats = useQuery<SupportStats>({
+    queryKey: ['dashboard', 'support', 'stats'],
+    queryFn: () => adminApi.supportStats() as Promise<SupportStats>,
+  });
+  const orders = useQuery<OrderListResponse>({
+    queryKey: ['dashboard', 'orders', 'recent'],
+    queryFn: () => adminApi.orders('?limit=100') as Promise<OrderListResponse>,
+  });
+  const support = useQuery<SupportListResponse>({
+    queryKey: ['dashboard', 'support', 'recent'],
+    queryFn: () => adminApi.supportRequests('?limit=5&sort=updatedAt%3Adesc') as Promise<SupportListResponse>,
+  });
+  const mail = useQuery<MailDelivery[]>({
+    queryKey: ['dashboard', 'mail', 'recent'],
+    queryFn: () => adminApi.mailDeliveries('?limit=5') as Promise<MailDelivery[]>,
+  });
 
-  const max = Math.max(1, ...trend.map((p) => p.revenue));
+  const statsQueries = [orderStats, customerStats, supportStats, mail];
+  const failedMailCount = (mail.data ?? []).filter((delivery) => delivery.status === 'failed').length;
+  const trend = buildTrend(orders.data?.data ?? []);
+  const max = Math.max(1, ...trend.map((point) => point.revenue));
+  const statsError = statsQueries.find((query) => query.isError)?.error;
 
-  const priorityPill = (p: string) =>
-    p === 'critical' ? 'pill danger' : p === 'high' ? 'pill warn' : p === 'normal' ? 'pill info' : 'pill';
-  const outcomePill = (o: string) =>
-    o === 'answered' ? 'pill success' : o === 'voicemail' ? 'pill info' : 'pill warn';
+  const retryDashboard = () => {
+    void orderStats.refetch();
+    void customerStats.refetch();
+    void supportStats.refetch();
+    void orders.refetch();
+    void support.refetch();
+    void mail.refetch();
+  };
 
   return (
     <>
       <PageHeader titleI18nKey="dashboard.title" subtitleI18nKey="dashboard.subtitle" />
 
-      <div className="kpis">
-        <Kpi id="kpi-sales-24h" labelI18nKey="dashboard.kpi.sales_24h" value={`$${(kpis?.sales24h ?? 0).toLocaleString()}`} subI18nKey="dashboard.kpi.sales_24h_sub" />
-        <Kpi id="kpi-orders" labelI18nKey="dashboard.kpi.orders" value={kpis?.ordersToday ?? 0} subI18nKey="dashboard.kpi.orders_sub" />
-        <Kpi id="kpi-open-tasks" labelI18nKey="dashboard.kpi.open_tasks" value={kpis?.openTasks ?? 0} subI18nKey="dashboard.kpi.open_tasks_sub" />
-        <Kpi id="kpi-ai-tasks" labelI18nKey="dashboard.kpi.ai_tasks" value={kpis?.aiTasksPending ?? 0} subI18nKey="dashboard.kpi.ai_tasks_sub" />
-        <Kpi id="kpi-calls" labelI18nKey="dashboard.kpi.calls" value={kpis?.callsAnswered ?? 0} subI18nKey="dashboard.kpi.calls_sub" />
-      </div>
+      {statsQueries.some((query) => query.isLoading) && (
+        <StateBlock title={t('common.loading')} body={t('dashboard.loading_body')} />
+      )}
+      {statsError && (
+        <StateBlock
+          title={t('common.error')}
+          body={apiErrorMessage(statsError)}
+          action={<button type="button" className="btn" onClick={retryDashboard}><RefreshCw size={14} /> {t('common.retry')}</button>}
+        />
+      )}
+
+      {!statsQueries.some((query) => query.isLoading || query.isError) && (
+        <div className="kpis">
+          <Kpi id="kpi-sales-24h" labelI18nKey="dashboard.kpi.sales_24h" value={formatMoney(orderStats.data?.totalRevenue ?? 0)} subI18nKey="dashboard.kpi.sales_24h_sub" />
+          <Kpi id="kpi-orders" labelI18nKey="dashboard.kpi.orders" value={orderStats.data?.count ?? 0} subI18nKey="dashboard.kpi.orders_sub" />
+          <Kpi id="kpi-open-tasks" labelI18nKey="dashboard.kpi.open_tasks" value={supportStats.data?.open ?? 0} subI18nKey="dashboard.kpi.open_tasks_sub" />
+          <Kpi id="kpi-ai-tasks" labelI18nKey="dashboard.kpi.ai_tasks" value={supportStats.data?.urgent ?? 0} subI18nKey="dashboard.kpi.ai_tasks_sub" />
+          <Kpi id="kpi-calls" labelI18nKey="dashboard.kpi.calls" value={failedMailCount} subI18nKey="dashboard.kpi.calls_sub" />
+        </div>
+      )}
 
       <div className="section" id="section-shopify-sales" style={{ marginBottom: 16 }}>
         <h3>
           <span data-i18n-key="dashboard.section_shopify_sales">{t('dashboard.section_shopify_sales')}</span>
-          <span className="meta">14d window</span>
+          <span className="meta">{t('dashboard.window_14d')}</span>
         </h3>
-        <div className="bar-chart" aria-label="Shopify sales bar chart">
-          {trend.map((point) => (
-            <div
-              key={point.date}
-              className="bar"
-              style={{ height: `${(point.revenue / max) * 100}%` }}
-              title={`${point.date} — $${point.revenue.toLocaleString()} · ${point.orders} orders`}
-            />
-          ))}
-        </div>
-        <div className="bar-labels">
-          {trend.map((point) => <span key={point.date}>{point.date.slice(5)}</span>)}
-        </div>
+        {orders.isLoading && <StateBlock title={t('common.loading')} body={t('dashboard.orders_loading_body')} />}
+        {orders.isError && (
+          <StateBlock
+            title={t('common.error')}
+            body={apiErrorMessage(orders.error)}
+            action={<button type="button" className="btn" onClick={() => orders.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+          />
+        )}
+        {orders.isSuccess && orders.data.data.length === 0 && (
+          <StateBlock
+            title={t('dashboard.orders_empty_title')}
+            body={t('dashboard.orders_empty_body')}
+            action={<a className="btn primary" href="/orders">{t('dashboard.orders_empty_cta')}</a>}
+          />
+        )}
+        {orders.isSuccess && orders.data.data.length > 0 && (
+          <>
+            <div className="bar-chart" aria-label={t('dashboard.section_shopify_sales')}>
+              {trend.map((point) => (
+                <div
+                  key={point.date}
+                  className="bar"
+                  style={{ height: `${Math.max(6, (point.revenue / max) * 100)}%` }}
+                  title={t('dashboard.chart_point_title', {
+                    date: point.date,
+                    revenue: formatMoney(point.revenue),
+                    orders: point.orders,
+                  })}
+                />
+              ))}
+            </div>
+            <div className="bar-labels">
+              {trend.map((point) => <span key={point.date}>{point.date.slice(5)}</span>)}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="two-col">
-        <div className="section" id="section-recent-tasks">
+        <div className="section" id="section-recent-support">
           <h3>
-            <span data-i18n-key="dashboard.section_recent_tasks">{t('dashboard.section_recent_tasks')}</span>
-            <span className="meta">{tasks.length} items</span>
+            <span data-i18n-key="dashboard.section_recent_support">{t('dashboard.section_recent_support')}</span>
+            <span className="meta">{t('dashboard.records_count', { count: support.data?.items.length ?? 0 })}</span>
           </h3>
-          <table className="data-table">
-            <tbody>
-              {tasks.map((task) => (
-                <tr key={task.id}>
-                  <td><div className="name">{task.title}</div><div className="muted">{task.assignee} · {task.source}</div></td>
-                  <td><span className={priorityPill(task.priority)}>{task.priority}</span></td>
-                  <td><span className="muted">{task.createdAt}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {support.isLoading && <StateBlock title={t('common.loading')} body={t('dashboard.support_loading_body')} />}
+          {support.isError && (
+            <StateBlock
+              title={t('common.error')}
+              body={apiErrorMessage(support.error)}
+              action={<button type="button" className="btn" onClick={() => support.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+            />
+          )}
+          {support.isSuccess && support.data.items.length === 0 && (
+            <StateBlock
+              title={t('dashboard.support_empty_title')}
+              body={t('dashboard.support_empty_body')}
+              action={<a className="btn primary" href="/support">{t('dashboard.support_empty_cta')}</a>}
+            />
+          )}
+          {support.isSuccess && support.data.items.length > 0 && (
+            <table className="data-table">
+              <tbody>
+                {support.data.items.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <div className="name">{item.ticketNumber} - {item.title}</div>
+                      <div className="muted">{item.customer?.companyName ?? item.customer?.email ?? t('dashboard.no_customer')} - {item.assignedTo?.name ?? t('dashboard.unassigned')}</div>
+                    </td>
+                    <td><span className={priorityPill(item.priority)}>{humanize(item.priority)}</span></td>
+                    <td><span className="muted">{formatDateTime(item.updatedAt)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        <div className="section" id="section-recent-calls">
+        <div className="section" id="section-recent-mail">
           <h3>
-            <span data-i18n-key="dashboard.section_recent_calls">{t('dashboard.section_recent_calls')}</span>
-            <span className="meta">{calls.length} calls</span>
+            <span data-i18n-key="dashboard.section_recent_mail">{t('dashboard.section_recent_mail')}</span>
+            <span className="meta">{t('dashboard.records_count', { count: mail.data?.length ?? 0 })}</span>
           </h3>
-          <table className="data-table">
-            <tbody>
-              {calls.map((call) => (
-                <tr key={call.id}>
-                  <td><div className="name">{call.customer}</div><div className="muted">{call.phone}</div></td>
-                  <td><span className={outcomePill(call.outcome)}>{call.outcome}</span></td>
-                  <td><span className="muted">{call.at}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {mail.isLoading && <StateBlock title={t('common.loading')} body={t('dashboard.mail_loading_body')} />}
+          {mail.isError && (
+            <StateBlock
+              title={t('common.error')}
+              body={apiErrorMessage(mail.error)}
+              action={<button type="button" className="btn" onClick={() => mail.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+            />
+          )}
+          {mail.isSuccess && mail.data.length === 0 && (
+            <StateBlock
+              title={t('dashboard.mail_empty_title')}
+              body={t('dashboard.mail_empty_body')}
+              action={<a className="btn primary" href="/system-mail">{t('dashboard.mail_empty_cta')}</a>}
+            />
+          )}
+          {mail.isSuccess && mail.data.length > 0 && (
+            <table className="data-table">
+              <tbody>
+                {mail.data.map((delivery) => (
+                  <tr key={delivery.id}>
+                    <td>
+                      <div className="name">{delivery.subject}</div>
+                      <div className="muted">{delivery.eventKey} - {delivery.recipientEmail}</div>
+                    </td>
+                    <td><span className={statusPill(delivery.status)}>{humanize(delivery.status)}</span></td>
+                    <td><span className="muted">{formatDateTime(delivery.createdAt)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+function buildTrend(orders: OrderRow[]): TrendPoint[] {
+  const today = new Date();
+  const byDate = new Map<string, TrendPoint>();
+  for (let index = 13; index >= 0; index -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - index);
+    const key = date.toISOString().slice(0, 10);
+    byDate.set(key, { date: key, revenue: 0, orders: 0 });
+  }
+  for (const order of orders) {
+    const rawDate = order.processedAt ?? order.createdAt;
+    const key = rawDate ? new Date(rawDate).toISOString().slice(0, 10) : '';
+    const point = byDate.get(key);
+    if (!point) continue;
+    point.revenue += Number(order.totalPrice ?? 0);
+    point.orders += 1;
+  }
+  return Array.from(byDate.values());
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function humanize(value: string) {
+  return value.replace(/_/g, ' ');
+}
+
+function priorityPill(priority: string) {
+  return ['critical', 'urgent', 'high'].includes(priority) ? 'pill danger' : priority === 'medium' ? 'pill warn' : 'pill info';
+}
+
+function statusPill(status: string) {
+  if (status === 'sent') return 'pill success';
+  if (status === 'failed') return 'pill danger';
+  if (status === 'queued' || status === 'sending') return 'pill warn';
+  return 'pill info';
+}
+
+function StateBlock({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+  return (
+    <div className="pricing-list-empty">
+      <div className="title">{title}</div>
+      <div className="note">{body}</div>
+      {action && <div style={{ marginTop: 14 }}>{action}</div>}
+    </div>
   );
 }
 

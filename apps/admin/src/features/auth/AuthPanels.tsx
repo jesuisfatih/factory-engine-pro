@@ -13,7 +13,7 @@ export function AdminLoginPanel() {
     mutationFn: () => adminApi.memberLogin({ email, password }),
     onSuccess: (session) => {
       adminTokenStore.setSession(session);
-      window.location.assign('/dashboard');
+      window.location.assign(loginRedirectTarget());
     },
     onError: (err) => setError(apiErrorMessage(err)),
   });
@@ -139,6 +139,12 @@ export function AdminResetPasswordPanel() {
       )}
     </div>
   );
+}
+
+function loginRedirectTarget() {
+  const target = new URLSearchParams(window.location.search).get('redirect') ?? '/dashboard';
+  if (!target.startsWith('/') || target.startsWith('//') || target.includes('\\')) return '/dashboard';
+  return target;
 }
 
 function Brand({ muted }: { muted: string }) {
