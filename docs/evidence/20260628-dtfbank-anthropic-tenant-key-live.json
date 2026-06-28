@@ -1,7 +1,7 @@
 ﻿{
     "target":  "DTF Bank Anthropic tenant credential and resolver health",
-    "checkedAt":  "2026-06-28T08:14:16.3494160Z",
-    "deployedBuildSha":  "af2eac154419996f3ce38517d0d880aabce9d960",
+    "checkedAt":  "2026-06-28T08:33:08.5941603Z",
+    "deployedBuildSha":  "e5ae0fdb5289e0e1bf02e3c11c14977841f91058",
     "scope":  {
                   "container":  "factoryengine-dtfbank-app",
                   "apiBase":  "https://api.dtfbank.com/api/v1",
@@ -29,7 +29,7 @@
                          "model":  "claude-haiku-4-5-20251001",
                          "source":  "tenant_config",
                          "promptKey":  "ai.transcript-resolver",
-                         "latencyMs":  2041,
+                         "latencyMs":  2146,
                          "outputFields":  [
                                               "customer_match",
                                               "product_mentions",
@@ -43,7 +43,7 @@
                                               "language_detected",
                                               "resolved_with_version"
                                           ],
-                         "callIntent":  "support",
+                         "callIntent":  "complaint",
                          "urgency":  "high",
                          "psychTags":  [
                                            "angry",
@@ -53,12 +53,28 @@
                          "resolvedWithVersion":  1
                      },
     "runtime":  {
-                    "pm2":  "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1131     │ 85s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │\n│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1114     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1109     │ 85s    │ 0    │ online    │ 0%       │ 140.1mb  │ root     │ disabled │\n│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1138     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘",
-                    "startLog":  "\u001b[32m[Nest] 1109  - \u001b[39m06/28/2026, 8:12:52 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                    "apiHealthStatus":  200,
+                    "pm2":  [
+                                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1132     │ 7m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1113     │ 7m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1106     │ 7m     │ 0    │ online    │ 0%       │ 157.5mb  │ root     │ disabled │",
+                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1124     │ 7m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+                            ],
+                    "startLog":  [
+                                     "No pending migrations to apply.",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:25:31 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/auth/person/login, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:25:31 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:00 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"39b036e7-0b1e-4251-a767-f1c226affacc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:06 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"e78e1e31-d837-46b7-9c59-049d05970acb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m"
+                                 ]
                 },
     "notes":  [
                   "Secret is not stored in this evidence file.",
                   "Tenant-config key overrides container env for this tenant.",
-                  "Health now uses the same wide model listing path as resolver model selection."
+                  "Health and resolver calls use the same deployed build as ROADMAP item 2 evidence."
               ]
 }

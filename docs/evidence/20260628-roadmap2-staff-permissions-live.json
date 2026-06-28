@@ -1,13 +1,17 @@
 ﻿{
     "target":  "ROADMAP item 2 - real staff accounts and permission lock",
-    "checkedAt":  "2026-06-28T03:18:28.4397901Z",
+    "checkedAt":  "2026-06-28T08:33:08.5911578Z",
     "tenantId":  "ten_dtfbank",
-    "buildSha":  "0f8ddcd645520895ec054018388929b13170d4c5",
+    "buildSha":  "e5ae0fdb5289e0e1bf02e3c11c14977841f91058",
     "apiBase":  "https://api.dtfbank.com/api/v1",
+    "appLoginUrl":  "https://app.dtfbank.com/login",
     "accounts":  [
                      {
                          "email":  "info@dtfbank.com",
                          "expectedRole":  "owner",
+                         "roleSlug":  "owner",
+                         "memberLoginStatus":  201,
+                         "personLoginStatus":  201,
                          "principal":  {
                                            "id":  "tmbr_ten_dtfbank_info_owner",
                                            "type":  "member",
@@ -42,48 +46,31 @@
                                                                "aircall.users.write"
                                                            ]
                                        },
-                         "permissions":  [
-                                             "roles.read",
-                                             "orders.read",
-                                             "roles.write",
-                                             "task.assign",
-                                             "members.read",
-                                             "orders.write",
-                                             "pricing.read",
-                                             "support.read",
-                                             "sync.trigger",
-                                             "identity.read",
-                                             "members.write",
-                                             "pricing.write",
-                                             "segments.read",
-                                             "settings.read",
-                                             "support.write",
-                                             "customers.read",
-                                             "identity.write",
-                                             "segments.write",
-                                             "settings.write",
-                                             "b2b_access.read",
-                                             "customers.write",
-                                             "b2b_access.write",
-                                             "commission.submit",
-                                             "aircall.users.read",
-                                             "aircall.users.write"
-                                         ],
-                         "hasCommissionSubmit":  true,
-                         "hasAircallUsersWrite":  true,
-                         "hasSettingsAny":  true,
-                         "hasMembersAny":  true,
-                         "hasRolesAny":  true,
-                         "hasIdentityAny":  true,
-                         "hasSyncTrigger":  true,
-                         "tenantConfigGetStatus":  200,
-                         "aircallUsersGetStatus":  200,
-                         "memberRolesStatus":  200,
-                         "membersStatus":  200
+                         "permissionChecks":  {
+                                                  "hasCommissionSubmit":  true,
+                                                  "hasAircallUsersRead":  true,
+                                                  "hasAircallUsersWrite":  true,
+                                                  "hasSettingsAny":  true,
+                                                  "hasMembersAny":  true,
+                                                  "hasRolesAny":  true,
+                                                  "hasIdentityAny":  true,
+                                                  "hasB2bWrite":  true,
+                                                  "hasSyncTrigger":  true
+                                              },
+                         "endpointStatuses":  {
+                                                  "tenantConfigGet":  200,
+                                                  "aircallUsersGet":  200,
+                                                  "aircallUsersSyncPost":  201,
+                                                  "memberRolesGet":  200,
+                                                  "membersGet":  200
+                                              }
                      },
                      {
                          "email":  "dtfbanktx@gmail.com",
                          "expectedRole":  "Customer Service",
+                         "roleSlug":  "customer_service",
+                         "memberLoginStatus":  201,
+                         "personLoginStatus":  201,
                          "principal":  {
                                            "id":  "tmbr_ten_dtfbank_linda_marroquin",
                                            "type":  "member",
@@ -101,31 +88,31 @@
                                                                "aircall.users.read"
                                                            ]
                                        },
-                         "permissions":  [
-                                             "orders.read",
-                                             "task.assign",
-                                             "support.read",
-                                             "segments.read",
-                                             "support.write",
-                                             "customers.read",
-                                             "customers.write",
-                                             "aircall.users.read"
-                                         ],
-                         "hasCommissionSubmit":  false,
-                         "hasAircallUsersWrite":  false,
-                         "hasSettingsAny":  false,
-                         "hasMembersAny":  false,
-                         "hasRolesAny":  false,
-                         "hasIdentityAny":  false,
-                         "hasSyncTrigger":  false,
-                         "tenantConfigGetStatus":  403,
-                         "aircallUsersGetStatus":  200,
-                         "memberRolesStatus":  403,
-                         "membersStatus":  403
+                         "permissionChecks":  {
+                                                  "hasCommissionSubmit":  false,
+                                                  "hasAircallUsersRead":  true,
+                                                  "hasAircallUsersWrite":  false,
+                                                  "hasSettingsAny":  false,
+                                                  "hasMembersAny":  false,
+                                                  "hasRolesAny":  false,
+                                                  "hasIdentityAny":  false,
+                                                  "hasB2bWrite":  false,
+                                                  "hasSyncTrigger":  false
+                                              },
+                         "endpointStatuses":  {
+                                                  "tenantConfigGet":  403,
+                                                  "aircallUsersGet":  200,
+                                                  "aircallUsersSyncPost":  403,
+                                                  "memberRolesGet":  403,
+                                                  "membersGet":  403
+                                              }
                      },
                      {
                          "email":  "charlette@dtfbank.com",
                          "expectedRole":  "Customer Service",
+                         "roleSlug":  "customer_service",
+                         "memberLoginStatus":  201,
+                         "personLoginStatus":  201,
                          "principal":  {
                                            "id":  "tmbr_ten_dtfbank_charlette_boatman",
                                            "type":  "member",
@@ -143,31 +130,31 @@
                                                                "aircall.users.read"
                                                            ]
                                        },
-                         "permissions":  [
-                                             "orders.read",
-                                             "task.assign",
-                                             "support.read",
-                                             "segments.read",
-                                             "support.write",
-                                             "customers.read",
-                                             "customers.write",
-                                             "aircall.users.read"
-                                         ],
-                         "hasCommissionSubmit":  false,
-                         "hasAircallUsersWrite":  false,
-                         "hasSettingsAny":  false,
-                         "hasMembersAny":  false,
-                         "hasRolesAny":  false,
-                         "hasIdentityAny":  false,
-                         "hasSyncTrigger":  false,
-                         "tenantConfigGetStatus":  403,
-                         "aircallUsersGetStatus":  200,
-                         "memberRolesStatus":  403,
-                         "membersStatus":  403
+                         "permissionChecks":  {
+                                                  "hasCommissionSubmit":  false,
+                                                  "hasAircallUsersRead":  true,
+                                                  "hasAircallUsersWrite":  false,
+                                                  "hasSettingsAny":  false,
+                                                  "hasMembersAny":  false,
+                                                  "hasRolesAny":  false,
+                                                  "hasIdentityAny":  false,
+                                                  "hasB2bWrite":  false,
+                                                  "hasSyncTrigger":  false
+                                              },
+                         "endpointStatuses":  {
+                                                  "tenantConfigGet":  403,
+                                                  "aircallUsersGet":  200,
+                                                  "aircallUsersSyncPost":  403,
+                                                  "memberRolesGet":  403,
+                                                  "membersGet":  403
+                                              }
                      },
                      {
                          "email":  "ihsan@dtfbank.com",
                          "expectedRole":  "Sales Personel",
+                         "roleSlug":  "sales_personel",
+                         "memberLoginStatus":  201,
+                         "personLoginStatus":  201,
                          "principal":  {
                                            "id":  "tmbr_ten_dtfbank_ihsan_taskiran",
                                            "type":  "member",
@@ -187,96 +174,135 @@
                                                                "aircall.users.read"
                                                            ]
                                        },
-                         "permissions":  [
-                                             "orders.read",
-                                             "task.assign",
-                                             "orders.write",
-                                             "pricing.read",
-                                             "pricing.write",
-                                             "segments.read",
-                                             "customers.read",
-                                             "customers.write",
-                                             "commission.submit",
-                                             "aircall.users.read"
-                                         ],
-                         "hasCommissionSubmit":  true,
-                         "hasAircallUsersWrite":  false,
-                         "hasSettingsAny":  false,
-                         "hasMembersAny":  false,
-                         "hasRolesAny":  false,
-                         "hasIdentityAny":  false,
-                         "hasSyncTrigger":  false,
-                         "tenantConfigGetStatus":  403,
-                         "aircallUsersGetStatus":  200,
-                         "memberRolesStatus":  403,
-                         "membersStatus":  403
+                         "permissionChecks":  {
+                                                  "hasCommissionSubmit":  true,
+                                                  "hasAircallUsersRead":  true,
+                                                  "hasAircallUsersWrite":  false,
+                                                  "hasSettingsAny":  false,
+                                                  "hasMembersAny":  false,
+                                                  "hasRolesAny":  false,
+                                                  "hasIdentityAny":  false,
+                                                  "hasB2bWrite":  false,
+                                                  "hasSyncTrigger":  false
+                                              },
+                         "endpointStatuses":  {
+                                                  "tenantConfigGet":  403,
+                                                  "aircallUsersGet":  200,
+                                                  "aircallUsersSyncPost":  403,
+                                                  "memberRolesGet":  403,
+                                                  "membersGet":  403
+                                              }
                      }
                  ],
-    "retiredProdtestMembers":  {
-                                   "value":  [
-                                                 {
-                                                     "id":  "tmbr_prodtest_1782574849914_fa5999f6",
-                                                     "tenantId":  "ten_dtfbank",
-                                                     "email":  "owner.prodtest+20260627184047@dtfbank.com",
-                                                     "firstName":  "Prod",
-                                                     "lastName":  "Owner",
-                                                     "phone":  null,
-                                                     "status":  "disabled",
-                                                     "lastLoginAt":  "2026-06-28T02:06:37.021Z",
-                                                     "invitationAcceptedAt":  "2026-06-27T15:40:50.152Z",
-                                                     "aircallUserId":  null,
-                                                     "createdAt":  "2026-06-27T15:40:50.440Z",
-                                                     "updatedAt":  "2026-06-28T03:17:08.241Z",
-                                                     "roleAssignments":  [
-                                                                             {
-                                                                                 "id":  "mra_prodtest_1782574850449_482e8778",
-                                                                                 "tenantId":  "ten_dtfbank",
-                                                                                 "memberId":  "tmbr_prodtest_1782574849914_fa5999f6",
-                                                                                 "roleId":  "mrol_prodtest_1782574849867_5d819c38",
-                                                                                 "createdAt":  "2026-06-27T15:40:50.450Z",
-                                                                                 "role":  {
-                                                                                              "id":  "mrol_prodtest_1782574849867_5d819c38",
-                                                                                              "tenantId":  "ten_dtfbank",
-                                                                                              "slug":  "owner",
-                                                                                              "name":  "Owner",
-                                                                                              "description":  "Full workspace administration",
-                                                                                              "permissions":  {
-                                                                                                                  "roles.read":  true,
-                                                                                                                  "orders.read":  true,
-                                                                                                                  "roles.write":  true,
-                                                                                                                  "task.assign":  true,
-                                                                                                                  "members.read":  true,
-                                                                                                                  "orders.write":  true,
-                                                                                                                  "pricing.read":  true,
-                                                                                                                  "support.read":  true,
-                                                                                                                  "sync.trigger":  true,
-                                                                                                                  "identity.read":  true,
-                                                                                                                  "members.write":  true,
-                                                                                                                  "pricing.write":  true,
-                                                                                                                  "segments.read":  true,
-                                                                                                                  "settings.read":  true,
-                                                                                                                  "support.write":  true,
-                                                                                                                  "customers.read":  true,
-                                                                                                                  "identity.write":  true,
-                                                                                                                  "segments.write":  true,
-                                                                                                                  "settings.write":  true,
-                                                                                                                  "b2b_access.read":  true,
-                                                                                                                  "customers.write":  true,
-                                                                                                                  "b2b_access.write":  true,
-                                                                                                                  "commission.submit":  true,
-                                                                                                                  "aircall.users.read":  true,
-                                                                                                                  "aircall.users.write":  true
-                                                                                                              },
-                                                                                              "isSystem":  true,
-                                                                                              "createdAt":  "2026-06-27T15:40:49.869Z",
-                                                                                              "updatedAt":  "2026-06-28T03:17:05.766Z"
-                                                                                          }
-                                                                             }
-                                                                         ]
-                                                 }
-                                             ],
-                                   "Count":  1
-                               },
+    "requiredRolePermissionSets":  {
+                                       "customerService":  [
+                                                               "customers.read",
+                                                               "customers.write",
+                                                               "support.read",
+                                                               "support.write",
+                                                               "orders.read",
+                                                               "segments.read",
+                                                               "task.assign",
+                                                               "aircall.users.read"
+                                                           ],
+                                       "salesPersonel":  [
+                                                             "customers.read",
+                                                             "customers.write",
+                                                             "orders.read",
+                                                             "orders.write",
+                                                             "pricing.read",
+                                                             "pricing.write",
+                                                             "segments.read",
+                                                             "task.assign",
+                                                             "aircall.users.read",
+                                                             "commission.submit"
+                                                         ],
+                                       "forbiddenForCustomerServiceAndSales":  [
+                                                                                   "aircall.users.write",
+                                                                                   "identity.read",
+                                                                                   "identity.write",
+                                                                                   "roles.read",
+                                                                                   "roles.write",
+                                                                                   "settings.read",
+                                                                                   "settings.write",
+                                                                                   "members.read",
+                                                                                   "members.write",
+                                                                                   "b2b_access.write",
+                                                                                   "sync.trigger"
+                                                                               ]
+                                   },
+    "members":  [
+                    {
+                        "id":  "tmbr_ten_dtfbank_ihsan_taskiran",
+                        "email":  "ihsan@dtfbank.com",
+                        "firstName":  "Ihsan",
+                        "lastName":  "Taskiran",
+                        "status":  "active",
+                        "aircallUserId":  "1831184",
+                        "roles":  [
+                                      {
+                                          "slug":  "sales_personel",
+                                          "name":  "Sales Personel"
+                                      }
+                                  ]
+                    },
+                    {
+                        "id":  "tmbr_ten_dtfbank_charlette_boatman",
+                        "email":  "charlette@dtfbank.com",
+                        "firstName":  "Charlette",
+                        "lastName":  "Boatman",
+                        "status":  "active",
+                        "aircallUserId":  "1972780",
+                        "roles":  [
+                                      {
+                                          "slug":  "customer_service",
+                                          "name":  "Customer Service"
+                                      }
+                                  ]
+                    },
+                    {
+                        "id":  "tmbr_ten_dtfbank_linda_marroquin",
+                        "email":  "dtfbanktx@gmail.com",
+                        "firstName":  "Linda",
+                        "lastName":  "Marroquin",
+                        "status":  "active",
+                        "aircallUserId":  "1831312",
+                        "roles":  [
+                                      {
+                                          "slug":  "customer_service",
+                                          "name":  "Customer Service"
+                                      }
+                                  ]
+                    },
+                    {
+                        "id":  "tmbr_ten_dtfbank_info_owner",
+                        "email":  "info@dtfbank.com",
+                        "firstName":  "DTF Bank",
+                        "lastName":  "Owner",
+                        "status":  "active",
+                        "aircallUserId":  "1831111",
+                        "roles":  [
+                                      {
+                                          "slug":  "owner",
+                                          "name":  "Owner"
+                                      }
+                                  ]
+                    },
+                    {
+                        "id":  "tmbr_prodtest_1782574849914_fa5999f6",
+                        "email":  "owner.prodtest+20260627184047@dtfbank.com",
+                        "firstName":  "Prod",
+                        "lastName":  "Owner",
+                        "status":  "disabled",
+                        "aircallUserId":  null,
+                        "roles":  [
+                                      {
+                                          "slug":  "owner",
+                                          "name":  "Owner"
+                                      }
+                                  ]
+                    }
+                ],
     "roles":  [
                   {
                       "name":  "Admin",
@@ -380,6 +406,152 @@
                                           "commission.submit":  true,
                                           "aircall.users.read":  true
                                       }
+                  },
+                  {
+                      "name":  "Flow Wizard custom access",
+                      "slug":  "admin_flow1_wizard_20260627171646_mqwmh0wp",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  false,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Flow Wizard custom access",
+                      "slug":  "admin_flow1_wizard_20260627171903_mqwmjxzw",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  false,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Flow Wizard custom access",
+                      "slug":  "admin_flow1_debug_20260627171557_mqwmfxq3",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  false,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Flow Wizard custom access",
+                      "slug":  "admin_flow1_wizard_20260627171449_mqwmeij4",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  false,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Flow Wizard custom access",
+                      "slug":  "admin_flow1_wizard_20260627171322_mqwmcne5",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  false,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "tester tester custom access",
+                      "slug":  "agent_testerrr_mqx1eubo",
+                      "permissions":  {
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "segments.read":  false,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "b2b_access.read":  true,
+                                          "aircall.users.read":  true
+                                      }
                   }
               ],
     "runtime":  {
@@ -387,24 +559,71 @@
                                 "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
                                 "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
                                 "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
-                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1137     │ 75s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
-                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1112     │ 75s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
-                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1107     │ 75s    │ 0    │ online    │ 0%       │ 147.5mb  │ root     │ disabled │",
-                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1130     │ 75s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1132     │ 7m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1113     │ 7m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1106     │ 7m     │ 0    │ online    │ 0%       │ 157.5mb  │ root     │ disabled │",
+                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1124     │ 7m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
                                 "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
                             ],
-                    "log":  [
-                                "No pending migrations to apply.",
-                                "\u001b[32m[Nest] 1107  - \u001b[39m06/28/2026, 3:17:18 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
-                            ]
+                    "authLogs":  [
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:25:31 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/auth/person/login, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:00 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"39b036e7-0b1e-4251-a767-f1c226affacc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:06 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"e78e1e31-d837-46b7-9c59-049d05970acb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"33a5ef5e-1135-4c19-bc6e-2654b22b4feb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ae8e46cc-b56b-4310-a1ce-77a297736985\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"df29b094-0f36-44dc-b6f9-c2670a925191\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"774f687c-a915-45a9-8f9f-10c058077235\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"868e590e-2fd0-4792-ad59-2d19d747093d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:00 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"62ebb0f1-74c0-43dc-a5df-a3a7484cab6d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:01 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"0fd9134f-f305-442c-8f20-158fa971d627\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:06 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f21f9e56-408d-4e83-a92b-4e8656ec5d82\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:07 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"b237fe04-c7a6-4ae7-88b4-66ede990e50b\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"2d55c4cd-4b8c-4f71-9d88-9e8b91036567\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ac48d130-527f-4f3e-afca-07593eff5b19\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"842e9667-5a8b-4f3e-8b07-1f80876d8daa\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:39 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"1f7b92f1-bd85-4530-b488-889c2833fab1\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:39 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"71d7657b-cb93-4272-9d6a-d5bc2c2efa13\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:43 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"606ec109-a305-492d-9423-3e60af4148be\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"aa553158-0beb-4760-a899-00dc64b4bb80\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"9cb94b46-f94c-4e0b-b60e-3e88562968a5\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                     "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"22e9d3b2-5d9f-4a40-99d6-ebafebc0f54b\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m"
+                                 ],
+                    "recentStartAndAuthLogs":  [
+                                                   "No pending migrations to apply.",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:25:31 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/auth/person/login, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:25:31 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:00 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"39b036e7-0b1e-4251-a767-f1c226affacc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:06 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"e78e1e31-d837-46b7-9c59-049d05970acb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:28:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"33a5ef5e-1135-4c19-bc6e-2654b22b4feb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ae8e46cc-b56b-4310-a1ce-77a297736985\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"df29b094-0f36-44dc-b6f9-c2670a925191\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"774f687c-a915-45a9-8f9f-10c058077235\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:30:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"868e590e-2fd0-4792-ad59-2d19d747093d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:00 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"62ebb0f1-74c0-43dc-a5df-a3a7484cab6d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:01 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"0fd9134f-f305-442c-8f20-158fa971d627\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:06 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f21f9e56-408d-4e83-a92b-4e8656ec5d82\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:07 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"b237fe04-c7a6-4ae7-88b4-66ede990e50b\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:31:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"2d55c4cd-4b8c-4f71-9d88-9e8b91036567\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ac48d130-527f-4f3e-afca-07593eff5b19\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"842e9667-5a8b-4f3e-8b07-1f80876d8daa\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"info@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:39 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"1f7b92f1-bd85-4530-b488-889c2833fab1\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:39 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"71d7657b-cb93-4272-9d6a-d5bc2c2efa13\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"dtfbanktx@gmail.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:43 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"606ec109-a305-492d-9423-3e60af4148be\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"aa553158-0beb-4760-a899-00dc64b4bb80\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"charlette@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"9cb94b46-f94c-4e0b-b60e-3e88562968a5\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"admin.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m",
+                                                   "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:32:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"22e9d3b2-5d9f-4a40-99d6-ebafebc0f54b\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"auth\",\"action\":\"person.login\",\"message\":\"Login accepted\",\"email\":\"ihsan@dtfbank.com\",\"success\":true}\u001b[39m"
+                                               ]
                 },
     "assertions":  {
-                       "fourAccountsLogin":  true,
-                       "customerServiceNoCommission":  true,
-                       "salesHasCommission":  true,
-                       "nonOwnerNoAircallWrite":  true,
-                       "nonOwnerNoSettingsMembersRolesIdentitySync":  true,
+                       "fourAccountsMemberLogin":  true,
+                       "fourAccountsPersonLogin":  true,
+                       "customerServiceExactRequiredPermissions":  true,
+                       "salesExactRequiredPermissions":  true,
+                       "nonOwnerForbiddenPermissionsAbsent":  true,
                        "nonOwnerTenantConfigForbidden":  true,
-                       "allCanReadAircallUsers":  true
+                       "allCanReadAircallUsers":  true,
+                       "nonOwnerAircallWriteForbidden":  true,
+                       "ownerAircallWriteAllowed":  true,
+                       "nonOwnerRolesMembersForbidden":  true
                    }
 }
