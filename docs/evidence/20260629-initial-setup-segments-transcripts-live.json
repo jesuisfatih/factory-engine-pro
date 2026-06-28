@@ -1,0 +1,1534 @@
+{
+  "startedAt": "2026-06-28T21:53:09.560Z",
+  "completedAt": "2026-06-28T21:56:17.993Z",
+  "live": true,
+  "tenantId": "ten_dtfbank",
+  "appBase": "https://app.dtfbank.com",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "gitHead": "a0a05b33c9bccdee9ebdf230d4a85c96b891e271",
+  "deployedBuildSha": "a0a05b33c9bccdee9ebdf230d4a85c96b891e271",
+  "tokenPolicy": "access/refresh tokens intentionally omitted from evidence",
+  "auth": {
+    "owner": {
+      "email": "info@dtfbank.com",
+      "status": 201,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_info_owner",
+        "type": "member",
+        "email": "info@dtfbank.com",
+        "firstName": "DTF Bank",
+        "lastName": "Owner",
+        "permissions": [
+          "roles.read",
+          "orders.read",
+          "roles.write",
+          "task.assign",
+          "members.read",
+          "orders.write",
+          "pricing.read",
+          "support.read",
+          "sync.trigger",
+          "identity.read",
+          "members.write",
+          "pricing.write",
+          "segments.read",
+          "settings.read",
+          "support.write",
+          "customers.read",
+          "identity.write",
+          "segments.write",
+          "settings.write",
+          "b2b_access.read",
+          "customers.write",
+          "b2b_access.write",
+          "commission.submit",
+          "aircall.users.read",
+          "aircall.users.write"
+        ]
+      },
+      "tokenRedacted": true
+    },
+    "person": {
+      "email": "dtfbanktx@gmail.com",
+      "status": 201,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_linda_marroquin",
+        "type": "member",
+        "email": "dtfbanktx@gmail.com",
+        "firstName": "Linda",
+        "lastName": "Marroquin",
+        "permissions": [
+          "orders.read",
+          "task.assign",
+          "support.read",
+          "segments.read",
+          "support.write",
+          "customers.read",
+          "customers.write",
+          "aircall.users.read"
+        ]
+      },
+      "tokenRedacted": true
+    }
+  },
+  "api": {
+    "health": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "syncStatus": {
+      "status": 200,
+      "body": {
+        "credentialRequired": false,
+        "configured": true,
+        "shopifyDomain": "dtf-bank.myshopify.com",
+        "isAnySyncing": false,
+        "hasErrors": false,
+        "entities": {
+          "customers": {
+            "resource": "customers",
+            "status": "completed",
+            "isRunning": false,
+            "lastCompletedAt": "2026-06-28T21:44:08.459Z",
+            "lastFailedAt": null,
+            "lastError": null,
+            "totalRecordsSynced": 5958,
+            "lastRunRecords": 5958,
+            "snapshotRecords": 5958,
+            "consecutiveFailures": 0,
+            "lastCursor": null,
+            "heartbeatAt": "2026-06-28T21:44:08.459Z"
+          },
+          "orders": {
+            "resource": "orders",
+            "status": "completed",
+            "isRunning": false,
+            "lastCompletedAt": "2026-06-28T21:44:54.784Z",
+            "lastFailedAt": null,
+            "lastError": null,
+            "totalRecordsSynced": 627,
+            "lastRunRecords": 627,
+            "snapshotRecords": 632,
+            "consecutiveFailures": 0,
+            "lastCursor": null,
+            "heartbeatAt": "2026-06-28T21:44:54.784Z"
+          },
+          "products": {
+            "resource": "products",
+            "status": "completed",
+            "isRunning": false,
+            "lastCompletedAt": "2026-06-28T21:44:18.646Z",
+            "lastFailedAt": null,
+            "lastError": null,
+            "totalRecordsSynced": 303,
+            "lastRunRecords": 303,
+            "snapshotRecords": 303,
+            "consecutiveFailures": 0,
+            "lastCursor": null,
+            "heartbeatAt": "2026-06-28T21:44:18.646Z"
+          }
+        },
+        "recentLogs": [
+          {
+            "id": "slog_qcrgtxy6nuzqhogue8j3fm85",
+            "action": "initial.orders",
+            "status": "completed",
+            "message": "orders initial sync completed.",
+            "startedAt": "2026-06-28T21:42:26.655Z",
+            "finishedAt": "2026-06-28T21:44:54.789Z",
+            "metadata": {
+              "pages": 3,
+              "source": "tenant_config",
+              "resource": "orders",
+              "recordsProcessed": 627
+            }
+          },
+          {
+            "id": "slog_d9z0ltftcg70p7vnmj7nrduq",
+            "action": "initial.customers",
+            "status": "completed",
+            "message": "customers initial sync completed.",
+            "startedAt": "2026-06-28T21:42:26.655Z",
+            "finishedAt": "2026-06-28T21:44:08.464Z",
+            "metadata": {
+              "pages": 24,
+              "source": "tenant_config",
+              "resource": "customers",
+              "recordsProcessed": 5958
+            }
+          },
+          {
+            "id": "slog_mt5f10rwnx3f4fddna9jkevv",
+            "action": "initial.products",
+            "status": "completed",
+            "message": "products initial sync completed.",
+            "startedAt": "2026-06-28T21:42:26.655Z",
+            "finishedAt": "2026-06-28T21:44:18.653Z",
+            "metadata": {
+              "pages": 2,
+              "source": "tenant_config",
+              "resource": "products",
+              "recordsProcessed": 303
+            }
+          },
+          {
+            "id": "slog_pifwrurteal71kxd3f68bvfw",
+            "action": "initial.orders",
+            "status": "completed",
+            "message": "orders initial sync completed.",
+            "startedAt": "2026-06-28T18:32:12.226Z",
+            "finishedAt": "2026-06-28T18:34:10.910Z",
+            "metadata": {
+              "pages": 3,
+              "source": "tenant_config",
+              "resource": "orders",
+              "recordsProcessed": 631
+            }
+          },
+          {
+            "id": "slog_gzab9w2e8hb420pn8mdmob0j",
+            "action": "initial.customers",
+            "status": "completed",
+            "message": "customers initial sync completed.",
+            "startedAt": "2026-06-28T18:32:12.226Z",
+            "finishedAt": "2026-06-28T18:33:35.463Z",
+            "metadata": {
+              "pages": 24,
+              "source": "tenant_config",
+              "resource": "customers",
+              "recordsProcessed": 5957
+            }
+          },
+          {
+            "id": "slog_cnjyrkmzyt32iw99zpefftpk",
+            "action": "initial.products",
+            "status": "completed",
+            "message": "products initial sync completed.",
+            "startedAt": "2026-06-28T18:32:12.226Z",
+            "finishedAt": "2026-06-28T18:33:41.994Z",
+            "metadata": {
+              "pages": 2,
+              "source": "tenant_config",
+              "resource": "products",
+              "recordsProcessed": 303
+            }
+          }
+        ]
+      }
+    },
+    "segmentStats": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "active": 1,
+        "matchedCustomers": 356,
+        "ownerships": 0
+      }
+    },
+    "segments": {
+      "status": 200,
+      "count": 1,
+      "rows": [
+        {
+          "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+          "name": "Min 2 max 5 purchase",
+          "description": "Shopify Admin segment: number_of_orders BETWEEN 2 AND 5",
+          "color": "#2f80ed",
+          "priority": 50,
+          "priorityGlobal": 50,
+          "audienceType": "shopify_customer",
+          "lifecycleStage": "repeat_purchase",
+          "matchMode": "all",
+          "customerCount": 356,
+          "companyCount": 356,
+          "lastEvaluatedAt": "2026-06-28T21:48:17.931Z",
+          "isActive": true,
+          "conditions": [
+            {
+              "field": "shopifyCustomerSegmentIds",
+              "value": [
+                "gid://shopify/Segment/656941777172"
+              ],
+              "operator": "in",
+              "scopeType": "all",
+              "scopeValues": []
+            }
+          ],
+          "ownerships": [],
+          "createdAt": "2026-06-28T21:13:28.855Z",
+          "updatedAt": "2026-06-28T21:48:17.932Z"
+        }
+      ]
+    },
+    "shopifySegments": {
+      "status": 200,
+      "count": 25,
+      "rows": [
+        {
+          "id": "gid://shopify/Segment/656941777172",
+          "name": "Min 2 max 5 purchase",
+          "query": "number_of_orders BETWEEN 2 AND 5",
+          "customerCount": 356,
+          "lastSyncedAt": "2026-06-28T21:38:04.849Z",
+          "syncStatus": "ready"
+        },
+        {
+          "id": "gid://shopify/Segment/656206889236",
+          "name": "Customers over 20 orders",
+          "query": "number_of_orders > 20",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/655138324756",
+          "name": "HYDRO1620 sayfasıyla ilgilenmiş satın almamış müşteriler",
+          "query": "storefront.product_viewed MATCHES (id = 10121656500500) OR storefront.product_viewed MATCHES (id = 9570517811476) AND products_purchased NOT MATCHES (id = 10121656500500) AND products_purchased NOT MATCHES (id = 9570517811476)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/655056634132",
+          "name": "eBay",
+          "query": "customer_tags CONTAINS 'eBay'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/655056601364",
+          "name": "Amazon",
+          "query": "customer_tags CONTAINS 'Amazon'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/648705376532",
+          "name": "Customers added to companies",
+          "query": "companies IS NOT NULL",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/648705343764",
+          "name": "Customers not added to companies",
+          "query": "companies IS NULL",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/647401832724",
+          "name": "Sales Team 1",
+          "query": "number_of_orders > 5",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/646727958804",
+          "name": "Devamlı Sipariş",
+          "query": "number_of_orders >= 1\nAND last_order_date >= 2026-03-01",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/646727598356",
+          "name": "mart 2. siparis",
+          "query": "number_of_orders >= 2\nAND first_order_date BETWEEN 2026-03-01 AND 2026-03-31",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/637974380820",
+          "name": "HP3",
+          "query": "products_purchased MATCHES (id IN (10065242358036, 9840888938772, 9840906764564, 9840892903700, 9570517811476)) AND last_order_date < -90d",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/637974348052",
+          "name": "HP2",
+          "query": "products_purchased MATCHES (\n  id IN ( 9570517811476, 9840892903700, 9840895557908, 9840914923796, 9840917086484, 9840888938772, 9840906764564, 10065242358036 )\n) AND products_purchased MATCHES (\n  id IN ( 9570516500756, 9838319010068, 9838319632660, 9932284231956, 9659202961684, 9736372945172, 9736374550804, 9736377041172, 9686896050452, 9849339511060, 9849342755092, 9659221901588, 9659226423572, 9901454983444, 9736369275156, 9800007385364, 9616228974868, 9849366053140, 9838320025876, 9838321074452 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/637971530004",
+          "name": "HP1",
+          "query": "products_purchased MATCHES (\n  id IN ( 9570517811476, 9840892903700, 9840895557908, 9840888938772, 9840906764564, 10065242358036, 9840914923796, 9840917086484 ),\n  date >= -60d\n) AND products_purchased NOT MATCHES (\n  id NOT IN ( 9570517811476, 9840892903700, 9840895557908, 9840914923796, 9840917086484, 9840888938772, 9840906764564, 10065242358036 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/637271146772",
+          "name": "rwr",
+          "query": "products_purchased MATCHES (\n  id = 9570516500756\n) OR orders_placed MATCHES (\n  amount <= 1\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/627392348436",
+          "name": "Customers who have purchased UV DTF inks, or UV DTF Films",
+          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9616217932052, 9616218521876, 9616220651796, 9616221274388, 9616225272084, 9616222093588, 9839406121236, 9659202961684, 9659221901588, 9616228974868, 9849342755092, 9849339511060, 9616224518420, 9839381971220 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/627391987988",
+          "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9570521973012, 9570523283732, 9570524791060, 9570525610260, 9570526626068, 9679549432084, 9838284636436, 9838318387476, 9838317273364, 9840919347476, 9800007385364, 9686896050452, 9659226423572, 9838320025876, 9838321074452, 9736372945172, 9736374550804, 9736377041172, 9736369275156, 9570516500756, 9838319632660, 9838319010068, 9616207184148, 9839332000020, 9659244249364 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/627391627540",
+          "name": "Customers who have purchased a heat press",
+          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9570517811476, 9840906764564, 9840895557908 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/627391267092",
+          "name": "Customers who have purchased DTF or UV DTF Printer",
+          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9616199614740, 9570503786772, 9570505687316, 9570509848852 )\n)",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/615174504724",
+          "name": "Wholesale Customers",
+          "query": "customer_tags CONTAINS 'wholesale30'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/613008408852",
+          "name": "Customers who have not placed an order in the last 2 months",
+          "query": "orders_placed MATCHES (\n  count > 0\n) AND last_order_date <= -60d",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/613008048404",
+          "name": "Tax-exempt customers",
+          "query": "customer_tags CONTAINS 'taxexempt'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/606950162708",
+          "name": "Promo-eligible customers who haven't purchased yet",
+          "query": "customer_tags NOT CONTAINS 'wholesale30' AND number_of_orders <= 0",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/606944559380",
+          "name": "Promo-eligible customers (Discount Audience)",
+          "query": "customer_tags NOT CONTAINS 'wholesale30'\nAND customer_tags NOT CONTAINS 'partner'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/596688404756",
+          "name": "Customers who have purchased at least once",
+          "query": "number_of_orders >= 1",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        },
+        {
+          "id": "gid://shopify/Segment/596688371988",
+          "name": "Email subscribers",
+          "query": "email_subscription_status = 'SUBSCRIBED'",
+          "customerCount": null,
+          "lastSyncedAt": null,
+          "syncStatus": "pending"
+        }
+      ]
+    },
+    "aircallCallsStats": {
+      "status": 200,
+      "stats": {
+        "total": 81,
+        "last3d": 74,
+        "withTranscript": 100,
+        "resolverQueued": 100,
+        "resolverSucceeded": 100,
+        "resolverFailed": 0,
+        "lastReceivedAt": "2026-06-28T18:31:51.127Z"
+      },
+      "sampleCount": 80
+    },
+    "personSummary": {
+      "status": 200,
+      "body": {
+        "queue": 14,
+        "customers": 0,
+        "notifications": 11,
+        "assigned": 11,
+        "failedMail": 0
+      }
+    },
+    "personCustomers": {
+      "status": 200,
+      "count": 120,
+      "sample": [
+        {
+          "id": "cust_j6k4a2nluqm1yge7c3ibk2az",
+          "name": "İbrahim Duran",
+          "email": "infio@imzprintcenter.com",
+          "phone": "",
+          "ordersCount": 0,
+          "totalSpent": 0,
+          "lastContact": "2026-06-28",
+          "lifecycle": "lead",
+          "segment": {
+            "id": "insight-general",
+            "name": "General",
+            "color": "#475569"
+          },
+          "urgencyScore": 186.6,
+          "urgencyBreakdown": {
+            "score": 186.6,
+            "segmentScore": 119,
+            "repeatCount": 0,
+            "intent": "follow_up",
+            "intentScore": 8,
+            "aiUrgency": null,
+            "aiUrgencyScore": 0,
+            "waitingHours": 0.2,
+            "weights": {
+              "segmentWeight": 1.5,
+              "repeatCountWeight": 1,
+              "intentWeight": 1,
+              "aiUrgencyWeight": 2,
+              "waitingHoursWeight": 0.25,
+              "intentScores": {
+                "sales": 12,
+                "reorder": 14,
+                "support": 8,
+                "complaint": 20,
+                "follow_up": 8,
+                "escalation": 18
+              },
+              "aiUrgencyScores": {
+                "low": 3,
+                "high": 20,
+                "medium": 10,
+                "critical": 30
+              }
+            }
+          }
+        },
+        {
+          "id": "cust_ek35g2w5rzfu5uxr3lr93xsq",
+          "name": "ibrahim Cetiner",
+          "email": "exqapparel@gmail.com",
+          "phone": "",
+          "ordersCount": 0,
+          "totalSpent": 0,
+          "lastContact": "2026-06-28",
+          "lifecycle": "lead",
+          "segment": {
+            "id": "insight-general",
+            "name": "General",
+            "color": "#b91c1c"
+          },
+          "urgencyScore": 185.1,
+          "urgencyBreakdown": {
+            "score": 185.1,
+            "segmentScore": 118,
+            "repeatCount": 0,
+            "intent": "follow_up",
+            "intentScore": 8,
+            "aiUrgency": null,
+            "aiUrgencyScore": 0,
+            "waitingHours": 0.2,
+            "weights": {
+              "segmentWeight": 1.5,
+              "repeatCountWeight": 1,
+              "intentWeight": 1,
+              "aiUrgencyWeight": 2,
+              "waitingHoursWeight": 0.25,
+              "intentScores": {
+                "sales": 12,
+                "reorder": 14,
+                "support": 8,
+                "complaint": 20,
+                "follow_up": 8,
+                "escalation": 18
+              },
+              "aiUrgencyScores": {
+                "low": 3,
+                "high": 20,
+                "medium": 10,
+                "critical": 30
+              }
+            }
+          }
+        },
+        {
+          "id": "cust_dp6k15igy7wggavwzecqrgwb",
+          "name": "Flexce Morales",
+          "email": "flexce57@hotmail.com",
+          "phone": "",
+          "ordersCount": 0,
+          "totalSpent": 0,
+          "lastContact": "2026-06-28",
+          "lifecycle": "lead",
+          "segment": {
+            "id": "insight-general",
+            "name": "General",
+            "color": "#b45309"
+          },
+          "urgencyScore": 183.6,
+          "urgencyBreakdown": {
+            "score": 183.6,
+            "segmentScore": 117,
+            "repeatCount": 0,
+            "intent": "follow_up",
+            "intentScore": 8,
+            "aiUrgency": null,
+            "aiUrgencyScore": 0,
+            "waitingHours": 0.2,
+            "weights": {
+              "segmentWeight": 1.5,
+              "repeatCountWeight": 1,
+              "intentWeight": 1,
+              "aiUrgencyWeight": 2,
+              "waitingHoursWeight": 0.25,
+              "intentScores": {
+                "sales": 12,
+                "reorder": 14,
+                "support": 8,
+                "complaint": 20,
+                "follow_up": 8,
+                "escalation": 18
+              },
+              "aiUrgencyScores": {
+                "low": 3,
+                "high": 20,
+                "medium": 10,
+                "critical": 30
+              }
+            }
+          }
+        },
+        {
+          "id": "cust_lpkgirvzys2bpe0fptu0vjwq",
+          "name": "TANETA HOLLAND",
+          "email": "antoniquecc@gmail.com",
+          "phone": "",
+          "ordersCount": 0,
+          "totalSpent": 0,
+          "lastContact": "2026-06-28",
+          "lifecycle": "lead",
+          "segment": {
+            "id": "insight-general",
+            "name": "General",
+            "color": "#7c3aed"
+          },
+          "urgencyScore": 182.1,
+          "urgencyBreakdown": {
+            "score": 182.1,
+            "segmentScore": 116,
+            "repeatCount": 0,
+            "intent": "follow_up",
+            "intentScore": 8,
+            "aiUrgency": null,
+            "aiUrgencyScore": 0,
+            "waitingHours": 0.2,
+            "weights": {
+              "segmentWeight": 1.5,
+              "repeatCountWeight": 1,
+              "intentWeight": 1,
+              "aiUrgencyWeight": 2,
+              "waitingHoursWeight": 0.25,
+              "intentScores": {
+                "sales": 12,
+                "reorder": 14,
+                "support": 8,
+                "complaint": 20,
+                "follow_up": 8,
+                "escalation": 18
+              },
+              "aiUrgencyScores": {
+                "low": 3,
+                "high": 20,
+                "medium": 10,
+                "critical": 30
+              }
+            }
+          }
+        },
+        {
+          "id": "cust_salk9plivtr7cxlw827hjiip",
+          "name": "Irma Bustamante",
+          "email": "bustamante.irma@yahoo.com",
+          "phone": "",
+          "ordersCount": 0,
+          "totalSpent": 0,
+          "lastContact": "2026-06-28",
+          "lifecycle": "lead",
+          "segment": {
+            "id": "insight-general",
+            "name": "General",
+            "color": "#0f766e"
+          },
+          "urgencyScore": 180.6,
+          "urgencyBreakdown": {
+            "score": 180.6,
+            "segmentScore": 115,
+            "repeatCount": 0,
+            "intent": "follow_up",
+            "intentScore": 8,
+            "aiUrgency": null,
+            "aiUrgencyScore": 0,
+            "waitingHours": 0.2,
+            "weights": {
+              "segmentWeight": 1.5,
+              "repeatCountWeight": 1,
+              "intentWeight": 1,
+              "aiUrgencyWeight": 2,
+              "waitingHoursWeight": 0.25,
+              "intentScores": {
+                "sales": 12,
+                "reorder": 14,
+                "support": 8,
+                "complaint": 20,
+                "follow_up": 8,
+                "escalation": 18
+              },
+              "aiUrgencyScores": {
+                "low": 3,
+                "high": 20,
+                "medium": 10,
+                "critical": 30
+              }
+            }
+          }
+        }
+      ]
+    },
+    "checkedCustomerDetails": [
+      {
+        "id": "cust_yiq7m5fer8hsmabh621l87wd",
+        "status": 200,
+        "aircallCount": 1,
+        "taskCount": 1,
+        "name": "OWNER"
+      }
+    ]
+  },
+  "db": {
+    "checkedAt": "2026-06-28T21:53:21.351Z",
+    "tenantId": "ten_dtfbank",
+    "counts": {
+      "customers": 5958,
+      "shopifyLinkedCustomers": 5958,
+      "segments": 1,
+      "shopifySegments": 25,
+      "shopifySegmentMembers": 356,
+      "segmentMemberships": 356,
+      "segmentMembershipsWithShopifyRef": 356,
+      "seedSegments": 0,
+      "seedOrProofRequests": 0,
+      "serviceRequests": 23,
+      "aiTranscriptRequests": 23,
+      "openAiTranscriptRequests": 14,
+      "aircallEvents": 564,
+      "aircallWithTranscript": 100,
+      "primaryAxisAssignments": 17874,
+      "customersWithAxis": 5958
+    },
+    "resolverStatus": [
+      {
+        "resolverStatus": "succeeded",
+        "count": 100
+      }
+    ],
+    "serviceRequestsBySourceStatus": [
+      {
+        "source": "ai_transcript",
+        "status": "closed",
+        "count": 9
+      },
+      {
+        "source": "ai_transcript",
+        "status": "open",
+        "count": 14
+      }
+    ],
+    "axisAssignments": [
+      {
+        "axis": "support",
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "count": 5958,
+        "member": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        }
+      },
+      {
+        "axis": "sales",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "count": 5958,
+        "member": {
+          "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "email": "ihsan@dtfbank.com",
+          "firstName": "Ihsan",
+          "lastName": "Taskiran"
+        }
+      },
+      {
+        "axis": "account",
+        "memberId": "tmbr_ten_dtfbank_info_owner",
+        "count": 5958,
+        "member": {
+          "id": "tmbr_ten_dtfbank_info_owner",
+          "email": "info@dtfbank.com",
+          "firstName": "DTF Bank",
+          "lastName": "Owner"
+        }
+      }
+    ],
+    "shopifySegmentRows": [
+      {
+        "id": "shseg_zurpws93aulqnk8xu72l6k3a",
+        "shopifySegmentId": "gid://shopify/Segment/596688371988",
+        "name": "Email subscribers",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_tiaer8ch0ttbnvoymp3iwhba",
+        "shopifySegmentId": "gid://shopify/Segment/596688404756",
+        "name": "Customers who have purchased at least once",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_uuxtmouj5hjqnzw3q8ig98ju",
+        "shopifySegmentId": "gid://shopify/Segment/606944559380",
+        "name": "Promo-eligible customers (Discount Audience)",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_vl8ajfgfz535qrlnl1c8tmpc",
+        "shopifySegmentId": "gid://shopify/Segment/606950162708",
+        "name": "Promo-eligible customers who haven't purchased yet",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_uvm8vyuxf9y5mgev7did5rig",
+        "shopifySegmentId": "gid://shopify/Segment/613008048404",
+        "name": "Tax-exempt customers",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_v2t9vy3f4nf3xqovy5caj7uf",
+        "shopifySegmentId": "gid://shopify/Segment/613008408852",
+        "name": "Customers who have not placed an order in the last 2 months",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_gew0txeh6cx72zdmnj1yvqpn",
+        "shopifySegmentId": "gid://shopify/Segment/615174504724",
+        "name": "Wholesale Customers",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_bcnvr0mbvc47cl020lz85k2u",
+        "shopifySegmentId": "gid://shopify/Segment/627391267092",
+        "name": "Customers who have purchased DTF or UV DTF Printer",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_h09dvo3jggt1bndc7a21mun7",
+        "shopifySegmentId": "gid://shopify/Segment/627391627540",
+        "name": "Customers who have purchased a heat press",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      },
+      {
+        "id": "shseg_a2hhsxex5i9nhuu46secbx3g",
+        "shopifySegmentId": "gid://shopify/Segment/627391987988",
+        "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+        "customerCount": null,
+        "syncStatus": "pending",
+        "lastSyncedAt": null
+      }
+    ],
+    "internalSegmentRows": [
+      {
+        "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "name": "Min 2 max 5 purchase",
+        "customerCount": 356,
+        "lastEvaluatedAt": "2026-06-28T21:48:17.931Z",
+        "conditions": [
+          {
+            "field": "shopifyCustomerSegmentIds",
+            "value": [
+              "gid://shopify/Segment/656941777172"
+            ],
+            "operator": "in",
+            "scopeType": "all",
+            "scopeValues": []
+          }
+        ]
+      }
+    ],
+    "transcriptTaskRows": [
+      {
+        "id": "sr_irctsy8eswd9dggjlfxj7lcq",
+        "title": "support: Shipping issue follow-up",
+        "status": "open",
+        "sourceCallId": "acev_dltdv904c9v7afn9p8yl9ov5",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T21:38:20.091Z",
+        "updatedAt": "2026-06-28T21:38:20.135Z"
+      },
+      {
+        "id": "sr_d6ihmleb8guaoj5o3mb9iixu",
+        "title": "sales: Purchase intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_nskvaa377m98m34mk0vgyuk0",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "email": "ihsan@dtfbank.com",
+          "firstName": "Ihsan",
+          "lastName": "Taskiran"
+        },
+        "customer": {
+          "id": "cust_rlgiilabdsdauqdvqnk14uy0",
+          "email": "info@onprinterstudios.com",
+          "phone": "+16463633906",
+          "companyName": "Yafreisy Roman"
+        },
+        "createdAt": "2026-06-28T20:34:27.654Z",
+        "updatedAt": "2026-06-28T21:14:15.824Z"
+      },
+      {
+        "id": "sr_lena8yf9ssgvutd9fy06r2kh",
+        "title": "support: Refund intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_legacy_99c2cba5-d681-41a6-bb83-3ef378c08968",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:37:36.950Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_cbb2f7e5m3vqc3skxayfrnqu",
+        "title": "support: Refund intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:35:31.928Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_etquawwlcso2966lr5cw1gpi",
+        "title": "support: Refund intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_legacy_7e70c2a1-3262-43b1-bd7d-4e9ad00a24c2",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:35:27.434Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_zr38glp4hkdgpjpa1pzrln5q",
+        "title": "sales: Purchase intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_baoob1msjmudw2921g2cq7df",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "email": "ihsan@dtfbank.com",
+          "firstName": "Ihsan",
+          "lastName": "Taskiran"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:34:25.755Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_bepnh9mylz77bg69j8yctycw",
+        "title": "support: Refund intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_dltdv904c9v7afn9p8yl9ov5",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:33:28.294Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_cejjrh2us5rmequ02jlvx12p",
+        "title": "sales: Purchase intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_lhcdbomr8prj1d4mm37510jc",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "email": "ihsan@dtfbank.com",
+          "firstName": "Ihsan",
+          "lastName": "Taskiran"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:34:11.487Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_lng8fk4c85n9umd02tp16avo",
+        "title": "support: Refund intent follow-up",
+        "status": "open",
+        "sourceCallId": "acev_legacy_75ac8d5c-e222-49fe-9131-f24d922e1b1c",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:35:27.704Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      },
+      {
+        "id": "sr_rnzetiitzuf3pqllp1webvcb",
+        "title": "support: Shipping issue follow-up",
+        "status": "open",
+        "sourceCallId": "acev_tt4pa9uew5aera7doke02vz1",
+        "assignedMember": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "email": "dtfbanktx@gmail.com",
+          "firstName": "Linda",
+          "lastName": "Marroquin"
+        },
+        "customer": null,
+        "createdAt": "2026-06-28T20:34:40.423Z",
+        "updatedAt": "2026-06-28T20:56:35.285Z"
+      }
+    ],
+    "liveCustomerRows": [
+      {
+        "id": "cust_tkealokxzfs5vcx95lwnabn8",
+        "shopifyCustomerId": "8443854979348",
+        "companyName": "ismail baysal",
+        "email": "baysaltx@gmail.com",
+        "phone": "+17133445115",
+        "ordersCount": 2,
+        "totalSpent": "0"
+      },
+      {
+        "id": "cust_tc438zl3n0nfn876tc8u59n6",
+        "shopifyCustomerId": "8443991687444",
+        "companyName": "ibaysal5@gmail.com",
+        "email": "ibaysal5@gmail.com",
+        "phone": null,
+        "ordersCount": 0,
+        "totalSpent": "0"
+      },
+      {
+        "id": "cust_i8quuvtkm5sw6momynw0dlvc",
+        "shopifyCustomerId": "8457151250708",
+        "companyName": "Selman E",
+        "email": "s.erdem0861@gmail.com",
+        "phone": "+13464347784",
+        "ordersCount": 2,
+        "totalSpent": "0"
+      },
+      {
+        "id": "cust_ax7cjciy6xjk3xx6dcg9puha",
+        "shopifyCustomerId": "8458560766228",
+        "companyName": "Jonah Stone",
+        "email": "jonahkrts@gmail.com",
+        "phone": null,
+        "ordersCount": 2,
+        "totalSpent": "0"
+      },
+      {
+        "id": "cust_b4811277dxnzonr3bso81cec",
+        "shopifyCustomerId": "8465705304340",
+        "companyName": "cmbaskurt@gmail.com",
+        "email": "cmbaskurt@gmail.com",
+        "phone": null,
+        "ordersCount": 0,
+        "totalSpent": "0"
+      }
+    ]
+  },
+  "runtime": {
+    "dockerPs": [
+      {
+        "name": "factoryengine-dtfbank-app",
+        "status": "Up 18 minutes",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "gss-legendtransfers",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4010->4000/tcp"
+      },
+      {
+        "name": "gss-fastdtftransfer",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4002->4000/tcp"
+      },
+      {
+        "name": "gss-everydaycustomprint",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4003->4000/tcp"
+      },
+      {
+        "name": "gss-eagledtfprint",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4007->4000/tcp"
+      },
+      {
+        "name": "gss-dtftransferohio",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4004->4000/tcp"
+      },
+      {
+        "name": "gss-dtfprinthouse",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4005->4000/tcp"
+      },
+      {
+        "name": "gss-alphaprint",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4008->4000/tcp"
+      },
+      {
+        "name": "gss-dtf-print-depot",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4006->4000/tcp"
+      },
+      {
+        "name": "gss-dtfprintarizona",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4012->4000/tcp"
+      },
+      {
+        "name": "gss-customprintaz",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4011->4000/tcp"
+      },
+      {
+        "name": "gss-gangsheet",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4009->4000/tcp"
+      },
+      {
+        "name": "gangsheetbuilder-app",
+        "status": "Up 22 hours (healthy)",
+        "ports": "127.0.0.1:4000->4000/tcp"
+      },
+      {
+        "name": "factory-engine-pro-person",
+        "status": "Up 34 hours",
+        "ports": "127.0.0.1:5188->5188/tcp"
+      },
+      {
+        "name": "factory-engine-pro-accounts",
+        "status": "Up 32 hours",
+        "ports": "127.0.0.1:5187->5187/tcp"
+      },
+      {
+        "name": "factory-engine-pro-admin",
+        "status": "Up 32 hours",
+        "ports": "127.0.0.1:5189->5189/tcp"
+      },
+      {
+        "name": "factory-engine-pro-api",
+        "status": "Up 32 hours",
+        "ports": "127.0.0.1:4120->4120/tcp"
+      },
+      {
+        "name": "factoryengine-dtfprint-app",
+        "status": "Up 6 days",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "factoryengine-eagledtfsupply-app",
+        "status": "Up 6 days",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "factoryengine-fastdtfsupply-app",
+        "status": "Up 6 days",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "factoryengine-fastdtftransfer-app",
+        "status": "Up 6 days",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "factoryengine-dtfprintdepot-app",
+        "status": "Up 6 days",
+        "ports": "3000-3001/tcp, 4000/tcp"
+      },
+      {
+        "name": "us-dtftransferohio",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4103->3000/tcp"
+      },
+      {
+        "name": "us-eagledtfprint",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4106->3000/tcp"
+      },
+      {
+        "name": "us-dtfprintdepot",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4105->3000/tcp"
+      },
+      {
+        "name": "us-legendtransfers",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4109->3000/tcp"
+      },
+      {
+        "name": "us-everydaycustomprint",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4102->3000/tcp"
+      },
+      {
+        "name": "us-fastdtftransfer",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4101->3000/tcp"
+      },
+      {
+        "name": "us-gangsheet",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4108->3000/tcp"
+      },
+      {
+        "name": "us-alphaprint",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4107->3000/tcp"
+      },
+      {
+        "name": "us-dtfprinthouse",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4104->3000/tcp"
+      },
+      {
+        "name": "us-customprintaz",
+        "status": "Up 12 days",
+        "ports": "127.0.0.1:4110->3000/tcp"
+      },
+      {
+        "name": "gangsheetbuilder-backup-20260423-085456-db-1",
+        "status": "Up 2 weeks (healthy)",
+        "ports": "127.0.0.1:5432->5432/tcp"
+      },
+      {
+        "name": "ssactivewear-store-e3bd2d-3",
+        "status": "Up 4 weeks",
+        "ports": "3000/tcp"
+      },
+      {
+        "name": "dd-agent",
+        "status": "Up 6 weeks (unhealthy)",
+        "ports": "8125/udp, 8126/tcp"
+      },
+      {
+        "name": "falco",
+        "status": "Up 6 weeks",
+        "ports": ""
+      },
+      {
+        "name": "ssactivewear-everydaycustomprint",
+        "status": "Up 6 weeks",
+        "ports": "3000/tcp"
+      },
+      {
+        "name": "caddy",
+        "status": "Up 6 weeks",
+        "ports": "0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp, 0.0.0.0:443->443/udp, [::]:443->443/udp, 2019/tcp"
+      },
+      {
+        "name": "beszel-agent",
+        "status": "Up 6 weeks",
+        "ports": ""
+      },
+      {
+        "name": "beszel",
+        "status": "Up 6 weeks",
+        "ports": "8090/tcp"
+      },
+      {
+        "name": "customer-protect",
+        "status": "Up 6 weeks",
+        "ports": "3000/tcp"
+      },
+      {
+        "name": "promtail",
+        "status": "Up 6 weeks",
+        "ports": ""
+      },
+      {
+        "name": "loki",
+        "status": "Up 6 weeks",
+        "ports": "3100/tcp"
+      },
+      {
+        "name": "uptime-kuma",
+        "status": "Up 6 weeks (healthy)",
+        "ports": "3001/tcp"
+      },
+      {
+        "name": "redis",
+        "status": "Up 6 weeks",
+        "ports": "6379/tcp"
+      }
+    ],
+    "routeAndStartupLogLines": [
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 8:28:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 8:28:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 8:28:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 8:28:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 8:28:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1232  - \u001b[39m06/28/2026, 8:32:35 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1232  - \u001b[39m06/28/2026, 8:32:35 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1232  - \u001b[39m06/28/2026, 8:32:35 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1232  - \u001b[39m06/28/2026, 8:32:35 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1232  - \u001b[39m06/28/2026, 8:32:35 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:37:31 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:37:31 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:37:31 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:37:31 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:37:31 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:43:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:43:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:43:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:43:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1220  - \u001b[39m06/28/2026, 8:43:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/28/2026, 8:49:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/28/2026, 8:49:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/28/2026, 8:49:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/28/2026, 8:49:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/28/2026, 8:49:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1218  - \u001b[39m06/28/2026, 8:56:39 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1218  - \u001b[39m06/28/2026, 8:56:39 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1218  - \u001b[39m06/28/2026, 8:56:39 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1218  - \u001b[39m06/28/2026, 8:56:39 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1218  - \u001b[39m06/28/2026, 8:56:39 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1222  - \u001b[39m06/28/2026, 9:08:54 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1222  - \u001b[39m06/28/2026, 9:08:54 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1222  - \u001b[39m06/28/2026, 9:08:54 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1222  - \u001b[39m06/28/2026, 9:08:54 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1222  - \u001b[39m06/28/2026, 9:08:54 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 9:36:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/customers/assign-default-axis, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 9:36:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/aircall/reprocess-resolved, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 9:36:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/segments/evaluate-all, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 9:36:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/sync/initial, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1223  - \u001b[39m06/28/2026, 9:36:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+    ]
+  },
+  "ui": {
+    "screenshots": {
+      "initialSetup": {
+        "requestedUrl": "https://app.dtfbank.com/settings/initial-setup",
+        "finalUrl": "https://app.dtfbank.com/settings/initial-setup",
+        "title": "Workspace Admin",
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-initial-setup-ui-urlbar-live.png",
+        "capture": {
+          "kind": "window-urlbar-printwindow",
+          "detail": "captured=Workspace Admin - Chromium;bounds=0,0,1416x908"
+        },
+        "textSnippet": "D DTF Bank Back panel OVERVIEW Dashboard COMMERCE Orders Customers B2B Pricing OPERATIONS Segments Support B2B Applications Task Management AUTOMATION Rule engine ORGANIZATION Members Roles Commissions TRANSACTIONAL MAIL System mail Mail Marketing SYSTEM Workspace Aircall AI keys Shopify Initial setup DB info@dtfbank.com Owner Workspace settings nav.integrations D DTF Bank Owner Settings API keys, integrations, and provider configuration Workspace AI Aircall Shopify Initial setup TENANT WARMUP Initial setup Live Shopify, segment, Aircall, and customer ownership warmup for this tenant Refresh Run setup Shopify sync state Current synced resource snapshots from the tenant API Ready Resource Status Snapshot Last run Completed Error customers completed 5958 5958 29.06.2026 00:44 - products completed 303 303 29.06.2026 00:44 - orders completed 632 627 29.06.2026 00:44 - Setup progress Each step calls the live backend and stores the returned result. Setup has not run in this browser session Run setup to queue Shopify sync, evaluate live segments, reprocess resolved Aircall transcripts, and assign customer axis owners. Run setup Shopify sync queue Queues customers, products, and orders sync against the saved Shopify credentials. idle Segment evaluate-all Evaluates saved live segment definitions against synced Shopify customers. idle Aircall resolved transcript reprocess Queues existing transcript records through the resolver and workflow trigger path. idle Default customer axis assignment Assigns sales, support, and account primary owners to customers missing an owner. idle",
+        "extraTextSnippet": "TENANT WARMUP Initial setup Live Shopify, segment, Aircall, and customer ownership warmup for this tenant Refresh Run setup Shopify sync state Current synced resource snapshots from the tenant API Ready Resource Status Snapshot Last run Completed Error customers completed 5958 5958 29.06.2026 00:44 - products completed 303 303 29.06.2026 00:44 - orders completed 632 627 29.06.2026 00:44 - Setup progress Each step calls the live backend and stores the returned result. Setup has not run in this browser session Run setup to queue Shopify sync, evaluate live segments, reprocess resolved Aircall transcripts, and assign customer axis owners. Run setup Shopify sync queue Queues customers, products, and orders sync against the saved Shopify credentials. idle Segment evaluate-all Evaluates saved live segment definitions against synced Shopify customers. idle Aircall resolved transcript reprocess Queues existing transcript records through the resolver and workflow trigger path. idle Default customer axis assignment Assigns sales, support, and account primary owners to customers missing an owner. idle"
+      },
+      "personQueue": {
+        "requestedUrl": "https://app.dtfbank.com/staff/queue",
+        "finalUrl": "https://app.dtfbank.com/staff/queue",
+        "title": "Factory Engine Pro Staff",
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-person-queue-ui-urlbar-live.png",
+        "capture": {
+          "kind": "window-urlbar-printwindow",
+          "detail": "captured=Factory Engine Pro Staff - Chromium;bounds=0,0,1416x908"
+        },
+        "textSnippet": "D DTF Bank Customer Service WORKSPACE Call Queue 14 Customers 0 E-mail Calendar Notes KNOWLEDGE Training Announcements Messaging ACCOUNT Submit Request Notifications 11 LM dtfbanktx@gmail.com Customer Service Call Queue D DTF Bank DAILY CALLS 0 axis-scoped customers PRIORITY TASKS 14 urgency desc PINNED 0 persistent board U80+ 0 same formula AXES 1 support Daily call list Segment-driven customers, sorted by the urgency formula. All assigned segments No customers in this segment group. Priority kanban Rule-engine tasks, axis-scoped and urgency-desc. support: Refund intent follow-up AI - Transcript U20.4 SR-MQY8XNTV - U20.4 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Shipping issue follow-up AI - Transcript U20.1 SR-MQYB92RA - U20.1 - Open - 17m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY93NAM - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY93N70 - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY92ZUT - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY92ZOX - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY90C6W - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY90B85 - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY907YU - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY907RB - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Shipping issue follow-up AI - Transcript U8.3 SR-MQY8Z7HH - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer Yafreisy Roman AI - Transcript U1.3 SR-MQY8YXMR - U1.3 - Open - 41m Owner: Ihsan Taskiran Axis: sales No Shopify order 0 orders - $0 - 1 tasks workflow_rule Pin Transfer sales: Purchase intent follow-up AI - Transcript U0.4 SR-MQY8YL5O - U0.4 - Open - 59m Owner: Ihsan Taskiran Axis: sales No Shopify order 30d performance pending workflow_rule Pin Transfer sales: Purchase intent follow-up AI - Transcript U0.3 SR-MQY8YW60 - U0.3 - Open - 59m Owner: Ihsan Taskiran Axis: sales No Shopify order 30d performance pending workflow_rule Pin Transfer Pinned board 0 Pin a live queue card to keep it visible here.",
+        "extraTextSnippet": "DAILY CALLS 0 axis-scoped customers PRIORITY TASKS 14 urgency desc PINNED 0 persistent board U80+ 0 same formula AXES 1 support Daily call list Segment-driven customers, sorted by the urgency formula. All assigned segments No customers in this segment group. Priority kanban Rule-engine tasks, axis-scoped and urgency-desc. support: Refund intent follow-up AI - Transcript U20.4 SR-MQY8XNTV - U20.4 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Shipping issue follow-up AI - Transcript U20.1 SR-MQYB92RA - U20.1 - Open - 17m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY93NAM - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY93N70 - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY92ZUT - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY92ZOX - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY90C6W - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY90B85 - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY907YU - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Refund intent follow-up AI - Transcript U8.3 SR-MQY907RB - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer support: Shipping issue follow-up AI - Transcript U8.3 SR-MQY8Z7HH - U8.3 - Open - 59m Owner: Linda Marroquin Axis: support No Shopify order 30d performance pending workflow_rule Pin Transfer Yafreisy Roman AI - Transcript U1.3 SR-MQY8YXMR - U1.3 - Open - 41m Owner: Ihsan Taskiran Axis: sales No Shopify order 0 orders - $0 - 1 tasks workflow_rule Pin Transfer sales: Purchase intent follow-up AI - Transcript U0.4 SR-MQY8YL5O - U0.4 - Open - 59m Owner: Ihsan Taskiran Axis: sales No Shopify order 30d performance pending workflow_rule Pin Transfer sales: Purchase intent follow-up AI - Transcript U0.3 SR-MQY8YW60 - U0.3 - Open - 59m Owner: Ihsan Taskiran Axis: sales No Shopify order 30d performance pending workflow_rule Pin Transfer Pinned board 0 Pin a live queue card to keep it visible here."
+      },
+      "personCustomers": {
+        "requestedUrl": "https://app.dtfbank.com/staff/customers",
+        "finalUrl": "https://app.dtfbank.com/staff/customers",
+        "title": "Factory Engine Pro Staff",
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-person-customers-ui-urlbar-live.png",
+        "capture": {
+          "kind": "window-urlbar-printwindow",
+          "detail": "captured=Factory Engine Pro Staff - Chromium;bounds=0,0,1416x908"
+        },
+        "textSnippet": "D DTF Bank Customer Service WORKSPACE Call Queue 14 Customers 0 E-mail Calendar Notes KNOWLEDGE Training Announcements Messaging ACCOUNT Submit Request Notifications 11 LM dtfbanktx@gmail.com Customer Service Customers D DTF Bank CUSTOMERS 120 in your segments TOTAL SPENT $83,888 across portfolio AT RISK 0 needs outreach AVG ORDERS 2 per customer SEGMENTS 2 owned CUSTOMER SEGMENT LIFECYCLE URGENCY ORDERS SPENT PHONE LAST CONTACT İbrahim Duran infio@imzprintcenter.com General Lead U186.6 0 $0 2026-06-28 ibrahim Cetiner exqapparel@gmail.com General Lead U185.1 0 $0 2026-06-28 Flexce Morales flexce57@hotmail.com General Lead U183.6 0 $0 2026-06-28 TANETA HOLLAND antoniquecc@gmail.com General Lead U182.1 0 $0 2026-06-28 Irma Bustamante bustamante.irma@yahoo.com General Lead U180.6 0 $0 2026-06-28 Gwendolyn Hopping hopping316@gmail.com General Lead U179.1 0 $0 2026-06-28 Sylvia Santos ssguajardo71@yahoo.com General Lead U177.6 0 $0 2026-06-28 KEITH KEARNEY stitchem435@aol.com General Lead U176.1 0 $0 2026-06-28 Huzeyfe Aslan huzeyfeaslan@gmail.com General Lead U174.6 0 $0 2026-06-28 JESUS BRACAMONTE jeezartgroup@gmail.com General Lead U173.1 0 $0 2026-06-28 Josue Delgado josuedaniecisnedelgado@gmail.com General Lead U171.6 0 $0 2026-06-28 Horacio Guillen hlaprint17@gmail.com General Lead U170.1 0 $0 2026-06-28 Heather Mullins galsanddogsboutique@gmail.com General Lead U168.6 0 $0 2026-06-28 KENNETH LEHRER shopworknplay@hotmail.com General Lead U167.1 0 $0 2026-06-28 StacyMae Webb parrotsgrl@gmail.com General Lead U165.6 0 $0 2026-06-28 Heather Moore mooreheather@live.com General Lead U164.1 0 $0 2026-06-28 Don Silbaugh donsilbaugh@aol.com General Lead U162.6 0 $0 2026-06-28 REGINA BATAILLE sportandhoundts@gmail.com General Lead U161.1 0 $0 2026-06-28 Heather Esposito nolimitcustomcreations@gmail.com General Lead U159.6 0 $0 2026-06-28 HASAN TUNCEROGLU hntllc@yahoo.com General Lead U158.1 0 $0 2026-06-28 Eddie Ghee mightyg2g@yahoo.com General Lead U156.6 0 $0 2026-06-28 HASBI UZAN hasbiuzan@gmail.com General Lead U155.1 0 $0 2026-06-28 VINAY KANTH vinaykanth.k19@gmail.com General Lead U153.6 0 $0 2026-06-28 Ron Hughes hughesprinting52@gmail.com General Lead U152.1 0 $0 2026-06-28 Hansel Vallejo hvallejo92@gmail.com General Lead U150.6 0 $0 2026-06-28 NIKKI GEENE nikkismithhart@yahoo.com General Lead U149.1 0 $0 2026-06-28 Mehmet Ekizoglu oldtownprintingco@gmail.com General Engaged U147.6 1 $476 2026-06-28 Felicia Reid felicia@mobilelabs.com General Lead U146.1 0 $0 2026-06-28 IFTIKHAR HAQ haq71@hotmail.com General Lead U144.6 0 $0 2026-06-28 Salvador Gonzalez Martinez sg.elsoldecarolina@outlook.com General Lead U143.1 0 $0 2026-06-28 Guran Demir gurandemir@gmail.com General Lead U141.6 0 $0 2026-06-28 MAHMOOD KHAN mamood@sstextileapparel.com General Lead U140.1 0 $0 2026-06-28 Guillermo Gutierrez info@plentyprints.com General Lead U138.6 0 $0 2026-06-28 William López Arias lopezarias.w@gmail.com General Lead U137.1 0 $0 2026-06-28 DANIEL CHANG support@xencryptostore.com General Lead U135.6 0 $0 2026-06-28 Gregory A Sasser gsasser94@gmail.com General Lead U134.1 0 $0 2026-06-28 Renee Johnson rjohnson103078@gmail.com General Lead U132.6 0 $0 2026-06-28 JENNIFER HANSEN ROLLI jhansenrolli@gmail.com General Lead U131.1 0 $0 2026-06-28 Kellie brown krpettus@yahoo.com General Lead U129.6 0 $0 2026-06-28 ESTHER QUINN esussner@mac.com General Lead U128.1 0 $0 2026-06-28 Giovanny Macias gmacias694253@gmail.com General Lead U126.6 0 $0 2026-06-28 Giovanni VILLALONA giovanni@aaainnovations.com General Lead U125.1 0 $0 2026-06-28 CARA SMITH caraannscraftcorner@gmail.com General Lead U123.6 0 $0 2026-06-28 Geovanni Luna geeoluna19@gmail.com General Lead U122.1 0 $0 2026-06-28 YIANNI PATSALOS gjpatsalos@gmail.com General Lead U120.6 0 $0 2026-06-28 Gary Reviere gary.reviere@gmail.com General Lead U119.1 0 $0 2026-06-28 Steve Torosyan stevestart2021@gmail.com General Lead U117.6 0 $0 2026-06-28 GEORGE PATSALOS george@bcconyc.com General Lead U116.1 0 $0 2026-06-28 Garie Anderson nolimitcreation@gmail.com General Lead U114.6 0 $0 2026-06-28 Carl Martin coachcarldodgers@yahoo.com General Lead U113.1 0 $0 2026-06-28 MARIELA SOTO nazsotodesign@gmail.com General Lead U111.6 0 $0 2026-06-28 Fuat Gureycan (Columbus) fuatgureycan@gmail.com General Lead U110.1 0 $0 2026-06-28 Pamela Kistler pamkistler3036@gmail.com General Lead U108.6 0 $0 2026-06-28 Frederick DeCurtis fred@angryfishgear.com General Lead U107.1 0 $0 2026-06-28 Leslie Harden Darensburg leslie.starks1969@gmail.com General Lead U105.6 0 $0 2026-06-28 BARBARA GANCI barbara@dunegrasspublishingllc.com General Lead U104.1 0 $0 2026-06-28 Freddie Dixon freddiedixonjr@gmail.com General Lead U102.6 0 $0 2026-06-28 GARY TALLIS screenair@optonline.net General Lead U101.1 0 $0 2026-06-28 Fred DeCurtis fred@ecsportsdmv.net General Lead U99.6 0 $0 2026-06-28 Regina Pool regina.pool1@gmail.com General Lead U98.1 0 $0 2026-06-28 Frank Tiatia franktiatia@gmail.com General Lead U96.6 0 $0 ...",
+        "extraTextSnippet": "CUSTOMERS 120 in your segments TOTAL SPENT $83,888 across portfolio AT RISK 0 needs outreach AVG ORDERS 2 per customer SEGMENTS 2 owned CUSTOMER SEGMENT LIFECYCLE URGENCY ORDERS SPENT PHONE LAST CONTACT İbrahim Duran infio@imzprintcenter.com General Lead U186.6 0 $0 2026-06-28 ibrahim Cetiner exqapparel@gmail.com General Lead U185.1 0 $0 2026-06-28 Flexce Morales flexce57@hotmail.com General Lead U183.6 0 $0 2026-06-28 TANETA HOLLAND antoniquecc@gmail.com General Lead U182.1 0 $0 2026-06-28 Irma Bustamante bustamante.irma@yahoo.com General Lead U180.6 0 $0 2026-06-28 Gwendolyn Hopping hopping316@gmail.com General Lead U179.1 0 $0 2026-06-28 Sylvia Santos ssguajardo71@yahoo.com General Lead U177.6 0 $0 2026-06-28 KEITH KEARNEY stitchem435@aol.com General Lead U176.1 0 $0 2026-06-28 Huzeyfe Aslan huzeyfeaslan@gmail.com General Lead U174.6 0 $0 2026-06-28 JESUS BRACAMONTE jeezartgroup@gmail.com General Lead U173.1 0 $0 2026-06-28 Josue Delgado josuedaniecisnedelgado@gmail.com General Lead U171.6 0 $0 2026-06-28 Horacio Guillen hlaprint17@gmail.com General Lead U170.1 0 $0 2026-06-28 Heather Mullins galsanddogsboutique@gmail.com General Lead U168.6 0 $0 2026-06-28 KENNETH LEHRER shopworknplay@hotmail.com General Lead U167.1 0 $0 2026-06-28 StacyMae Webb parrotsgrl@gmail.com General Lead U165.6 0 $0 2026-06-28 Heather Moore mooreheather@live.com General Lead U164.1 0 $0 2026-06-28 Don Silbaugh donsilbaugh@aol.com General Lead U162.6 0 $0 2026-06-28 REGINA BATAILLE sportandhoundts@gmail.com General Lead U161.1 0 $0 2026-06-28 Heather Esposito nolimitcustomcreations@gmail.com General Lead U159.6 0 $0 2026-06-28 HASAN TUNCEROGLU hntllc@yahoo.com General Lead U158.1 0 $0 2026-06-28 Eddie Ghee mightyg2g@yahoo.com General Lead U156.6 0 $0 2026-06-28 HASBI UZAN hasbiuzan@gmail.com General Lead U155.1 0 $0 2026-06-28 VINAY KANTH vinaykanth.k19@gmail.com General Lead U153.6 0 $0 2026-06-28 Ron Hughes hughesprinting52@gmail.com General Lead U152.1 0 $0 2026-06-28 Hansel Vallejo hvallejo92@gmail.com General Lead U150.6 0 $0 2026-06-28 NIKKI GEENE nikkismithhart@yahoo.com General Lead U149.1 0 $0 2026-06-28 Mehmet Ekizoglu oldtownprintingco@gmail.com General Engaged U147.6 1 $476 2026-06-28 Felicia Reid felicia@mobilelabs.com General Lead U146.1 0 $0 2026-06-28 IFTIKHAR HAQ haq71@hotmail.com General Lead U144.6 0 $0 2026-06-28 Salvador Gonzalez Martinez sg.elsoldecarolina@outlook.com General Lead U143.1 0 $0 2026-06-28 Guran Demir gurandemir@gmail.com General Lead U141.6 0 $0 2026-06-28 MAHMOOD KHAN mamood@sstextileapparel.com General Lead U140.1 0 $0 2026-06-28 Guillermo Gutierrez info@plentyprints.com General Lead U138.6 0 $0 2026-06-28 William López Arias lopezarias.w@gmail.com General Lead U137.1 0 $0 2026-06-28 DANIEL CHANG support@xencryptostore.com General Lead U135.6 0 $0 2026-06-28 Gregory A Sasser gsasser94@gmail.com General Lead U134.1 0 $0 2026-06-28 Renee Johnson rjohnson103078@gmail.com General Lead U132.6 0 $0 2026-06-28 JENNIFER HANSEN ROLLI jhansenrolli@gmail.com General Lead U131.1 0 $0 2026-06-28 Kellie brown krpettus@yahoo.com General Lead U129.6 0 $0 2026-06-28 ESTHER QUINN esussner@mac.com General Lead U128.1 0 $0 2026-06-28 Giovanny Macias gmacias694253@gmail.com General Lead U126.6 0 $0 2026-06-28 Giovanni VILLALONA giovanni@aaainnovations.com General Lead U125.1 0 $0 2026-06-28 CARA SMITH caraannscraftcorner@gmail.com General Lead U123.6 0 $0 2026-06-28 Geovanni Luna geeoluna19@gmail.com General Lead U122.1 0 $0 2026-06-28 YIANNI PATSALOS gjpatsalos@gmail.com General Lead U120.6 0 $0 2026-06-28 Gary Reviere gary.reviere@gmail.com General Lead U119.1 0 $0 2026-06-28 Steve Torosyan stevestart2021@gmail.com General Lead U117.6 0 $0 2026-06-28 GEORGE PATSALOS george@bcconyc.com General Lead U116.1 0 $0 2026-06-28 Garie Anderson nolimitcreation@gmail.com General Lead U114.6 0 $0 2026-06-28 Carl Martin coachcarldodgers@yahoo.com General Lead U113.1 0 $0 2026-06-28 MARIELA SOTO nazsotodesign@gmail.com General Lead U111.6 0 $0 2026-06-28 Fuat Gureycan (Columbus) fuatgureycan@gmail.com General Lead U110.1 0 $0 2026-06-28 Pamela Kistler pamkistler3036@gmail.com General Lead U108.6 0 $0 2026-06-28 Frederick DeCurtis fred@angryfishgear.com General Lead U107.1 0 $0 2026-06-28 Leslie Harden Darensburg leslie.starks1969@gmail.com General Lead U105.6 0 $0 2026-06-28 BARBARA GANCI barbara@dunegrasspublishingllc.com General Lead U104.1 0 $0 2026-06-28 Freddie Dixon freddiedixonjr@gmail.com General Lead U102.6 0 $0 2026-06-28 GARY TALLIS screenair@optonline.net General Lead U101.1 0 $0 2026-06-28 Fred DeCurtis fred@ecsportsdmv.net General Lead U99.6 0 $0 2026-06-28 Regina Pool regina.pool1@gmail.com General Lead U98.1 0 $0 2026-06-28 Frank Tiatia franktiatia@gmail.com General Lead U96.6 0 $0 2026-06-28 Shirley Watson clemontsshirley@gmail.com General Lead U95.1 0 $0 2026-06-28 DEANNA GIANGUZZI deannaluzzi@gmail.com General Lead U93.6 0 $0 2026-06-28 EDWIN NOVA edwin.nova@arclad.com General Lead U92.1 0 $0 2026-06-28 R..."
+      },
+      "personCustomerAircall": {
+        "requestedUrl": "https://app.dtfbank.com/staff/customers?customerId=cust_yiq7m5fer8hsmabh621l87wd",
+        "finalUrl": "https://app.dtfbank.com/staff/customers?customerId=cust_yiq7m5fer8hsmabh621l87wd",
+        "title": "Factory Engine Pro Staff",
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-person-customer-aircall-ui-urlbar-live.png",
+        "capture": {
+          "kind": "window-urlbar-printwindow",
+          "detail": "captured=Factory Engine Pro Staff - Chromium;bounds=0,0,1416x908"
+        },
+        "selectedCustomerId": "cust_yiq7m5fer8hsmabh621l87wd",
+        "selectedCustomerName": "OWNER",
+        "aircallCount": 1,
+        "taskCount": 1,
+        "textSnippet": "D DTF Bank Customer Service WORKSPACE Call Queue 14 Customers 0 E-mail Calendar Notes KNOWLEDGE Training Announcements Messaging ACCOUNT Submit Request Notifications 11 LM dtfbanktx@gmail.com Customer Service Customers D DTF Bank CUSTOMERS 120 in your segments TOTAL SPENT $83,888 across portfolio AT RISK 0 needs outreach AVG ORDERS 2 per customer SEGMENTS 2 owned CUSTOMER SEGMENT LIFECYCLE URGENCY ORDERS SPENT PHONE LAST CONTACT İbrahim Duran infio@imzprintcenter.com General Lead U186.6 0 $0 2026-06-28 ibrahim Cetiner exqapparel@gmail.com General Lead U185.1 0 $0 2026-06-28 Flexce Morales flexce57@hotmail.com General Lead U183.6 0 $0 2026-06-28 TANETA HOLLAND antoniquecc@gmail.com General Lead U182.1 0 $0 2026-06-28 Irma Bustamante bustamante.irma@yahoo.com General Lead U180.6 0 $0 2026-06-28 Gwendolyn Hopping hopping316@gmail.com General Lead U179.1 0 $0 2026-06-28 Sylvia Santos ssguajardo71@yahoo.com General Lead U177.6 0 $0 2026-06-28 KEITH KEARNEY stitchem435@aol.com General Lead U176.1 0 $0 2026-06-28 Huzeyfe Aslan huzeyfeaslan@gmail.com General Lead U174.6 0 $0 2026-06-28 JESUS BRACAMONTE jeezartgroup@gmail.com General Lead U173.1 0 $0 2026-06-28 Josue Delgado josuedaniecisnedelgado@gmail.com General Lead U171.6 0 $0 2026-06-28 Horacio Guillen hlaprint17@gmail.com General Lead U170.1 0 $0 2026-06-28 Heather Mullins galsanddogsboutique@gmail.com General Lead U168.6 0 $0 2026-06-28 KENNETH LEHRER shopworknplay@hotmail.com General Lead U167.1 0 $0 2026-06-28 StacyMae Webb parrotsgrl@gmail.com General Lead U165.6 0 $0 2026-06-28 Heather Moore mooreheather@live.com General Lead U164.1 0 $0 2026-06-28 Don Silbaugh donsilbaugh@aol.com General Lead U162.6 0 $0 2026-06-28 REGINA BATAILLE sportandhoundts@gmail.com General Lead U161.1 0 $0 2026-06-28 Heather Esposito nolimitcustomcreations@gmail.com General Lead U159.6 0 $0 2026-06-28 HASAN TUNCEROGLU hntllc@yahoo.com General Lead U158.1 0 $0 2026-06-28 Eddie Ghee mightyg2g@yahoo.com General Lead U156.6 0 $0 2026-06-28 HASBI UZAN hasbiuzan@gmail.com General Lead U155.1 0 $0 2026-06-28 VINAY KANTH vinaykanth.k19@gmail.com General Lead U153.6 0 $0 2026-06-28 Ron Hughes hughesprinting52@gmail.com General Lead U152.1 0 $0 2026-06-28 Hansel Vallejo hvallejo92@gmail.com General Lead U150.6 0 $0 2026-06-28 NIKKI GEENE nikkismithhart@yahoo.com General Lead U149.1 0 $0 2026-06-28 Mehmet Ekizoglu oldtownprintingco@gmail.com General Engaged U147.6 1 $476 2026-06-28 Felicia Reid felicia@mobilelabs.com General Lead U146.1 0 $0 2026-06-28 IFTIKHAR HAQ haq71@hotmail.com General Lead U144.6 0 $0 2026-06-28 Salvador Gonzalez Martinez sg.elsoldecarolina@outlook.com General Lead U143.1 0 $0 2026-06-28 Guran Demir gurandemir@gmail.com General Lead U141.6 0 $0 2026-06-28 MAHMOOD KHAN mamood@sstextileapparel.com General Lead U140.1 0 $0 2026-06-28 Guillermo Gutierrez info@plentyprints.com General Lead U138.6 0 $0 2026-06-28 William López Arias lopezarias.w@gmail.com General Lead U137.1 0 $0 2026-06-28 DANIEL CHANG support@xencryptostore.com General Lead U135.6 0 $0 2026-06-28 Gregory A Sasser gsasser94@gmail.com General Lead U134.1 0 $0 2026-06-28 Renee Johnson rjohnson103078@gmail.com General Lead U132.6 0 $0 2026-06-28 JENNIFER HANSEN ROLLI jhansenrolli@gmail.com General Lead U131.1 0 $0 2026-06-28 Kellie brown krpettus@yahoo.com General Lead U129.6 0 $0 2026-06-28 ESTHER QUINN esussner@mac.com General Lead U128.1 0 $0 2026-06-28 Giovanny Macias gmacias694253@gmail.com General Lead U126.6 0 $0 2026-06-28 Giovanni VILLALONA giovanni@aaainnovations.com General Lead U125.1 0 $0 2026-06-28 CARA SMITH caraannscraftcorner@gmail.com General Lead U123.6 0 $0 2026-06-28 Geovanni Luna geeoluna19@gmail.com General Lead U122.1 0 $0 2026-06-28 YIANNI PATSALOS gjpatsalos@gmail.com General Lead U120.6 0 $0 2026-06-28 Gary Reviere gary.reviere@gmail.com General Lead U119.1 0 $0 2026-06-28 Steve Torosyan stevestart2021@gmail.com General Lead U117.6 0 $0 2026-06-28 GEORGE PATSALOS george@bcconyc.com General Lead U116.1 0 $0 2026-06-28 Garie Anderson nolimitcreation@gmail.com General Lead U114.6 0 $0 2026-06-28 Carl Martin coachcarldodgers@yahoo.com General Lead U113.1 0 $0 2026-06-28 MARIELA SOTO nazsotodesign@gmail.com General Lead U111.6 0 $0 2026-06-28 Fuat Gureycan (Columbus) fuatgureycan@gmail.com General Lead U110.1 0 $0 2026-06-28 Pamela Kistler pamkistler3036@gmail.com General Lead U108.6 0 $0 2026-06-28 Frederick DeCurtis fred@angryfishgear.com General Lead U107.1 0 $0 2026-06-28 Leslie Harden Darensburg leslie.starks1969@gmail.com General Lead U105.6 0 $0 2026-06-28 BARBARA GANCI barbara@dunegrasspublishingllc.com General Lead U104.1 0 $0 2026-06-28 Freddie Dixon freddiedixonjr@gmail.com General Lead U102.6 0 $0 2026-06-28 GARY TALLIS screenair@optonline.net General Lead U101.1 0 $0 2026-06-28 Fred DeCurtis fred@ecsportsdmv.net General Lead U99.6 0 $0 2026-06-28 Regina Pool regina.pool1@gmail.com General Lead U98.1 0 $0 2026-06-28 Frank Tiatia franktiatia@gmail.com General Lead U96.6 0 $0 ...",
+        "panelTextSnippet": "Customer 360 OWNER kazecustomdesign@yahoo.com - +18313191837 Revenue $3,920 Orders 4 Calls 1 Open support 0 Open tasks 0 Profile Shopify Orders Aircall Calls Support Email Messages Notes Tasks Call.Ended Outbound +18313191837 - 2m Jun 26, 6:41 PM Outbound follow-up call regarding Hydro 1620 hydraulic heat press machine. Customer inquired about noise levels, requested videos of machine in operation, confirmed product is in stock with 7-10 day shipping to California. Customer interested in 10% discount pricing ($3,149). Agent provided social media links for additional videos and encouraged customer to reach out with further questions. Call ended positively with customer satisfied. Info Request Purchase Intent",
+        "activeTabVerified": true
+      }
+    },
+    "network": [
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/sync/status",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/customers",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/customers",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/customers/cust_yiq7m5fer8hsmabh621l87wd/detail",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/customers/cust_yiq7m5fer8hsmabh621l87wd/detail",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/customers",
+        "status": 200
+      },
+      {
+        "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+        "status": 200
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "consoleErrorClassification": {
+      "apiNetworkNon2xx": [],
+      "note": "Browser console reported one generic 404 resource error, but every captured api.dtfbank.com/api/v1 network response is HTTP 200. Treated as non-API static/browser resource noise."
+    }
+  },
+  "notes": [
+    "UI screenshots recaptured with target browser PrintWindow after initial CopyFromScreen captured the wrong foreground Chrome window."
+  ]
+}
