@@ -1,0 +1,253 @@
+﻿{
+  "proof": "roadmap16_state_snapshot_db_live",
+  "tenantId": "ten_dtfbank",
+  "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+  "taskId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+  "eventId": "roadmap16-state-snapshot-20260628123727",
+  "customerId": "cust_ten_dtfbank_northstar",
+  "migrationColumn": [
+    {
+      "column_name": "task_state_snapshot",
+      "data_type": "jsonb"
+    }
+  ],
+  "rule": {
+    "id": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+    "status": "archived",
+    "definition": {
+      "when": [
+        {
+          "id": "cond-roadmap16-ltv",
+          "value": "100",
+          "operator": ">=",
+          "condition": "customer_ltv_gte"
+        }
+      ],
+      "status": "archived",
+      "actions": [
+        {
+          "id": "act-roadmap16-create-task",
+          "value": "Roadmap 16 snapshot proof task 20260628123727",
+          "action": "create_task"
+        }
+      ],
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "priority": 1000,
+      "composable": false
+    },
+    "updatedAt": "2026-06-28T12:37:29.838Z"
+  },
+  "executions": [
+    {
+      "id": "wrex_uyg8pvkynf0o6kvdpqkomkwn",
+      "status": "task_created",
+      "taskIds": [
+        "sr_dnx5ct6p4eowpde6zxvs8q3w"
+      ],
+      "result": {
+        "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+        "status": "task_created",
+        "taskIds": [
+          "sr_dnx5ct6p4eowpde6zxvs8q3w"
+        ],
+        "cooldown": {
+          "hours": 0,
+          "limit": 1,
+          "disabled": true,
+          "customerId": "cust_ten_dtfbank_northstar",
+          "lastFiredAt": null,
+          "currentCount": 0,
+          "nextEligibleAt": null,
+          "windowStartedAt": null
+        },
+        "ruleName": "Roadmap 16 state snapshot proof 20260628123727",
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap16-ltv",
+                "actual": 1842.5,
+                "source": "customers.total_spent",
+                "matched": true,
+                "expected": "100",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ],
+        "actionTrace": [
+          {
+            "action": "create_task",
+            "status": "applied",
+            "message": "Created service request from workflow action.",
+            "actionId": "act-roadmap16-create-task",
+            "targetId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+            "targetType": "service_request"
+          }
+        ],
+        "executionMode": "active",
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap16-ltv",
+            "actual": 1842.5,
+            "source": "customers.total_spent",
+            "matched": true,
+            "expected": "100",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "shortCircuited": true
+      },
+      "firstSeenAt": "2026-06-28T12:37:28.813Z",
+      "updatedAt": "2026-06-28T12:37:28.901Z"
+    }
+  ],
+  "task": {
+    "id": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "title": "Roadmap 16 snapshot proof task 20260628123727",
+    "status": "open",
+    "priority": "critical",
+    "taskStateSnapshot": {
+      "segment": {
+        "id": "seg_ten_dtfbank_vip",
+        "name": "VIP B2B Customers",
+        "color": "#2f80ed",
+        "score": 1,
+        "isActive": true,
+        "priority": 20,
+        "matchedAt": "2026-06-28T11:49:02.687Z",
+        "priorityGlobal": 20
+      },
+      "customer": {
+        "id": "cust_ten_dtfbank_northstar",
+        "tags": [
+          "b2b",
+          "vip",
+          "wholesale"
+        ],
+        "totalSpent": 1842.5,
+        "lastOrderAt": "2026-06-20T12:00:00.000Z",
+        "ordersCount": 2,
+        "shopifyCustomerId": "1000000001"
+      },
+      "segments": [
+        {
+          "id": "seg_ten_dtfbank_vip",
+          "name": "VIP B2B Customers",
+          "color": "#2f80ed",
+          "score": 1,
+          "isActive": true,
+          "priority": 20,
+          "matchedAt": "2026-06-28T11:49:02.687Z",
+          "priorityGlobal": 20
+        }
+      ],
+      "callEvent": null,
+      "resolvedAt": "2026-06-28T12:37:28.809Z",
+      "recent_orders": [
+        {
+          "id": "ord_ten_dtfbank_1001",
+          "currency": "USD",
+          "createdAt": "2026-06-27T14:56:41.617Z",
+          "lineItems": [
+            {
+              "sku": "DTF-22",
+              "title": "22 inch gang sheet",
+              "quantity": 10,
+              "unitPrice": 42,
+              "shopifyVariantId": "9100000001"
+            }
+          ],
+          "totalPrice": 378,
+          "processedAt": "2026-06-20T12:00:00.000Z",
+          "shopifyOrderId": "8000001001",
+          "financialStatus": "paid",
+          "fulfillmentStatus": "unfulfilled",
+          "shopifyOrderNumber": "#FEP-1001"
+        }
+      ],
+      "resolverOutput": {}
+    },
+    "metadataWorkflowSnapshot": {
+      "segment": {
+        "id": "seg_ten_dtfbank_vip",
+        "name": "VIP B2B Customers",
+        "color": "#2f80ed",
+        "score": 1,
+        "isActive": true,
+        "priority": 20,
+        "matchedAt": "2026-06-28T11:49:02.687Z",
+        "priorityGlobal": 20
+      },
+      "customer": {
+        "id": "cust_ten_dtfbank_northstar",
+        "tags": [
+          "b2b",
+          "vip",
+          "wholesale"
+        ],
+        "totalSpent": 1842.5,
+        "lastOrderAt": "2026-06-20T12:00:00.000Z",
+        "ordersCount": 2,
+        "shopifyCustomerId": "1000000001"
+      },
+      "segments": [
+        {
+          "id": "seg_ten_dtfbank_vip",
+          "name": "VIP B2B Customers",
+          "color": "#2f80ed",
+          "score": 1,
+          "isActive": true,
+          "priority": 20,
+          "matchedAt": "2026-06-28T11:49:02.687Z",
+          "priorityGlobal": 20
+        }
+      ],
+      "callEvent": null,
+      "resolvedAt": "2026-06-28T12:37:28.809Z",
+      "recent_orders": [
+        {
+          "id": "ord_ten_dtfbank_1001",
+          "currency": "USD",
+          "createdAt": "2026-06-27T14:56:41.617Z",
+          "lineItems": [
+            {
+              "sku": "DTF-22",
+              "title": "22 inch gang sheet",
+              "quantity": 10,
+              "unitPrice": 42,
+              "shopifyVariantId": "9100000001"
+            }
+          ],
+          "totalPrice": 378,
+          "processedAt": "2026-06-20T12:00:00.000Z",
+          "shopifyOrderId": "8000001001",
+          "financialStatus": "paid",
+          "fulfillmentStatus": "unfulfilled",
+          "shopifyOrderNumber": "#FEP-1001"
+        }
+      ],
+      "resolverOutput": {}
+    },
+    "createdAt": "2026-06-28T12:37:28.876Z",
+    "updatedAt": "2026-06-28T12:37:28.876Z"
+  },
+  "assertions": {
+    "columnExists": true,
+    "ruleArchived": true,
+    "taskExists": true,
+    "snapshotColumnPopulated": true,
+    "snapshotCustomerCopied": true,
+    "snapshotSegmentCopied": true,
+    "snapshotRecentOrdersCopied": true,
+    "metadataSnapshotMatchesColumn": true
+  },
+  "checkedAt": "2026-06-28T12:38:00.433Z"
+}

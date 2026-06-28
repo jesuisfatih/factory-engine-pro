@@ -1,0 +1,36 @@
+{
+  "proof": "roadmap16_state_snapshot_ui_live",
+  "url": "https://app.dtfbank.com/staff/",
+  "taskId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+  "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+  "ticket": "SR-MQXRXJ8O",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap16-state-snapshot-ui-live-20260628.png",
+  "modalText": "Manual\nHigh risk - P9\nworkflow_rule\nNorthstar Print Supply\n+15555550101\norders+northstar@example.com\nMANUAL TASK\nCreated by an operator. No AI brief - add dial notes as the call progresses to feed the next cycle of intelligence.\nWHY THIS TASK\n1/1 matched\nRoadmap 16 state snapshot proof 20260628123727\nManual.Trigger\nroadmap16-live-proof\nCustomer Ltv Gte\n>=\nExpected 100\nActual 1842.5\ncustomers.total_spent\nDIAL NOTES\nCUSTOMER\nName\nNorthstar Print Supply\nEmail\norders+northstar@example.com\nPhone\n+15555550101\nSegment\nworkflow_rule\nORDERS\n2\nLTV\n$1.842,5\nFIRE-TIME SNAPSHOT\nCustomer\ncust_ten_dtfbank_northstar\nSegment\nVIP B2B Customers\nSegments\n1\nRecent orders\n1\nCall\nOpen\nMore\nSnooze\nCall now\nMark done",
+  "apiResponses": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/queue",
+      "status": 200
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+  ],
+  "assertions": {
+    "liveStaffLoaded": true,
+    "proofCardOpened": true,
+    "fireTimeSnapshotVisible": true,
+    "snapshotCustomerVisible": true,
+    "snapshotSegmentVisible": true,
+    "recentOrdersVisible": true,
+    "queueApiOk": true
+  },
+  "checkedAt": "2026-06-28T12:38:58.809Z"
+}

@@ -1,0 +1,258 @@
+{
+  "proof": "roadmap16_state_snapshot_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "ee8ca93403e06d6c92b3ad570c46f408f4732002",
+  "customerId": "cust_ten_dtfbank_northstar",
+  "rule": {
+    "id": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+    "name": "Roadmap 16 state snapshot proof 20260628123727",
+    "status": "active",
+    "priority": 1000,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "active",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap16-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "value": "100"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap16-create-task",
+          "action": "create_task",
+          "value": "Roadmap 16 snapshot proof task 20260628123727"
+        }
+      ]
+    }
+  },
+  "eventId": "roadmap16-state-snapshot-20260628123727",
+  "fire": {
+    "eventId": "roadmap16-state-snapshot-20260628123727",
+    "trigger": "manual.trigger",
+    "source": "roadmap16-live-proof",
+    "matchedRules": 2,
+    "evaluatedRules": 1,
+    "tasksCreated": 1,
+    "tasks": [
+      {
+        "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+        "ruleName": "Roadmap 16 state snapshot proof 20260628123727",
+        "actionId": "act-roadmap16-create-task",
+        "action": "create_task",
+        "taskId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+        "title": "Roadmap 16 snapshot proof task 20260628123727"
+      }
+    ],
+    "results": [
+      {
+        "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+        "ruleName": "Roadmap 16 state snapshot proof 20260628123727",
+        "status": "task_created",
+        "executionMode": "active",
+        "shortCircuited": true,
+        "taskIds": [
+          "sr_dnx5ct6p4eowpde6zxvs8q3w"
+        ],
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap16-ltv",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "100",
+            "actual": 1842.5,
+            "matched": true,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap16-ltv",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "100",
+                "actual": 1842.5,
+                "matched": true,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ],
+        "cooldown": {
+          "disabled": true,
+          "customerId": "cust_ten_dtfbank_northstar",
+          "hours": 0,
+          "limit": 1,
+          "currentCount": 0,
+          "windowStartedAt": null,
+          "lastFiredAt": null,
+          "nextEligibleAt": null
+        },
+        "actionTrace": [
+          {
+            "actionId": "act-roadmap16-create-task",
+            "action": "create_task",
+            "status": "applied",
+            "targetType": "service_request",
+            "targetId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+            "message": "Created service request from workflow action."
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T12:37:28.905Z"
+  },
+  "taskId": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+  "queueCard": {
+    "id": "sr_dnx5ct6p4eowpde6zxvs8q3w",
+    "title": "Northstar Print Supply",
+    "summary": "SR-MQXRXJ8O - Critical - Open - Now",
+    "workflowTrace": {
+      "ruleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+      "matchedRuleId": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+      "ruleName": "Roadmap 16 state snapshot proof 20260628123727",
+      "trigger": "manual.trigger",
+      "source": "roadmap16-live-proof",
+      "eventId": "roadmap16-state-snapshot-20260628123727",
+      "action": "create_task",
+      "actionId": "act-roadmap16-create-task",
+      "conditionTrace": [
+        {
+          "id": "cond-roadmap16-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "expected": "100",
+          "actual": 1842.5,
+          "matched": true,
+          "source": "customers.total_spent"
+        }
+      ],
+      "whenTrace": [
+        {
+          "id": "default",
+          "matched": true,
+          "conditionTrace": [
+            {
+              "id": "cond-roadmap16-ltv",
+              "condition": "customer_ltv_gte",
+              "operator": ">=",
+              "expected": "100",
+              "actual": 1842.5,
+              "matched": true,
+              "source": "customers.total_spent"
+            }
+          ]
+        }
+      ]
+    },
+    "taskStateSnapshot": {
+      "segment": {
+        "id": "seg_ten_dtfbank_vip",
+        "name": "VIP B2B Customers",
+        "color": "#2f80ed",
+        "score": 1,
+        "isActive": true,
+        "priority": 20,
+        "matchedAt": "2026-06-28T11:49:02.687Z",
+        "priorityGlobal": 20
+      },
+      "customer": {
+        "id": "cust_ten_dtfbank_northstar",
+        "tags": [
+          "b2b",
+          "vip",
+          "wholesale"
+        ],
+        "totalSpent": 1842.5,
+        "lastOrderAt": "2026-06-20T12:00:00.000Z",
+        "ordersCount": 2,
+        "shopifyCustomerId": "1000000001"
+      },
+      "segments": [
+        {
+          "id": "seg_ten_dtfbank_vip",
+          "name": "VIP B2B Customers",
+          "color": "#2f80ed",
+          "score": 1,
+          "isActive": true,
+          "priority": 20,
+          "matchedAt": "2026-06-28T11:49:02.687Z",
+          "priorityGlobal": 20
+        }
+      ],
+      "callEvent": null,
+      "resolvedAt": "2026-06-28T12:37:28.809Z",
+      "recent_orders": [
+        {
+          "id": "ord_ten_dtfbank_1001",
+          "currency": "USD",
+          "createdAt": "2026-06-27T14:56:41.617Z",
+          "lineItems": [
+            {
+              "sku": "DTF-22",
+              "title": "22 inch gang sheet",
+              "quantity": 10,
+              "unitPrice": 42,
+              "shopifyVariantId": "9100000001"
+            }
+          ],
+          "totalPrice": 378,
+          "processedAt": "2026-06-20T12:00:00.000Z",
+          "shopifyOrderId": "8000001001",
+          "financialStatus": "paid",
+          "fulfillmentStatus": "unfulfilled",
+          "shopifyOrderNumber": "#FEP-1001"
+        }
+      ],
+      "resolverOutput": {}
+    }
+  },
+  "archivedRule": {
+    "id": "wrule_gc40zvcdqmgkxec4xt1ny8d2",
+    "status": "archived",
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "archived",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap16-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "value": "100"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap16-create-task",
+          "action": "create_task",
+          "value": "Roadmap 16 snapshot proof task 20260628123727"
+        }
+      ]
+    }
+  },
+  "assertions": {
+    "createdOneTask": true,
+    "taskVisibleInPersonQueue": true,
+    "snapshotVisibleInPersonApi": true,
+    "snapshotHasCustomer": true,
+    "snapshotHasSegmentCopy": true,
+    "snapshotHasRecentOrdersCopy": true,
+    "proofRuleArchived": true
+  },
+  "checkedAt": "2026-06-28T12:37:30.722Z"
+}
