@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound } from 'lucide-react';
-import { adminApi, adminTokenStore, apiErrorMessage } from '@/lib/api';
+import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
+import { adminApi, adminTokenStore, apiErrorMessage, handOffToPerson } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/auth/AuthShell';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
@@ -15,6 +16,10 @@ export function AdminLoginPanel() {
     mutationFn: () => adminApi.memberLogin({ email, password }),
     onSuccess: (session) => {
       persistRememberedEmail(rememberMe, email);
+      if (memberSurfaceFromPermissions(session.principal.permissions) === 'person') {
+        handOffToPerson(session);
+        return;
+      }
       adminTokenStore.setSession(session);
       window.location.assign(loginRedirectTarget());
     },
@@ -107,7 +112,12 @@ export function AdminResetPasswordPanel() {
       : adminApi.resetPassword({ token, password }),
     onSuccess: (response: unknown) => {
       if (isInvitation && response && typeof response === 'object' && 'accessToken' in response) {
-        adminTokenStore.setSession(response as Parameters<typeof adminTokenStore.setSession>[0]);
+        const session = response as Parameters<typeof adminTokenStore.setSession>[0];
+        if (memberSurfaceFromPermissions(session.principal.permissions) === 'person') {
+          handOffToPerson(session);
+          return;
+        }
+        adminTokenStore.setSession(session);
         window.location.assign('/dashboard');
       }
     },

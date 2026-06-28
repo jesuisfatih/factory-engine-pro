@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AnnouncementsView } from './views/Announcements';
@@ -14,7 +15,7 @@ import { TrainingView } from './views/Training';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { LoginView } from './views/auth/LoginView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
-import { readSession } from './lib/api';
+import { handOffToAdmin, readAdminSession, readSession } from './lib/api';
 import { type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
@@ -33,17 +34,40 @@ const TITLES: Record<NavId, string> = {
 type AuthScreen = 'login' | 'forgot' | 'reset';
 
 export default function App() {
-  const [authed, setAuthed] = useState(() => Boolean(readSession()?.accessToken));
+  const initialPersonSession = readSession();
+  const initialAdminSession = readAdminSession();
+  const personSurface = initialPersonSession ? memberSurfaceFromPermissions(initialPersonSession.principal.permissions) : null;
+  const adminSurface = initialAdminSession ? memberSurfaceFromPermissions(initialAdminSession.principal.permissions) : null;
+  const shouldHandOffToAdmin = personSurface === 'admin' || (!initialPersonSession && adminSurface === 'admin');
+  const [authed, setAuthed] = useState(() => Boolean(initialPersonSession?.accessToken) && personSurface === 'person');
   const [authScreen, setAuthScreen] = useState<AuthScreen>(initialAuthScreen);
   const [current, setCurrent] = useState<NavId>(initialNav);
   const [collapsed, setCollapsed] = useState(false);
   const title = TITLES[current];
 
   useEffect(() => {
+    if (personSurface === 'admin' && initialPersonSession) {
+      handOffToAdmin(initialPersonSession);
+      return;
+    }
+    if (!initialPersonSession && adminSurface === 'admin' && initialAdminSession) {
+      window.location.assign('/dashboard');
+    }
+  }, [adminSurface, initialAdminSession, initialPersonSession, personSurface]);
+
+  useEffect(() => {
     const onPopState = () => setCurrent(initialNav());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (authed && isStaffAuthPath(window.location.pathname)) {
+      window.history.replaceState(null, '', '/staff/queue');
+    }
+  }, [authed]);
+
+  if (shouldHandOffToAdmin) return null;
 
   if (!authed) {
     return (
@@ -91,6 +115,10 @@ function initialAuthScreen(): AuthScreen {
   if (window.location.pathname.endsWith('/forgot-password')) return 'forgot';
   if (window.location.pathname.endsWith('/reset-password')) return 'reset';
   return 'login';
+}
+
+function isStaffAuthPath(pathname: string) {
+  return pathname.endsWith('/login') || pathname.endsWith('/forgot-password') || pathname.endsWith('/reset-password');
 }
 
 function initialNav(): NavId {

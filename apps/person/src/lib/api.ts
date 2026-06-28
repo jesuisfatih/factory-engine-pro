@@ -1,6 +1,8 @@
+import type { AuthSession } from '@factory-engine-pro/contracts';
 import { ApiClient, type TokenStore } from '@factory-engine-pro/api-client';
 
 const SESSION_KEY = 'factory-engine-pro.person.session';
+const ADMIN_SESSION_KEY = 'factory-engine-pro.admin.session';
 
 export const personTokenStore: TokenStore = {
   getAccessToken() {
@@ -27,16 +29,28 @@ export function readSession() {
   const raw = window.localStorage.getItem(SESSION_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as {
-      accessToken: string;
-      refreshToken: string;
-      tenantId: string;
-      principal: { firstName: string; lastName: string; email: string; permissions: string[] };
-    };
+    return JSON.parse(raw) as AuthSession;
   } catch {
     personTokenStore.clear();
     return null;
   }
+}
+
+export function readAdminSession() {
+  const raw = window.localStorage.getItem(ADMIN_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    window.localStorage.removeItem(ADMIN_SESSION_KEY);
+    return null;
+  }
+}
+
+export function handOffToAdmin(session: AuthSession, target = '/dashboard') {
+  window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+  personTokenStore.clear();
+  window.location.assign(target);
 }
 
 export function apiErrorMessage(error: unknown) {

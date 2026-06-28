@@ -39,6 +39,28 @@ export const CUSTOMER_PERMISSIONS = {
 export type MemberPermission = (typeof MEMBER_PERMISSIONS)[keyof typeof MEMBER_PERMISSIONS];
 export type CustomerPermission = (typeof CUSTOMER_PERMISSIONS)[keyof typeof CUSTOMER_PERMISSIONS];
 export type Permission = MemberPermission | CustomerPermission;
+export type MemberSurface = 'admin' | 'person';
+
+const ADMIN_SURFACE_PERMISSIONS = [
+  MEMBER_PERMISSIONS.settingsRead,
+  MEMBER_PERMISSIONS.settingsWrite,
+  MEMBER_PERMISSIONS.membersRead,
+  MEMBER_PERMISSIONS.membersWrite,
+  MEMBER_PERMISSIONS.rolesRead,
+  MEMBER_PERMISSIONS.rolesWrite,
+] as const;
+
+export function memberSurfaceFromPermissions(permissions: readonly string[] = []): MemberSurface {
+  return ADMIN_SURFACE_PERMISSIONS.some((permission) => permissions.includes(permission)) ? 'admin' : 'person';
+}
+
+export function isAdminSurfacePermissions(permissions: readonly string[] = []) {
+  return memberSurfaceFromPermissions(permissions) === 'admin';
+}
+
+export function isPersonSurfacePermissions(permissions: readonly string[] = []) {
+  return memberSurfaceFromPermissions(permissions) === 'person';
+}
 
 export const DEFAULT_MEMBER_ROLES = [
   {

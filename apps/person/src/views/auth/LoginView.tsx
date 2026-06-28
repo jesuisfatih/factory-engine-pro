@@ -1,9 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Mail, ArrowRight } from 'lucide-react';
+import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, isEmail } from '../../components/auth/AuthShell';
 import { WorkspaceBrand } from '../../components/WorkspaceBrand';
-import { apiErrorMessage, personApi, personTokenStore } from '../../lib/api';
+import { apiErrorMessage, handOffToAdmin, personApi, personTokenStore } from '../../lib/api';
 
 interface Props {
   onSuccess: () => void;
@@ -20,7 +21,12 @@ export function LoginView({ onSuccess, onForgot }: Props) {
     mutationFn: () => personApi.personLogin({ email, password }),
     onSuccess: (session) => {
       persistRememberedEmail(rememberMe, email);
+      if (memberSurfaceFromPermissions(session.principal.permissions) === 'admin') {
+        handOffToAdmin(session);
+        return;
+      }
       personTokenStore.setSession(session);
+      window.history.replaceState(null, '', '/staff/queue');
       onSuccess();
     },
     onError: (err) => setError(apiErrorMessage(err)),

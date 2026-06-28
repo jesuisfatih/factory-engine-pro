@@ -2,6 +2,7 @@ import type { AuthSession } from '@factory-engine-pro/contracts';
 import { ApiClient, type TokenStore } from '@factory-engine-pro/api-client';
 
 const SESSION_KEY = 'factory-engine-pro.admin.session';
+const PERSON_SESSION_KEY = 'factory-engine-pro.person.session';
 const SESSION_CHANGED_EVENT = 'factory-engine-pro.admin.session.changed';
 
 function notifySessionChanged() {
@@ -42,8 +43,25 @@ export function readSession() {
   }
 }
 
+export function readPersonSession() {
+  const raw = window.localStorage.getItem(PERSON_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    window.localStorage.removeItem(PERSON_SESSION_KEY);
+    return null;
+  }
+}
+
 export function readSessionSnapshot() {
   return window.localStorage.getItem(SESSION_KEY);
+}
+
+export function handOffToPerson(session: AuthSession, target = '/staff/queue') {
+  window.localStorage.setItem(PERSON_SESSION_KEY, JSON.stringify(session));
+  adminTokenStore.clear();
+  window.location.assign(target);
 }
 
 export function subscribeSession(callback: () => void) {

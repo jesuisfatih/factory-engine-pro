@@ -1,9 +1,9 @@
 import { Outlet, createRootRoute, redirect, useRouterState } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
-import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
-import { readSession } from '@/lib/api';
+import { handOffToPerson, readPersonSession, readSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/rules/, key: 'nav.rules' },
@@ -97,8 +97,19 @@ function RootLayout() {
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
     const session = readSession();
+    const personSession = readPersonSession();
     const hasSession = Boolean(session?.accessToken);
     const authRoute = isAuthRoute(location.pathname);
+
+    if (session && memberSurfaceFromPermissions(session.principal.permissions) === 'person') {
+      handOffToPerson(session);
+      return;
+    }
+
+    if (!session && personSession && memberSurfaceFromPermissions(personSession.principal.permissions) === 'person') {
+      window.location.assign('/staff/queue');
+      return;
+    }
 
     if (!hasSession && !authRoute) {
       throw redirect({
