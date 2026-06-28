@@ -212,8 +212,15 @@ export class AuthService {
     return this.sessions.issue(token.tenantId, principal);
   }
 
-  async logout(refreshToken: string | undefined) {
-    if (refreshToken) await this.authTokens.revoke('refresh', refreshToken);
+  async logout(input: { refreshToken?: string; accessToken?: string }) {
+    const [refreshRevoked, accessRevoked] = await Promise.all([
+      this.authTokens.revokeIfPresent('refresh', input.refreshToken),
+      this.sessions.revokeAccessToken(input.accessToken),
+    ]);
+    this.logger.log('auth', 'logout', 'Principal logged out', {
+      refresh_revoked: refreshRevoked,
+      access_revoked: accessRevoked,
+    });
     return { ok: true };
   }
 

@@ -6,7 +6,7 @@ import {
   Mail, Rocket,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
-import { adminTokenStore } from '@/lib/api';
+import { adminApi, adminTokenStore } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
@@ -102,9 +102,15 @@ export function Sidebar({ collapsed }: Props) {
     children: section.children.filter((leaf) => can(leaf.permission)),
   })).filter((section) => section.children.length > 0);
   const roleLabel = adminRoleLabel(principal);
-  const logout = () => {
-    adminTokenStore.clear();
-    window.location.assign('/login');
+  const logout = async () => {
+    try {
+      await adminApi.logout();
+    } catch {
+      // Local session cleanup must still happen if the server token is already expired.
+    } finally {
+      adminTokenStore.clear();
+      window.location.assign('/login');
+    }
   };
 
   return (
@@ -153,7 +159,7 @@ export function Sidebar({ collapsed }: Props) {
             </Link>
           )}
         </div>
-        <button id="btn-logout" data-i18n-key="common.logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
+        <button id="btn-logout" data-i18n-key="common.logout" type="button" className="logout" title={t('common.logout')} onClick={() => void logout()}>
           <LogOut size={14} />
         </button>
       </div>

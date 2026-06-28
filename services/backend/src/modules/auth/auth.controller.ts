@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req } from '@nestjs/common';
 import {
   acceptInvitationSchema,
   bootstrapTenantSchema,
   customerLoginSchema,
   customerRegisterSchema,
   forgotPasswordSchema,
+  logoutSchema,
   memberLoginSchema,
   refreshTokenSchema,
   resetPasswordSchema,
@@ -13,12 +14,14 @@ import {
   type CustomerLoginInput,
   type CustomerRegisterInput,
   type ForgotPasswordInput,
+  type LogoutInput,
   type MemberLoginInput,
   type RefreshTokenInput,
   type ResetPasswordInput,
 } from '@factory-engine-pro/contracts';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, Body as NestBody } from '@nestjs/common';
+import type { Request } from 'express';
 import { Public } from '../../shared/public.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { AuthService } from './auth.service.js';
@@ -91,12 +94,22 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@NestBody() body: { refreshToken?: string }) {
-    return this.auth.logout(body.refreshToken);
+  logout(
+    @Req() request: Request,
+    @NestBody(new ZodValidationPipe(logoutSchema)) body: LogoutInput,
+  ) {
+    return this.auth.logout({
+      refreshToken: body.refreshToken,
+      accessToken: bearerToken(request.headers.authorization),
+    });
   }
 
   @Get('me')
   me() {
     return this.auth.me();
   }
+}
+
+function bearerToken(header: string | undefined) {
+  return header?.startsWith('Bearer ') ? header.slice(7) : undefined;
 }

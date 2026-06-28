@@ -1,5 +1,5 @@
 import { NAV, type NavId } from '../types';
-import { readSession } from '../lib/api';
+import { personApi, personTokenStore, readSession } from '../lib/api';
 import { Icon } from './Icon';
 import { WorkspaceBrand } from './WorkspaceBrand';
 import { useQuery } from '@tanstack/react-query';
@@ -50,6 +50,16 @@ export function Sidebar({ current, onSelect, collapsed }: Props) {
     acc[key].push(item);
     return acc;
   }, {});
+  const logout = async () => {
+    try {
+      await personApi.logout();
+    } catch {
+      // Local session cleanup must still happen if the server token is already expired.
+    } finally {
+      personTokenStore.clear();
+      window.location.assign('/staff/login');
+    }
+  };
 
   return (
     <aside className="sidebar">
@@ -84,7 +94,9 @@ export function Sidebar({ current, onSelect, collapsed }: Props) {
           <div className="email">{principal?.email ?? 'No active session'}</div>
           <div className="role">Customer Service</div>
         </div>
-        <button type="button" className="logout" title="Log out"><Icon name="logout" size={14} /></button>
+        <button id="btn-person-logout" type="button" className="logout" title="Log out" onClick={() => void logout()}>
+          <Icon name="logout" size={14} />
+        </button>
       </div>
     </aside>
   );

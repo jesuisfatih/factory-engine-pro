@@ -39,6 +39,7 @@ import type {
   CustomerLoginInput,
   CustomerRegisterInput,
   ForgotPasswordInput,
+  LogoutInput,
   MemberLoginInput,
   ResolveReorderInput,
   ResetPasswordInput,
@@ -162,6 +163,12 @@ export class ApiClient {
 
   me() {
     return this.get<AuthSession['principal']>('/auth/me');
+  }
+
+  logout(input: LogoutInput = {}) {
+    return this.post<{ ok: true }>('/auth/logout', {
+      refreshToken: input.refreshToken ?? this.options.tokenStore?.getRefreshToken() ?? undefined,
+    });
   }
 
   members(query = '') {

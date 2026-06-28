@@ -27,6 +27,11 @@ export const refreshTokenSchema = z.object({
 });
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 
+export const logoutSchema = z.object({
+  refreshToken: z.string().min(16).optional(),
+});
+export type LogoutInput = z.infer<typeof logoutSchema>;
+
 export const acceptInvitationSchema = z.object({
   token: z.string().min(16),
   password: passwordSchema,

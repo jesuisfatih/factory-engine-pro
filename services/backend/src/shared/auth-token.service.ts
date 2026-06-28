@@ -58,6 +58,57 @@ export class AuthTokenService {
     if (result.count === 0) throw new NotFoundException('Refresh token not found');
   }
 
+  async revokeIfPresent(kind: AuthTokenKind, token: string | undefined) {
+    if (!token) return false;
+    const tokenHash = this.hash(token);
+    const result = await this.prisma.db.authToken.updateMany({
+      where: { kind, tokenHash, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count > 0;
+  }
+
+  async revokeAccessToken(input: {
+    tenantId: string;
+    token: string;
+    principalType: PrincipalType;
+    principalId: string;
+    expiresAt: Date;
+    metadata?: Record<string, unknown>;
+  }) {
+    await this.prisma.db.authToken.upsert({
+      where: { tokenHash: this.hash(input.token) },
+      create: {
+        id: prefixedId('tok'),
+        tenantId: input.tenantId,
+        kind: 'access_revocation',
+        principalType: input.principalType,
+        principalId: input.principalId,
+        tokenHash: this.hash(input.token),
+        expiresAt: input.expiresAt,
+        metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+      },
+      update: {
+        revokedAt: null,
+        expiresAt: input.expiresAt,
+        metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  async isAccessTokenRevoked(token: string) {
+    const row = await this.prisma.db.authToken.findFirst({
+      where: {
+        kind: 'access_revocation',
+        tokenHash: this.hash(token),
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    return Boolean(row);
+  }
+
   hash(token: string) {
     return createHash('sha256').update(token).digest('hex');
   }

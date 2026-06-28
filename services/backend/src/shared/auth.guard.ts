@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import type { PrincipalType } from '@factory-engine-pro/contracts';
+import { AuthTokenService } from './auth-token.service.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 import { getJwtAccessSecret } from './jwt-secret.js';
 import { TenantContextService } from './tenant-context.js';
@@ -22,6 +23,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly tenantContext: TenantContextService,
+    private readonly authTokens: AuthTokenService,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -35,9 +37,13 @@ export class JwtAuthGuard implements CanActivate {
     const auth = request.headers.authorization;
     if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('Bearer token is required');
 
-    const payload = await this.jwt.verifyAsync<AccessTokenPayload>(auth.slice(7), {
+    const accessToken = auth.slice(7);
+    const payload = await this.jwt.verifyAsync<AccessTokenPayload>(accessToken, {
       secret: getJwtAccessSecret(this.config),
     });
+    if (await this.authTokens.isAccessTokenRevoked(accessToken)) {
+      throw new UnauthorizedException('Session was revoked');
+    }
     this.tenantContext.set({
       tenantId: payload.tenant_id,
       principalId: payload.sub,
