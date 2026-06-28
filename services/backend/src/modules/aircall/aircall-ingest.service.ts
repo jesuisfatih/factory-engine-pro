@@ -345,7 +345,6 @@ export class AircallIngestService {
       },
     });
     if (!callEvent || callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt) return;
-    if (callEvent.resolverQueuedAt && callEvent.resolverQueueJobId && callEvent.resolverStatus !== 'failed') return;
 
     const jobId = ['aircall-transcript', callEvent.tenantId, callEvent.externalCallId, callEvent.id]
       .map((part) => part.replace(/[^a-zA-Z0-9_-]/g, '_'))
@@ -357,6 +356,27 @@ export class AircallIngestService {
         external_call_id: callEvent.externalCallId,
       });
       return;
+    }
+
+    const existingJob = await this.transcriptResolverQueue.getJob(jobId);
+    if (existingJob) {
+      const state = await existingJob.getState();
+      const returnValue = existingJob.returnvalue as { status?: unknown } | null;
+      const completedWithoutSuccess = state === 'completed' && returnValue?.status !== 'succeeded';
+      if (state === 'failed' || completedWithoutSuccess) {
+        await existingJob.remove();
+      } else if (state !== 'unknown') {
+        await this.prisma.db.aircallCallEvent.updateMany({
+          where: { id: callEvent.id },
+          data: {
+            resolverQueuedAt: callEvent.resolverQueuedAt ?? new Date(),
+            resolverQueueJobId: jobId,
+            resolverStatus: 'queued',
+            resolverError: null,
+          },
+        });
+        return;
+      }
     }
 
     await this.transcriptResolverQueue.add(
