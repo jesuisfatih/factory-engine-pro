@@ -4,6 +4,12 @@ import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 
+export interface SegmentMembershipMetadata {
+  source?: string;
+  shopifySegmentRef?: string | null;
+  score?: number | null;
+}
+
 @Injectable()
 export class SegmentsRepository {
   constructor(
@@ -138,16 +144,26 @@ export class SegmentsRepository {
     });
   }
 
-  async replaceMemberships(segmentId: string, customerIds: string[]) {
+  async replaceMemberships(
+    segmentId: string,
+    customerIds: string[],
+    metadataByCustomer: Map<string, SegmentMembershipMetadata> = new Map(),
+  ) {
     await this.prisma.db.segmentCustomerMembership.deleteMany({ where: { segmentId } });
     if (customerIds.length > 0) {
       await this.prisma.db.segmentCustomerMembership.createMany({
-        data: customerIds.map((customerId) => ({
-          id: prefixedId('smem'),
-          tenantId: this.tenantId(),
-          segmentId,
-          customerId,
-        })),
+        data: customerIds.map((customerId) => {
+          const metadata = metadataByCustomer.get(customerId);
+          return {
+            id: prefixedId('smem'),
+            tenantId: this.tenantId(),
+            segmentId,
+            customerId,
+            source: metadata?.source ?? 'auto',
+            shopifySegmentRef: metadata?.shopifySegmentRef ?? null,
+            score: metadata?.score ?? 1,
+          };
+        }),
         skipDuplicates: true,
       });
     }
@@ -369,7 +385,7 @@ export class SegmentsRepository {
     }
   }
 
-  async upsertMembership(segmentId: string, customerId: string) {
+  async upsertMembership(segmentId: string, customerId: string, metadata: SegmentMembershipMetadata = {}) {
     const tenantId = this.tenantId();
     await this.prisma.db.segmentCustomerMembership.upsert({
       where: { tenantId_segmentId_customerId: { tenantId, segmentId, customerId } },
@@ -378,9 +394,16 @@ export class SegmentsRepository {
         tenantId,
         segmentId,
         customerId,
-        score: 1,
+        source: metadata.source ?? 'auto',
+        shopifySegmentRef: metadata.shopifySegmentRef ?? null,
+        score: metadata.score ?? 1,
       },
-      update: { matchedAt: new Date(), score: 1 },
+      update: {
+        matchedAt: new Date(),
+        source: metadata.source ?? 'auto',
+        shopifySegmentRef: metadata.shopifySegmentRef ?? null,
+        score: metadata.score ?? 1,
+      },
     });
     return this.refreshSegmentCount(segmentId);
   }
@@ -401,6 +424,7 @@ export class SegmentsRepository {
 
   async upsertOwnership(segmentId: string, input: {
     memberId: string;
+    teamId?: string | null;
     priority: number;
     importance: string;
     dailyCap?: number | null;
@@ -413,6 +437,7 @@ export class SegmentsRepository {
     });
     const data = {
       memberId: input.memberId,
+      teamId: input.teamId ?? null,
       priority: input.priority,
       importance: input.importance,
       dailyCap: input.dailyCap ?? null,

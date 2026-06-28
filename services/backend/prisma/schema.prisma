@@ -781,6 +781,7 @@ model SegmentOwnership {
   tenantId      String   @map("tenant_id")
   segmentId     String   @map("segment_id")
   memberId      String   @map("member_id")
+  teamId        String?  @map("team_id")
   priority      Int      @default(0)
   importance    String   @default("normal")
   dailyCap      Int?     @map("daily_cap")
@@ -797,18 +798,21 @@ model SegmentOwnership {
   @@unique([tenantId, segmentId, memberId])
   @@index([tenantId, segmentId])
   @@index([tenantId, memberId])
+  @@index([tenantId, teamId])
   @@map("segment_ownerships")
 }
 
 model SegmentCustomerMembership {
-  id         String   @id
-  tenantId   String   @map("tenant_id")
-  segmentId  String   @map("segment_id")
-  customerId String   @map("customer_id")
-  matchedAt  DateTime @default(now()) @map("matched_at")
-  score      Decimal? @db.Decimal(12, 4)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  segmentId         String   @map("segment_id")
+  customerId        String   @map("customer_id")
+  source            String   @default("auto")
+  shopifySegmentRef String?  @map("shopify_segment_ref")
+  matchedAt         DateTime @default(now()) @map("matched_at")
+  score             Decimal? @db.Decimal(12, 4)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   segment  Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
@@ -817,6 +821,8 @@ model SegmentCustomerMembership {
   @@unique([tenantId, segmentId, customerId])
   @@index([tenantId, customerId])
   @@index([tenantId, segmentId])
+  @@index([tenantId, source])
+  @@index([tenantId, shopifySegmentRef])
   @@map("segment_customer_memberships")
 }
 

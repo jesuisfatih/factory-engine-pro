@@ -87,6 +87,7 @@ export type PreviewSegmentInput = z.infer<typeof previewSegmentSchema>;
 
 export const upsertSegmentOwnershipSchema = z.object({
   memberId: z.string().trim().min(1),
+  teamId: z.string().trim().min(1).optional(),
   priority: z.coerce.number().int().min(0).default(0),
   importance: segmentImportanceSchema.default('normal'),
   dailyCap: z.coerce.number().int().min(0).nullable().optional(),

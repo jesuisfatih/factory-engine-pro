@@ -2,7 +2,7 @@
 
 Date: 2026-06-28
 
-Status: approval gate. This document is an inventory only. Segment transfer must not start until the owner approves the target decisions below.
+Status: implementation baseline. The original approval gate is closed by ROADMAP 23b1; this document now records old-system parity and the remaining implementation gaps.
 
 ## Source Files Read
 
@@ -197,59 +197,55 @@ Expected UI behaviors:
 
 ## New System Current State
 
-The new system already has a segment module, but it is materially shallower:
+The new system is now close to old-system parity for the segment engine core:
 
-- Backend uses `Customer` as the only candidate pool.
-- `preview` returns only total customers, match count, total revenue, average orders, at-risk count, and a flat match sample.
-- It does not model company user signals separately.
-- It does not model Shopify customer segment snapshot tables.
-- It does not call Shopify Admin segment APIs.
-- It does not support `shopifyCustomerSegmentIds`.
-- It does not support `shopifyCustomerAcceptsMarketing`, `shopifyCustomerState`, `shopifyCustomerLocale`, `shopifyCustomerOrdersCount`, `shopifyCustomerTotalSpent`.
-- It does not support `periodRevenue`, `periodOrders`, `periodQuantity`, `timeframeDays`, product scope, or collection scope in the evaluator, even though the contract has partial scope fields.
-- It does not persist `company_segment_assignments` equivalent history.
-- It does not emit old mail marketing `segment_enter` / `segment_exit` events. It fires new workflow triggers for member added/removed only.
-- Ownership maps to new `Member`, which is correct for the new identity model, but old sales assignment behavior still needs a new-system decision.
-- `apps/admin/src/features/operations/SegmentsPage.tsx` is real API-bound and has loading/empty/error states, but its builder field list is reduced.
-- `apps/admin/src/components/SegmentModal.tsx` and `apps/admin/src/lib/live-data.ts` present preview counts as if there are Shopify/unlinked counts, but those are derived from the same backend match count and are not old-system parity.
+- Contracts expose the old 31 segment fields, 9 operators, `all/any` match mode, 3 audience types, timeframe, and `all/product/collection` scope.
+- Backend evaluates over `Customer`, `CustomerUser`, linked Shopify customer signals, Shopify customer segment snapshots, behavior metrics, and period order metrics.
+- Shopify segment metadata and membership snapshots are tenant-scoped in `shopify_customer_segments` and `shopify_customer_segment_members`.
+- `shopifyCustomerSegmentIds` calls Shopify Admin segment membership sync before preview/evaluate, then uses the snapshot membership map for matching.
+- `preview` returns separate company, customer user, Shopify customer, and unlinked Shopify customer counts plus match samples.
+- `evaluate`, `evaluateForCustomer`, and `evaluateAll` persist current memberships, assignment history, current winner rows, and new workflow triggers for `segment.member_added` / `segment.member_removed`.
+- Segment membership rows now keep `source='auto'` plus `shopify_segment_ref` when the match came through a real Shopify segment condition.
+- Ownership maps to new `Member`, keeps old-style priority/importance/daily cap/auto assignment fields, and has a `team_id` compatibility column for old team ownership semantics.
+- Admin `SegmentsPage` is real API-bound with loading, empty, and error states; it includes all 31 fields, operator filtering, period scope controls, preview before save, evaluate one/all, and a live Shopify segment selector.
 
-## Required Transfer Decisions
+Known remaining gaps:
 
-Before code transfer, these decisions need explicit approval:
+- Old mail marketing `segment_enter` / `segment_exit` side effects are not directly imported. The new system intentionally fires workflow triggers and must wire mail enrollment through the new mail/rules pipeline, not old dittofeed/event-bus modules.
+- Ownership team semantics are stored as `team_id`, but there is no separate new team assignment UI yet.
+- RFM/CLV rows must remain computed from synced Shopify/customer data. The old 8 seeded RFM rows must not be restored.
+
+## Resolved Transfer Decisions
 
 1. Candidate model
-   - Recommended: adapt old `CompanyCandidate` to the new 5-layer model:
-     - `Customer` = old company/account candidate
-     - `CustomerUser` = old company user candidate
-     - Shopify customer signals = data inside/synced onto `Customer` plus a new Shopify segment snapshot table
+   - `Customer` is the old account/company candidate.
+   - `CustomerUser` is the old company-user candidate.
+   - Shopify customer signals come from synced Shopify fields plus tenant-scoped Shopify segment snapshots.
    - Do not add old `Company` or `CompanyUser` tables.
 
 2. Shopify segment snapshots
-   - Recommended: add new tenant-scoped tables equivalent to:
-     - `shopify_customer_segments`
-     - `shopify_customer_segment_members`
-   - Use new `tenant_id`, new Shopify tenant config credentials, and no old merchant model.
+   - Keep tenant-scoped `shopify_customer_segments` and `shopify_customer_segment_members`.
+   - Use new tenant Shopify config credentials and no old merchant model.
 
 3. Assignment history
-   - Recommended: add a new `segment_customer_assignments` or equivalent history table instead of only `segment_customer_memberships`.
-   - Keep current `segments.customer_count` and `segment_customer_memberships` as canonical current membership.
+   - Keep `segment_customer_memberships` as canonical current membership.
+   - Keep `segment_customer_assignments` for historical/current winner assignment state.
 
 4. Ownership behavior
-   - Recommended: keep new `Member` ownership, not old `selleruser`.
-   - Translate old auto owner behavior into the new customer assignment/task axis model only after deciding how it interacts with `customer_assignments`.
+   - Keep new `Member` ownership, not old `selleruser`.
+   - Persist optional `team_id` only as compatibility metadata until the new identity/team UX is explicit.
 
 5. Mail/workflow side effects
-   - Recommended: emit both new workflow triggers and a mail-domain event equivalent for marketing flow enrollment.
-   - Do not import old dittofeed/event-bus modules.
+   - Use new workflow triggers now.
+   - Wire marketing/mail enrollment through the new mail pipeline later; do not import old dittofeed/event-bus modules.
 
 6. UI builder
-   - Recommended: replace the current reduced field picker with the old grouped builder behavior adapted to new contracts.
-   - Add Shopify segment live-search component backed by the new `/shopify-customers/segments` endpoint.
+   - Use the old field/operator/scope grammar adapted to new contracts.
+   - Use the live Shopify segment selector backed by the new Shopify segment endpoint.
 
-7. RFM
-   - Old RFM has 11 segments: `champions`, `loyal`, `potential_loyalist`, `new_customers`, `promising`, `need_attention`, `about_to_sleep`, `at_risk`, `cant_lose`, `hibernating`, `lost`, plus fallback `other`.
-   - The previous 8 seeded RFM rows were incomplete and should not be restored as seed data.
-   - RFM/CLV metrics must be calculated from synced Shopify orders/customers, not seeded rows.
+7. Seed rule
+   - Segment data is never seeded as customer/business data.
+   - Shopify customers, Shopify segment memberships, orders, and RFM/CLV outcomes must come from sync/evaluation only.
 
 ## Proposed Transfer Sequence After Approval
 

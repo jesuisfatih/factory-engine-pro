@@ -10,7 +10,7 @@ import type {
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { RulesService } from '../rules/rules.service.js';
-import { SegmentsRepository } from './segments.repository.js';
+import { SegmentsRepository, type SegmentMembershipMetadata } from './segments.repository.js';
 import { ShopifyCustomerSegmentsService } from './shopify-customer-segments.service.js';
 
 type CustomerRow = Awaited<ReturnType<SegmentsRepository['listCustomers']>>[number];
@@ -247,8 +247,9 @@ export class SegmentsService {
     const existingRows = await this.repository.listMembershipCustomerIds(id);
     const existingIds = new Set(existingRows.map((row) => row.customerId));
     const matchIdSet = new Set(matchIds);
+    const membershipMetadata = this.membershipMetadataByCustomer(matches, context.requestedShopifySegmentIds);
 
-    await this.repository.replaceMemberships(id, matchIds);
+    await this.repository.replaceMemberships(id, matchIds, membershipMetadata);
     await this.repository.syncAssignmentHistory(segment, matchIds, context.metricsByCustomer);
     const assignmentSync = await this.repository.syncSalesAssignmentsFromCurrentSegments([
       ...matchIds,
@@ -312,8 +313,14 @@ export class SegmentsService {
       const matched = matchedSegmentIds.has(segment.id) ? [customerId] : [];
       await this.repository.syncAssignmentHistory(segment, matched, context.metricsByCustomer);
     }
+    for (const segment of matchedSegments) {
+      await this.repository.upsertMembership(
+        segment.id,
+        customerId,
+        this.membershipMetadataForCandidate(candidate, extractShopifySegmentIds(this.normalizeConditions(segment.conditions))),
+      );
+    }
     for (const segment of added) {
-      await this.repository.upsertMembership(segment.id, customerId);
       await this.fireSegmentMembershipTrigger('segment.member_added', customerId, segment.id, segment.name);
     }
     for (const membership of removed) {
@@ -360,6 +367,7 @@ export class SegmentsService {
     if (!member) throw new BadRequestException('Active member is required for segment ownership');
     const ownership = await this.repository.upsertOwnership(id, {
       memberId: input.memberId,
+      teamId: input.teamId,
       priority: input.priority ?? 0,
       importance: input.importance ?? 'normal',
       dailyCap: input.dailyCap,
@@ -370,6 +378,7 @@ export class SegmentsService {
     this.logger.log('segments', 'ownership_upsert', 'Segment ownership changed', {
       segment_id: id,
       member_id: input.memberId,
+      team_id: input.teamId,
     });
     return this.presentOwnership(ownership);
   }
@@ -819,6 +828,26 @@ export class SegmentsService {
     };
   }
 
+  private membershipMetadataByCustomer(
+    candidates: SegmentCandidate[],
+    requestedShopifySegmentIds: string[],
+  ): Map<string, SegmentMembershipMetadata> {
+    return new Map(candidates.map((candidate) => [
+      candidate.customer.id,
+      this.membershipMetadataForCandidate(candidate, requestedShopifySegmentIds),
+    ]));
+  }
+
+  private membershipMetadataForCandidate(
+    candidate: SegmentCandidate | undefined,
+    requestedShopifySegmentIds: string[],
+  ): SegmentMembershipMetadata {
+    if (!candidate) return { source: 'auto', shopifySegmentRef: null, score: 1 };
+    const requested = new Set(requestedShopifySegmentIds);
+    const shopifySegmentRef = candidate.shopifySegmentIds.find((segmentId) => requested.has(segmentId)) ?? null;
+    return { source: 'auto', shopifySegmentRef, score: 1 };
+  }
+
   private presentSegment(segment: Awaited<ReturnType<SegmentsRepository['findById']>>) {
     if (!segment) return segment;
     return {
@@ -846,6 +875,7 @@ export class SegmentsService {
     return {
       id: ownership.id,
       memberId: ownership.memberId,
+      teamId: ownership.teamId,
       memberName: ownership.member ? `${ownership.member.firstName} ${ownership.member.lastName}` : null,
       memberEmail: ownership.member?.email ?? null,
       priority: ownership.priority,
