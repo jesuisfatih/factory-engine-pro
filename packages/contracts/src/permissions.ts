@@ -23,6 +23,7 @@ export const MEMBER_PERMISSIONS = {
   taskAssign: 'task.assign',
   aircallUsersRead: 'aircall.users.read',
   aircallUsersWrite: 'aircall.users.write',
+  commissionSubmit: 'commission.submit',
 } as const;
 
 export const CUSTOMER_PERMISSIONS = {
@@ -88,6 +89,38 @@ export const DEFAULT_MEMBER_ROLES = [
       [MEMBER_PERMISSIONS.b2bAccessRead]: true,
       [MEMBER_PERMISSIONS.taskAssign]: true,
       [MEMBER_PERMISSIONS.aircallUsersRead]: true,
+    },
+  },
+  {
+    slug: 'customer_service',
+    name: 'Customer Service',
+    description: 'Inbound support and customer follow-up staff',
+    permissions: {
+      [MEMBER_PERMISSIONS.customersRead]: true,
+      [MEMBER_PERMISSIONS.customersWrite]: true,
+      [MEMBER_PERMISSIONS.supportRead]: true,
+      [MEMBER_PERMISSIONS.supportWrite]: true,
+      [MEMBER_PERMISSIONS.ordersRead]: true,
+      [MEMBER_PERMISSIONS.segmentsRead]: true,
+      [MEMBER_PERMISSIONS.taskAssign]: true,
+      [MEMBER_PERMISSIONS.aircallUsersRead]: true,
+    },
+  },
+  {
+    slug: 'sales_personel',
+    name: 'Sales Personel',
+    description: 'Sales workspace staff with commission submission rights',
+    permissions: {
+      [MEMBER_PERMISSIONS.customersRead]: true,
+      [MEMBER_PERMISSIONS.customersWrite]: true,
+      [MEMBER_PERMISSIONS.ordersRead]: true,
+      [MEMBER_PERMISSIONS.ordersWrite]: true,
+      [MEMBER_PERMISSIONS.pricingRead]: true,
+      [MEMBER_PERMISSIONS.pricingWrite]: true,
+      [MEMBER_PERMISSIONS.segmentsRead]: true,
+      [MEMBER_PERMISSIONS.taskAssign]: true,
+      [MEMBER_PERMISSIONS.aircallUsersRead]: true,
+      [MEMBER_PERMISSIONS.commissionSubmit]: true,
     },
   },
 ] as const;

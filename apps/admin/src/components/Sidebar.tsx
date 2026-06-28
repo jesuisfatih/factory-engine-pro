@@ -54,7 +54,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     children: [
       { to: '/team/users', matchPrefix: '/team/users', i18nKey: 'nav.team_members', id: 'nav-team-users', icon: Users, permission: 'members.read' },
       { to: '/team/roles', matchPrefix: '/team/roles', i18nKey: 'nav.team_roles', id: 'nav-team-roles', icon: KeyRound, permission: 'roles.read' },
-      { to: '/team/commissions', matchPrefix: '/team/commissions', i18nKey: 'nav.team_commissions', id: 'nav-team-commissions', icon: DollarSign, permission: 'members.read' },
+      { to: '/team/commissions', matchPrefix: '/team/commissions', i18nKey: 'nav.team_commissions', id: 'nav-team-commissions', icon: DollarSign, permission: MEMBER_PERMISSIONS.membersRead },
     ],
   },
   {
@@ -67,7 +67,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     groupKey: 'nav.group_system',
     children: [
       { to: '/settings/workspace', matchPrefix: '/settings/workspace', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read' },
-      { to: '/settings/aircall', matchPrefix: '/settings/aircall', i18nKey: 'nav.aircall_settings', id: 'nav-aircall', icon: Cable, permission: 'aircall.users.read' },
+      { to: '/settings/aircall', matchPrefix: '/settings/aircall', i18nKey: 'nav.aircall_settings', id: 'nav-aircall', icon: Cable, permission: MEMBER_PERMISSIONS.settingsRead },
       { to: '/settings/ai', matchPrefix: '/settings/ai', i18nKey: 'nav.ai_settings_legacy', id: 'nav-ai-old', icon: Sparkles, permission: 'settings.read' },
       { to: '/settings/shopify', matchPrefix: '/settings/shopify', i18nKey: 'nav.shopify_settings', id: 'nav-shopify', icon: Store, permission: 'settings.read' },
     ],

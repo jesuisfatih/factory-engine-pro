@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { AuthSession } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, type AuthSession } from '@factory-engine-pro/contracts';
 import { readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 type Principal = AuthSession['principal'];
@@ -37,8 +37,14 @@ export function principalInitials(principal: Principal | undefined) {
 
 export function adminRoleLabel(principal: Principal | undefined) {
   const permissions = new Set(principal?.permissions ?? []);
-  if (permissions.has('roles.write') && permissions.has('settings.write')) return 'Owner';
-  if (permissions.has('members.write')) return 'Admin';
-  if (permissions.has('task.assign')) return 'Agent';
+  if (permissions.has(MEMBER_PERMISSIONS.rolesWrite) && permissions.has(MEMBER_PERMISSIONS.settingsWrite)) return 'Owner';
+  if (permissions.has(MEMBER_PERMISSIONS.membersWrite)) return 'Admin';
+  if (permissions.has(MEMBER_PERMISSIONS.commissionSubmit)) return 'Sales Personel';
+  if (
+    permissions.has(MEMBER_PERMISSIONS.supportWrite)
+    && permissions.has(MEMBER_PERMISSIONS.customersWrite)
+    && !permissions.has(MEMBER_PERMISSIONS.ordersWrite)
+  ) return 'Customer Service';
+  if (permissions.has(MEMBER_PERMISSIONS.taskAssign)) return 'Agent';
   return principal ? 'Member' : 'No session';
 }

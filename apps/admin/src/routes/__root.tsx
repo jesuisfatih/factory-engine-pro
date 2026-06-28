@@ -38,7 +38,7 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string }> = [
   { test: /^\/tasks/, permission: MEMBER_PERMISSIONS.taskAssign },
   { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsWrite },
   { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },
-  { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.aircallUsersRead },
+  { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/ai/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/shopify/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/workspace/, permission: MEMBER_PERMISSIONS.settingsRead },
