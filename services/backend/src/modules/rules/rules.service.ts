@@ -16,6 +16,9 @@ import {
   type WorkflowEnumChainProbeResponse,
   type WorkflowRuleAction,
   type WorkflowRuleCondition,
+  type WorkflowRuleDefinition,
+  type WorkflowRuleWhenGroup,
+  type WorkflowWhenGroupTrace,
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
   type WorkflowRuleDto,
@@ -65,8 +68,9 @@ export class RulesService {
     for (const row of rules) {
       const rule = toDto(row);
       const state = await this.resolveConditionState(parsed.params);
-      const conditionTrace = await this.resolveConditions(rule.definition.when, state);
-      const conditionsMatched = conditionTrace.every((entry) => entry.matched);
+      const whenTrace = await this.resolveWhenGroups(conditionGroups(rule.definition), state);
+      const conditionTrace = whenTrace.flatMap((group) => group.conditionTrace);
+      const conditionsMatched = whenTrace.every((entry) => entry.matched);
       this.logger.log(
         'rules',
         conditionsMatched ? 'conditions_matched' : 'conditions_not_matched',
@@ -76,6 +80,7 @@ export class RulesService {
           trigger: parsed.trigger,
           rule_id: rule.id,
           matched: conditionsMatched,
+          when_trace: whenTrace,
           condition_trace: conditionTrace,
         },
       );
@@ -87,6 +92,7 @@ export class RulesService {
           reason: 'conditions_not_matched',
           taskIds: [],
           conditionTrace,
+          whenTrace,
         });
         continue;
       }
@@ -103,6 +109,7 @@ export class RulesService {
           rule,
           state,
           conditionTrace,
+          whenTrace,
           taskIds,
         });
         actionTrace.push(applied.trace);
@@ -127,6 +134,7 @@ export class RulesService {
         ...(actionStatus === 'skipped' ? { reason: 'actions_skipped' as const } : {}),
         taskIds,
         conditionTrace,
+        whenTrace,
         actionTrace,
       });
     }
@@ -151,6 +159,22 @@ export class RulesService {
       tasks_created: response.tasksCreated,
     });
     return response;
+  }
+
+  private async resolveWhenGroups(
+    groups: WorkflowRuleWhenGroup[],
+    state: Awaited<ReturnType<RulesService['resolveConditionState']>>,
+  ): Promise<WorkflowWhenGroupTrace[]> {
+    const traces: WorkflowWhenGroupTrace[] = [];
+    for (const group of groups) {
+      const conditionTrace = await this.resolveConditions(group.conditions, state);
+      traces.push({
+        id: group.id,
+        matched: conditionTrace.every((entry) => entry.matched),
+        conditionTrace,
+      });
+    }
+    return traces;
   }
 
   private async resolveConditions(
@@ -305,6 +329,7 @@ export class RulesService {
     rule: WorkflowRuleDto;
     state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
     conditionTrace: WorkflowConditionTrace[];
+    whenTrace: WorkflowWhenGroupTrace[];
     taskIds: string[];
   }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
     this.executor.recognizeAction(action.action);
@@ -557,6 +582,7 @@ export class RulesService {
         action: action.action,
         rulePriority: context.rule.priority,
         conditionTrace: context.conditionTrace,
+        whenTrace: context.whenTrace,
       },
     };
   }
@@ -728,8 +754,15 @@ type WorkflowActionContext = {
   rule: WorkflowRuleDto;
   state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
   conditionTrace: WorkflowConditionTrace[];
+  whenTrace: WorkflowWhenGroupTrace[];
   taskIds: string[];
 };
+
+function conditionGroups(definition: WorkflowRuleDefinition): WorkflowRuleWhenGroup[] {
+  if (definition.whenGroups?.length) return definition.whenGroups;
+  if (definition.when.length > 0) return [{ id: 'default', conditions: definition.when }];
+  return [];
+}
 
 function resultStatus(taskIds: string[], actionTrace: WorkflowActionTrace[]): WorkflowTriggerFireResponse['results'][number]['status'] {
   if (taskIds.length > 0) return 'task_created';

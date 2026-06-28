@@ -16,6 +16,12 @@ export const workflowRuleConditionSchema = z.object({
 });
 export type WorkflowRuleCondition = z.infer<typeof workflowRuleConditionSchema>;
 
+export const workflowRuleWhenGroupSchema = z.object({
+  id: z.string().trim().min(1),
+  conditions: z.array(workflowRuleConditionSchema).min(1),
+});
+export type WorkflowRuleWhenGroup = z.infer<typeof workflowRuleWhenGroupSchema>;
+
 export const workflowRuleActionSchema = z.object({
   id: z.string().trim().min(1),
   action: workflowActionSchema,
@@ -29,6 +35,7 @@ export const workflowRuleDefinitionSchema = z.object({
   composable: z.boolean(),
   trigger: workflowTriggerSchema,
   when: z.array(workflowRuleConditionSchema),
+  whenGroups: z.array(workflowRuleWhenGroupSchema).optional(),
   actions: z.array(workflowRuleActionSchema).min(1),
 });
 export type WorkflowRuleDefinition = z.infer<typeof workflowRuleDefinitionSchema>;
@@ -90,6 +97,7 @@ export interface WorkflowTriggerFireResult {
   reason?: 'conditions_not_matched' | 'actions_skipped' | 'unsupported_action';
   taskIds: string[];
   conditionTrace?: WorkflowConditionTrace[];
+  whenTrace?: WorkflowWhenGroupTrace[];
   actionTrace?: WorkflowActionTrace[];
 }
 
@@ -101,6 +109,12 @@ export interface WorkflowConditionTrace {
   actual: unknown;
   matched: boolean;
   source: string;
+}
+
+export interface WorkflowWhenGroupTrace {
+  id: string;
+  matched: boolean;
+  conditionTrace: WorkflowConditionTrace[];
 }
 
 export interface WorkflowTriggerFireResponse {
