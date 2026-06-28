@@ -1,0 +1,257 @@
+{
+  "proof": "roadmap12_runtime_status_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap12-runtime-20260628113847",
+  "customer": {
+    "id": "cust_nw1yip6avbgmk8gito31hw7y",
+    "shopifyCustomerId": "7591658356950",
+    "totalSpent": 173.88
+  },
+  "rules": {
+    "draft": {
+      "id": "wrule_pzhsk9upbn7eegswlitm8fu9",
+      "name": "Roadmap 12 draft ignored 20260628113847",
+      "status": "draft",
+      "priority": 95
+    },
+    "shadow": {
+      "id": "wrule_gknoyxja5x4gh535ascthpnv",
+      "name": "Roadmap 12 shadow dry run 20260628113847",
+      "status": "shadow",
+      "priority": 94
+    },
+    "active": {
+      "id": "wrule_yt5m3lxggc9cx306jefm3c0s",
+      "name": "Roadmap 12 active non-composable 20260628113847",
+      "status": "active",
+      "priority": 93,
+      "composable": false
+    },
+    "lower": {
+      "id": "wrule_zsex72063c00mmg8dj47ygsu",
+      "name": "Roadmap 12 lower active blocked 20260628113847",
+      "status": "active",
+      "priority": 92
+    }
+  },
+  "titles": {
+    "draft": "Roadmap 12 draft should not run 20260628113847",
+    "shadow": "Roadmap 12 shadow should not create 20260628113847",
+    "active": "Roadmap 12 active runtime task 20260628113847",
+    "lower": "Roadmap 12 lower active should not run 20260628113847"
+  },
+  "fire": {
+    "eventId": "roadmap12-runtime-20260628113847",
+    "trigger": "manual.trigger",
+    "source": "roadmap12-live-proof",
+    "matchedRules": 4,
+    "evaluatedRules": 2,
+    "tasksCreated": 1,
+    "tasks": [
+      {
+        "ruleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+        "ruleName": "Roadmap 12 active non-composable 20260628113847",
+        "actionId": "act-active-93",
+        "action": "create_task",
+        "taskId": "sr_fzqf4hhtyygvwt8fwmze2t24",
+        "title": "Roadmap 12 active runtime task 20260628113847"
+      }
+    ],
+    "results": [
+      {
+        "ruleId": "wrule_gknoyxja5x4gh535ascthpnv",
+        "ruleName": "Roadmap 12 shadow dry run 20260628113847",
+        "status": "shadow_matched",
+        "executionMode": "shadow",
+        "taskIds": [],
+        "conditionTrace": [
+          {
+            "id": "cond-shadow-94",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "0",
+            "actual": 173.88,
+            "matched": true,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-shadow-94",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "0",
+                "actual": 173.88,
+                "matched": true,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ruleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+        "ruleName": "Roadmap 12 active non-composable 20260628113847",
+        "status": "task_created",
+        "executionMode": "active",
+        "shortCircuited": true,
+        "taskIds": [
+          "sr_fzqf4hhtyygvwt8fwmze2t24"
+        ],
+        "conditionTrace": [
+          {
+            "id": "cond-active-93",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "0",
+            "actual": 173.88,
+            "matched": true,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-active-93",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "0",
+                "actual": 173.88,
+                "matched": true,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ],
+        "actionTrace": [
+          {
+            "actionId": "act-active-93",
+            "action": "create_task",
+            "status": "applied",
+            "targetType": "service_request",
+            "targetId": "sr_fzqf4hhtyygvwt8fwmze2t24",
+            "message": "Created service request from workflow action."
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T11:38:49.229Z"
+  },
+  "supportTasks": [
+    {
+      "id": "sr_fzqf4hhtyygvwt8fwmze2t24",
+      "title": "Roadmap 12 active runtime task 20260628113847",
+      "status": "open",
+      "priority": "critical",
+      "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+      "workflow": {
+        "action": "create_task",
+        "params": {
+          "intent": "inquiry",
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+        },
+        "ruleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+        "source": "roadmap12-live-proof",
+        "eventId": "roadmap12-runtime-20260628113847",
+        "trigger": "manual.trigger",
+        "actionId": "act-active-93",
+        "ruleName": "Roadmap 12 active non-composable 20260628113847",
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-active-93",
+                "actual": 173.88,
+                "source": "customers.total_spent",
+                "matched": true,
+                "expected": "0",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ],
+        "occurredAt": null,
+        "rulePriority": 93,
+        "matchedRuleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+        "stateSnapshot": {
+          "customer": {
+            "id": "cust_nw1yip6avbgmk8gito31hw7y",
+            "tags": [
+              "Inbox online store chat",
+              "Login with Shop",
+              "Shop",
+              "workflow:pinned",
+              "workflow:pin:roadmap10-20260628111139",
+              "workflow:pin:roadmap10-20260628111708"
+            ],
+            "totalSpent": 173.88,
+            "lastOrderAt": null,
+            "ordersCount": 3,
+            "shopifyCustomerId": "7591658356950"
+          },
+          "callEvent": null,
+          "resolvedAt": "2026-06-28T11:38:49.189Z",
+          "resolverOutput": {}
+        },
+        "conditionTrace": [
+          {
+            "id": "cond-active-93",
+            "actual": 173.88,
+            "source": "customers.total_spent",
+            "matched": true,
+            "expected": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "matched_rule_id": "wrule_yt5m3lxggc9cx306jefm3c0s"
+      }
+    }
+  ],
+  "archivedRules": [
+    {
+      "id": "wrule_pzhsk9upbn7eegswlitm8fu9",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    },
+    {
+      "id": "wrule_gknoyxja5x4gh535ascthpnv",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    },
+    {
+      "id": "wrule_yt5m3lxggc9cx306jefm3c0s",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    },
+    {
+      "id": "wrule_zsex72063c00mmg8dj47ygsu",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    }
+  ],
+  "assertions": {
+    "shadowMatchedNoTask": true,
+    "activeCreatedOneTask": true,
+    "activeShortCircuited": true,
+    "draftNotEvaluated": true,
+    "lowerActiveNotEvaluatedAfterShortCircuit": true,
+    "onlyOneTaskCreated": true,
+    "taskHasMatchedRuleId": true,
+    "taskHasConditionTrace": true,
+    "taskHasStateSnapshot": true,
+    "proofRulesArchived": true
+  },
+  "checkedAt": "2026-06-28T11:38:51.109Z"
+}

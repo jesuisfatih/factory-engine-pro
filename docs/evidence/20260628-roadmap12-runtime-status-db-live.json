@@ -1,0 +1,245 @@
+﻿{
+  "proof": "roadmap12_runtime_status_db_live",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap12-runtime-20260628113847",
+  "taskIds": [
+    "sr_fzqf4hhtyygvwt8fwmze2t24"
+  ],
+  "ruleIds": [
+    "wrule_pzhsk9upbn7eegswlitm8fu9",
+    "wrule_gknoyxja5x4gh535ascthpnv",
+    "wrule_yt5m3lxggc9cx306jefm3c0s",
+    "wrule_zsex72063c00mmg8dj47ygsu"
+  ],
+  "assertions": {
+    "serviceRequestRowsFound": 1,
+    "taskMatchedRuleIdPersisted": true,
+    "taskConditionTracePersisted": true,
+    "taskWhenTracePersisted": true,
+    "taskStateSnapshotPersisted": true,
+    "archivedProofRules": true,
+    "draftShadowLowerCreatedNoTasks": true
+  },
+  "serviceRequests": [
+    {
+      "id": "sr_fzqf4hhtyygvwt8fwmze2t24",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 12 active runtime task 20260628113847",
+      "status": "open",
+      "priority": "critical",
+      "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+      "metadata": {
+        "category": "workflow_rule",
+        "workflow": {
+          "action": "create_task",
+          "params": {
+            "intent": "inquiry",
+            "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+          },
+          "ruleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+          "source": "roadmap12-live-proof",
+          "eventId": "roadmap12-runtime-20260628113847",
+          "trigger": "manual.trigger",
+          "actionId": "act-active-93",
+          "ruleName": "Roadmap 12 active non-composable 20260628113847",
+          "whenTrace": [
+            {
+              "id": "default",
+              "matched": true,
+              "conditionTrace": [
+                {
+                  "id": "cond-active-93",
+                  "actual": 173.88,
+                  "source": "customers.total_spent",
+                  "matched": true,
+                  "expected": "0",
+                  "operator": ">=",
+                  "condition": "customer_ltv_gte"
+                }
+              ]
+            }
+          ],
+          "occurredAt": null,
+          "rulePriority": 93,
+          "matchedRuleId": "wrule_yt5m3lxggc9cx306jefm3c0s",
+          "stateSnapshot": {
+            "customer": {
+              "id": "cust_nw1yip6avbgmk8gito31hw7y",
+              "tags": [
+                "Inbox online store chat",
+                "Login with Shop",
+                "Shop",
+                "workflow:pinned",
+                "workflow:pin:roadmap10-20260628111139",
+                "workflow:pin:roadmap10-20260628111708"
+              ],
+              "totalSpent": 173.88,
+              "lastOrderAt": null,
+              "ordersCount": 3,
+              "shopifyCustomerId": "7591658356950"
+            },
+            "callEvent": null,
+            "resolvedAt": "2026-06-28T11:38:49.189Z",
+            "resolverOutput": {}
+          },
+          "conditionTrace": [
+            {
+              "id": "cond-active-93",
+              "actual": 173.88,
+              "source": "customers.total_spent",
+              "matched": true,
+              "expected": "0",
+              "operator": ">=",
+              "condition": "customer_ltv_gte"
+            }
+          ],
+          "matched_rule_id": "wrule_yt5m3lxggc9cx306jefm3c0s"
+        },
+        "ticketNumber": "SR-MQXPU3G2"
+      },
+      "createdAt": "2026-06-28T11:38:49.206Z",
+      "updatedAt": "2026-06-28T11:38:49.206Z"
+    }
+  ],
+  "workflowRules": [
+    {
+      "id": "wrule_pzhsk9upbn7eegswlitm8fu9",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 12 draft ignored 20260628113847",
+      "status": "archived",
+      "priority": 95,
+      "composable": true,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-draft-95",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-draft-95",
+            "value": "Roadmap 12 draft should not run 20260628113847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 95,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T11:38:49.623Z"
+    },
+    {
+      "id": "wrule_gknoyxja5x4gh535ascthpnv",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 12 shadow dry run 20260628113847",
+      "status": "archived",
+      "priority": 94,
+      "composable": true,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-shadow-94",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-shadow-94",
+            "value": "Roadmap 12 shadow should not create 20260628113847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 94,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T11:38:49.826Z"
+    },
+    {
+      "id": "wrule_yt5m3lxggc9cx306jefm3c0s",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 12 active non-composable 20260628113847",
+      "status": "archived",
+      "priority": 93,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-active-93",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-active-93",
+            "value": "Roadmap 12 active runtime task 20260628113847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 93,
+        "composable": false
+      },
+      "updatedAt": "2026-06-28T11:38:50.031Z"
+    },
+    {
+      "id": "wrule_zsex72063c00mmg8dj47ygsu",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 12 lower active blocked 20260628113847",
+      "status": "archived",
+      "priority": 92,
+      "composable": true,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-active-92",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-active-92",
+            "value": "Roadmap 12 lower active should not run 20260628113847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 92,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T11:38:50.237Z"
+    }
+  ],
+  "blockedTaskCounts": [
+    {
+      "title": "Roadmap 12 draft should not run 20260628113847",
+      "count": 0
+    },
+    {
+      "title": "Roadmap 12 shadow should not create 20260628113847",
+      "count": 0
+    },
+    {
+      "title": "Roadmap 12 lower active should not run 20260628113847",
+      "count": 0
+    }
+  ],
+  "checkedAt": "2026-06-28T11:39:15.297Z"
+}

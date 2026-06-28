@@ -1,0 +1,47 @@
+﻿{
+    "proof":  "roadmap12_runtime_status_runtime_live",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "eventId":  "roadmap12-runtime-20260628113847",
+    "expectedCommit":  "26613fab9630fff3a914aee230eb7be1085942c9",
+    "hostBuildSha":  "26613fab9630fff3a914aee230eb7be1085942c9",
+    "containerBuildSha":  "26613fab9630fff3a914aee230eb7be1085942c9",
+    "health":  {
+                   "statusCode":  200,
+                   "body":  {
+                                "ok":  true,
+                                "service":  "factory-engine-pro-backend"
+                            }
+               },
+    "assertions":  {
+                       "hostBuildMatchesHead":  true,
+                       "containerBuildMatchesHead":  true,
+                       "healthOk":  true,
+                       "shadowRuleMatchedLogSeen":  true,
+                       "workflowTaskCreatedLogSeen":  true,
+                       "runtimeShortCircuitLogSeen":  true,
+                       "triggerFiredLogSeen":  true,
+                       "noDraftTaskLogSeen":  true,
+                       "lowerRuleNotLogged":  true
+                   },
+    "pm2":  [
+                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1147     │ 99s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1113     │ 99s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1118     │ 99s    │ 0    │ online    │ 0%       │ 140.8mb  │ root     │ disabled │",
+                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1133     │ 99s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+            ],
+    "logs":  [
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_gknoyxja5x4gh535ascthpnv\",\"matched\":true,\"when_trace\":[{\"id\":\"default\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-shadow-94\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}],\"condition_trace\":[{\"id\":\"cond-shadow-94\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"shadow_rule_matched\",\"message\":\"Shadow workflow rule matched without mutating state\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_gknoyxja5x4gh535ascthpnv\",\"when_trace\":[{\"id\":\"default\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-shadow-94\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}],\"condition_trace\":[{\"id\":\"cond-shadow-94\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_yt5m3lxggc9cx306jefm3c0s\",\"matched\":true,\"when_trace\":[{\"id\":\"default\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-active-93\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}],\"condition_trace\":[{\"id\":\"cond-active-93\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"0\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_action_applied\",\"message\":\"Created service request from workflow action.\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_yt5m3lxggc9cx306jefm3c0s\",\"action_id\":\"act-active-93\",\"workflow_action\":\"create_task\",\"status\":\"applied\",\"target_type\":\"service_request\",\"target_id\":\"sr_fzqf4hhtyygvwt8fwmze2t24\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_yt5m3lxggc9cx306jefm3c0s\",\"action_id\":\"act-active-93\",\"task_id\":\"sr_fzqf4hhtyygvwt8fwmze2t24\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"runtime_short_circuit\",\"message\":\"Workflow runtime stopped after non-composable active rule\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_yt5m3lxggc9cx306jefm3c0s\",\"priority\":93}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 11:38:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"176c9d8c-b3ba-4eb0-bafd-0b03a26490bc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap12-runtime-20260628113847\",\"trigger\":\"manual.trigger\",\"source\":\"roadmap12-live-proof\",\"matched_rules\":4,\"tasks_created\":1}\u001b[39m"
+             ],
+    "checkedAt":  "2026-06-28T11:39:41.6791381Z"
+}
