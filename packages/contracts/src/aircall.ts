@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { TranscriptResolverOutput } from './ai.js';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION, type TranscriptResolverOutput } from './ai.js';
 
 export const aircallLinkUserSchema = z.object({
   memberId: z.string().trim().min(1),
@@ -11,6 +11,13 @@ export const aircallBackfillRecentSchema = z.object({
   maxPages: z.coerce.number().int().min(1).max(40).default(20),
 });
 export type AircallBackfillRecentInput = z.infer<typeof aircallBackfillRecentSchema>;
+
+export const aircallResolverReprocessSchema = z.object({
+  targetVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  callEventId: z.string().trim().min(1).optional(),
+});
+export type AircallResolverReprocessInput = z.infer<typeof aircallResolverReprocessSchema>;
 
 export interface AircallUserDto {
   id: string;
@@ -180,5 +187,21 @@ export interface AircallBackfillRecentResponse {
   transcriptsEmpty: number;
   transcriptErrors: number;
   resolverQueued: number;
+  stats: AircallCallEventsResponse['stats'];
+}
+
+export interface AircallResolverReprocessResponse {
+  targetVersion: number;
+  scanned: number;
+  queued: number;
+  skipped: number;
+  callEvents: Array<{
+    id: string;
+    externalCallId: string;
+    previousVersion: number | null;
+    previousStatus: string | null;
+    queued: boolean;
+    skippedReason: string | null;
+  }>;
   stats: AircallCallEventsResponse['stats'];
 }

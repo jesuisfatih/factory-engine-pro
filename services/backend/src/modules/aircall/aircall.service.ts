@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type {
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
@@ -8,6 +9,8 @@ import type {
   AircallConnectionTestResponse,
   AircallNumberDto,
   AircallNumbersResponse,
+  AircallResolverReprocessInput,
+  AircallResolverReprocessResponse,
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
@@ -437,6 +440,93 @@ export class AircallService {
       }
       throw error;
     }
+  }
+
+  async reprocessResolver(input: AircallResolverReprocessInput): Promise<AircallResolverReprocessResponse> {
+    const startedAt = new Date();
+    const targetVersion = input.targetVersion ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
+    if (targetVersion !== TRANSCRIPT_RESOLVER_SCHEMA_VERSION) {
+      throw new BadRequestException({
+        message: `Only current resolver schema version ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION} can be queued for reprocess.`,
+        code: 'resolver_reprocess_version_mismatch',
+      });
+    }
+
+    const where: Prisma.AircallCallEventWhereInput = input.callEventId
+      ? { id: input.callEventId }
+      : {
+          AND: [
+            { transcriptRaw: { not: null } },
+            {
+              OR: [
+                { resolvedWithVersion: null },
+                { resolvedWithVersion: { lt: targetVersion } },
+                { resolverStatus: 'failed' },
+              ],
+            },
+          ],
+        };
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      where,
+      orderBy: { eventTimestamp: 'desc' },
+      take: input.limit,
+      select: {
+        id: true,
+        externalCallId: true,
+        transcriptRaw: true,
+        resolvedWithVersion: true,
+        resolverStatus: true,
+      },
+    });
+    if (input.callEventId && rows.length === 0) {
+      throw new NotFoundException('Aircall call event was not found for resolver reprocess.');
+    }
+
+    let queued = 0;
+    let skipped = 0;
+    const callEvents: AircallResolverReprocessResponse['callEvents'] = [];
+    for (const row of rows) {
+      const result = await this.ingest.enqueueTranscriptResolver(row.id, row.transcriptRaw, {
+        forceReprocess: true,
+        targetVersion,
+        source: 'manual_reprocess',
+      });
+      if (result.queued) queued++;
+      else skipped++;
+      callEvents.push({
+        id: row.id,
+        externalCallId: row.externalCallId,
+        previousVersion: row.resolvedWithVersion,
+        previousStatus: row.resolverStatus,
+        queued: result.queued,
+        skippedReason: result.skippedReason,
+      });
+    }
+
+    await this.repository.createSyncLog({
+      action: 'calls.resolver_reprocess',
+      status: queued > 0 ? 'success' : 'skipped',
+      message: `Queued ${queued}/${rows.length} Aircall transcript resolver job(s) for schema v${targetVersion}.`,
+      startedAt,
+      finishedAt: new Date(),
+      metadata: {
+        targetVersion,
+        limit: input.limit,
+        callEventId: input.callEventId ?? null,
+        scanned: rows.length,
+        queued,
+        skipped,
+      },
+    });
+
+    return {
+      targetVersion,
+      scanned: rows.length,
+      queued,
+      skipped,
+      callEvents,
+      stats: await this.callEventStats(),
+    };
   }
 
   async webhookStatus(): Promise<AircallWebhookStatusResponse> {

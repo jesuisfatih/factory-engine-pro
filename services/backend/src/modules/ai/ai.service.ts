@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   buildTranscriptResolverPromptFromEnums,
+  TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   transcriptResolverOutputSchema,
   WORKFLOW_ENUM_VERSION,
   type AiHealthResponse,
@@ -143,12 +144,13 @@ export class AiService {
     const response = await this.callAnthropicResolver(credentials.key, model, input, credentials.source);
     const text = extractAnthropicText(response);
     const parsed = transcriptResolverOutputSchema.parse(parseJsonObject(text));
+    const output = { ...parsed, resolved_with_version: TRANSCRIPT_RESOLVER_SCHEMA_VERSION };
     return {
       provider: 'anthropic',
       model,
       source: credentials.source === 'none' ? 'env' : credentials.source,
       promptKey: 'ai.transcript-resolver',
-      output: parsed,
+      output,
       latencyMs: Date.now() - startedAt,
       checkedAt: new Date().toISOString(),
     };
@@ -340,7 +342,7 @@ Return STRICT JSON only. The JSON must exactly match this schema:
   "competitor_mentioned": string[],
   "summary": string under 200 tokens,
   "language_detected": ISO-like language name or code,
-  "resolved_with_version": 1
+  "resolved_with_version": ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION}
 }
 Use null or empty arrays when unknown. Confidence values must be 0..1.`;
 }

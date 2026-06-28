@@ -1,6 +1,22 @@
 import { z } from 'zod';
 import { CALL_INTENTS, PSYCH_TAGS, URGENCY_LEVELS } from './enums.js';
 
+export const TRANSCRIPT_RESOLVER_SCHEMA_VERSION = 2;
+
+export const TRANSCRIPT_RESOLVER_OUTPUT_FIELDS = [
+  'customer_match',
+  'product_mentions',
+  'psych_tags',
+  'call_intent',
+  'shipping_signals',
+  'payment_signals',
+  'urgency_signal',
+  'competitor_mentioned',
+  'summary',
+  'language_detected',
+  'resolved_with_version',
+] as const;
+
 export const aiHealthResponseSchema = z.object({
   provider: z.literal('anthropic'),
   credentialRequired: z.boolean(),

@@ -1,4 +1,5 @@
 import { HttpException, Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type { Prisma } from '@prisma/client';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -15,6 +16,8 @@ type ResolverJobData = {
   tenantId?: string;
   callEventId?: string;
   externalCallId?: string;
+  forceReprocess?: boolean;
+  targetVersion?: number;
 };
 
 @Injectable()
@@ -44,6 +47,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         job_id: job?.id,
         call_event_id: job?.data?.callEventId,
         tenant_id: job?.data?.tenantId,
+        target_version: job?.data?.targetVersion,
       });
     });
   }
@@ -82,9 +86,14 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         transcriptSource: true,
         transcriptPulledAt: true,
         resolvedAt: true,
+        resolvedWithVersion: true,
       },
     });
     if (!callEvent) throw new Error(`Aircall call event was not found for resolver job: ${callEventId}`);
+    const targetVersion = normalizeTargetVersion(job.data?.targetVersion);
+    if (!job.data?.forceReprocess && callEvent.resolvedAt) {
+      return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion };
+    }
 
     const transcript = callEvent.transcriptRaw?.trim();
     if (!transcript) {
@@ -148,6 +157,8 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         external_call_id: callEvent.externalCallId,
         model: result.model,
         resolved_with_version: result.output.resolved_with_version,
+        target_version: targetVersion,
+        force_reprocess: Boolean(job.data?.forceReprocess),
         latency_ms: result.latencyMs,
       });
       return { status: 'succeeded', resolvedWithVersion: result.output.resolved_with_version };
@@ -194,4 +205,9 @@ function httpErrorCode(error: unknown) {
     return typeof code === 'string' ? code : null;
   }
   return null;
+}
+
+function normalizeTargetVersion(value: unknown) {
+  const parsed = Number(value ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
 }

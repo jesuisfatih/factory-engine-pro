@@ -2,9 +2,11 @@ import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import {
   aircallBackfillRecentSchema,
   aircallLinkUserSchema,
+  aircallResolverReprocessSchema,
   MEMBER_PERMISSIONS,
   type AircallBackfillRecentInput,
   type AircallLinkUserInput,
+  type AircallResolverReprocessInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -68,6 +70,14 @@ export class AircallController {
     @Body(new ZodValidationPipe(aircallBackfillRecentSchema)) body: AircallBackfillRecentInput,
   ) {
     return this.aircall.backfillRecentCalls(body);
+  }
+
+  @Post('calls/resolver/reprocess')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  reprocessResolver(
+    @Body(new ZodValidationPipe(aircallResolverReprocessSchema)) body: AircallResolverReprocessInput,
+  ) {
+    return this.aircall.reprocessResolver(body);
   }
 
   @Post('users/:aircallUserId/link')

@@ -10,6 +10,8 @@ import type {
   AircallLinkUserInput,
   AircallConnectionTestResponse,
   AircallNumbersResponse,
+  AircallResolverReprocessInput,
+  AircallResolverReprocessResponse,
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
@@ -573,6 +575,10 @@ export class ApiClient {
 
   backfillRecentAircallCalls(input: AircallBackfillRecentInput = { recentDays: 3, maxPages: 20 }) {
     return this.post<AircallBackfillRecentResponse>('/aircall/calls/backfill-recent', input);
+  }
+
+  reprocessAircallResolver(input: AircallResolverReprocessInput) {
+    return this.post<AircallResolverReprocessResponse>('/aircall/calls/resolver/reprocess', input);
   }
 
   aiHealth() {

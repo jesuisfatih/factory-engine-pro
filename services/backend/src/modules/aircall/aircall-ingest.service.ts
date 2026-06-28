@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { timingSafeEqual } from 'node:crypto';
@@ -20,6 +21,18 @@ export interface ReceiveAircallWebhookResult {
   accepted: true;
   status: 'queued' | 'rejected' | 'duplicate';
   reason?: string;
+}
+
+export interface EnqueueTranscriptResolverOptions {
+  forceReprocess?: boolean;
+  targetVersion?: number;
+  source?: 'ingest' | 'manual_reprocess';
+}
+
+export interface EnqueueTranscriptResolverResult {
+  queued: boolean;
+  jobId: string | null;
+  skippedReason: string | null;
 }
 
 export const AIRCALL_INGEST_JOB = 'process';
@@ -330,21 +343,35 @@ export class AircallIngestService {
     return legacyMember.id;
   }
 
-  private async enqueueTranscriptResolver(callEventId: string, transcriptRaw: string | null) {
-    if (!transcriptRaw?.trim()) return;
+  async enqueueTranscriptResolver(
+    callEventId: string,
+    transcriptRaw?: string | null,
+    options: EnqueueTranscriptResolverOptions = {},
+  ): Promise<EnqueueTranscriptResolverResult> {
     const callEvent = await this.prisma.db.aircallCallEvent.findFirst({
       where: { id: callEventId },
       select: {
         id: true,
         tenantId: true,
         externalCallId: true,
+        transcriptRaw: true,
         resolverQueuedAt: true,
         resolverQueueJobId: true,
         resolverStatus: true,
         resolvedAt: true,
+        resolvedWithVersion: true,
       },
     });
-    if (!callEvent || callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt) return;
+    if (!callEvent) return { queued: false, jobId: null, skippedReason: 'call_event_not_found' };
+
+    const transcript = (transcriptRaw ?? callEvent.transcriptRaw)?.trim();
+    if (!transcript) return { queued: false, jobId: null, skippedReason: 'transcript_empty' };
+
+    const targetVersion = normalizeTargetVersion(options.targetVersion);
+    if (!options.forceReprocess && (callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt)) {
+      const versionLabel = callEvent.resolvedWithVersion ? `v${callEvent.resolvedWithVersion}` : 'legacy';
+      return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
+    }
 
     const jobId = ['aircall-transcript', callEvent.tenantId, callEvent.externalCallId, callEvent.id]
       .map((part) => part.replace(/[^a-zA-Z0-9_-]/g, '_'))
@@ -355,7 +382,7 @@ export class AircallIngestService {
         tenant_id: callEvent.tenantId,
         external_call_id: callEvent.externalCallId,
       });
-      return;
+      return { queued: false, jobId, skippedReason: 'resolver_queue_missing' };
     }
 
     const existingJob = await this.transcriptResolverQueue.getJob(jobId);
@@ -363,7 +390,9 @@ export class AircallIngestService {
       const state = await existingJob.getState();
       const returnValue = existingJob.returnvalue as { status?: unknown } | null;
       const completedWithoutSuccess = state === 'completed' && returnValue?.status !== 'succeeded';
-      if (state === 'failed' || completedWithoutSuccess) {
+      if (options.forceReprocess && state !== 'active') {
+        await existingJob.remove();
+      } else if (state === 'failed' || completedWithoutSuccess) {
         await existingJob.remove();
       } else if (state !== 'unknown') {
         await this.prisma.db.aircallCallEvent.updateMany({
@@ -375,7 +404,7 @@ export class AircallIngestService {
             resolverError: null,
           },
         });
-        return;
+        return { queued: false, jobId, skippedReason: `existing_job_${state}` };
       }
     }
 
@@ -385,6 +414,8 @@ export class AircallIngestService {
         tenantId: callEvent.tenantId,
         callEventId: callEvent.id,
         externalCallId: callEvent.externalCallId,
+        forceReprocess: Boolean(options.forceReprocess),
+        targetVersion,
       },
       {
         jobId,
@@ -402,7 +433,11 @@ export class AircallIngestService {
       call_event_id: callEvent.id,
       tenant_id: callEvent.tenantId,
       external_call_id: callEvent.externalCallId,
+      target_version: targetVersion,
+      force_reprocess: Boolean(options.forceReprocess),
+      source: options.source ?? 'ingest',
     });
+    return { queued: true, jobId, skippedReason: null };
   }
 
   private async resolveTenant(tenantSlug: string) {
@@ -591,4 +626,9 @@ function timingSafeEquals(expected: string, actual: string) {
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeTargetVersion(value: unknown) {
+  const parsed = Number(value ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
 }

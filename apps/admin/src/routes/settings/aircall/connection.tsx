@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, Key, RefreshCw, Save, XCircle } from 'lucide-react';
@@ -109,6 +110,22 @@ function ConnectionView() {
       });
     },
     onError: (error) => toast.error(t('aircall_hub.connection.backfill_recent_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const reprocessResolver = useMutation({
+    mutationFn: () => adminApi.reprocessAircallResolver({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, limit: 20 }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      toast.success(t('aircall_hub.connection.resolver_reprocess_ok'), {
+        description: t('aircall_hub.connection.resolver_reprocess_ok_body', {
+          queued: result.queued,
+          scanned: result.scanned,
+          version: result.targetVersion,
+        }),
+      });
+    },
+    onError: (error) => toast.error(t('aircall_hub.connection.resolver_reprocess_failed'), { description: apiErrorMessage(error) }),
   });
 
   const setField = (field: keyof CredentialForm, value: string) => {
@@ -301,6 +318,18 @@ function ConnectionView() {
           >
             <RefreshCw size={13} /> {backfillRecent.isPending ? t('aircall_hub.connection.backfill_recent_running') : t('aircall_hub.connection.backfill_recent')}
           </button>
+          <button
+            id="btn-reprocess-aircall-resolver"
+            type="button"
+            className="btn"
+            disabled={missingCredentials || !canSyncDirectory || reprocessResolver.isPending || config.isLoading}
+            onClick={() => reprocessResolver.mutate()}
+          >
+            <RefreshCw size={13} />
+            {reprocessResolver.isPending
+              ? t('aircall_hub.connection.resolver_reprocess_running')
+              : t('aircall_hub.connection.resolver_reprocess', { version: TRANSCRIPT_RESOLVER_SCHEMA_VERSION })}
+          </button>
         </div>
         {!canSyncDirectory && <div className="form-error" style={{ marginTop: 12 }}>{t('aircall_hub.connection.no_aircall_write_permission')}</div>}
         {backfillRecent.data && (
@@ -309,6 +338,14 @@ function ConnectionView() {
             <RuntimeCell label={t('aircall_hub.connection.backfill_ingested')} value={String(backfillRecent.data.ingested)} />
             <RuntimeCell label={t('aircall_hub.connection.backfill_transcripts')} value={String(backfillRecent.data.transcriptsFound)} />
             <RuntimeCell label={t('aircall_hub.connection.backfill_queued')} value={String(backfillRecent.data.resolverQueued)} />
+          </div>
+        )}
+        {reprocessResolver.data && (
+          <div className="webhook-grid" style={{ marginTop: 12 }}>
+            <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_version')} value={`v${reprocessResolver.data.targetVersion}`} />
+            <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_scanned')} value={String(reprocessResolver.data.scanned)} />
+            <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_queued')} value={String(reprocessResolver.data.queued)} />
+            <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_skipped')} value={String(reprocessResolver.data.skipped)} />
           </div>
         )}
       </section>
