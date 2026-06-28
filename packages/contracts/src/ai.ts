@@ -12,6 +12,9 @@ export const aiHealthResponseSchema = z.object({
   checkedAt: z.string(),
   modelCount: z.number().int().min(0).nullable(),
   error: z.string().nullable(),
+  resolverReachable: z.boolean(),
+  resolverStatus: z.enum(['ok', 'not_checked', 'provider_error', 'network_error']),
+  resolverError: z.string().nullable(),
 });
 
 export type AiHealthResponse = z.infer<typeof aiHealthResponseSchema>;

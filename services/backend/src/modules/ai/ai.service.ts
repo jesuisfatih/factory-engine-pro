@@ -36,6 +36,9 @@ export class AiService {
         checkedAt: new Date().toISOString(),
         modelCount: null,
         error: 'Anthropic API key is not configured for this tenant.',
+        resolverReachable: false,
+        resolverStatus: 'not_checked',
+        resolverError: 'Anthropic API key is not configured for this tenant.',
       };
     }
 
@@ -51,17 +54,25 @@ export class AiService {
       const text = await response.text();
       const body = parseJson(text);
       if (response.ok) {
+        const modelIds = Array.isArray(body?.data)
+          ? body.data.map((item) => typeof item === 'object' && item && 'id' in item ? String((item as { id?: unknown }).id ?? '') : '').filter(Boolean)
+          : [];
+        const model = await this.resolveModel(credentials.key, modelIds);
+        const resolver = await this.checkResolverAccess(credentials.key, model, credentials.source);
         return {
           provider: 'anthropic',
           credentialRequired: false,
           configured: true,
           reachable: true,
-          status: 'ok',
+          status: resolver.ok ? 'ok' : resolver.status,
           source: credentials.source,
           latencyMs,
           checkedAt: new Date().toISOString(),
           modelCount: Array.isArray(body?.data) ? body.data.length : null,
-          error: null,
+          error: resolver.ok ? null : resolver.error,
+          resolverReachable: resolver.ok,
+          resolverStatus: resolver.ok ? 'ok' : resolver.status,
+          resolverError: resolver.ok ? null : resolver.error,
         };
       }
 
@@ -83,6 +94,9 @@ export class AiService {
         checkedAt: new Date().toISOString(),
         modelCount: null,
         error: message,
+        resolverReachable: false,
+        resolverStatus: 'not_checked',
+        resolverError: 'Resolver was not checked because Anthropic model listing failed.',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -98,6 +112,9 @@ export class AiService {
         checkedAt: new Date().toISOString(),
         modelCount: null,
         error: message,
+        resolverReachable: false,
+        resolverStatus: 'network_error',
+        resolverError: message,
       };
     }
   }
@@ -142,11 +159,12 @@ export class AiService {
     return { key: null, source: 'none' };
   }
 
-  private async resolveModel(key: string) {
+  private async resolveModel(key: string, knownModelIds: string[] = []) {
     const configured = this.config.get<string>('ANTHROPIC_RESOLVER_MODEL')?.trim()
       || this.config.get<string>('ANTHROPIC_MODEL')?.trim();
     if (configured) return configured;
     const fallback = 'claude-3-5-haiku-latest';
+    if (knownModelIds.length) return knownModelIds.find((id) => id.includes('haiku')) ?? knownModelIds[0] ?? fallback;
     try {
       const response = await fetch('https://api.anthropic.com/v1/models?limit=20', {
         headers: {
@@ -160,6 +178,54 @@ export class AiService {
       return ids.find((id) => id.includes('haiku')) ?? ids[0] ?? fallback;
     } catch {
       return fallback;
+    }
+  }
+
+  private async checkResolverAccess(
+    key: string,
+    model: string,
+    source: 'tenant_config' | 'env' | 'none',
+  ): Promise<{ ok: true } | { ok: false; status: 'provider_error' | 'network_error'; error: string }> {
+    const startedAt = Date.now();
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: this.anthropicTimeoutSignal(),
+        body: JSON.stringify({
+          model,
+          max_tokens: 16,
+          temperature: 0,
+          messages: [{ role: 'user', content: 'Return only JSON: {"ok":true}' }],
+        }),
+      });
+      const text = await response.text();
+      const body = parseJson(text) as { error?: { message?: unknown } } | null;
+      if (response.ok) return { ok: true };
+      const message = providerMessage(body, text) ?? `Anthropic resolver health failed with HTTP ${response.status}.`;
+      this.logger.warn('ai', 'health_resolver_failed', 'Anthropic resolver health check failed', {
+        key_source: source,
+        model,
+        status_code: response.status,
+        latency_ms: Date.now() - startedAt,
+      });
+      return { ok: false, status: 'provider_error', error: message };
+    } catch (error) {
+      const timeoutMs = this.anthropicTimeoutMs();
+      const timeout = isTimeoutError(error);
+      const message = timeout
+        ? `Anthropic resolver health timed out after ${timeoutMs}ms.`
+        : `Anthropic resolver health could not reach provider: ${error instanceof Error ? error.message : String(error)}`;
+      this.logger.warn('ai', timeout ? 'health_resolver_timeout' : 'health_resolver_network_failed', message, {
+        key_source: source,
+        model,
+        latency_ms: Date.now() - startedAt,
+      });
+      return { ok: false, status: 'network_error', error: message };
     }
   }
 

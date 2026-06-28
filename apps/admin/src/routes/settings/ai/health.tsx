@@ -106,8 +106,8 @@ function HealthView() {
       <div className="sr-kpi-row">
         <Kpi label="Provider" value={health.data?.provider ?? 'anthropic'} tone={statusTone} icon={<Activity size={15} />} />
         <Kpi label="Credential" value={configured ? health.data?.source ?? 'configured' : 'missing'} tone={configured ? 'success' : 'danger'} icon={<CheckCircle2 size={15} />} />
-        <Kpi label="Reachability" value={health.data?.reachable ? 'reachable' : 'blocked'} tone={health.data?.reachable ? 'success' : 'danger'} icon={<Activity size={15} />} />
-        <Kpi label="Latency" value={health.data?.latencyMs == null ? 'n/a' : `${health.data.latencyMs}ms`} tone="" icon={<RefreshCw size={15} />} />
+        <Kpi label="Models API" value={health.data?.reachable ? 'reachable' : 'blocked'} tone={health.data?.reachable ? 'success' : 'danger'} icon={<Activity size={15} />} />
+        <Kpi label="Resolver API" value={health.data?.resolverReachable ? 'ready' : 'blocked'} tone={health.data?.resolverReachable ? 'success' : 'danger'} icon={<Send size={15} />} />
       </div>
 
       {!configured && (
@@ -129,13 +129,20 @@ function HealthView() {
           <div className="detail-grid">
             <Detail label="Source" value={health.data?.source ?? 'none'} />
             <Detail label="Model listing" value={health.data?.modelCount == null ? 'not verified' : `${health.data.modelCount} model(s)`} />
+            <Detail label="Resolver messages" value={health.data?.resolverStatus ?? 'not_checked'} />
             <Detail label="Checked" value={formatDate(health.data?.checkedAt)} />
-            <Detail label="Credential required" value={health.data?.credentialRequired ? 'yes' : 'no'} />
+            <Detail label="Latency" value={health.data?.latencyMs == null ? 'n/a' : `${health.data.latencyMs}ms`} />
           </div>
           {health.data?.error && (
             <div className="error-state" style={{ marginTop: 14 }}>
               <AlertTriangle size={16} />
               <span>{health.data.error}</span>
+            </div>
+          )}
+          {health.data?.resolverError && health.data.resolverError !== health.data.error && (
+            <div className="error-state" style={{ marginTop: 14 }}>
+              <AlertTriangle size={16} />
+              <span>{health.data.resolverError}</span>
             </div>
           )}
         </section>
