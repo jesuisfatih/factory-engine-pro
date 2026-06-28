@@ -344,12 +344,12 @@ export function SegmentModal({ open, onClose }: Props) {
                       className="btn ghost"
                       onClick={() => {
                         const nextId = `r${Date.now()}`;
-                        const seed = FIELD_GROUPS[0].fields[0];
+                        const defaultField = FIELD_GROUPS[0].fields[0];
                         rulesField.pushValue({
                           id: nextId,
                           group: FIELD_GROUPS[0].id,
-                          field: seed.id,
-                          operator: RULE_OPERATORS[seed.type][0],
+                          field: defaultField.id,
+                          operator: RULE_OPERATORS[defaultField.type][0],
                           value: '',
                         });
                       }}

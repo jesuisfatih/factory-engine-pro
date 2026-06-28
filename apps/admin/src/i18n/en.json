@@ -973,7 +973,7 @@
     "no_daily_cap": "No daily cap",
     "remove_owner": "Remove owner",
     "preview_customers": "Preview customers",
-    "preview_customers_sub": "Live sample from the customer table.",
+    "preview_customers_sub": "Live preview from the customer table.",
     "preview_empty_title": "No preview matches",
     "preview_empty_body": "Evaluate or adjust the rules to produce matched customers.",
     "no_email": "No email",

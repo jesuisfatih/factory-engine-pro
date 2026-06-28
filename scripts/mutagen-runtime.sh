@@ -6,7 +6,7 @@ cd /app
 export NODE_ENV="${NODE_ENV:-production}"
 export HOST="${HOST:-0.0.0.0}"
 export PORT="${PORT:-4000}"
-export SEED_TENANT_ID="${SEED_TENANT_ID:-ten_dtfbank}"
+export TENANT_ID="${TENANT_ID:-ten_dtfbank}"
 
 if [ -n "${JWT_SECRET:-}" ]; then
   export JWT_ACCESS_SECRET="${JWT_ACCESS_SECRET:-$JWT_SECRET}"
@@ -17,7 +17,7 @@ export CONFIG_ENCRYPTION_KEY="${CONFIG_ENCRYPTION_KEY:-${SETTINGS_ENCRYPTION_KEY
 export ADMIN_APP_URL="${ADMIN_APP_URL:-${ADMIN_URL:-http://127.0.0.1:3000}}"
 export ACCOUNTS_APP_URL="${ACCOUNTS_APP_URL:-${ACCOUNTS_URL:-http://127.0.0.1:3001}}"
 export PERSON_APP_URL="${PERSON_APP_URL:-${ADMIN_APP_URL}}"
-export VITE_TENANT_ID="${VITE_TENANT_ID:-$SEED_TENANT_ID}"
+export VITE_TENANT_ID="${VITE_TENANT_ID:-$TENANT_ID}"
 export VITE_PERSON_BASE_PATH="${VITE_PERSON_BASE_PATH:-/staff/}"
 
 if [ -n "${API_URL:-}" ]; then
@@ -40,7 +40,6 @@ pnpm --filter @factory-engine-pro/person build
 pnpm --filter @factory-engine-pro/accounts build
 
 pnpm --filter @factory-engine-pro/backend prisma:deploy
-pnpm --filter @factory-engine-pro/backend seed
 
 cat > /tmp/ecosystem.config.js <<'EOF'
 module.exports = {

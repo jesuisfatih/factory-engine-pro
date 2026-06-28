@@ -13,8 +13,7 @@
     "typecheck": "turbo typecheck",
     "db:generate": "pnpm --filter @factory-engine-pro/backend prisma:generate",
     "db:migrate": "pnpm --filter @factory-engine-pro/backend prisma:migrate",
-    "db:deploy": "pnpm --filter @factory-engine-pro/backend prisma:deploy",
-    "seed": "pnpm --filter @factory-engine-pro/backend seed"
+    "db:deploy": "pnpm --filter @factory-engine-pro/backend prisma:deploy"
   },
   "devDependencies": {
     "turbo": "^2.6.1",

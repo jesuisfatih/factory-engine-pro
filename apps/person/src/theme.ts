@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const KEY = 'tanstack-demo-theme';
+const KEY = 'factory-engine-person-theme';
 export type Theme = 'light' | 'dark';
 
 function detectInitial(): Theme {
