@@ -447,7 +447,6 @@ async function seedDtfbankRoadmapStaff(tenantId: string, suffix: string) {
       update: {
         firstName: member.firstName,
         lastName: member.lastName,
-        passwordHash: passwordHash(),
         status: 'active',
       },
     });
