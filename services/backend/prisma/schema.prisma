@@ -91,6 +91,7 @@ model Tenant {
   workflowRules           WorkflowRule[]
   workflowRuleExecutions  WorkflowRuleExecution[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
+  workflowRuleVersions    WorkflowRuleVersion[]
 
   @@map("tenants")
 }
@@ -139,6 +140,7 @@ model Member {
   segmentOwnerships SegmentOwnership[]
   assignedServiceRequests ServiceRequest[]
   aircallMemberMaps AircallMemberMap[]
+  workflowRuleVersions WorkflowRuleVersion[]
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -1177,11 +1179,32 @@ model WorkflowRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   executions WorkflowRuleExecution[]
   cooldowns  WorkflowRuleCooldown[]
+  versions   WorkflowRuleVersion[]
 
   @@index([tenantId, status])
   @@index([tenantId, trigger])
   @@index([tenantId, priority])
   @@map("workflow_rules")
+}
+
+model WorkflowRuleVersion {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  ruleId           String   @map("rule_id")
+  versionNo        Int      @map("version_no")
+  jsonSnapshot     Json     @map("json_snapshot")
+  editedByMemberId String?  @map("edited_by_member_id")
+  editedAt         DateTime @default(now()) @map("edited_at")
+  comment          String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule   WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  editor Member? @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, ruleId, versionNo])
+  @@index([tenantId, ruleId, editedAt])
+  @@index([tenantId, editedByMemberId])
+  @@map("rule_versions")
 }
 
 model WorkflowRuleExecution {

@@ -4,6 +4,7 @@ import type {
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
   WorkflowRuleDto,
+  WorkflowRuleVersionsResponse,
   WorkflowTrigger,
   SaveWorkflowRuleInput,
   WorkflowTriggerFireInput,
@@ -60,6 +61,7 @@ export function fetchWorkflowRules() {
 export function saveWorkflowRule(draft: RuleDraft, id?: string) {
   const input: SaveWorkflowRuleInput = {
     name: draft.name,
+    comment: id ? 'Edited from rules canvas' : 'Created from rules canvas',
     definition: {
       status: draft.status,
       priority: draft.priority,
@@ -78,6 +80,17 @@ export function saveWorkflowRule(draft: RuleDraft, id?: string) {
 
 export function fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
   return adminApi.fireWorkflowTrigger(input);
+}
+
+export function fetchWorkflowRuleVersions(id: string): Promise<WorkflowRuleVersionsResponse> {
+  return adminApi.workflowRuleVersions(id);
+}
+
+export function rollbackWorkflowRule(id: string, versionNo: number) {
+  return adminApi.rollbackWorkflowRule(id, {
+    versionNo,
+    comment: `Rollback from rules canvas to v${versionNo}`,
+  });
 }
 
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {

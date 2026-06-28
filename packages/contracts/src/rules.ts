@@ -53,8 +53,15 @@ export type WorkflowRuleDefinition = z.infer<typeof workflowRuleDefinitionSchema
 export const saveWorkflowRuleSchema = z.object({
   name: z.string().trim().min(2).max(120),
   definition: workflowRuleDefinitionSchema,
+  comment: z.string().trim().max(500).optional(),
 });
 export type SaveWorkflowRuleInput = z.infer<typeof saveWorkflowRuleSchema>;
+
+export const rollbackWorkflowRuleSchema = z.object({
+  versionNo: z.coerce.number().int().min(1),
+  comment: z.string().trim().max(500).optional(),
+});
+export type RollbackWorkflowRuleInput = z.infer<typeof rollbackWorkflowRuleSchema>;
 
 export interface WorkflowRuleDto {
   id: string;
@@ -70,6 +77,21 @@ export interface WorkflowRuleDto {
 
 export interface WorkflowRulesResponse {
   rules: WorkflowRuleDto[];
+}
+
+export interface WorkflowRuleVersionDto {
+  id: string;
+  ruleId: string;
+  versionNo: number;
+  jsonSnapshot: SaveWorkflowRuleInput;
+  editedByMemberId: string | null;
+  editedAt: string;
+  comment: string | null;
+}
+
+export interface WorkflowRuleVersionsResponse {
+  ruleId: string;
+  versions: WorkflowRuleVersionDto[];
 }
 
 export const fireWorkflowTriggerSchema = z.object({

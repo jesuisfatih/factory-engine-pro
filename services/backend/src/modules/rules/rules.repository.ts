@@ -22,6 +22,13 @@ export class RulesRepository {
     return this.prisma.db.workflowRule.findFirst({ where: { id } });
   }
 
+  listVersions(ruleId: string) {
+    return this.prisma.db.workflowRuleVersion.findMany({
+      where: { ruleId },
+      orderBy: { versionNo: 'desc' },
+    });
+  }
+
   findActiveByTrigger(trigger: WorkflowTrigger) {
     return this.prisma.db.workflowRule.findMany({
       where: { trigger, status: 'active' },
@@ -111,32 +118,78 @@ export class RulesRepository {
     });
   }
 
-  create(input: SaveWorkflowRuleInput) {
-    return this.prisma.db.workflowRule.create({
-      data: {
-        id: prefixedId('wrule'),
-        tenantId: this.tenantId(),
-        name: input.name,
-        status: input.definition.status,
-        priority: input.definition.priority,
-        composable: input.definition.composable,
-        trigger: input.definition.trigger,
-        definition: input.definition as Prisma.InputJsonValue,
-      },
+  create(input: SaveWorkflowRuleInput, editedByMemberId: string | null) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.$transaction(async (tx) => {
+      const rule = await tx.workflowRule.create({
+        data: {
+          id: prefixedId('wrule'),
+          tenantId,
+          name: input.name,
+          status: input.definition.status,
+          priority: input.definition.priority,
+          composable: input.definition.composable,
+          trigger: input.definition.trigger,
+          definition: input.definition as Prisma.InputJsonValue,
+        },
+      });
+      await createVersion(tx, tenantId, rule.id, 1, input, editedByMemberId, input.comment ?? 'Rule created');
+      return rule;
     });
   }
 
-  update(id: string, input: SaveWorkflowRuleInput) {
-    return this.prisma.db.workflowRule.updateMany({
-      where: { id },
-      data: {
-        name: input.name,
-        status: input.definition.status,
-        priority: input.definition.priority,
-        composable: input.definition.composable,
-        trigger: input.definition.trigger,
-        definition: input.definition as Prisma.InputJsonValue,
-      },
+  update(id: string, input: SaveWorkflowRuleInput, editedByMemberId: string | null) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.$transaction(async (tx) => {
+      const existing = await tx.workflowRule.findFirst({ where: { id, tenantId } });
+      if (!existing) return null;
+      await tx.workflowRule.updateMany({
+        where: { id, tenantId },
+        data: {
+          name: input.name,
+          status: input.definition.status,
+          priority: input.definition.priority,
+          composable: input.definition.composable,
+          trigger: input.definition.trigger,
+          definition: input.definition as Prisma.InputJsonValue,
+        },
+      });
+      const rule = await tx.workflowRule.findFirst({ where: { id, tenantId } });
+      if (!rule) return null;
+      await createVersion(tx, tenantId, rule.id, await nextVersionNo(tx, tenantId, rule.id), input, editedByMemberId, input.comment ?? 'Rule edited');
+      return rule;
+    });
+  }
+
+  rollback(id: string, versionNo: number, editedByMemberId: string | null, comment?: string) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.$transaction(async (tx) => {
+      const version = await tx.workflowRuleVersion.findFirst({ where: { ruleId: id, tenantId, versionNo } });
+      if (!version) return null;
+      const snapshot = inputFromSnapshot(version.jsonSnapshot);
+      await tx.workflowRule.updateMany({
+        where: { id, tenantId },
+        data: {
+          name: snapshot.name,
+          status: snapshot.definition.status,
+          priority: snapshot.definition.priority,
+          composable: snapshot.definition.composable,
+          trigger: snapshot.definition.trigger,
+          definition: snapshot.definition as Prisma.InputJsonValue,
+        },
+      });
+      const rule = await tx.workflowRule.findFirst({ where: { id, tenantId } });
+      if (!rule) return null;
+      await createVersion(
+        tx,
+        tenantId,
+        rule.id,
+        await nextVersionNo(tx, tenantId, rule.id),
+        { ...snapshot, comment: comment ?? `Rollback to version ${versionNo}` },
+        editedByMemberId,
+        comment ?? `Rollback to version ${versionNo}`,
+      );
+      return rule;
     });
   }
 
@@ -145,6 +198,53 @@ export class RulesRepository {
     if (!tenantId) throw new Error('Tenant context is required');
     return tenantId;
   }
+}
+
+async function nextVersionNo(tx: Prisma.TransactionClient, tenantId: string, ruleId: string) {
+  const aggregate = await tx.workflowRuleVersion.aggregate({
+    where: { tenantId, ruleId },
+    _max: { versionNo: true },
+  });
+  return (aggregate._max.versionNo ?? 0) + 1;
+}
+
+function createVersion(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  ruleId: string,
+  versionNo: number,
+  input: SaveWorkflowRuleInput,
+  editedByMemberId: string | null,
+  comment: string | null,
+) {
+  return tx.workflowRuleVersion.create({
+    data: {
+      id: prefixedId('wrv'),
+      tenantId,
+      ruleId,
+      versionNo,
+      jsonSnapshot: snapshotFor(input) as Prisma.InputJsonValue,
+      editedByMemberId,
+      comment,
+    },
+  });
+}
+
+function snapshotFor(input: SaveWorkflowRuleInput) {
+  return {
+    name: input.name,
+    definition: input.definition,
+  };
+}
+
+function inputFromSnapshot(snapshot: Prisma.JsonValue): SaveWorkflowRuleInput {
+  const value = snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
+    ? snapshot as Record<string, unknown>
+    : {};
+  return {
+    name: String(value.name ?? 'Restored workflow rule'),
+    definition: value.definition as SaveWorkflowRuleInput['definition'],
+  };
 }
 
 function isUniqueConstraintError(error: unknown) {

@@ -24,9 +24,11 @@ import {
   Database,
   FilePlus2,
   Filter,
+  History,
   Network,
   Plus,
   RefreshCw,
+  RotateCcw,
   Save,
   Trash2,
   Zap,
@@ -48,11 +50,13 @@ import {
   draftFromWorkflowRule,
   fireWorkflowTrigger,
   fetchWorkflowCatalog,
+  fetchWorkflowRuleVersions,
   fetchWorkflowRules,
   LIFECYCLE_TONE,
   makeAction,
   makeCondition,
   makeRuleDraft,
+  rollbackWorkflowRule,
   saveWorkflowRule,
   type ConditionOperator,
   type RuleDraft,
@@ -63,6 +67,7 @@ import {
 
 const CATALOG_QK = ['rules', 'catalog'] as const;
 const RULES_QK = ['rules', 'saved'] as const;
+const versionsQk = (ruleId: string | null) => ['rules', 'versions', ruleId ?? 'none'] as const;
 
 const OPERATORS_BY_TYPE: Record<string, ConditionOperator[]> = {
   string: ['=', '!=', 'contains'],
@@ -433,6 +438,11 @@ function RulesView() {
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
   const [didHydratePersistedRule, setDidHydratePersistedRule] = useState(false);
+  const versionsQuery = useQuery({
+    queryKey: versionsQk(selectedRuleId),
+    queryFn: () => fetchWorkflowRuleVersions(selectedRuleId!),
+    enabled: Boolean(selectedRuleId),
+  });
 
   useEffect(() => {
     if (catalogQuery.data && !draft) setDraft(makeRuleDraft(catalogQuery.data));
@@ -473,9 +483,26 @@ function RulesView() {
       setSelectedRuleId(rule.id);
       setDraft(draftFromWorkflowRule(rule));
       await queryClient.invalidateQueries({ queryKey: RULES_QK });
+      await queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) });
       toast.success('Rule saved', { description: `${rule.name} is now persisted as workflow JSON.` });
     },
     onError: (error) => toast.error('Rule save failed', { description: apiErrorMessage(error) }),
+  });
+  const rollbackMutation = useMutation({
+    mutationFn: async (versionNo: number) => {
+      if (!selectedRuleId) throw new Error('Select a saved rule before rollback.');
+      return rollbackWorkflowRule(selectedRuleId, versionNo);
+    },
+    onSuccess: async (rule) => {
+      setSelectedRuleId(rule.id);
+      setDraft(draftFromWorkflowRule(rule));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: RULES_QK }),
+        queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) }),
+      ]);
+      toast.success('Rule rolled back', { description: `${rule.name} restored and audited as a new version.` });
+    },
+    onError: (error) => toast.error('Rollback failed', { description: apiErrorMessage(error) }),
   });
   const fireMutation = useMutation({
     mutationFn: async () => {
@@ -590,6 +617,53 @@ function RulesView() {
                     <span>{cooldownLabel(rule.definition.cooldown)}</span>
                   </div>
                 </button>
+              ))}
+
+              <div className="rules-section-head">
+                <span><History size={12} /> Rule audit</span>
+                <span className="muted">{versionsQuery.data?.versions.length ?? 0}</span>
+              </div>
+              {!selectedRuleId && (
+                <div className="rules-empty">
+                  <History size={16} /> Select a saved rule to inspect versions.
+                </div>
+              )}
+              {selectedRuleId && versionsQuery.isLoading && (
+                <div className="rules-empty">
+                  <RefreshCw size={16} /> Loading version audit...
+                </div>
+              )}
+              {selectedRuleId && versionsQuery.isError && (
+                <div className="rules-empty danger-text">
+                  <AlertTriangle size={16} /> {apiErrorMessage(versionsQuery.error)}
+                </div>
+              )}
+              {selectedRuleId && versionsQuery.isSuccess && versionsQuery.data.versions.length === 0 && (
+                <div className="rules-empty">
+                  <History size={16} /> No version audit rows yet.
+                </div>
+              )}
+              {selectedRuleId && versionsQuery.isSuccess && versionsQuery.data.versions.map((version) => (
+                <div className="rule-card rule-version-card" key={version.id}>
+                  <div className="rule-card-head">
+                    <span className="pill">v{version.versionNo}</span>
+                    <span className="muted">{new Date(version.editedAt).toLocaleString()}</span>
+                  </div>
+                  <div className="rule-card-name">{version.jsonSnapshot.name}</div>
+                  <div className="rule-card-desc">{version.comment ?? 'No comment'}</div>
+                  <div className="rule-card-meta">
+                    <span>{version.jsonSnapshot.definition.status}</span>
+                    <span>{version.jsonSnapshot.definition.trigger}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn small ghost"
+                    disabled={rollbackMutation.isPending}
+                    onClick={() => rollbackMutation.mutate(version.versionNo)}
+                  >
+                    <RotateCcw size={11} /> Rollback
+                  </button>
+                </div>
               ))}
 
               <div className="rules-section-head">

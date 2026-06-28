@@ -34,6 +34,7 @@ import type {
   MemberLoginInput,
   ResolveReorderInput,
   ResetPasswordInput,
+  RollbackWorkflowRuleInput,
   SaveWorkflowRuleInput,
   TenantConfigInput,
   UpdateAccountPasswordInput,
@@ -49,6 +50,7 @@ import type {
   WorkflowTriggerFireInput,
   WorkflowTriggerFireResponse,
   WorkflowRuleDto,
+  WorkflowRuleVersionsResponse,
   WorkflowRulesResponse,
   AssignServiceRequestInput,
   AddServiceRequestCommentInput,
@@ -620,6 +622,14 @@ export class ApiClient {
 
   updateWorkflowRule(id: string, input: SaveWorkflowRuleInput) {
     return this.put<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}`, input);
+  }
+
+  workflowRuleVersions(id: string) {
+    return this.get<WorkflowRuleVersionsResponse>(`/rules/${encodeURIComponent(id)}/versions`);
+  }
+
+  rollbackWorkflowRule(id: string, input: RollbackWorkflowRuleInput) {
+    return this.post<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}/rollback`, input);
   }
 
   fireWorkflowTrigger(input: WorkflowTriggerFireInput) {

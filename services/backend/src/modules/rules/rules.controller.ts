@@ -2,7 +2,9 @@ import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import {
   fireWorkflowTriggerSchema,
   MEMBER_PERMISSIONS,
+  rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
+  type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
 } from '@factory-engine-pro/contracts';
@@ -42,6 +44,21 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   enumChainProbe() {
     return this.rules.enumChainProbe();
+  }
+
+  @Get(':id/versions')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  versions(@Param('id') id: string) {
+    return this.rules.listRuleVersions(id);
+  }
+
+  @Post(':id/rollback')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  rollback(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(rollbackWorkflowRuleSchema)) body: RollbackWorkflowRuleInput,
+  ) {
+    return this.rules.rollbackRule(id, body);
   }
 
   @Get(':id')

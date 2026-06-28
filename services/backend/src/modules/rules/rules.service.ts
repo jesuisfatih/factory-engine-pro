@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import {
   fireWorkflowTriggerSchema,
+  rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
@@ -12,6 +13,7 @@ import {
   type WorkflowActionTrace,
   type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
+  type RollbackWorkflowRuleInput,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
   type WorkflowEnumChainProbeResponse,
@@ -23,6 +25,7 @@ import {
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
   type WorkflowRuleDto,
+  type WorkflowRuleVersionsResponse,
   type WorkflowRulesResponse,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
@@ -55,6 +58,13 @@ export class RulesService {
     const rule = await this.repository.findById(id);
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     return toDto(rule);
+  }
+
+  async listRuleVersions(id: string): Promise<WorkflowRuleVersionsResponse> {
+    const rule = await this.repository.findById(id);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    const versions = await this.repository.listVersions(id);
+    return { ruleId: id, versions: versions.map(toVersionDto) };
   }
 
   async fireTrigger(input: WorkflowTriggerFireInput): Promise<WorkflowTriggerFireResponse> {
@@ -867,8 +877,22 @@ export class RulesService {
 
   async createRule(input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
-    const rule = await this.repository.create(parsed);
-    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted', {
+    const rule = await this.repository.create(parsed, this.editedByMemberId());
+    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
+      rule_id: rule.id,
+      status: rule.status,
+      trigger: rule.trigger,
+      priority: rule.priority,
+      version_no: 1,
+    });
+    return toDto(rule);
+  }
+
+  async updateRule(id: string, input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
+    const parsed = saveWorkflowRuleSchema.parse(input);
+    const rule = await this.repository.update(id, parsed, this.editedByMemberId());
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
       rule_id: rule.id,
       status: rule.status,
       trigger: rule.trigger,
@@ -877,17 +901,15 @@ export class RulesService {
     return toDto(rule);
   }
 
-  async updateRule(id: string, input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
-    const parsed = saveWorkflowRuleSchema.parse(input);
-    const result = await this.repository.update(id, parsed);
-    if (result.count === 0) throw new NotFoundException('Workflow rule was not found.');
-    const rule = await this.repository.findById(id);
-    if (!rule) throw new NotFoundException('Workflow rule was not found.');
-    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted', {
+  async rollbackRule(id: string, input: RollbackWorkflowRuleInput): Promise<WorkflowRuleDto> {
+    const parsed = rollbackWorkflowRuleSchema.parse(input);
+    const rule = await this.repository.rollback(id, parsed.versionNo, this.editedByMemberId(), parsed.comment);
+    if (!rule) throw new NotFoundException('Workflow rule version was not found.');
+    this.logger.log('rules', 'rule_rollback', 'Workflow rule rolled back to an audited version', {
       rule_id: rule.id,
+      rollback_version_no: parsed.versionNo,
       status: rule.status,
       trigger: rule.trigger,
-      priority: rule.priority,
     });
     return toDto(rule);
   }
@@ -953,6 +975,11 @@ export class RulesService {
     });
 
     return response;
+  }
+
+  private editedByMemberId() {
+    const context = this.tenantContext.get();
+    return context?.principalType === 'member' ? context.principalId ?? null : null;
   }
 }
 
@@ -1109,6 +1136,26 @@ function toDto(rule: {
     definition,
     createdAt: rule.createdAt.toISOString(),
     updatedAt: rule.updatedAt.toISOString(),
+  };
+}
+
+function toVersionDto(version: {
+  id: string;
+  ruleId: string;
+  versionNo: number;
+  jsonSnapshot: Prisma.JsonValue;
+  editedByMemberId: string | null;
+  editedAt: Date;
+  comment: string | null;
+}) {
+  return {
+    id: version.id,
+    ruleId: version.ruleId,
+    versionNo: version.versionNo,
+    jsonSnapshot: saveWorkflowRuleSchema.parse(version.jsonSnapshot),
+    editedByMemberId: version.editedByMemberId,
+    editedAt: version.editedAt.toISOString(),
+    comment: version.comment,
   };
 }
 
