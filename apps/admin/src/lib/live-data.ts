@@ -113,7 +113,6 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
     id: 'company',
     fields: [
       { id: 'companyStatus', label: 'Customer status', type: 'string' },
-      { id: 'companyName', label: 'Company name', type: 'string' },
       { id: 'companyGroup', label: 'Company group', type: 'string' },
       { id: 'companyEmail', label: 'Company email', type: 'string' },
       { id: 'companyPhone', label: 'Company phone', type: 'string' },
@@ -125,8 +124,6 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
   {
     id: 'company_user',
     fields: [
-      { id: 'companyEmail', label: 'Contact email', type: 'string' },
-      { id: 'companyPhone', label: 'Contact phone', type: 'string' },
       { id: 'companyUserRole', label: 'Customer user role', type: 'array' },
       { id: 'companyUserIsActive', label: 'Customer user active', type: 'boolean' },
     ],
@@ -153,10 +150,7 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
     id: 'behavior',
     fields: [
       { id: 'daysSinceLastOrder', label: 'Days since last order', type: 'number' },
-      { id: 'healthScore', label: 'Health score', type: 'number' },
-      { id: 'churnRisk', label: 'Churn risk', type: 'string' },
-      { id: 'lifecycle', label: 'Lifecycle / RFM segment', type: 'string' },
-      { id: 'clvTier', label: 'CLV tier', type: 'string' },
+      { id: 'churnRisk', label: 'Churn risk', type: 'number' },
       { id: 'buyerIntent', label: 'Buyer intent', type: 'string' },
       { id: 'segment', label: 'Behavior segment', type: 'string' },
       { id: 'engagementScore', label: 'Engagement score', type: 'number' },
@@ -338,7 +332,7 @@ export async function saveSegment(input: {
     color: input.color,
     priority: input.priority,
     priorityGlobal: input.priority,
-    audienceType: 'customer',
+    audienceType: 'accountscompany',
     lifecycleStage: input.lifecycleStage === 'any' ? undefined : input.lifecycleStage,
     matchMode: input.matchMode,
     conditions: input.rules.map(toSegmentCondition),

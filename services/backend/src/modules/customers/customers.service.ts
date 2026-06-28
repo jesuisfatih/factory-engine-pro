@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { Prisma } from '@prisma/client';
 import {
   assignCustomerAxisPrimarySchema,
+  assignDefaultCustomerAxisSchema,
   type CreateCustomerListInput,
   type CustomerAssignmentAxis,
   type CustomerCommerceQuery,
@@ -12,6 +13,7 @@ import {
   recordCustomerAxisNoAutoReassignSchema,
   taskAxisSchema,
   type AssignCustomerAxisPrimaryInput,
+  type AssignDefaultCustomerAxisInput,
   type RecordCustomerAxisNoAutoReassignInput,
   type UpdateCustomerListInput,
 } from '@factory-engine-pro/contracts';
@@ -452,6 +454,91 @@ export class CustomersService {
     return this.assignments(customerId);
   }
 
+  async assignDefaultAxis(input: AssignDefaultCustomerAxisInput) {
+    const parsed = assignDefaultCustomerAxisSchema.parse(input ?? {});
+    const axes = Array.from(new Set(parsed.axes));
+    const owners = await this.defaultAxisOwners(axes);
+    const missingOwnerAxes = axes.filter((axis) => !owners.get(axis));
+    const customers = await this.prisma.db.customer.findMany({
+      include: {
+        assignments: {
+          where: { axis: { in: axes }, isPrimary: true },
+        },
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      take: parsed.limit,
+    });
+
+    let assigned = 0;
+    let skippedExisting = 0;
+    let skippedNoOwner = 0;
+
+    for (const customer of customers) {
+      const existingAxes = new Set(customer.assignments.map((assignment) => assignment.axis as CustomerAssignmentAxis));
+      for (const axis of axes) {
+        const owner = owners.get(axis);
+        if (!owner) {
+          skippedNoOwner += 1;
+          continue;
+        }
+        const existing = customer.assignments.find((assignment) => assignment.axis === axis);
+        if (parsed.onlyMissing && existing) {
+          skippedExisting += 1;
+          continue;
+        }
+
+        const previousMemberId = existing?.memberId ?? null;
+        const assignment = await this.repository.upsertAssignment({
+          customerId: customer.id,
+          axis,
+          memberId: owner.id,
+          source: parsed.source,
+          reason: parsed.reason,
+          approvedByMemberId: this.currentMemberId(),
+        });
+        await this.repository.createAssignmentAudit({
+          customerId: customer.id,
+          axis,
+          action: existingAxes.has(axis) ? 'default_axis_reassigned' : 'default_axis_assigned',
+          previousMemberId,
+          newMemberId: owner.id,
+          actorMemberId: this.currentMemberId(),
+          source: parsed.source,
+          reason: parsed.reason,
+          metadata: {
+            assignmentId: assignment.id,
+            ownerEmail: owner.email,
+            onlyMissing: parsed.onlyMissing,
+          },
+        });
+        existingAxes.add(axis);
+        assigned += 1;
+      }
+    }
+
+    this.logger.log('customers', 'assign_default_axis', 'Default customer axis assignment backfill completed', {
+      scanned: customers.length,
+      assigned,
+      skipped_existing: skippedExisting,
+      skipped_no_owner: skippedNoOwner,
+      axes,
+      missing_owner_axes: missingOwnerAxes,
+    });
+
+    return {
+      scanned: customers.length,
+      assigned,
+      skippedExisting,
+      skippedNoOwner,
+      axes,
+      missingOwnerAxes,
+      owners: Object.fromEntries(axes.map((axis) => {
+        const owner = owners.get(axis);
+        return [axis, owner ? { id: owner.id, email: owner.email, name: memberName(owner) } : null];
+      })),
+    };
+  }
+
   async recordNoAutoReassign(
     customerId: string,
     axisValue: string,
@@ -742,6 +829,22 @@ export class CustomersService {
     if (count !== customerIds.length) throw new BadRequestException('One or more customers do not exist');
   }
 
+  private async defaultAxisOwners(axes: CustomerAssignmentAxis[]) {
+    const members = await this.prisma.db.member.findMany({
+      where: { status: 'active' },
+      include: { roleAssignments: { include: { role: true } } },
+      orderBy: [{ createdAt: 'asc' }, { email: 'asc' }],
+    });
+    const owners = new Map<CustomerAssignmentAxis, typeof members[number]>();
+    for (const axis of axes) {
+      const scored = members
+        .map((member) => ({ member, score: defaultAxisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)) }))
+        .sort((left, right) => right.score - left.score || left.member.email.localeCompare(right.member.email));
+      owners.set(axis, scored.find((entry) => entry.score > 0)?.member ?? scored[0]?.member);
+    }
+    return owners;
+  }
+
   private parseAxis(axis: string): CustomerAssignmentAxis {
     return taskAxisSchema.parse(axis);
   }
@@ -993,6 +1096,36 @@ function averageDaysBetween(dates: Date[]) {
 
 function memberName(member: { firstName: string; lastName: string; email: string }) {
   return [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
+}
+
+function defaultAxisRoleScore(axis: CustomerAssignmentAxis, roles: Array<{ slug: string; permissions: Prisma.JsonValue }>) {
+  const slugs = new Set(roles.map((role) => role.slug));
+  if (slugs.has('owner') || slugs.has('admin')) return 100;
+  let score = 0;
+  for (const role of roles) {
+    const permissions = jsonRecord(role.permissions);
+    if (axis === 'sales') {
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.commissionSubmit)) score += 40;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersWrite)) score += 25;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.pricingWrite)) score += 25;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.customersRead)) score += 10;
+    }
+    if (axis === 'support') {
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportWrite)) score += 45;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportRead)) score += 25;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.customersRead)) score += 10;
+    }
+    if (axis === 'account') {
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.customersRead)) score += 30;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersRead)) score += 25;
+      if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportRead)) score += 10;
+    }
+  }
+  return score;
+}
+
+function permissionEnabled(permissions: Record<string, unknown>, permission: string) {
+  return permissions[permission] === true;
 }
 
 function jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
+  assignDefaultCustomerAxisSchema,
   assignCustomerAxisPrimarySchema,
   createCustomerListSchema,
   customerCommerceQuerySchema,
@@ -9,6 +10,7 @@ import {
   updateCustomerListItemNoteSchema,
   updateCustomerListSchema,
   type AssignCustomerAxisPrimaryInput,
+  type AssignDefaultCustomerAxisInput,
   type CreateCustomerListInput,
   type CustomerCommerceQuery,
   type CustomerListCustomersInput,
@@ -40,6 +42,14 @@ export class CustomersController {
   @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
   calculateInsights() {
     return this.customers.calculateInsights();
+  }
+
+  @Post('assign-default-axis')
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
+  assignDefaultAxis(
+    @Body(new ZodValidationPipe(assignDefaultCustomerAxisSchema)) body: AssignDefaultCustomerAxisInput,
+  ) {
+    return this.customers.assignDefaultAxis(body);
   }
 
   @Get('lists')

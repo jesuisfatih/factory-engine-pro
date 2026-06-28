@@ -3,7 +3,6 @@ import { emailSchema, pageQuerySchema, passwordSchema } from './common.js';
 
 export const segmentFieldSchema = z.enum([
   'companyStatus',
-  'companyName',
   'companyGroup',
   'companyEmail',
   'companyPhone',
@@ -23,10 +22,7 @@ export const segmentFieldSchema = z.enum([
   'totalOrders',
   'avgOrderValue',
   'daysSinceLastOrder',
-  'healthScore',
   'churnRisk',
-  'lifecycle',
-  'clvTier',
   'buyerIntent',
   'segment',
   'engagementScore',
@@ -70,7 +66,7 @@ export const createSegmentSchema = z.object({
   matchMode: segmentMatchModeSchema.default('all'),
   priority: z.coerce.number().int().min(0).default(0),
   priorityGlobal: z.coerce.number().int().min(0).optional(),
-  audienceType: z.enum(['customer', 'customer_user', 'shopify_customer']).default('customer'),
+  audienceType: z.enum(['accountscompany', 'shopify_customer', 'workforce_pool']).default('accountscompany'),
   lifecycleStage: z.string().trim().max(50).optional(),
   conditions: z.array(segmentConditionSchema).min(1).max(20),
   isActive: z.boolean().default(true),

@@ -205,6 +205,138 @@ export class SegmentsRepository {
     await this.refreshCurrentAssignments();
   }
 
+  async syncSalesAssignmentsFromCurrentSegments(customerIds: string[]) {
+    const tenantId = this.tenantId();
+    const uniqueCustomerIds = Array.from(new Set(customerIds.filter(Boolean)));
+    if (uniqueCustomerIds.length === 0) return { assigned: 0, skipped: 0, cleared: 0 };
+
+    const [currentAssignments, existingSalesAssignments] = await Promise.all([
+      this.prisma.db.segmentCustomerAssignment.findMany({
+        where: {
+          customerId: { in: uniqueCustomerIds },
+          isCurrent: true,
+          isMatched: true,
+        },
+        include: {
+          segment: {
+            include: {
+              ownerships: {
+                where: {
+                  autoAssignNew: true,
+                  member: { status: 'active' },
+                },
+                include: { member: true },
+                orderBy: [{ priority: 'desc' }, { updatedAt: 'asc' }],
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.db.customerAssignment.findMany({
+        where: { customerId: { in: uniqueCustomerIds }, axis: 'sales' },
+        include: customerAssignmentMemberInclude,
+      }),
+    ]);
+
+    const currentByCustomer = new Map(currentAssignments.map((assignment) => [assignment.customerId, assignment]));
+    const existingByCustomer = new Map(existingSalesAssignments.map((assignment) => [assignment.customerId, assignment]));
+    let assigned = 0;
+    let skipped = 0;
+    let cleared = 0;
+
+    for (const customerId of uniqueCustomerIds) {
+      const current = currentByCustomer.get(customerId);
+      const owner = current?.segment.ownerships[0] ?? null;
+      const existing = existingByCustomer.get(customerId);
+
+      if (!current || !owner) {
+        if (existing && isSegmentOwnershipSource(existing.source)) {
+          await this.prisma.db.customerAssignment.deleteMany({ where: { id: existing.id } });
+          await this.createCustomerAssignmentAudit({
+            customerId,
+            action: 'primary_cleared',
+            previousMemberId: existing.memberId,
+            newMemberId: null,
+            source: SEGMENT_ASSIGNMENT_SOURCE,
+            reason: 'Customer no longer has a current segment owner.',
+            metadata: {
+              previousAssignmentId: existing.id,
+              previousSource: existing.source,
+            },
+          });
+          cleared += 1;
+        }
+        continue;
+      }
+
+      if (existing && existing.memberId !== owner.memberId && !isSegmentOwnershipSource(existing.source)) {
+        await this.createCustomerAssignmentAudit({
+          customerId,
+          action: 'auto_reassign_skipped',
+          previousMemberId: existing.memberId,
+          newMemberId: owner.memberId,
+          source: SEGMENT_ASSIGNMENT_SOURCE,
+          reason: `Manual sales owner preserved while segment ${current.segment.name} requested auto assignment.`,
+          metadata: {
+            segmentId: current.segmentId,
+            segmentName: current.segment.name,
+            preservedAssignmentId: existing.id,
+            preservedSource: existing.source,
+            attemptedMemberId: owner.memberId,
+          },
+        });
+        skipped += 1;
+        continue;
+      }
+
+      await this.prisma.db.customerAssignment.upsert({
+        where: {
+          tenantId_customerId_axis: {
+            tenantId,
+            customerId,
+            axis: 'sales',
+          },
+        },
+        create: {
+          id: prefixedId('casn'),
+          tenantId,
+          customerId,
+          axis: 'sales',
+          memberId: owner.memberId,
+          source: SEGMENT_ASSIGNMENT_SOURCE,
+          reason: `Segment ownership: ${current.segment.name}`,
+          approvedByMemberId: null,
+          approvedAt: new Date(),
+        },
+        update: {
+          memberId: owner.memberId,
+          source: SEGMENT_ASSIGNMENT_SOURCE,
+          reason: `Segment ownership: ${current.segment.name}`,
+          approvedByMemberId: null,
+          approvedAt: new Date(),
+          isPrimary: true,
+        },
+      });
+      await this.createCustomerAssignmentAudit({
+        customerId,
+        action: 'primary_assigned',
+        previousMemberId: existing?.memberId ?? null,
+        newMemberId: owner.memberId,
+        source: SEGMENT_ASSIGNMENT_SOURCE,
+        reason: `Segment ownership: ${current.segment.name}`,
+        metadata: {
+          segmentId: current.segmentId,
+          segmentName: current.segment.name,
+          currentSegmentAssignmentId: current.id,
+          unchanged: existing?.memberId === owner.memberId,
+        },
+      });
+      assigned += 1;
+    }
+
+    return { assigned, skipped, cleared };
+  }
+
   private async refreshCurrentAssignments() {
     const tenantId = this.tenantId();
     const rows = await this.prisma.db.segmentCustomerAssignment.findMany({
@@ -313,9 +445,45 @@ export class SegmentsRepository {
     return this.prisma.db.member.findFirst({ where: { id, status: 'active' } });
   }
 
+  private createCustomerAssignmentAudit(input: {
+    customerId: string;
+    action: string;
+    previousMemberId?: string | null;
+    newMemberId?: string | null;
+    source: string;
+    reason?: string | null;
+    metadata?: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.db.customerAssignmentAudit.create({
+      data: {
+        id: prefixedId('caud'),
+        tenantId: this.tenantId(),
+        customerId: input.customerId,
+        axis: 'sales',
+        action: input.action,
+        previousMemberId: input.previousMemberId ?? null,
+        newMemberId: input.newMemberId ?? null,
+        actorMemberId: null,
+        source: input.source,
+        reason: input.reason ?? null,
+        metadata: input.metadata ?? {},
+      },
+    });
+  }
+
   private tenantId() {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new Error('Tenant context is required');
     return tenantId;
   }
+}
+
+const SEGMENT_ASSIGNMENT_SOURCE = 'segment_ownership';
+
+const customerAssignmentMemberInclude = {
+  member: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
+} satisfies Prisma.CustomerAssignmentInclude;
+
+function isSegmentOwnershipSource(source: string | null | undefined) {
+  return source === SEGMENT_ASSIGNMENT_SOURCE || source?.startsWith(`${SEGMENT_ASSIGNMENT_SOURCE}:`) === true;
 }

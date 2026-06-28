@@ -2086,9 +2086,28 @@ function personColumn(status: string, raw: unknown): PersonQueueColumn {
 
 function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' {
   const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
+  const workflow = asRecord(metadata.workflow);
+  const workflowTrigger = String(workflow.trigger ?? '');
+  const workflowSource = String(workflow.source ?? '');
   if (metadata.aiSource === 'segment') return 'ai_segment';
   if (metadata.aiSource === 'stale') return 'ai_stale';
-  if (row.source === 'call' || row.sourceCallId || row.sourceEmailId) return 'ai_transcript';
+  if (metadata.aiSource === 'transcript'
+    || row.source === 'call'
+    || row.sourceCallId
+    || row.sourceEmailId
+    || workflowTrigger.startsWith('aircall.')
+    || workflowTrigger.includes('transcript')
+    || workflowSource.includes('aircall')
+    || workflowSource.includes('transcript')
+    || [
+      'call_intent.classified',
+      'psych.tag.detected',
+      'product.detected_in_transcript',
+      'customer.matched_from_transcript',
+      'psych.analysis.completed',
+      'customer.repeat_call.detected',
+      'customer.first_call.detected',
+    ].includes(workflowTrigger)) return 'ai_transcript';
   return 'manual';
 }
 

@@ -876,17 +876,19 @@ export class RulesService {
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
+      const sourceCallId = this.workflowSourceCallId(context);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
         description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
-        source: 'workflow',
+        source: sourceCallId ? 'call' : 'workflow',
         surface: 'internal',
         priority: priorityForRule(context.rule.priority),
         axis: assignment.axis,
         assignedMemberId: assignment.assigneeMemberId,
         watcherMemberIds: assignment.watcherMemberIds,
         matchedRuleId: context.rule.id,
+        sourceCallId: sourceCallId ?? undefined,
         conditionTrace: context.conditionTrace,
         metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
         taskStateSnapshot,
@@ -905,6 +907,7 @@ export class RulesService {
             assignedMemberId: assignment.assigneeMemberId,
             watcherMemberIds: assignment.watcherMemberIds,
             matchedRuleId: context.rule.id,
+            sourceCallId,
             conditionTraceCount: context.conditionTrace.length,
           },
         },
@@ -1339,13 +1342,17 @@ export class RulesService {
     taskStateSnapshot: Record<string, unknown>,
     assignment: TaskAssignment,
   ) {
+    const aiSource = this.workflowAiSource(context);
+    const sourceCallId = this.workflowSourceCallId(context);
     return {
       category: 'workflow_rule',
+      ...(aiSource ? { aiSource } : {}),
       workflow: {
         eventId: context.eventId,
         trigger: context.trigger,
         source: context.source,
         occurredAt: context.occurredAt,
+        sourceCallId,
         params: context.params,
         ruleId: context.rule.id,
         matchedRuleId: context.rule.id,
@@ -1369,6 +1376,35 @@ export class RulesService {
         stateSnapshot: taskStateSnapshot,
       },
     };
+  }
+
+  private workflowSourceCallId(context: WorkflowActionContext) {
+    return stringParam(context.params, 'callId')
+      ?? stringParam(context.params, 'callEventId')
+      ?? stringParam(context.params, 'aircallCallEventId')
+      ?? stringParam(context.params, 'externalCallId')
+      ?? null;
+  }
+
+  private workflowAiSource(context: WorkflowActionContext) {
+    const trigger = context.trigger;
+    if (trigger.startsWith('aircall.')
+      || trigger.includes('transcript')
+      || context.source.includes('aircall')
+      || context.source.includes('transcript')
+      || [
+        'call_intent.classified',
+        'psych.tag.detected',
+        'product.detected_in_transcript',
+        'customer.matched_from_transcript',
+        'psych.analysis.completed',
+        'customer.repeat_call.detected',
+        'customer.first_call.detected',
+      ].includes(trigger)) {
+      return 'transcript';
+    }
+    if (trigger.startsWith('segment.')) return 'segment';
+    return null;
   }
 
   private targetTaskId(context: WorkflowActionContext) {

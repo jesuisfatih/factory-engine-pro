@@ -16,6 +16,7 @@ import type {
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
+  AssignDefaultCustomerAxisInput,
   AuthSession,
   BootstrapTenantInput,
   CalculatePricesInput,
@@ -329,6 +330,10 @@ export class ApiClient {
       `/customers/${encodeURIComponent(customerId)}/assignments/${encodeURIComponent(axis)}/no-auto-reassign`,
       input,
     );
+  }
+
+  assignDefaultCustomerAxis(input: Partial<AssignDefaultCustomerAxisInput> = {}) {
+    return this.post('/customers/assign-default-axis', input);
   }
 
   customerLists() {

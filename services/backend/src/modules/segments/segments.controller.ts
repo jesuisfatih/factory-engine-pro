@@ -20,37 +20,37 @@ export class SegmentsController {
 
   @Get()
   @RequirePermission(MEMBER_PERMISSIONS.segmentsRead)
-  list() {
+  list(): Promise<unknown> {
     return this.segments.list();
   }
 
   @Get('stats')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsRead)
-  stats() {
+  stats(): Promise<unknown> {
     return this.segments.stats();
   }
 
   @Post('preview')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsRead)
-  preview(@Body(new ZodValidationPipe(previewSegmentSchema)) body: PreviewSegmentInput) {
+  preview(@Body(new ZodValidationPipe(previewSegmentSchema)) body: PreviewSegmentInput): Promise<unknown> {
     return this.segments.preview(body);
   }
 
   @Post('evaluate-all')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
-  evaluateAll() {
+  evaluateAll(): Promise<unknown> {
     return this.segments.evaluateAll();
   }
 
   @Post()
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
-  create(@Body(new ZodValidationPipe(createSegmentSchema)) body: CreateSegmentInput) {
+  create(@Body(new ZodValidationPipe(createSegmentSchema)) body: CreateSegmentInput): Promise<unknown> {
     return this.segments.create(body);
   }
 
   @Get(':id')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsRead)
-  getOne(@Param('id') id: string) {
+  getOne(@Param('id') id: string): Promise<unknown> {
     return this.segments.getOne(id);
   }
 
@@ -59,19 +59,19 @@ export class SegmentsController {
   update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateSegmentSchema)) body: UpdateSegmentInput,
-  ) {
+  ): Promise<unknown> {
     return this.segments.update(id, body);
   }
 
   @Post(':id/evaluate')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
-  evaluate(@Param('id') id: string) {
+  evaluate(@Param('id') id: string): Promise<unknown> {
     return this.segments.evaluate(id);
   }
 
   @Get(':id/ownership')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsRead)
-  getOwnerships(@Param('id') id: string) {
+  getOwnerships(@Param('id') id: string): Promise<unknown> {
     return this.segments.getOwnerships(id);
   }
 
@@ -80,19 +80,19 @@ export class SegmentsController {
   upsertOwnership(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(upsertSegmentOwnershipSchema)) body: UpsertSegmentOwnershipInput,
-  ) {
+  ): Promise<unknown> {
     return this.segments.upsertOwnership(id, body);
   }
 
   @Delete(':id/ownership')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
-  removeOwnership(@Param('id') id: string, @Query('ownershipId') ownershipId?: string) {
+  removeOwnership(@Param('id') id: string, @Query('ownershipId') ownershipId?: string): Promise<unknown> {
     return this.segments.removeOwnership(id, ownershipId);
   }
 
   @Delete(':id')
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<unknown> {
     return this.segments.remove(id);
   }
 }

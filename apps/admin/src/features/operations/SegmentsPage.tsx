@@ -49,6 +49,11 @@ interface SegmentPreview {
     customerUsers: number;
     shopifyCustomers: number;
     unlinkedShopifyCustomers: number;
+    primaryEntity?: string;
+    activeGroups?: string[];
+    companySignals?: { matchedCount: number };
+    companyUserSignals?: { matchedCount: number; matchedCustomerCount: number };
+    shopifyCustomerSignals?: { matchedCount: number; linkedCustomerCount: number; linkedUserCount: number; unlinkedCount: number };
   };
   matches: Array<{
     id: string;
@@ -59,6 +64,25 @@ interface SegmentPreview {
     healthScore: number;
     churnRisk: string;
     lifecycle: string;
+  }>;
+  companyUserMatches?: Array<{
+    id: string;
+    customerId: string;
+    companyName: string;
+    email: string;
+    roleValues: string[];
+    isActive: boolean;
+  }>;
+  shopifyCustomerMatches?: Array<{
+    shopifyCustomerId: string;
+    name: string;
+    email: string | null;
+    segmentIds: string[];
+    ordersCount: number;
+    totalSpent: number;
+    linkedCustomerId: string | null;
+    companyName: string | null;
+    linkState: 'linked' | 'unlinked';
   }>;
 }
 
@@ -112,7 +136,7 @@ interface SegmentDraft {
   color: string;
   matchMode: 'all' | 'any';
   priority: number;
-  audienceType: 'customer' | 'customer_user' | 'shopify_customer';
+  audienceType: 'accountscompany' | 'shopify_customer' | 'workforce_pool';
   isActive: boolean;
   conditions: ConditionDraft[];
 }
@@ -128,7 +152,6 @@ interface ShopifySegmentOption {
 
 const FIELDS: SegmentField[] = [
   'companyStatus',
-  'companyName',
   'companyGroup',
   'companyEmail',
   'companyPhone',
@@ -148,10 +171,7 @@ const FIELDS: SegmentField[] = [
   'totalOrders',
   'avgOrderValue',
   'daysSinceLastOrder',
-  'healthScore',
   'churnRisk',
-  'lifecycle',
-  'clvTier',
   'buyerIntent',
   'segment',
   'engagementScore',
@@ -172,7 +192,7 @@ const NUMERIC_FIELDS = new Set<SegmentField>([
   'totalOrders',
   'avgOrderValue',
   'daysSinceLastOrder',
-  'healthScore',
+  'churnRisk',
   'engagementScore',
   'upsellPotential',
   'totalSessions',
@@ -386,6 +406,31 @@ export function SegmentsPage() {
                   <SegStat label={t('segments.preview_risk')} value={selected.preview?.summary.atRisk ?? 0} sub={t('segments.preview_risk_sub')} />
                 </div>
 
+                {selected.preview?.breakdown && (
+                  <div className="seg-stat-grid">
+                    <SegStat
+                      label={t('segments.preview_company_signals')}
+                      value={selected.preview.breakdown.companySignals?.matchedCount ?? selected.preview.breakdown.customers}
+                      sub={t('segments.preview_primary_entity', { entity: label(selected.preview.breakdown.primaryEntity ?? 'company') })}
+                    />
+                    <SegStat
+                      label={t('segments.preview_user_signals')}
+                      value={selected.preview.breakdown.companyUserSignals?.matchedCount ?? selected.preview.breakdown.customerUsers}
+                      sub={t('segments.preview_user_company_count', { count: selected.preview.breakdown.companyUserSignals?.matchedCustomerCount ?? 0 })}
+                    />
+                    <SegStat
+                      label={t('segments.preview_shopify_signals')}
+                      value={selected.preview.breakdown.shopifyCustomerSignals?.matchedCount ?? selected.preview.breakdown.shopifyCustomers}
+                      sub={t('segments.preview_shopify_linked_count', { count: selected.preview.breakdown.shopifyCustomerSignals?.linkedCustomerCount ?? 0 })}
+                    />
+                    <SegStat
+                      label={t('segments.preview_unlinked_shopify')}
+                      value={selected.preview.breakdown.shopifyCustomerSignals?.unlinkedCount ?? selected.preview.breakdown.unlinkedShopifyCustomers}
+                      sub={t('segments.preview_active_groups', { groups: (selected.preview.breakdown.activeGroups ?? []).map(label).join(', ') || '-' })}
+                    />
+                  </div>
+                )}
+
                 <section className="ownership-card">
                   <div className="head">
                     <h3><GitBranch size={14} /> {t('segments.ownership_title')}</h3>
@@ -451,6 +496,50 @@ export function SegmentsPage() {
                       </div>
                     ))}
                   </div>
+                  {(selected.preview?.companyUserMatches ?? []).length > 0 && (
+                    <>
+                      <div className="customer-signal-head" style={{ marginTop: 18 }}>
+                        <div>
+                          <h3>{t('segments.preview_company_users')}</h3>
+                          <div className="sub">{t('segments.preview_company_users_sub')}</div>
+                        </div>
+                      </div>
+                      <div className="signal-cards">
+                        {(selected.preview?.companyUserMatches ?? []).slice(0, 8).map((user) => (
+                          <div key={user.id} className="signal-card">
+                            <div className="name">{user.email}</div>
+                            <div className="meta">
+                              <span>{user.companyName}</span>
+                              <span>{user.roleValues.join(', ') || '-'}</span>
+                              <span>{user.isActive ? t('common.active') : t('common.inactive')}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {(selected.preview?.shopifyCustomerMatches ?? []).length > 0 && (
+                    <>
+                      <div className="customer-signal-head" style={{ marginTop: 18 }}>
+                        <div>
+                          <h3>{t('segments.preview_shopify_customers')}</h3>
+                          <div className="sub">{t('segments.preview_shopify_customers_sub')}</div>
+                        </div>
+                      </div>
+                      <div className="signal-cards">
+                        {(selected.preview?.shopifyCustomerMatches ?? []).slice(0, 8).map((customer) => (
+                          <div key={customer.shopifyCustomerId} className="signal-card">
+                            <div className="name">{customer.name}</div>
+                            <div className="meta">
+                              <span>{customer.companyName ?? customer.email ?? customer.shopifyCustomerId}</span>
+                              <span>{fmtMoney(customer.totalSpent)}</span>
+                              <span>{label(customer.linkState)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </section>
               </>
             )}
@@ -535,9 +624,9 @@ function SegmentEditor({ draft, onClose }: { draft: SegmentDraft; onClose: () =>
               <div className="field">
                 <label>{t('segments.modal.field_audience')}</label>
                 <select value={current.audienceType} onChange={(event) => setCurrent({ ...current, audienceType: event.target.value as SegmentDraft['audienceType'] })}>
-                  <option value="customer">Customer</option>
-                  <option value="customer_user">Customer user</option>
+                  <option value="accountscompany">Accounts company</option>
                   <option value="shopify_customer">Shopify customer</option>
+                  <option value="workforce_pool">Workforce pool</option>
                 </select>
               </div>
               <label className="field" style={{ justifyContent: 'end' }}>
@@ -656,7 +745,7 @@ function emptyDraft(): SegmentDraft {
     color: '#2f80ed',
     matchMode: 'all',
     priority: 0,
-    audienceType: 'customer',
+    audienceType: 'accountscompany',
     isActive: true,
     conditions: [emptyCondition()],
   };
@@ -670,7 +759,7 @@ function draftFromSegment(segment: SegmentRow): SegmentDraft {
     color: segment.color,
     matchMode: segment.matchMode,
     priority: segment.priority,
-    audienceType: segment.audienceType as SegmentDraft['audienceType'],
+    audienceType: normalizeAudienceType(segment.audienceType),
     isActive: segment.isActive,
     conditions: segment.conditions.length ? segment.conditions.map((condition) => ({
       id: crypto.randomUUID(),
@@ -729,13 +818,20 @@ function coerceValue(field: SegmentField, value: string) {
 function operatorsFor(field: SegmentField): SegmentOperator[] {
   if (NUMERIC_FIELDS.has(field)) return ['gt', 'gte', 'lt', 'lte', 'eq', 'neq'];
   if (BOOLEAN_FIELDS.has(field)) return ['eq', 'neq'];
-  if (field === 'shopifyCustomerTags' || field === 'shopifyCustomerSegmentIds' || field === 'companyUserRole') return ['contains', 'in', 'notIn', 'eq', 'neq'];
+  if (field === 'shopifyCustomerSegmentIds') return ['in', 'notIn'];
+  if (field === 'shopifyCustomerTags' || field === 'companyUserRole') return ['contains', 'in', 'notIn', 'eq', 'neq'];
   return OPERATORS;
 }
 
 function defaultValueFor(field: SegmentField) {
   if (BOOLEAN_FIELDS.has(field)) return 'true';
   return '';
+}
+
+function normalizeAudienceType(value: string): SegmentDraft['audienceType'] {
+  if (value === 'shopify_customer') return 'shopify_customer';
+  if (value === 'workforce_pool' || value === 'customer_user') return 'workforce_pool';
+  return 'accountscompany';
 }
 
 function Kpi({ icon, label, value, sub }: { icon: ReactNode; label: string; value: number | string | null; sub: string }) {

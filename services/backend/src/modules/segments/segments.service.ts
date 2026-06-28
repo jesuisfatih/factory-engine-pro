@@ -24,14 +24,57 @@ interface SegmentCandidate {
   productIndex: Map<string, ProductRow>;
 }
 
+interface SegmentConditionGroups {
+  company: SegmentConditionInput[];
+  customerUser: SegmentConditionInput[];
+  shopifyCustomer: SegmentConditionInput[];
+}
+
+interface CustomerUserEntity {
+  id: string;
+  customerId: string;
+  companyName: string;
+  email: string;
+  roleValues: string[];
+  isActive: boolean;
+}
+
+interface ShopifyCustomerEntity {
+  shopifyCustomerId: string;
+  name: string;
+  email: string | null;
+  tags: string[];
+  segmentIds: string[];
+  acceptsMarketing: boolean | null;
+  state: string | null;
+  locale: string | null;
+  ordersCount: number;
+  totalSpent: number;
+  linkedCustomerId: string | null;
+  companyName: string | null;
+  linkedUsers: Array<{ id: string; email: string; companyId: string; companyName: string }>;
+  linkState: 'linked' | 'unlinked';
+}
+
 interface EvaluationContext {
   candidates: SegmentCandidate[];
   snapshotCustomerIds: Set<string>;
   requestedShopifySegmentIds: string[];
+  shopifyMembershipsByCustomerId: Map<string, string[]>;
   metricsByCustomer: Map<string, Record<string, unknown>>;
 }
 
 const PERIOD_FIELDS = new Set(['periodRevenue', 'periodOrders', 'periodQuantity']);
+const CUSTOMER_USER_FIELDS = new Set(['companyUserRole', 'companyUserIsActive']);
+const SHOPIFY_CUSTOMER_FIELDS = new Set([
+  'shopifyCustomerTags',
+  'shopifyCustomerSegmentIds',
+  'shopifyCustomerAcceptsMarketing',
+  'shopifyCustomerState',
+  'shopifyCustomerLocale',
+  'shopifyCustomerOrdersCount',
+  'shopifyCustomerTotalSpent',
+]);
 
 @Injectable()
 export class SegmentsService {
@@ -80,7 +123,7 @@ export class SegmentsService {
       color: input.color ?? '#2f80ed',
       priority: input.priority ?? 0,
       priorityGlobal: input.priorityGlobal ?? input.priority ?? 0,
-      audienceType: input.audienceType ?? 'customer',
+      audienceType: input.audienceType ?? 'accountscompany',
       lifecycleStage: input.lifecycleStage ?? null,
       matchMode,
       conditions,
@@ -127,12 +170,27 @@ export class SegmentsService {
   async preview(input: PreviewSegmentInput) {
     const customers = await this.repository.listCustomers();
     const context = await this.buildEvaluationContext(customers, input.conditions);
+    const groups = this.splitConditions(input.conditions);
     const matches = this.matchCustomers(context.candidates, input.conditions, input.matchMode);
+    const companySignalMatches = groups.company.length > 0
+      ? context.candidates.filter((candidate) => this.matchesCompanyConditionGroup(candidate, groups.company, input.matchMode))
+      : [];
+    const customerUserMatches = this.matchCustomerUserEntities(context.candidates, groups.customerUser, input.matchMode);
+    const shopifyCustomerMatches = this.matchShopifyCustomerEntities(
+      this.previewShopifyCustomerEntities(context),
+      groups.shopifyCustomer,
+      input.matchMode,
+    );
     const totalRevenue = matches.reduce((sum, candidate) => sum + Number(candidate.customer.totalSpent || 0), 0);
     const totalOrders = matches.reduce((sum, candidate) => sum + Number(candidate.customer.ordersCount || 0), 0);
     const atRisk = matches.filter((candidate) => candidate.customer.insight?.churnRisk === 'high').length;
     const localShopifyIds = new Set(customers.map((customer) => customer.shopifyCustomerId).filter((id): id is string => Boolean(id)));
     const unlinkedSnapshotCustomers = Array.from(context.snapshotCustomerIds).filter((id) => !localShopifyIds.has(id)).length;
+    const matchedShopifyCustomerCount = groups.shopifyCustomer.length > 0
+      ? shopifyCustomerMatches.length
+      : matches.filter((candidate) => Boolean(candidate.customer.shopifyCustomerId)).length;
+    const linkedShopifyCustomerIds = new Set(shopifyCustomerMatches.flatMap((customer) => customer.linkedCustomerId ? [customer.linkedCustomerId] : []));
+    const linkedShopifyUserIds = new Set(shopifyCustomerMatches.flatMap((customer) => customer.linkedUsers.map((user) => user.id)));
 
     return {
       summary: {
@@ -144,19 +202,36 @@ export class SegmentsService {
         requestedShopifySegments: context.requestedShopifySegmentIds.length,
         matchCount: matches.length,
         matchedCustomers: matches.length,
-        matchedCustomerUsers: matches.reduce((sum, candidate) => sum + customerUserMatchCount(candidate, input.conditions), 0),
-        matchedShopifyCustomers: matches.filter((candidate) => Boolean(candidate.customer.shopifyCustomerId)).length,
+        matchedCustomerUsers: customerUserMatches.length,
+        matchedShopifyCustomers: matchedShopifyCustomerCount,
         totalRevenue,
         avgOrders: matches.length ? totalOrders / matches.length : 0,
         atRisk,
       },
       breakdown: {
         customers: matches.length,
-        customerUsers: matches.reduce((sum, candidate) => sum + customerUserMatchCount(candidate, input.conditions), 0),
-        shopifyCustomers: matches.filter((candidate) => Boolean(candidate.customer.shopifyCustomerId)).length,
+        customerUsers: customerUserMatches.length,
+        shopifyCustomers: matchedShopifyCustomerCount,
         unlinkedShopifyCustomers: unlinkedSnapshotCustomers,
+        primaryEntity: this.resolvePreviewPrimaryEntity(groups),
+        activeGroups: this.activePreviewGroups(groups),
+        companySignals: {
+          matchedCount: companySignalMatches.length,
+        },
+        companyUserSignals: {
+          matchedCount: customerUserMatches.length,
+          matchedCustomerCount: new Set(customerUserMatches.map((user) => user.customerId)).size,
+        },
+        shopifyCustomerSignals: {
+          matchedCount: shopifyCustomerMatches.length,
+          linkedCustomerCount: linkedShopifyCustomerIds.size,
+          linkedUserCount: linkedShopifyUserIds.size,
+          unlinkedCount: shopifyCustomerMatches.filter((customer) => customer.linkState === 'unlinked').length,
+        },
       },
       matches: matches.slice(0, 100).map((candidate) => this.presentCustomerMatch(candidate)),
+      companyUserMatches: customerUserMatches.slice(0, 100),
+      shopifyCustomerMatches: shopifyCustomerMatches.slice(0, 100),
     };
   }
 
@@ -175,6 +250,10 @@ export class SegmentsService {
 
     await this.repository.replaceMemberships(id, matchIds);
     await this.repository.syncAssignmentHistory(segment, matchIds, context.metricsByCustomer);
+    const assignmentSync = await this.repository.syncSalesAssignmentsFromCurrentSegments([
+      ...matchIds,
+      ...existingRows.map((membership) => membership.customerId),
+    ]);
 
     const added = matches.filter((candidate) => !existingIds.has(candidate.customer.id));
     const removed = existingRows.filter((membership) => !matchIdSet.has(membership.customerId));
@@ -190,6 +269,9 @@ export class SegmentsService {
       match_count: matches.length,
       added_count: added.length,
       removed_count: removed.length,
+      auto_assigned_count: assignmentSync.assigned,
+      auto_assign_skipped_count: assignmentSync.skipped,
+      auto_assign_cleared_count: assignmentSync.cleared,
     });
     return this.getOne(id);
   }
@@ -238,12 +320,16 @@ export class SegmentsService {
       await this.repository.deleteMembership(membership.segmentId, customerId);
       await this.fireSegmentMembershipTrigger('segment.member_removed', customerId, membership.segmentId, membership.segment.name);
     }
+    const assignmentSync = await this.repository.syncSalesAssignmentsFromCurrentSegments([customerId]);
 
     this.logger.log('segments', 'evaluate_customer', 'Customer segment memberships evaluated', {
       customer_id: customerId,
       matched_count: matchedSegments.length,
       added_count: added.length,
       removed_count: removed.length,
+      auto_assigned_count: assignmentSync.assigned,
+      auto_assign_skipped_count: assignmentSync.skipped,
+      auto_assign_cleared_count: assignmentSync.cleared,
     });
     return {
       customerId,
@@ -333,7 +419,7 @@ export class SegmentsService {
       productIndex,
     }));
     const metricsByCustomer = new Map(candidates.map((candidate) => [candidate.customer.id, this.metricsSnapshot(candidate)]));
-    return { candidates, snapshotCustomerIds, requestedShopifySegmentIds, metricsByCustomer };
+    return { candidates, snapshotCustomerIds, requestedShopifySegmentIds, shopifyMembershipsByCustomerId: membershipMap, metricsByCustomer };
   }
 
   private async fireSegmentMembershipTrigger(
@@ -367,10 +453,208 @@ export class SegmentsService {
 
   private matchCustomers(candidates: SegmentCandidate[], conditions: SegmentConditionInput[], matchMode: 'all' | 'any') {
     if (conditions.length === 0) return candidates;
-    return candidates.filter((candidate) => {
-      const checks = conditions.map((condition) => this.matchesCondition(this.valueFor(candidate, condition), condition.operator, condition.value));
-      return matchMode === 'all' ? checks.every(Boolean) : checks.some(Boolean);
+    const groups = this.splitConditions(conditions);
+    return candidates.filter((candidate) => this.matchesCandidate(candidate, groups, matchMode));
+  }
+
+  private splitConditions(conditions: SegmentConditionInput[]): SegmentConditionGroups {
+    return {
+      company: conditions.filter((condition) => !CUSTOMER_USER_FIELDS.has(condition.field) && !SHOPIFY_CUSTOMER_FIELDS.has(condition.field)),
+      customerUser: conditions.filter((condition) => CUSTOMER_USER_FIELDS.has(condition.field)),
+      shopifyCustomer: conditions.filter((condition) => SHOPIFY_CUSTOMER_FIELDS.has(condition.field)),
+    };
+  }
+
+  private matchesCandidate(candidate: SegmentCandidate, groups: SegmentConditionGroups, matchMode: 'all' | 'any') {
+    if (matchMode === 'all') {
+      return (
+        this.matchesCompanyConditionGroup(candidate, groups.company, 'all')
+        && this.matchesAllEntityConditions(this.customerUserEntities(candidate), groups.customerUser, (entity, condition) =>
+          this.customerUserValueFor(entity, condition),
+        )
+        && this.matchesAllEntityConditions(this.shopifyCustomerEntities(candidate), groups.shopifyCustomer, (entity, condition) =>
+          this.shopifyCustomerValueFor(entity, condition),
+        )
+      );
+    }
+
+    return [...groups.company, ...groups.customerUser, ...groups.shopifyCustomer].some((condition) =>
+      this.matchesAnyCondition(candidate, condition),
+    );
+  }
+
+  private matchesCompanyConditionGroup(
+    candidate: SegmentCandidate,
+    conditions: SegmentConditionInput[],
+    matchMode: 'all' | 'any',
+  ) {
+    if (conditions.length === 0) return matchMode === 'all';
+    return matchMode === 'all'
+      ? conditions.every((condition) => this.matchesCompanyCondition(candidate, condition))
+      : conditions.some((condition) => this.matchesCompanyCondition(candidate, condition));
+  }
+
+  private matchesAnyCondition(candidate: SegmentCandidate, condition: SegmentConditionInput) {
+    if (CUSTOMER_USER_FIELDS.has(condition.field)) {
+      return this.matchesAnyEntityCondition(this.customerUserEntities(candidate), condition, (entity, item) =>
+        this.customerUserValueFor(entity, item),
+      );
+    }
+    if (SHOPIFY_CUSTOMER_FIELDS.has(condition.field)) {
+      return this.matchesAnyEntityCondition(this.shopifyCustomerEntities(candidate), condition, (entity, item) =>
+        this.shopifyCustomerValueFor(entity, item),
+      );
+    }
+    return this.matchesCompanyCondition(candidate, condition);
+  }
+
+  private matchesCompanyCondition(candidate: SegmentCandidate, condition: SegmentConditionInput) {
+    return this.matchesCondition(this.valueFor(candidate, condition), condition.operator, condition.value);
+  }
+
+  private matchesAllEntityConditions<T>(
+    entities: T[],
+    conditions: SegmentConditionInput[],
+    resolver: (entity: T, condition: SegmentConditionInput) => unknown,
+  ) {
+    if (conditions.length === 0) return true;
+    if (entities.length === 0) return false;
+    return entities.some((entity) =>
+      conditions.every((condition) => this.matchesCondition(resolver(entity, condition), condition.operator, condition.value)),
+    );
+  }
+
+  private matchesAnyEntityCondition<T>(
+    entities: T[],
+    condition: SegmentConditionInput,
+    resolver: (entity: T, condition: SegmentConditionInput) => unknown,
+  ) {
+    return entities.some((entity) => this.matchesCondition(resolver(entity, condition), condition.operator, condition.value));
+  }
+
+  private matchCustomerUserEntities(
+    candidates: SegmentCandidate[],
+    conditions: SegmentConditionInput[],
+    matchMode: 'all' | 'any',
+  ) {
+    if (conditions.length === 0) return [];
+    return candidates
+      .flatMap((candidate) => this.customerUserEntities(candidate))
+      .filter((entity) => matchMode === 'all'
+        ? conditions.every((condition) => this.matchesCondition(this.customerUserValueFor(entity, condition), condition.operator, condition.value))
+        : conditions.some((condition) => this.matchesCondition(this.customerUserValueFor(entity, condition), condition.operator, condition.value)));
+  }
+
+  private matchShopifyCustomerEntities(
+    entities: ShopifyCustomerEntity[],
+    conditions: SegmentConditionInput[],
+    matchMode: 'all' | 'any',
+  ) {
+    if (conditions.length === 0) return [];
+    return entities.filter((entity) => matchMode === 'all'
+      ? conditions.every((condition) => this.matchesCondition(this.shopifyCustomerValueFor(entity, condition), condition.operator, condition.value))
+      : conditions.some((condition) => this.matchesCondition(this.shopifyCustomerValueFor(entity, condition), condition.operator, condition.value)));
+  }
+
+  private customerUserEntities(candidate: SegmentCandidate): CustomerUserEntity[] {
+    return candidate.customer.customerUsers.map((user) => {
+      const roleValues = uniqueStrings(user.roleAssignments.flatMap((assignment) => [
+        assignment.role.slug,
+        assignment.role.name,
+      ]));
+      return {
+        id: user.id,
+        customerId: candidate.customer.id,
+        companyName: candidate.customer.companyName,
+        email: user.email,
+        roleValues,
+        isActive: user.status === 'active',
+      };
     });
+  }
+
+  private customerUserValueFor(entity: CustomerUserEntity, condition: SegmentConditionInput) {
+    if (condition.field === 'companyUserRole') return entity.roleValues;
+    if (condition.field === 'companyUserIsActive') return entity.isActive;
+    return null;
+  }
+
+  private shopifyCustomerEntities(candidate: SegmentCandidate): ShopifyCustomerEntity[] {
+    const entity = this.linkedShopifyCustomerEntity(candidate);
+    return entity ? [entity] : [];
+  }
+
+  private linkedShopifyCustomerEntity(candidate: SegmentCandidate): ShopifyCustomerEntity | null {
+    const shopifyCustomerId = candidate.customer.shopifyCustomerId;
+    if (!shopifyCustomerId) return null;
+    const raw = record(candidate.customer.rawData);
+    const fullName = [candidate.customer.firstName, candidate.customer.lastName].filter(Boolean).join(' ').trim();
+    return {
+      shopifyCustomerId,
+      name: fullName || candidate.customer.email || candidate.customer.companyName || shopifyCustomerId,
+      email: candidate.customer.email,
+      tags: candidate.customer.tags,
+      segmentIds: candidate.shopifySegmentIds,
+      acceptsMarketing: booleanOrNull(raw.accepts_marketing ?? raw.acceptsMarketing),
+      state: stringValue(raw.state),
+      locale: stringValue(raw.locale),
+      ordersCount: Number(candidate.customer.ordersCount || 0),
+      totalSpent: Number(candidate.customer.totalSpent || 0),
+      linkedCustomerId: candidate.customer.id,
+      companyName: candidate.customer.companyName,
+      linkedUsers: candidate.customer.customerUsers.map((user) => ({
+        id: user.id,
+        email: user.email,
+        companyId: candidate.customer.id,
+        companyName: candidate.customer.companyName,
+      })),
+      linkState: 'linked',
+    };
+  }
+
+  private previewShopifyCustomerEntities(context: EvaluationContext): ShopifyCustomerEntity[] {
+    const linked = context.candidates.flatMap((candidate) => this.shopifyCustomerEntities(candidate));
+    const linkedIds = new Set(linked.map((entity) => entity.shopifyCustomerId));
+    const unlinked = Array.from(context.shopifyMembershipsByCustomerId.entries())
+      .filter(([shopifyCustomerId]) => !linkedIds.has(shopifyCustomerId))
+      .map(([shopifyCustomerId, segmentIds]) => ({
+        shopifyCustomerId,
+        name: `Shopify Customer ${shopifyCustomerId}`,
+        email: null,
+        tags: [],
+        segmentIds,
+        acceptsMarketing: null,
+        state: null,
+        locale: null,
+        ordersCount: 0,
+        totalSpent: 0,
+        linkedCustomerId: null,
+        companyName: null,
+        linkedUsers: [],
+        linkState: 'unlinked' as const,
+      }));
+    return [...linked, ...unlinked];
+  }
+
+  private shopifyCustomerValueFor(entity: ShopifyCustomerEntity, condition: SegmentConditionInput) {
+    switch (condition.field) {
+      case 'shopifyCustomerTags':
+        return entity.tags;
+      case 'shopifyCustomerSegmentIds':
+        return entity.segmentIds;
+      case 'shopifyCustomerAcceptsMarketing':
+        return entity.acceptsMarketing;
+      case 'shopifyCustomerState':
+        return entity.state ?? '';
+      case 'shopifyCustomerLocale':
+        return entity.locale ?? '';
+      case 'shopifyCustomerOrdersCount':
+        return entity.ordersCount;
+      case 'shopifyCustomerTotalSpent':
+        return entity.totalSpent;
+      default:
+        return null;
+    }
   }
 
   private valueFor(candidate: SegmentCandidate, condition: SegmentConditionInput) {
@@ -378,7 +662,8 @@ export class SegmentsService {
     const raw = record(customer.rawData);
     const insight = customer.insight;
     const deepMetrics = record(insight?.deepMetrics);
-    switch (condition.field) {
+    const field = condition.field as string;
+    switch (field) {
       case 'companyStatus':
         return customer.status;
       case 'companyName':
@@ -428,7 +713,7 @@ export class SegmentsService {
       case 'engagementScore':
         return Number(deepMetrics.engagementScore ?? deepMetrics.engagement_score ?? insight?.healthScore ?? 0);
       case 'churnRisk':
-        return insight?.churnRisk ?? 'unknown';
+        return numberValue(deepMetrics.churnRisk ?? deepMetrics.churn_risk ?? riskScore(insight?.churnRisk));
       case 'clvTier':
         return insight?.clvTier ?? 'new';
       case 'buyerIntent':
@@ -490,6 +775,21 @@ export class SegmentsService {
       default:
         throw new BadRequestException(`Unsupported operator: ${operator}`);
     }
+  }
+
+  private activePreviewGroups(groups: SegmentConditionGroups) {
+    const activeGroups: Array<'company' | 'customer_user' | 'shopify_customer'> = [];
+    if (groups.company.length > 0) activeGroups.push('company');
+    if (groups.customerUser.length > 0) activeGroups.push('customer_user');
+    if (groups.shopifyCustomer.length > 0) activeGroups.push('shopify_customer');
+    return activeGroups;
+  }
+
+  private resolvePreviewPrimaryEntity(groups: SegmentConditionGroups) {
+    const activeGroups = this.activePreviewGroups(groups);
+    if (activeGroups.length === 0) return 'company';
+    if (activeGroups.length > 1) return 'mixed';
+    return activeGroups[0];
   }
 
   private normalizeConditions(raw: unknown): SegmentConditionInput[] {
@@ -589,13 +889,6 @@ function extractShopifySegmentIds(conditions: SegmentConditionInput[]) {
     .map((value) => String(value || '').trim())
     .filter((value) => value.startsWith('gid://shopify/Segment/'));
   return uniqueStrings(values);
-}
-
-function customerUserMatchCount(candidate: SegmentCandidate, conditions: SegmentConditionInput[]) {
-  if (!conditions.some((condition) => condition.field === 'companyUserRole' || condition.field === 'companyUserIsActive')) {
-    return 0;
-  }
-  return candidate.customer.customerUsers.length;
 }
 
 function normalizeValue(value: unknown): unknown {
@@ -698,9 +991,30 @@ function stringValue(value: unknown) {
   return text || null;
 }
 
+function booleanOrNull(value: unknown) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+  return null;
+}
+
 function numberValue(value: unknown) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) ? number : 0;
+}
+
+function riskScore(value: unknown) {
+  const normalized = stringValue(value)?.toLowerCase();
+  if (!normalized) return 0;
+  if (normalized === 'critical') return 100;
+  if (normalized === 'high') return 75;
+  if (normalized === 'medium') return 50;
+  if (normalized === 'low') return 20;
+  if (normalized === 'unknown') return 0;
+  return numberValue(normalized);
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {

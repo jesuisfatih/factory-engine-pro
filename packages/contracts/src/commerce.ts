@@ -102,6 +102,15 @@ export const recordCustomerAxisNoAutoReassignSchema = z.object({
 });
 export type RecordCustomerAxisNoAutoReassignInput = z.infer<typeof recordCustomerAxisNoAutoReassignSchema>;
 
+export const assignDefaultCustomerAxisSchema = z.object({
+  axes: z.array(customerAssignmentAxisSchema).min(1).max(3).default(['sales', 'support', 'account']),
+  limit: z.coerce.number().int().min(1).max(10000).default(10000),
+  onlyMissing: z.boolean().default(true),
+  source: z.string().trim().max(80).default('default_axis_backfill'),
+  reason: z.string().trim().max(500).default('Default axis assignment backfill'),
+});
+export type AssignDefaultCustomerAxisInput = z.infer<typeof assignDefaultCustomerAxisSchema>;
+
 export interface CustomerAxisAssignmentDto {
   id: string;
   customerId: string;
