@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ActiveWorkflowRuleStatsResponse } from '@factory-engine-pro/contracts';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
@@ -107,6 +108,10 @@ function DashboardView() {
     queryKey: ['dashboard', 'mail', 'recent'],
     queryFn: () => adminApi.mailDeliveries('?limit=5') as Promise<MailDelivery[]>,
   });
+  const ruleStats = useQuery<ActiveWorkflowRuleStatsResponse>({
+    queryKey: ['dashboard', 'rules', 'active-stats', 7],
+    queryFn: () => adminApi.workflowRuleActiveStats('?days=7'),
+  });
 
   const statsQueries = [orderStats, customerStats, supportStats, mail];
   const failedMailCount = (mail.data ?? []).filter((delivery) => delivery.status === 'failed').length;
@@ -121,6 +126,7 @@ function DashboardView() {
     void orders.refetch();
     void support.refetch();
     void mail.refetch();
+    void ruleStats.refetch();
   };
 
   return (
@@ -147,6 +153,57 @@ function DashboardView() {
           <Kpi id="kpi-calls" labelI18nKey="dashboard.kpi.calls" value={failedMailCount} subI18nKey="dashboard.kpi.calls_sub" />
         </div>
       )}
+
+      <div className="section" id="section-active-rule-stats" style={{ marginBottom: 16 }}>
+        <h3>
+          <span>Active rule stats</span>
+          <span className="meta">7d fire/match/avg_latency</span>
+        </h3>
+        {ruleStats.isLoading && <StateBlock title={t('common.loading')} body="Loading active rule health metrics from the API." />}
+        {ruleStats.isError && (
+          <StateBlock
+            title={t('common.error')}
+            body={apiErrorMessage(ruleStats.error)}
+            action={<button type="button" className="btn" onClick={() => ruleStats.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+          />
+        )}
+        {ruleStats.isSuccess && ruleStats.data.rows.length === 0 && (
+          <StateBlock
+            title="No active workflow rules"
+            body="Active rules appear here after they are switched on in the rule engine."
+            action={<a className="btn primary" href="/rules">Open rule engine</a>}
+          />
+        )}
+        {ruleStats.isSuccess && ruleStats.data.rows.length > 0 && (
+          <table className="data-table" id="active-rule-stats-table">
+            <thead>
+              <tr>
+                <th>Rule</th>
+                <th>Fire</th>
+                <th>Match</th>
+                <th>Avg latency</th>
+                <th>Tasks</th>
+                <th>Health</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ruleStats.data.rows.map((row) => (
+                <tr key={row.ruleId}>
+                  <td>
+                    <div className="name">{row.ruleName}</div>
+                    <div className="muted">{row.trigger} - p{row.priority} - last {row.lastFiredAt ? formatDateTime(row.lastFiredAt) : 'never'}</div>
+                  </td>
+                  <td>{row.fireCount}</td>
+                  <td>{row.matchRate.toFixed(1)}% ({row.matchCount})</td>
+                  <td>{formatLatency(row.avgLatencyMs)}</td>
+                  <td>{row.taskCreatedCount}</td>
+                  <td><span className={healthPill(row.health)}>{row.health}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <div className="section" id="section-shopify-sales" style={{ marginBottom: 16 }}>
         <h3>
@@ -305,6 +362,12 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatLatency(value: number | null) {
+  if (value === null) return 'n/a';
+  if (value < 1000) return `${value}ms`;
+  return `${(value / 1000).toFixed(1)}s`;
+}
+
 function humanize(value: string) {
   return value.replace(/_/g, ' ');
 }
@@ -318,6 +381,12 @@ function statusPill(status: string) {
   if (status === 'failed') return 'pill danger';
   if (status === 'queued' || status === 'sending') return 'pill warn';
   return 'pill info';
+}
+
+function healthPill(health: string) {
+  if (health === 'dead') return 'pill danger';
+  if (health === 'loose') return 'pill warn';
+  return 'pill success';
 }
 
 function StateBlock({ title, body, action }: { title: string; body: string; action?: ReactNode }) {

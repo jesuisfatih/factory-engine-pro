@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  activeWorkflowRuleStatsQuerySchema,
   backfillWorkflowRuleSchema,
   fireWorkflowTriggerSchema,
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
+  type ActiveWorkflowRuleStatsQuery,
   type BackfillWorkflowRuleInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
@@ -46,6 +48,12 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   enumChainProbe() {
     return this.rules.enumChainProbe();
+  }
+
+  @Get('stats/active')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  activeStats(@Query(new ZodValidationPipe(activeWorkflowRuleStatsQuerySchema)) query: ActiveWorkflowRuleStatsQuery) {
+    return this.rules.activeStats(query);
   }
 
   @Get(':id/versions')

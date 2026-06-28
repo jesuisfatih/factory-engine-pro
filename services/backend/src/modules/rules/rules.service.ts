@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import {
+  activeWorkflowRuleStatsQuerySchema,
   backfillWorkflowRuleSchema,
   fireWorkflowTriggerSchema,
   rollbackWorkflowRuleSchema,
@@ -11,6 +12,8 @@ import {
   WORKFLOW_ENUM_VERSION,
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
+  type ActiveWorkflowRuleStatsQuery,
+  type ActiveWorkflowRuleStatsResponse,
   type BackfillWorkflowRuleInput,
   type WorkflowActionTrace,
   type WorkflowCooldownTrace,
@@ -78,6 +81,69 @@ export class RulesService {
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     const reports = await this.repository.listBackfillReports(id);
     return { ruleId: id, reports: reports.map(toBackfillReportDto) };
+  }
+
+  async activeStats(input: ActiveWorkflowRuleStatsQuery): Promise<ActiveWorkflowRuleStatsResponse> {
+    const parsed = activeWorkflowRuleStatsQuerySchema.parse(input);
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd.getTime() - parsed.days * 24 * 60 * 60 * 1000);
+    const { rules, executions } = await this.repository.activeStatsRows(windowStart);
+    const executionsByRule = new Map<string, typeof executions>();
+    for (const execution of executions) {
+      const group = executionsByRule.get(execution.ruleId) ?? [];
+      group.push(execution);
+      executionsByRule.set(execution.ruleId, group);
+    }
+
+    const rows = rules.map((row) => {
+      const rule = toDto(row);
+      const ruleExecutions = executionsByRule.get(rule.id) ?? [];
+      const fireCount = ruleExecutions.length;
+      const matched = ruleExecutions.filter((execution) => execution.status !== 'skipped' && execution.status !== 'started');
+      const latencies = ruleExecutions
+        .filter((execution) => execution.status !== 'started')
+        .map((execution) => Math.max(0, execution.updatedAt.getTime() - execution.firstSeenAt.getTime()));
+      const matchRate = fireCount === 0 ? 0 : Math.round((matched.length / fireCount) * 1000) / 10;
+      const avgLatencyMs = averageMs(latencies);
+      return {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        trigger: rule.trigger,
+        priority: rule.priority,
+        fireCount,
+        matchCount: matched.length,
+        matchRate,
+        taskCreatedCount: ruleExecutions.reduce((sum, execution) => sum + execution.taskIds.length, 0),
+        avgLatencyMs,
+        lastFiredAt: ruleExecutions[0]?.firstSeenAt.toISOString() ?? null,
+        health: ruleHealth(fireCount, matchRate, avgLatencyMs),
+      };
+    });
+
+    const totalLatencyValues = executions
+      .filter((execution) => execution.status !== 'started')
+      .map((execution) => Math.max(0, execution.updatedAt.getTime() - execution.firstSeenAt.getTime()));
+    const response: ActiveWorkflowRuleStatsResponse = {
+      windowDays: parsed.days,
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      totals: {
+        activeRules: rows.length,
+        fireCount: rows.reduce((sum, row) => sum + row.fireCount, 0),
+        matchCount: rows.reduce((sum, row) => sum + row.matchCount, 0),
+        taskCreatedCount: rows.reduce((sum, row) => sum + row.taskCreatedCount, 0),
+        avgLatencyMs: averageMs(totalLatencyValues),
+      },
+      rows,
+    };
+    this.logger.log('rules', 'active_stats_read', 'Active workflow rule stats read', {
+      window_days: response.windowDays,
+      active_rules: response.totals.activeRules,
+      fire_count: response.totals.fireCount,
+      match_count: response.totals.matchCount,
+      avg_latency_ms: response.totals.avgLatencyMs,
+    });
+    return response;
   }
 
   async runBackfill(id: string, input: BackfillWorkflowRuleInput): Promise<WorkflowRuleBackfillRunResponse> {
@@ -1539,6 +1605,18 @@ function priorityForRule(priority: number): 'critical' | 'high' | 'medium' | 'lo
   if (priority >= 70) return 'high';
   if (priority >= 30) return 'medium';
   return 'low';
+}
+
+function averageMs(values: number[]) {
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function ruleHealth(fireCount: number, matchRate: number, avgLatencyMs: number | null): ActiveWorkflowRuleStatsResponse['rows'][number]['health'] {
+  if (fireCount === 0) return 'dead';
+  if (fireCount >= 5 && matchRate >= 80) return 'loose';
+  if (avgLatencyMs !== null && avgLatencyMs > 5000) return 'loose';
+  return 'healthy';
 }
 
 function compareCondition(actual: unknown, operator: string, expected: string, confidenceGte?: number) {

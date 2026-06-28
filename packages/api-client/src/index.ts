@@ -29,6 +29,7 @@ import type {
   CreateServiceRequestInput,
   CreateSubUserInput,
   BackfillWorkflowRuleInput,
+  ActiveWorkflowRuleStatsResponse,
   CustomerLoginInput,
   CustomerRegisterInput,
   ForgotPasswordInput,
@@ -641,6 +642,10 @@ export class ApiClient {
 
   workflowRuleBackfills(id: string) {
     return this.get<WorkflowRuleBackfillReportsResponse>(`/rules/${encodeURIComponent(id)}/backfills`);
+  }
+
+  workflowRuleActiveStats(query = '?days=7') {
+    return this.get<ActiveWorkflowRuleStatsResponse>(`/rules/stats/active${query}`);
   }
 
   fireWorkflowTrigger(input: WorkflowTriggerFireInput) {

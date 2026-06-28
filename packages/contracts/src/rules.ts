@@ -69,6 +69,11 @@ export const backfillWorkflowRuleSchema = z.object({
 });
 export type BackfillWorkflowRuleInput = z.infer<typeof backfillWorkflowRuleSchema>;
 
+export const activeWorkflowRuleStatsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(30).default(7),
+});
+export type ActiveWorkflowRuleStatsQuery = z.infer<typeof activeWorkflowRuleStatsQuerySchema>;
+
 export interface WorkflowRuleDto {
   id: string;
   name: string;
@@ -149,6 +154,34 @@ export interface WorkflowRuleBackfillRunResponse {
 export interface WorkflowRuleBackfillReportsResponse {
   ruleId: string;
   reports: WorkflowRuleBackfillReportDto[];
+}
+
+export interface ActiveWorkflowRuleStatsRow {
+  ruleId: string;
+  ruleName: string;
+  trigger: string;
+  priority: number;
+  fireCount: number;
+  matchCount: number;
+  matchRate: number;
+  taskCreatedCount: number;
+  avgLatencyMs: number | null;
+  lastFiredAt: string | null;
+  health: 'dead' | 'loose' | 'healthy';
+}
+
+export interface ActiveWorkflowRuleStatsResponse {
+  windowDays: number;
+  windowStart: string;
+  windowEnd: string;
+  totals: {
+    activeRules: number;
+    fireCount: number;
+    matchCount: number;
+    taskCreatedCount: number;
+    avgLatencyMs: number | null;
+  };
+  rows: ActiveWorkflowRuleStatsRow[];
 }
 
 export const fireWorkflowTriggerSchema = z.object({

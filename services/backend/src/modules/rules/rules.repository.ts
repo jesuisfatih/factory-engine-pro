@@ -51,6 +51,25 @@ export class RulesRepository {
     });
   }
 
+  async activeStatsRows(since: Date) {
+    const tenantId = this.tenantId();
+    const rules = await this.prisma.db.workflowRule.findMany({
+      where: { tenantId, status: 'active' },
+      orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const executions = rules.length === 0
+      ? []
+      : await this.prisma.db.workflowRuleExecution.findMany({
+          where: {
+            tenantId,
+            ruleId: { in: rules.map((rule) => rule.id) },
+            firstSeenAt: { gte: since },
+          },
+          orderBy: { firstSeenAt: 'desc' },
+        });
+    return { rules, executions };
+  }
+
   async claimExecution(input: {
     eventId: string;
     ruleId: string;
