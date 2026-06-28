@@ -1254,6 +1254,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 .rules-inline-control span, .rules-inline-check span { font-weight: 700; }
 .rules-canvas-toolbar .rules-priority-input { width: 74px; }
+.rules-canvas-toolbar input:disabled { opacity: 0.55; cursor: not-allowed; }
 .rules-canvas-toolbar .rules-inline-check input {
   width: auto; padding: 0; accent-color: var(--accent);
 }

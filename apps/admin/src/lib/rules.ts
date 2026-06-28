@@ -37,6 +37,8 @@ export interface RuleDraft {
   status: RuleLifecycle;
   priority: number;
   composable: boolean;
+  cooldownHours: number;
+  cooldownLimit: number;
   trigger: WorkflowTrigger;
   when: RuleDraftCondition[];
   whenGroups: RuleDraftWhenGroup[];
@@ -62,6 +64,9 @@ export function saveWorkflowRule(draft: RuleDraft, id?: string) {
       status: draft.status,
       priority: draft.priority,
       composable: draft.composable,
+      cooldown: draft.cooldownHours === 0
+        ? 0
+        : { hours: draft.cooldownHours, limit: draft.cooldownLimit },
       trigger: draft.trigger,
       when: draft.when,
       whenGroups: draft.whenGroups.length > 0 ? draft.whenGroups : undefined,
@@ -76,11 +81,14 @@ export function fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
 }
 
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
+  const cooldown = cooldownFromDefinition(rule.definition.cooldown);
   return {
     name: rule.name,
     status: rule.definition.status,
     priority: rule.definition.priority,
     composable: rule.definition.composable,
+    cooldownHours: cooldown.hours,
+    cooldownLimit: cooldown.limit,
     trigger: rule.definition.trigger,
     when: rule.definition.when,
     whenGroups: rule.definition.whenGroups ?? [],
@@ -94,6 +102,8 @@ export function makeRuleDraft(catalog: WorkflowEnumCatalogResponse): RuleDraft {
     status: 'draft',
     priority: 50,
     composable: false,
+    cooldownHours: 24,
+    cooldownLimit: 1,
     trigger: catalog.triggers[0]?.value ?? 'manual.trigger',
     when: [makeCondition(catalog)],
     whenGroups: [],
@@ -134,6 +144,18 @@ export function defaultValue(
   if (optionSource === 'call_intents') return catalog.callIntents[0]?.value ?? '';
   if (optionSource === 'psych_tags') return catalog.psychTags[0]?.value ?? '';
   return '';
+}
+
+export function cooldownFromDefinition(cooldown: WorkflowRuleDto['definition']['cooldown']): { hours: number; limit: number } {
+  if (cooldown === undefined) return { hours: 24, limit: 1 };
+  if (typeof cooldown === 'number') return { hours: cooldown, limit: 1 };
+  return { hours: cooldown.hours, limit: cooldown.limit };
+}
+
+export function cooldownLabel(cooldown: WorkflowRuleDto['definition']['cooldown']) {
+  const normalized = cooldownFromDefinition(cooldown);
+  if (normalized.hours === 0) return 'cooldown off';
+  return `${normalized.limit}/${normalized.hours}h cooldown`;
 }
 
 export const LIFECYCLE_TONE: Record<RuleLifecycle, string> = {

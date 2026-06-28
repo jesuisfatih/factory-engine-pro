@@ -90,6 +90,7 @@ model Tenant {
   syncLogs                SyncLog[]
   workflowRules           WorkflowRule[]
   workflowRuleExecutions  WorkflowRuleExecution[]
+  workflowRuleCooldowns   WorkflowRuleCooldown[]
 
   @@map("tenants")
 }
@@ -217,6 +218,7 @@ model Customer {
   pricingRules  PricingRule[]
   segmentMemberships SegmentCustomerMembership[]
   serviceRequests ServiceRequest[]
+  workflowRuleCooldowns WorkflowRuleCooldown[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -1173,6 +1175,7 @@ model WorkflowRule {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   executions WorkflowRuleExecution[]
+  cooldowns  WorkflowRuleCooldown[]
 
   @@index([tenantId, status])
   @@index([tenantId, trigger])
@@ -1199,4 +1202,24 @@ model WorkflowRuleExecution {
   @@index([tenantId, eventId])
   @@index([tenantId, ruleId])
   @@map("workflow_rule_executions")
+}
+
+model WorkflowRuleCooldown {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  ruleId          String   @map("rule_id")
+  customerId      String   @map("customer_id")
+  windowStartedAt DateTime @default(now()) @map("window_started_at")
+  lastFiredAt     DateTime @default(now()) @map("last_fired_at")
+  fireCount       Int      @default(0) @map("fire_count")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule     WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  customer Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, ruleId, customerId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, ruleId])
+  @@map("workflow_rule_cooldowns")
 }

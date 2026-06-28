@@ -44,6 +44,7 @@ import { apiErrorMessage } from '@/lib/api';
 import {
   defaultOperator,
   defaultValue,
+  cooldownLabel,
   draftFromWorkflowRule,
   fireWorkflowTrigger,
   fetchWorkflowCatalog,
@@ -586,6 +587,7 @@ function RulesView() {
                     <span>{conditionCount(rule.definition)} conditions</span>
                     {whenGroupCount(rule.definition) > 1 && <span>{whenGroupCount(rule.definition)} WHEN groups</span>}
                     <span>{rule.composable ? 'composable' : 'single fire'}</span>
+                    <span>{cooldownLabel(rule.definition.cooldown)}</span>
                   </div>
                 </button>
               ))}
@@ -640,6 +642,29 @@ function RulesView() {
                     onChange={(event) => setDraft({ ...draft, composable: event.target.checked })}
                   />
                   <span>Composable</span>
+                </label>
+                <label className="rules-inline-control">
+                  <span>Cooldown h</span>
+                  <input
+                    className="rules-priority-input"
+                    type="number"
+                    min="0"
+                    max="8760"
+                    value={draft.cooldownHours}
+                    onChange={(event) => setDraft({ ...draft, cooldownHours: Math.max(0, Number(event.target.value) || 0) })}
+                  />
+                </label>
+                <label className="rules-inline-control">
+                  <span>Limit</span>
+                  <input
+                    className="rules-priority-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    disabled={draft.cooldownHours === 0}
+                    value={draft.cooldownLimit}
+                    onChange={(event) => setDraft({ ...draft, cooldownLimit: Math.max(1, Number(event.target.value) || 1) })}
+                  />
                 </label>
                 <span className={`pill ${LIFECYCLE_TONE[draft.status]}`}>{draft.status}</span>
                 <button type="button" className="btn ghost" onClick={() => setDraft(appendCondition(draft, catalog))}>

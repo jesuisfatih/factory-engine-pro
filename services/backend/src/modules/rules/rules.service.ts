@@ -10,6 +10,7 @@ import {
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
   type WorkflowActionTrace,
+  type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
@@ -126,6 +127,38 @@ export class RulesService {
         continue;
       }
 
+      const cooldown = await this.evaluateCooldown(rule, state);
+      if (!cooldown.allowed) {
+        this.logger.log('rules', 'cooldown_skipped', 'Workflow rule skipped by per-customer cooldown', {
+          event_id: eventId,
+          trigger: parsed.trigger,
+          rule_id: rule.id,
+          customer_id: cooldown.trace.customerId,
+          cooldown_hours: cooldown.trace.hours,
+          cooldown_limit: cooldown.trace.limit,
+          cooldown_count: cooldown.trace.currentCount,
+          next_eligible_at: cooldown.trace.nextEligibleAt,
+        });
+        const cooldownResult: WorkflowTriggerFireResponse['results'][number] = {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          status: 'skipped',
+          reason: 'cooldown',
+          executionMode: 'active',
+          taskIds: [],
+          conditionTrace,
+          whenTrace,
+          cooldown: cooldown.trace,
+        };
+        results.push(cooldownResult);
+        await this.repository.completeExecution(execution.id, {
+          status: cooldownResult.status,
+          taskIds: [],
+          result: cooldownResult as unknown as Prisma.InputJsonValue,
+        });
+        continue;
+      }
+
       if (rule.status === 'shadow') {
         this.logger.log('rules', 'shadow_rule_matched', 'Shadow workflow rule matched without mutating state', {
           event_id: eventId,
@@ -165,6 +198,7 @@ export class RulesService {
           state,
           conditionTrace,
           whenTrace,
+          cooldown: cooldown.trace,
           taskIds,
         });
         actionTrace.push(applied.trace);
@@ -192,6 +226,7 @@ export class RulesService {
         taskIds,
         conditionTrace,
         whenTrace,
+        cooldown: cooldown.trace,
         actionTrace,
       };
       results.push(activeResult);
@@ -200,6 +235,7 @@ export class RulesService {
         taskIds,
         result: activeResult as unknown as Prisma.InputJsonValue,
       });
+      await this.recordCooldownFire(rule, cooldown, actionStatus);
 
       if (!rule.composable && actionStatus !== 'skipped') {
         this.logger.log('rules', 'runtime_short_circuit', 'Workflow runtime stopped after non-composable active rule', {
@@ -285,6 +321,47 @@ export class RulesService {
       resolverOutput,
       now: dateParam(params, 'now') ?? new Date(),
     };
+  }
+
+  private async evaluateCooldown(
+    rule: WorkflowRuleDto,
+    state: Awaited<ReturnType<RulesService['resolveConditionState']>>,
+  ): Promise<RuleCooldownDecision> {
+    const config = normalizeCooldown(rule.definition);
+    const customerId = state.customer?.id ?? null;
+    const base: Omit<RuleCooldownDecision, 'allowed'> = {
+      config,
+      customerId,
+      existing: null,
+      firedAt: state.now,
+      trace: cooldownTrace(config, customerId, null, state.now),
+    };
+    if (rule.status !== 'active' || config.disabled || !customerId) return { ...base, allowed: true };
+
+    const existing = await this.repository.findCooldown(rule.id, customerId);
+    const trace = cooldownTrace(config, customerId, existing, state.now);
+    const decision = { ...base, existing, trace };
+    if (!existing || cooldownExpired(existing.windowStartedAt, state.now, config.hours)) {
+      return { ...decision, allowed: true };
+    }
+    if (existing.fireCount >= config.limit) return { ...decision, allowed: false };
+    return { ...decision, allowed: true };
+  }
+
+  private async recordCooldownFire(
+    rule: WorkflowRuleDto,
+    decision: RuleCooldownDecision,
+    status: WorkflowTriggerFireResponse['results'][number]['status'],
+  ) {
+    if (status === 'skipped' || decision.config.disabled || !decision.customerId) return;
+    const shouldReset = !decision.existing || cooldownExpired(decision.existing.windowStartedAt, decision.firedAt, decision.config.hours);
+    await this.repository.upsertCooldown({
+      ruleId: rule.id,
+      customerId: decision.customerId,
+      windowStartedAt: shouldReset ? decision.firedAt : decision.existing!.windowStartedAt,
+      lastFiredAt: decision.firedAt,
+      fireCount: shouldReset ? 1 : decision.existing!.fireCount + 1,
+    });
   }
 
   private async resolveCustomer(params: Record<string, unknown>) {
@@ -403,6 +480,7 @@ export class RulesService {
     state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
     conditionTrace: WorkflowConditionTrace[];
     whenTrace: WorkflowWhenGroupTrace[];
+    cooldown: WorkflowCooldownTrace;
     taskIds: string[];
   }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
     this.executor.recognizeAction(action.action);
@@ -658,6 +736,7 @@ export class RulesService {
         rulePriority: context.rule.priority,
         conditionTrace: context.conditionTrace,
         whenTrace: context.whenTrace,
+        cooldown: context.cooldown,
         stateSnapshot: fireTimeStateSnapshot(context.state),
       },
     };
@@ -831,13 +910,75 @@ type WorkflowActionContext = {
   state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
   conditionTrace: WorkflowConditionTrace[];
   whenTrace: WorkflowWhenGroupTrace[];
+  cooldown: WorkflowCooldownTrace;
   taskIds: string[];
+};
+
+type RuleCooldownConfig = {
+  disabled: boolean;
+  hours: number;
+  limit: number;
+};
+
+type RuleCooldownRow = {
+  windowStartedAt: Date;
+  lastFiredAt: Date;
+  fireCount: number;
+};
+
+type RuleCooldownDecision = {
+  allowed: boolean;
+  config: RuleCooldownConfig;
+  customerId: string | null;
+  existing: RuleCooldownRow | null;
+  firedAt: Date;
+  trace: WorkflowCooldownTrace;
 };
 
 function conditionGroups(definition: WorkflowRuleDefinition): WorkflowRuleWhenGroup[] {
   if (definition.whenGroups?.length) return definition.whenGroups;
   if (definition.when.length > 0) return [{ id: 'default', conditions: definition.when }];
   return [];
+}
+
+function normalizeCooldown(definition: WorkflowRuleDefinition): RuleCooldownConfig {
+  const raw = definition.cooldown;
+  if (raw === undefined) return { disabled: false, hours: 24, limit: 1 };
+  if (typeof raw === 'number') return { disabled: raw === 0, hours: raw, limit: 1 };
+  return {
+    disabled: raw.hours === 0,
+    hours: raw.hours,
+    limit: raw.limit,
+  };
+}
+
+function cooldownTrace(
+  config: RuleCooldownConfig,
+  customerId: string | null,
+  row: RuleCooldownRow | null,
+  now: Date,
+): WorkflowCooldownTrace {
+  const expired = row ? cooldownExpired(row.windowStartedAt, now, config.hours) : false;
+  const activeRow = row && !expired ? row : null;
+  return {
+    disabled: config.disabled,
+    customerId,
+    hours: config.hours,
+    limit: config.limit,
+    currentCount: activeRow?.fireCount ?? 0,
+    windowStartedAt: activeRow?.windowStartedAt.toISOString() ?? null,
+    lastFiredAt: activeRow?.lastFiredAt.toISOString() ?? null,
+    nextEligibleAt: activeRow ? addHours(activeRow.windowStartedAt, config.hours).toISOString() : null,
+  };
+}
+
+function cooldownExpired(windowStartedAt: Date, now: Date, hours: number) {
+  if (hours <= 0) return true;
+  return now.getTime() >= addHours(windowStartedAt, hours).getTime();
+}
+
+function addHours(date: Date, hours: number) {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
 function fireTimeStateSnapshot(state: WorkflowActionContext['state']) {

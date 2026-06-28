@@ -29,11 +29,21 @@ export const workflowRuleActionSchema = z.object({
 });
 export type WorkflowRuleAction = z.infer<typeof workflowRuleActionSchema>;
 
+export const workflowRuleCooldownSchema = z.union([
+  z.coerce.number().min(0).max(8760),
+  z.object({
+    hours: z.coerce.number().min(0).max(8760),
+    limit: z.coerce.number().int().min(1).max(100).default(1),
+  }),
+]);
+export type WorkflowRuleCooldown = z.infer<typeof workflowRuleCooldownSchema>;
+
 export const workflowRuleDefinitionSchema = z.object({
   status: workflowRuleStatusSchema,
   priority: z.coerce.number().int().min(0).max(1000),
   composable: z.boolean(),
   trigger: workflowTriggerSchema,
+  cooldown: workflowRuleCooldownSchema.optional(),
   when: z.array(workflowRuleConditionSchema),
   whenGroups: z.array(workflowRuleWhenGroupSchema).optional(),
   actions: z.array(workflowRuleActionSchema).min(1),
@@ -94,12 +104,13 @@ export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
   status: 'task_created' | 'actions_applied' | 'no_op' | 'shadow_matched' | 'skipped';
-  reason?: 'conditions_not_matched' | 'actions_skipped' | 'duplicate_event' | 'unsupported_action';
+  reason?: 'conditions_not_matched' | 'actions_skipped' | 'duplicate_event' | 'cooldown' | 'unsupported_action';
   executionMode?: 'active' | 'shadow';
   shortCircuited?: boolean;
   taskIds: string[];
   conditionTrace?: WorkflowConditionTrace[];
   whenTrace?: WorkflowWhenGroupTrace[];
+  cooldown?: WorkflowCooldownTrace;
   actionTrace?: WorkflowActionTrace[];
 }
 
@@ -117,6 +128,17 @@ export interface WorkflowWhenGroupTrace {
   id: string;
   matched: boolean;
   conditionTrace: WorkflowConditionTrace[];
+}
+
+export interface WorkflowCooldownTrace {
+  disabled: boolean;
+  customerId: string | null;
+  hours: number;
+  limit: number;
+  currentCount: number;
+  windowStartedAt: string | null;
+  lastFiredAt: string | null;
+  nextEligibleAt: string | null;
 }
 
 export interface WorkflowTriggerFireResponse {

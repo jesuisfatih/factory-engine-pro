@@ -70,6 +70,47 @@ export class RulesRepository {
     });
   }
 
+  findCooldown(ruleId: string, customerId: string) {
+    return this.prisma.db.workflowRuleCooldown.findFirst({
+      where: {
+        ruleId,
+        customerId,
+      },
+    });
+  }
+
+  upsertCooldown(input: {
+    ruleId: string;
+    customerId: string;
+    windowStartedAt: Date;
+    lastFiredAt: Date;
+    fireCount: number;
+  }) {
+    return this.prisma.db.workflowRuleCooldown.upsert({
+      where: {
+        tenantId_ruleId_customerId: {
+          tenantId: this.tenantId(),
+          ruleId: input.ruleId,
+          customerId: input.customerId,
+        },
+      },
+      create: {
+        id: prefixedId('wrcd'),
+        tenantId: this.tenantId(),
+        ruleId: input.ruleId,
+        customerId: input.customerId,
+        windowStartedAt: input.windowStartedAt,
+        lastFiredAt: input.lastFiredAt,
+        fireCount: input.fireCount,
+      },
+      update: {
+        windowStartedAt: input.windowStartedAt,
+        lastFiredAt: input.lastFiredAt,
+        fireCount: input.fireCount,
+      },
+    });
+  }
+
   create(input: SaveWorkflowRuleInput) {
     return this.prisma.db.workflowRule.create({
       data: {
