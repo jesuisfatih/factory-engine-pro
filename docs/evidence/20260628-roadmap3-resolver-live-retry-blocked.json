@@ -1,0 +1,29 @@
+{
+  "capturedAt": "2026-06-28T05:58:37Z",
+  "scope": "roadmap-item-3-final-gate",
+  "liveBuildSha": "4ec616fa6760782e34ead951b0f5c1a25b708dd7",
+  "endpoint": "POST https://api.dtfbank.com/api/v1/ai/transcript-resolver/test",
+  "tenantId": "ten_dtfbank",
+  "principalId": "tmbr_ten_dtfbank_info_owner",
+  "result": {
+    "ok": false,
+    "httpStatus": 400,
+    "code": "anthropic_resolver_failed",
+    "requestId": "9620c41a-a3a7-4842-b407-90bbff3577ae",
+    "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+  },
+  "containerLog": {
+    "container": "factoryengine-dtfbank-app",
+    "module": "ai",
+    "action": "resolver_failed",
+    "request_id": "9620c41a-a3a7-4842-b407-90bbff3577ae",
+    "tenant_id": "ten_dtfbank",
+    "principal_id": "tmbr_ten_dtfbank_info_owner",
+    "principal_type": "member",
+    "key_source": "tenant_config",
+    "model": "claude-haiku-4-5-20251001",
+    "status_code": 400,
+    "latency_ms": 110
+  },
+  "roadmapGate": "Not complete: item 3 still requires one test transcript JSON output from Anthropic."
+}
