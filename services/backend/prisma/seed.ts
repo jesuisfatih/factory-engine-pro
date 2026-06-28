@@ -225,10 +225,11 @@ async function main() {
     },
   });
   if (seedMember) {
+    const ownershipId = `sown_${suffix}_vip_${seedMember.id}`.slice(0, 190);
     await prisma.segmentOwnership.upsert({
       where: { tenantId_segmentId_memberId: { tenantId, segmentId, memberId: seedMember.id } },
       create: {
-        id: `sown_${suffix}_vip_owner`,
+        id: ownershipId,
         tenantId,
         segmentId,
         memberId: seedMember.id,
