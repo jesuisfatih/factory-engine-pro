@@ -30,13 +30,26 @@ export class CryptoService {
   }
 
   private key() {
-    const raw = this.config.get<string>('CONFIG_ENCRYPTION_KEY');
+    const raw = this.firstConfig(
+      'CONFIG_ENCRYPTION_KEY',
+      'SETTINGS_ENCRYPTION_KEY',
+      'TOKEN_ENCRYPTION_KEY',
+      'JWT_SECRET',
+    );
     if (!raw) {
-      throw new InternalServerErrorException('CONFIG_ENCRYPTION_KEY is required before storing tenant secrets');
+      throw new InternalServerErrorException('CONFIG_ENCRYPTION_KEY, SETTINGS_ENCRYPTION_KEY, TOKEN_ENCRYPTION_KEY, or JWT_SECRET is required before storing tenant secrets');
     }
     if (/^[a-f0-9]{64}$/i.test(raw)) return Buffer.from(raw, 'hex');
     const decoded = Buffer.from(raw, 'base64');
     if (decoded.length === 32) return decoded;
     return createHash('sha256').update(raw).digest();
+  }
+
+  private firstConfig(...keys: string[]) {
+    for (const key of keys) {
+      const value = this.config.get<string>(key)?.trim();
+      if (value) return value;
+    }
+    return null;
   }
 }
