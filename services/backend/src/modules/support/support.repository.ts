@@ -97,6 +97,20 @@ export class SupportRepository {
     await this.prisma.db.serviceRequest.updateMany({ where: { id }, data: { updatedAt: new Date() } });
   }
 
+  listOpenForOverdueSweep(excludedStatuses: string[], take: number) {
+    return this.prisma.db.serviceRequest.findMany({
+      where: { status: { notIn: excludedStatuses } },
+      orderBy: [{ updatedAt: 'asc' }, { createdAt: 'asc' }],
+      take,
+      include: {
+        customer: true,
+        customerUser: true,
+        assignedMember: true,
+        comments: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+  }
+
   listCustomers(search?: string) {
     return this.prisma.db.customer.findMany({
       where: search

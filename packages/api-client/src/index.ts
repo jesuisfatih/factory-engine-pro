@@ -72,6 +72,8 @@ import type {
   ShopifyInitialSyncResponse,
   ShopifySyncStatus,
   SavePersonNoteInput,
+  SweepOverdueServiceRequestsInput,
+  SweepOverdueServiceRequestsResponse,
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
 } from '@factory-engine-pro/contracts';
@@ -490,6 +492,10 @@ export class ApiClient {
 
   bulkSupportRequests(input: BulkServiceRequestsInput) {
     return this.post('/support/bulk', input);
+  }
+
+  sweepOverdueSupportRequests(input: SweepOverdueServiceRequestsInput = { limit: 100 }) {
+    return this.post<SweepOverdueServiceRequestsResponse>('/support/overdue/sweep', input);
   }
 
   b2bAccessRequests(query = '') {

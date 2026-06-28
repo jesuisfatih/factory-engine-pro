@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import type { Prisma } from '@prisma/client';
 import type {
   AddServiceRequestCommentInput,
@@ -7,14 +8,20 @@ import type {
   ChangeServiceRequestStatusInput,
   CloseServiceRequestInput,
   CreateServiceRequestInput,
+  SweepOverdueServiceRequestItem,
+  SweepOverdueServiceRequestsInput,
+  SweepOverdueServiceRequestsResponse,
   SupportQuery,
   UpdateServiceRequestInput,
+  WorkflowTriggerFireResponse,
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { RULES_RUNTIME, type RulesRuntime } from '../rules/rules.tokens.js';
 import { SupportRepository } from './support.repository.js';
 
 const CLOSED_STATUSES = new Set(['closed', 'resolved']);
+const OVERDUE_DUE_AT_KEYS = ['dueAt', 'due_at', 'deadlineAt', 'deadline_at'];
 
 @Injectable()
 export class SupportService {
@@ -22,6 +29,7 @@ export class SupportService {
     private readonly repository: SupportRepository,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async list(query: SupportQuery) {
@@ -162,9 +170,12 @@ export class SupportService {
     const data: Prisma.ServiceRequestUncheckedUpdateManyInput = { status: input.status };
     if (CLOSED_STATUSES.has(input.status)) data.closedAt = new Date();
     if (input.status === 'reopened') data.closedAt = null;
-    await this.repository.update(id, data);
+    const updated = await this.repository.update(id, data);
     await this.addSystemComment(id, 'status_changed', { previousStatus: existing.status, newStatus: input.status });
     this.logger.log('support', 'status', 'Service request status changed', { service_request_id: id, status: input.status });
+    if (updated && !CLOSED_STATUSES.has(existing.status) && CLOSED_STATUSES.has(input.status)) {
+      await this.fireTaskLifecycleTrigger('task.completed', updated);
+    }
     return this.getById(id);
   }
 
@@ -184,8 +195,8 @@ export class SupportService {
   }
 
   async close(id: string, input: CloseServiceRequestInput) {
-    await this.requireRow(id);
-    await this.repository.update(id, {
+    const existing = await this.requireRow(id);
+    const updated = await this.repository.update(id, {
       status: 'closed',
       closedAt: new Date(),
       resolutionCode: input.resolutionCode ?? null,
@@ -193,6 +204,9 @@ export class SupportService {
     });
     await this.addSystemComment(id, 'closed', { resolutionCode: input.resolutionCode ?? null, resolutionNote: input.resolutionNote ?? null });
     this.logger.log('support', 'close', 'Service request closed', { service_request_id: id });
+    if (updated && !CLOSED_STATUSES.has(existing.status)) {
+      await this.fireTaskLifecycleTrigger('task.completed', updated);
+    }
     return this.getById(id);
   }
 
@@ -214,6 +228,56 @@ export class SupportService {
     }
     this.logger.log('support', 'bulk', 'Bulk support action applied', { count: input.ids.length });
     return { ok: true, count: input.ids.length };
+  }
+
+  async sweepOverdue(input: SweepOverdueServiceRequestsInput): Promise<SweepOverdueServiceRequestsResponse> {
+    const checkedAt = input.now ? new Date(input.now) : new Date();
+    if (Number.isNaN(checkedAt.getTime())) throw new BadRequestException('A valid ISO datetime is required for now.');
+
+    const rows = await this.repository.listOpenForOverdueSweep(Array.from(CLOSED_STATUSES), input.limit ?? 100);
+    const items: SweepOverdueServiceRequestItem[] = [];
+    let overdue = 0;
+    let skipped = 0;
+
+    for (const row of rows) {
+      const dueAt = this.extractExplicitDueAt(row.metadata);
+      if (!dueAt) {
+        skipped += 1;
+        continue;
+      }
+      if (dueAt.getTime() > checkedAt.getTime()) continue;
+
+      overdue += 1;
+      const result = await this.fireTaskLifecycleTrigger('task.overdue', row, {
+        dueAt: dueAt.toISOString(),
+        checkedAt: checkedAt.toISOString(),
+      });
+      if (!result) {
+        skipped += 1;
+        continue;
+      }
+
+      items.push({
+        id: row.id,
+        title: row.title,
+        status: row.status as SweepOverdueServiceRequestItem['status'],
+        priority: row.priority as SweepOverdueServiceRequestItem['priority'],
+        dueAt: dueAt.toISOString(),
+        eventId: result.eventId,
+        evaluatedRules: result.evaluatedRules,
+        tasksCreated: result.tasksCreated,
+        resultStatuses: result.results.map((entry) => entry.status),
+      });
+    }
+
+    return {
+      checkedAt: checkedAt.toISOString(),
+      scanned: rows.length,
+      overdue,
+      fired: items.length,
+      skipped,
+      items,
+    };
   }
 
   async listCustomers(search?: string) {
@@ -298,6 +362,81 @@ export class SupportService {
     await this.repository.touch(id);
   }
 
+  private async fireTaskLifecycleTrigger(
+    trigger: 'task.completed' | 'task.overdue',
+    row: any,
+    extraParams: Record<string, unknown> = {},
+  ): Promise<WorkflowTriggerFireResponse | null> {
+    try {
+      const rules = this.moduleRef.get<RulesRuntime>(RULES_RUNTIME, { strict: false });
+      const metadata = this.asRecord(row.metadata);
+      const workflow = this.asRecord(metadata.workflow);
+      const occurredAt = trigger === 'task.completed'
+        ? (row.closedAt ?? row.updatedAt ?? new Date())
+        : new Date();
+      const eventKey = trigger === 'task.overdue'
+        ? String(extraParams.dueAt ?? row.updatedAt ?? new Date().toISOString())
+        : new Date(occurredAt).toISOString();
+      const result = await rules.fireTrigger({
+        trigger,
+        eventId: `${trigger}:${row.id}:${eventKey}`,
+        source: 'support.task_lifecycle',
+        occurredAt: new Date(occurredAt).toISOString(),
+        params: {
+          taskId: row.id,
+          serviceRequestId: row.id,
+          customerId: row.customerId ?? undefined,
+          customerUserId: row.customerUserId ?? undefined,
+          assignedMemberId: row.assignedMemberId ?? undefined,
+          status: row.status,
+          priority: row.priority,
+          surface: row.surface,
+          source: row.source,
+          title: row.title,
+          category: metadata.category,
+          matchedRuleId: workflow.matchedRuleId ?? workflow.matched_rule_id,
+          workflow,
+          ...extraParams,
+        },
+      });
+      this.logger.log(
+        'support',
+        trigger === 'task.overdue' ? 'task_overdue_trigger_fired' : 'task_completed_trigger_fired',
+        trigger === 'task.overdue'
+          ? 'Overdue task fired workflow trigger'
+          : 'Completed task fired workflow trigger',
+        {
+          service_request_id: row.id,
+          event_id: result.eventId,
+          trigger,
+          evaluated_rules: result.evaluatedRules,
+          tasks_created: result.tasksCreated,
+          result_statuses: result.results.map((entry) => entry.status),
+        },
+      );
+      return result;
+    } catch (error) {
+      this.logger.error('support', 'task_lifecycle_trigger_failed', 'Task lifecycle workflow trigger failed', {
+        service_request_id: row.id,
+        trigger,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private extractExplicitDueAt(metadataValue: unknown) {
+    const metadata = this.asRecord(metadataValue);
+    const workflow = this.asRecord(metadata.workflow);
+    for (const source of [workflow, metadata]) {
+      for (const key of OVERDUE_DUE_AT_KEYS) {
+        const parsed = parseDate(source[key]);
+        if (parsed) return parsed;
+      }
+    }
+    return null;
+  }
+
   private present(row: any) {
     const metadata = this.asRecord(row.metadata);
     const ticketNumber = String(metadata.ticketNumber || `SR-${String(row.id).slice(-8).toUpperCase()}`);
@@ -340,6 +479,15 @@ export class SupportService {
 
 function splitCsv(raw?: string) {
   return String(raw || '').split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function parseDate(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return null;
 }
 
 function buildSla(row: any, firstResponseAt: Date | string | null) {

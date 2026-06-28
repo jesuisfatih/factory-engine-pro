@@ -59,6 +59,7 @@ import {
   makeCondition,
   makeRuleDraft,
   rollbackWorkflowRule,
+  runOverdueTaskSweep,
   runWorkflowRuleBackfill,
   saveWorkflowRule,
   type ConditionOperator,
@@ -543,6 +544,13 @@ function RulesView() {
     },
     onError: (error) => toast.error('Backfill failed', { description: apiErrorMessage(error) }),
   });
+  const overdueSweepMutation = useMutation({
+    mutationFn: runOverdueTaskSweep,
+    onSuccess: (result) => toast.success('Overdue sweep completed', {
+      description: `${result.fired}/${result.overdue} overdue task(s) fired workflow rules.`,
+    }),
+    onError: (error) => toast.error('Overdue sweep failed', { description: apiErrorMessage(error) }),
+  });
   const latestBackfill = backfillsQuery.data?.reports[0];
 
   return (
@@ -856,6 +864,15 @@ function RulesView() {
                 </button>
                 <button
                   type="button"
+                  id="btn-overdue-task-sweep"
+                  className="btn ghost"
+                  disabled={overdueSweepMutation.isPending}
+                  onClick={() => overdueSweepMutation.mutate()}
+                >
+                  <AlertTriangle size={12} /> {overdueSweepMutation.isPending ? 'Sweeping...' : 'Sweep overdue'}
+                </button>
+                <button
+                  type="button"
                   id="btn-save-workflow-rule"
                   className="btn primary"
                   disabled={!draft || saveMutation.isPending}
@@ -887,6 +904,16 @@ function RulesView() {
                 {saveMutation.isError && <span className="danger-text">{apiErrorMessage(saveMutation.error)}</span>}
                 {fireMutation.isError && <span className="danger-text">{apiErrorMessage(fireMutation.error)}</span>}
                 {backfillMutation.isError && <span className="danger-text">{apiErrorMessage(backfillMutation.error)}</span>}
+                {overdueSweepMutation.isIdle && <span><strong>Overdue:</strong> no sweep run</span>}
+                {overdueSweepMutation.isSuccess && (
+                  <span>
+                    <strong>Overdue:</strong>{' '}
+                    {overdueSweepMutation.data.fired === 0
+                      ? `0 fired (${overdueSweepMutation.data.scanned} scanned)`
+                      : `${overdueSweepMutation.data.fired}/${overdueSweepMutation.data.overdue} fired`}
+                  </span>
+                )}
+                {overdueSweepMutation.isError && <span className="danger-text">{apiErrorMessage(overdueSweepMutation.error)}</span>}
                 {verify.data && (
                   <>
                     <span><CheckCircle2 size={11} /> {verify.data.probeValues.trigger}</span>

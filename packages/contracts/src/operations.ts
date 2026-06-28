@@ -153,6 +153,33 @@ export const closeServiceRequestSchema = z.object({
 });
 export type CloseServiceRequestInput = z.infer<typeof closeServiceRequestSchema>;
 
+export const sweepOverdueServiceRequestsSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  now: z.string().datetime().optional(),
+});
+export type SweepOverdueServiceRequestsInput = z.infer<typeof sweepOverdueServiceRequestsSchema>;
+
+export interface SweepOverdueServiceRequestItem {
+  id: string;
+  title: string;
+  status: ServiceRequestStatus;
+  priority: ServiceRequestPriority;
+  dueAt: string;
+  eventId: string;
+  evaluatedRules: number;
+  tasksCreated: number;
+  resultStatuses: string[];
+}
+
+export interface SweepOverdueServiceRequestsResponse {
+  checkedAt: string;
+  scanned: number;
+  overdue: number;
+  fired: number;
+  skipped: number;
+  items: SweepOverdueServiceRequestItem[];
+}
+
 export const bulkServiceRequestsSchema = z.object({
   ids: z.array(z.string().trim().min(1)).min(1).max(500),
   assignedMemberId: z.string().trim().nullable().optional(),

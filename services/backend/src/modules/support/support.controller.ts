@@ -7,6 +7,7 @@ import {
   closeServiceRequestSchema,
   createServiceRequestSchema,
   MEMBER_PERMISSIONS,
+  sweepOverdueServiceRequestsSchema,
   supportQuerySchema,
   updateServiceRequestSchema,
   type AddServiceRequestCommentInput,
@@ -15,6 +16,7 @@ import {
   type ChangeServiceRequestStatusInput,
   type CloseServiceRequestInput,
   type CreateServiceRequestInput,
+  type SweepOverdueServiceRequestsInput,
   type SupportQuery,
   type UpdateServiceRequestInput,
 } from '@factory-engine-pro/contracts';
@@ -68,6 +70,12 @@ export class SupportController {
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   bulk(@Body(new ZodValidationPipe(bulkServiceRequestsSchema)) body: BulkServiceRequestsInput) {
     return this.support.bulk(body);
+  }
+
+  @Post('overdue/sweep')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  sweepOverdue(@Body(new ZodValidationPipe(sweepOverdueServiceRequestsSchema)) body: SweepOverdueServiceRequestsInput) {
+    return this.support.sweepOverdue(body);
   }
 
   @Get(':id')
