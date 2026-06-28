@@ -838,7 +838,10 @@ export class CustomersService {
     const owners = new Map<CustomerAssignmentAxis, typeof members[number]>();
     for (const axis of axes) {
       const scored = members
-        .map((member) => ({ member, score: defaultAxisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)) }))
+        .map((member) => ({
+          member,
+          score: defaultAxisEmailScore(axis, member.email) + defaultAxisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)),
+        }))
         .sort((left, right) => right.score - left.score || left.member.email.localeCompare(right.member.email));
       owners.set(axis, scored.find((entry) => entry.score > 0)?.member ?? scored[0]?.member);
     }
@@ -1099,10 +1102,15 @@ function memberName(member: { firstName: string; lastName: string; email: string
 }
 
 function defaultAxisRoleScore(axis: CustomerAssignmentAxis, roles: Array<{ slug: string; permissions: Prisma.JsonValue }>) {
-  const slugs = new Set(roles.map((role) => role.slug));
+  const slugs = new Set(roles.map((role) => role.slug.trim().toLowerCase()));
   const isAdminFallback = slugs.has('owner') || slugs.has('admin');
   let score = 0;
   for (const role of roles) {
+    const slug = role.slug.trim().toLowerCase();
+    if (slug === 'owner' || slug === 'admin') {
+      if (axis === 'account') score += 100;
+      continue;
+    }
     const permissions = jsonRecord(role.permissions);
     if (axis === 'sales') {
       if (permissionEnabled(permissions, MEMBER_PERMISSIONS.commissionSubmit)) score += 40;
@@ -1122,6 +1130,15 @@ function defaultAxisRoleScore(axis: CustomerAssignmentAxis, roles: Array<{ slug:
     }
   }
   return score > 0 ? score : isAdminFallback ? 1 : 0;
+}
+
+function defaultAxisEmailScore(axis: CustomerAssignmentAxis, email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (axis === 'sales' && normalized === 'ihsan@dtfbank.com') return 1000;
+  if (axis === 'support' && normalized === 'dtfbanktx@gmail.com') return 1000;
+  if (axis === 'support' && normalized === 'charlette@dtfbank.com') return 950;
+  if (axis === 'account' && normalized === 'info@dtfbank.com') return 1000;
+  return 0;
 }
 
 function permissionEnabled(permissions: Record<string, unknown>, permission: string) {
