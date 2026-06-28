@@ -1,0 +1,19 @@
+﻿{
+    "generatedAt":  "2026-06-28T03:04:31.8240453Z",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "buildSha":  "36fa7cd41c45b436ad19d38d66cf701b284db48b",
+    "pm2":  [
+                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1150     │ 21m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1120     │ 21m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1115     │ 21m    │ 0    │ online    │ 0%       │ 188.3mb  │ root     │ disabled │",
+                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1137     │ 21m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+            ],
+    "logs":  "\u001b[32m[Nest] 1115  - \u001b[39m06/28/2026, 2:58:54 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"shopify-sync-4\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"shopify\",\"action\":\"sync_completed\",\"message\":\"Shopify sync resource completed\",\"resource\":\"customers\",\"records_processed\":7494}\u001b[39m"
+}

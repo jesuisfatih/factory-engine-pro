@@ -1,0 +1,126 @@
+﻿{
+  "generatedAt": "2026-06-28T03:05:26.639Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "appBase": "https://app.dtfbank.com",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "36fa7cd41c45b436ad19d38d66cf701b284db48b",
+  "tenantConfig": {
+    "shopifyDomain": "eagle-dtf-print.myshopify.com",
+    "hasShopifyAdminToken": true,
+    "hasAnthropicApiKey": true,
+    "hasAircallApiId": true,
+    "hasAircallApiToken": true,
+    "hasAircallWebhookSecret": true
+  },
+  "shopify": {
+    "trigger": {
+      "message": "Reused recent completed Shopify customers sync log.",
+      "batchId": null,
+      "queued": false,
+      "resources": [
+        "customers"
+      ],
+      "syncLogIds": [
+        "slog_kob2zbcj0b6cjng7x8jxk0eu"
+      ]
+    },
+    "customerState": {
+      "resource": "customers",
+      "status": "completed",
+      "isRunning": false,
+      "lastCompletedAt": "2026-06-28T02:58:54.368Z",
+      "lastFailedAt": null,
+      "lastError": null,
+      "totalRecordsSynced": 7494,
+      "lastRunRecords": 7494,
+      "snapshotRecords": 13448,
+      "consecutiveFailures": 0,
+      "lastCursor": null,
+      "heartbeatAt": "2026-06-28T02:58:54.368Z"
+    },
+    "log": {
+      "id": "slog_kob2zbcj0b6cjng7x8jxk0eu",
+      "action": "initial.customers",
+      "status": "completed",
+      "message": "customers initial sync completed.",
+      "startedAt": "2026-06-28T02:56:49.849Z",
+      "finishedAt": "2026-06-28T02:58:54.372Z",
+      "metadata": {
+        "pages": 30,
+        "source": "tenant_config",
+        "resource": "customers",
+        "recordsProcessed": 7494
+      }
+    },
+    "completedWithout401": true
+  },
+  "aircall": {
+    "syncSource": "aircall_api",
+    "usersSeen": 4,
+    "membersSeen": 17,
+    "targetMappings": [
+      {
+        "email": "info@dtfbank.com",
+        "memberId": "tmbr_ten_dtfbank_info_owner",
+        "memberName": "DTF Bank Owner",
+        "aircallUserId": "1831111",
+        "aircallUserEmail": "ibaysal@dtfbank.com",
+        "source": "manual"
+      },
+      {
+        "email": "dtfbanktx@gmail.com",
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "memberName": "Linda Marroquin",
+        "aircallUserId": "1831312",
+        "aircallUserEmail": "dtfbanktx@gmail.com",
+        "source": "email_auto"
+      },
+      {
+        "email": "charlette@dtfbank.com",
+        "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+        "memberName": "Charlette Boatman",
+        "aircallUserId": "1972780",
+        "aircallUserEmail": "charlette@dtfbank.com",
+        "source": "email_auto"
+      },
+      {
+        "email": "ihsan@dtfbank.com",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "aircallUserId": "1831184",
+        "aircallUserEmail": "ihsan@dtfbank.com",
+        "source": "email_auto"
+      }
+    ],
+    "mapCount": 4,
+    "testCall": {
+      "webhook": {
+        "accepted": true,
+        "status": "queued"
+      },
+      "testCallId": "target3-live-1782615927612",
+      "inbox": {
+        "id": "awin_ger70w0cjgp09krflfcl0f15",
+        "status": "processed",
+        "rejectionReason": null,
+        "processedAt": "2026-06-28T03:05:27.682Z"
+      },
+      "call": {
+        "id": "call_hxbjza6rc3n2vm57z4xnu2zk",
+        "aircallCallId": "target3-live-1782615927612",
+        "currentOperatorId": "tmbr_ten_dtfbank_linda_marroquin",
+        "status": "closed",
+        "transcriptRaw": "Customer asked for the current order tracking status, mentioned a delayed shipment, and reque
+sted a same day follow up from support."
+      },
+      "linkedCorrectMember": true,
+      "transcriptStored": true
+    }
+  },
+  "anthropic": null,
+  "error": {
+    "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or 
+purchase credits.",
+    "status": 400
+  }
+}

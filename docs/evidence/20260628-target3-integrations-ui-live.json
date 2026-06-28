@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-06-28T03:05:07.180Z",
+  "appUrl": "https://app.dtfbank.com",
+  "routes": [
+    {
+      "key": "shopify",
+      "url": "https://app.dtfbank.com/settings/shopify",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-shopify-settings-live-20260628.png",
+      "bodyTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nShopify Admin API\nCustomers, orders, and products sync.\nRefresh\nSHOP DOMAIN\neagle-dtf-print.myshopify.com\nADMIN ACCESS TOKEN\nSaved\nAPI KEY\nSaved\nAPI SECRET\nSaved\nWEBHOOK HMAC SECRET\nSaved\nProvider credentials\nBlank secret fields keep the encrypted value currently stored for this tenant.\n SHOP DOMAIN\nADMIN ACCESS TOKEN\nAPI KEY\nAPI SECRET\nWEBHOOK HMAC SECRET\nLEAVE BLANK TO KEEP EXISTING ENCRYPTED VALUE\nSave\nInitial sync\nFull backfill for customers, products, and orders. Later webhook and delta sync use the same tenant snapshots.\nRefresh\nRun initial sync\nResource\tStatus\tSnapshot records\tLast run\tFailures\tLast completed\tError\nCustomers\tcompleted\t13448\t7494\t0\t28.06.2026 05:58\t-\nProducts\tcompleted\t304\t303\t0\t27.06.2026 22:55\t-\nOrders\tcompleted\t638\t637\t0\t27.06.2026 22:55\t-",
+      "hasErrorText": true
+    },
+    {
+      "key": "aircall_users",
+      "url": "https://app.dtfbank.com/settings/aircall/users",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-aircall-users-live-20260628.png",
+      "bodyTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nMap Aircall users to sellerusers\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\n4 Aircall user4 linked0 unlinked\nAircall Sync\nAIRCALL USER\tEMAIL\tEXT\tSTATUS\tLINKED MEMBER\t\n\nIB\nIsmail Baysal\n\tibaysal@dtfbank.com\t001\tavailable\t\nDTF Bank Owner\t Unlink\n\nIT\nIhsan Taskiran\n\tihsan@dtfbank.com\t002\tavailable\t\nIhsan Taskiran\t Unlink\n\nLM\nLinda Marroquin\n\tdtfbanktx@gmail.com\t003\tavailable\t\nLinda Marroquin\t Unlink\n\nCB\nCharlette Boatman\n\tcharlette@dtfbank.com\t004\tavailable\t\nCharlette Boatman\t Unlink",
+      "hasErrorText": false
+    },
+    {
+      "key": "ai_health",
+      "url": "https://app.dtfbank.com/settings/ai/health",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target3-ai-health-live-20260628.png",
+      "bodyTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nAI Health\n\nProvider availability, rate limits, recent error spikes, circuit-breaker status. p50/p95 latency, last 5 alerts.",
+      "hasErrorText": true
+    }
+  ]
+}
