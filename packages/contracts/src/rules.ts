@@ -77,8 +77,19 @@ export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
   status: 'task_created' | 'skipped';
-  reason?: 'conditions_pending_resolver' | 'unsupported_action';
+  reason?: 'conditions_not_matched' | 'unsupported_action';
   taskIds: string[];
+  conditionTrace?: WorkflowConditionTrace[];
+}
+
+export interface WorkflowConditionTrace {
+  id: string;
+  condition: string;
+  operator: string;
+  expected: unknown;
+  actual: unknown;
+  matched: boolean;
+  source: string;
 }
 
 export interface WorkflowTriggerFireResponse {
