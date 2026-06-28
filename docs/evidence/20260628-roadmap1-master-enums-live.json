@@ -1,7 +1,7 @@
 ﻿{
     "target":  "ROADMAP item 1 - Master enums.ts single source of truth",
-    "checkedAt":  "2026-06-28T03:07:59.8875248Z",
-    "deployedBuildSha":  "36fa7cd41c45b436ad19d38d66cf701b284db48b",
+    "checkedAt":  "2026-06-28T08:14:16.3094374Z",
+    "deployedBuildSha":  "af2eac154419996f3ce38517d0d880aabce9d960",
     "scope":  {
                   "container":  "factoryengine-dtfbank-app",
                   "apiBase":  "https://api.dtfbank.com/api/v1",
@@ -26,13 +26,13 @@
                                            },
                                 "firstTrigger":  "aircall.call.created",
                                 "lastTrigger":  "task.overdue",
-                                "conditions":  14,
-                                "actions":  9
+                                "lastCondition":  "day_of_week",
+                                "lastAction":  "no-op"
                             },
                 "enumChain":  {
                                   "ok":  true,
                                   "version":  "2026-06-28.1",
-                                  "checkedAt":  "2026-06-28T03:07:48.228Z",
+                                  "checkedAt":  "2026-06-28T08:13:57.442Z",
                                   "counts":  {
                                                  "psychTags":  8,
                                                  "callIntents":  5,
@@ -68,32 +68,25 @@
                                                       "callIntent":  "follow_up",
                                                       "urgencyLevel":  "critical"
                                                   }
-                              },
-                "resolverPrompt":  {
-                                       "promptKey":  "ai.transcript-resolver",
-                                       "promptVersion":  "2026-06-28.1",
-                                       "includesProbePsychTag":  true,
-                                       "includesProbeCallIntent":  true,
-                                       "includesProbeUrgency":  true,
-                                       "includesProbeCondition":  true
-                                   }
+                              }
             },
+    "ui":  {
+               "url":  "https://app.dtfbank.com/rules",
+               "screenshot":  "docs/evidence/roadmap1-master-enums-rules-live-20260628.png",
+               "hasMasterCatalog":  true,
+               "hasCounts":  true,
+               "hasCatalogSource":  true,
+               "hasProbeValues":  true,
+               "principalVisible":  true
+           },
     "runtime":  {
-                    "pm2":  [
-                                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
-                                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
-                                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
-                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1150     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
-                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1120     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
-                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1115     │ 24m    │ 0    │ online    │ 0%       │ 188.8mb  │ root     │ disabled │",
-                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1137     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
-                                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
-                            ],
-                    "enumChainLog":  "\u001b[32m[Nest] 1115  - \u001b[39m06/28/2026, 3:07:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"801541cd-0533-4774-9139-19a51f374540\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"enum_chain_verified\",\"message\":\"Workflow enum chain verified\",\"catalog_version\":\"2026-06-28.1\",\"counts\":{\"psychTags\":8,\"callIntents\":5,\"urgencyLevels\":4,\"triggers\":29,\"conditions\":14,\"actions\":9},\"prompt_key\":\"ai.transcript-resolver\",\"probe_values\":{\"trigger\":\"task.overdue\",\"condition\":\"day_of_week\",\"action\":\"no-op\",\"psychTag\":\"satisfied\",\"callIntent\":\"follow_up\",\"urgencyLevel\":\"critical\"},\"executor\":{\"recognizedTriggers\":29,\"recognizedConditions\":14,\"recognizedActions\":9}}\u001b[39m"
+                    "pm2":  "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1131     │ 85s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │\n│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1114     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1109     │ 85s    │ 0    │ online    │ 0%       │ 140.1mb  │ root     │ disabled │\n│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1138     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘",
+                    "startLog":  "\u001b[32m[Nest] 1109  - \u001b[39m06/28/2026, 8:12:52 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                    "enumChainLog":  "\u001b[32m[Nest] 1109  - \u001b[39m06/28/2026, 8:13:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d53f6d4c-b67e-4afa-8f04-d5702d9cd913\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"enum_chain_verified\",\"message\":\"Workflow enum chain verified\",\"catalog_version\":\"2026-06-28.1\",\"counts\":{\"psychTags\":8,\"callIntents\":5,\"urgencyLevels\":4,\"triggers\":29,\"conditions\":14,\"actions\":9},\"prompt_key\":\"ai.transcript-resolver\",\"probe_values\":{\"trigger\":\"task.overdue\",\"condition\":\"day_of_week\",\"action\":\"no-op\",\"psychTag\":\"satisfied\",\"callIntent\":\"follow_up\",\"urgencyLevel\":\"critical\"},\"executor\":{\"recognizedTriggers\":29,\"recognizedConditions\":14,\"recognizedActions\":9}}\u001b[39m"
                 },
     "notes":  [
-                  "No local URL was used as evidence.",
-                  "Canvas source is GET /api/v1/rules/catalog and executor counts are returned by /rules/enum-chain.",
-                  "Trigger count is 29: 15 system + 5 AI-derived + 5 aggregate + 2 accounts + 2 chaining-prep."
+                  "No local proof URL is used as evidence.",
+                  "Canvas source is GET /api/v1/rules/catalog.",
+                  "Probe values use the last current enum values: task.overdue, day_of_week, no-op, satisfied, follow_up, critical."
               ]
 }

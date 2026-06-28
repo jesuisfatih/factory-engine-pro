@@ -1,0 +1,64 @@
+﻿{
+    "target":  "DTF Bank Anthropic tenant credential and resolver health",
+    "checkedAt":  "2026-06-28T08:14:16.3494160Z",
+    "deployedBuildSha":  "af2eac154419996f3ce38517d0d880aabce9d960",
+    "scope":  {
+                  "container":  "factoryengine-dtfbank-app",
+                  "apiBase":  "https://api.dtfbank.com/api/v1",
+                  "tenantId":  "ten_dtfbank",
+                  "principalEmail":  "info@dtfbank.com"
+              },
+    "tenantConfig":  {
+                         "hasAnthropicApiKey":  true,
+                         "keyStored":  "encrypted_at_rest",
+                         "keyValue":  "redacted"
+                     },
+    "health":  {
+                   "provider":  "anthropic",
+                   "configured":  true,
+                   "reachable":  true,
+                   "status":  "ok",
+                   "source":  "tenant_config",
+                   "modelCount":  8,
+                   "resolverReachable":  true,
+                   "resolverStatus":  "ok",
+                   "resolverError":  null
+               },
+    "resolverTest":  {
+                         "provider":  "anthropic",
+                         "model":  "claude-haiku-4-5-20251001",
+                         "source":  "tenant_config",
+                         "promptKey":  "ai.transcript-resolver",
+                         "latencyMs":  2041,
+                         "outputFields":  [
+                                              "customer_match",
+                                              "product_mentions",
+                                              "psych_tags",
+                                              "call_intent",
+                                              "shipping_signals",
+                                              "payment_signals",
+                                              "urgency_signal",
+                                              "competitor_mentioned",
+                                              "summary",
+                                              "language_detected",
+                                              "resolved_with_version"
+                                          ],
+                         "callIntent":  "support",
+                         "urgency":  "high",
+                         "psychTags":  [
+                                           "angry",
+                                           "shipping_issue",
+                                           "refund_intent"
+                                       ],
+                         "resolvedWithVersion":  1
+                     },
+    "runtime":  {
+                    "pm2":  "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1131     │ 85s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │\n│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1114     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1109     │ 85s    │ 0    │ online    │ 0%       │ 140.1mb  │ root     │ disabled │\n│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1138     │ 85s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘",
+                    "startLog":  "\u001b[32m[Nest] 1109  - \u001b[39m06/28/2026, 8:12:52 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                },
+    "notes":  [
+                  "Secret is not stored in this evidence file.",
+                  "Tenant-config key overrides container env for this tenant.",
+                  "Health now uses the same wide model listing path as resolver model selection."
+              ]
+}
