@@ -1,0 +1,31 @@
+{
+  "proof": "roadmap11_when_group_combiner_ui_live",
+  "appUrl": "https://app.dtfbank.com/rules",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap11-when-groups-20260628112448",
+  "checks": {
+    "reachedRulesPage": true,
+    "hasRuleEngineTitle": true,
+    "hasGroupedProofRules": true,
+    "hasTwoWhenGroupsMeta": true,
+    "hasGroupLabelsInCanvas": true,
+    "hasConditionCountTwo": true,
+    "hasRulesNetwork": true,
+    "hasCatalogNetwork": true
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/catalog",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules",
+      "status": 200
+    }
+  ],
+  "finalUrl": "https://app.dtfbank.com/rules",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap11-when-groups-ui-live-20260628.png",
+  "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nRule engine\nD\nDTF Bank\nOwner\nRule engine\nVisual editor for task-generation rules. Author here, the engine consumes the JSON.\nVerify chain\nMASTER ENUM CATALOG V2026-06-28.1\n8 psych tags · 5 call intents · 4 urgency levels · 29 triggers · 14 conditions · 9 actions\nSAVED RULES\n12\nshadow\np17\nRoadmap 7 persisted rule 20260628103457\nmanual.trigger -> create_task\n1 conditions\nsingle fire\narchived\np80\nRoadmap 8 aggregate trigger proof 20260628104932\ncustomer.repeat_call.detected -> create_task\n0 conditions\ncomposable\narchived\np80\nRoadmap 8 ai_derived trigger proof 20260628104932\npsych.tag.detected -> create_task\n0 conditions\ncomposable\narchived\np80\nRoadmap 8 system trigger proof 20260628104932\nshopify.order.created -> create_task\n0 conditions\ncomposable\narchived\np85\nRoadmap 9 no_match condition proof 20260628105847\nmanual.trigger -> create_task\n1 conditions\ncomposable\narchived\np85\nRoadmap 9 match condition proof 20260628105847\nmanual.trigger -> create_task\n1 conditions\ncomposable\narchived\np87\nRoadmap 10 no-op proof 20260628111708\nmanual.trigger -> no-op\n1 conditions\ncomposable\narchived\np87\nRoadmap 10 no-op proof 20260628111139\nmanual.trigger -> no-op\n1 conditions\ncomposable\narchived\np88\nRoadmap 11 grouped WHEN blocked 20260628112448\nmanual.trigger -> create_task\n2 conditions\n2 WHEN groups\ncomposable\narchived\np88\nRoadmap 10 multi action proof 20260628111708\nmanual.trigger -> create_task + route_member + add_watcher + escalate + pin_customer + add_note + segment_add + segment_remove\n1 conditions\ncomposable\narchived\np88\nRoadmap 10 multi action proof 20260628111139\nmanual.trigger -> create_task + route_member + add_watcher + escalate + pin_customer + add_note + seg",
+  "checkedAt": "2026-06-28T11:32:37.225Z"
+}

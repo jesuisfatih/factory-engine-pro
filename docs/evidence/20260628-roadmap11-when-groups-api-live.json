@@ -1,0 +1,268 @@
+{
+  "proof": "roadmap11_when_group_combiner_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap11-when-groups-20260628112448",
+  "customer": {
+    "id": "cust_nw1yip6avbgmk8gito31hw7y",
+    "shopifyCustomerId": "7591658356950",
+    "totalSpent": 173.88
+  },
+  "matchRule": {
+    "id": "wrule_w99q2la9yns5svgn61dno54y",
+    "name": "Roadmap 11 grouped WHEN match 20260628112448",
+    "status": "active"
+  },
+  "blockedRule": {
+    "id": "wrule_sef32839997lmocop3w06mec",
+    "name": "Roadmap 11 grouped WHEN blocked 20260628112448",
+    "status": "active"
+  },
+  "fire": {
+    "eventId": "roadmap11-when-groups-20260628112448",
+    "trigger": "manual.trigger",
+    "source": "roadmap11-live-proof",
+    "matchedRules": 2,
+    "evaluatedRules": 2,
+    "tasksCreated": 1,
+    "tasks": [
+      {
+        "ruleId": "wrule_w99q2la9yns5svgn61dno54y",
+        "ruleName": "Roadmap 11 grouped WHEN match 20260628112448",
+        "actionId": "act-create-task",
+        "action": "create_task",
+        "taskId": "sr_rflmuhes6wdo7xvokwdqyf4k",
+        "title": "Roadmap 11 grouped WHEN task 20260628112448"
+      }
+    ],
+    "results": [
+      {
+        "ruleId": "wrule_w99q2la9yns5svgn61dno54y",
+        "ruleName": "Roadmap 11 grouped WHEN match 20260628112448",
+        "status": "task_created",
+        "taskIds": [
+          "sr_rflmuhes6wdo7xvokwdqyf4k"
+        ],
+        "conditionTrace": [
+          {
+            "id": "cond-intent",
+            "condition": "call_intent",
+            "operator": "=",
+            "expected": "inquiry",
+            "actual": "inquiry",
+            "matched": true,
+            "source": "event_or_resolver"
+          },
+          {
+            "id": "cond-ltv",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "100",
+            "actual": 173.88,
+            "matched": true,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "group-intent",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-intent",
+                "condition": "call_intent",
+                "operator": "=",
+                "expected": "inquiry",
+                "actual": "inquiry",
+                "matched": true,
+                "source": "event_or_resolver"
+              }
+            ]
+          },
+          {
+            "id": "group-ltv",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-ltv",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "100",
+                "actual": 173.88,
+                "matched": true,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ],
+        "actionTrace": [
+          {
+            "actionId": "act-create-task",
+            "action": "create_task",
+            "status": "applied",
+            "targetType": "service_request",
+            "targetId": "sr_rflmuhes6wdo7xvokwdqyf4k",
+            "message": "Created service request from workflow action."
+          }
+        ]
+      },
+      {
+        "ruleId": "wrule_sef32839997lmocop3w06mec",
+        "ruleName": "Roadmap 11 grouped WHEN blocked 20260628112448",
+        "status": "skipped",
+        "reason": "conditions_not_matched",
+        "taskIds": [],
+        "conditionTrace": [
+          {
+            "id": "cond-intent-blocked",
+            "condition": "call_intent",
+            "operator": "=",
+            "expected": "inquiry",
+            "actual": "inquiry",
+            "matched": true,
+            "source": "event_or_resolver"
+          },
+          {
+            "id": "cond-ltv-blocked",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "100000",
+            "actual": 173.88,
+            "matched": false,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "group-intent",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-intent-blocked",
+                "condition": "call_intent",
+                "operator": "=",
+                "expected": "inquiry",
+                "actual": "inquiry",
+                "matched": true,
+                "source": "event_or_resolver"
+              }
+            ]
+          },
+          {
+            "id": "group-ltv-high",
+            "matched": false,
+            "conditionTrace": [
+              {
+                "id": "cond-ltv-blocked",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "100000",
+                "actual": 173.88,
+                "matched": false,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T11:24:49.191Z"
+  },
+  "supportTasks": [
+    {
+      "id": "sr_rflmuhes6wdo7xvokwdqyf4k",
+      "title": "Roadmap 11 grouped WHEN task 20260628112448",
+      "status": "open",
+      "priority": "high",
+      "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+      "workflow": {
+        "action": "create_task",
+        "params": {
+          "intent": "inquiry",
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+        },
+        "ruleId": "wrule_w99q2la9yns5svgn61dno54y",
+        "source": "roadmap11-live-proof",
+        "eventId": "roadmap11-when-groups-20260628112448",
+        "trigger": "manual.trigger",
+        "actionId": "act-create-task",
+        "ruleName": "Roadmap 11 grouped WHEN match 20260628112448",
+        "whenTrace": [
+          {
+            "id": "group-intent",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-intent",
+                "actual": "inquiry",
+                "source": "event_or_resolver",
+                "matched": true,
+                "expected": "inquiry",
+                "operator": "=",
+                "condition": "call_intent"
+              }
+            ]
+          },
+          {
+            "id": "group-ltv",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-ltv",
+                "actual": 173.88,
+                "source": "customers.total_spent",
+                "matched": true,
+                "expected": "100",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ],
+        "occurredAt": null,
+        "rulePriority": 89,
+        "conditionTrace": [
+          {
+            "id": "cond-intent",
+            "actual": "inquiry",
+            "source": "event_or_resolver",
+            "matched": true,
+            "expected": "inquiry",
+            "operator": "=",
+            "condition": "call_intent"
+          },
+          {
+            "id": "cond-ltv",
+            "actual": 173.88,
+            "source": "customers.total_spent",
+            "matched": true,
+            "expected": "100",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ]
+      }
+    }
+  ],
+  "archivedRules": [
+    {
+      "id": "wrule_w99q2la9yns5svgn61dno54y",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    },
+    {
+      "id": "wrule_sef32839997lmocop3w06mec",
+      "status": "archived",
+      "trigger": "manual.trigger"
+    }
+  ],
+  "assertions": {
+    "matchRuleProducedTask": true,
+    "matchRuleHasTwoMatchedGroups": true,
+    "blockedRuleSkippedByDefaultAnd": true,
+    "blockedRuleHasOneFalseGroup": true,
+    "onlyOneTaskCreated": true,
+    "proofRulesArchived": true
+  },
+  "checkedAt": "2026-06-28T11:24:50.697Z"
+}

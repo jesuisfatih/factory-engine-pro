@@ -1,0 +1,198 @@
+﻿{
+  "proof": "roadmap11_when_group_combiner_db_live",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap11-when-groups-20260628112448",
+  "taskIds": [
+    "sr_rflmuhes6wdo7xvokwdqyf4k"
+  ],
+  "ruleIds": [
+    "wrule_w99q2la9yns5svgn61dno54y",
+    "wrule_sef32839997lmocop3w06mec"
+  ],
+  "assertions": {
+    "serviceRequestRowsFound": 1,
+    "taskMetadataHasTwoWhenGroups": true,
+    "workflowRuleRowsFound": 2,
+    "archivedProofRules": true,
+    "definitionsPersistWhenGroups": true,
+    "blockedRuleDidNotCreateTask": true
+  },
+  "serviceRequests": [
+    {
+      "id": "sr_rflmuhes6wdo7xvokwdqyf4k",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 11 grouped WHEN task 20260628112448",
+      "status": "open",
+      "priority": "high",
+      "metadata": {
+        "category": "workflow_rule",
+        "workflow": {
+          "action": "create_task",
+          "params": {
+            "intent": "inquiry",
+            "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+          },
+          "ruleId": "wrule_w99q2la9yns5svgn61dno54y",
+          "source": "roadmap11-live-proof",
+          "eventId": "roadmap11-when-groups-20260628112448",
+          "trigger": "manual.trigger",
+          "actionId": "act-create-task",
+          "ruleName": "Roadmap 11 grouped WHEN match 20260628112448",
+          "whenTrace": [
+            {
+              "id": "group-intent",
+              "matched": true,
+              "conditionTrace": [
+                {
+                  "id": "cond-intent",
+                  "actual": "inquiry",
+                  "source": "event_or_resolver",
+                  "matched": true,
+                  "expected": "inquiry",
+                  "operator": "=",
+                  "condition": "call_intent"
+                }
+              ]
+            },
+            {
+              "id": "group-ltv",
+              "matched": true,
+              "conditionTrace": [
+                {
+                  "id": "cond-ltv",
+                  "actual": 173.88,
+                  "source": "customers.total_spent",
+                  "matched": true,
+                  "expected": "100",
+                  "operator": ">=",
+                  "condition": "customer_ltv_gte"
+                }
+              ]
+            }
+          ],
+          "occurredAt": null,
+          "rulePriority": 89,
+          "conditionTrace": [
+            {
+              "id": "cond-intent",
+              "actual": "inquiry",
+              "source": "event_or_resolver",
+              "matched": true,
+              "expected": "inquiry",
+              "operator": "=",
+              "condition": "call_intent"
+            },
+            {
+              "id": "cond-ltv",
+              "actual": 173.88,
+              "source": "customers.total_spent",
+              "matched": true,
+              "expected": "100",
+              "operator": ">=",
+              "condition": "customer_ltv_gte"
+            }
+          ]
+        },
+        "ticketNumber": "SR-MQXPC39E"
+      },
+      "createdAt": "2026-06-28T11:24:49.158Z",
+      "updatedAt": "2026-06-28T11:24:49.158Z"
+    }
+  ],
+  "workflowRules": [
+    {
+      "id": "wrule_w99q2la9yns5svgn61dno54y",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 11 grouped WHEN match 20260628112448",
+      "status": "archived",
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-create-task",
+            "value": "Roadmap 11 grouped WHEN task 20260628112448",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 89,
+        "composable": true,
+        "whenGroups": [
+          {
+            "id": "group-intent",
+            "conditions": [
+              {
+                "id": "cond-intent",
+                "value": "inquiry",
+                "operator": "=",
+                "condition": "call_intent"
+              }
+            ]
+          },
+          {
+            "id": "group-ltv",
+            "conditions": [
+              {
+                "id": "cond-ltv",
+                "value": "100",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ]
+      },
+      "updatedAt": "2026-06-28T11:24:49.610Z"
+    },
+    {
+      "id": "wrule_sef32839997lmocop3w06mec",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 11 grouped WHEN blocked 20260628112448",
+      "status": "archived",
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-blocked-task",
+            "value": "Roadmap 11 blocked task should not exist 20260628112448",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 88,
+        "composable": true,
+        "whenGroups": [
+          {
+            "id": "group-intent",
+            "conditions": [
+              {
+                "id": "cond-intent-blocked",
+                "value": "inquiry",
+                "operator": "=",
+                "condition": "call_intent"
+              }
+            ]
+          },
+          {
+            "id": "group-ltv-high",
+            "conditions": [
+              {
+                "id": "cond-ltv-blocked",
+                "value": "100000",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ]
+      },
+      "updatedAt": "2026-06-28T11:24:49.826Z"
+    }
+  ],
+  "blockedTaskCount": 0,
+  "checkedAt": "2026-06-28T11:25:11.435Z"
+}

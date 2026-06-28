@@ -1,0 +1,46 @@
+﻿{
+    "proof":  "roadmap11_when_group_combiner_runtime_live",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "eventId":  "roadmap11-when-groups-20260628112448",
+    "expectedCommit":  "56ac24f791a7d3384660270c373aebea91be57bf",
+    "hostBuildSha":  "56ac24f791a7d3384660270c373aebea91be57bf",
+    "containerBuildSha":  "56ac24f791a7d3384660270c373aebea91be57bf",
+    "health":  {
+                   "statusCode":  200,
+                   "body":  {
+                                "ok":  true,
+                                "service":  "factory-engine-pro-backend"
+                            }
+               },
+    "assertions":  {
+                       "hostBuildMatchesHead":  true,
+                       "containerBuildMatchesHead":  true,
+                       "healthOk":  true,
+                       "conditionsMatchedLogSeen":  true,
+                       "conditionsNotMatchedLogSeen":  true,
+                       "whenTraceLogged":  true,
+                       "groupIntentLogged":  true,
+                       "falseGroupLogged":  true,
+                       "taskCreatedLogSeen":  true,
+                       "triggerFiredLogSeen":  true
+                   },
+    "pm2":  [
+                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1143     │ 68s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1118     │ 68s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1113     │ 68s    │ 0    │ online    │ 0%       │ 138.1mb  │ root     │ disabled │",
+                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1135     │ 68s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+            ],
+    "logs":  [
+                 "\u001b[32m[Nest] 1116  - \u001b[39m06/28/2026, 11:24:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"177d9f3c-2fdf-4677-973b-4bf0828d2945\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap11-when-groups-20260628112448\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_w99q2la9yns5svgn61dno54y\",\"matched\":true,\"when_trace\":[{\"id\":\"group-intent\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-intent\",\"condition\":\"call_intent\",\"operator\":\"=\",\"expected\":\"inquiry\",\"actual\":\"inquiry\",\"matched\":true,\"source\":\"event_or_resolver\"}]},{\"id\":\"group-ltv\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-ltv\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}],\"condition_trace\":[{\"id\":\"cond-intent\",\"condition\":\"call_intent\",\"operator\":\"=\",\"expected\":\"inquiry\",\"actual\":\"inquiry\",\"matched\":true,\"source\":\"event_or_resolver\"},{\"id\":\"cond-ltv\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1116  - \u001b[39m06/28/2026, 11:24:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"177d9f3c-2fdf-4677-973b-4bf0828d2945\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_action_applied\",\"message\":\"Created service request from workflow action.\",\"event_id\":\"roadmap11-when-groups-20260628112448\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_w99q2la9yns5svgn61dno54y\",\"action_id\":\"act-create-task\",\"workflow_action\":\"create_task\",\"status\":\"applied\",\"target_type\":\"service_request\",\"target_id\":\"sr_rflmuhes6wdo7xvokwdqyf4k\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1116  - \u001b[39m06/28/2026, 11:24:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"177d9f3c-2fdf-4677-973b-4bf0828d2945\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap11-when-groups-20260628112448\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_w99q2la9yns5svgn61dno54y\",\"action_id\":\"act-create-task\",\"task_id\":\"sr_rflmuhes6wdo7xvokwdqyf4k\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1116  - \u001b[39m06/28/2026, 11:24:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"177d9f3c-2fdf-4677-973b-4bf0828d2945\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_not_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap11-when-groups-20260628112448\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_sef32839997lmocop3w06mec\",\"matched\":false,\"when_trace\":[{\"id\":\"group-intent\",\"matched\":true,\"conditionTrace\":[{\"id\":\"cond-intent-blocked\",\"condition\":\"call_intent\",\"operator\":\"=\",\"expected\":\"inquiry\",\"actual\":\"inquiry\",\"matched\":true,\"source\":\"event_or_resolver\"}]},{\"id\":\"group-ltv-high\",\"matched\":false,\"conditionTrace\":[{\"id\":\"cond-ltv-blocked\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100000\",\"actual\":173.88,\"matched\":false,\"source\":\"customers.total_spent\"}]}],\"condition_trace\":[{\"id\":\"cond-intent-blocked\",\"condition\":\"call_intent\",\"operator\":\"=\",\"expected\":\"inquiry\",\"actual\":\"inquiry\",\"matched\":true,\"source\":\"event_or_resolver\"},{\"id\":\"cond-ltv-blocked\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100000\",\"actual\":173.88,\"matched\":false,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1116  - \u001b[39m06/28/2026, 11:24:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"177d9f3c-2fdf-4677-973b-4bf0828d2945\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap11-when-groups-20260628112448\",\"trigger\":\"manual.trigger\",\"source\":\"roadmap11-live-proof\",\"matched_rules\":2,\"tasks_created\":1}\u001b[39m"
+             ],
+    "checkedAt":  "2026-06-28T11:33:05.9046181Z"
+}
