@@ -1,8 +1,12 @@
 {
-  "checkedAt": "2026-06-28T14:15:42.427Z",
+  "checkedAt": "2026-06-28T14:22:45.137Z",
   "health": {
     "ok": true,
     "service": "factory-engine-pro-backend"
+  },
+  "supportStatus": {
+    "status": 200,
+    "contentType": "text/html"
   },
   "buildSha": "84508d13bab7ead098f895598df0f12b7c18c7e1",
   "docker": {
@@ -21,7 +25,7 @@
     },
     "Ports": "3000-3001/tcp, 4000/tcp",
     "RunningFor": "About an hour ago",
-    "Size": "25.2MB (virtual 3.24GB)",
+    "Size": "25.3MB (virtual 3.24GB)",
     "State": "running",
     "Status": "Up About an hour"
   },
@@ -29,31 +33,40 @@
     {
       "name": "factory-engine-pro-admin",
       "status": "online",
-      "pid": 32121,
-      "restarts": 156,
-      "uptimeMs": 4909
+      "pid": 47495,
+      "restarts": 303,
+      "uptimeMs": 98193
     },
     {
       "name": "factory-engine-pro-person",
       "status": "online",
       "pid": 1383,
       "restarts": 0,
-      "uptimeMs": 3739253
+      "uptimeMs": 4161963
     },
     {
       "name": "factory-engine-pro-accounts",
       "status": "online",
       "pid": 1394,
       "restarts": 0,
-      "uptimeMs": 3739251
+      "uptimeMs": 4161961
     },
     {
       "name": "factory-engine-pro-api",
       "status": "online",
       "pid": 17861,
       "restarts": 0,
-      "uptimeMs": 372422
+      "uptimeMs": 795132
     }
+  ],
+  "viteProcesses": [
+    "1383 /bin/sh -lc cd /app/apps/person && node_modules/.bin/vite preview --host 0.0.0.0 --port 3002",
+    "1394 /bin/sh -lc cd /app/apps/accounts && node_modules/.bin/vite preview --host 0.0.0.0 --port 3001",
+    "1475 node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002",
+    "1476 node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3001",
+    "47495 /bin/sh -lc cd /app/apps/admin && node_modules/.bin/vite preview --host 0.0.0.0 --port 3000",
+    "47523 node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3000",
+    "47748 node /tmp/list-vite-procs.cjs"
   ],
   "migration": {
     "migration_name": "202606290_task_assignee_resolution",
@@ -62,9 +75,11 @@
   },
   "assertions": {
     "healthOk": true,
+    "supportRouteOk": true,
     "buildShaDeployed": true,
     "apiOnline": true,
     "adminOnline": true,
+    "adminSinglePort3000Process": true,
     "migrationApplied": true
   }
 }
