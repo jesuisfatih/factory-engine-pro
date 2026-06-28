@@ -1,0 +1,189 @@
+﻿{
+  "proof": "roadmap13_event_idempotency_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "tenantSlug": "dtfbank",
+  "buildSha": "9927699c6868e7f6a29d68d2cfe9cc2755c4cf7d",
+  "rule": {
+    "id": "wrule_edb967a791c34ed395eed9ad",
+    "name": "Roadmap 13 Aircall event idempotency 20260628115630",
+    "status": "active",
+    "priority": 1000,
+    "composable": false,
+    "trigger": "aircall.call.created",
+    "definition": {
+      "when": [],
+      "status": "active",
+      "actions": [
+        {
+          "id": "act-roadmap13-create-task",
+          "value": "Roadmap 13 Aircall duplicate guard task 20260628115630",
+          "action": "create_task"
+        }
+      ],
+      "trigger": "aircall.call.created",
+      "priority": 1000,
+      "composable": false
+    }
+  },
+  "webhook": {
+    "url": "https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank",
+    "payload": {
+      "tokenPresent": true,
+      "event": "call.created",
+      "timestamp": "2026-06-28T11:56:30.869Z",
+      "externalCallId": "roadmap13-aircall-20260628115630",
+      "transcriptPresent": true
+    },
+    "first": {
+      "statusCode": 200,
+      "ok": true,
+      "body": {
+        "accepted": true,
+        "status": "queued"
+      }
+    },
+    "second": {
+      "statusCode": 200,
+      "ok": true,
+      "body": {
+        "accepted": true,
+        "status": "queued"
+      }
+    }
+  },
+  "workflowEventId": "aircall:acev_jxrtu8qylwryrbvegb7avb12:aircall.call.created",
+  "callEvent": {
+    "id": "acev_jxrtu8qylwryrbvegb7avb12",
+    "externalCallId": "roadmap13-aircall-20260628115630",
+    "eventType": "call.created",
+    "eventTimestamp": "2026-06-28T11:56:30.869Z",
+    "processedAt": "2026-06-28T11:56:31.578Z"
+  },
+  "inboxRows": [
+    {
+      "id": "awin_bt0vg3l6upu7tjri4jla6ew7",
+      "status": "processed",
+      "rejectionReason": null,
+      "tenantId": "ten_dtfbank",
+      "externalCallId": "roadmap13-aircall-20260628115630",
+      "eventType": "call.created",
+      "processedAt": "2026-06-28T11:56:31.582Z"
+    },
+    {
+      "id": "awin_h7ew0xa7q927ztiqug1eevtv",
+      "status": "processed",
+      "rejectionReason": null,
+      "tenantId": "ten_dtfbank",
+      "externalCallId": "roadmap13-aircall-20260628115630",
+      "eventType": "call.created",
+      "processedAt": "2026-06-28T11:56:31.419Z"
+    }
+  ],
+  "executions": [
+    {
+      "id": "wrex_gmyqk1nl39d6pu6puue6cr8f",
+      "eventId": "aircall:acev_jxrtu8qylwryrbvegb7avb12:aircall.call.created",
+      "ruleId": "wrule_edb967a791c34ed395eed9ad",
+      "trigger": "aircall.call.created",
+      "status": "task_created",
+      "taskIds": [
+        "sr_d5sq3mh0ew30h37voxq14695"
+      ],
+      "result": {
+        "ruleId": "wrule_edb967a791c34ed395eed9ad",
+        "status": "task_created",
+        "taskIds": [
+          "sr_d5sq3mh0ew30h37voxq14695"
+        ],
+        "ruleName": "Roadmap 13 Aircall event idempotency 20260628115630",
+        "whenTrace": [],
+        "actionTrace": [
+          {
+            "action": "create_task",
+            "status": "applied",
+            "message": "Created service request from workflow action.",
+            "actionId": "act-roadmap13-create-task",
+            "targetId": "sr_d5sq3mh0ew30h37voxq14695",
+            "targetType": "service_request"
+          }
+        ],
+        "executionMode": "active",
+        "conditionTrace": [],
+        "shortCircuited": true
+      },
+      "firstSeenAt": "2026-06-28T11:56:31.368Z",
+      "updatedAt": "2026-06-28T11:56:31.394Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "sr_d5sq3mh0ew30h37voxq14695",
+      "title": "Roadmap 13 Aircall duplicate guard task 20260628115630",
+      "status": "open",
+      "priority": "critical",
+      "customerId": null,
+      "metadata": {
+        "category": "workflow_rule",
+        "workflow": {
+          "action": "create_task",
+          "params": {
+            "callId": "call_avh4aeum76h8l7ibytyfrj5z",
+            "status": "done",
+            "direction": "inbound",
+            "eventType": "call.created",
+            "customerId": null,
+            "callEventId": "acev_jxrtu8qylwryrbvegb7avb12",
+            "contactEmail": "roadmap13-proof@example.invalid",
+            "contactPhone": "+15550001313",
+            "aircallUserId": "roadmap13-aircall-user",
+            "customerUserId": null,
+            "externalCallId": "roadmap13-aircall-20260628115630",
+            "assignedMemberId": null,
+            "contactPhoneE164": "+15550001313",
+            "aircallCallEventId": "acev_jxrtu8qylwryrbvegb7avb12"
+          },
+          "ruleId": "wrule_edb967a791c34ed395eed9ad",
+          "source": "aircall-webhook",
+          "eventId": "aircall:acev_jxrtu8qylwryrbvegb7avb12:aircall.call.created",
+          "trigger": "aircall.call.created",
+          "actionId": "act-roadmap13-create-task",
+          "ruleName": "Roadmap 13 Aircall event idempotency 20260628115630",
+          "whenTrace": [],
+          "occurredAt": "2026-06-28T11:56:30.869Z",
+          "rulePriority": 1000,
+          "matchedRuleId": "wrule_edb967a791c34ed395eed9ad",
+          "stateSnapshot": {
+            "customer": null,
+            "callEvent": {
+              "id": "acev_jxrtu8qylwryrbvegb7avb12"
+            },
+            "resolvedAt": "2026-06-28T11:56:31.365Z",
+            "resolverOutput": {}
+          },
+          "conditionTrace": [],
+          "matched_rule_id": "wrule_edb967a791c34ed395eed9ad"
+        },
+        "ticketNumber": "SR-MQXQGV0U"
+      },
+      "createdAt": "2026-06-28T11:56:31.377Z"
+    }
+  ],
+  "archivedRule": {
+    "id": "wrule_edb967a791c34ed395eed9ad",
+    "status": "archived",
+    "trigger": "aircall.call.created",
+    "updatedAt": "2026-06-28T11:56:33.374Z"
+  },
+  "assertions": {
+    "bothWebhookPostsAccepted": true,
+    "twoInboxRowsProcessed": true,
+    "oneCallEvent": true,
+    "oneExecutionForEventRule": true,
+    "oneTaskCreated": true,
+    "executionReferencesOnlyTask": true,
+    "taskCarriesWorkflowEvent": true,
+    "proofRuleArchived": true
+  },
+  "checkedAt": "2026-06-28T11:56:33.386Z"
+}
