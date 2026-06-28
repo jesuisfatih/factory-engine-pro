@@ -1,0 +1,118 @@
+{
+  "capturedAt": "2026-06-28T06:56:30.000Z",
+  "scope": "roadmap-target-3-anthropic-resolver-gate",
+  "live": {
+    "apiHealth": {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "buildSha": "e048fbcf1773bcf11e963657e9476119d6d5c2e2",
+    "container": "factoryengine-dtfbank-app",
+    "pm2Apps": [
+      "factory-engine-pro-api",
+      "factory-engine-pro-admin",
+      "factory-engine-pro-person",
+      "factory-engine-pro-accounts"
+    ]
+  },
+  "tenantResolverProbe": {
+    "tenantId": "ten_dtfbank",
+    "loginStatus": 201,
+    "aiHealthStatus": 200,
+    "aiHealth": {
+      "provider": "anthropic",
+      "configured": true,
+      "reachable": true,
+      "status": "provider_error",
+      "source": "tenant_config",
+      "modelCount": 1,
+      "resolverReachable": false,
+      "resolverStatus": "provider_error",
+      "error": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+    },
+    "resolverTestStatus": 400,
+    "resolverTest": {
+      "code": "anthropic_resolver_failed",
+      "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+    }
+  },
+  "candidateCredentialScan": {
+    "policy": "read-only scan; no full secrets captured; gangsheet/upload/customizer paths skipped",
+    "remoteVultr": {
+      "candidateCount": 3,
+      "results": [
+        {
+          "fingerprint": "9ac789e82c88",
+          "sourceCount": 7,
+          "sourceLabels": [
+            "container-env:factoryengine-dtfbank-app",
+            "container-env:factoryengine-dtfprint-app",
+            "container-env:factoryengine-dtfprintdepot-app",
+            "container-env:factoryengine-eagledtfsupply-app",
+            "container-env:factoryengine-fastdtfsupply-app",
+            "container-env:factoryengine-fastdtftransfer-app",
+            "file:/opt/apps/custom/factoryengine/eagledtfprint/.env"
+          ],
+          "modelsStatus": 200,
+          "messagesStatus": 400,
+          "messagesError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+        },
+        {
+          "fingerprint": "b0cb6a60a43a",
+          "sourceCount": 2,
+          "sourceLabels": [
+            "file:/opt/apps/custom/factoryengine/eagledtfprint-source/backend/.env",
+            "file:/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/eagledtfprint/.env"
+          ],
+          "modelsStatus": 401,
+          "messagesStatus": 401,
+          "messagesError": "invalid x-api-key"
+        },
+        {
+          "fingerprint": "dec7c3ee145f",
+          "sourceCount": 2,
+          "sourceLabels": [
+            "file:/opt/apps/custom/factoryengine/dtfbank/.env",
+            "file:/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/dtfbank/.env"
+          ],
+          "modelsStatus": 200,
+          "messagesStatus": 400,
+          "messagesError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+        }
+      ]
+    },
+    "localRepos": {
+      "candidateCount": 2,
+      "results": [
+        {
+          "fingerprint": "b0cb6a60a43a",
+          "sourceCount": 2,
+          "modelsStatus": 401,
+          "messagesStatus": 401,
+          "messagesError": "invalid x-api-key"
+        },
+        {
+          "fingerprint": "dec7c3ee145f",
+          "sourceCount": 1,
+          "modelsStatus": 200,
+          "messagesStatus": 400,
+          "messagesError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+        }
+      ]
+    }
+  },
+  "gateDecision": {
+    "roadmapTarget3Status": "blocked_by_provider_billing",
+    "completedParts": [
+      "Shopify connection test and sync returned live success without 401",
+      "Aircall users are mapped to members in the live UI/API",
+      "Tenant Anthropic credential exists and models API is reachable"
+    ],
+    "remainingPart": "Anthropic messages API must return a successful transcript resolver JSON output.",
+    "nextStep": "Proceed to target 4 only as a documented external-provider exception, because no working Anthropic messages credential is available in the approved Vultr/local sources."
+  }
+}
