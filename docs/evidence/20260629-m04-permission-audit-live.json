@@ -1,0 +1,271 @@
+{
+  "item": 4,
+  "title": "Linda Messages 403 fix - permission audit",
+  "checkedAt": "2026-06-28T23:58:48.730Z",
+  "scope": {
+    "app": "https://app.dtfbank.com/staff",
+    "api": "https://api.dtfbank.com/api/v1",
+    "tenantId": "ten_dtfbank",
+    "container": "factoryengine-dtfbank-app",
+    "remote": "root@144.202.125.169"
+  },
+  "git": {
+    "codeCommit": "84382a6f4caf7424bf47d08fa60ebc0503e9546e",
+    "deployedBuildSha": "84382a6f4caf7424bf47d08fa60ebc0503e9546e",
+    "branch": "main"
+  },
+  "implementation": {
+    "newPermissions": [
+      "messaging.read",
+      "messaging.write"
+    ],
+    "endpointChanges": {
+      "/person/workspace/messages/teammates": "messaging.read",
+      "/person/workspace/messages/threads/:threadId": "messaging.read",
+      "POST /person/workspace/messages": "messaging.write"
+    },
+    "migration": "202606304_messaging_permissions updates owner/admin/agent/customer_service/sales_personel roles"
+  },
+  "validation": [
+    {
+      "command": "pnpm typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm build",
+      "status": "passed",
+      "note": "9 workspace packages, exit 0; existing Vite chunk-size warnings only"
+    }
+  ],
+  "runtime": {
+    "health": {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "migrationLog": [
+      "Applying migration `202606304_messaging_permissions`",
+      "All migrations have been successfully applied."
+    ],
+    "pm2": {
+      "api": "factory-engine-pro-api online",
+      "admin": "factory-engine-pro-admin online",
+      "person": "factory-engine-pro-person online",
+      "accounts": "factory-engine-pro-accounts online"
+    }
+  },
+  "db": {
+    "rolePermissionCheck": [
+      {
+        "slug": "admin",
+        "messagingRead": true,
+        "messagingWrite": true
+      },
+      {
+        "slug": "agent",
+        "messagingRead": true,
+        "messagingWrite": true
+      },
+      {
+        "slug": "customer_service",
+        "messagingRead": true,
+        "messagingWrite": true
+      },
+      {
+        "slug": "owner",
+        "messagingRead": true,
+        "messagingWrite": true
+      },
+      {
+        "slug": "sales_personel",
+        "messagingRead": true,
+        "messagingWrite": true
+      }
+    ],
+    "lindaLoginPermissions": [
+      "messaging.read",
+      "messaging.write"
+    ]
+  },
+  "api": {
+    "checkedAt": "2026-06-28T23:57:52.020Z",
+    "account": "dtfbanktx@gmail.com",
+    "loginStatus": 201,
+    "permission403Count": 0,
+    "endpointResults": [
+      {
+        "path": "/person/workspace/summary",
+        "status": 200,
+        "size": 5
+      },
+      {
+        "path": "/person/workspace/daily-operations",
+        "status": 200,
+        "size": 5
+      },
+      {
+        "path": "/person/workspace/customers",
+        "status": 200,
+        "size": 120
+      },
+      {
+        "path": "/person/workspace/emails",
+        "status": 200,
+        "size": 0
+      },
+      {
+        "path": "/person/workspace/training",
+        "status": 200,
+        "size": 2
+      },
+      {
+        "path": "/person/workspace/calendar",
+        "status": 200,
+        "size": 39
+      },
+      {
+        "path": "/person/workspace/notes",
+        "status": 200,
+        "size": 0
+      },
+      {
+        "path": "/person/workspace/announcements",
+        "status": 200,
+        "size": 10
+      },
+      {
+        "path": "/person/workspace/messages/teammates",
+        "status": 200,
+        "size": 3
+      },
+      {
+        "path": "/person/workspace/messages/threads/tmbr_ten_dtfbank_charlette_boatman",
+        "status": 200,
+        "size": 0
+      },
+      {
+        "path": "/person/workspace/requests",
+        "status": 200,
+        "size": 0
+      },
+      {
+        "path": "/person/workspace/notifications",
+        "status": 200,
+        "size": 11
+      }
+    ]
+  },
+  "ui": {
+    "checkedAt": "2026-06-28T23:58:48.730Z",
+    "account": "dtfbanktx@gmail.com",
+    "permission403Count": 0,
+    "visiblePermissionErrors": [],
+    "pages": [
+      {
+        "id": "queue",
+        "finalUrl": "https://app.dtfbank.com/staff/queue",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-queue-live.png",
+          "bytes": 107572,
+          "sha256": "23affdf57ab89bc8669ec8bd1263e71f9aee9590f47050adf5742b9c9d9baaf1"
+        }
+      },
+      {
+        "id": "customers",
+        "finalUrl": "https://app.dtfbank.com/staff/customers",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-customers-live.png",
+          "bytes": 131604,
+          "sha256": "a8c53bde2eacef699efa7f13d091241d360a52aa31c7f89a460b4b748bac923a"
+        }
+      },
+      {
+        "id": "email",
+        "finalUrl": "https://app.dtfbank.com/staff/email",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-email-live.png",
+          "bytes": 39457,
+          "sha256": "7f02417b29428feec1d487d2e5bc2320b9015b7c3dbfcdd36e683ccb6e56e97b"
+        }
+      },
+      {
+        "id": "training",
+        "finalUrl": "https://app.dtfbank.com/staff/training",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-training-live.png",
+          "bytes": 64424,
+          "sha256": "0597083a2580b44ab32276489c95b1e0d8aa08812db7c920b32df527bc29244a"
+        }
+      },
+      {
+        "id": "calendar",
+        "finalUrl": "https://app.dtfbank.com/staff/calendar",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-calendar-live.png",
+          "bytes": 47553,
+          "sha256": "d917a732352f7cf9c05d88bd160b0c7f8475417f15cb8fd9ac350fe2db7551c9"
+        }
+      },
+      {
+        "id": "notes",
+        "finalUrl": "https://app.dtfbank.com/staff/notes",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-notes-live.png",
+          "bytes": 44631,
+          "sha256": "0c25abb6612b05be346a01bc5b870d10f02cc0aa9b3eee7ccdf3deb3451de7fc"
+        }
+      },
+      {
+        "id": "announcements",
+        "finalUrl": "https://app.dtfbank.com/staff/announcements",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-announcements-live.png",
+          "bytes": 74515,
+          "sha256": "405d7bf1d139d8d38792e9aa598ca764e534d623a398e4358defdadcf4e017e5"
+        }
+      },
+      {
+        "id": "messaging",
+        "finalUrl": "https://app.dtfbank.com/staff/messaging",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-messaging-live.png",
+          "bytes": 56828,
+          "sha256": "a42fe1bda63fbda196aacd02aaeb0be02463f52cd51cc939a706666d9e406fae"
+        }
+      },
+      {
+        "id": "requests",
+        "finalUrl": "https://app.dtfbank.com/staff/requests",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-requests-live.png",
+          "bytes": 50286,
+          "sha256": "5dc13b14f9d743a2931289b33009e4d624ffdfbcf69c95f15c2d4127595ecb29"
+        }
+      },
+      {
+        "id": "notifications",
+        "finalUrl": "https://app.dtfbank.com/staff/notifications",
+        "screenshot": {
+          "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-notifications-live.png",
+          "bytes": 105007,
+          "sha256": "cf4d5e0008242fd6fa515efdf84998223c7a6f4763074ec502b935fc4bb7e9fb"
+        }
+      }
+    ],
+    "messagingProof": {
+      "finalUrl": "https://app.dtfbank.com/staff/messaging",
+      "visible": [
+        "Messages",
+        "Directory",
+        "Charlette Boatman"
+      ],
+      "forbiddenResponses": [],
+      "consoleErrors": []
+    }
+  },
+  "nextRoadmapItem": 5,
+  "seedMockPolicy": "No seed/mock data was added in this item. Existing Training/Announcements/Messages seed cleanup is ROADMAP item 12 and was not skipped into here."
+}
