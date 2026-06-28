@@ -735,7 +735,7 @@ function RulesView() {
                   </div>
                   <div className="rule-card-name">{report.recentDays}d backfill</div>
                   <div className="rule-card-desc">
-                    {report.matchedEvents}/{report.evaluatedEvents} matched Â· {report.wouldCreateTasks} task(s) would create
+                    {report.matchedEvents}/{report.evaluatedEvents} matched / {report.wouldCreateTasks} task(s) would create
                   </div>
                   <div className="rule-card-meta">
                     <span>{report.result.candidateSource}</span>
