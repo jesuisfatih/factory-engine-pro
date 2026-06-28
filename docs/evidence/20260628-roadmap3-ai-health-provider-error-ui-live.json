@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-06-28T05:31:15.472328+00:00",
+  "appUrl": "https://app.dtfbank.com/settings/ai/health",
+  "buildSha": "b91b96831a9ca93d030c49d5bb72e52d5da7bceb",
+  "screenshot": "docs/evidence/roadmap3-ai-health-provider-error-live-20260628.png",
+  "assertions": {
+    "providerVisible": true,
+    "resolverApiBlockedVisible": true,
+    "healthProviderError": true,
+    "healthResolverReachableFalse": true,
+    "liveErrorVisible": true,
+    "requestIdVisible": true,
+    "noStubCopyVisible": true
+  },
+  "containerLog": {
+    "startup": "Nest application successfully started",
+    "healthResolverFailed": {
+      "request_id": "4723611e-0e67-4232-9c15-9e582eb298ff",
+      "tenant_id": "ten_dtfbank",
+      "principal_id": "tmbr_ten_dtfbank_info_owner",
+      "principal_type": "member",
+      "module": "ai",
+      "action": "health_resolver_failed",
+      "message": "Anthropic resolver health check failed",
+      "key_source": "tenant_config",
+      "model": "claude-fable-5",
+      "status_code": 400
+    },
+    "resolverFailed": {
+      "request_id": "6a461f11-58fd-443d-8e6a-568258aabc48",
+      "tenant_id": "ten_dtfbank",
+      "principal_id": "tmbr_ten_dtfbank_info_owner",
+      "principal_type": "member",
+      "module": "ai",
+      "action": "resolver_failed",
+      "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+      "key_source": "tenant_config",
+      "model": "claude-haiku-4-5-20251001",
+      "status_code": 400
+    }
+  },
+  "aiNetwork": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/resolver-prompt",
+      "status": 200,
+      "body": "{\"promptKey\":\"ai.transcript-resolver\",\"promptVersion\":\"2026-06-28.1\",\"prompt\":\"You are FactoryEngine transcript resolver.\\nUse only these psych_tags: angry, purchase_intent, shipping_issue, refund_intent, complaint, info_request, follow_up, satisfied\\nUse only these call_intents: sale, support, inquiry, complaint, follow_up\\nUse only these urgency_levels: low, medium, high, critical\\nResolver-backed conditions: call_intent, psych_tag_includes, product_mentioned, previous_purchase_includes, segment_member, call_count_in_window, is_first_call, customer_ltv_gte, order_count_in_window, last_order_age_lte, open_task_exists_for_intent, axis_primary_is, time_of_day_in_range, day_of_week\\nReturn JSON only. Do not invent enum values.\"}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/health",
+      "status": 200,
+      "body": "{\"provider\":\"anthropic\",\"credentialRequired\":false,\"configured\":true,\"reachable\":true,\"status\":\"provider_error\",\"source\":\"tenant_config\",\"latencyMs\":2033,\"checkedAt\":\"2026-06-28T05:31:11.729Z\",\"modelCount\":1,\"error\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\",\"resolverReachable\":false,\"resolverStatus\":\"provider_error\",\"resolverError\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/transcript-resolver/test",
+      "status": 400,
+      "body": "{\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\",\"code\":\"anthropic_resolver_failed\",\"request_id\":\"6a461f11-58fd-443d-8e6a-568258aabc48\"}"
+    }
+  ]
+}
