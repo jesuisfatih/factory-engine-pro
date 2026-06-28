@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2026-06-28T07:43:16+03:00",
+  "scope": "dtfbank live api endpoint and factoryengine-dtfbank-app container log",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "appBase": "https://app.dtfbank.com",
+  "tenantId": "ten_dtfbank",
+  "deploy": {
+    "container": "factoryengine-dtfbank-app",
+    "buildSha": "7cc837aadd446f3be151ef1e0e4a78f64116deaa",
+    "commit": "7cc837a Log Anthropic resolver provider failures",
+    "restartScope": "factoryengine-dtfbank-app only"
+  },
+  "runtime": {
+    "health": {
+      "status": 200,
+      "content": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "pm2OnlineProcesses": [
+      "factory-engine-pro-api",
+      "factory-engine-pro-admin",
+      "factory-engine-pro-person",
+      "factory-engine-pro-accounts"
+    ],
+    "startupLog": "Nest application successfully started"
+  },
+  "resolverEndpoint": {
+    "method": "POST",
+    "url": "https://api.dtfbank.com/api/v1/ai/transcript-resolver/test",
+    "authPrincipal": "tmbr_ten_dtfbank_info_owner",
+    "status": 400,
+    "latencyMs": 633,
+    "body": {
+      "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+      "code": "anthropic_resolver_failed",
+      "request_id": "11817f6f-2db3-4801-8448-1ae708f4097d"
+    }
+  },
+  "containerLog": {
+    "request_id": "11817f6f-2db3-4801-8448-1ae708f4097d",
+    "tenant_id": "ten_dtfbank",
+    "principal_id": "tmbr_ten_dtfbank_info_owner",
+    "principal_type": "member",
+    "module": "ai",
+    "action": "resolver_failed",
+    "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+    "key_source": "tenant_config",
+    "model": "claude-haiku-4-5-20251001",
+    "status_code": 400,
+    "latency_ms": 143
+  },
+  "conclusion": {
+    "roadmapItem3Complete": false,
+    "blockingRequirement": "Bitti requires a successful test transcript JSON output.",
+    "currentFailureMode": "TenantConfig Anthropic key reaches Anthropic, but Anthropic rejects message generation because the account has no credits.",
+    "codePathVerified": true,
+    "containerLogVerified": true,
+    "nextRequiredInput": "Add credits to the Anthropic account or provide a credited Anthropic API key."
+  }
+}
