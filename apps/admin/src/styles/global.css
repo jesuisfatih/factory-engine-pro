@@ -1202,6 +1202,15 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   display: flex; flex-direction: column; gap: 6px;
   overflow-y: auto;
 }
+.rules-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 8px 4px 4px;
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase;
+}
+.rules-section-head span {
+  display: inline-flex; align-items: center; gap: 6px;
+}
 .rule-card {
   width: 100%; background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 10px 12px;
@@ -1239,6 +1248,15 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   color: var(--text); font-size: 12px; outline: none; font-family: inherit;
 }
 .rules-name-input { flex: 1; min-width: 220px; font-weight: 700; }
+.rules-inline-control, .rules-inline-check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-muted); white-space: nowrap;
+}
+.rules-inline-control span, .rules-inline-check span { font-weight: 700; }
+.rules-canvas-toolbar .rules-priority-input { width: 74px; }
+.rules-canvas-toolbar .rules-inline-check input {
+  width: auto; padding: 0; accent-color: var(--accent);
+}
 .rules-add-action { position: relative; }
 .rules-add-action summary { list-style: none; cursor: pointer; }
 .rules-add-action summary::-webkit-details-marker { display: none; }

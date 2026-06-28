@@ -88,6 +88,7 @@ model Tenant {
   aircallSyncStates       AircallSyncState[]
   shopifySyncStates       ShopifySyncState[]
   syncLogs                SyncLog[]
+  workflowRules           WorkflowRule[]
 
   @@map("tenants")
 }
@@ -1155,4 +1156,24 @@ model SyncLog {
   @@index([tenantId, service, createdAt])
   @@index([tenantId, status])
   @@map("sync_logs")
+}
+
+model WorkflowRule {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  name       String
+  status     String   @default("draft")
+  priority   Int      @default(50)
+  composable Boolean  @default(false)
+  trigger    String
+  definition Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, trigger])
+  @@index([tenantId, priority])
+  @@map("workflow_rules")
 }

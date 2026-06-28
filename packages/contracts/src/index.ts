@@ -10,4 +10,5 @@ export * from './mail.js';
 export * from './operations.js';
 export * from './person.js';
 export * from './permissions.js';
+export * from './rules.js';
 export * from './sync.js';

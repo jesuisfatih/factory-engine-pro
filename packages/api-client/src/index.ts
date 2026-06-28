@@ -34,6 +34,7 @@ import type {
   MemberLoginInput,
   ResolveReorderInput,
   ResetPasswordInput,
+  SaveWorkflowRuleInput,
   TenantConfigInput,
   UpdateAccountPasswordInput,
   UpdateAccountProfileInput,
@@ -45,6 +46,8 @@ import type {
   UpsertSegmentOwnershipInput,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
+  WorkflowRuleDto,
+  WorkflowRulesResponse,
   AssignServiceRequestInput,
   AddServiceRequestCommentInput,
   BulkServiceRequestsInput,
@@ -599,6 +602,22 @@ export class ApiClient {
 
   workflowEnumChainProbe() {
     return this.get<WorkflowEnumChainProbeResponse>('/rules/enum-chain');
+  }
+
+  workflowRules() {
+    return this.get<WorkflowRulesResponse>('/rules');
+  }
+
+  workflowRule(id: string) {
+    return this.get<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}`);
+  }
+
+  createWorkflowRule(input: SaveWorkflowRuleInput) {
+    return this.post<WorkflowRuleDto>('/rules', input);
+  }
+
+  updateWorkflowRule(id: string, input: SaveWorkflowRuleInput) {
+    return this.put<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}`, input);
   }
 
   shopifySyncStatus() {

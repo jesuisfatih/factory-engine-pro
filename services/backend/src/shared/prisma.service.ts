@@ -43,6 +43,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'AircallSyncState',
   'ShopifySyncState',
   'SyncLog',
+  'WorkflowRule',
 ]);
 
 @Injectable()

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import {
   Background,
   Controls,
@@ -20,10 +21,13 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Database,
+  FilePlus2,
   Filter,
   Network,
   Plus,
   RefreshCw,
+  Save,
   Trash2,
   Zap,
 } from 'lucide-react';
@@ -31,6 +35,7 @@ import type {
   WorkflowAction,
   WorkflowCondition,
   WorkflowEnumCatalogResponse,
+  WorkflowRuleDto,
   WorkflowTrigger,
 } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
@@ -38,11 +43,14 @@ import { apiErrorMessage } from '@/lib/api';
 import {
   defaultOperator,
   defaultValue,
+  draftFromWorkflowRule,
   fetchWorkflowCatalog,
+  fetchWorkflowRules,
   LIFECYCLE_TONE,
   makeAction,
   makeCondition,
   makeRuleDraft,
+  saveWorkflowRule,
   type ConditionOperator,
   type RuleDraft,
   type RuleDraftAction,
@@ -51,6 +59,7 @@ import {
 } from '@/lib/rules';
 
 const CATALOG_QK = ['rules', 'catalog'] as const;
+const RULES_QK = ['rules', 'saved'] as const;
 
 const OPERATORS_BY_TYPE: Record<string, ConditionOperator[]> = {
   string: ['=', '!=', 'contains'],
@@ -354,20 +363,57 @@ function buildGraph(
 }
 
 function RulesView() {
+  const queryClient = useQueryClient();
   const catalogQuery = useQuery({ queryKey: CATALOG_QK, queryFn: fetchWorkflowCatalog });
+  const rulesQuery = useQuery({ queryKey: RULES_QK, queryFn: fetchWorkflowRules });
   const verify = useMutation({ mutationFn: verifyWorkflowEnumChain });
   const [draft, setDraft] = useState<RuleDraft | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [didHydratePersistedRule, setDidHydratePersistedRule] = useState(false);
 
   useEffect(() => {
     if (catalogQuery.data && !draft) setDraft(makeRuleDraft(catalogQuery.data));
   }, [catalogQuery.data, draft]);
 
+  useEffect(() => {
+    if (!catalogQuery.data || didHydratePersistedRule || !rulesQuery.isSuccess) return;
+    const firstRule = rulesQuery.data?.rules[0];
+    if (firstRule) {
+      setSelectedRuleId(firstRule.id);
+      setDraft(draftFromWorkflowRule(firstRule));
+    }
+    setDidHydratePersistedRule(true);
+  }, [catalogQuery.data, didHydratePersistedRule, rulesQuery.data?.rules, rulesQuery.isSuccess]);
+
   const catalog = catalogQuery.data;
+  const rules = rulesQuery.data?.rules ?? [];
   const catalogEmpty = catalog && (
     catalog.triggers.length === 0
     || catalog.conditions.length === 0
     || catalog.actions.length === 0
   );
+  const selectRule = (rule: WorkflowRuleDto) => {
+    setSelectedRuleId(rule.id);
+    setDraft(draftFromWorkflowRule(rule));
+  };
+  const newRule = () => {
+    if (!catalog) return;
+    setSelectedRuleId(null);
+    setDraft(makeRuleDraft(catalog));
+  };
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!draft) throw new Error('Rule draft is not ready.');
+      return saveWorkflowRule(draft, selectedRuleId ?? undefined);
+    },
+    onSuccess: async (rule) => {
+      setSelectedRuleId(rule.id);
+      setDraft(draftFromWorkflowRule(rule));
+      await queryClient.invalidateQueries({ queryKey: RULES_QK });
+      toast.success('Rule saved', { description: `${rule.name} is now persisted as workflow JSON.` });
+    },
+    onError: (error) => toast.error('Rule save failed', { description: apiErrorMessage(error) }),
+  });
 
   return (
     <>
@@ -422,6 +468,55 @@ function RulesView() {
 
           <div className="rules-shell">
             <aside className="rules-list">
+              <div className="rules-section-head">
+                <span><Database size={12} /> Saved rules</span>
+                <span className="muted">{rules.length}</span>
+              </div>
+              {rulesQuery.isLoading && (
+                <div className="rules-empty">
+                  <RefreshCw size={16} /> Loading saved rules...
+                </div>
+              )}
+              {rulesQuery.isError && (
+                <div className="rules-empty danger-text">
+                  <AlertTriangle size={16} /> {apiErrorMessage(rulesQuery.error)}
+                </div>
+              )}
+              {!rulesQuery.isLoading && !rulesQuery.isError && rules.length === 0 && (
+                <div className="rules-empty">
+                  <Database size={16} />
+                  <div>No persisted workflow rules yet.</div>
+                  <button type="button" className="btn small" onClick={newRule}>
+                    <FilePlus2 size={12} /> New rule
+                  </button>
+                </div>
+              )}
+              {rules.map((rule) => (
+                <button
+                  key={rule.id}
+                  type="button"
+                  className={`rule-card ${selectedRuleId === rule.id ? 'active' : ''}`}
+                  onClick={() => selectRule(rule)}
+                >
+                  <div className="rule-card-head">
+                    <span className={`pill ${LIFECYCLE_TONE[rule.status]}`}>{rule.status}</span>
+                    <span className="muted">p{rule.priority}</span>
+                  </div>
+                  <div className="rule-card-name">{rule.name}</div>
+                  <div className="rule-card-desc">
+                    {rule.definition.trigger}{' -> '}{rule.definition.actions.map((action) => action.action).join(' + ')}
+                  </div>
+                  <div className="rule-card-meta">
+                    <span>{rule.definition.when.length} conditions</span>
+                    <span>{rule.composable ? 'composable' : 'single fire'}</span>
+                  </div>
+                </button>
+              ))}
+
+              <div className="rules-section-head">
+                <span><Network size={12} /> Catalog</span>
+                <span className="muted">v{catalog.version}</span>
+              </div>
               <CatalogCard title="Triggers" count={catalog.counts.triggers} values={catalog.triggers.slice(0, 8).map((entry) => entry.value)} />
               <CatalogCard title="Conditions" count={catalog.counts.conditions} values={catalog.conditions.slice(0, 8).map((entry) => entry.value)} />
               <CatalogCard title="Actions" count={catalog.counts.actions} values={catalog.actions.map((entry) => entry.value)} />
@@ -432,6 +527,9 @@ function RulesView() {
 
             <main className="rules-canvas-wrap">
               <div className="rules-canvas-toolbar">
+                <button type="button" id="btn-new-workflow-rule" className="btn ghost" onClick={newRule}>
+                  <FilePlus2 size={12} /> New
+                </button>
                 <input
                   className="rules-name-input"
                   value={draft.name}
@@ -447,12 +545,40 @@ function RulesView() {
                   <option value="active">active</option>
                   <option value="archived">archived</option>
                 </select>
+                <label className="rules-inline-control">
+                  <span>Priority</span>
+                  <input
+                    className="rules-priority-input"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    value={draft.priority}
+                    onChange={(event) => setDraft({ ...draft, priority: Number(event.target.value) })}
+                  />
+                </label>
+                <label className="rules-inline-check">
+                  <input
+                    type="checkbox"
+                    checked={draft.composable}
+                    onChange={(event) => setDraft({ ...draft, composable: event.target.checked })}
+                  />
+                  <span>Composable</span>
+                </label>
                 <span className={`pill ${LIFECYCLE_TONE[draft.status]}`}>{draft.status}</span>
                 <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, when: [...draft.when, makeCondition(catalog)] })}>
                   <Plus size={12} /> Condition
                 </button>
                 <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, actions: [...draft.actions, makeAction(catalog)] })}>
                   <Plus size={12} /> Action
+                </button>
+                <button
+                  type="button"
+                  id="btn-save-workflow-rule"
+                  className="btn primary"
+                  disabled={!draft || saveMutation.isPending}
+                  onClick={() => saveMutation.mutate()}
+                >
+                  <Save size={12} /> {saveMutation.isPending ? 'Saving...' : selectedRuleId ? 'Update rule' : 'Save rule'}
                 </button>
               </div>
 
@@ -466,7 +592,9 @@ function RulesView() {
                 <Activity size={11} />
                 <span><strong>Prompt:</strong> ai.transcript-resolver</span>
                 <span><strong>Canvas source:</strong> /api/v1/rules/catalog</span>
+                <span><strong>Rule JSON source:</strong> {selectedRuleId ? `/api/v1/rules/${selectedRuleId}` : '/api/v1/rules'}</span>
                 <span><strong>Executor:</strong> {verify.data ? 'verified' : 'not checked'}</span>
+                {saveMutation.isError && <span className="danger-text">{apiErrorMessage(saveMutation.error)}</span>}
                 {verify.data && (
                   <>
                     <span><CheckCircle2 size={11} /> {verify.data.probeValues.trigger}</span>

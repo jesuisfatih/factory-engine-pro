@@ -1,23 +1,68 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
+  saveWorkflowRuleSchema,
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
+  workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
+  type SaveWorkflowRuleInput,
   type WorkflowEnumCatalogResponse,
   type WorkflowEnumChainProbeResponse,
+  type WorkflowRuleDto,
+  type WorkflowRulesResponse,
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
+import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
 import { WorkflowPromptService } from './workflow-prompt.service.js';
 
 @Injectable()
 export class RulesService {
   constructor(
+    private readonly repository: RulesRepository,
     private readonly executor: WorkflowExecutorService,
     private readonly prompt: WorkflowPromptService,
     private readonly logger: AppLogger,
   ) {}
+
+  async listRules(): Promise<WorkflowRulesResponse> {
+    const rules = await this.repository.list();
+    return { rules: rules.map(toDto) };
+  }
+
+  async getRule(id: string): Promise<WorkflowRuleDto> {
+    const rule = await this.repository.findById(id);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    return toDto(rule);
+  }
+
+  async createRule(input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
+    const parsed = saveWorkflowRuleSchema.parse(input);
+    const rule = await this.repository.create(parsed);
+    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted', {
+      rule_id: rule.id,
+      status: rule.status,
+      trigger: rule.trigger,
+      priority: rule.priority,
+    });
+    return toDto(rule);
+  }
+
+  async updateRule(id: string, input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
+    const parsed = saveWorkflowRuleSchema.parse(input);
+    const result = await this.repository.update(id, parsed);
+    if (result.count === 0) throw new NotFoundException('Workflow rule was not found.');
+    const rule = await this.repository.findById(id);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    this.logger.log('rules', 'rule_saved', 'Workflow rule persisted', {
+      rule_id: rule.id,
+      status: rule.status,
+      trigger: rule.trigger,
+      priority: rule.priority,
+    });
+    return toDto(rule);
+  }
 
   catalog(): WorkflowEnumCatalogResponse {
     return {
@@ -81,4 +126,29 @@ export class RulesService {
 
     return response;
   }
+}
+
+function toDto(rule: {
+  id: string;
+  name: string;
+  status: string;
+  priority: number;
+  composable: boolean;
+  trigger: string;
+  definition: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}): WorkflowRuleDto {
+  const definition = workflowRuleDefinitionSchema.parse(rule.definition);
+  return {
+    id: rule.id,
+    name: rule.name,
+    status: definition.status,
+    priority: rule.priority,
+    composable: rule.composable,
+    trigger: rule.trigger,
+    definition,
+    createdAt: rule.createdAt.toISOString(),
+    updatedAt: rule.updatedAt.toISOString(),
+  };
 }

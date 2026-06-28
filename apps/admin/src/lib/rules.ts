@@ -3,7 +3,9 @@ import type {
   WorkflowCondition,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
+  WorkflowRuleDto,
   WorkflowTrigger,
+  SaveWorkflowRuleInput,
 } from '@factory-engine-pro/contracts';
 import { adminApi } from './api';
 
@@ -40,6 +42,37 @@ export function fetchWorkflowCatalog(): Promise<WorkflowEnumCatalogResponse> {
 
 export function verifyWorkflowEnumChain(): Promise<WorkflowEnumChainProbeResponse> {
   return adminApi.workflowEnumChainProbe();
+}
+
+export function fetchWorkflowRules() {
+  return adminApi.workflowRules();
+}
+
+export function saveWorkflowRule(draft: RuleDraft, id?: string) {
+  const input: SaveWorkflowRuleInput = {
+    name: draft.name,
+    definition: {
+      status: draft.status,
+      priority: draft.priority,
+      composable: draft.composable,
+      trigger: draft.trigger,
+      when: draft.when,
+      actions: draft.actions,
+    },
+  };
+  return id ? adminApi.updateWorkflowRule(id, input) : adminApi.createWorkflowRule(input);
+}
+
+export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
+  return {
+    name: rule.name,
+    status: rule.definition.status,
+    priority: rule.definition.priority,
+    composable: rule.definition.composable,
+    trigger: rule.definition.trigger,
+    when: rule.definition.when,
+    actions: rule.definition.actions,
+  };
 }
 
 export function makeRuleDraft(catalog: WorkflowEnumCatalogResponse): RuleDraft {
