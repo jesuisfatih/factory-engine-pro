@@ -1,0 +1,65 @@
+{
+  "capturedAt": "2026-06-28T06:02:55Z",
+  "scope": "roadmap-item-3-anthropic-key-all-custom-scan",
+  "host": "144.202.125.169",
+  "searchScope": "/opt/apps/custom env/compose/config files plus running container envs",
+  "secretHandling": "No raw keys printed; fingerprints are sha256 prefixes.",
+  "candidateCount": 3,
+  "messageOkCount": 0,
+  "results": [
+    {
+      "fingerprint": "9ac789e82c88",
+      "sourceCount": 9,
+      "sources": [
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-predeploy-cd86bac",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-predeploy-next1625",
+        "container:factoryengine-dtfbank-app",
+        "container:factoryengine-dtfprint-app",
+        "container:factoryengine-dtfprintdepot-app",
+        "container:factoryengine-eagledtfsupply-app",
+        "container:factoryengine-fastdtfsupply-app",
+        "container:factoryengine-fastdtftransfer-app"
+      ],
+      "modelsStatus": 200,
+      "messageStatus": 400,
+      "modelTested": "claude-haiku-4-5-20251001",
+      "messageError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+      "modelsReturned": 9,
+      "messageOk": false
+    },
+    {
+      "fingerprint": "b0cb6a60a43a",
+      "sourceCount": 6,
+      "sources": [
+        "/opt/apps/custom/factoryengine/eagledtfprint-source/backend/.env",
+        "/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/eagledtfprint/.env",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-2026-05-07-redis-rotate",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-20260528204655-anthropic-rotate",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-image-fba77bf35-20260506171912",
+        "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-redis-rotate-20260511-132223"
+      ],
+      "modelsStatus": 401,
+      "messageStatus": 401,
+      "modelTested": "claude-3-5-haiku-latest",
+      "messageError": "invalid x-api-key",
+      "modelsReturned": 0,
+      "messageOk": false
+    },
+    {
+      "fingerprint": "dec7c3ee145f",
+      "sourceCount": 2,
+      "sources": [
+        "/opt/apps/custom/factoryengine/dtfbank/.env",
+        "/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/dtfbank/.env"
+      ],
+      "modelsStatus": 200,
+      "messageStatus": 400,
+      "modelTested": "claude-haiku-4-5-20251001",
+      "messageError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+      "modelsReturned": 9,
+      "messageOk": false
+    }
+  ],
+  "conclusion": "No Anthropic key found on /opt/apps/custom can produce a message response. Roadmap item 3 cannot satisfy its transcript JSON output gate without Anthropic credits or a working key."
+}

@@ -1,0 +1,98 @@
+{
+  "capturedAt": "2026-06-28T06:03:21.460627+00:00",
+  "pages": [
+    {
+      "name": "shopify",
+      "url": "https://app.dtfbank.com/settings/shopify",
+      "screenshot": "docs\\evidence\\roadmap3-shopify-settings-live-20260628-refresh.png"
+    },
+    {
+      "name": "aircall_users",
+      "url": "https://app.dtfbank.com/settings/aircall/users",
+      "screenshot": "docs\\evidence\\roadmap3-aircall-users-live-20260628-refresh.png"
+    },
+    {
+      "name": "aircall_sync_logs",
+      "url": "https://app.dtfbank.com/settings/aircall/sync-logs",
+      "screenshot": "docs\\evidence\\roadmap3-aircall-sync-logs-live-20260628-refresh.png"
+    },
+    {
+      "name": "aircall_numbers",
+      "url": "https://app.dtfbank.com/settings/aircall/numbers",
+      "screenshot": "docs\\evidence\\roadmap3-aircall-numbers-live-20260628-refresh.png"
+    }
+  ],
+  "assertions": {
+    "shopify_sync_api_200": true,
+    "shopify_configured": true,
+    "shopify_has_snapshot_records": true,
+    "shopify_ui_has_rows": true,
+    "aircall_users_api_200": true,
+    "aircall_users_present": true,
+    "aircall_required_members_linked": true,
+    "aircall_users_ui_has_members": true,
+    "aircall_sync_logs_api_200": true,
+    "aircall_sync_logs_have_rows": true,
+    "aircall_numbers_api_200": true,
+    "aircall_numbers_configured": true,
+    "no_legacy_mock_labels_on_target_pages": true
+  },
+  "summary": {
+    "shopifyDomain": "eagle-dtf-print.myshopify.com",
+    "shopifyCounts": {
+      "customers": [
+        13448,
+        "completed",
+        null
+      ],
+      "orders": [
+        638,
+        "completed",
+        null
+      ],
+      "products": [
+        304,
+        "completed",
+        null
+      ]
+    },
+    "aircallUserCount": 4,
+    "linkedMembers": [
+      "charlette@dtfbank.com",
+      "dtfbanktx@gmail.com",
+      "ihsan@dtfbank.com",
+      "info@dtfbank.com"
+    ],
+    "aircallSyncRows": 1,
+    "aircallInboxRows": 15,
+    "aircallNumberCount": 2
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": "{\"workspaceName\":\"DTF Bank\",\"brandBadge\":\"DB\",\"brandLogo\":null,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"hasShopifyAdminToken\":true,\"hasShopifyApiKey\":true,\"hasShopifyApiSecret\":true,\"hasWebhookHmacKey\":true,\"hasAircallApiId\":true,\"hasAircallApiToken\":true,\"hasAircallWebhookSecret\":true,\"hasAnthropicApiKey\":true,\"hasResendApiKey\":true}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/sync/status",
+      "status": 200,
+      "body": "{\"credentialRequired\":false,\"configured\":true,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"isAnySyncing\":false,\"hasErrors\":false,\"entities\":{\"customers\":{\"resource\":\"customers\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-28T03:11:04.633Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":7494,\"lastRunRecords\":7494,\"snapshotRecords\":13448,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-28T03:11:04.633Z\"},\"orders\":{\"resource\":\"orders\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-27T19:55:47.691Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":637,\"lastRunRecords\":637,\"snapshotRecords\":638,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-27T19:55:47.691Z\"},\"products\":{\"resource\":\"products\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-27T19:55:02.959Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":303,\"lastRunRecords\":303,\"snapshotRecords\":304,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-27T19:55:02.959Z\"}},\"recentLogs\":[{\"id\":\"slog_ot7c07khr0qau3j9vwbyoby1\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-28T03:09:28.494Z\",\"finishedAt\":\"2026-06-28T03:11:04.637Z\",\"metadata\":{\"pages\":30,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":7494}},{\"id\":\"slog_kob2zbcj0b6cjng7x8jxk0eu\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-28T02:56:49.849Z\",\"finishedAt\":\"2026-06-28T02:58:54.372Z\",\"metadata\":{\"pages\":30,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":7494}},{\"id\":\"slog_agvgrsik7ihopl787i6e1fxj\",\"action\":\"initial.customers\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-28T02:49:31.942Z\",\"finishedAt\":\"2026-06-28T02:49:32.489Z\",\"metadata\":{\"resource\":\"customers\",\"providerStatus\":401}},{\"id\":\"slog_irewvkczdp6npoago54v4rmg\",\"action\":\"initial.orders\",\"status\":\"completed\",\"message\":\"orders initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.959Z\",\"finishedAt\":\"2026-06-27T19:55:47.696Z\",\"metadata\":{\"pages\":3,\"source\":\"tenant_config\",\"resource\":\"orders\",\"recordsProcessed\":637}},{\"id\":\"slog_nvxwgm3fu763wvp0wvjc1ulh\",\"action\":\"initial.products\",\"status\":\"completed\",\"message\":\"products initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.959Z\",\"finishedAt\":\"2026-06-27T19:55:02.965Z\",\"metadata\":{\"pages\":2,\"source\":\"tenant_config\",\"resource\":\"products\",\"recordsProcessed\":303}},{\"id\":\"slog_qzm28zmb0r8gg6cb06gxydp9\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.958Z\",\"finishedAt\":\"2026-06-27T19:54:51.482Z\",\"metadata\":{\"pages\":24,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":5951}},{\"id\":\"slog_sqtkp37caayzsos5udvn89wi\",\"action\":\"initial.products\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.977Z\",\"finishedAt\":\"2026-06-27T19:31:10.465Z\",\"metadata\":{\"resource\":\"products\",\"providerStatus\":401}},{\"id\":\"slog_d8rm94nsvjntiel3ukdb5ukq\",\"action\":\"initial.orders\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.977Z\",\"finishedAt\":\"2026-06-27T19:31:10.654Z\",\"metadata\":{\"resource\":\"orders\",\"providerStatus\":401}},{\"id\":\"slog_b2ww007sqni2n0on17ma2on0\",\"action\":\"initial.customers\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.976Z\",\"finishedAt\":\"2026-06-27T19:31:10.257Z\",\"metadata\":{\"resource\":\"customers\",\"providerStatus\":401}}]}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/users",
+      "status": 200,
+      "body": "{\"source\":\"aircall_api\",\"users\":[{\"id\":\"1831111\",\"aircallUserId\":\"1831111\",\"name\":\"Ismail Baysal\",\"email\":\"ibaysal@dtfbank.com\",\"extension\":\"001\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_info_owner\",\"email\":\"info@dtfbank.com\",\"name\":\"DTF Bank Owner\"}},{\"id\":\"1831184\",\"aircallUserId\":\"1831184\",\"name\":\"Ihsan Taskiran\",\"email\":\"ihsan@dtfbank.com\",\"extension\":\"002\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"email\":\"ihsan@dtfbank.com\",\"name\":\"Ihsan Taskiran\"}},{\"id\":\"1831312\",\"aircallUserId\":\"1831312\",\"name\":\"Linda Marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"extension\":\"003\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"name\":\"Linda Marroquin\"}},{\"id\":\"1972780\",\"aircallUserId\":\"1972780\",\"name\":\"Charlette Boatman\",\"email\":\"charlette@dtfbank.com\",\"extension\":\"004\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"email\":\"charlette@dtfbank.com\",\"name\":\"Charlette Boatman\"}}],\"members\":[{\"id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"email\":\"charlette@dtfbank.com\",\"name\":\"Charlette Boatman\",\"aircallUserId\":\"1972780\"},{\"id\":\"tmbr_ten_dtfbank_info_owner\",\"email\":\"info@dtfbank.com\",\"name\":\"DTF Bank Owner\",\"aircallUserId\":\"1831111\"},{\"id\":\"tmbr_emx64m3u1orn46wdtrghrxjl\",\"email\":\"flow1.member+20260627165606@dtfbank.com\",\"name\":\"Flow Invite\",\"aircallUserId\":null},{\"id\":\"tmbr_gu9niu9cld9mkqy1u99bxvo9\",\"email\":\"flow1.ui+20260627165928@dtfbank.com\",\"name\":\"Flow Ui\",\"aircallUserId\":null},{\"id\":\"tmbr_safmfipyjwpnezes1kqzjqjr\",\"email\":\"flow1.ui+20260627120260627165759@dtfbank.com\",\"name\":\"Flow Ui\",\"aircallUserId\":null},{\"id\":\"tmbr_if0rxlogwbxvq1hc4sz3v6vw\",\"email\":\"flow1.wizard+20260627171903@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_tsoglfkltia3ifoihgk3jibz\",\"email\":\"flow1.wizard+20260627171322@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_hefib4cyfldodtk2okppitug\",\"email\":\"flow1.wizard+20260627171449@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_wjrl6ehc48d0zzvruknx56io\",\"email\":\"flow1.wizard+20260627171646@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"email\":\"ihsan@dtfbank.com\",\"name\":\"Ihsan Taskiran\",\"aircallUserId\":\"1831184\"},{\"id\":\"tmbr_h1qxrf78cx0j03bf5x8mpn9b\",\"email\":\"invite.prodtest+1782575676710@dtfbank.com\",\"name\":\"Invite Prodtest\",\"aircallUserId\":null},{\"id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"name\":\"Linda Marroquin\",\"aircallUserId\":\"1831312\"},{\"id\":\"tmbr_o6jpfqed8u25bnesnpe490zu\",\"email\":\"melis@dtfbank.com\",\"name\":\"Melis hebelehübele\",\"aircallUserId\":null},{\"id\":\"tmbr_prodtest_1782574849914_fa5999f6\",\"email\":\"owner.prodtest+20260627184047@dtfbank.com\",\"name\":\"Prod Owner\",\"aircallUserId\":null},{\"id\":\"tmbr_yb6n0h3h18flhl46liup45i3\",\"email\":\"target2.rbac.20260627220337@dtfbank.com\",\"name\":\"Target2 RBAC\",\"aircallUserId\":null},{\"id\":\"tmbr_qkt66tv1tkjt8g0man4ur1zs\",\"email\":\"test@gmail.com\",\"name\":\"test test\",\"aircallUserId\":null},{\"id\":\"tmbr_yckroayjl8fknl353yqfcrzx\",\"email\":\"testerrr@gmail.com\",\"name\":\"tester tester\",\"aircallUserId\":null}]}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/sync-logs",
+      "status": 200,
+      "body": "{\"credentialRequired\":false,\"logs\":[{\"id\":\"slog_hnm0nm64omd6cg7peqvdooeg\",\"service\":\"aircall\",\"action\":\"numbers.sync\",\"status\":\"success\",\"message\":\"Synced 2 Aircall numbers.\",\"startedAt\":\"2026-06-27T19:53:19.127Z\",\"finishedAt\":\"2026-06-27T19:53:19.390Z\"}],\"inbox\":[{\"id\":\"awin_jfayl75uhbi8gjaj07z4bt4r\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"3907275322\",\"receivedAt\":\"2026-06-28T05:46:32.779Z\",\"processedAt\":\"2026-06-28T05:46:32.886Z\"},{\"id\":\"awin_ahmve76wog11nyzxazp17b54\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.agent_declined\",\"externalCallId\":\"3907273902\",\"receivedAt\":\"2026-06-28T05:32:23.536Z\",\"processedAt\":\"2026-06-28T05:32:23.645Z\"},{\"id\":\"awin_ger70w0cjgp09krflfcl0f15\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"target3-live-1782615927612\",\"receivedAt\":\"2026-06-28T03:05:27.620Z\",\"processedAt\":\"2026-06-28T03:05:27.682Z\"},{\"id\":\"awin_nh0kc8pjwh98jcx14wzfk67n\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"target3-live-1782615830344\",\"receivedAt\":\"2026-06-28T03:03:50.353Z\",\"processedAt\":\"2026-06-28T03:03:50.414Z\"},{\"id\":\"awin_anjgt9m9a28k6hl69ju69nv8\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"target3-live-1782615730405\",\"receivedAt\":\"2026-06-28T03:02:10.417Z\",\"processedAt\":\"2026-06-28T03:02:10.498Z\"},{\"id\":\"awin_gfge47ba0szj1u0excliis7h\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"3907273902\",\"receivedAt\":\"2026-06-27T23:35:43.724Z\",\"processedAt\":\"2026-06-27T23:35:43.802Z\"},{\"id\":\"awin_q36zlusjonojury3c3aodbol\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ringing_on_agent\",\"externalCallId\":\"3907273902\",\"receivedAt\":\"2026-06-27T21:38:52.236Z\",\"processedAt\":\"2026-06-27T21:38:52.372Z\"},{\"id\":\"awin_sum5k1x2kznycez8d16ff0v1\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ended\",\"externalCallId\":\"3907454172\",\"receivedAt\":\"2026-06-27T21:00:06.631Z\",\"processedAt\":\"2026-06-27T21:00:06.716Z\"},{\"id\":\"awin_yhdikhaon41acsymvy2y4l1j\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.hungup\",\"externalCallId\":\"3907454172\",\"receivedAt\":\"2026-06-27T20:59:36.483Z\",\"processedAt\":\"2026-06-27T20:59:36.568Z\"},{\"id\":\"awin_iuv1v6tkln4fd0xl2j1hh5s9\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.created\",\"externalCallId\":\"3907454172\",\"receivedAt\":\"2026-06-27T20:59:29.910Z\",\"processedAt\":\"2026-06-27T20:59:29.995Z\"},{\"id\":\"awin_emaqv99l418clithcg2v71l1\",\"status\":\"processed\",\"rejectionReason\":null,\"eventType\":\"call.ringing_on_agent\",\"externalCallId\":\"3907275322\",\"receivedAt\":\"2026-06-27T20:16:18.839Z\",\"processedAt\":\"2026-06-27T20:16:18.918Z\"},{\"id\":\"awin_th57vszelp6vdpk2qobifu2f\",\"status\":\"rejected\",\"rejectionReason\":\"webhook_secret_missing\",\"eventType\":\"call.created\",\"externalCallId\":\"3907275322\",\"receivedAt\":\"2026-06-27T19:17:57.270Z\",\"processedAt\":null},{\"id\":\"awin_d44ggcv0wle9t2d1wa6p7g7i\",\"status\":\"rejected\",\"rejectionReason\":\"webhook_secret_missing\",\"eventType\":\"call.hungup\",\"externalCallId\":\"3907273902\",\"receivedAt\":\"2026-06-27T18:36:31.946Z\",\"processedAt\":null},{\"id\":\"awin_hrzkhkjepewu7jwxj4yz593b\",\"status\":\"rejected\",\"rejectionReason\":\"missing_token_claim\",\"eventType\":\"call.ended\",\"externalCallId\":\"proof-call-redeploy-bb4211b\",\"receivedAt\":\"2026-06-27T18:36:23.352Z\",\"processedAt\":null},{\"id\":\"awin_kft98yl6o4vk2xgxjv3ucqpg\",\"status\":\"rejected\",\"rejectionReason\":\"webhook_secret_missing\",\"eventType\":\"call.ended\",\"externalCallId\":\"proof-call-1\",\"receivedAt\":\"2026-06-27T18:16:46.191Z\",\"processedAt\":null}]}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/numbers",
+      "status": 200,
+      "body": "{\"credentialRequired\":false,\"source\":\"aircall_api\",\"stats\":{\"total\":2,\"ivr\":0,\"countries\":[\"US\"]},\"numbers\":[{\"id\":\"acn_np6i535znoxps1gfxypvtea2\",\"aircallNumberId\":\"1251762\",\"name\":\"DTF BANK\",\"digits\":\"+1 346-479-9224\",\"country\":\"US\",\"timezone\":\"America/Chicago\",\"isIvr\":false,\"tenantSlug\":\"dtfbank\",\"lastSyncedAt\":\"2026-06-27T19:53:19.386Z\"},{\"id\":\"acn_hxt6e7lfqkfmc7dzsnm5jpn6\",\"aircallNumberId\":\"1179166\",\"name\":\"DTF BANK Printers and Equipments\",\"digits\":\"+1 832-899-4008\",\"country\":\"US\",\"timezone\":\"America/Chicago\",\"isIvr\":false,\"tenantSlug\":\"dtfbank\",\"lastSyncedAt\":\"2026-06-27T19:53:19.379Z\"}]}"
+    }
+  ],
+  "console": []
+}
