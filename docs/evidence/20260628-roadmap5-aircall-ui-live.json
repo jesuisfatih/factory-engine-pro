@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-06-28T09:06:31.024Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "route": "https://app.dtfbank.com/settings/aircall/connection",
+  "screenshot": "docs/evidence/roadmap5-aircall-resolver-ui-live-20260628.png",
+  "targetCallId": "3906652817",
+  "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nCredentials, routing defaults and backfill controls\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nCredential Status\nSaved encrypted values from TenantConfig\nRetry\nAPI ID\nSaved\nAPI TOKEN\nSaved\nWEBHOOK SECRET (OPTIONAL)\nSaved\nCredentials\nSave Aircall credentials into TenantConfig. Values are encrypted at rest and never returned to the browser.\n API ID\n API TOKEN\n WEBHOOK SECRET (OPTIONAL)\nLEAVE FIELDS BLANK TO KEEP EXISTING ENCRYPTED VALUES.\nSave credentials\nRuntime actions\nLive Aircall API checks and tenant directory refresh\nCredentials are saved. Run a live Aircall API check or refresh users and numbers.\nTest live connection\nRefresh users and numbers\nPull last 3 days\nCall transactions\nRecent Aircall call events stored in DB, transcript capture, and resolver queue state.\nRetry\nCALLS TOTAL\n104\nLAST 3 DAYS\n104\nWITH TRANSCRIPT\n76\nRESOLVER QUEUED\n73\nRESOLVED\n3\nRESOLVER FAILED\n0\nLAST RECEIVED\n28.06.2026 11:39\nCALL\tWHEN\tCONTACT\tTRANSCRIPT\tQUEUE\tRESOLVER OUTPUT\ntarget3-live-1782635960600\ncall.ended / outbound\n\t28.06.2026 11:39\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\t28.06.2026 11:39\tv1 / 28.06.2026 11:39\ntarget3-live-1782635821161\ncall.ended / outbound\n\t28.06.2026 11:37\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\t28.06.2026 11:37\tv1 / 28.06.2026 11:37\ntarget3-live-1782615927612\ncall.ended / outbound\n\t28.06.2026 06:05\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\tNot queued\tNot resolved\ntarget3-live-1782615830344\ncall.ended / outbound\n\t28.06.2026 06:03\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\tNot queued\tNot resolved\ntarget3-live-1782615730405\ncall.ended / outbound\n\t28.06.2026 06:02\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\tNot queued\tNot resolved\n3907454172\ncall.ended / inbound\n\t28.06.2026 00:00\t\n+1 512-845-2012\n-\n\tMissing\tNot queued\tNot resolved\n3907454172\ncall.hungup / inbound\n\t27.06.2026 23:59\t\n+1 512-845-2012\n-\n\tMissing\tNot queued\tNot resolved\n3907454172\ncall.ended / inbound\n\t27.06.2026 23:59\t\n+1 512-845-2012\n-\n\tMissing\tNot queued\tNot resolved\n3907454172\ncall.created / inbound\n\t27.06.2026 23:59\t\n+1 512-845-2012\n-\n\tMissing\tNot queued\tNot resolved\n3907275322\ncall.ended / inbound\n\t27.06.2026 19:58\t\n+1 646-363-3906\n-\n\tMissing\tNot queued\tNot resolved\n3907275322\ncall.ended / inbound\n\t27.06.2026 19:57\t\n+1 646-363-3906\n-\n\tMissing\tNot queued\tNot resolved\n3907273902\ncall.ended / inbound\n\t27.06.2026 19:57\t\n+1 646-363-3906\n-\n\tMissing\tNot queued\tNot resolved",
+  "stats": {
+    "total": 104,
+    "last3d": 104,
+    "withTranscript": 76,
+    "resolverQueued": 73,
+    "resolverSucceeded": 3,
+    "resolverFailed": 0,
+    "lastReceivedAt": "2026-06-28T08:39:20.664Z"
+  },
+  "targetCall": {
+    "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+    "externalCallId": "3906652817",
+    "eventTimestamp": "2026-06-26T23:22:43.000Z",
+    "transcriptPresent": true,
+    "transcriptLength": 412,
+    "transcriptSource": "aircall_ci",
+    "resolverStatus": "succeeded",
+    "resolverOutputPresent": true,
+    "resolverModel": "claude-haiku-4-5-20251001",
+    "resolverPromptKey": "ai.transcript-resolver",
+    "resolverLatencyMs": 3227,
+    "resolvedAt": "2026-06-28T08:59:29.745Z",
+    "resolvedWithVersion": 1,
+    "resolverOutputKeys": [
+      "summary",
+      "psych_tags",
+      "call_intent",
+      "customer_match",
+      "urgency_signal",
+      "payment_signals",
+      "product_mentions",
+      "shipping_signals",
+      "language_detected",
+      "competitor_mentioned",
+      "resolved_with_version"
+    ]
+  },
+  "uiAssertions": {
+    "liveUrl": true,
+    "authenticatedOwnerSession": true,
+    "callTransactionsRendered": true,
+    "nonEmptyStateRendered": true,
+    "transcriptStatRendered": true,
+    "resolverSucceededStatRendered": true,
+    "tableRendered": true,
+    "hasNoVisibleErrorState": true
+  },
+  "apiAssertions": {
+    "aircallCallsEndpointLive": true,
+    "targetCallReturnedByEndpoint": true,
+    "targetCallResolverSucceeded": true,
+    "targetCallResolverOutputPresent": true,
+    "targetCallResolvedWithVersion": true,
+    "targetCallHasAll11Fields": true
+  },
+  "browserWarnings": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    }
+  ],
+  "failedRequests": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "failure": "net::ERR_ABORTED"
+    }
+  ]
+}

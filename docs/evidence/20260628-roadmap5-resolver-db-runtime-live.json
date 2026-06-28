@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-06-28T09:03:40.348Z",
+  "source": "remote-container-prisma-with-pm2-api-env",
+  "container": "factoryengine-dtfbank-app",
+  "pm2Process": "factory-engine-pro-api",
+  "buildSha": "70b7ea3eca02eb7be2c0074dc282523b9e1cf7da",
+  "event": {
+    "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+    "tenantId": "ten_dtfbank",
+    "externalCallId": "3906652817",
+    "eventTimestamp": "2026-06-26T23:22:43.000Z",
+    "transcriptSource": "aircall_ci",
+    "transcriptLength": 412,
+    "resolverStatus": "succeeded",
+    "resolverModel": "claude-haiku-4-5-20251001",
+    "resolverPromptKey": "ai.transcript-resolver",
+    "resolverLatencyMs": 3227,
+    "resolvedAt": "2026-06-28T08:59:29.745Z",
+    "resolvedWithVersion": 1,
+    "resolverError": null,
+    "outputKeys": [
+      "summary",
+      "psych_tags",
+      "call_intent",
+      "customer_match",
+      "urgency_signal",
+      "payment_signals",
+      "product_mentions",
+      "shipping_signals",
+      "language_detected",
+      "competitor_mentioned",
+      "resolved_with_version"
+    ],
+    "missingFields": [],
+    "extraFields": [],
+    "output": {
+      "summary": "Gary Fairbanks from Cypress called requesting a callback at (346) 287-3217. He mentioned a friend in Bossier City, Louisiana needs a part and asked about pickup options. Customer wants to discuss what can be accomplished and requested a callback.",
+      "psych_tags": [
+        "info_request"
+      ],
+      "call_intent": "inquiry",
+      "customer_match": {
+        "phone": "+13462873217",
+        "name_hint": "Gary Fairbanks",
+        "confidence": 0.9,
+        "customer_id": null
+      },
+      "urgency_signal": "low",
+      "payment_signals": {
+        "complaint": false,
+        "refund_asked": false,
+        "method_mentioned": false
+      },
+      "product_mentions": [],
+      "shipping_signals": {
+        "complaint": false,
+        "tracking_asked": false,
+        "address_mentioned": true
+      },
+      "language_detected": "en",
+      "competitor_mentioned": [],
+      "resolved_with_version": 1
+    }
+  },
+  "runtimeLogs": [
+    {
+      "source": "docker logs --since=45m factoryengine-dtfbank-app",
+      "line": "[Nest] 1173  - 06/28/2026, 8:59:29 AM     LOG [AppLogger] {\"request_id\":\"ai-transcript-resolver-aircall-transcript-ten_dtfbank-3906652817-acev_vnemm2nihwqswx3jjnqdfcr6\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"ai\",\"action\":\"transcript_resolved\",\"message\":\"Aircall transcript resolved into structured output\",\"call_event_id\":\"acev_vnemm2nihwqswx3jjnqdfcr6\",\"external_call_id\":\"3906652817\",\"model\":\"claude-haiku-4-5-20251001\",\"resolved_with_version\":1,\"latency_ms\":3227}"
+    }
+  ],
+  "assertions": {
+    "tenantScoped": true,
+    "realAircallCall": true,
+    "transcriptCaptured": true,
+    "transcriptSourceIsAircallCi": true,
+    "resolverSucceeded": true,
+    "resolverModelIsTenantAnthropic": true,
+    "resolverPromptKeyStored": true,
+    "dbResolvedWithVersionStored": true,
+    "jsonResolvedWithVersionStored": true,
+    "jsonHasAll11Fields": true,
+    "jsonHasNoExtraFields": true,
+    "psychTagsComputedOnceOnCallEvent": true,
+    "psychTagsUseMasterEnum": true,
+    "callIntentUsesMasterEnum": true,
+    "urgencyUsesMasterEnum": true
+  }
+}

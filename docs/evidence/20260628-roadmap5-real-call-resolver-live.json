@@ -1,0 +1,64 @@
+{
+  "selected": {
+    "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+    "externalCallId": "3906652817",
+    "previousStatus": "queued",
+    "previousJobState": "completed",
+    "previousReturn": {
+      "status": "failed",
+      "error": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+    }
+  },
+  "final": {
+    "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+    "externalCallId": "3906652817",
+    "resolverStatus": "succeeded",
+    "resolverError": null,
+    "resolverModel": "claude-haiku-4-5-20251001",
+    "resolverPromptKey": "ai.transcript-resolver",
+    "resolverLatencyMs": 3227,
+    "resolvedAt": "2026-06-28T08:59:29.745Z",
+    "resolvedWithVersion": 1,
+    "outputKeys": [
+      "summary",
+      "psych_tags",
+      "call_intent",
+      "customer_match",
+      "urgency_signal",
+      "payment_signals",
+      "product_mentions",
+      "shipping_signals",
+      "language_detected",
+      "competitor_mentioned",
+      "resolved_with_version"
+    ],
+    "output": {
+      "summary": "Gary Fairbanks from Cypress called requesting a callback at (346) 287-3217. He mentioned a friend in Bossier City, Louisiana needs a part and asked about pickup options. Customer wants to discuss what can be accomplished and requested a callback.",
+      "psych_tags": [
+        "info_request"
+      ],
+      "call_intent": "inquiry",
+      "customer_match": {
+        "phone": "+13462873217",
+        "name_hint": "Gary Fairbanks",
+        "confidence": 0.9,
+        "customer_id": null
+      },
+      "urgency_signal": "low",
+      "payment_signals": {
+        "complaint": false,
+        "refund_asked": false,
+        "method_mentioned": false
+      },
+      "product_mentions": [],
+      "shipping_signals": {
+        "complaint": false,
+        "tracking_asked": false,
+        "address_mentioned": true
+      },
+      "language_detected": "en",
+      "competitor_mentioned": [],
+      "resolved_with_version": 1
+    }
+  }
+}
