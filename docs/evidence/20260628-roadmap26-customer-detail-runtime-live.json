@@ -1,0 +1,70 @@
+﻿{
+    "generatedAt":  "2026-06-28T16:25:58.4733014Z",
+    "buildSha":  "fb70dd91abeaf7dcacdbff0b9ade92a0fe33c18e",
+    "ports":  [
+                  {
+                      "port":  3000,
+                      "open":  true
+                  },
+                  {
+                      "port":  3001,
+                      "open":  true
+                  },
+                  {
+                      "port":  3002,
+                      "open":  true
+                  },
+                  {
+                      "port":  4000,
+                      "open":  true
+                  }
+              ],
+    "pm2Online":  [
+                      {
+                          "name":  "factory-engine-pro-api",
+                          "online":  true
+                      },
+                      {
+                          "name":  "factory-engine-pro-admin",
+                          "online":  true
+                      },
+                      {
+                          "name":  "factory-engine-pro-person",
+                          "online":  true
+                      },
+                      {
+                          "name":  "factory-engine-pro-accounts",
+                          "online":  true
+                      }
+                  ],
+    "httpsRoutes":  [
+                        {
+                            "url":  "https://app.dtfbank.com/",
+                            "status":  200
+                        },
+                        {
+                            "url":  "https://app.dtfbank.com/staff/customers?customerId=cust_roadmap24_linda",
+                            "status":  200
+                        },
+                        {
+                            "url":  "https://app.dtfbank.com/customers?customerId=cust_roadmap24_linda",
+                            "status":  200
+                        },
+                        {
+                            "url":  "https://api.dtfbank.com/api/v1/health",
+                            "status":  200
+                        }
+                    ],
+    "customerDetailLogSamples":  [
+                                     "/root/.pm2/logs/factory-engine-pro-api-out.log:3837:[Nest] 82576  - 06/28/2026, 4:25:04 PM     LOG [AppLogger] {\"request_id\":\"7c04a859-f3be-4d7d-aba8-71ef420be8a9\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_detail.read\",\"message\":\"Customer detail panel opened\",\"customer_id\":\"cust_roadmap24_linda\",\"orders\":2,\"calls\":2,\"support\":1,\"emails\":1}",
+                                     "/root/.pm2/logs/factory-engine-pro-api-out.log:3838:[Nest] 82576  - 06/28/2026, 4:25:05 PM     LOG [AppLogger] {\"request_id\":\"1ea21b89-4ecf-44af-aa80-82aa766f819c\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_detail.read\",\"message\":\"Customer detail panel opened\",\"customer_id\":\"cust_roadmap24_ihsan\",\"orders\":1,\"calls\":1,\"support\":1,\"emails\":1}",
+                                     "/root/.pm2/logs/factory-engine-pro-api-out.log:3839:[Nest] 82576  - 06/28/2026, 4:25:05 PM     LOG [AppLogger] {\"request_id\":\"90f00430-f0e0-4a20-914b-4b45e44ea2f6\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_detail.read\",\"message\":\"Customer detail panel opened\",\"customer_id\":\"cust_roadmap24_linda\",\"orders\":2,\"calls\":2,\"support\":1,\"emails\":1}",
+                                     "/root/.pm2/logs/factory-engine-pro-api-out.log:3840:[Nest] 82576  - 06/28/2026, 4:25:06 PM     LOG [AppLogger] {\"request_id\":\"e345d618-352f-4a8f-b616-426f0bd1b4e3\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_detail.read\",\"message\":\"Customer detail panel opened\",\"customer_id\":\"cust_roadmap24_ihsan\",\"orders\":1,\"calls\":1,\"support\":1,\"emails\":1}"
+                                 ],
+    "assertions":  {
+                       "buildShaMatchesSourceCommit":  true,
+                       "allRuntimePortsOpen":  true,
+                       "publicRoutesReturn200":  true,
+                       "customerDetailStructuredLogsPresent":  true
+                   }
+}

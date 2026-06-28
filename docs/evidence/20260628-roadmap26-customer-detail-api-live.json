@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-06-28T16:25:06.967Z",
+  "base": "https://api.dtfbank.com/api/v1",
+  "buildSha": "fb70dd91abeaf7dcacdbff0b9ade92a0fe33c18e",
+  "principals": {
+    "linda": {
+      "email": "dtfbanktx@gmail.com",
+      "hasCommission": false
+    },
+    "ihsan": {
+      "email": "ihsan@dtfbank.com",
+      "hasCommission": true
+    },
+    "owner": {
+      "email": "info@dtfbank.com",
+      "hasCommission": true
+    }
+  },
+  "requests": {
+    "lindaDetail": {
+      "status": 200,
+      "requestId": "7c04a859-f3be-4d7d-aba8-71ef420be8a9",
+      "customerId": "cust_roadmap24_linda",
+      "visibleTabs": [
+        "profile",
+        "shopify_orders",
+        "aircall_calls",
+        "support",
+        "email",
+        "messages",
+        "notes",
+        "tasks"
+      ],
+      "counts": {
+        "profileSegments": 2,
+        "profileAssignments": 1,
+        "shopifyOrders": 2,
+        "aircallCalls": 2,
+        "support": 1,
+        "email": 1,
+        "messages": 1,
+        "notes": 8,
+        "tasks": 2,
+        "commissionVisible": false,
+        "commissionPayload": false
+      }
+    },
+    "lindaForbidden": {
+      "status": 403,
+      "requestId": "8e811e97-26e9-4348-b838-c3fdd80b04d2",
+      "message": "Customer is outside your axis scope"
+    },
+    "ihsanDetail": {
+      "status": 200,
+      "requestId": "1ea21b89-4ecf-44af-aa80-82aa766f819c",
+      "customerId": "cust_roadmap24_ihsan",
+      "visibleTabs": [
+        "profile",
+        "shopify_orders",
+        "aircall_calls",
+        "support",
+        "email",
+        "messages",
+        "notes",
+        "tasks",
+        "commission"
+      ],
+      "counts": {
+        "profileSegments": 2,
+        "profileAssignments": 1,
+        "shopifyOrders": 1,
+        "aircallCalls": 1,
+        "support": 1,
+        "email": 1,
+        "messages": 1,
+        "notes": 1,
+        "tasks": 2,
+        "commissionVisible": true,
+        "commissionPayload": true
+      },
+      "commission": {
+        "eligible": true,
+        "lifetimeRevenue": 9420.5,
+        "revenue30d": 3252.8,
+        "orders30d": 1,
+        "projectedCommission": 0,
+        "note": "Commission submit flow is a later roadmap item; this panel exposes the live order basis only."
+      }
+    },
+    "adminLinda": {
+      "status": 200,
+      "requestId": "90f00430-f0e0-4a20-914b-4b45e44ea2f6",
+      "customerId": "cust_roadmap24_linda",
+      "visibleTabs": [
+        "profile",
+        "shopify_orders",
+        "aircall_calls",
+        "support",
+        "email",
+        "messages",
+        "notes",
+        "tasks",
+        "commission"
+      ],
+      "counts": {
+        "profileSegments": 2,
+        "profileAssignments": 1,
+        "shopifyOrders": 2,
+        "aircallCalls": 2,
+        "support": 1,
+        "email": 1,
+        "messages": 1,
+        "notes": 8,
+        "tasks": 2,
+        "commissionVisible": true,
+        "commissionPayload": true
+      }
+    },
+    "adminIhsan": {
+      "status": 200,
+      "requestId": "e345d618-352f-4a8f-b616-426f0bd1b4e3",
+      "customerId": "cust_roadmap24_ihsan",
+      "visibleTabs": [
+        "profile",
+        "shopify_orders",
+        "aircall_calls",
+        "support",
+        "email",
+        "messages",
+        "notes",
+        "tasks",
+        "commission"
+      ],
+      "counts": {
+        "profileSegments": 2,
+        "profileAssignments": 1,
+        "shopifyOrders": 1,
+        "aircallCalls": 1,
+        "support": 1,
+        "email": 1,
+        "messages": 1,
+        "notes": 1,
+        "tasks": 2,
+        "commissionVisible": true,
+        "commissionPayload": true
+      }
+    }
+  },
+  "assertions": {
+    "allEndpointsExpectedStatus": true,
+    "allBaseTabsHaveLiveRows": true,
+    "customerScopeEnforced": true,
+    "commissionHiddenForCustomerService": true,
+    "commissionVisibleForSales": true,
+    "adminEndpointUsesSamePanelDto": true
+  }
+}

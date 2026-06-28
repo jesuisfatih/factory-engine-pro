@@ -1,0 +1,64 @@
+﻿{
+  "generatedAt": "2026-06-28T16:25:29.594Z",
+  "tenantId": "ten_dtfbank",
+  "customers": [
+    {
+      "id": "cust_roadmap24_ihsan",
+      "email": "roadmap24.ihsan@dtfbank.test",
+      "companyName": "Roadmap 24 Ihsan Sales Customer",
+      "ordersCount": 6,
+      "totalSpent": "9420.5",
+      "assignments": [
+        {
+          "axis": "sales",
+          "memberId": "tmbr_ten_dtfbank_ihsan_taskiran"
+        }
+      ],
+      "segmentMemberships": [
+        {
+          "segmentId": "seg_roadmap24_ihsan"
+        },
+        {
+          "segmentId": "seg_roadmap26_customer_360"
+        }
+      ]
+    },
+    {
+      "id": "cust_roadmap24_linda",
+      "email": "roadmap25.linda.customer@example.com",
+      "companyName": "Roadmap 24 Linda Axis Customer",
+      "ordersCount": 3,
+      "totalSpent": "3370.75",
+      "assignments": [
+        {
+          "axis": "support",
+          "memberId": "tmbr_ten_dtfbank_linda_marroquin"
+        }
+      ],
+      "segmentMemberships": [
+        {
+          "segmentId": "seg_roadmap24_linda"
+        },
+        {
+          "segmentId": "seg_roadmap26_customer_360"
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "orders": 2,
+    "aircallCalls": 2,
+    "mailDeliveries": 2,
+    "supportRequests": 2,
+    "linkedNotes": 2,
+    "linkedMessages": 2,
+    "comments": 4,
+    "segmentMemberships": 2
+  },
+  "assertions": {
+    "tenantRowsExplicit": true,
+    "bothRoleFixturesExist": true,
+    "allCustomerDetailTabsHaveDbRows": true,
+    "noQuotesOrInvoicesFixtureAdded": true
+  }
+}

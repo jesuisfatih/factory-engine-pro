@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-06-28T16:27:43.423Z",
+  "screenshots": {
+    "personCs": "docs/evidence/roadmap26-customer-detail-person-cs-live-20260628.png",
+    "personSales": "docs/evidence/roadmap26-customer-detail-person-sales-live-20260628.png",
+    "admin": "docs/evidence/roadmap26-customer-detail-admin-live-20260628.png"
+  },
+  "assertions": {
+    "personCsPanelOpenedFromQueryParam": true,
+    "personCsAllBaseTabsVisible": true,
+    "personCsCommissionHidden": true,
+    "personSalesCommissionVisible": true,
+    "adminPanelOpenedFromQueryParam": true,
+    "screenshotsWritten": true
+  }
+}
