@@ -1,0 +1,151 @@
+﻿{
+  "proof": "roadmap17_rule_versioning_db_live",
+  "tenantId": "ten_dtfbank",
+  "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+  "tableProbe": [
+    {
+      "table_name": "rule_versions"
+    }
+  ],
+  "rule": {
+    "id": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "name": "Roadmap 17 rollback proof 20260628125141",
+    "status": "draft",
+    "priority": 111,
+    "definition": {
+      "when": [
+        {
+          "id": "cond-roadmap17-v1",
+          "value": "inquiry",
+          "operator": "=",
+          "condition": "call_intent"
+        }
+      ],
+      "status": "draft",
+      "actions": [
+        {
+          "id": "act-roadmap17-v1",
+          "value": "v1 audit no-op",
+          "action": "no-op"
+        }
+      ],
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "priority": 111,
+      "composable": false
+    },
+    "updatedAt": "2026-06-28T12:51:42.931Z"
+  },
+  "versions": [
+    {
+      "id": "wrv_zi3voxzz8jnv7v8avl60jom5",
+      "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+      "versionNo": 1,
+      "jsonSnapshot": {
+        "name": "Roadmap 17 rollback proof 20260628125141",
+        "definition": {
+          "when": [
+            {
+              "id": "cond-roadmap17-v1",
+              "value": "inquiry",
+              "operator": "=",
+              "condition": "call_intent"
+            }
+          ],
+          "status": "draft",
+          "actions": [
+            {
+              "id": "act-roadmap17-v1",
+              "value": "v1 audit no-op",
+              "action": "no-op"
+            }
+          ],
+          "trigger": "manual.trigger",
+          "cooldown": 0,
+          "priority": 111,
+          "composable": false
+        }
+      },
+      "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+      "editedAt": "2026-06-28T12:51:42.275Z",
+      "comment": "Roadmap 17 create v1"
+    },
+    {
+      "id": "wrv_du6aq5x3ubejvfyq7lbz0v8a",
+      "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+      "versionNo": 2,
+      "jsonSnapshot": {
+        "name": "Roadmap 17 rollback proof 20260628125141 edited",
+        "definition": {
+          "when": [
+            {
+              "id": "cond-roadmap17-v1",
+              "value": "inquiry",
+              "operator": "=",
+              "condition": "call_intent"
+            }
+          ],
+          "status": "shadow",
+          "actions": [
+            {
+              "id": "act-roadmap17-v2",
+              "value": "v2 audit no-op",
+              "action": "no-op"
+            }
+          ],
+          "trigger": "manual.trigger",
+          "cooldown": 0,
+          "priority": 222,
+          "composable": false
+        }
+      },
+      "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+      "editedAt": "2026-06-28T12:51:42.490Z",
+      "comment": "Roadmap 17 edit v2"
+    },
+    {
+      "id": "wrv_ivzd94tbth9lgpmoechdwxjo",
+      "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+      "versionNo": 3,
+      "jsonSnapshot": {
+        "name": "Roadmap 17 rollback proof 20260628125141",
+        "definition": {
+          "when": [
+            {
+              "id": "cond-roadmap17-v1",
+              "value": "inquiry",
+              "operator": "=",
+              "condition": "call_intent"
+            }
+          ],
+          "status": "draft",
+          "actions": [
+            {
+              "id": "act-roadmap17-v1",
+              "value": "v1 audit no-op",
+              "action": "no-op"
+            }
+          ],
+          "trigger": "manual.trigger",
+          "cooldown": 0,
+          "priority": 111,
+          "composable": false
+        }
+      },
+      "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+      "editedAt": "2026-06-28T12:51:42.941Z",
+      "comment": "Roadmap 17 rollback to v1"
+    }
+  ],
+  "assertions": {
+    "tableExists": true,
+    "threeVersions": true,
+    "versionNumbersSequential": true,
+    "editAuditPresent": true,
+    "rollbackAuditPresent": true,
+    "rollbackLiveMatchesV1": true,
+    "v2SnapshotPreserved": true,
+    "editedByMemberCaptured": true
+  },
+  "checkedAt": "2026-06-28T12:52:33.113Z"
+}

@@ -1,0 +1,289 @@
+{
+  "proof": "roadmap17_rule_versioning_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "b08ed8d378972aa3b7edd56e1c7e95c595094d07",
+  "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+  "created": {
+    "id": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "name": "Roadmap 17 rollback proof 20260628125141",
+    "status": "draft",
+    "priority": 111,
+    "composable": false,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "draft",
+      "priority": 111,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap17-v1",
+          "condition": "call_intent",
+          "operator": "=",
+          "value": "inquiry"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap17-v1",
+          "action": "no-op",
+          "value": "v1 audit no-op"
+        }
+      ]
+    },
+    "createdAt": "2026-06-28T12:51:42.269Z",
+    "updatedAt": "2026-06-28T12:51:42.269Z"
+  },
+  "edited": {
+    "id": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "name": "Roadmap 17 rollback proof 20260628125141 edited",
+    "status": "shadow",
+    "priority": 222,
+    "composable": false,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "shadow",
+      "priority": 222,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap17-v1",
+          "condition": "call_intent",
+          "operator": "=",
+          "value": "inquiry"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap17-v2",
+          "action": "no-op",
+          "value": "v2 audit no-op"
+        }
+      ]
+    },
+    "createdAt": "2026-06-28T12:51:42.269Z",
+    "updatedAt": "2026-06-28T12:51:42.478Z"
+  },
+  "rolledBack": {
+    "id": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "name": "Roadmap 17 rollback proof 20260628125141",
+    "status": "draft",
+    "priority": 111,
+    "composable": false,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "draft",
+      "priority": 111,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap17-v1",
+          "condition": "call_intent",
+          "operator": "=",
+          "value": "inquiry"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap17-v1",
+          "action": "no-op",
+          "value": "v1 audit no-op"
+        }
+      ]
+    },
+    "createdAt": "2026-06-28T12:51:42.269Z",
+    "updatedAt": "2026-06-28T12:51:42.931Z"
+  },
+  "versionsAfterEdit": {
+    "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "versions": [
+      {
+        "id": "wrv_du6aq5x3ubejvfyq7lbz0v8a",
+        "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+        "versionNo": 2,
+        "jsonSnapshot": {
+          "name": "Roadmap 17 rollback proof 20260628125141 edited",
+          "definition": {
+            "status": "shadow",
+            "priority": 222,
+            "composable": false,
+            "trigger": "manual.trigger",
+            "cooldown": 0,
+            "when": [
+              {
+                "id": "cond-roadmap17-v1",
+                "condition": "call_intent",
+                "operator": "=",
+                "value": "inquiry"
+              }
+            ],
+            "actions": [
+              {
+                "id": "act-roadmap17-v2",
+                "action": "no-op",
+                "value": "v2 audit no-op"
+              }
+            ]
+          }
+        },
+        "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+        "editedAt": "2026-06-28T12:51:42.490Z",
+        "comment": "Roadmap 17 edit v2"
+      },
+      {
+        "id": "wrv_zi3voxzz8jnv7v8avl60jom5",
+        "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+        "versionNo": 1,
+        "jsonSnapshot": {
+          "name": "Roadmap 17 rollback proof 20260628125141",
+          "definition": {
+            "status": "draft",
+            "priority": 111,
+            "composable": false,
+            "trigger": "manual.trigger",
+            "cooldown": 0,
+            "when": [
+              {
+                "id": "cond-roadmap17-v1",
+                "condition": "call_intent",
+                "operator": "=",
+                "value": "inquiry"
+              }
+            ],
+            "actions": [
+              {
+                "id": "act-roadmap17-v1",
+                "action": "no-op",
+                "value": "v1 audit no-op"
+              }
+            ]
+          }
+        },
+        "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+        "editedAt": "2026-06-28T12:51:42.275Z",
+        "comment": "Roadmap 17 create v1"
+      }
+    ]
+  },
+  "versionsAfterRollback": {
+    "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+    "versions": [
+      {
+        "id": "wrv_ivzd94tbth9lgpmoechdwxjo",
+        "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+        "versionNo": 3,
+        "jsonSnapshot": {
+          "name": "Roadmap 17 rollback proof 20260628125141",
+          "definition": {
+            "status": "draft",
+            "priority": 111,
+            "composable": false,
+            "trigger": "manual.trigger",
+            "cooldown": 0,
+            "when": [
+              {
+                "id": "cond-roadmap17-v1",
+                "condition": "call_intent",
+                "operator": "=",
+                "value": "inquiry"
+              }
+            ],
+            "actions": [
+              {
+                "id": "act-roadmap17-v1",
+                "action": "no-op",
+                "value": "v1 audit no-op"
+              }
+            ]
+          }
+        },
+        "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+        "editedAt": "2026-06-28T12:51:42.941Z",
+        "comment": "Roadmap 17 rollback to v1"
+      },
+      {
+        "id": "wrv_du6aq5x3ubejvfyq7lbz0v8a",
+        "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+        "versionNo": 2,
+        "jsonSnapshot": {
+          "name": "Roadmap 17 rollback proof 20260628125141 edited",
+          "definition": {
+            "status": "shadow",
+            "priority": 222,
+            "composable": false,
+            "trigger": "manual.trigger",
+            "cooldown": 0,
+            "when": [
+              {
+                "id": "cond-roadmap17-v1",
+                "condition": "call_intent",
+                "operator": "=",
+                "value": "inquiry"
+              }
+            ],
+            "actions": [
+              {
+                "id": "act-roadmap17-v2",
+                "action": "no-op",
+                "value": "v2 audit no-op"
+              }
+            ]
+          }
+        },
+        "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+        "editedAt": "2026-06-28T12:51:42.490Z",
+        "comment": "Roadmap 17 edit v2"
+      },
+      {
+        "id": "wrv_zi3voxzz8jnv7v8avl60jom5",
+        "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+        "versionNo": 1,
+        "jsonSnapshot": {
+          "name": "Roadmap 17 rollback proof 20260628125141",
+          "definition": {
+            "status": "draft",
+            "priority": 111,
+            "composable": false,
+            "trigger": "manual.trigger",
+            "cooldown": 0,
+            "when": [
+              {
+                "id": "cond-roadmap17-v1",
+                "condition": "call_intent",
+                "operator": "=",
+                "value": "inquiry"
+              }
+            ],
+            "actions": [
+              {
+                "id": "act-roadmap17-v1",
+                "action": "no-op",
+                "value": "v1 audit no-op"
+              }
+            ]
+          }
+        },
+        "editedByMemberId": "tmbr_ten_dtfbank_info_owner",
+        "editedAt": "2026-06-28T12:51:42.275Z",
+        "comment": "Roadmap 17 create v1"
+      }
+    ]
+  },
+  "assertions": {
+    "createMadeVersion1": true,
+    "editMadeVersion2": true,
+    "rollbackCreatedVersion3": true,
+    "rollbackRestoredName": true,
+    "rollbackRestoredPriority": true,
+    "rollbackRestoredStatus": true,
+    "versionSnapshotsDistinct": true,
+    "version3SnapshotEqualsV1": true
+  },
+  "checkedAt": "2026-06-28T12:51:44.009Z"
+}

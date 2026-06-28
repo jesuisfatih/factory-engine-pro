@@ -1,0 +1,44 @@
+{
+  "proof": "roadmap17_rule_versioning_ui_live",
+  "url": "https://app.dtfbank.com/rules",
+  "ruleId": "wrule_chw5ijw6yl7mmdaibpk76x4u",
+  "ruleName": "Roadmap 17 rollback proof 20260628125141",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap17-rule-versioning-ui-live-20260628.png",
+  "bodyExcerpt": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nRule engine\nD\nDTF Bank\nOwner\nRule engine\nVisual editor for task-generation rules. Author here, the engine consumes the JSON.\nVerify chain\nMASTER ENUM CATALOG V2026-06-28.1\n8 psych tags · 5 call intents · 4 urgency levels · 29 triggers · 14 conditions · 9 actions\nSAVED RULES\n22\nshadow\np17\nRoadmap 7 persisted rule 20260628103457\nmanual.trigger -> create_task\n1 conditions\nsingle fire\n1/24h cooldown\narchived\np80\nRoadmap 8 aggregate trigger proof 20260628104932\ncustomer.repeat_call.detected -> create_task\n0 conditions\ncomposable\n1/24h cooldown\narchived\np80\nRoadmap 8 ai_derived trigger proof 20260628104932\npsych.tag.detected -> create_task\n0 conditions\ncomposable\n1/24h cooldown\narchived\np80\nRoadmap 8 system trigger proof 20260628104932\nshopify.order.created -> create_task\n0 conditions\ncomposable\n1/24h cooldown\narchived\np85\nRoadmap 9 no_match condition proof 20260628105847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np85\nRoadmap 9 match condition proof 20260628105847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np87\nRoadmap 10 no-op proof 20260628111708\nmanual.trigger -> no-op\n1 conditions\ncomposable\n1/24h cooldown\narchived\np87\nRoadmap 10 no-op proof 20260628111139\nmanual.trigger -> no-op\n1 conditions\ncomposable\n1/24h cooldown\narchived\np88\nRoadmap 11 grouped WHEN blocked 20260628112448\nmanual.trigger -> create_task\n2 conditions\n2 WHEN groups\ncomposable\n1/24h cooldown\narchived\np88\nRoadmap 10 multi action proof 20260628111708\nmanual.trigger -> create_task + route_member + add_watcher + escalate + pin_customer + add_note + segment_add + segment_remove\n1 conditions\ncomposable\n1/24h cooldown\narchived\np88\nRoadmap 10 multi action proof 20260628111139\nmanual.trigger -> create_task + route_member + add_watcher + escalate + pin_customer + add_note + segment_add + segment_remove\n1 conditions\ncomposable\n1/24h cooldown\narchived\np89\nRoadmap 11 grouped WHEN match 20260628112448\nmanual.trigger -> create_task\n2 conditions\n2 WHEN groups\ncomposable\n1/24h cooldown\narchived\np92\nRoadmap 12 lower active blocked 20260628113847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np93\nRoadmap 12 active non-composable 20260628113847\nmanual.trigger -> create_task\n1 conditions\nsingle fire\n1/24h cooldown\narchived\np94\nRoadmap 12 shadow dry run 20260628113847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np95\nRoadmap 12 draft ignored 20260628113847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\ndraft\np111\nRoadmap 17 rollback proof 20260628125141\nmanual.trigger -> no-op\n1 conditions\nsingle fire\ncooldown off\ndraft\np111\nRoadmap 17 rollback proof 20260628124939\nmanual.trigger -> no-op\n1 conditions\nsingle fire\ncooldown off\narchived\np1000\nRoadmap 16 state snapshot proof 20260628123727\nmanual.trigger -> create_task\n1 conditions\nsingle fire\ncooldown off\narchived\np1000\nRoadmap 15 rule trace proof 20260628122356\nmanual.trigger -> create_task\n1 conditions\nsingle fire\ncooldown off\narchived\np1000\nRoadmap 14 cooldown proof 20260628121051\nmanual.trigger -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\narchived\np1000\nRoadmap 13 Aircall event idempotency 20260628115630\naircall.call.created -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\nRULE AUDIT\n3\nv3\n28.06.2026 15:51:42\nRoadmap 17 rollback proof 20260628125141\nRoadmap 17 rollback to v1\ndraft\nmanual.trigger\nRollback\nv2\n28.06.2026 15:51:42\nRoadmap 17 rollback proof 20260628125141 edited\nRoadmap 17 edit v2\nshadow\nmanual.trigger\nRollback\nv1\n28.06.2026 15:51:42\nRoadmap 17 rollback proof 20260628125141\nRoadmap 17 create v1\ndraft\nmanual.trigger\nRollback\nCATALOG\nV2026-06-28.1\nTriggers\n29\nTriggers\naircall.call.created · aircall.call.ended · aircall.call.missed · aircall.transcript.received · shopify.order.created · shopify.order.cancelled · shopify.order.refunded · shopify.customer.created\nConditions\n14\nConditions\ncall_intent · psych_tag_includes · product_mentioned · previous_purchase_includes · segment_member · call_count_in_window · is_first_call · customer_ltv_gte\nActions\n9\nActions\ncreate_task · pin_customer · add_note · segment_add · segment_remove · route_member · add_watcher · escalate · no-op\nPsych tags\n8\nPsych tags\nangry · purchase_intent · shipping_issue · refund_intent · complaint · info_request · follow_up · satisfied\nCall intents\n5\nCall intents\nsale · support · inquiry · complaint · follow_up\nUrgency\n4\nUrgency\nlow · medium · high · critical\nNew\ndraft\nshadow\nactive\narchived\nPriority\nComposable\nCooldown h\nLimit\ndraft\nCondition\nAction\nFire event\nUpdate rule\nTRIGGER\nAircall Call Created\nAircall Call Ended\nAircall Call Missed\nAircall Transcript ",
+  "apiResponses": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/catalog",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/wrule_bkgp5ru0g9kq1gmxevlw9vbd/versions",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/wrule_chw5ijw6yl7mmdaibpk76x4u/versions",
+      "status": 200
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+  ],
+  "assertions": {
+    "liveRulesLoaded": true,
+    "proofRuleVisible": true,
+    "auditPanelVisible": true,
+    "v1Visible": true,
+    "v2Visible": true,
+    "v3RollbackVisible": true,
+    "rollbackButtonVisible": true,
+    "versionsApiOk": true
+  },
+  "checkedAt": "2026-06-28T12:53:49.308Z"
+}
