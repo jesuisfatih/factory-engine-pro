@@ -98,6 +98,34 @@ export class RulesService {
         continue;
       }
 
+      const execution = await this.repository.claimExecution({
+        eventId,
+        ruleId: rule.id,
+        trigger: parsed.trigger,
+      });
+      if (!execution) {
+        this.logger.log('rules', 'event_duplicate_skipped', 'Duplicate workflow event/rule execution skipped', {
+          event_id: eventId,
+          trigger: parsed.trigger,
+          rule_id: rule.id,
+          execution_mode: rule.status === 'shadow' ? 'shadow' : 'active',
+          short_circuited: rule.status === 'active' && !rule.composable,
+        });
+        results.push({
+          ruleId: rule.id,
+          ruleName: rule.name,
+          status: 'skipped',
+          reason: 'duplicate_event',
+          executionMode: rule.status === 'shadow' ? 'shadow' : 'active',
+          shortCircuited: rule.status === 'active' && !rule.composable,
+          taskIds: [],
+          conditionTrace,
+          whenTrace,
+        });
+        if (rule.status === 'active' && !rule.composable) break;
+        continue;
+      }
+
       if (rule.status === 'shadow') {
         this.logger.log('rules', 'shadow_rule_matched', 'Shadow workflow rule matched without mutating state', {
           event_id: eventId,
@@ -106,7 +134,7 @@ export class RulesService {
           when_trace: whenTrace,
           condition_trace: conditionTrace,
         });
-        results.push({
+        const shadowResult: WorkflowTriggerFireResponse['results'][number] = {
           ruleId: rule.id,
           ruleName: rule.name,
           status: 'shadow_matched',
@@ -114,6 +142,12 @@ export class RulesService {
           taskIds: [],
           conditionTrace,
           whenTrace,
+        };
+        results.push(shadowResult);
+        await this.repository.completeExecution(execution.id, {
+          status: shadowResult.status,
+          taskIds: [],
+          result: shadowResult as unknown as Prisma.InputJsonValue,
         });
         continue;
       }
@@ -148,7 +182,7 @@ export class RulesService {
       }
 
       const actionStatus = resultStatus(taskIds, actionTrace);
-      results.push({
+      const activeResult: WorkflowTriggerFireResponse['results'][number] = {
         ruleId: rule.id,
         ruleName: rule.name,
         status: actionStatus,
@@ -159,6 +193,12 @@ export class RulesService {
         conditionTrace,
         whenTrace,
         actionTrace,
+      };
+      results.push(activeResult);
+      await this.repository.completeExecution(execution.id, {
+        status: activeResult.status,
+        taskIds,
+        result: activeResult as unknown as Prisma.InputJsonValue,
       });
 
       if (!rule.composable && actionStatus !== 'skipped') {

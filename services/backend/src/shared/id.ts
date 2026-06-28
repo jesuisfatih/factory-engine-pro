@@ -39,7 +39,8 @@ export type IdPrefix =
   | 'acss'
   | 'ssync'
   | 'slog'
-  | 'wrule';
+  | 'wrule'
+  | 'wrex';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;

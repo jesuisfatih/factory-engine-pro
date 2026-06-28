@@ -36,6 +36,40 @@ export class RulesRepository {
     });
   }
 
+  async claimExecution(input: {
+    eventId: string;
+    ruleId: string;
+    trigger: WorkflowTrigger;
+  }) {
+    try {
+      return await this.prisma.db.workflowRuleExecution.create({
+        data: {
+          id: prefixedId('wrex'),
+          tenantId: this.tenantId(),
+          eventId: input.eventId,
+          ruleId: input.ruleId,
+          trigger: input.trigger,
+          status: 'started',
+          result: {},
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) return null;
+      throw error;
+    }
+  }
+
+  completeExecution(id: string, data: {
+    status: string;
+    taskIds: string[];
+    result: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.db.workflowRuleExecution.update({
+      where: { id },
+      data,
+    });
+  }
+
   create(input: SaveWorkflowRuleInput) {
     return this.prisma.db.workflowRule.create({
       data: {
@@ -70,4 +104,8 @@ export class RulesRepository {
     if (!tenantId) throw new Error('Tenant context is required');
     return tenantId;
   }
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
 }
