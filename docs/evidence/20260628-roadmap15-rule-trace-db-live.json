@@ -1,0 +1,207 @@
+﻿{
+  "proof": "roadmap15_rule_trace_db_live",
+  "tenantId": "ten_dtfbank",
+  "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+  "taskId": "sr_p10ibyc4g0eiwdfinscvub3k",
+  "eventId": "roadmap15-rule-trace-20260628122356",
+  "rule": {
+    "id": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+    "tenantId": "ten_dtfbank",
+    "name": "Roadmap 15 rule trace proof 20260628122356",
+    "status": "archived",
+    "priority": 1000,
+    "trigger": "manual.trigger",
+    "definition": {
+      "when": [
+        {
+          "id": "cond-roadmap15-ltv",
+          "value": "100",
+          "operator": ">=",
+          "condition": "customer_ltv_gte"
+        }
+      ],
+      "status": "archived",
+      "actions": [
+        {
+          "id": "act-roadmap15-create-task",
+          "value": "Roadmap 15 trace proof task 20260628122356",
+          "action": "create_task"
+        }
+      ],
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "priority": 1000,
+      "composable": false
+    },
+    "updatedAt": "2026-06-28T12:23:58.445Z"
+  },
+  "executions": [
+    {
+      "id": "wrex_fjp3z398sbst76f1bzpwu9z3",
+      "eventId": "roadmap15-rule-trace-20260628122356",
+      "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+      "status": "task_created",
+      "taskIds": [
+        "sr_p10ibyc4g0eiwdfinscvub3k"
+      ],
+      "result": {
+        "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+        "status": "task_created",
+        "taskIds": [
+          "sr_p10ibyc4g0eiwdfinscvub3k"
+        ],
+        "cooldown": {
+          "hours": 0,
+          "limit": 1,
+          "disabled": true,
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+          "lastFiredAt": null,
+          "currentCount": 0,
+          "nextEligibleAt": null,
+          "windowStartedAt": null
+        },
+        "ruleName": "Roadmap 15 rule trace proof 20260628122356",
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap15-ltv",
+                "actual": 173.88,
+                "source": "customers.total_spent",
+                "matched": true,
+                "expected": "100",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ],
+        "actionTrace": [
+          {
+            "action": "create_task",
+            "status": "applied",
+            "message": "Created service request from workflow action.",
+            "actionId": "act-roadmap15-create-task",
+            "targetId": "sr_p10ibyc4g0eiwdfinscvub3k",
+            "targetType": "service_request"
+          }
+        ],
+        "executionMode": "active",
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap15-ltv",
+            "actual": 173.88,
+            "source": "customers.total_spent",
+            "matched": true,
+            "expected": "100",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "shortCircuited": true
+      },
+      "firstSeenAt": "2026-06-28T12:23:57.457Z",
+      "updatedAt": "2026-06-28T12:23:57.495Z"
+    }
+  ],
+  "task": {
+    "id": "sr_p10ibyc4g0eiwdfinscvub3k",
+    "tenantId": "ten_dtfbank",
+    "title": "Roadmap 15 trace proof task 20260628122356",
+    "status": "open",
+    "priority": "critical",
+    "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+    "metadata": {
+      "category": "workflow_rule",
+      "workflow": {
+        "action": "create_task",
+        "params": {
+          "intent": "inquiry",
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+        },
+        "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+        "source": "roadmap15-live-proof",
+        "eventId": "roadmap15-rule-trace-20260628122356",
+        "trigger": "manual.trigger",
+        "actionId": "act-roadmap15-create-task",
+        "cooldown": {
+          "hours": 0,
+          "limit": 1,
+          "disabled": true,
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+          "lastFiredAt": null,
+          "currentCount": 0,
+          "nextEligibleAt": null,
+          "windowStartedAt": null
+        },
+        "ruleName": "Roadmap 15 rule trace proof 20260628122356",
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap15-ltv",
+                "actual": 173.88,
+                "source": "customers.total_spent",
+                "matched": true,
+                "expected": "100",
+                "operator": ">=",
+                "condition": "customer_ltv_gte"
+              }
+            ]
+          }
+        ],
+        "occurredAt": null,
+        "rulePriority": 1000,
+        "matchedRuleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+        "stateSnapshot": {
+          "customer": {
+            "id": "cust_nw1yip6avbgmk8gito31hw7y",
+            "tags": [
+              "Inbox online store chat",
+              "Login with Shop",
+              "Shop",
+              "workflow:pinned",
+              "workflow:pin:roadmap10-20260628111139",
+              "workflow:pin:roadmap10-20260628111708"
+            ],
+            "totalSpent": 173.88,
+            "lastOrderAt": null,
+            "ordersCount": 3,
+            "shopifyCustomerId": "7591658356950"
+          },
+          "callEvent": null,
+          "resolvedAt": "2026-06-28T12:23:57.453Z",
+          "resolverOutput": {}
+        },
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap15-ltv",
+            "actual": 173.88,
+            "source": "customers.total_spent",
+            "matched": true,
+            "expected": "100",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "matched_rule_id": "wrule_p71nlqedb6ek0xgcoilkrvyd"
+      },
+      "ticketNumber": "SR-MQXRG55O"
+    },
+    "createdAt": "2026-06-28T12:23:57.471Z",
+    "updatedAt": "2026-06-28T12:23:57.471Z"
+  },
+  "assertions": {
+    "ruleArchived": true,
+    "oneExecutionRow": true,
+    "executionCreatedTask": true,
+    "taskMetadataWorkflowPresent": true,
+    "taskConditionTracePersisted": true,
+    "taskTraceExpectedActualMatchedPersisted": true
+  },
+  "checkedAt": "2026-06-28T12:24:31.935Z"
+}

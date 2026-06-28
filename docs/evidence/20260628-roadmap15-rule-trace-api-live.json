@@ -1,0 +1,197 @@
+{
+  "proof": "roadmap15_rule_trace_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "6b48c9941d0a34293851a65a5d15657592e134e6",
+  "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+  "rule": {
+    "id": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+    "name": "Roadmap 15 rule trace proof 20260628122356",
+    "status": "active",
+    "priority": 1000,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "active",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap15-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "value": "100"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap15-create-task",
+          "action": "create_task",
+          "value": "Roadmap 15 trace proof task 20260628122356"
+        }
+      ]
+    }
+  },
+  "eventId": "roadmap15-rule-trace-20260628122356",
+  "fire": {
+    "eventId": "roadmap15-rule-trace-20260628122356",
+    "trigger": "manual.trigger",
+    "source": "roadmap15-live-proof",
+    "matchedRules": 2,
+    "evaluatedRules": 1,
+    "tasksCreated": 1,
+    "tasks": [
+      {
+        "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+        "ruleName": "Roadmap 15 rule trace proof 20260628122356",
+        "actionId": "act-roadmap15-create-task",
+        "action": "create_task",
+        "taskId": "sr_p10ibyc4g0eiwdfinscvub3k",
+        "title": "Roadmap 15 trace proof task 20260628122356"
+      }
+    ],
+    "results": [
+      {
+        "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+        "ruleName": "Roadmap 15 rule trace proof 20260628122356",
+        "status": "task_created",
+        "executionMode": "active",
+        "shortCircuited": true,
+        "taskIds": [
+          "sr_p10ibyc4g0eiwdfinscvub3k"
+        ],
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap15-ltv",
+            "condition": "customer_ltv_gte",
+            "operator": ">=",
+            "expected": "100",
+            "actual": 173.88,
+            "matched": true,
+            "source": "customers.total_spent"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap15-ltv",
+                "condition": "customer_ltv_gte",
+                "operator": ">=",
+                "expected": "100",
+                "actual": 173.88,
+                "matched": true,
+                "source": "customers.total_spent"
+              }
+            ]
+          }
+        ],
+        "cooldown": {
+          "disabled": true,
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+          "hours": 0,
+          "limit": 1,
+          "currentCount": 0,
+          "windowStartedAt": null,
+          "lastFiredAt": null,
+          "nextEligibleAt": null
+        },
+        "actionTrace": [
+          {
+            "actionId": "act-roadmap15-create-task",
+            "action": "create_task",
+            "status": "applied",
+            "targetType": "service_request",
+            "targetId": "sr_p10ibyc4g0eiwdfinscvub3k",
+            "message": "Created service request from workflow action."
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T12:23:57.499Z"
+  },
+  "taskId": "sr_p10ibyc4g0eiwdfinscvub3k",
+  "queueCard": {
+    "id": "sr_p10ibyc4g0eiwdfinscvub3k",
+    "title": "EAGLE PRINT CENTER LLC",
+    "summary": "SR-MQXRG55O - Critical - Open - Now",
+    "source": "manual",
+    "workflowTrace": {
+      "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+      "matchedRuleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+      "ruleName": "Roadmap 15 rule trace proof 20260628122356",
+      "trigger": "manual.trigger",
+      "source": "roadmap15-live-proof",
+      "eventId": "roadmap15-rule-trace-20260628122356",
+      "action": "create_task",
+      "actionId": "act-roadmap15-create-task",
+      "conditionTrace": [
+        {
+          "id": "cond-roadmap15-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "expected": "100",
+          "actual": 173.88,
+          "matched": true,
+          "source": "customers.total_spent"
+        }
+      ],
+      "whenTrace": [
+        {
+          "id": "default",
+          "matched": true,
+          "conditionTrace": [
+            {
+              "id": "cond-roadmap15-ltv",
+              "condition": "customer_ltv_gte",
+              "operator": ">=",
+              "expected": "100",
+              "actual": 173.88,
+              "matched": true,
+              "source": "customers.total_spent"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "archivedRule": {
+    "id": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+    "status": "archived",
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "archived",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": 0,
+      "when": [
+        {
+          "id": "cond-roadmap15-ltv",
+          "condition": "customer_ltv_gte",
+          "operator": ">=",
+          "value": "100"
+        }
+      ],
+      "actions": [
+        {
+          "id": "act-roadmap15-create-task",
+          "action": "create_task",
+          "value": "Roadmap 15 trace proof task 20260628122356"
+        }
+      ]
+    }
+  },
+  "assertions": {
+    "createdOneTask": true,
+    "taskVisibleInPersonQueue": true,
+    "workflowTracePresent": true,
+    "conditionTraceVisibleInApi": true,
+    "expectedActualMatchedPresent": true,
+    "proofRuleArchived": true
+  },
+  "checkedAt": "2026-06-28T12:23:59.321Z"
+}

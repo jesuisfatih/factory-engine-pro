@@ -1,0 +1,23 @@
+{
+  "proof": "roadmap15_rule_trace_ui_live",
+  "url": "https://app.dtfbank.com/staff/",
+  "taskId": "sr_p10ibyc4g0eiwdfinscvub3k",
+  "ruleId": "wrule_p71nlqedb6ek0xgcoilkrvyd",
+  "ticket": "SR-MQXRG55O",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap15-rule-trace-ui-live-20260628.png",
+  "traceText": "WHY THIS TASK\n1/1 matched\nRoadmap 15 rule trace proof 20260628122356\nManual.Trigger\nroadmap15-live-proof\nCustomer Ltv Gte\n>=\nExpected 100\nActual 173.88\ncustomers.total_spent",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+  ],
+  "assertions": {
+    "liveStaffLoaded": true,
+    "proofCardOpened": true,
+    "whyThisTaskVisible": true,
+    "ruleNameVisible": true,
+    "conditionVisible": true,
+    "expectedActualVisible": true,
+    "matchedVisible": true,
+    "noApiRequestFailures": true
+  },
+  "checkedAt": "2026-06-28T12:27:56.460Z"
+}
