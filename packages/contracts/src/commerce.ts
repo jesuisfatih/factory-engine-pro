@@ -111,6 +111,20 @@ export const assignDefaultCustomerAxisSchema = z.object({
 });
 export type AssignDefaultCustomerAxisInput = z.infer<typeof assignDefaultCustomerAxisSchema>;
 
+export interface AssignDefaultCustomerAxisResponse {
+  scanned: number;
+  assigned: number;
+  skippedExisting: number;
+  skippedNoOwner: number;
+  axes: CustomerAssignmentAxis[];
+  missingOwnerAxes: CustomerAssignmentAxis[];
+  owners: Record<CustomerAssignmentAxis, {
+    id: string;
+    email: string;
+    name: string;
+  } | null>;
+}
+
 export interface CustomerAxisAssignmentDto {
   id: string;
   customerId: string;

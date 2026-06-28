@@ -45,7 +45,7 @@ export class CustomersController {
   }
 
   @Post('assign-default-axis')
-  @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite, MEMBER_PERMISSIONS.membersRead)
   assignDefaultAxis(
     @Body(new ZodValidationPipe(assignDefaultCustomerAxisSchema)) body: AssignDefaultCustomerAxisInput,
   ) {

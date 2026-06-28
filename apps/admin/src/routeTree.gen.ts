@@ -37,6 +37,7 @@ import { Route as TasksCustomerRouteImport } from './routes/tasks/customer'
 import { Route as TasksCalendarRouteImport } from './routes/tasks/calendar'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings/workspace'
 import { Route as SettingsShopifyRouteImport } from './routes/settings/shopify'
+import { Route as SettingsInitialSetupRouteImport } from './routes/settings/initial-setup'
 import { Route as SettingsAircallRouteImport } from './routes/settings/aircall'
 import { Route as SettingsAiRouteImport } from './routes/settings/ai'
 import { Route as TeamUsersIndexRouteImport } from './routes/team/users.index'
@@ -194,6 +195,11 @@ const SettingsShopifyRoute = SettingsShopifyRouteImport.update({
   path: '/shopify',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsInitialSetupRoute = SettingsInitialSetupRouteImport.update({
+  id: '/initial-setup',
+  path: '/initial-setup',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsAircallRoute = SettingsAircallRouteImport.update({
   id: '/aircall',
   path: '/aircall',
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/team': typeof TeamRouteWithChildren
   '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -434,6 +443,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/settings/ai'
     | '/settings/aircall'
+    | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
     | '/tasks/calendar'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/settings/ai'
     | '/settings/aircall'
+    | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
     | '/tasks/calendar'
@@ -524,6 +535,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/settings/ai'
     | '/settings/aircall'
+    | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
     | '/tasks/calendar'
@@ -770,6 +782,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsShopifyRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/initial-setup': {
+      id: '/settings/initial-setup'
+      path: '/initial-setup'
+      fullPath: '/settings/initial-setup'
+      preLoaderRoute: typeof SettingsInitialSetupRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/aircall': {
       id: '/settings/aircall'
       path: '/aircall'
@@ -932,6 +951,7 @@ const SettingsAircallRouteWithChildren = SettingsAircallRoute._addFileChildren(
 interface SettingsRouteChildren {
   SettingsAiRoute: typeof SettingsAiRouteWithChildren
   SettingsAircallRoute: typeof SettingsAircallRouteWithChildren
+  SettingsInitialSetupRoute: typeof SettingsInitialSetupRoute
   SettingsShopifyRoute: typeof SettingsShopifyRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
 }
@@ -939,6 +959,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAiRoute: SettingsAiRouteWithChildren,
   SettingsAircallRoute: SettingsAircallRouteWithChildren,
+  SettingsInitialSetupRoute: SettingsInitialSetupRoute,
   SettingsShopifyRoute: SettingsShopifyRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
 }

@@ -17,6 +17,7 @@ import type {
   AircallUsersResponse,
   AircallWebhookStatusResponse,
   AssignDefaultCustomerAxisInput,
+  AssignDefaultCustomerAxisResponse,
   AuthSession,
   BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
@@ -334,7 +335,7 @@ export class ApiClient {
   }
 
   assignDefaultCustomerAxis(input: Partial<AssignDefaultCustomerAxisInput> = {}) {
-    return this.post('/customers/assign-default-axis', input);
+    return this.post<AssignDefaultCustomerAxisResponse>('/customers/assign-default-axis', input);
   }
 
   customerLists() {
@@ -773,6 +774,10 @@ export class ApiClient {
 
   reprocessAircallResolver(input: AircallResolverReprocessInput) {
     return this.post<AircallResolverReprocessResponse>('/aircall/calls/resolver/reprocess', input);
+  }
+
+  reprocessResolvedAircall(input: Partial<AircallResolverReprocessInput> = {}) {
+    return this.post<AircallResolverReprocessResponse>('/aircall/reprocess-resolved', input);
   }
 
   aiHealth() {

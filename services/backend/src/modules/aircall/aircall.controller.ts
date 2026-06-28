@@ -81,7 +81,7 @@ export class AircallController {
   }
 
   @Post('reprocess-resolved')
-  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  @RequirePermission(MEMBER_PERMISSIONS.syncTrigger)
   reprocessResolvedAlias(
     @Body(new ZodValidationPipe(aircallResolverReprocessSchema)) body: AircallResolverReprocessInput,
   ) {

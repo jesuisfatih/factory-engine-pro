@@ -12,6 +12,7 @@ function SettingsLayout() {
           { to: '/settings/ai', i18nKey: 'settings.tabs.ai', id: 'tab-settings-ai' },
           { to: '/settings/aircall', i18nKey: 'settings.tabs.aircall', id: 'tab-settings-aircall' },
           { to: '/settings/shopify', i18nKey: 'settings.tabs.shopify', id: 'tab-settings-shopify' },
+          { to: '/settings/initial-setup', i18nKey: 'settings.tabs.initial_setup', id: 'tab-settings-initial-setup' },
         ]}
       />
       <Outlet />

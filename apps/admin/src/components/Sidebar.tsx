@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
   ShoppingCart, UserSquare2, Workflow, Sparkles, Cable, KeyRound, Store, FileCheck2,
-  Mail,
+  Mail, Rocket,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { adminTokenStore } from '@/lib/api';
@@ -78,6 +78,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
       { to: '/settings/aircall', matchPrefix: '/settings/aircall', i18nKey: 'nav.aircall_settings', id: 'nav-aircall', icon: Cable, permission: MEMBER_PERMISSIONS.settingsRead },
       { to: '/settings/ai', matchPrefix: '/settings/ai', i18nKey: 'nav.ai_settings_legacy', id: 'nav-ai-old', icon: Sparkles, permission: 'settings.read' },
       { to: '/settings/shopify', matchPrefix: '/settings/shopify', i18nKey: 'nav.shopify_settings', id: 'nav-shopify', icon: Store, permission: 'settings.read' },
+      { to: '/settings/initial-setup', matchPrefix: '/settings/initial-setup', i18nKey: 'nav.initial_setup', id: 'nav-initial-setup', icon: Rocket, permission: 'sync.trigger' },
     ],
   },
 ];

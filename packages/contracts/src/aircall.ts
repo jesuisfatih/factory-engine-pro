@@ -14,7 +14,7 @@ export type AircallBackfillRecentInput = z.infer<typeof aircallBackfillRecentSch
 
 export const aircallResolverReprocessSchema = z.object({
   targetVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(10000).default(1000),
   callEventId: z.string().trim().min(1).optional(),
 });
 export type AircallResolverReprocessInput = z.infer<typeof aircallResolverReprocessSchema>;
