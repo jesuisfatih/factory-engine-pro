@@ -3,10 +3,13 @@ import type {
   PersonDailyOperationsDto,
   PersonMiniOrder,
   PersonPerformance30d,
+  PersonTaskTransferResult,
+  PersonTransferTarget,
   PersonTaskBriefDetail,
   PersonTaskStateSnapshot,
   PersonTaskWorkflowTrace,
   PersonUrgencyBreakdown,
+  TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
@@ -27,6 +30,9 @@ export interface Card {
   kind: 'task' | 'customer';
   id: string;
   customerId?: string | null;
+  assignedMemberId?: string | null;
+  assignedMemberName?: string | null;
+  axis?: 'sales' | 'support' | 'account' | null;
   title: string;
   summary: string;
   segment: string;
@@ -61,6 +67,9 @@ export interface Card {
 export type DailyCallItem = PersonDailyCallItem;
 export type DailyOperations = PersonDailyOperationsDto;
 export type TaskBriefDetail = PersonTaskBriefDetail;
+export type TransferTarget = PersonTransferTarget;
+export type TransferTaskInput = TransferPersonTaskInput;
+export type TransferTaskResult = PersonTaskTransferResult;
 
 export interface Column {
   id: ColumnId;

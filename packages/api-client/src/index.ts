@@ -83,6 +83,9 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
+  PersonTaskTransferResult,
+  PersonTransferTarget,
+  TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 
 export interface TokenStore {
@@ -441,6 +444,14 @@ export class ApiClient {
 
   togglePersonCustomerPin(customerId: string, input: TogglePersonQueuePinInput = {}) {
     return this.post(`/person/workspace/customers/${encodeURIComponent(customerId)}/pin`, input);
+  }
+
+  personTransferTargets() {
+    return this.get<PersonTransferTarget[]>('/person/workspace/transfer-targets');
+  }
+
+  transferPersonTask(id: string, input: TransferPersonTaskInput) {
+    return this.post<PersonTaskTransferResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/transfer`, input);
   }
 
   personTaskBrief(id: string) {

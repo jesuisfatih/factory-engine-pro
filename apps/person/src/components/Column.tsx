@@ -8,9 +8,10 @@ interface Props {
   cards: CardData[];
   onTogglePin: (id: string) => void;
   onOpen: (id: string) => void;
+  onTransfer?: (card: CardData) => void;
 }
 
-export function Column({ column, cards, onTogglePin, onOpen }: Props) {
+export function Column({ column, cards, onTogglePin, onOpen, onTransfer }: Props) {
   /**
    * Whole column is the drop target (not just the body). That way users can drop a
    * card anywhere inside the column - including above the first card or below the
@@ -26,7 +27,7 @@ export function Column({ column, cards, onTogglePin, onOpen }: Props) {
       <div className="column-body">
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
-            <Card key={card.id} card={card} onTogglePin={onTogglePin} onOpen={onOpen} />
+            <Card key={card.id} card={card} onTogglePin={onTogglePin} onOpen={onOpen} onTransfer={onTransfer} />
           ))}
         </SortableContext>
       </div>

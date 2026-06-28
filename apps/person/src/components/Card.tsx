@@ -1,10 +1,11 @@
-import { Activity, AlarmClockOff, ShoppingBag, Sparkles, Tags } from 'lucide-react';
+import { Activity, AlarmClockOff, ArrowRightLeft, ShoppingBag, Sparkles, Tags } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
 interface Props {
   card: CardData;
   onTogglePin: (id: string) => void;
   onOpen?: (id: string) => void;
+  onTransfer?: (card: CardData) => void;
 }
 
 function priorityClass(priority: number) {
@@ -24,7 +25,7 @@ function fmtMoney(value: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
-export function Card({ card, onTogglePin, onOpen }: Props) {
+export function Card({ card, onTogglePin, onOpen, onTransfer }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
@@ -52,6 +53,10 @@ export function Card({ card, onTogglePin, onOpen }: Props) {
         </span>
       </div>
       <div className="summary">{card.summary}</div>
+      <div className="assign-line">
+        <span>{card.assignedMemberName ? `Owner: ${card.assignedMemberName}` : 'Owner: unassigned'}</span>
+        <span>{card.axis ? `Axis: ${card.axis}` : 'Axis: none'}</span>
+      </div>
       <div className="card-signals">
         <span title="Latest Shopify order"><ShoppingBag size={10} /> {lastOrder}</span>
         <span title="Last 30 days"><Activity size={10} /> {performance}</span>
@@ -69,6 +74,22 @@ export function Card({ card, onTogglePin, onOpen }: Props) {
         >
           {card.pinned ? 'Pinned' : 'Pin'}
         </button>
+        {card.kind === 'task' ? (
+          <button
+            type="button"
+            className="transfer-btn"
+            title="Transfer task"
+            aria-label={`Transfer ${card.title}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onTransfer?.(card);
+            }}
+          >
+            <ArrowRightLeft size={12} />
+            <span>Transfer</span>
+          </button>
+        ) : null}
       </div>
     </div>
   );

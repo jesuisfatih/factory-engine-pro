@@ -6,12 +6,14 @@ import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
+import { TransferTaskModal } from '../components/TransferTaskModal';
 
 const QK = ['person', 'daily-operations'] as const;
 
 export function CallQueueView() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [transferCard, setTransferCard] = useState<CardData | null>(null);
   const [segmentFilter, setSegmentFilter] = useState('all');
   const { data, isLoading, error } = useQuery({ queryKey: QK, queryFn: fetchDailyOperations });
 
@@ -104,7 +106,13 @@ export function CallQueueView() {
               {priority.length === 0 ? (
                 <div className="ops-empty">No priority tasks in your axis scope.</div>
               ) : priority.map((card) => (
-                <Card key={card.id} card={card} onTogglePin={() => taskPin.mutate(card)} onOpen={setSelectedId} />
+                <Card
+                  key={card.id}
+                  card={card}
+                  onTogglePin={() => taskPin.mutate(card)}
+                  onOpen={setSelectedId}
+                  onTransfer={setTransferCard}
+                />
               ))}
             </div>
           </section>
@@ -116,6 +124,17 @@ export function CallQueueView() {
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} onClose={() => setSelectedId(null)} />}
+      {transferCard && (
+        <TransferTaskModal
+          card={transferCard}
+          onClose={() => setTransferCard(null)}
+          onTransferred={() => {
+            setTransferCard(null);
+            setSelectedId(null);
+            qc.invalidateQueries({ queryKey: QK });
+          }}
+        />
+      )}
     </div>
   );
 }

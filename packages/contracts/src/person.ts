@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { serviceRequestPrioritySchema } from './operations.js';
+import { customerAssignmentAxisSchema } from './commerce.js';
 import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './rules.js';
 
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
@@ -112,6 +113,9 @@ export const personQueueCardSchema = z.object({
   kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
   customerId: z.string().nullable().optional(),
+  assignedMemberId: z.string().nullable().optional(),
+  assignedMemberName: z.string().nullable().optional(),
+  axis: customerAssignmentAxisSchema.nullable().optional(),
   title: z.string(),
   summary: z.string(),
   segment: z.string(),
@@ -266,6 +270,37 @@ export const togglePersonQueuePinSchema = z.object({
   pinned: z.boolean().optional(),
 });
 export type TogglePersonQueuePinInput = z.infer<typeof togglePersonQueuePinSchema>;
+
+export const transferPersonTaskSchema = z.object({
+  targetMemberId: z.string().trim().min(1),
+  targetAxis: customerAssignmentAxisSchema.optional(),
+  reason: z.string().trim().max(500).optional(),
+});
+export type TransferPersonTaskInput = z.infer<typeof transferPersonTaskSchema>;
+
+export const personTransferTargetSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  roleNames: z.array(z.string()),
+  axes: z.array(customerAssignmentAxisSchema),
+});
+export type PersonTransferTarget = z.infer<typeof personTransferTargetSchema>;
+
+export const personTaskTransferResultSchema = z.object({
+  ok: z.literal(true),
+  taskId: z.string(),
+  customerId: z.string().nullable(),
+  fromMemberId: z.string().nullable(),
+  fromMemberName: z.string().nullable(),
+  toMemberId: z.string(),
+  toMemberName: z.string(),
+  fromAxis: customerAssignmentAxisSchema.nullable(),
+  toAxis: customerAssignmentAxisSchema,
+  sourceListRemoved: z.boolean(),
+  targetListEntered: z.boolean(),
+});
+export type PersonTaskTransferResult = z.infer<typeof personTaskTransferResultSchema>;
 
 export const savePersonTaskNoteSchema = z.object({
   body: z.string().trim().min(1).max(12000),

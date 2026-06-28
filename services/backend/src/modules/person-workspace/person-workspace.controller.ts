@@ -8,6 +8,7 @@ import {
   schedulePersonTaskFollowUpSchema,
   sendPersonMessageSchema,
   togglePersonQueuePinSchema,
+  transferPersonTaskSchema,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
   type SavePersonNoteInput,
@@ -15,6 +16,7 @@ import {
   type SchedulePersonTaskFollowUpInput,
   type SendPersonMessageInput,
   type TogglePersonQueuePinInput,
+  type TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -69,6 +71,12 @@ export class PersonWorkspaceController {
     return this.workspace.toggleCustomerPin(id, body);
   }
 
+  @Get('transfer-targets')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  transferTargets() {
+    return this.workspace.transferTargets();
+  }
+
   @Get('customers/:id/detail')
   @RequirePermission(MEMBER_PERMISSIONS.customersRead)
   customerDetail(@Param('id') id: string) {
@@ -79,6 +87,15 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.supportRead)
   taskBrief(@Param('id') id: string) {
     return this.workspace.taskBrief(id);
+  }
+
+  @Post('tasks/:id/transfer')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  transferTask(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(transferPersonTaskSchema)) body: TransferPersonTaskInput,
+  ) {
+    return this.workspace.transferTask(id, body);
   }
 
   @Post('tasks/:id/notes')

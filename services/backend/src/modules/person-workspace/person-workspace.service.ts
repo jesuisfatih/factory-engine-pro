@@ -1,9 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
+  PersonTaskTransferResult,
   PersonMiniOrder,
   PersonPerformance30d,
   PersonQueueColumn,
@@ -11,13 +13,16 @@ import type {
   PersonTaskStateSnapshot,
   PersonTaskTimelineEntry,
   PersonTaskWorkflowTrace,
+  PersonTransferTarget,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
   SendPersonMessageInput,
   TogglePersonQueuePinInput,
+  TransferPersonTaskInput,
   WorkflowConditionTrace,
   WorkflowWhenGroupTrace,
+  CustomerAssignmentAxis,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
@@ -39,6 +44,7 @@ const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   closed: 'closed',
 };
 const SEGMENT_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#b45309', '#b91c1c', '#475569'];
+const TRANSFER_AXES = ['sales', 'support', 'account'] as const satisfies readonly CustomerAssignmentAxis[];
 const EMPTY_PERFORMANCE_30D: PersonPerformance30d = {
   orders: 0,
   revenue: 0,
@@ -411,6 +417,259 @@ export class PersonWorkspaceService {
       pinned: nextPinned,
     });
     return { ok: true, pinned: nextPinned };
+  }
+
+  async transferTargets(): Promise<PersonTransferTarget[]> {
+    const current = await this.currentMember();
+    const rows = await this.prisma.db.member.findMany({
+      where: { status: 'active' },
+      include: { roleAssignments: { include: { role: true } } },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }, { email: 'asc' }],
+      take: 200,
+    });
+
+    return rows
+      .filter((row) => row.id !== current.id)
+      .map((row) => {
+        const roleNames = row.roleAssignments.map((assignment) => assignment.role.name);
+        const axes = transferAxesForRoles(row.roleAssignments.map((assignment) => assignment.role));
+        return {
+          id: row.id,
+          name: memberDisplayName(row),
+          email: row.email,
+          roleNames,
+          axes,
+        };
+      })
+      .filter((row) => row.axes.length > 0);
+  }
+
+  async transferTask(id: string, input: TransferPersonTaskInput): Promise<PersonTaskTransferResult> {
+    const member = await this.currentMember();
+    const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
+    if (CLOSED.has(row.status)) throw new BadRequestException('Closed or resolved tasks cannot be transferred');
+    if (input.targetMemberId === member.id) throw new BadRequestException('Choose another teammate as transfer target');
+
+    const target = await this.prisma.db.member.findFirst({
+      where: { id: input.targetMemberId, status: 'active' },
+      include: { roleAssignments: { include: { role: true } } },
+    });
+    if (!target) throw new NotFoundException('Transfer target teammate not found');
+
+    const targetAxes = transferAxesForRoles(target.roleAssignments.map((assignment) => assignment.role));
+    if (targetAxes.length === 0) throw new BadRequestException('Transfer target does not have a transferable workspace axis');
+
+    const fromAxis = axisOrNull(row.axis);
+    const toAxis = input.targetAxis ?? fromAxis ?? targetAxes[0];
+    if (!targetAxes.includes(toAxis)) throw new BadRequestException(`Transfer target cannot receive ${toAxis} work`);
+
+    const tenantId = this.tenantId();
+    const transferredAt = new Date();
+    const reason = input.reason?.trim() || 'Manual transfer from person workspace';
+    const sourceAssignmentsChanged = await this.prisma.$transaction(async (tx) => {
+      const metadata = this.record(row.metadata);
+      const transferEvent = {
+        at: transferredAt.toISOString(),
+        actorMemberId: member.id,
+        fromMemberId: row.assignedMemberId ?? member.id,
+        toMemberId: target.id,
+        fromAxis,
+        toAxis,
+        reason,
+      };
+      const history = Array.isArray(metadata.transferHistory) ? metadata.transferHistory : [];
+
+      await tx.serviceRequest.updateMany({
+        where: { id: row.id, tenantId },
+        data: {
+          assignedMemberId: target.id,
+          axis: toAxis,
+          metadata: {
+            ...metadata,
+            transferredAt: transferredAt.toISOString(),
+            transferredByMemberId: member.id,
+            previousAssignedMemberId: row.assignedMemberId,
+            previousAxis: fromAxis,
+            transferReason: reason,
+            transferHistory: [...history, transferEvent].slice(-25),
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      await tx.serviceRequestComment.create({
+        data: {
+          id: prefixedId('srcm'),
+          tenantId,
+          serviceRequestId: row.id,
+          actorId: member.id,
+          actorType: 'member',
+          body: `Transferred from ${memberDisplayName(row.assignedMember ?? member)} to ${memberDisplayName(target)} (${fromAxis ?? 'unassigned'} -> ${toAxis}). Reason: ${reason}`,
+          internal: true,
+          attachmentsJson: [{
+            kind: 'task_transfer',
+            fromMemberId: row.assignedMemberId ?? member.id,
+            toMemberId: target.id,
+            fromAxis,
+            toAxis,
+          }] as Prisma.InputJsonValue,
+        },
+      });
+
+      if (row.assignedMemberId && row.assignedMemberId !== target.id) {
+        await tx.taskParticipant.upsert({
+          where: {
+            tenantId_serviceRequestId_memberId_role: {
+              tenantId,
+              serviceRequestId: row.id,
+              memberId: row.assignedMemberId,
+              role: 'watcher',
+            },
+          },
+          create: {
+            id: prefixedId('tpar'),
+            tenantId,
+            serviceRequestId: row.id,
+            memberId: row.assignedMemberId,
+            role: 'watcher',
+            source: 'manual_transfer',
+          },
+          update: { source: 'manual_transfer' },
+        });
+      }
+
+      if (!row.customerId) return false;
+
+      const currentAssignments = await tx.customerAssignment.findMany({
+        where: {
+          tenantId,
+          customerId: row.customerId,
+          memberId: member.id,
+          isPrimary: true,
+        },
+      });
+      const previousTargetAxis = await tx.customerAssignment.findFirst({
+        where: { tenantId, customerId: row.customerId, axis: toAxis },
+      });
+      const touched = currentAssignments.length > 0;
+
+      if (touched) {
+        await tx.customerAssignment.updateMany({
+          where: {
+            tenantId,
+            customerId: row.customerId,
+            memberId: member.id,
+            isPrimary: true,
+          },
+          data: {
+            isPrimary: false,
+            reason,
+            approvedByMemberId: member.id,
+            approvedAt: transferredAt,
+            source: 'person_workspace_transfer',
+          },
+        });
+      }
+
+      const targetAssignment = await tx.customerAssignment.upsert({
+        where: {
+          tenantId_customerId_axis: {
+            tenantId,
+            customerId: row.customerId,
+            axis: toAxis,
+          },
+        },
+        create: {
+          id: prefixedId('casn'),
+          tenantId,
+          customerId: row.customerId,
+          axis: toAxis,
+          memberId: target.id,
+          isPrimary: true,
+          source: 'person_workspace_transfer',
+          reason,
+          approvedByMemberId: member.id,
+          approvedAt: transferredAt,
+        },
+        update: {
+          memberId: target.id,
+          isPrimary: true,
+          source: 'person_workspace_transfer',
+          reason,
+          approvedByMemberId: member.id,
+          approvedAt: transferredAt,
+        },
+      });
+
+      await tx.customerAssignmentAudit.create({
+        data: {
+          id: prefixedId('caud'),
+          tenantId,
+          customerId: row.customerId,
+          axis: toAxis,
+          action: 'person_workspace_transfer',
+          previousMemberId: previousTargetAxis?.memberId ?? (fromAxis === toAxis ? member.id : null),
+          newMemberId: target.id,
+          actorMemberId: member.id,
+          source: 'person_workspace_transfer',
+          reason,
+          metadata: {
+            serviceRequestId: row.id,
+            assignmentId: targetAssignment.id,
+            fromAxis,
+            toAxis,
+            disabledSourceAssignmentIds: currentAssignments.map((assignment) => assignment.id),
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      if (fromAxis && fromAxis !== toAxis) {
+        await tx.customerAssignmentAudit.create({
+          data: {
+            id: prefixedId('caud'),
+            tenantId,
+            customerId: row.customerId,
+            axis: fromAxis,
+            action: 'person_workspace_transfer_out',
+            previousMemberId: member.id,
+            newMemberId: target.id,
+            actorMemberId: member.id,
+            source: 'person_workspace_transfer',
+            reason,
+            metadata: {
+              serviceRequestId: row.id,
+              toAxis,
+              disabledSourceAssignmentIds: currentAssignments.map((assignment) => assignment.id),
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      return touched;
+    });
+
+    this.logger.log('person_workspace', 'task.transfer', 'Person workspace task transferred', {
+      service_request_id: row.id,
+      customer_id: row.customerId,
+      from_member_id: row.assignedMemberId ?? member.id,
+      to_member_id: target.id,
+      from_axis: fromAxis,
+      to_axis: toAxis,
+    });
+
+    return {
+      ok: true,
+      taskId: row.id,
+      customerId: row.customerId,
+      fromMemberId: row.assignedMemberId ?? member.id,
+      fromMemberName: memberDisplayName(row.assignedMember ?? member),
+      toMemberId: target.id,
+      toMemberName: memberDisplayName(target),
+      fromAxis,
+      toAxis,
+      sourceListRemoved: row.customerId ? sourceAssignmentsChanged : true,
+      targetListEntered: true,
+    };
   }
 
   async taskBrief(id: string): Promise<PersonTaskBriefDetail> {
@@ -1214,6 +1473,9 @@ export class PersonWorkspaceService {
       kind: 'task' as const,
       id: row.id,
       customerId: row.customerId,
+      assignedMemberId: row.assignedMemberId,
+      assignedMemberName: row.assignedMember ? memberDisplayName(row.assignedMember) : null,
+      axis: axisOrNull(row.axis),
       title: customerName,
       summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
       segment: String(metadata.category ?? row.surface ?? 'Support'),
@@ -1415,6 +1677,47 @@ function participants(thread: { metadata: Prisma.JsonValue }) {
     ? thread.metadata as Record<string, unknown>
     : {};
   return Array.isArray(metadata.participantIds) ? metadata.participantIds.filter((id): id is string => typeof id === 'string') : [];
+}
+
+function memberDisplayName(member: { firstName: string; lastName: string; email: string }) {
+  return `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim() || member.email;
+}
+
+function axisOrNull(value: string | null | undefined): CustomerAssignmentAxis | null {
+  return TRANSFER_AXES.includes(value as CustomerAssignmentAxis) ? value as CustomerAssignmentAxis : null;
+}
+
+function transferAxesForRoles(roles: Array<{ slug: string; permissions: unknown }>): CustomerAssignmentAxis[] {
+  const slugs = new Set(roles.map((role) => role.slug));
+  if (slugs.has('owner') || slugs.has('admin')) return [...TRANSFER_AXES];
+
+  const axes: CustomerAssignmentAxis[] = [];
+  const add = (axis: CustomerAssignmentAxis) => {
+    if (!axes.includes(axis)) axes.push(axis);
+  };
+
+  for (const role of roles) {
+    const permissions = asRecord(role.permissions);
+    if (permissionEnabled(permissions, MEMBER_PERMISSIONS.commissionSubmit)
+      || permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersWrite)
+      || permissionEnabled(permissions, MEMBER_PERMISSIONS.pricingWrite)) {
+      add('sales');
+    }
+    if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportRead)
+      || permissionEnabled(permissions, MEMBER_PERMISSIONS.supportWrite)) {
+      add('support');
+    }
+    if (permissionEnabled(permissions, MEMBER_PERMISSIONS.customersRead)
+      && permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersRead)) {
+      add('account');
+    }
+  }
+
+  return axes;
+}
+
+function permissionEnabled(permissions: Record<string, unknown>, permission: string) {
+  return permissions[permission] === true;
 }
 
 function groupBy<T>(rows: T[], keyFn: (row: T) => string) {
