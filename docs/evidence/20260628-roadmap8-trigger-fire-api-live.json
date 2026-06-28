@@ -1,0 +1,341 @@
+﻿{
+    "proof":  "roadmap8_trigger_catalog_task_generation_live_api",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "stamp":  "20260628104932",
+    "allFamiliesCreatedTasks":  true,
+    "results":  [
+                    {
+                        "family":  "system",
+                        "trigger":  "shopify.order.created",
+                        "params":  {
+                                       "shopifyOrderId":  "roadmap8-order-20260628104932",
+                                       "totalPrice":  123.45
+                                   },
+                        "ruleId":  "wrule_vp3ws5la0cnbb1afijq3mfd6",
+                        "archivedStatus":  "archived",
+                        "fire":  {
+                                     "eventId":  "roadmap8-system-20260628104932",
+                                     "trigger":  "shopify.order.created",
+                                     "source":  "roadmap8-live-proof",
+                                     "matchedRules":  1,
+                                     "evaluatedRules":  1,
+                                     "tasksCreated":  1,
+                                     "tasks":  [
+                                                   {
+                                                       "ruleId":  "wrule_vp3ws5la0cnbb1afijq3mfd6",
+                                                       "ruleName":  "Roadmap 8 system trigger proof 20260628104932",
+                                                       "actionId":  "act-system",
+                                                       "action":  "create_task",
+                                                       "taskId":  "sr_m1i87w03kwj1mlb6e9c3rcl6",
+                                                       "title":  "Roadmap 8 system trigger task 20260628104932"
+                                                   }
+                                               ],
+                                     "results":  [
+                                                     {
+                                                         "ruleId":  "wrule_vp3ws5la0cnbb1afijq3mfd6",
+                                                         "ruleName":  "Roadmap 8 system trigger proof 20260628104932",
+                                                         "status":  "task_created",
+                                                         "taskIds":  [
+                                                                         "sr_m1i87w03kwj1mlb6e9c3rcl6"
+                                                                     ]
+                                                     }
+                                                 ],
+                                     "checkedAt":  "2026-06-28T10:49:32.507Z"
+                                 },
+                        "supportTasks":  [
+                                             {
+                                                 "id":  "sr_m1i87w03kwj1mlb6e9c3rcl6",
+                                                 "tenantId":  "ten_dtfbank",
+                                                 "customerId":  null,
+                                                 "customerUserId":  null,
+                                                 "assignedMemberId":  null,
+                                                 "source":  "manual",
+                                                 "surface":  "internal",
+                                                 "sourceCallId":  null,
+                                                 "sourceEmailId":  null,
+                                                 "sourceFormId":  null,
+                                                 "title":  "Roadmap 8 system trigger task 20260628104932",
+                                                 "description":  "Created by workflow rule \"Roadmap 8 system trigger proof 20260628104932\" for trigger \"shopify.order.created\".",
+                                                 "status":  "open",
+                                                 "priority":  "high",
+                                                 "createdByActorId":  "tmbr_ten_dtfbank_info_owner",
+                                                 "closedAt":  null,
+                                                 "resolutionCode":  null,
+                                                 "resolutionNote":  null,
+                                                 "metadata":  {
+                                                                  "category":  "workflow_rule",
+                                                                  "workflow":  {
+                                                                                   "action":  "create_task",
+                                                                                   "params":  {
+                                                                                                  "totalPrice":  123.45,
+                                                                                                  "shopifyOrderId":  "roadmap8-order-20260628104932"
+                                                                                              },
+                                                                                   "ruleId":  "wrule_vp3ws5la0cnbb1afijq3mfd6",
+                                                                                   "source":  "roadmap8-live-proof",
+                                                                                   "eventId":  "roadmap8-system-20260628104932",
+                                                                                   "trigger":  "shopify.order.created",
+                                                                                   "actionId":  "act-system",
+                                                                                   "ruleName":  "Roadmap 8 system trigger proof 20260628104932",
+                                                                                   "occurredAt":  null,
+                                                                                   "rulePriority":  80
+                                                                               },
+                                                                  "ticketNumber":  "SR-MQXO2Q12"
+                                                              },
+                                                 "createdAt":  "2026-06-28T10:49:32.490Z",
+                                                 "updatedAt":  "2026-06-28T10:49:32.490Z",
+                                                 "customer":  null,
+                                                 "customerUser":  null,
+                                                 "assignedMember":  null,
+                                                 "comments":  [
+
+                                                              ],
+                                                 "ticketNumber":  "SR-MQXO2Q12",
+                                                 "number":  "SR-MQXO2Q12",
+                                                 "subject":  "Roadmap 8 system trigger task 20260628104932",
+                                                 "summary":  "Created by workflow rule \"Roadmap 8 system trigger proof 20260628104932\" for trigger \"shopify.order.created\".",
+                                                 "category":  "workflow_rule",
+                                                 "company":  null,
+                                                 "companyUser":  null,
+                                                 "assignedTo":  null,
+                                                 "responses":  [
+
+                                                               ],
+                                                 "firstResponseAt":  null,
+                                                 "sla":  {
+                                                             "firstResponseHours":  4,
+                                                             "resolutionHours":  24,
+                                                             "firstResponseTargetAt":  "2026-06-28T14:49:32.490Z",
+                                                             "resolutionTargetAt":  "2026-06-29T10:49:32.490Z",
+                                                             "firstResponseAt":  null,
+                                                             "ageMs":  222,
+                                                             "firstResponseBreached":  false,
+                                                             "resolutionBreached":  false,
+                                                             "tone":  "green"
+                                                         }
+                                             }
+                                         ]
+                    },
+                    {
+                        "family":  "ai_derived",
+                        "trigger":  "psych.tag.detected",
+                        "params":  {
+                                       "tag":  "angry"
+                                   },
+                        "ruleId":  "wrule_x3j5x1cwu7plhb7umf3dubg0",
+                        "archivedStatus":  "archived",
+                        "fire":  {
+                                     "eventId":  "roadmap8-ai_derived-20260628104932",
+                                     "trigger":  "psych.tag.detected",
+                                     "source":  "roadmap8-live-proof",
+                                     "matchedRules":  1,
+                                     "evaluatedRules":  1,
+                                     "tasksCreated":  1,
+                                     "tasks":  [
+                                                   {
+                                                       "ruleId":  "wrule_x3j5x1cwu7plhb7umf3dubg0",
+                                                       "ruleName":  "Roadmap 8 ai_derived trigger proof 20260628104932",
+                                                       "actionId":  "act-ai_derived",
+                                                       "action":  "create_task",
+                                                       "taskId":  "sr_mot1vkrx4b2ty6irb5n0uarf",
+                                                       "title":  "Roadmap 8 AI trigger task 20260628104932"
+                                                   }
+                                               ],
+                                     "results":  [
+                                                     {
+                                                         "ruleId":  "wrule_x3j5x1cwu7plhb7umf3dubg0",
+                                                         "ruleName":  "Roadmap 8 ai_derived trigger proof 20260628104932",
+                                                         "status":  "task_created",
+                                                         "taskIds":  [
+                                                                         "sr_mot1vkrx4b2ty6irb5n0uarf"
+                                                                     ]
+                                                     }
+                                                 ],
+                                     "checkedAt":  "2026-06-28T10:49:33.899Z"
+                                 },
+                        "supportTasks":  [
+                                             {
+                                                 "id":  "sr_mot1vkrx4b2ty6irb5n0uarf",
+                                                 "tenantId":  "ten_dtfbank",
+                                                 "customerId":  null,
+                                                 "customerUserId":  null,
+                                                 "assignedMemberId":  null,
+                                                 "source":  "manual",
+                                                 "surface":  "internal",
+                                                 "sourceCallId":  null,
+                                                 "sourceEmailId":  null,
+                                                 "sourceFormId":  null,
+                                                 "title":  "Roadmap 8 AI trigger task 20260628104932",
+                                                 "description":  "Created by workflow rule \"Roadmap 8 ai_derived trigger proof 20260628104932\" for trigger \"psych.tag.detected\".",
+                                                 "status":  "open",
+                                                 "priority":  "high",
+                                                 "createdByActorId":  "tmbr_ten_dtfbank_info_owner",
+                                                 "closedAt":  null,
+                                                 "resolutionCode":  null,
+                                                 "resolutionNote":  null,
+                                                 "metadata":  {
+                                                                  "category":  "workflow_rule",
+                                                                  "workflow":  {
+                                                                                   "action":  "create_task",
+                                                                                   "params":  {
+                                                                                                  "tag":  "angry"
+                                                                                              },
+                                                                                   "ruleId":  "wrule_x3j5x1cwu7plhb7umf3dubg0",
+                                                                                   "source":  "roadmap8-live-proof",
+                                                                                   "eventId":  "roadmap8-ai_derived-20260628104932",
+                                                                                   "trigger":  "psych.tag.detected",
+                                                                                   "actionId":  "act-ai_derived",
+                                                                                   "ruleName":  "Roadmap 8 ai_derived trigger proof 20260628104932",
+                                                                                   "occurredAt":  null,
+                                                                                   "rulePriority":  80
+                                                                               },
+                                                                  "ticketNumber":  "SR-MQXO2R3V"
+                                                              },
+                                                 "createdAt":  "2026-06-28T10:49:33.885Z",
+                                                 "updatedAt":  "2026-06-28T10:49:33.885Z",
+                                                 "customer":  null,
+                                                 "customerUser":  null,
+                                                 "assignedMember":  null,
+                                                 "comments":  [
+
+                                                              ],
+                                                 "ticketNumber":  "SR-MQXO2R3V",
+                                                 "number":  "SR-MQXO2R3V",
+                                                 "subject":  "Roadmap 8 AI trigger task 20260628104932",
+                                                 "summary":  "Created by workflow rule \"Roadmap 8 ai_derived trigger proof 20260628104932\" for trigger \"psych.tag.detected\".",
+                                                 "category":  "workflow_rule",
+                                                 "company":  null,
+                                                 "companyUser":  null,
+                                                 "assignedTo":  null,
+                                                 "responses":  [
+
+                                                               ],
+                                                 "firstResponseAt":  null,
+                                                 "sla":  {
+                                                             "firstResponseHours":  4,
+                                                             "resolutionHours":  24,
+                                                             "firstResponseTargetAt":  "2026-06-28T14:49:33.885Z",
+                                                             "resolutionTargetAt":  "2026-06-29T10:49:33.885Z",
+                                                             "firstResponseAt":  null,
+                                                             "ageMs":  216,
+                                                             "firstResponseBreached":  false,
+                                                             "resolutionBreached":  false,
+                                                             "tone":  "green"
+                                                         }
+                                             }
+                                         ]
+                    },
+                    {
+                        "family":  "aggregate",
+                        "trigger":  "customer.repeat_call.detected",
+                        "params":  {
+                                       "count":  2,
+                                       "windowDays":  30
+                                   },
+                        "ruleId":  "wrule_i1dv9uleh63n7mjbjei871xu",
+                        "archivedStatus":  "archived",
+                        "fire":  {
+                                     "eventId":  "roadmap8-aggregate-20260628104932",
+                                     "trigger":  "customer.repeat_call.detected",
+                                     "source":  "roadmap8-live-proof",
+                                     "matchedRules":  1,
+                                     "evaluatedRules":  1,
+                                     "tasksCreated":  1,
+                                     "tasks":  [
+                                                   {
+                                                       "ruleId":  "wrule_i1dv9uleh63n7mjbjei871xu",
+                                                       "ruleName":  "Roadmap 8 aggregate trigger proof 20260628104932",
+                                                       "actionId":  "act-aggregate",
+                                                       "action":  "create_task",
+                                                       "taskId":  "sr_assqknz6dlugq301edwxx5o4",
+                                                       "title":  "Roadmap 8 aggregate trigger task 20260628104932"
+                                                   }
+                                               ],
+                                     "results":  [
+                                                     {
+                                                         "ruleId":  "wrule_i1dv9uleh63n7mjbjei871xu",
+                                                         "ruleName":  "Roadmap 8 aggregate trigger proof 20260628104932",
+                                                         "status":  "task_created",
+                                                         "taskIds":  [
+                                                                         "sr_assqknz6dlugq301edwxx5o4"
+                                                                     ]
+                                                     }
+                                                 ],
+                                     "checkedAt":  "2026-06-28T10:49:35.278Z"
+                                 },
+                        "supportTasks":  [
+                                             {
+                                                 "id":  "sr_assqknz6dlugq301edwxx5o4",
+                                                 "tenantId":  "ten_dtfbank",
+                                                 "customerId":  null,
+                                                 "customerUserId":  null,
+                                                 "assignedMemberId":  null,
+                                                 "source":  "manual",
+                                                 "surface":  "internal",
+                                                 "sourceCallId":  null,
+                                                 "sourceEmailId":  null,
+                                                 "sourceFormId":  null,
+                                                 "title":  "Roadmap 8 aggregate trigger task 20260628104932",
+                                                 "description":  "Created by workflow rule \"Roadmap 8 aggregate trigger proof 20260628104932\" for trigger \"customer.repeat_call.detected\".",
+                                                 "status":  "open",
+                                                 "priority":  "high",
+                                                 "createdByActorId":  "tmbr_ten_dtfbank_info_owner",
+                                                 "closedAt":  null,
+                                                 "resolutionCode":  null,
+                                                 "resolutionNote":  null,
+                                                 "metadata":  {
+                                                                  "category":  "workflow_rule",
+                                                                  "workflow":  {
+                                                                                   "action":  "create_task",
+                                                                                   "params":  {
+                                                                                                  "count":  2,
+                                                                                                  "windowDays":  30
+                                                                                              },
+                                                                                   "ruleId":  "wrule_i1dv9uleh63n7mjbjei871xu",
+                                                                                   "source":  "roadmap8-live-proof",
+                                                                                   "eventId":  "roadmap8-aggregate-20260628104932",
+                                                                                   "trigger":  "customer.repeat_call.detected",
+                                                                                   "actionId":  "act-aggregate",
+                                                                                   "ruleName":  "Roadmap 8 aggregate trigger proof 20260628104932",
+                                                                                   "occurredAt":  null,
+                                                                                   "rulePriority":  80
+                                                                               },
+                                                                  "ticketNumber":  "SR-MQXO2S64"
+                                                              },
+                                                 "createdAt":  "2026-06-28T10:49:35.262Z",
+                                                 "updatedAt":  "2026-06-28T10:49:35.262Z",
+                                                 "customer":  null,
+                                                 "customerUser":  null,
+                                                 "assignedMember":  null,
+                                                 "comments":  [
+
+                                                              ],
+                                                 "ticketNumber":  "SR-MQXO2S64",
+                                                 "number":  "SR-MQXO2S64",
+                                                 "subject":  "Roadmap 8 aggregate trigger task 20260628104932",
+                                                 "summary":  "Created by workflow rule \"Roadmap 8 aggregate trigger proof 20260628104932\" for trigger \"customer.repeat_call.detected\".",
+                                                 "category":  "workflow_rule",
+                                                 "company":  null,
+                                                 "companyUser":  null,
+                                                 "assignedTo":  null,
+                                                 "responses":  [
+
+                                                               ],
+                                                 "firstResponseAt":  null,
+                                                 "sla":  {
+                                                             "firstResponseHours":  4,
+                                                             "resolutionHours":  24,
+                                                             "firstResponseTargetAt":  "2026-06-28T14:49:35.262Z",
+                                                             "resolutionTargetAt":  "2026-06-29T10:49:35.262Z",
+                                                             "firstResponseAt":  null,
+                                                             "ageMs":  218,
+                                                             "firstResponseBreached":  false,
+                                                             "resolutionBreached":  false,
+                                                             "tone":  "green"
+                                                         }
+                                             }
+                                         ]
+                    }
+                ],
+    "checkedAt":  "2026-06-28T10:49:36.7528715Z"
+}

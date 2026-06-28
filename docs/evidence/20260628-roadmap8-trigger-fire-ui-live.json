@@ -1,0 +1,24 @@
+{
+  "proof": "roadmap8_trigger_fire_ui_live",
+  "appUrl": "https://app.dtfbank.com/rules",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "checks": {
+    "hasFireButton": true,
+    "hasSaveButton": true,
+    "hasRulesNetwork": true,
+    "hasSavedRules": true
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/catalog",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules",
+      "status": 200
+    }
+  ],
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap8-trigger-fire-ui-live-20260628.png",
+  "checkedAt": "2026-06-28T10:50:39.655Z"
+}
