@@ -332,7 +332,7 @@ export class AircallIngestService {
 
   private async enqueueTranscriptResolver(callEventId: string, transcriptRaw: string | null) {
     if (!transcriptRaw?.trim()) return;
-    const callEvent = await this.prisma.db.aircallCallEvent.findUnique({
+    const callEvent = await this.prisma.db.aircallCallEvent.findFirst({
       where: { id: callEventId },
       select: {
         id: true,
@@ -369,7 +369,7 @@ export class AircallIngestService {
         removeOnFail: 5000,
       },
     );
-    await this.prisma.db.aircallCallEvent.update({
+    await this.prisma.db.aircallCallEvent.updateMany({
       where: { id: callEvent.id },
       data: { resolverQueuedAt: new Date(), resolverQueueJobId: jobId },
     });

@@ -295,10 +295,10 @@ export class AircallService {
           }
 
           const existing = await this.prisma.db.aircallCallEvent.findFirst({
-            where: { externalCallId, eventType: 'call.ended', transcriptRaw: { not: null } },
-            select: { id: true },
+            where: { externalCallId, eventType: 'call.ended' },
+            select: { id: true, transcriptRaw: true, resolverQueuedAt: true },
           });
-          if (existing) {
+          if (existing?.transcriptRaw && existing.resolverQueuedAt) {
             skipped++;
             continue;
           }
