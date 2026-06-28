@@ -3,9 +3,16 @@ import type { Prisma } from '@prisma/client';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
+  PersonAiPsychAnalysis,
+  PersonMiniOrder,
+  PersonPerformance30d,
   PersonQueueColumn,
+  PersonTaskBriefDetail,
   PersonTaskStateSnapshot,
+  PersonTaskTimelineEntry,
   PersonTaskWorkflowTrace,
+  SavePersonTaskNoteInput,
+  SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
   SendPersonMessageInput,
   TogglePersonQueuePinInput,
@@ -30,6 +37,13 @@ const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   closed: 'closed',
 };
 const SEGMENT_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#b45309', '#b91c1c', '#475569'];
+const EMPTY_PERFORMANCE_30D: PersonPerformance30d = {
+  orders: 0,
+  revenue: 0,
+  calls: 0,
+  callMinutes: 0,
+  serviceRequests: 0,
+};
 
 const serviceRequestInclude = {
   customer: {
@@ -71,6 +85,11 @@ type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
     };
   };
 }>;
+
+interface CardContext {
+  miniOrders: Map<string, PersonMiniOrder>;
+  performance: Map<string, PersonPerformance30d>;
+}
 
 @Injectable()
 export class PersonWorkspaceService {
@@ -170,7 +189,10 @@ export class PersonWorkspaceService {
       this.customerPins(member.id, visibleCustomerIds),
     ]);
 
-    const repeatCounts = await this.repeatCounts(visibleCustomerIds);
+    const [repeatCounts, cardContext] = await Promise.all([
+      this.repeatCounts(visibleCustomerIds),
+      this.cardContext(visibleCustomerIds),
+    ]);
     const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
     const dailyByCustomer = new Map<string, ReturnType<PersonWorkspaceService['dailyCallItem']>>();
@@ -203,12 +225,12 @@ export class PersonWorkspaceService {
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
     const priorityKanban = scopedRows
       .filter((row) => !CLOSED.has(row.status))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext))
       .sort(sortByUrgency)
       .slice(0, 120);
     const pinnedTasks = scopedRows
       .filter((row) => this.isTaskPinned(row, member.id))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0));
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext));
     const pinnedCustomers = customerPinRows
       .filter((row) => row.customer)
       .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
@@ -240,12 +262,14 @@ export class PersonWorkspaceService {
       take: 300,
     });
     const visible = rows.filter((row) => this.isQueueVisible(row) && this.isServiceRequestScoped(row, assignments, member.id));
-    const [config, repeatCounts] = await Promise.all([
+    const visibleCustomerIds = visible.map((row) => row.customerId).filter((id): id is string => Boolean(id));
+    const [config, repeatCounts, cardContext] = await Promise.all([
       this.urgencyConfig(),
-      this.repeatCounts(visible.map((row) => row.customerId).filter((id): id is string => Boolean(id))),
+      this.repeatCounts(visibleCustomerIds),
+      this.cardContext(visibleCustomerIds),
     ]);
     return visible
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext))
       .sort(sortByUrgency)
       .slice(0, 120);
   }
@@ -265,7 +289,13 @@ export class PersonWorkspaceService {
       column_id: input.columnId,
     });
     const updated = await this.requireServiceRequest(id);
-    return this.queueCard(updated, member.id, await this.urgencyConfig(), await this.repeatCount(updated.customerId));
+    return this.queueCard(
+      updated,
+      member.id,
+      await this.urgencyConfig(),
+      await this.repeatCount(updated.customerId),
+      await this.cardContext(updated.customerId ? [updated.customerId] : []),
+    );
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
@@ -288,7 +318,13 @@ export class PersonWorkspaceService {
       pinned: nextPinned,
     });
     const updated = await this.requireServiceRequest(id);
-    return this.queueCard(updated, member.id, await this.urgencyConfig(), await this.repeatCount(updated.customerId));
+    return this.queueCard(
+      updated,
+      member.id,
+      await this.urgencyConfig(),
+      await this.repeatCount(updated.customerId),
+      await this.cardContext(updated.customerId ? [updated.customerId] : []),
+    );
   }
 
   async toggleCustomerPin(id: string, input: TogglePersonQueuePinInput) {
@@ -372,6 +408,178 @@ export class PersonWorkspaceService {
       pinned: nextPinned,
     });
     return { ok: true, pinned: nextPinned };
+  }
+
+  async taskBrief(id: string): Promise<PersonTaskBriefDetail> {
+    const member = await this.currentMember();
+    const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
+
+    const customerId = row.customerId;
+    const customerEmail = row.customer?.email ?? row.customerUser?.email ?? null;
+    const customerPhone = row.customer?.phone ?? row.customerUser?.phone ?? null;
+    const aircallWhere = aircallWhereFor(customerEmail, customerPhone);
+    const matchedRuleId = matchedRuleIdFrom(row);
+
+    const [
+      config,
+      repeatCount,
+      cardContext,
+      recentOrders,
+      activityLogs,
+      relatedRequests,
+      aircallRows,
+      rule,
+    ] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCount(customerId),
+      this.cardContext(customerId ? [customerId] : []),
+      customerId
+        ? this.prisma.db.commerceOrder.findMany({
+            where: { customerId },
+            orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+            take: 5,
+          })
+        : Promise.resolve([]),
+      customerId
+        ? this.prisma.db.commerceActivityLog.findMany({
+            where: { customerId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          })
+        : Promise.resolve([]),
+      customerId
+        ? this.prisma.db.serviceRequest.findMany({
+            where: { customerId },
+            include: { comments: { orderBy: { createdAt: 'desc' }, take: 3 } },
+            orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+            take: 5,
+          })
+        : Promise.resolve([]),
+      aircallWhere
+        ? this.prisma.db.aircallCallEvent.findMany({
+            where: aircallWhere,
+            orderBy: { eventTimestamp: 'desc' },
+            take: 8,
+          })
+        : Promise.resolve([]),
+      matchedRuleId
+        ? this.prisma.db.workflowRule.findFirst({ where: { id: matchedRuleId } })
+        : Promise.resolve(null),
+    ]);
+
+    const card = this.queueCard(row, member.id, config, repeatCount, cardContext);
+    const orders = recentOrders.map((order) => miniOrder(order));
+    const basePerformance = customerId
+      ? cardContext.performance.get(customerId) ?? { ...EMPTY_PERFORMANCE_30D }
+      : { ...EMPTY_PERFORMANCE_30D };
+    const calls30d = callsSince(aircallRows, thirtyDaysAgo());
+    const performance30d = {
+      ...basePerformance,
+      calls: calls30d.length,
+      callMinutes: Math.round(calls30d.reduce((sum, call) => sum + (call.durationSeconds ?? 0), 0) / 60),
+    };
+
+    return {
+      card,
+      shopifyCustomer: {
+        customerId,
+        shopifyCustomerId: row.customer?.shopifyCustomerId ?? null,
+        phoneMatched: Boolean(customerPhone && aircallRows.some((call) => phoneVariants(customerPhone).includes(call.contactPhone ?? '') || phoneVariants(customerPhone).includes(call.contactPhoneE164 ?? ''))),
+        emailMatched: Boolean(customerEmail && aircallRows.some((call) => call.contactEmail?.toLowerCase() === customerEmail.toLowerCase())),
+      },
+      recentOrders: orders,
+      timeline: taskTimeline(row, recentOrders, aircallRows, activityLogs, relatedRequests),
+      performance30d,
+      notes: row.comments.map((comment) => ({
+        id: comment.id,
+        body: comment.body,
+        actorType: comment.actorType,
+        createdAt: comment.createdAt.toISOString(),
+      })).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+      aiPsychAnalysis: latestAiPsychAnalysis(aircallRows),
+      rule: rule ? {
+        id: rule.id,
+        name: rule.name,
+        status: rule.status,
+        trigger: rule.trigger,
+        canvasUrl: `/rules?ruleId=${encodeURIComponent(rule.id)}`,
+      } : null,
+      customerDetailUrl: customerId ? `/staff/customers?customerId=${encodeURIComponent(customerId)}` : null,
+    };
+  }
+
+  async saveTaskNote(id: string, input: SavePersonTaskNoteInput) {
+    const member = await this.currentMember();
+    const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: row.id,
+        actorId: member.id,
+        actorType: 'member',
+        body: input.body,
+        internal: true,
+        attachmentsJson: [{ kind: 'person_task_note', customerId: row.customerId }] as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
+    this.logger.log('person_workspace', 'task.note', 'Task brief note saved', {
+      service_request_id: row.id,
+      member_id: member.id,
+      customer_id: row.customerId,
+    });
+    return this.taskBrief(id);
+  }
+
+  async scheduleTaskFollowUp(id: string, input: SchedulePersonTaskFollowUpInput) {
+    const member = await this.currentMember();
+    const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
+    const scheduledAt = new Date(input.scheduledAt);
+    if (Number.isNaN(scheduledAt.getTime())) throw new BadRequestException('Follow-up time is invalid');
+    const metadata = this.record(row.metadata);
+    const scheduledFollowUps = Array.isArray(metadata.scheduledFollowUps)
+      ? metadata.scheduledFollowUps.filter((item) => item && typeof item === 'object')
+      : [];
+    const followUp = {
+      id: prefixedId('srcm'),
+      scheduledAt: scheduledAt.toISOString(),
+      note: input.note ?? null,
+      createdByMemberId: member.id,
+      createdAt: new Date().toISOString(),
+    };
+    await this.prisma.db.serviceRequest.updateMany({
+      where: { id: row.id },
+      data: {
+        dueAt: scheduledAt,
+        status: CLOSED.has(row.status) ? 'open' : row.status,
+        metadata: {
+          ...metadata,
+          scheduledFollowUps: [...scheduledFollowUps, followUp],
+        } as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: row.id,
+        actorId: member.id,
+        actorType: 'member',
+        body: input.note?.trim() ? `Follow-up scheduled: ${input.note.trim()}` : `Follow-up scheduled for ${scheduledAt.toISOString()}`,
+        internal: true,
+        attachmentsJson: [{ kind: 'calendar_follow_up', ...followUp }] as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('person_workspace', 'task.calendar', 'Task follow-up scheduled', {
+      service_request_id: row.id,
+      member_id: member.id,
+      scheduled_at: scheduledAt.toISOString(),
+    });
+    return this.taskBrief(id);
   }
 
   async customers() {
@@ -971,7 +1179,7 @@ export class PersonWorkspaceService {
     return row;
   }
 
-  private queueCard(row: ServiceRequestRow, memberId: string, config = this.scoring.configFrom({}), repeatCount = 0) {
+  private queueCard(row: ServiceRequestRow, memberId: string, config = this.scoring.configFrom({}), repeatCount = 0, cardContext?: CardContext) {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
@@ -980,6 +1188,7 @@ export class PersonWorkspaceService {
     const customerName = row.customer?.companyName ?? row.customerUser?.email ?? row.title;
     const ticket = ticketNumber(row);
     const workflowTrace = workflowTraceFromMetadata(metadata);
+    const matchedRuleId = row.matchedRuleId ?? workflowTrace?.matchedRuleId ?? workflowTrace?.ruleId ?? null;
     const urgencyBreakdown = this.scoring.score({
       priority: row.priority,
       source: row.source,
@@ -1013,6 +1222,9 @@ export class PersonWorkspaceService {
       aiBrief: source === 'manual' ? undefined : this.brief(row),
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
+      matchedRuleId,
+      miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
+      performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
   }
 
@@ -1038,8 +1250,57 @@ export class PersonWorkspaceService {
     return counts.get(customerId) ?? 0;
   }
 
+  private async cardContext(customerIds: string[]): Promise<CardContext> {
+    const uniqueIds = Array.from(new Set(customerIds.filter(Boolean)));
+    const miniOrders = new Map<string, PersonMiniOrder>();
+    const performance = new Map<string, PersonPerformance30d>();
+    if (uniqueIds.length === 0) return { miniOrders, performance };
+
+    const since = thirtyDaysAgo();
+    const [orders, orderAgg, requestAgg] = await Promise.all([
+      this.prisma.db.commerceOrder.findMany({
+        where: { customerId: { in: uniqueIds } },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(uniqueIds.length * 5, 500),
+      }),
+      this.prisma.db.commerceOrder.groupBy({
+        by: ['customerId'],
+        where: { customerId: { in: uniqueIds }, createdAt: { gte: since } },
+        _count: { _all: true },
+        _sum: { totalPrice: true },
+      }),
+      this.prisma.db.serviceRequest.groupBy({
+        by: ['customerId'],
+        where: { customerId: { in: uniqueIds }, createdAt: { gte: since } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    for (const order of orders) {
+      if (!order.customerId || miniOrders.has(order.customerId)) continue;
+      miniOrders.set(order.customerId, miniOrder(order));
+    }
+    for (const id of uniqueIds) performance.set(id, { ...EMPTY_PERFORMANCE_30D });
+    for (const row of orderAgg) {
+      if (!row.customerId) continue;
+      performance.set(row.customerId, {
+        ...(performance.get(row.customerId) ?? EMPTY_PERFORMANCE_30D),
+        orders: row._count._all,
+        revenue: money(row._sum.totalPrice),
+      });
+    }
+    for (const row of requestAgg) {
+      if (!row.customerId) continue;
+      performance.set(row.customerId, {
+        ...(performance.get(row.customerId) ?? EMPTY_PERFORMANCE_30D),
+        serviceRequests: row._count._all,
+      });
+    }
+    return { miniOrders, performance };
+  }
+
   private calendarFromRequest(row: ServiceRequestRow) {
-    const date = row.assignedMemberId ? row.updatedAt : row.createdAt;
+    const date = row.dueAt ?? (row.assignedMemberId ? row.updatedAt : row.createdAt);
     return {
       id: `sr-${row.id}`,
       title: row.title,
@@ -1234,6 +1495,231 @@ function taskStateSnapshotFromJson(value: unknown): PersonTaskStateSnapshot | un
   return Object.keys(snapshot).length ? snapshot : undefined;
 }
 
+function matchedRuleIdFrom(row: { matchedRuleId: string | null; metadata: Prisma.JsonValue }) {
+  const workflow = asRecord(asRecord(row.metadata).workflow);
+  return row.matchedRuleId
+    ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
+}
+
+function aircallWhereFor(email: string | null, phone: string | null): Prisma.AircallCallEventWhereInput | null {
+  const or: Prisma.AircallCallEventWhereInput[] = [];
+  if (email?.trim()) or.push({ contactEmail: email.trim() });
+  for (const value of phoneVariants(phone)) {
+    or.push({ contactPhone: value }, { contactPhoneE164: value });
+  }
+  return or.length ? { OR: or } : null;
+}
+
+function phoneVariants(value: string | null | undefined) {
+  const raw = value?.trim();
+  if (!raw) return [];
+  const digits = raw.replace(/\D/g, '');
+  return uniqueStrings([raw, digits, digits ? `+${digits}` : null]);
+}
+
+function thirtyDaysAgo() {
+  return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+}
+
+function miniOrder(order: {
+  id: string;
+  shopifyOrderNumber: string | null;
+  totalPrice: unknown;
+  currency: string;
+  financialStatus: string | null;
+  fulfillmentStatus: string | null;
+  processedAt: Date | null;
+  createdAt: Date;
+}): PersonMiniOrder {
+  return {
+    id: order.id,
+    orderNumber: order.shopifyOrderNumber,
+    totalPrice: money(order.totalPrice),
+    currency: order.currency,
+    financialStatus: order.financialStatus,
+    fulfillmentStatus: order.fulfillmentStatus,
+    processedAt: order.processedAt?.toISOString() ?? null,
+    createdAt: order.createdAt.toISOString(),
+  };
+}
+
+function callsSince<T extends { eventTimestamp: Date }>(rows: T[], since: Date) {
+  return rows.filter((row) => row.eventTimestamp.getTime() >= since.getTime());
+}
+
+function taskTimeline(
+  row: ServiceRequestRow,
+  orders: Array<{
+    id: string;
+    shopifyOrderNumber: string | null;
+    totalPrice: unknown;
+    currency: string;
+    financialStatus: string | null;
+    fulfillmentStatus: string | null;
+    processedAt: Date | null;
+    createdAt: Date;
+  }>,
+  calls: Array<{
+    id: string;
+    eventType: string;
+    eventTimestamp: Date;
+    direction: string | null;
+    status: string | null;
+    durationSeconds: number | null;
+    transcriptRaw: string | null;
+    resolverOutput: Prisma.JsonValue | null;
+  }>,
+  activityLogs: Array<{
+    id: string;
+    eventType: string;
+    payload: Prisma.JsonValue;
+    createdAt: Date;
+  }>,
+  relatedRequests: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    updatedAt: Date;
+    createdAt: Date;
+    comments?: Array<{ body: string; createdAt: Date }>;
+  }>,
+): PersonTaskTimelineEntry[] {
+  const entries: PersonTaskTimelineEntry[] = [{
+    id: `task-created-${row.id}`,
+    kind: 'task',
+    title: row.title,
+    summary: row.description ?? row.status,
+    at: row.createdAt.toISOString(),
+    meta: { status: row.status, priority: row.priority },
+  }];
+
+  for (const order of orders) {
+    entries.push({
+      id: `order-${order.id}`,
+      kind: 'order',
+      title: order.shopifyOrderNumber ? `Order ${order.shopifyOrderNumber}` : 'Shopify order',
+      summary: `${order.currency} ${money(order.totalPrice).toLocaleString()} - ${order.financialStatus ?? 'status unknown'}`,
+      at: (order.processedAt ?? order.createdAt).toISOString(),
+      meta: {
+        orderId: order.id,
+        fulfillmentStatus: order.fulfillmentStatus,
+      },
+    });
+  }
+
+  for (const call of calls) {
+    const resolver = asRecord(call.resolverOutput);
+    entries.push({
+      id: `aircall-${call.id}`,
+      kind: 'aircall',
+      title: `${titleize(call.eventType)} ${call.direction ?? 'call'}`.trim(),
+      summary: stringOrNull(resolver.summary) ?? call.transcriptRaw?.slice(0, 220) ?? call.status,
+      at: call.eventTimestamp.toISOString(),
+      meta: {
+        durationSeconds: call.durationSeconds,
+        status: call.status,
+        intent: stringOrNull(resolver.call_intent),
+        psychTags: stringArray(resolver.psych_tags),
+      },
+    });
+  }
+
+  for (const comment of row.comments) {
+    entries.push({
+      id: `note-${comment.id}`,
+      kind: 'note',
+      title: 'Task note',
+      summary: comment.body,
+      at: comment.createdAt.toISOString(),
+      meta: { actorType: comment.actorType, internal: comment.internal },
+    });
+  }
+
+  for (const request of relatedRequests) {
+    if (request.id === row.id) continue;
+    entries.push({
+      id: `request-${request.id}`,
+      kind: 'task',
+      title: request.title,
+      summary: `${titleize(request.status)} - ${titleize(request.priority)}`,
+      at: request.updatedAt.toISOString(),
+      meta: { requestId: request.id, comments: request.comments?.length ?? 0 },
+    });
+  }
+
+  for (const log of activityLogs) {
+    entries.push({
+      id: `activity-${log.id}`,
+      kind: 'activity',
+      title: titleize(log.eventType),
+      summary: summarizePayload(log.payload),
+      at: log.createdAt.toISOString(),
+      meta: { eventType: log.eventType },
+    });
+  }
+
+  return entries
+    .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
+    .slice(0, 16);
+}
+
+function latestAiPsychAnalysis(calls: Array<{
+  eventTimestamp: Date;
+  resolvedAt: Date | null;
+  resolverOutput: Prisma.JsonValue | null;
+  transcriptRaw: string | null;
+}>): PersonAiPsychAnalysis | null {
+  const call = calls.find((row) => row.resolverOutput) ?? calls.find((row) => row.transcriptRaw);
+  if (!call) return null;
+  const output = asRecord(call.resolverOutput);
+  const tags = stringArray(output.psych_tags);
+  const shipping = asRecord(output.shipping_signals);
+  const payment = asRecord(output.payment_signals);
+  const products = valueArray(output.product_mentions)
+    .map((item) => asRecord(item))
+    .map((item) => stringOrNull(item.name_hint ?? item.sku))
+    .filter((item): item is string => Boolean(item));
+  const objections = uniqueStrings([
+    shipping.complaint === true ? 'Shipping complaint' : null,
+    payment.complaint === true ? 'Payment complaint' : null,
+    payment.refund_asked === true ? 'Refund asked' : null,
+    tags.includes('complaint') ? 'Complaint language' : null,
+    tags.includes('refund_intent') ? 'Refund intent' : null,
+  ]);
+  const buyingSignals = uniqueStrings([
+    ...products.map((product) => `Mentioned ${product}`),
+    tags.includes('purchase_intent') ? 'Purchase intent' : null,
+    tags.includes('satisfied') ? 'Satisfied tone' : null,
+  ]);
+  const hesitationSignals = uniqueStrings([
+    tags.includes('shipping_issue') ? 'Shipping issue' : null,
+    tags.includes('info_request') ? 'Information request' : null,
+    stringOrNull(output.urgency_signal) ? `Urgency ${stringOrNull(output.urgency_signal)}` : null,
+  ]);
+  return {
+    communicationStyle: stringOrNull(output.call_intent),
+    decisionMakingStyle: stringOrNull(output.urgency_signal),
+    trustLevel: null,
+    engagementLevel: null,
+    winProbability: null,
+    motivators: tags,
+    objections,
+    buyingSignals,
+    hesitationSignals,
+    talkTrack: stringOrNull(output.summary) ?? call.transcriptRaw?.slice(0, 320) ?? null,
+    generatedAt: call.resolvedAt?.toISOString() ?? call.eventTimestamp.toISOString(),
+  };
+}
+
+function summarizePayload(value: unknown) {
+  const payload = asRecord(value);
+  const summary = stringOrNull(payload.summary ?? payload.title ?? payload.name ?? payload.status);
+  if (summary) return summary;
+  const serialized = JSON.stringify(payload);
+  return serialized.length > 180 ? `${serialized.slice(0, 177)}...` : serialized;
+}
+
 function normalizeWhenTrace(value: unknown): WorkflowWhenGroupTrace[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
@@ -1275,6 +1761,18 @@ function stringOrNull(value: unknown) {
   return raw ? raw : null;
 }
 
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function valueArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)));
+}
+
 function has(record: Record<string, unknown>, key: string) {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
@@ -1292,7 +1790,7 @@ function personColumn(status: string, raw: unknown): PersonQueueColumn {
   return 'unassigned';
 }
 
-function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
+function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' {
   const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
   if (metadata.aiSource === 'segment') return 'ai_segment';
   if (metadata.aiSource === 'stale') return 'ai_stale';

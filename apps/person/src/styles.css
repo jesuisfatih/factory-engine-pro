@@ -63,6 +63,7 @@ body {
 }
 
 button { font-family: inherit; }
+.danger-text { color: var(--danger) !important; }
 
 /* ─── Layout ─────────────────────────────────────────────── */
 .layout { display: grid; grid-template-columns: var(--side-w) 1fr; height: 100vh; }
@@ -256,6 +257,9 @@ button { font-family: inherit; }
 .priority.p5 { background: var(--success-soft); color: var(--success); }
 .priority.p3 { background: var(--info-soft); color: var(--info); }
 .card .summary { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+.card-signals { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 7px; }
+.card-signals span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+.card-signals svg { flex-shrink: 0; }
 .card .row2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; }
 .chip { font-size: 9px; color: #fff; padding: 2px 7px; border-radius: 999px; font-weight: 600; letter-spacing: .2px; }
 .pin-btn { background: transparent; border: 1px solid var(--border); color: var(--text-faint); cursor: pointer; padding: 2px 7px; border-radius: 6px; font-size: 10px; }
@@ -399,6 +403,7 @@ button { font-family: inherit; }
 .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; background: var(--surface-2); }
 .modal-card .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .modal-card .btn.primary { background: var(--success); color: #fff; border-color: var(--success); }
+.modal-card .btn:disabled { opacity: .55; cursor: not-allowed; }
 .event-summary { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .event-summary h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
 .event-summary .meta { font-size: 11px; color: var(--text-muted); }
@@ -431,6 +436,7 @@ button { font-family: inherit; }
 .brief-tier.tier-warn { background: var(--warn-soft); color: var(--warn); }
 .brief-tier.tier-success { background: var(--success-soft); color: var(--success); }
 .brief-tier.tier-info { background: var(--info-soft); color: var(--info); }
+.brief-urgency { padding: 2px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text); font-weight: 800; }
 .brief-identity { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
 .brief-identity span { display: inline-flex; align-items: center; gap: 5px; }
 
@@ -451,10 +457,26 @@ button { font-family: inherit; }
 .brief-actions-list { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--text); line-height: 1.6; }
 .brief-actions-list li { padding: 2px 0; }
 .brief-transcript { background: var(--surface); border-left: 3px solid var(--accent); padding: 9px 12px; border-radius: 4px; font-size: 12px; color: var(--text-muted); font-style: italic; line-height: 1.55; }
+.brief-state { display: grid; gap: 5px; justify-items: flex-start; background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; color: var(--text-muted); font-size: 12px; }
+.brief-state strong { color: var(--text); }
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.brief-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.brief-mini-list { display: grid; gap: 6px; margin-top: 8px; }
+.brief-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 7px 8px; font-size: 11px; }
+.brief-mini-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+.brief-mini-row strong { color: var(--text); }
+.brief-mini-row em { color: var(--text-faint); font-style: normal; }
+.brief-psych { display: grid; gap: 7px; font-size: 12px; }
+.brief-psych div { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; }
+.brief-psych span { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .35px; font-weight: 700; }
+.brief-psych strong { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brief-psych p { margin: 4px 0 0; color: var(--text-muted); line-height: 1.5; }
 .rule-trace-block { background: var(--surface); }
 .rule-trace-count { font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--surface-3); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .rule-trace-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
 .rule-trace-meta span { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 10px; font-weight: 700; padding: 3px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rule-canvas-link { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 10px; font-weight: 800; padding: 3px 8px; text-decoration: none; }
 .rule-trace-list { display: flex; flex-direction: column; gap: 7px; }
 .rule-trace-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); padding: 9px 10px; }
 .rule-trace-row.matched { border-color: color-mix(in srgb, var(--success) 24%, var(--border)); }
@@ -484,9 +506,27 @@ button { font-family: inherit; }
 .brief-card-meta .brief-card-row .val { font-size: 11px; }
 .brief-quick-actions { display: flex; gap: 6px; }
 .brief-quick-actions .btn { flex: 1; justify-content: center; }
+.brief-timeline { display: grid; gap: 7px; }
+.brief-timeline-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
+.brief-timeline-row > span { align-self: start; display: inline-flex; justify-content: center; border-radius: 999px; background: var(--surface-3); color: var(--text-muted); font-size: 9px; font-weight: 800; padding: 2px 6px; }
+.brief-timeline-row.kind-order > span { background: var(--success-soft); color: var(--success); }
+.brief-timeline-row.kind-aircall > span { background: var(--info-soft); color: var(--info); }
+.brief-timeline-row.kind-note > span { background: var(--warn-soft); color: var(--warn); }
+.brief-timeline-row strong { display: block; color: var(--text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brief-timeline-row p { margin: 2px 0; color: var(--text-muted); font-size: 11px; line-height: 1.4; }
+.brief-timeline-row em { color: var(--text-faint); font-size: 10px; font-style: normal; }
+.brief-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 11px; color: var(--text-faint); }
+.brief-form-actions .btn { flex-shrink: 0; }
+.brief-note-row { border: 1px solid var(--border); border-radius: 7px; background: var(--surface); padding: 7px 8px; }
+.brief-note-row span { display: block; color: var(--text-faint); font-size: 10px; margin-bottom: 3px; }
+.brief-note-row p { margin: 0; color: var(--text); font-size: 11px; line-height: 1.45; }
+.brief-schedule-grid { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.modal-card a.btn { text-decoration: none; }
 
 @media (max-width: 880px) {
   .brief-body { grid-template-columns: 1fr; }
+  .brief-grid-two, .brief-schedule-grid { grid-template-columns: 1fr; }
+  .card-signals { grid-template-columns: 1fr; }
 }
 
 /* ─── Notes ──────────────────────────────────────────────── */

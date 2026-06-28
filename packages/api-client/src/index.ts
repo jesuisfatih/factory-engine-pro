@@ -75,10 +75,13 @@ import type {
   ShopifyInitialSyncResponse,
   ShopifySyncStatus,
   SavePersonNoteInput,
+  SavePersonTaskNoteInput,
+  SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
   SweepOverdueServiceRequestsResponse,
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
+  PersonTaskBriefDetail,
 } from '@factory-engine-pro/contracts';
 
 export interface TokenStore {
@@ -433,6 +436,18 @@ export class ApiClient {
 
   togglePersonCustomerPin(customerId: string, input: TogglePersonQueuePinInput = {}) {
     return this.post(`/person/workspace/customers/${encodeURIComponent(customerId)}/pin`, input);
+  }
+
+  personTaskBrief(id: string) {
+    return this.get<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/brief`);
+  }
+
+  savePersonTaskNote(id: string, input: SavePersonTaskNoteInput) {
+    return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/notes`, input);
+  }
+
+  schedulePersonTaskFollowUp(id: string, input: SchedulePersonTaskFollowUpInput) {
+    return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/calendar`, input);
   }
 
   personCustomers() {

@@ -4,11 +4,15 @@ import {
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
   savePersonNoteSchema,
+  savePersonTaskNoteSchema,
+  schedulePersonTaskFollowUpSchema,
   sendPersonMessageSchema,
   togglePersonQueuePinSchema,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
   type SavePersonNoteInput,
+  type SavePersonTaskNoteInput,
+  type SchedulePersonTaskFollowUpInput,
   type SendPersonMessageInput,
   type TogglePersonQueuePinInput,
 } from '@factory-engine-pro/contracts';
@@ -63,6 +67,30 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(togglePersonQueuePinSchema)) body: TogglePersonQueuePinInput,
   ) {
     return this.workspace.toggleCustomerPin(id, body);
+  }
+
+  @Get('tasks/:id/brief')
+  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  taskBrief(@Param('id') id: string) {
+    return this.workspace.taskBrief(id);
+  }
+
+  @Post('tasks/:id/notes')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  saveTaskNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(savePersonTaskNoteSchema)) body: SavePersonTaskNoteInput,
+  ) {
+    return this.workspace.saveTaskNote(id, body);
+  }
+
+  @Post('tasks/:id/calendar')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  scheduleTaskFollowUp(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(schedulePersonTaskFollowUpSchema)) body: SchedulePersonTaskFollowUpInput,
+  ) {
+    return this.workspace.scheduleTaskFollowUp(id, body);
   }
 
   @Get('customers')

@@ -1,6 +1,9 @@
 import type {
   PersonDailyCallItem,
   PersonDailyOperationsDto,
+  PersonMiniOrder,
+  PersonPerformance30d,
+  PersonTaskBriefDetail,
   PersonTaskStateSnapshot,
   PersonTaskWorkflowTrace,
   PersonUrgencyBreakdown,
@@ -47,10 +50,17 @@ export interface Card {
   workflowTrace?: PersonTaskWorkflowTrace;
   /** Fire-time customer, segment, and recent order state copied onto the task. */
   taskStateSnapshot?: PersonTaskStateSnapshot;
+  /** Persisted workflow rule id used by the rule canvas link. */
+  matchedRuleId?: string | null;
+  /** Latest Shopify order, projected onto the card for fast scanning. */
+  miniOrder?: PersonMiniOrder;
+  /** Rolling 30-day customer signal summary. */
+  performance30d?: PersonPerformance30d;
 }
 
 export type DailyCallItem = PersonDailyCallItem;
 export type DailyOperations = PersonDailyOperationsDto;
+export type TaskBriefDetail = PersonTaskBriefDetail;
 
 export interface Column {
   id: ColumnId;

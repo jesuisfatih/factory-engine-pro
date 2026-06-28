@@ -1,6 +1,6 @@
-import type { CreatePersonRequestInput, SavePersonNoteInput } from '@factory-engine-pro/contracts';
+import type { CreatePersonRequestInput, SavePersonNoteInput, SavePersonTaskNoteInput, SchedulePersonTaskFollowUpInput } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
-import type { Card, ColumnId, CustomerRow, DailyOperations } from '../types';
+import type { Card, ColumnId, CustomerRow, DailyOperations, TaskBriefDetail } from '../types';
 
 export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
 export interface PersonSummary {
@@ -124,6 +124,10 @@ export const moveCard = (input: { id: string; columnId: ColumnId; index: number 
   personApi.movePersonQueueCard(input.id, { columnId: input.columnId, index: input.index }) as Promise<Card>;
 export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
 export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
+export const fetchTaskBrief = (id: string) => personApi.personTaskBrief(id) as Promise<TaskBriefDetail>;
+export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => personApi.savePersonTaskNote(id, input) as Promise<TaskBriefDetail>;
+export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
+  personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
 export const fetchTeammates = () => personApi.personTeammates() as Promise<Teammate[]>;

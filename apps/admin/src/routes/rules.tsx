@@ -461,10 +461,11 @@ function RulesView() {
 
   useEffect(() => {
     if (!catalogQuery.data || didHydratePersistedRule || !rulesQuery.isSuccess) return;
-    const firstRule = rulesQuery.data?.rules[0];
-    if (firstRule) {
-      setSelectedRuleId(firstRule.id);
-      setDraft(draftFromWorkflowRule(firstRule));
+    const queryRuleId = new URLSearchParams(window.location.search).get('ruleId');
+    const selectedRule = rulesQuery.data?.rules.find((rule) => rule.id === queryRuleId) ?? rulesQuery.data?.rules[0];
+    if (selectedRule) {
+      setSelectedRuleId(selectedRule.id);
+      setDraft(draftFromWorkflowRule(selectedRule));
     }
     setDidHydratePersistedRule(true);
   }, [catalogQuery.data, didHydratePersistedRule, rulesQuery.data?.rules, rulesQuery.isSuccess]);

@@ -1,4 +1,4 @@
-import { AlarmClockOff, Sparkles, Tags } from 'lucide-react';
+import { Activity, AlarmClockOff, ShoppingBag, Sparkles, Tags } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
 interface Props {
@@ -20,8 +20,18 @@ const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: 
   ai_stale: { label: 'AI - Stale', icon: AlarmClockOff },
 };
 
+function fmtMoney(value: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+}
+
 export function Card({ card, onTogglePin, onOpen }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
+  const lastOrder = card.miniOrder
+    ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
+    : 'No Shopify order';
+  const performance = card.performance30d
+    ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} tasks`
+    : '30d performance pending';
   return (
     <div
       className="card"
@@ -42,6 +52,10 @@ export function Card({ card, onTogglePin, onOpen }: Props) {
         </span>
       </div>
       <div className="summary">{card.summary}</div>
+      <div className="card-signals">
+        <span title="Latest Shopify order"><ShoppingBag size={10} /> {lastOrder}</span>
+        <span title="Last 30 days"><Activity size={10} /> {performance}</span>
+      </div>
       <div className="row2">
         <span className="chip" style={{ background: card.segmentColor }}>{card.segment}</span>
         <button

@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   X, Phone, Mail, ExternalLink, Sparkles, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
-  GitBranch, XCircle,
+  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
-import type { Card as CardData, TaskSource } from '../types';
+import { fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
 
 interface Props {
   card: CardData;
@@ -65,6 +67,30 @@ function snapshotCustomerId(snapshot: Record<string, unknown>) {
   return typeof customer.id === 'string' ? customer.id : 'Not captured';
 }
 
+function fmtMoney(value: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function fmtDate(value: string | null | undefined) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function dateTimeLocal(value: Date) {
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+}
+
+function initialScheduleValue() {
+  const value = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  value.setMinutes(0, 0, 0);
+  if (value.getHours() < 9) value.setHours(9);
+  if (value.getHours() > 17) value.setHours(17);
+  return dateTimeLocal(value);
+}
+
 interface NarrativeFieldProps {
   label: string;
   aiValue: string;
@@ -98,48 +124,57 @@ function NarrativeField({ label, aiValue, value, onChange, multiLine }: Narrativ
       </div>
       {editing ? (
         multiLine ? (
-          <textarea
-            className="brief-edit"
-            rows={3}
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            autoFocus
-          />
+          <textarea className="brief-edit" rows={3} value={value} onChange={(event) => onChange(event.target.value)} autoFocus />
         ) : (
-          <input
-            className="brief-edit"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            autoFocus
-          />
+          <input className="brief-edit" value={value} onChange={(event) => onChange(event.target.value)} autoFocus />
         )
       ) : (
-        <div className="brief-val">{value}{dirty && <span className="brief-dirty">edited</span>}</div>
+        <div className="brief-val">{value || 'Not captured'}{dirty && <span className="brief-dirty">edited</span>}</div>
       )}
     </div>
   );
 }
 
 export function TaskBriefModal({ card, onClose }: Props) {
-  const hasBrief = card.source !== 'manual' && card.aiBrief;
+  const queryClient = useQueryClient();
+  const queryKey = ['person', 'task-brief', card.id] as const;
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchTaskBrief(card.id),
+  });
+
+  const detail = data as TaskBriefDetail | undefined;
+  const liveCard = detail?.card ?? card;
+  const hasBrief = liveCard.source !== 'manual' && liveCard.aiBrief;
   const initial = useMemo(() => ({
-    why: card.aiBrief?.whyCalling ?? '',
-    upset: card.aiBrief?.upsetAbout ?? '',
-    goal: card.aiBrief?.callGoal ?? '',
-  }), [card]);
+    why: liveCard.aiBrief?.whyCalling ?? '',
+    upset: liveCard.aiBrief?.upsetAbout ?? '',
+    goal: liveCard.aiBrief?.callGoal ?? '',
+  }), [liveCard.aiBrief]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
-  const tier = riskTier(card.priority);
-  const workflowTrace = card.workflowTrace;
+  const [note, setNote] = useState('');
+  const [scheduleAt, setScheduleAt] = useState(() => initialScheduleValue());
+  const [scheduleNote, setScheduleNote] = useState('');
+  const tier = riskTier(liveCard.priority);
+  const workflowTrace = liveCard.workflowTrace;
   const traceItems = workflowTrace?.conditionTrace?.length
     ? workflowTrace.conditionTrace
     : workflowTrace?.whenTrace.flatMap((group) => group.conditionTrace) ?? [];
   const matchedCount = traceItems.filter((item) => item.matched).length;
-  const taskStateSnapshot = asRecord(card.taskStateSnapshot);
+  const taskStateSnapshot = asRecord(liveCard.taskStateSnapshot);
   const hasTaskStateSnapshot = Object.keys(taskStateSnapshot).length > 0;
   const snapshotOrders = asArray(taskStateSnapshot.recent_orders);
   const snapshotSegments = asArray(taskStateSnapshot.segments);
+  const latestOrder = liveCard.miniOrder ?? detail?.recentOrders[0];
+  const performance = detail?.performance30d ?? liveCard.performance30d;
+
+  useEffect(() => {
+    setWhy(initial.why);
+    setUpset(initial.upset);
+    setGoal(initial.goal);
+  }, [initial]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -151,6 +186,41 @@ export function TaskBriefModal({ card, onClose }: Props) {
       document.body.style.overflow = prev;
     };
   }, [onClose]);
+
+  const noteMutation = useMutation({
+    mutationFn: () => saveTaskNote(card.id, { body: note }),
+    onSuccess: (next) => {
+      setNote('');
+      queryClient.setQueryData(queryKey, next);
+      queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['person', 'notes'] });
+    },
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: () => scheduleTaskFollowUp(card.id, {
+      scheduledAt: new Date(scheduleAt).toISOString(),
+      note: scheduleNote || undefined,
+    }),
+    onSuccess: (next) => {
+      setScheduleNote('');
+      queryClient.setQueryData(queryKey, next);
+      queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['person', 'calendar'] });
+    },
+  });
+
+  const submitNote = (event: FormEvent) => {
+    event.preventDefault();
+    if (!note.trim()) return;
+    noteMutation.mutate();
+  };
+
+  const submitSchedule = (event: FormEvent) => {
+    event.preventDefault();
+    if (!scheduleAt) return;
+    scheduleMutation.mutate();
+  };
 
   return (
     <div
@@ -164,20 +234,18 @@ export function TaskBriefModal({ card, onClose }: Props) {
         <header className="modal-head">
           <div>
             <div className="brief-eyebrow">
-              <span className={`brief-source brief-source-${card.source}`}>
-                {card.source === 'manual' ? null : <Sparkles size={10} />} {SOURCE_LABEL[card.source]}
+              <span className={`brief-source brief-source-${liveCard.source}`}>
+                {liveCard.source === 'manual' ? null : <Sparkles size={10} />} {SOURCE_LABEL[liveCard.source]}
               </span>
-              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{card.priority}</span>
-              <span className="chip" style={{ background: card.segmentColor }}>{card.segment}</span>
+              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{liveCard.priority}</span>
+              <span className="chip" style={{ background: liveCard.segmentColor }}>{liveCard.segment}</span>
+              <span className="brief-urgency">U{liveCard.urgencyScore}</span>
             </div>
-            <h2 id="task-brief-title" style={{ marginTop: 6 }}>{card.title}</h2>
+            <h2 id="task-brief-title" style={{ marginTop: 6 }}>{liveCard.title}</h2>
             <div className="brief-identity">
-              {card.phone && (
-                <span><Phone size={11} /> {card.phone}</span>
-              )}
-              {card.email && (
-                <span><Mail size={11} /> {card.email}</span>
-              )}
+              {liveCard.phone && <span><Phone size={11} /> {liveCard.phone}</span>}
+              {liveCard.email && <span><Mail size={11} /> {liveCard.email}</span>}
+              {latestOrder && <span><ShoppingBag size={11} /> {latestOrder.orderNumber ?? latestOrder.id} {fmtMoney(latestOrder.totalPrice, latestOrder.currency)}</span>}
             </div>
           </div>
           <button type="button" className="close" onClick={onClose} aria-label="Close">
@@ -187,211 +255,248 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
         <div className="modal-body brief-body">
           <div className="brief-main">
-            {hasBrief ? (
-              <>
-                <NarrativeField
-                  label="Why you're calling"
-                  aiValue={initial.why}
-                  value={why}
-                  onChange={setWhy}
-                  multiLine
-                />
-                <NarrativeField
-                  label="What they're upset about"
-                  aiValue={initial.upset}
-                  value={upset}
-                  onChange={setUpset}
-                  multiLine
-                />
-                <NarrativeField
-                  label="Your goal"
-                  aiValue={initial.goal}
-                  value={goal}
-                  onChange={setGoal}
-                  multiLine
-                />
-
-                {card.aiBrief?.suggestedActions?.length ? (
-                  <div className="brief-block">
-                    <div className="brief-block-head">
-                      <span className="lbl">Suggested actions</span>
-                    </div>
-                    <ul className="brief-actions-list">
-                      {card.aiBrief.suggestedActions.map((action) => (
-                        <li key={action}>{action}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {card.aiBrief?.transcriptSnippet ? (
-                  <div className="brief-block">
-                    <div className="brief-block-head">
-                      <span className="lbl">Transcript snippet</span>
-                    </div>
-                    <div className="brief-transcript">{card.aiBrief.transcriptSnippet}</div>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="brief-block">
-                <div className="brief-block-head">
-                  <span className="lbl">Manual task</span>
-                </div>
-                <div className="brief-val brief-val-muted">
-                  Created by an operator. No AI brief - add dial notes as the call progresses to feed
-                  the next cycle of intelligence.
-                </div>
+            {isLoading && (
+              <div className="brief-state">
+                <Loader2 size={16} className="spin" />
+                <strong>Loading live task brief</strong>
+                <span>Shopify orders, Aircall resolver output, timeline, and rule trace are being read from the API.</span>
               </div>
             )}
 
-            <div className="brief-block rule-trace-block">
-              <div className="brief-block-head">
-                <span className="lbl">Why this task</span>
-                {workflowTrace ? (
-                  <span className="rule-trace-count">{matchedCount}/{traceItems.length} matched</span>
-                ) : null}
+            {isError && (
+              <div className="brief-state danger-text">
+                <AlertTriangle size={16} />
+                <strong>Task brief could not be loaded</strong>
+                <span>{friendlyError(error)}</span>
               </div>
-              {workflowTrace ? (
-                <>
-                  <div className="rule-trace-meta">
-                    <span><GitBranch size={11} /> {workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
-                    <span>{labelize(workflowTrace.trigger)}</span>
-                    <span>{workflowTrace.source ?? 'workflow'}</span>
+            )}
+
+            {!isLoading && !isError && !detail && (
+              <div className="brief-state">
+                <StickyNote size={16} />
+                <strong>No task brief data</strong>
+                <span>This task exists on the board, but the live brief endpoint returned no detail payload.</span>
+              </div>
+            )}
+
+            {!isError && (
+              <>
+                {hasBrief ? (
+                  <>
+                    <NarrativeField label="Why you're calling" aiValue={initial.why} value={why} onChange={setWhy} multiLine />
+                    <NarrativeField label="What they're upset about" aiValue={initial.upset} value={upset} onChange={setUpset} multiLine />
+                    <NarrativeField label="Your goal" aiValue={initial.goal} value={goal} onChange={setGoal} multiLine />
+
+                    {liveCard.aiBrief?.suggestedActions?.length ? (
+                      <div className="brief-block">
+                        <div className="brief-block-head">
+                          <span className="lbl">Suggested actions</span>
+                        </div>
+                        <ul className="brief-actions-list">
+                          {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{action}</li>)}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    {liveCard.aiBrief?.transcriptSnippet ? (
+                      <div className="brief-block">
+                        <div className="brief-block-head">
+                          <span className="lbl">Transcript snippet</span>
+                        </div>
+                        <div className="brief-transcript">{liveCard.aiBrief.transcriptSnippet}</div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="brief-block">
+                    <div className="brief-block-head">
+                      <span className="lbl">Manual task</span>
+                    </div>
+                    <div className="brief-val brief-val-muted">
+                      Created by an operator. Add a task note or schedule a follow-up to enrich the customer history.
+                    </div>
                   </div>
-                  {traceItems.length ? (
-                    <div className="rule-trace-list">
-                      {traceItems.map((trace, index) => (
-                        <div className={`rule-trace-row${trace.matched ? ' matched' : ' missed'}`} key={`${trace.id}-${index}`}>
-                          <div className="rule-trace-status" title={trace.matched ? 'Matched' : 'Not matched'}>
-                            {trace.matched ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                )}
+
+                <RuleTraceBlock
+                  workflowTrace={workflowTrace}
+                  traceItems={traceItems}
+                  matchedCount={matchedCount}
+                  rule={detail?.rule ?? null}
+                />
+
+                <div className="brief-grid-two">
+                  <div className="brief-block">
+                    <div className="brief-block-head">
+                      <span className="lbl">Shopify detail</span>
+                      {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="rule-trace-count">matched</span> : null}
+                    </div>
+                    {detail ? (
+                      <>
+                        <div className="brief-card-row"><span className="lbl">Customer id</span><span className="val">{detail.shopifyCustomer.customerId ?? 'Not matched'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Shopify id</span><span className="val">{detail.shopifyCustomer.shopifyCustomerId ?? 'Not synced'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Phone match</span><span className="val">{detail.shopifyCustomer.phoneMatched ? 'Yes' : 'No'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Email match</span><span className="val">{detail.shopifyCustomer.emailMatched ? 'Yes' : 'No'}</span></div>
+                        {detail.recentOrders.length === 0 ? (
+                          <div className="brief-val brief-val-muted">No Shopify orders for this matched customer.</div>
+                        ) : (
+                          <div className="brief-mini-list">
+                            {detail.recentOrders.map((order) => (
+                              <div key={order.id} className="brief-mini-row">
+                                <span>{order.orderNumber ?? order.id}</span>
+                                <strong>{fmtMoney(order.totalPrice, order.currency)}</strong>
+                                <em>{order.financialStatus ?? 'unknown'}</em>
+                              </div>
+                            ))}
                           </div>
-                          <div className="rule-trace-content">
-                            <div className="rule-trace-condition">
-                              <strong>{labelize(trace.condition)}</strong>
-                              <span>{trace.operator}</span>
-                            </div>
-                            <div className="rule-trace-values">
-                              <span>Expected <strong>{traceValue(trace.expected)}</strong></span>
-                              <span>Actual <strong>{traceValue(trace.actual)}</strong></span>
-                            </div>
-                            <div className="rule-trace-source">{trace.source}</div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="brief-val brief-val-muted">Open the live brief to see Shopify match data.</div>
+                    )}
+                  </div>
+
+                  <div className="brief-block">
+                    <div className="brief-block-head">
+                      <span className="lbl">AI psych analysis</span>
+                    </div>
+                    {detail?.aiPsychAnalysis ? (
+                      <div className="brief-psych">
+                        <div><span>Intent</span><strong>{labelize(detail.aiPsychAnalysis.communicationStyle)}</strong></div>
+                        <div><span>Urgency</span><strong>{labelize(detail.aiPsychAnalysis.decisionMakingStyle)}</strong></div>
+                        <div><span>Motivators</span><strong>{detail.aiPsychAnalysis.motivators.join(', ') || 'None'}</strong></div>
+                        <div><span>Objections</span><strong>{detail.aiPsychAnalysis.objections.join(', ') || 'None'}</strong></div>
+                        {detail.aiPsychAnalysis.talkTrack && <p>{detail.aiPsychAnalysis.talkTrack}</p>}
+                      </div>
+                    ) : (
+                      <div className="brief-val brief-val-muted">No resolved Aircall psych analysis is attached to this customer yet.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="brief-block">
+                  <div className="brief-block-head">
+                    <span className="lbl">Order and customer timeline</span>
+                    {detail ? <span className="rule-trace-count">{detail.timeline.length}</span> : null}
+                  </div>
+                  {detail?.timeline.length ? (
+                    <div className="brief-timeline">
+                      {detail.timeline.map((item) => (
+                        <div key={item.id} className={`brief-timeline-row kind-${item.kind}`}>
+                          <span>{labelize(item.kind)}</span>
+                          <div>
+                            <strong>{item.title}</strong>
+                            <p>{item.summary ?? 'No summary'}</p>
+                            <em>{fmtDate(item.at)}</em>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="brief-val brief-val-muted">
-                      Rule metadata is present, but this task did not save condition-level trace entries.
-                    </div>
+                    <div className="brief-val brief-val-muted">No timeline entries yet.</div>
                   )}
-                </>
-              ) : (
-                <div className="brief-val brief-val-muted">
-                  No workflow rule trace is saved for this task. Operator-created tasks only carry manual context.
                 </div>
-              )}
-            </div>
 
-            <div className="brief-block">
-              <div className="brief-block-head">
-                <span className="lbl">Dial notes</span>
-              </div>
-              <textarea
-                className="brief-edit"
-                rows={3}
-                placeholder="Notes during the call (saved to customer history)..."
-              />
-            </div>
+                <form className="brief-block" onSubmit={submitNote}>
+                  <div className="brief-block-head">
+                    <span className="lbl">Task note</span>
+                    {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
+                  </div>
+                  <textarea
+                    className="brief-edit"
+                    rows={3}
+                    placeholder="Save a task note to customer history..."
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+                  <div className="brief-form-actions">
+                    <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted as a service request comment.'}</span>
+                    <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
+                      <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
+                    </button>
+                  </div>
+                  {detail?.notes.length ? (
+                    <div className="brief-mini-list">
+                      {detail.notes.slice(0, 3).map((item) => (
+                        <div key={item.id} className="brief-note-row">
+                          <span>{fmtDate(item.createdAt)}</span>
+                          <p>{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </form>
+
+                <form className="brief-block" onSubmit={submitSchedule}>
+                  <div className="brief-block-head">
+                    <span className="lbl">Calendar action</span>
+                  </div>
+                  <div className="brief-schedule-grid">
+                    <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                    <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
+                    <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
+                      <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
+                    </button>
+                  </div>
+                  {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
+                </form>
+              </>
+            )}
           </div>
 
           <aside className="brief-side">
             <div className="brief-card">
-              <div className="brief-card-head">
-                <Tags size={12} /> Customer
-              </div>
-              <div className="brief-card-row">
-                <span className="lbl">Name</span>
-                <span className="val">{card.title}</span>
-              </div>
-              {card.email && (
-                <div className="brief-card-row">
-                  <span className="lbl">Email</span>
-                  <span className="val">{card.email}</span>
-                </div>
-              )}
-              {card.phone && (
-                <div className="brief-card-row">
-                  <span className="lbl">Phone</span>
-                  <span className="val">{card.phone}</span>
-                </div>
-              )}
-              <div className="brief-card-row">
-                <span className="lbl">Segment</span>
-                <span className="val">{card.segment}</span>
-              </div>
+              <div className="brief-card-head"><Tags size={12} /> Customer</div>
+              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{liveCard.title}</span></div>
+              {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
+              {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
+              <div className="brief-card-row"><span className="lbl">Segment</span><span className="val">{liveCard.segment}</span></div>
             </div>
 
             <div className="brief-stats">
               <div className="brief-stat">
                 <ShoppingBag size={11} />
-                <div>
-                  <div className="lbl">Orders</div>
-                  <div className="val">{card.ordersCount ?? 'N/A'}</div>
-                </div>
+                <div><div className="lbl">Orders</div><div className="val">{liveCard.ordersCount ?? 'N/A'}</div></div>
               </div>
               <div className="brief-stat">
                 <DollarSign size={11} />
-                <div>
-                  <div className="lbl">LTV</div>
-                  <div className="val">{card.totalSpent ? `$${card.totalSpent.toLocaleString()}` : 'N/A'}</div>
-                </div>
+                <div><div className="lbl">LTV</div><div className="val">{liveCard.totalSpent ? fmtMoney(liveCard.totalSpent) : 'N/A'}</div></div>
+              </div>
+              <div className="brief-stat">
+                <Activity size={11} />
+                <div><div className="lbl">30d revenue</div><div className="val">{performance ? fmtMoney(performance.revenue) : 'N/A'}</div></div>
+              </div>
+              <div className="brief-stat">
+                <Phone size={11} />
+                <div><div className="lbl">30d calls</div><div className="val">{performance?.calls ?? 'N/A'}</div></div>
               </div>
             </div>
 
             {hasTaskStateSnapshot && (
               <div className="brief-card brief-card-meta">
                 <div className="brief-card-head"><GitBranch size={12} /> Fire-time snapshot</div>
-                <div className="brief-card-row">
-                  <span className="lbl">Customer</span>
-                  <span className="val">{snapshotCustomerId(taskStateSnapshot)}</span>
-                </div>
-                <div className="brief-card-row">
-                  <span className="lbl">Segment</span>
-                  <span className="val">{snapshotSegmentName(taskStateSnapshot)}</span>
-                </div>
-                <div className="brief-card-row">
-                  <span className="lbl">Segments</span>
-                  <span className="val">{snapshotSegments.length}</span>
-                </div>
-                <div className="brief-card-row">
-                  <span className="lbl">Recent orders</span>
-                  <span className="val">{snapshotOrders.length}</span>
-                </div>
+                <div className="brief-card-row"><span className="lbl">Customer</span><span className="val">{snapshotCustomerId(taskStateSnapshot)}</span></div>
+                <div className="brief-card-row"><span className="lbl">Segment</span><span className="val">{snapshotSegmentName(taskStateSnapshot)}</span></div>
+                <div className="brief-card-row"><span className="lbl">Segments</span><span className="val">{snapshotSegments.length}</span></div>
+                <div className="brief-card-row"><span className="lbl">Recent orders</span><span className="val">{snapshotOrders.length}</span></div>
               </div>
             )}
 
-            {hasBrief && card.aiBrief && (
+            {hasBrief && liveCard.aiBrief && (
               <div className="brief-card brief-card-meta">
                 <div className="brief-card-head"><Sparkles size={12} /> AI metadata</div>
-                <div className="brief-card-row">
-                  <span className="lbl">Prompt</span>
-                  <span className="val">{card.aiBrief.promptKey} - {card.aiBrief.promptVersion}</span>
-                </div>
-                <div className="brief-card-row">
-                  <span className="lbl">Model</span>
-                  <span className="val">{card.aiBrief.modelUsed}</span>
-                </div>
-                <div className="brief-card-row">
-                  <span className="lbl">Confidence</span>
-                  <span className="val">{Math.round(card.aiBrief.confidence * 100)}%</span>
-                </div>
+                <div className="brief-card-row"><span className="lbl">Prompt</span><span className="val">{liveCard.aiBrief.promptKey} - {liveCard.aiBrief.promptVersion}</span></div>
+                <div className="brief-card-row"><span className="lbl">Model</span><span className="val">{liveCard.aiBrief.modelUsed}</span></div>
+                <div className="brief-card-row"><span className="lbl">Confidence</span><span className="val">{Math.round(liveCard.aiBrief.confidence * 100)}%</span></div>
               </div>
             )}
 
             <div className="brief-quick-actions">
-              <button type="button" className="btn"><Phone size={12} /> Call</button>
-              <button type="button" className="btn"><ExternalLink size={12} /> Open</button>
+              <a className="btn" href={liveCard.phone ? `tel:${liveCard.phone}` : undefined}><Phone size={12} /> Call</a>
+              <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> Email</a>
+            </div>
+            <div className="brief-quick-actions">
+              <a className="btn" href={detail?.customerDetailUrl ?? '#'}><ExternalLink size={12} /> Customer detail</a>
             </div>
           </aside>
         </div>
@@ -401,10 +506,71 @@ export function TaskBriefModal({ card, onClose }: Props) {
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
           <button type="button" className="btn"><Phone size={13} /> Call now</button>
           <button type="button" className="btn primary" onClick={onClose}>
-            <CheckCircle2 size={13} /> Mark done
+            <CheckCircle2 size={13} /> Done
           </button>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function RuleTraceBlock({
+  workflowTrace,
+  traceItems,
+  matchedCount,
+  rule,
+}: {
+  workflowTrace: CardData['workflowTrace'];
+  traceItems: NonNullable<CardData['workflowTrace']>['conditionTrace'];
+  matchedCount: number;
+  rule: TaskBriefDetail['rule'];
+}) {
+  return (
+    <div className="brief-block rule-trace-block">
+      <div className="brief-block-head">
+        <span className="lbl">Why this task</span>
+        {workflowTrace ? <span className="rule-trace-count">{matchedCount}/{traceItems.length} matched</span> : null}
+      </div>
+      {workflowTrace ? (
+        <>
+          <div className="rule-trace-meta">
+            <span><GitBranch size={11} /> {rule?.name ?? workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
+            <span>{labelize(workflowTrace.trigger)}</span>
+            <span>{workflowTrace.source ?? 'workflow'}</span>
+            {rule ? (
+              <a href={rule.canvasUrl} className="rule-canvas-link">
+                <ExternalLink size={11} /> Open rule canvas
+              </a>
+            ) : null}
+          </div>
+          {traceItems.length ? (
+            <div className="rule-trace-list">
+              {traceItems.map((trace, index) => (
+                <div className={`rule-trace-row${trace.matched ? ' matched' : ' missed'}`} key={`${trace.id}-${index}`}>
+                  <div className="rule-trace-status" title={trace.matched ? 'Matched' : 'Not matched'}>
+                    {trace.matched ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                  </div>
+                  <div className="rule-trace-content">
+                    <div className="rule-trace-condition">
+                      <strong>{labelize(trace.condition)}</strong>
+                      <span>{trace.operator}</span>
+                    </div>
+                    <div className="rule-trace-values">
+                      <span>Expected <strong>{traceValue(trace.expected)}</strong></span>
+                      <span>Actual <strong>{traceValue(trace.actual)}</strong></span>
+                    </div>
+                    <div className="rule-trace-source">{trace.source}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="brief-val brief-val-muted">Rule metadata is present, but condition-level trace entries are not saved.</div>
+          )}
+        </>
+      ) : (
+        <div className="brief-val brief-val-muted">No workflow rule trace is saved for this task.</div>
+      )}
     </div>
   );
 }

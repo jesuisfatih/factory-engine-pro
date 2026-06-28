@@ -87,6 +87,27 @@ export const personTaskBriefSchema = z.object({
 });
 export type PersonTaskBrief = z.infer<typeof personTaskBriefSchema>;
 
+export const personMiniOrderSchema = z.object({
+  id: z.string(),
+  orderNumber: z.string().nullable(),
+  totalPrice: z.number(),
+  currency: z.string(),
+  financialStatus: z.string().nullable(),
+  fulfillmentStatus: z.string().nullable(),
+  processedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type PersonMiniOrder = z.infer<typeof personMiniOrderSchema>;
+
+export const personPerformance30dSchema = z.object({
+  orders: z.number(),
+  revenue: z.number(),
+  calls: z.number(),
+  callMinutes: z.number(),
+  serviceRequests: z.number(),
+});
+export type PersonPerformance30d = z.infer<typeof personPerformance30dSchema>;
+
 export const personQueueCardSchema = z.object({
   kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
@@ -109,8 +130,77 @@ export const personQueueCardSchema = z.object({
   aiBrief: personTaskBriefSchema.optional(),
   workflowTrace: personTaskWorkflowTraceSchema.optional(),
   taskStateSnapshot: personTaskStateSnapshotSchema.optional(),
+  matchedRuleId: z.string().nullable().optional(),
+  miniOrder: personMiniOrderSchema.optional(),
+  performance30d: personPerformance30dSchema.optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
+
+export const personTaskTimelineKindSchema = z.enum(['order', 'aircall', 'note', 'task', 'activity']);
+export type PersonTaskTimelineKind = z.infer<typeof personTaskTimelineKindSchema>;
+
+export const personTaskTimelineEntrySchema = z.object({
+  id: z.string(),
+  kind: personTaskTimelineKindSchema,
+  title: z.string(),
+  summary: z.string().nullable(),
+  at: z.string(),
+  meta: z.record(z.string(), z.unknown()).default({}),
+});
+export type PersonTaskTimelineEntry = z.infer<typeof personTaskTimelineEntrySchema>;
+
+export const personTaskNoteSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  actorType: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type PersonTaskNote = z.infer<typeof personTaskNoteSchema>;
+
+export const personTaskRuleLinkSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.string(),
+  trigger: z.string(),
+  canvasUrl: z.string(),
+});
+export type PersonTaskRuleLink = z.infer<typeof personTaskRuleLinkSchema>;
+
+export const personTaskShopifyCustomerSchema = z.object({
+  customerId: z.string().nullable(),
+  shopifyCustomerId: z.string().nullable(),
+  phoneMatched: z.boolean(),
+  emailMatched: z.boolean(),
+});
+export type PersonTaskShopifyCustomer = z.infer<typeof personTaskShopifyCustomerSchema>;
+
+export const personAiPsychAnalysisSchema = z.object({
+  communicationStyle: z.string().nullable(),
+  decisionMakingStyle: z.string().nullable(),
+  trustLevel: z.number().nullable(),
+  engagementLevel: z.number().nullable(),
+  winProbability: z.number().nullable(),
+  motivators: z.array(z.string()),
+  objections: z.array(z.string()),
+  buyingSignals: z.array(z.string()),
+  hesitationSignals: z.array(z.string()),
+  talkTrack: z.string().nullable(),
+  generatedAt: z.string().nullable(),
+});
+export type PersonAiPsychAnalysis = z.infer<typeof personAiPsychAnalysisSchema>;
+
+export const personTaskBriefDetailSchema = z.object({
+  card: personQueueCardSchema,
+  shopifyCustomer: personTaskShopifyCustomerSchema,
+  recentOrders: z.array(personMiniOrderSchema),
+  timeline: z.array(personTaskTimelineEntrySchema),
+  performance30d: personPerformance30dSchema,
+  notes: z.array(personTaskNoteSchema),
+  aiPsychAnalysis: personAiPsychAnalysisSchema.nullable(),
+  rule: personTaskRuleLinkSchema.nullable(),
+  customerDetailUrl: z.string().nullable(),
+});
+export type PersonTaskBriefDetail = z.infer<typeof personTaskBriefDetailSchema>;
 
 export const personDailyCallItemSchema = z.object({
   kind: z.literal('customer').default('customer'),
@@ -176,6 +266,17 @@ export const togglePersonQueuePinSchema = z.object({
   pinned: z.boolean().optional(),
 });
 export type TogglePersonQueuePinInput = z.infer<typeof togglePersonQueuePinSchema>;
+
+export const savePersonTaskNoteSchema = z.object({
+  body: z.string().trim().min(1).max(12000),
+});
+export type SavePersonTaskNoteInput = z.infer<typeof savePersonTaskNoteSchema>;
+
+export const schedulePersonTaskFollowUpSchema = z.object({
+  scheduledAt: z.string().datetime(),
+  note: z.string().trim().max(1200).optional(),
+});
+export type SchedulePersonTaskFollowUpInput = z.infer<typeof schedulePersonTaskFollowUpSchema>;
 
 export const sendPersonMessageSchema = z.object({
   threadId: z.string().trim().min(1),
