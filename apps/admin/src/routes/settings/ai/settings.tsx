@@ -1,281 +1,358 @@
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { Brain, Save, Download, Upload, RotateCcw, AlertTriangle, TrendingUp, Truck, Phone, ShoppingCart, Mail, Clock, Wallet } from 'lucide-react';
-import { AI_SERVICES, fetchServiceToggles, type AiServiceId, type ServiceToggleState } from '@/lib/mock';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, FileText, KeyRound, RefreshCw, Save, Send, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import type { AiHealthResponse, TranscriptResolverTestResponse } from '@factory-engine-pro/contracts';
+import { adminApi, apiErrorMessage } from '@/lib/api';
+import { useCan } from '@/lib/permissions';
 
-const ICONS: Record<AiServiceId, typeof TrendingUp> = {
-  analytics: TrendingUp,
-  partners: Truck,
-  aircall: Phone,
-  sales: ShoppingCart,
-  email_template: Mail,
-};
+const TENANT_CONFIG_QK = ['identity', 'tenant-config'] as const;
+const AI_HEALTH_QK = ['ai', 'health'] as const;
+const AI_PROMPT_QK = ['ai', 'resolver-prompt'] as const;
+const PROBE_TRANSCRIPT = [
+  'Customer called because order DTF-18491 is delayed.',
+  'They asked for tracking, mentioned a missing apartment number, and requested an urgent follow up today.',
+  'They also said they may move the next gang sheet order to a competitor if shipping is not fixed.',
+].join(' ');
+
+interface TenantConfigResponse {
+  hasAnthropicApiKey: boolean;
+}
+
+interface ResolverPromptResponse {
+  promptKey: string;
+  promptVersion: string;
+  prompt: string;
+}
 
 function AiSettingsView() {
-  const { t } = useTranslation();
   const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: ['ai', 'toggles'], queryFn: fetchServiceToggles });
+  const canWrite = useCan('settings.write');
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
 
-  const [masterEnabled, setMasterEnabled] = useState(true);
-  const [quietHours, setQuietHours] = useState(false);
-  const [services, setServices] = useState<ServiceToggleState[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const config = useQuery({
+    queryKey: TENANT_CONFIG_QK,
+    queryFn: () => adminApi.tenantConfig() as Promise<TenantConfigResponse>,
+  });
+  const health = useQuery({
+    queryKey: AI_HEALTH_QK,
+    queryFn: () => adminApi.aiHealth() as Promise<AiHealthResponse>,
+    retry: false,
+  });
+  const prompt = useQuery({
+    queryKey: AI_PROMPT_QK,
+    queryFn: () => adminApi.aiResolverPrompt() as Promise<ResolverPromptResponse>,
+    retry: false,
+  });
 
-  useEffect(() => {
-    if (!data) return;
-    setMasterEnabled(data.masterEnabled);
-    setQuietHours(data.quietHours);
-    setServices(data.services);
-  }, [data]);
+  const saveCredentials = useMutation({
+    mutationFn: () => adminApi.updateTenantConfig({
+      anthropicApiKey: trimOrUndefined(anthropicApiKey),
+    }),
+    onSuccess: () => {
+      setAnthropicApiKey('');
+      qc.invalidateQueries({ queryKey: TENANT_CONFIG_QK });
+      qc.invalidateQueries({ queryKey: AI_HEALTH_QK });
+      toast.success('Anthropic credential saved');
+    },
+    onError: (error) => toast.error('Anthropic credential could not be saved', { description: apiErrorMessage(error) }),
+  });
 
-  const updateService = (id: AiServiceId, patch: Partial<ServiceToggleState>) => {
-    setServices((rows) => rows.map((row) => row.id === id ? { ...row, ...patch } : row));
-  };
-  const updateServiceConfig = (id: AiServiceId, key: string, value: boolean | number) => {
-    setServices((rows) => rows.map((row) => row.id === id ? { ...row, config: { ...row.config, [key]: value } } : row));
-  };
+  const resolverProbe = useMutation({
+    mutationFn: () => adminApi.aiTranscriptResolverTest({
+      transcript: PROBE_TRANSCRIPT,
+      metadata: {
+        source: 'admin-ai-settings',
+        purpose: 'roadmap-3-transcript-resolver-proof',
+      },
+    }) as Promise<TranscriptResolverTestResponse>,
+  });
 
-  const renderImpactRow = (id: string, items: string[]) => (
-    <div className="impact-row" id={`impact-${id}`}
-      onClick={() => setExpanded((current) => current === id ? null : id)}>
-      <span>↓ {t('ai.ai_settings.if_disabled_label', { count: items.length })}</span>
-      {expanded === id && <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>}
-    </div>
-  );
+  const hasCredential = Boolean(config.data?.hasAnthropicApiKey || health.data?.configured);
+  const credentialStatusError = config.isError ? apiErrorMessage(config.error) : health.isError ? apiErrorMessage(health.error) : null;
+  const promptStats = prompt.data ? {
+    chars: prompt.data.prompt.length,
+    lines: prompt.data.prompt.split('\n').filter((line) => line.trim().length > 0).length,
+  } : null;
 
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }} data-i18n-key="ai.ai_settings.all_changes_saved">
-          {t('ai.ai_settings.all_changes_saved')}
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button id="btn-discard" className="btn ghost" type="button">
-            {t('ai.ai_settings.discard')}
-          </button>
-          <button id="btn-reset-defaults" className="btn" type="button" style={{ color: 'var(--warn)', borderColor: 'var(--warn)' }}>
-            <RotateCcw size={13} /> {t('ai.ai_settings.reset_defaults')}
-          </button>
-          <button id="btn-export" className="btn" type="button">
-            <Download size={13} /> {t('ai.ai_settings.export')}
-          </button>
-          <button id="btn-import" className="btn" type="button">
-            <Upload size={13} /> {t('ai.ai_settings.import')}
-          </button>
-          <button id="btn-save-all" type="button" className="save-btn" style={{ background: '#7c3aed', borderColor: '#7c3aed' }}
-            onClick={() => qc.invalidateQueries({ queryKey: ['ai', 'toggles'] })}>
-            <Save size={13} /> {t('ai.ai_settings.save')}
-          </button>
-        </div>
-      </div>
-
-      {/* Master Toggle */}
-      <div className="master-toggle-card" id="master-ai-toggle">
+    <div className="integration-page" id="ai-settings-runtime-page">
+      <section className="webhook-card" id="ai-credential-status">
         <div className="head">
           <div>
-            <div className="name">
-              <div className="icon-wrap"><Brain size={16} /></div>
-              <span data-i18n-key="ai.ai_settings.master_toggle_title">{t('ai.ai_settings.master_toggle_title')}</span>
-              <span className="risk-tag CRITICAL">CRITICAL</span>
-            </div>
-            <div className="sub" data-i18n-key="ai.ai_settings.master_toggle_sub">
-              {t('ai.ai_settings.master_toggle_sub')}
-            </div>
+            <h3>Anthropic credential</h3>
+            <div className="sub">Tenant scoped key used by transcript resolver calls.</div>
           </div>
-          <button id="master-switch" type="button" className={`switch${masterEnabled ? ' on' : ''}`}
-            onClick={() => setMasterEnabled((value) => !value)}>
-            <span className="knob" />
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              config.refetch();
+              health.refetch();
+              prompt.refetch();
+            }}
+            disabled={config.isFetching || health.isFetching || prompt.isFetching}
+          >
+            <RefreshCw size={13} /> Refresh
           </button>
         </div>
-        {!masterEnabled && (
-          <div className="impact-banner">
-            <AlertTriangle size={14} />
-            <span data-i18n-key="ai.ai_settings.master_impact_note">{t('ai.ai_settings.master_impact_note')}</span>
+
+        {(config.isLoading || health.isLoading) && (
+          <StateBlock
+            title="Loading AI configuration"
+            body="Reading the tenant credential marker and live Anthropic health state."
+          />
+        )}
+
+        {credentialStatusError && (
+          <StateBlock
+            title="AI configuration could not load"
+            body={credentialStatusError}
+            icon={<AlertTriangle size={18} color="var(--danger)" />}
+            action={<button type="button" className="btn" onClick={() => { config.refetch(); health.refetch(); }}><RefreshCw size={14} /> Retry</button>}
+          />
+        )}
+
+        {!config.isLoading && !health.isLoading && !credentialStatusError && (
+          <>
+            <div className="webhook-grid">
+              <StatusCell
+                label="Tenant key"
+                ok={Boolean(config.data?.hasAnthropicApiKey)}
+                value={config.data?.hasAnthropicApiKey ? 'encrypted at rest' : 'missing'}
+              />
+              <StatusCell
+                label="Provider"
+                ok={health.data?.provider === 'anthropic'}
+                value={health.data?.provider ?? 'anthropic'}
+              />
+              <StatusCell
+                label="Credential source"
+                ok={Boolean(health.data?.configured)}
+                value={health.data?.source ?? 'none'}
+              />
+              <StatusCell
+                label="Resolver API"
+                ok={Boolean(health.data?.resolverReachable)}
+                value={health.data?.resolverStatus ?? 'not_checked'}
+              />
+            </div>
+
+            {!hasCredential && (
+              <div className="empty-state" style={{ marginBottom: 14 }}>
+                <XCircle size={18} />
+                <div>
+                  <strong>No Anthropic key is configured</strong>
+                  <span>Save a tenant key before producing transcript resolver JSON.</span>
+                </div>
+              </div>
+            )}
+
+            {health.data?.resolverError && (
+              <div className="error-state" style={{ marginTop: 12 }}>
+                <AlertTriangle size={16} />
+                <span>{health.data.resolverError}</span>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <section className="config-card" id="ai-credential-form">
+        <h3>Credential update</h3>
+        <div className="sub">Blank values keep the existing encrypted tenant key.</div>
+        <div className="field-row-2">
+          <div className="field">
+            <label htmlFor="field-anthropic-api-key">
+              <KeyRound size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
+              Anthropic API key
+            </label>
+            <input
+              id="field-anthropic-api-key"
+              type="password"
+              value={anthropicApiKey}
+              onChange={(event) => setAnthropicApiKey(event.target.value)}
+              placeholder={config.data?.hasAnthropicApiKey ? 'Leave blank to keep existing key' : 'sk-ant-...'}
+              disabled={!canWrite || saveCredentials.isPending}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="field">
+            <label>Save tenant credential</label>
+            <button
+              id="btn-save-anthropic-credential"
+              type="button"
+              className="save-btn"
+              style={{ height: 40, justifyContent: 'center' }}
+              disabled={!canWrite || saveCredentials.isPending || !trimOrUndefined(anthropicApiKey)}
+              onClick={() => saveCredentials.mutate()}
+            >
+              <Save size={13} /> {saveCredentials.isPending ? 'Saving' : 'Save'}
+            </button>
+          </div>
+        </div>
+        {!canWrite && <div className="form-error" style={{ marginTop: 12 }}>settings.write permission is required to change this key.</div>}
+      </section>
+
+      <section className="config-card" id="ai-runtime-health">
+        <div className="section-title-row">
+          <div>
+            <h3>Live resolver health</h3>
+            <div className="sub">Uses the real tenant key against Anthropic model and messages APIs.</div>
+          </div>
+          <button
+            id="btn-refresh-ai-health"
+            type="button"
+            className="btn"
+            onClick={() => health.refetch()}
+            disabled={health.isFetching}
+          >
+            <RefreshCw size={13} /> Refresh
+          </button>
+        </div>
+
+        {health.isLoading && <StateBlock title="Checking provider" body="Waiting for the Anthropic health probe." />}
+        {health.isError && <div className="error-state">{apiErrorMessage(health.error)}</div>}
+        {health.data && (
+          <>
+            <div className="webhook-grid">
+              <RuntimeCell label="Status" value={health.data.status} />
+              <RuntimeCell label="Models API" value={health.data.reachable ? 'reachable' : 'blocked'} />
+              <RuntimeCell label="Model count" value={health.data.modelCount == null ? 'n/a' : String(health.data.modelCount)} />
+              <RuntimeCell label="Latency" value={health.data.latencyMs == null ? 'n/a' : `${health.data.latencyMs}ms`} />
+              <RuntimeCell label="Checked" value={formatDate(health.data.checkedAt)} />
+              <RuntimeCell label="Resolver messages" value={health.data.resolverStatus} />
+            </div>
+            {health.data.error && <div className="error-state">{health.data.error}</div>}
+          </>
+        )}
+      </section>
+
+      <section className="config-card" id="ai-resolver-test">
+        <div className="section-title-row">
+          <div>
+            <h3>Transcript resolver test</h3>
+            <div className="sub">Produces the JSON output required by the integration gate.</div>
+          </div>
+          <button
+            id="btn-test-ai-resolver"
+            type="button"
+            className="btn primary"
+            onClick={() => resolverProbe.mutate()}
+            disabled={!hasCredential || resolverProbe.isPending}
+          >
+            {resolverProbe.isPending ? <RefreshCw className="spin" size={13} /> : <Send size={13} />}
+            {resolverProbe.isPending ? 'Running' : 'Run test'}
+          </button>
+        </div>
+
+        {!hasCredential && (
+          <div className="empty-state">
+            <FileText size={18} />
+            <div>
+              <strong>Resolver test is waiting for credentials</strong>
+              <span>Save a tenant key to run a live transcript proof.</span>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Per-service cards */}
-      {services.map((svc) => {
-        const meta = AI_SERVICES.find((service) => service.id === svc.id)!;
-        const Icon = ICONS[svc.id];
-        return (
-          <div key={svc.id} className="service-toggle-card" id={`svc-toggle-${svc.id}`}>
-            <div className="head">
-              <div>
-                <div className="name" style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Icon size={16} style={{ color: meta.color }} />
-                  <span>{meta.label}</span>
-                  <span className={`risk-tag ${meta.risk}`}>{meta.risk}</span>
-                </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{meta.subtitle}</div>
-              </div>
-              <button id={`switch-${svc.id}`} type="button" className={`switch${svc.enabled ? ' on' : ''}`}
-                onClick={() => updateService(svc.id, { enabled: !svc.enabled })}>
-                <span className="knob" />
-              </button>
+        {resolverProbe.isError && <div className="error-state">{apiErrorMessage(resolverProbe.error)}</div>}
+        {resolverProbe.data && (
+          <>
+            <div className="webhook-grid">
+              <RuntimeCell label="Model" value={resolverProbe.data.model} />
+              <RuntimeCell label="Source" value={resolverProbe.data.source} />
+              <RuntimeCell label="Prompt" value={resolverProbe.data.promptKey} />
+              <RuntimeCell label="Latency" value={`${resolverProbe.data.latencyMs}ms`} />
+              <RuntimeCell label="Checked" value={formatDate(resolverProbe.data.checkedAt)} />
             </div>
-
-            {renderImpactRow(svc.id, svc.impactDescriptions)}
-
-            <div className="config-section-label" data-i18n-key="ai.ai_settings.model_override_label">
-              {t('ai.ai_settings.model_override_label')}
+            <div className="code-block" style={{ whiteSpace: 'pre-wrap' }}>
+              {JSON.stringify(resolverProbe.data.output, null, 2)}
             </div>
-            <select id={`override-${svc.id}`} className="model-override-select"
-              value={svc.modelOverride}
-              onChange={(event) => updateService(svc.id, { modelOverride: event.target.value })}>
-              <option value="default">{t('ai.ai_settings.model_default')}</option>
-              <option value="claude-haiku-4-5">claude-haiku-4-5-20251001</option>
-              <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-              <option value="claude-opus-4-7">claude-opus-4-7</option>
-            </select>
-            <div className="model-override-help" data-i18n-key="ai.ai_settings.model_override_help">
-              {t('ai.ai_settings.model_override_help')}
+          </>
+        )}
+        {hasCredential && !resolverProbe.isPending && !resolverProbe.isError && !resolverProbe.data && (
+          <div className="empty-state">
+            <FileText size={18} />
+            <div>
+              <strong>No resolver output in this view yet</strong>
+              <span>Run the live test to capture the transcript JSON result.</span>
             </div>
-
-            {/* Per-service config toggles */}
-            {svc.id === 'aircall' && (
-              <>
-                <div className="config-section-label" data-i18n-key="ai.ai_settings.config_section_aircall">
-                  {t('ai.ai_settings.config_section_aircall')}
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.psychoanalysis_label">
-                    {t('ai.ai_settings.psychoanalysis_label')}
-                  </span>
-                  <button id={`cfg-${svc.id}-psycho`} type="button"
-                    className={`switch${svc.config.psychoanalysisEnabled ? ' on' : ''}`}
-                    onClick={() => updateServiceConfig(svc.id, 'psychoanalysisEnabled', !svc.config.psychoanalysisEnabled)}>
-                    <span className="knob" />
-                  </button>
-                </div>
-              </>
-            )}
-
-            {svc.id === 'partners' && (
-              <>
-                <div className="config-section-label" data-i18n-key="ai.ai_settings.config_section_partners">
-                  {t('ai.ai_settings.config_section_partners')}
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.text_first_label">
-                    {t('ai.ai_settings.text_first_label')}
-                  </span>
-                  <button id={`cfg-${svc.id}-textfirst`} type="button"
-                    className={`switch${svc.config.textFirstAttempt ? ' on' : ''}`}
-                    onClick={() => updateServiceConfig(svc.id, 'textFirstAttempt', !svc.config.textFirstAttempt)}>
-                    <span className="knob" />
-                  </button>
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.vision_cache_ttl">
-                    {t('ai.ai_settings.vision_cache_ttl')}
-                  </span>
-                  <input id={`cfg-${svc.id}-cache-ttl`} type="number"
-                    value={Number(svc.config.visionCacheTtlHours ?? 1)}
-                    onChange={(event) => updateServiceConfig(svc.id, 'visionCacheTtlHours', Number(event.target.value))} />
-                </div>
-              </>
-            )}
-
-            {svc.id === 'sales' && (
-              <>
-                <div className="config-section-label" data-i18n-key="ai.ai_settings.config_section_sales">
-                  {t('ai.ai_settings.config_section_sales')}
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.per_call_intelligence">
-                    {t('ai.ai_settings.per_call_intelligence')}
-                  </span>
-                  <button id={`cfg-${svc.id}-percall`} type="button"
-                    className={`switch${svc.config.perCallIntelligenceEnabled ? ' on' : ''}`}
-                    onClick={() => updateServiceConfig(svc.id, 'perCallIntelligenceEnabled', !svc.config.perCallIntelligenceEnabled)}>
-                    <span className="knob" />
-                  </button>
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.daily_digest">
-                    {t('ai.ai_settings.daily_digest')}
-                  </span>
-                  <button id={`cfg-${svc.id}-digest`} type="button"
-                    className={`switch${svc.config.dailyDigestEnabled ? ' on' : ''}`}
-                    onClick={() => updateServiceConfig(svc.id, 'dailyDigestEnabled', !svc.config.dailyDigestEnabled)}>
-                    <span className="knob" />
-                  </button>
-                </div>
-              </>
-            )}
-
-            {svc.id === 'email_template' && (
-              <>
-                <div className="config-section-label" data-i18n-key="ai.ai_settings.config_section_email_template">
-                  {t('ai.ai_settings.config_section_email_template')}
-                </div>
-                <div className="config-row">
-                  <span className="lbl" data-i18n-key="ai.ai_settings.max_output_tokens_cap">
-                    {t('ai.ai_settings.max_output_tokens_cap')}
-                  </span>
-                  <input id={`cfg-${svc.id}-max-tokens`} type="number"
-                    value={Number(svc.config.maxOutputTokensCap ?? 4000)}
-                    onChange={(event) => updateServiceConfig(svc.id, 'maxOutputTokensCap', Number(event.target.value))} />
-                </div>
-              </>
-            )}
           </div>
-        );
-      })}
+        )}
+      </section>
 
-      {/* Quiet Hours */}
-      <div className="service-toggle-card" id="quiet-hours">
-        <div className="head">
+      <section className="config-card" id="ai-prompt-runtime">
+        <div className="section-title-row">
           <div>
-            <div className="name" style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Clock size={16} style={{ color: 'var(--text-muted)' }} />
-              <span data-i18n-key="ai.ai_settings.quiet_hours_title">{t('ai.ai_settings.quiet_hours_title')}</span>
-              <span className="risk-tag LOW">LOW</span>
-            </div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 4 }} data-i18n-key="ai.ai_settings.quiet_hours_sub">
-              {t('ai.ai_settings.quiet_hours_sub')}
-            </div>
+            <h3>Resolver prompt registry</h3>
+            <div className="sub">Prompt template compiled from the shared enum catalog.</div>
           </div>
-          <button id="quiet-hours-switch" type="button" className={`switch${quietHours ? ' on' : ''}`}
-            onClick={() => setQuietHours((value) => !value)}>
-            <span className="knob" />
-          </button>
+          <StatusPill ok={prompt.data?.promptKey === 'ai.transcript-resolver'} label={prompt.data?.promptKey ?? 'missing'} />
         </div>
-      </div>
-
-      {/* Budget settings link */}
-      <div className="service-toggle-card" id="budget-settings-collapsed">
-        <div className="head">
-          <div>
-            <div className="name" style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Wallet size={16} style={{ color: 'var(--text-muted)' }} />
-              <span data-i18n-key="ai.ai_settings.budget_settings_title">{t('ai.ai_settings.budget_settings_title')}</span>
-              <span className="risk-tag MEDIUM">MEDIUM</span>
+        {prompt.isLoading && <StateBlock title="Loading prompt" body="Reading the active resolver prompt." />}
+        {prompt.isError && <div className="error-state">{apiErrorMessage(prompt.error)}</div>}
+        {prompt.data && (
+          <>
+            <div className="webhook-grid">
+              <RuntimeCell label="Version" value={prompt.data.promptVersion} />
+              <RuntimeCell label="Characters" value={String(promptStats?.chars ?? 0)} />
+              <RuntimeCell label="Lines" value={String(promptStats?.lines ?? 0)} />
             </div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 4 }} data-i18n-key="ai.ai_settings.budget_settings_sub">
-              {t('ai.ai_settings.budget_settings_sub')}
+            <div className="code-block" style={{ maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+              {prompt.data.prompt}
             </div>
-          </div>
-          <span className="muted">→</span>
-        </div>
-      </div>
-
-      {/* Recent changes */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}
-          data-i18n-key="ai.ai_settings.recent_changes_title">
-          {t('ai.ai_settings.recent_changes_title')} (0)
-        </div>
-        <div className="changes-empty" data-i18n-key="ai.ai_settings.no_changes">
-          {t('ai.ai_settings.no_changes')}
-        </div>
-      </div>
-    </>
+          </>
+        )}
+      </section>
+    </div>
   );
+}
+
+function StatusCell({ label, ok, value }: { label: string; ok: boolean; value: string }) {
+  return (
+    <div className="cell">
+      <div className="lbl">{label}</div>
+      <div className="val" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {ok ? <CheckCircle2 size={14} color="var(--success)" /> : <XCircle size={14} color="var(--danger)" />}
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function RuntimeCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="cell">
+      <div className="lbl">{label}</div>
+      <div className="val">{value}</div>
+    </div>
+  );
+}
+
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return <span className={`status-pill ${ok ? 'success' : 'danger'}`}>{label}</span>;
+}
+
+function StateBlock({ title, body, action, icon }: { title: string; body: string; action?: React.ReactNode; icon?: React.ReactNode }) {
+  return (
+    <div className="pricing-list-empty">
+      {icon && <div style={{ marginBottom: 10 }}>{icon}</div>}
+      <div className="title">{title}</div>
+      <div className="note">{body}</div>
+      {action && <div style={{ marginTop: 14 }}>{action}</div>}
+    </div>
+  );
+}
+
+function trimOrUndefined(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 }
 
 export const Route = createFileRoute('/settings/ai/settings')({ component: AiSettingsView });

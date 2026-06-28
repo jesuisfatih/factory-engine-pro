@@ -1,76 +1,178 @@
+import type { ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { TrendingUp, Truck, Phone, ShoppingCart, Mail, RefreshCw } from 'lucide-react';
-import { AI_SERVICES, fetchAiServiceStats, type AiServiceId } from '@/lib/mock';
+import { useQuery } from '@tanstack/react-query';
+import { Activity, AlertTriangle, CheckCircle2, FileText, RefreshCw, Send, XCircle } from 'lucide-react';
+import type { AiHealthResponse } from '@factory-engine-pro/contracts';
+import { adminApi, apiErrorMessage } from '@/lib/api';
 
-const ICONS: Record<AiServiceId, typeof TrendingUp> = {
-  analytics: TrendingUp,
-  partners: Truck,
-  aircall: Phone,
-  sales: ShoppingCart,
-  email_template: Mail,
-};
+const AI_HEALTH_QK = ['ai', 'health'] as const;
+const AI_PROMPT_QK = ['ai', 'resolver-prompt'] as const;
+
+interface ResolverPromptResponse {
+  promptKey: string;
+  promptVersion: string;
+  prompt: string;
+}
 
 function ServicesView() {
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const { data: stats = [] } = useQuery({ queryKey: ['ai', 'services'], queryFn: fetchAiServiceStats });
+  const health = useQuery({
+    queryKey: AI_HEALTH_QK,
+    queryFn: () => adminApi.aiHealth() as Promise<AiHealthResponse>,
+    retry: false,
+  });
+  const prompt = useQuery({
+    queryKey: AI_PROMPT_QK,
+    queryFn: () => adminApi.aiResolverPrompt() as Promise<ResolverPromptResponse>,
+    retry: false,
+  });
+
+  const loading = health.isLoading || prompt.isLoading;
+  const error = health.isError ? apiErrorMessage(health.error) : prompt.isError ? apiErrorMessage(prompt.error) : null;
+
+  if (loading) {
+    return (
+      <section className="section workspace-state">
+        <RefreshCw className="spin" size={18} />
+        <div>
+          <h3>Loading AI services</h3>
+          <p>Checking the live Anthropic provider, resolver endpoint, and prompt registry.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="section workspace-state error-state">
+        <AlertTriangle size={18} />
+        <div>
+          <h3>AI services could not load</h3>
+          <p>{error}</p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              health.refetch();
+              prompt.refetch();
+            }}
+          >
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const promptLines = prompt.data?.prompt.split('\n').filter((line) => line.trim().length > 0).length ?? 0;
 
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }} data-i18n-key="ai.services.title">
-          {t('ai.services.title')}
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          Live AI service registry
         </div>
-        <button id="btn-ai-services-refresh" type="button" className="btn ghost"
-          onClick={() => qc.invalidateQueries({ queryKey: ['ai', 'services'] })}>
-          <RefreshCw size={13} /> {t('ai.services.refresh')}
+        <button
+          id="btn-ai-services-refresh"
+          type="button"
+          className="btn ghost"
+          onClick={() => {
+            health.refetch();
+            prompt.refetch();
+          }}
+          disabled={health.isFetching || prompt.isFetching}
+        >
+          <RefreshCw size={13} /> Refresh
         </button>
       </div>
 
       <div className="service-grid" id="ai-service-grid">
-        {AI_SERVICES.map((meta) => {
-          const stat = stats.find((s) => s.id === meta.id);
-          const Icon = ICONS[meta.id];
-          return (
-            <div key={meta.id} className="service-card" id={`service-card-${meta.id}`}>
-              <div className="top">
-                <span className="dot" style={{ background: meta.color }} />
-                <Icon size={16} style={{ color: meta.color }} />
-                <div>
-                  <h4>{meta.label}</h4>
-                  <div className="sub">{meta.subtitle}</div>
-                </div>
-              </div>
-              <div className="body">
-                <div className="col">
-                  <div className="label" data-i18n-key="ai.services.calls">{t('ai.services.calls')}</div>
-                  <div className="val">{stat?.calls ?? 0}</div>
-                </div>
-                <div className="col">
-                  <div className="label" data-i18n-key="ai.services.cost">{t('ai.services.cost')}</div>
-                  <div className="val">${(stat?.cost ?? 0).toFixed(2)}</div>
-                </div>
-                <div className="col">
-                  <div className="label" data-i18n-key="ai.services.avg_ms">{t('ai.services.avg_ms')}</div>
-                  <div className="val">{stat?.avgMs ?? 0}</div>
-                </div>
-                <div className="col">
-                  <div className="label" data-i18n-key="ai.services.error_pct">{t('ai.services.error_pct')}</div>
-                  <div className="val" style={{ color: 'var(--success)' }}>{stat?.errorPct ?? 0}%</div>
-                </div>
-              </div>
-              <div className="foot">
-                <span><span data-i18n-key="ai.services.tokens_in">{t('ai.services.tokens_in')}</span> <b>{(stat?.tokensIn ?? 0).toLocaleString()}</b></span>
-                <span><span data-i18n-key="ai.services.tokens_out">{t('ai.services.tokens_out')}</span> <b>{(stat?.tokensOut ?? 0).toLocaleString()}</b></span>
-              </div>
-            </div>
-          );
-        })}
+        <ServiceCard
+          id="anthropic-provider"
+          icon={<Activity size={16} />}
+          title="Anthropic provider"
+          subtitle={`credential source: ${health.data?.source ?? 'none'}`}
+          ok={Boolean(health.data?.reachable)}
+          metrics={[
+            ['Status', health.data?.status ?? 'unknown'],
+            ['Models', health.data?.modelCount == null ? 'n/a' : String(health.data.modelCount)],
+            ['Latency', health.data?.latencyMs == null ? 'n/a' : `${health.data.latencyMs}ms`],
+            ['Checked', formatDate(health.data?.checkedAt)],
+          ]}
+        />
+        <ServiceCard
+          id="transcript-resolver"
+          icon={<Send size={16} />}
+          title="Transcript resolver"
+          subtitle="real messages API readiness"
+          ok={Boolean(health.data?.resolverReachable)}
+          metrics={[
+            ['Status', health.data?.resolverStatus ?? 'not_checked'],
+            ['Provider', health.data?.provider ?? 'anthropic'],
+            ['Credential', health.data?.configured ? 'configured' : 'missing'],
+            ['Required', health.data?.credentialRequired ? 'yes' : 'no'],
+          ]}
+        />
+        <ServiceCard
+          id="resolver-prompt-registry"
+          icon={<FileText size={16} />}
+          title="Resolver prompt registry"
+          subtitle={prompt.data?.promptKey ?? 'missing'}
+          ok={prompt.data?.promptKey === 'ai.transcript-resolver'}
+          metrics={[
+            ['Version', prompt.data?.promptVersion ?? 'unknown'],
+            ['Characters', String(prompt.data?.prompt.length ?? 0)],
+            ['Lines', String(promptLines)],
+            ['Enum source', 'contracts'],
+          ]}
+        />
       </div>
+
+      {(health.data?.error || health.data?.resolverError) && (
+        <div className="error-state" style={{ marginTop: 14 }}>
+          <AlertTriangle size={16} />
+          <span>{health.data.resolverError ?? health.data.error}</span>
+        </div>
+      )}
     </>
   );
+}
+
+function ServiceCard({ id, icon, title, subtitle, ok, metrics }: {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  ok: boolean;
+  metrics: Array<[string, string]>;
+}) {
+  return (
+    <div className="service-card" id={`service-card-${id}`}>
+      <div className="top">
+        <span className="dot" style={{ background: ok ? 'var(--success)' : 'var(--danger)' }} />
+        {icon}
+        <div>
+          <h4>{title}</h4>
+          <div className="sub">{subtitle}</div>
+        </div>
+        <span style={{ marginLeft: 'auto' }}>
+          {ok ? <CheckCircle2 size={15} color="var(--success)" /> : <XCircle size={15} color="var(--danger)" />}
+        </span>
+      </div>
+      <div className="body">
+        {metrics.map(([label, value]) => (
+          <div className="col" key={label}>
+            <div className="label">{label}</div>
+            <div className="val">{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatDate(value: string | undefined) {
+  if (!value) return 'n/a';
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 }
 
 export const Route = createFileRoute('/settings/ai/services')({ component: ServicesView });

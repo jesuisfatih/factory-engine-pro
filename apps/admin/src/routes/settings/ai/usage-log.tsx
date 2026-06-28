@@ -1,116 +1,212 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { useMemo, useState } from 'react';
-import { Search, RefreshCw, XCircle, CheckCircle2, ChevronRight } from 'lucide-react';
-import { fetchAiCalls, AI_SERVICES, type AiServiceId } from '@/lib/mock';
-// Banner removed — layout already provides IntegrationHeader.
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, FileText, RefreshCw, Send, XCircle } from 'lucide-react';
+import type { AiHealthResponse, TranscriptResolverTestResponse } from '@factory-engine-pro/contracts';
+import { adminApi, apiErrorMessage } from '@/lib/api';
 
-type ServiceFilter = 'all' | AiServiceId;
-type StatusFilter = 'all' | 'success' | 'fail';
+const AI_HEALTH_QK = ['ai', 'health'] as const;
+const AI_PROMPT_QK = ['ai', 'resolver-prompt'] as const;
+const PROBE_TRANSCRIPT = [
+  'Customer called about a delayed order and asked for tracking.',
+  'They sounded frustrated, requested a same day update, and mentioned moving future work elsewhere.',
+].join(' ');
+
+interface ResolverPromptResponse {
+  promptKey: string;
+  promptVersion: string;
+  prompt: string;
+}
+
+interface LogRow {
+  id: string;
+  time: string;
+  service: string;
+  model: string;
+  prompt: string;
+  latency: string;
+  status: 'success' | 'fail';
+  message: string;
+}
 
 function UsageLogView() {
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('fail');
-  const [search, setSearch] = useState('');
+  const health = useQuery({
+    queryKey: AI_HEALTH_QK,
+    queryFn: () => adminApi.aiHealth() as Promise<AiHealthResponse>,
+    retry: false,
+  });
+  const prompt = useQuery({
+    queryKey: AI_PROMPT_QK,
+    queryFn: () => adminApi.aiResolverPrompt() as Promise<ResolverPromptResponse>,
+    retry: false,
+  });
+  const resolverProbe = useMutation({
+    mutationFn: () => adminApi.aiTranscriptResolverTest({
+      transcript: PROBE_TRANSCRIPT,
+      metadata: {
+        source: 'admin-ai-usage-log',
+        purpose: 'live-resolver-call-log',
+      },
+    }) as Promise<TranscriptResolverTestResponse>,
+  });
 
-  const { data: calls = [] } = useQuery({ queryKey: ['ai', 'calls'], queryFn: fetchAiCalls });
-
-  const rows = useMemo(() => {
-    return calls.filter((row) => {
-      if (serviceFilter !== 'all' && row.service !== serviceFilter) return false;
-      if (statusFilter !== 'all' && row.status !== statusFilter) return false;
-      if (search.trim()) {
-        const needle = search.toLowerCase();
-        if (!(`${row.promptKey} ${row.model} ${row.id}`.toLowerCase().includes(needle))) return false;
-      }
-      return true;
-    });
-  }, [calls, serviceFilter, statusFilter, search]);
+  const rows = rowsFromState(health.data, prompt.data, resolverProbe.data, resolverProbe.error, resolverProbe.isError);
+  const error = health.isError ? apiErrorMessage(health.error) : prompt.isError ? apiErrorMessage(prompt.error) : null;
 
   return (
     <>
       <div className="log-filters" id="ai-log-filters">
-        <div className="group">
-          <button id="srv-all" type="button" className={`filter-pill${serviceFilter === 'all' ? ' active' : ''}`} onClick={() => setServiceFilter('all')}>
-            {t('ai.usage_log.filter_all')}
-          </button>
-          {AI_SERVICES.map((srv) => (
-            <button key={srv.id} id={`srv-${srv.id}`} type="button"
-              className={`filter-pill${serviceFilter === srv.id ? ' active' : ''}`}
-              onClick={() => setServiceFilter(srv.id)}>
-              {srv.label}
-            </button>
-          ))}
-        </div>
-        <div className="group">
-          <button id="status-all" type="button" className={`filter-pill${statusFilter === 'all' ? ' active' : ''}`} onClick={() => setStatusFilter('all')}>
-            {t('ai.usage_log.filter_all')}
-          </button>
-          <button id="status-success" type="button" className={`filter-pill success${statusFilter === 'success' ? ' active' : ''}`} onClick={() => setStatusFilter('success')}>
-            {t('ai.usage_log.filter_success')}
-          </button>
-          <button id="status-fail" type="button" className={`filter-pill fail${statusFilter === 'fail' ? ' active' : ''}`} onClick={() => setStatusFilter('fail')}>
-            {t('ai.usage_log.filter_fail')}
-          </button>
-        </div>
-        <div className="search-wrap">
-          <Search size={14} className="icon" />
-          <input id="ai-log-search"
-            placeholder={t('ai.usage_log.search_placeholder')}
-            value={search} onChange={(event) => setSearch(event.target.value)} />
-        </div>
-        <button id="btn-ai-log-refresh" type="button" className="btn ghost"
-          onClick={() => qc.invalidateQueries({ queryKey: ['ai', 'calls'] })}>
+        <button
+          id="btn-ai-log-refresh"
+          type="button"
+          className="btn ghost"
+          onClick={() => {
+            health.refetch();
+            prompt.refetch();
+          }}
+          disabled={health.isFetching || prompt.isFetching}
+        >
           <RefreshCw size={13} /> Refresh
         </button>
+        <button
+          id="btn-ai-log-run-resolver"
+          type="button"
+          className="btn primary"
+          onClick={() => resolverProbe.mutate()}
+          disabled={!health.data?.configured || resolverProbe.isPending}
+        >
+          {resolverProbe.isPending ? <RefreshCw className="spin" size={13} /> : <Send size={13} />}
+          {resolverProbe.isPending ? 'Running' : 'Run resolver call'}
+        </button>
       </div>
+
+      {error && (
+        <div className="error-state">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="data-card">
         <table className="data-table" id="ai-log-table">
           <thead>
             <tr>
-              <th data-i18n-key="ai.usage_log.col_time">{t('ai.usage_log.col_time')}</th>
-              <th data-i18n-key="ai.usage_log.col_service">{t('ai.usage_log.col_service')}</th>
-              <th data-i18n-key="ai.usage_log.col_model">{t('ai.usage_log.col_model')}</th>
-              <th data-i18n-key="ai.usage_log.col_prompt">{t('ai.usage_log.col_prompt')}</th>
-              <th data-i18n-key="ai.usage_log.col_tokens" style={{ textAlign: 'right' }}>{t('ai.usage_log.col_tokens')}</th>
-              <th data-i18n-key="ai.usage_log.col_cache" style={{ textAlign: 'right' }}>{t('ai.usage_log.col_cache')}</th>
-              <th data-i18n-key="ai.usage_log.col_cost" style={{ textAlign: 'right' }}>{t('ai.usage_log.col_cost')}</th>
-              <th data-i18n-key="ai.usage_log.col_latency" style={{ textAlign: 'right' }}>{t('ai.usage_log.col_latency')}</th>
-              <th data-i18n-key="ai.usage_log.col_status" style={{ textAlign: 'right' }}>{t('ai.usage_log.col_status')}</th>
-              <th />
+              <th>Time</th>
+              <th>Service</th>
+              <th>Model</th>
+              <th>Prompt</th>
+              <th style={{ textAlign: 'right' }}>Latency</th>
+              <th style={{ textAlign: 'right' }}>Status</th>
+              <th>Message</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} id={`call-${row.id}`}>
-                <td className="muted">{row.timestamp}</td>
-                <td><span className={`service-badge ${row.service}`}>{row.service}</span></td>
+            {(health.isLoading || prompt.isLoading) && (
+              <tr>
+                <td colSpan={7} style={{ padding: 24, color: 'var(--text-muted)' }}>
+                  <RefreshCw className="spin" size={14} /> Loading live AI request state
+                </td>
+              </tr>
+            )}
+            {!health.isLoading && !prompt.isLoading && rows.map((row) => (
+              <tr key={row.id} id={`ai-log-${row.id}`}>
+                <td className="muted">{row.time}</td>
+                <td><span className="service-badge aircall">{row.service}</span></td>
                 <td className="muted">{row.model}</td>
-                <td className="muted">{row.promptKey}</td>
-                <td style={{ textAlign: 'right' }} className="muted">{row.tokensIn} → {row.tokensOut}</td>
-                <td style={{ textAlign: 'right', color: 'var(--success)' }}>{row.cacheHits ?? '—'}</td>
-                <td style={{ textAlign: 'right' }} className="muted">${(row.costMillicents / 100000).toFixed(2)}m</td>
-                <td style={{ textAlign: 'right' }} className="muted">{row.latencyMs}ms</td>
+                <td className="muted">{row.prompt}</td>
+                <td style={{ textAlign: 'right' }} className="muted">{row.latency}</td>
                 <td style={{ textAlign: 'right' }}>
                   {row.status === 'success'
                     ? <span className="status-success" title="success"><CheckCircle2 size={14} /></span>
                     : <span className="status-fail" title="fail"><XCircle size={14} /></span>}
                 </td>
-                <td style={{ textAlign: 'right' }} className="muted"><ChevronRight size={14} /></td>
+                <td className="muted">{row.message}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--text-faint)' }}>No calls match these filters.</td></tr>
+            {!health.isLoading && !prompt.isLoading && rows.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-faint)' }}>
+                  <FileText size={16} /> No live AI request state is available yet.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
     </>
   );
+}
+
+function rowsFromState(
+  health: AiHealthResponse | undefined,
+  prompt: ResolverPromptResponse | undefined,
+  probe: TranscriptResolverTestResponse | undefined,
+  probeError: unknown,
+  probeFailed: boolean,
+): LogRow[] {
+  const rows: LogRow[] = [];
+  if (health) {
+    rows.push({
+      id: 'provider-health',
+      time: formatDate(health.checkedAt),
+      service: 'anthropic_health',
+      model: health.modelCount == null ? 'models' : `${health.modelCount} model(s)`,
+      prompt: 'provider',
+      latency: health.latencyMs == null ? 'n/a' : `${health.latencyMs}ms`,
+      status: health.status === 'ok' ? 'success' : 'fail',
+      message: health.error ?? health.resolverError ?? health.status,
+    });
+    rows.push({
+      id: 'resolver-health',
+      time: formatDate(health.checkedAt),
+      service: 'transcript_resolver',
+      model: 'messages',
+      prompt: 'ai.transcript-resolver',
+      latency: health.latencyMs == null ? 'n/a' : `${health.latencyMs}ms`,
+      status: health.resolverReachable ? 'success' : 'fail',
+      message: health.resolverError ?? health.resolverStatus,
+    });
+  }
+  if (prompt) {
+    rows.push({
+      id: 'prompt-registry',
+      time: 'current',
+      service: 'prompt_registry',
+      model: prompt.promptVersion,
+      prompt: prompt.promptKey,
+      latency: 'n/a',
+      status: prompt.promptKey === 'ai.transcript-resolver' ? 'success' : 'fail',
+      message: `${prompt.prompt.length} chars`,
+    });
+  }
+  if (probe) {
+    rows.unshift({
+      id: 'resolver-test',
+      time: formatDate(probe.checkedAt),
+      service: 'transcript_resolver',
+      model: probe.model,
+      prompt: probe.promptKey,
+      latency: `${probe.latencyMs}ms`,
+      status: 'success',
+      message: probe.output.summary,
+    });
+  } else if (probeFailed) {
+    rows.unshift({
+      id: 'resolver-test-failed',
+      time: 'latest',
+      service: 'transcript_resolver',
+      model: 'messages',
+      prompt: 'ai.transcript-resolver',
+      latency: 'n/a',
+      status: 'fail',
+      message: apiErrorMessage(probeError),
+    });
+  }
+  return rows;
+}
+
+function formatDate(value: string | undefined) {
+  if (!value) return 'n/a';
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 }
 
 export const Route = createFileRoute('/settings/ai/usage-log')({ component: UsageLogView });
