@@ -1,0 +1,99 @@
+﻿{
+    "target":  "ROADMAP item 1 - Master enums.ts single source of truth",
+    "checkedAt":  "2026-06-28T03:07:59.8875248Z",
+    "deployedBuildSha":  "36fa7cd41c45b436ad19d38d66cf701b284db48b",
+    "scope":  {
+                  "container":  "factoryengine-dtfbank-app",
+                  "apiBase":  "https://api.dtfbank.com/api/v1",
+                  "appUrl":  "https://app.dtfbank.com/rules",
+                  "tenantId":  "ten_dtfbank",
+                  "principalEmail":  "info@dtfbank.com"
+              },
+    "api":  {
+                "health":  {
+                               "ok":  true,
+                               "service":  "factory-engine-pro-backend"
+                           },
+                "catalog":  {
+                                "version":  "2026-06-28.1",
+                                "counts":  {
+                                               "psychTags":  8,
+                                               "callIntents":  5,
+                                               "urgencyLevels":  4,
+                                               "triggers":  29,
+                                               "conditions":  14,
+                                               "actions":  9
+                                           },
+                                "firstTrigger":  "aircall.call.created",
+                                "lastTrigger":  "task.overdue",
+                                "conditions":  14,
+                                "actions":  9
+                            },
+                "enumChain":  {
+                                  "ok":  true,
+                                  "version":  "2026-06-28.1",
+                                  "checkedAt":  "2026-06-28T03:07:48.228Z",
+                                  "counts":  {
+                                                 "psychTags":  8,
+                                                 "callIntents":  5,
+                                                 "urgencyLevels":  4,
+                                                 "triggers":  29,
+                                                 "conditions":  14,
+                                                 "actions":  9
+                                             },
+                                  "prompt":  {
+                                                 "promptKey":  "ai.transcript-resolver",
+                                                 "promptVersion":  "2026-06-28.1",
+                                                 "includesAllPsychTags":  true,
+                                                 "includesAllCallIntents":  true,
+                                                 "includesAllUrgencyLevels":  true,
+                                                 "includesAllConditions":  true
+                                             },
+                                  "canvas":  {
+                                                 "source":  "GET /api/v1/rules/catalog",
+                                                 "triggerOptions":  29,
+                                                 "conditionOptions":  14,
+                                                 "actionOptions":  9
+                                             },
+                                  "executor":  {
+                                                   "recognizedTriggers":  29,
+                                                   "recognizedConditions":  14,
+                                                   "recognizedActions":  9
+                                               },
+                                  "probeValues":  {
+                                                      "trigger":  "task.overdue",
+                                                      "condition":  "day_of_week",
+                                                      "action":  "no-op",
+                                                      "psychTag":  "satisfied",
+                                                      "callIntent":  "follow_up",
+                                                      "urgencyLevel":  "critical"
+                                                  }
+                              },
+                "resolverPrompt":  {
+                                       "promptKey":  "ai.transcript-resolver",
+                                       "promptVersion":  "2026-06-28.1",
+                                       "includesProbePsychTag":  true,
+                                       "includesProbeCallIntent":  true,
+                                       "includesProbeUrgency":  true,
+                                       "includesProbeCondition":  true
+                                   }
+            },
+    "runtime":  {
+                    "pm2":  [
+                                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1150     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1120     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1115     │ 24m    │ 0    │ online    │ 0%       │ 188.8mb  │ root     │ disabled │",
+                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1137     │ 24m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+                            ],
+                    "enumChainLog":  "\u001b[32m[Nest] 1115  - \u001b[39m06/28/2026, 3:07:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"801541cd-0533-4774-9139-19a51f374540\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"enum_chain_verified\",\"message\":\"Workflow enum chain verified\",\"catalog_version\":\"2026-06-28.1\",\"counts\":{\"psychTags\":8,\"callIntents\":5,\"urgencyLevels\":4,\"triggers\":29,\"conditions\":14,\"actions\":9},\"prompt_key\":\"ai.transcript-resolver\",\"probe_values\":{\"trigger\":\"task.overdue\",\"condition\":\"day_of_week\",\"action\":\"no-op\",\"psychTag\":\"satisfied\",\"callIntent\":\"follow_up\",\"urgencyLevel\":\"critical\"},\"executor\":{\"recognizedTriggers\":29,\"recognizedConditions\":14,\"recognizedActions\":9}}\u001b[39m"
+                },
+    "notes":  [
+                  "No local URL was used as evidence.",
+                  "Canvas source is GET /api/v1/rules/catalog and executor counts are returned by /rules/enum-chain.",
+                  "Trigger count is 29: 15 system + 5 AI-derived + 5 aggregate + 2 accounts + 2 chaining-prep."
+              ]
+}
