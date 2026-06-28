@@ -1,0 +1,55 @@
+{
+  "capturedAt": "2026-06-28T06:25:07.034334+00:00",
+  "url": "https://app.dtfbank.com/settings/shopify",
+  "screenshot": "docs\\evidence\\roadmap3-shopify-connection-runtime-live-20260628.png",
+  "assertions": {
+    "page_url_live": true,
+    "test_button_enabled_initially": true,
+    "connection_test_api_200": true,
+    "connection_test_ok": true,
+    "connection_source_tenant_config": true,
+    "ui_shows_connected": true,
+    "ui_shows_runtime_check": true,
+    "sync_status_api_200": true,
+    "sync_status_has_snapshots": true,
+    "button_remains_usable": true
+  },
+  "summary": {
+    "initialDisabled": false,
+    "finalDisabled": false,
+    "connection": {
+      "ok": true,
+      "status": "ok",
+      "source": "tenant_config",
+      "shopifyDomain": "eagle-dtf-print.myshopify.com",
+      "apiVersion": "2025-01",
+      "latencyMs": 211,
+      "shopId": "70672908502",
+      "shopName": "Eagle DTF Print",
+      "error": null
+    },
+    "snapshots": {
+      "customers": 13448,
+      "orders": 638,
+      "products": 304
+    }
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": "{\"workspaceName\":\"DTF Bank\",\"brandBadge\":\"DB\",\"brandLogo\":null,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"hasShopifyAdminToken\":true,\"hasShopifyApiKey\":true,\"hasShopifyApiSecret\":true,\"hasWebhookHmacKey\":true,\"hasAircallApiId\":true,\"hasAircallApiToken\":true,\"hasAircallWebhookSecret\":true,\"hasAnthropicApiKey\":true,\"hasResendApiKey\":true}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/sync/status",
+      "status": 200,
+      "body": "{\"credentialRequired\":false,\"configured\":true,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"isAnySyncing\":false,\"hasErrors\":false,\"entities\":{\"customers\":{\"resource\":\"customers\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-28T03:11:04.633Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":7494,\"lastRunRecords\":7494,\"snapshotRecords\":13448,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-28T03:11:04.633Z\"},\"orders\":{\"resource\":\"orders\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-27T19:55:47.691Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":637,\"lastRunRecords\":637,\"snapshotRecords\":638,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-27T19:55:47.691Z\"},\"products\":{\"resource\":\"products\",\"status\":\"completed\",\"isRunning\":false,\"lastCompletedAt\":\"2026-06-27T19:55:02.959Z\",\"lastFailedAt\":null,\"lastError\":null,\"totalRecordsSynced\":303,\"lastRunRecords\":303,\"snapshotRecords\":304,\"consecutiveFailures\":0,\"lastCursor\":null,\"heartbeatAt\":\"2026-06-27T19:55:02.959Z\"}},\"recentLogs\":[{\"id\":\"slog_ot7c07khr0qau3j9vwbyoby1\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-28T03:09:28.494Z\",\"finishedAt\":\"2026-06-28T03:11:04.637Z\",\"metadata\":{\"pages\":30,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":7494}},{\"id\":\"slog_kob2zbcj0b6cjng7x8jxk0eu\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-28T02:56:49.849Z\",\"finishedAt\":\"2026-06-28T02:58:54.372Z\",\"metadata\":{\"pages\":30,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":7494}},{\"id\":\"slog_agvgrsik7ihopl787i6e1fxj\",\"action\":\"initial.customers\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-28T02:49:31.942Z\",\"finishedAt\":\"2026-06-28T02:49:32.489Z\",\"metadata\":{\"resource\":\"customers\",\"providerStatus\":401}},{\"id\":\"slog_irewvkczdp6npoago54v4rmg\",\"action\":\"initial.orders\",\"status\":\"completed\",\"message\":\"orders initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.959Z\",\"finishedAt\":\"2026-06-27T19:55:47.696Z\",\"metadata\":{\"pages\":3,\"source\":\"tenant_config\",\"resource\":\"orders\",\"recordsProcessed\":637}},{\"id\":\"slog_nvxwgm3fu763wvp0wvjc1ulh\",\"action\":\"initial.products\",\"status\":\"completed\",\"message\":\"products initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.959Z\",\"finishedAt\":\"2026-06-27T19:55:02.965Z\",\"metadata\":{\"pages\":2,\"source\":\"tenant_config\",\"resource\":\"products\",\"recordsProcessed\":303}},{\"id\":\"slog_qzm28zmb0r8gg6cb06gxydp9\",\"action\":\"initial.customers\",\"status\":\"completed\",\"message\":\"customers initial sync completed.\",\"startedAt\":\"2026-06-27T19:53:19.958Z\",\"finishedAt\":\"2026-06-27T19:54:51.482Z\",\"metadata\":{\"pages\":24,\"source\":\"tenant_config\",\"resource\":\"customers\",\"recordsProcessed\":5951}},{\"id\":\"slog_sqtkp37caayzsos5udvn89wi\",\"action\":\"initial.products\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.977Z\",\"finishedAt\":\"2026-06-27T19:31:10.465Z\",\"metadata\":{\"resource\":\"products\",\"providerStatus\":401}},{\"id\":\"slog_d8rm94nsvjntiel3ukdb5ukq\",\"action\":\"initial.orders\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.977Z\",\"finishedAt\":\"2026-06-27T19:31:10.654Z\",\"metadata\":{\"resource\":\"orders\",\"providerStatus\":401}},{\"id\":\"slog_b2ww007sqni2n0on17ma2on0\",\"action\":\"initial.customers\",\"status\":\"failed\",\"message\":\"Shopify Admin API failed with 401: [API] Invalid API key or access token (unrecognized login or wrong password)\",\"startedAt\":\"2026-06-27T19:31:09.976Z\",\"finishedAt\":\"2026-06-27T19:31:10.257Z\",\"metadata\":{\"resource\":\"customers\",\"providerStatus\":401}}]}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/sync/connection-test",
+      "status": 200,
+      "body": "{\"ok\":true,\"status\":\"ok\",\"credentialRequired\":false,\"configured\":true,\"source\":\"tenant_config\",\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"apiVersion\":\"2025-01\",\"checkedAt\":\"2026-06-28T06:25:04.152Z\",\"latencyMs\":211,\"shopId\":\"70672908502\",\"shopName\":\"Eagle DTF Print\",\"shopEmail\":\"info@eagledtfprint.com\",\"error\":null}"
+    }
+  ],
+  "console": []
+}

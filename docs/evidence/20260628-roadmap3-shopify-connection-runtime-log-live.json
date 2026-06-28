@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-06-28T06:25:04Z",
+  "scope": "roadmap-item-3-shopify-connection-runtime",
+  "liveBuildSha": "67ebda145d45a9f0cac700694bfd408e86aed1e2",
+  "container": "factoryengine-dtfbank-app",
+  "endpoint": "GET https://api.dtfbank.com/api/v1/sync/connection-test",
+  "response": {
+    "ok": true,
+    "status": "ok",
+    "credentialRequired": false,
+    "configured": true,
+    "source": "tenant_config",
+    "shopifyDomain": "eagle-dtf-print.myshopify.com",
+    "apiVersion": "2025-01",
+    "latencyMs": 211,
+    "shopId": "70672908502",
+    "shopName": "Eagle DTF Print",
+    "error": null
+  },
+  "containerLog": {
+    "request_id": "f006b2cb-10d1-41a3-be3f-c6c85f7fbe9b",
+    "tenant_id": "ten_dtfbank",
+    "principal_id": "tmbr_ten_dtfbank_info_owner",
+    "principal_type": "member",
+    "module": "shopify",
+    "action": "connection_test_ok",
+    "message": "Shopify connection test succeeded",
+    "shopify_domain": "eagle-dtf-print.myshopify.com",
+    "source": "tenant_config",
+    "api_version": "2025-01",
+    "latency_ms": 407,
+    "shop_id": "70672908502"
+  },
+  "uiProof": {
+    "url": "https://app.dtfbank.com/settings/shopify",
+    "screenshot": "docs/evidence/roadmap3-shopify-connection-runtime-live-20260628.png",
+    "json": "docs/evidence/20260628-roadmap3-shopify-connection-runtime-live.json"
+  }
+}
