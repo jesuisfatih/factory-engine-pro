@@ -1,0 +1,99 @@
+﻿{
+  "backfillWindow": {
+    "from": "2026-06-25T08:46:44.771Z",
+    "to": "2026-06-28T08:46:44.771Z"
+  },
+  "aircallCiCounts": {
+    "withTranscript": 71,
+    "resolverQueued": 71,
+    "resolverSucceeded": 0,
+    "resolverFailed": 0
+  },
+  "assertions": {
+    "backfillTranscriptRowsFilled": true,
+    "backfillTranscriptRowsQueued": true,
+    "noBackfillResolverFailures": true
+  },
+  "samples": [
+    {
+      "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+      "externalCallId": "3906652817",
+      "eventTimestamp": "2026-06-26T23:22:43.000Z",
+      "transcriptLength": 412,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_hk6wji7fkdnxx6zsauirgwp2",
+      "externalCallId": "3906587992",
+      "eventTimestamp": "2026-06-26T22:20:52.000Z",
+      "transcriptLength": 793,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_opaim73823pa0po9vblt8ah1",
+      "externalCallId": "3906571528",
+      "eventTimestamp": "2026-06-26T22:08:33.000Z",
+      "transcriptLength": 1992,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_ijqct593w5d5u4u8vuhd7np1",
+      "externalCallId": "3906496212",
+      "eventTimestamp": "2026-06-26T21:17:02.000Z",
+      "transcriptLength": 486,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_atrtcom6eid4dbegv3kfcqdb",
+      "externalCallId": "3906460157",
+      "eventTimestamp": "2026-06-26T20:59:03.000Z",
+      "transcriptLength": 2096,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_bpajtjo8xwtbylghlaeowuml",
+      "externalCallId": "3906457381",
+      "eventTimestamp": "2026-06-26T20:58:13.000Z",
+      "transcriptLength": 3731,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_kk29s5zprvr9i9kg7b9z053l",
+      "externalCallId": "3906451258",
+      "eventTimestamp": "2026-06-26T20:52:31.000Z",
+      "transcriptLength": 378,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_vv1a0x3zghr9l58vthq29h7s",
+      "externalCallId": "3906447922",
+      "eventTimestamp": "2026-06-26T20:51:05.000Z",
+      "transcriptLength": 558,
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    }
+  ]
+}

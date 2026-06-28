@@ -1,0 +1,293 @@
+﻿{
+  "tenantId": "ten_dtfbank",
+  "from": "2026-06-25T08:48:35.062Z",
+  "to": "2026-06-28T08:48:35.062Z",
+  "counts": {
+    "total": 113,
+    "inboxTotal": 406,
+    "withTranscript": 76,
+    "resolverQueued": 73,
+    "resolverSucceeded": 2,
+    "resolverFailed": 0
+  },
+  "transcriptSamples": [
+    {
+      "id": "acev_hyumolkim4dfte6hunnx2ejf",
+      "externalCallId": "target3-live-1782635960600",
+      "eventTimestamp": "2026-06-28T08:39:20.600Z",
+      "transcriptLength": 132,
+      "transcriptSource": "aircall_payload",
+      "resolverQueued": true,
+      "resolverStatus": "succeeded",
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolvedAt": "2026-06-28T08:39:22.620Z"
+    },
+    {
+      "id": "acev_tdc9xuf58p2qm4rvzz11w74t",
+      "externalCallId": "target3-live-1782635821161",
+      "eventTimestamp": "2026-06-28T08:37:01.161Z",
+      "transcriptLength": 132,
+      "transcriptSource": "aircall_payload",
+      "resolverQueued": true,
+      "resolverStatus": "succeeded",
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolvedAt": "2026-06-28T08:37:03.474Z"
+    },
+    {
+      "id": "acev_cbh12g4hr057227423rqvnak",
+      "externalCallId": "target3-live-1782615927612",
+      "eventTimestamp": "2026-06-28T03:05:27.612Z",
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_kpne426nt0kig5rlv0kb91ah",
+      "externalCallId": "target3-live-1782615830344",
+      "eventTimestamp": "2026-06-28T03:03:50.344Z",
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_w9spbwvwu699gesridhcelb4",
+      "externalCallId": "target3-live-1782615730405",
+      "eventTimestamp": "2026-06-28T03:02:10.405Z",
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+      "externalCallId": "3906652817",
+      "eventTimestamp": "2026-06-26T23:22:43.000Z",
+      "transcriptLength": 412,
+      "transcriptSource": "aircall_ci",
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_hk6wji7fkdnxx6zsauirgwp2",
+      "externalCallId": "3906587992",
+      "eventTimestamp": "2026-06-26T22:20:52.000Z",
+      "transcriptLength": 793,
+      "transcriptSource": "aircall_ci",
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_opaim73823pa0po9vblt8ah1",
+      "externalCallId": "3906571528",
+      "eventTimestamp": "2026-06-26T22:08:33.000Z",
+      "transcriptLength": 1992,
+      "transcriptSource": "aircall_ci",
+      "resolverQueued": true,
+      "resolverStatus": "queued",
+      "resolverModel": null,
+      "resolvedAt": null
+    }
+  ],
+  "recentSamples": [
+    {
+      "id": "acev_hyumolkim4dfte6hunnx2ejf",
+      "externalCallId": "target3-live-1782635960600",
+      "eventTimestamp": "2026-06-28T08:39:20.600Z",
+      "transcriptPresent": true,
+      "transcriptLength": 132,
+      "transcriptSource": "aircall_payload",
+      "resolverQueued": true,
+      "resolverStatus": "succeeded",
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolvedAt": "2026-06-28T08:39:22.620Z"
+    },
+    {
+      "id": "acev_tdc9xuf58p2qm4rvzz11w74t",
+      "externalCallId": "target3-live-1782635821161",
+      "eventTimestamp": "2026-06-28T08:37:01.161Z",
+      "transcriptPresent": true,
+      "transcriptLength": 132,
+      "transcriptSource": "aircall_payload",
+      "resolverQueued": true,
+      "resolverStatus": "succeeded",
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolvedAt": "2026-06-28T08:37:03.474Z"
+    },
+    {
+      "id": "acev_cbh12g4hr057227423rqvnak",
+      "externalCallId": "target3-live-1782615927612",
+      "eventTimestamp": "2026-06-28T03:05:27.612Z",
+      "transcriptPresent": true,
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_kpne426nt0kig5rlv0kb91ah",
+      "externalCallId": "target3-live-1782615830344",
+      "eventTimestamp": "2026-06-28T03:03:50.344Z",
+      "transcriptPresent": true,
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_w9spbwvwu699gesridhcelb4",
+      "externalCallId": "target3-live-1782615730405",
+      "eventTimestamp": "2026-06-28T03:02:10.405Z",
+      "transcriptPresent": true,
+      "transcriptLength": 132,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_lg2z0fikf7m1k8z47ynbgo7g",
+      "externalCallId": "3907454172",
+      "eventTimestamp": "2026-06-27T21:00:06.000Z",
+      "transcriptPresent": false,
+      "transcriptLength": 0,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_y0jt7drr7hgbjiakyinn2z2f",
+      "externalCallId": "3907454172",
+      "eventTimestamp": "2026-06-27T20:59:36.000Z",
+      "transcriptPresent": false,
+      "transcriptLength": 0,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_irnv3gkd1de7f341csj1pdt3",
+      "externalCallId": "3907454172",
+      "eventTimestamp": "2026-06-27T20:59:35.000Z",
+      "transcriptPresent": false,
+      "transcriptLength": 0,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_l5r74p1bbk9zgpwnug3e5ejx",
+      "externalCallId": "3907454172",
+      "eventTimestamp": "2026-06-27T20:59:29.000Z",
+      "transcriptPresent": false,
+      "transcriptLength": 0,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "acev_pc1iw2rm8vmcd218l52xvruo",
+      "externalCallId": "3907275322",
+      "eventTimestamp": "2026-06-27T16:58:14.000Z",
+      "transcriptPresent": false,
+      "transcriptLength": 0,
+      "transcriptSource": null,
+      "resolverQueued": false,
+      "resolverStatus": null,
+      "resolverModel": null,
+      "resolvedAt": null
+    }
+  ],
+  "latestSyncLogs": [
+    {
+      "id": "slog_s318fulg9x1qi86nm0br9zmu",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 99/99 Aircall calls from the last 3 day(s).",
+      "startedAt": "2026-06-28T08:46:44.762Z",
+      "finishedAt": "2026-06-28T08:47:11.812Z",
+      "metadata": {
+        "to": "2026-06-28T08:46:44.771Z",
+        "from": "2026-06-25T08:46:44.771Z",
+        "pages": 2,
+        "errors": 0,
+        "fetched": 99,
+        "skipped": 0,
+        "ingested": 99,
+        "recentDays": 3,
+        "resolverQueued": 71,
+        "transcriptErrors": 0,
+        "transcriptsEmpty": 28,
+        "transcriptsFound": 71
+      }
+    },
+    {
+      "id": "slog_pcve051w0ln8hyeenuwdfvjl",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 99/99 Aircall calls from the last 3 day(s).",
+      "startedAt": "2026-06-28T07:20:17.315Z",
+      "finishedAt": "2026-06-28T07:20:42.489Z",
+      "metadata": {
+        "to": "2026-06-28T07:20:17.328Z",
+        "from": "2026-06-25T07:20:17.328Z",
+        "pages": 2,
+        "errors": 0,
+        "fetched": 99,
+        "skipped": 0,
+        "ingested": 99,
+        "recentDays": 3,
+        "resolverQueued": 71,
+        "transcriptErrors": 0,
+        "transcriptsEmpty": 28,
+        "transcriptsFound": 71
+      }
+    },
+    {
+      "id": "slog_ntv712mzfq8leye3bg5ses4v",
+      "action": "calls.backfill_recent",
+      "status": "partial_success",
+      "message": "Backfilled 28/99 Aircall calls from the last 3 day(s).",
+      "startedAt": "2026-06-28T07:14:59.922Z",
+      "finishedAt": "2026-06-28T07:15:25.706Z",
+      "metadata": {
+        "to": "2026-06-28T07:14:59.935Z",
+        "from": "2026-06-25T07:14:59.935Z",
+        "pages": 2,
+        "errors": 71,
+        "fetched": 99,
+        "skipped": 0,
+        "ingested": 28,
+        "recentDays": 3,
+        "resolverQueued": 0,
+        "transcriptErrors": 0,
+        "transcriptsEmpty": 28,
+        "transcriptsFound": 71
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-06-28T08:49:51.346860+00:00",
+  "appUrl": "https://app.dtfbank.com",
+  "routes": [
+    {
+      "key": "connection",
+      "url": "https://app.dtfbank.com/settings/aircall/connection",
+      "screenshot": "docs/evidence/roadmap4-aircall-connection-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nCredentials, routing defaults and backfill controls\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nCredential Status\nSaved encrypted values from TenantConfig\nRetry\nAPI ID\nSaved\nAPI TOKEN\nSaved\nWEBHOOK SECRET (OPTIONAL)\nSaved\nCredentials\nSave Aircall credentials into TenantConfig. Values are encrypted at rest and never returned to the browser.\n API ID\n API TOKEN\n WEBHOOK SECRET (OPTIONAL)\nLEAVE FIELDS BLANK TO KEEP EXISTING ENCRYPTED VALUES.\nSave credentials\nRuntime actions\nLive Aircall API checks and tenant directory refresh\nCredentials are saved. Run a live Aircall API check or refresh users and numbers.\nTest live connection\nRefresh users and numbers\nPull last 3 days\nCall transactions\nRecent Aircall call events stored in DB, transcript capture, and resolver queue state.\nRetry\nCALLS TOTAL\n104\nLAST 3 DAYS\n104\nWITH TRANSCRIPT\n76\nRESOLVER QUEUED\n73\nRESOLVED\n2\nRESOLVER FAILED\n0\nLAST RECEIVED\n28.06.2026 11:39\nCALL\tWHEN\tCONTACT\tTRANSCRIPT\tQUEUE\tRESOLVER OUTPUT\ntarget3-live-1782635960600\ncall.ended / outbound\n\t28.06.2026 11:39\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\t28.06.2026 11:39\tv1 / 28.06.2026 11:39\ntarget3-live-1782635821161\ncall.ended / outbound\n\t28.06.2026 11:37\t\ntarget3.live.proof@dtfbank.test\n1831312\n\t132 chars\t28.06.2026 11:37\tv1 / 28.06.2026 11:37\ntarget3-live-1782615927612\ncall.ended / outbound\n\t28.06."
+    },
+    {
+      "key": "sync_logs",
+      "url": "https://app.dtfbank.com/settings/aircall/sync-logs",
+      "screenshot": "docs/evidence/roadmap4-aircall-sync-logs-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nRecent Aircall sync and health signals\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nAircall sync logs\nLatest health counts from the call ingestion pipeline.\nRefresh\nSource\tAction\tStatus\tMessage\tAt\naircall\tcalls.backfill_recent\tsuccess\tBackfilled 99/99 Aircall calls from the last 3 day(s).\t28.06.2026 11:47\naircall\tcalls.backfill_recent\tsuccess\tBackfilled 99/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:20\naircall\tcalls.backfill_recent\tpartial_success\tBackfilled 28/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:15\naircall\tcalls.backfill_recent\tpartial_success\tBackfilled 28/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:10\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:16\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:16\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:14\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t27.06.2026 22:53\nWebhook\tcall.ended\tprocessed\t3907454172\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3907275322\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3907273902\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3906652817\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3906587992\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3906571528\t28.06.2026 11:47\nWebhook\tcall.ended\tprocessed\t3906496212\t28.06.2026 11:47"
+    }
+  ],
+  "assertions": {
+    "connection_live_url": true,
+    "connection_shows_call_transactions": true,
+    "connection_shows_with_transcript_stat": true,
+    "connection_shows_resolver_queue_state": true,
+    "sync_logs_live_url": true,
+    "sync_logs_show_backfill_recent_success": true
+  },
+  "summary": {
+    "connectionContainsTarget3OrRealCalls": true,
+    "syncLogSnippet": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nRecent Aircall sync and health signals"
+  }
+}
