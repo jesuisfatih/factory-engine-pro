@@ -1,0 +1,50 @@
+﻿{
+    "proof":  "roadmap9_condition_resolver_runtime_live",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "expectedCommit":  "9592ba7b39994aa645bc9579be8431182c7e84a7",
+    "hostBuildSha":  "9592ba7b39994aa645bc9579be8431182c7e84a7",
+    "containerBuildSha":  "9592ba7b39994aa645bc9579be8431182c7e84a7",
+    "health":  {
+                   "statusCode":  200,
+                   "body":  {
+                                "ok":  true,
+                                "service":  "factory-engine-pro-backend"
+                            }
+               },
+    "assertions":  {
+                       "hostBuildMatchesHead":  true,
+                       "containerBuildMatchesHead":  true,
+                       "healthOk":  true,
+                       "conditionsMatchedLogSeen":  true,
+                       "conditionsNotMatchedLogSeen":  true,
+                       "triggerRouteMapped":  true
+                   },
+    "pm2":  [
+                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1145     │ 2m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1123     │ 2m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1118     │ 2m     │ 0    │ online    │ 0%       │ 143.9mb  │ root     │ disabled │",
+                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1136     │ 2m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+            ],
+    "logs":  [
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:48:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/events/fire, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:48:53 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"c61c05f3-b700-4b0c-beb7-4969a6158f83\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap8-system-20260628104932\",\"trigger\":\"shopify.order.created\",\"rule_id\":\"wrule_vp3ws5la0cnbb1afijq3mfd6\",\"action_id\":\"act-system\",\"task_id\":\"sr_m1i87w03kwj1mlb6e9c3rcl6\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"c61c05f3-b700-4b0c-beb7-4969a6158f83\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap8-system-20260628104932\",\"trigger\":\"shopify.order.created\",\"source\":\"roadmap8-live-proof\",\"matched_rules\":1,\"tasks_created\":1}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:33 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d37530d3-666b-4177-9eb2-3ff76811ebe6\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap8-ai_derived-20260628104932\",\"trigger\":\"psych.tag.detected\",\"rule_id\":\"wrule_x3j5x1cwu7plhb7umf3dubg0\",\"action_id\":\"act-ai_derived\",\"task_id\":\"sr_mot1vkrx4b2ty6irb5n0uarf\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:33 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d37530d3-666b-4177-9eb2-3ff76811ebe6\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap8-ai_derived-20260628104932\",\"trigger\":\"psych.tag.detected\",\"source\":\"roadmap8-live-proof\",\"matched_rules\":1,\"tasks_created\":1}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:35 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"fe095313-09ac-4255-934f-3cd41c44cd67\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap8-aggregate-20260628104932\",\"trigger\":\"customer.repeat_call.detected\",\"rule_id\":\"wrule_i1dv9uleh63n7mjbjei871xu\",\"action_id\":\"act-aggregate\",\"task_id\":\"sr_assqknz6dlugq301edwxx5o4\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:49:35 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"fe095313-09ac-4255-934f-3cd41c44cd67\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap8-aggregate-20260628104932\",\"trigger\":\"customer.repeat_call.detected\",\"source\":\"roadmap8-live-proof\",\"matched_rules\":1,\"tasks_created\":1}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:57:59 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/events/fire, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:57:59 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:58:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f9834425-7f40-436c-932b-6519982b0686\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_not_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap9-condition-20260628105847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_blbu20g23uzhy173tbu6hndi\",\"matched\":false,\"condition_trace\":[{\"id\":\"cond-ltv-no_match\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100000\",\"actual\":173.88,\"matched\":false,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:58:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f9834425-7f40-436c-932b-6519982b0686\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"conditions_matched\",\"message\":\"Workflow rule condition trace evaluated\",\"event_id\":\"roadmap9-condition-20260628105847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_o8bene7wkgozwt6uu7q83bqt\",\"matched\":true,\"condition_trace\":[{\"id\":\"cond-ltv-match\",\"condition\":\"customer_ltv_gte\",\"operator\":\"\u003e=\",\"expected\":\"100\",\"actual\":173.88,\"matched\":true,\"source\":\"customers.total_spent\"}]}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:58:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f9834425-7f40-436c-932b-6519982b0686\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"workflow_task_created\",\"message\":\"Workflow rule created a task\",\"event_id\":\"roadmap9-condition-20260628105847\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_o8bene7wkgozwt6uu7q83bqt\",\"action_id\":\"act-match\",\"task_id\":\"sr_swnhn8iqy8v4g7bkgvemhqgn\"}\u001b[39m",
+                 "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:58:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f9834425-7f40-436c-932b-6519982b0686\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"trigger_fired\",\"message\":\"Workflow trigger evaluated active rules\",\"event_id\":\"roadmap9-condition-20260628105847\",\"trigger\":\"manual.trigger\",\"source\":\"roadmap9-live-proof\",\"matched_rules\":2,\"tasks_created\":1}\u001b[39m"
+             ],
+    "checkedAt":  "2026-06-28T11:00:50.5435622Z"
+}

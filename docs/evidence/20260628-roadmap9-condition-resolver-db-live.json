@@ -1,0 +1,125 @@
+﻿{
+  "proof": "roadmap9_condition_resolver_db_live",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap9-condition-20260628105847",
+  "taskIds": [
+    "sr_swnhn8iqy8v4g7bkgvemhqgn"
+  ],
+  "ruleIds": [
+    "wrule_blbu20g23uzhy173tbu6hndi",
+    "wrule_o8bene7wkgozwt6uu7q83bqt"
+  ],
+  "assertions": {
+    "serviceRequestRowsFound": 1,
+    "workflowRuleRowsFound": 2,
+    "taskHasWorkflowTrace": true,
+    "ltvTraceMatched": true,
+    "archivedProofRules": true
+  },
+  "serviceRequests": [
+    {
+      "id": "sr_swnhn8iqy8v4g7bkgvemhqgn",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 9 condition match task 20260628105847",
+      "status": "open",
+      "priority": "high",
+      "source": "manual",
+      "surface": "internal",
+      "metadata": {
+        "category": "workflow_rule",
+        "workflow": {
+          "action": "create_task",
+          "params": {
+            "intent": "inquiry",
+            "customerId": "cust_nw1yip6avbgmk8gito31hw7y"
+          },
+          "ruleId": "wrule_o8bene7wkgozwt6uu7q83bqt",
+          "source": "roadmap9-live-proof",
+          "eventId": "roadmap9-condition-20260628105847",
+          "trigger": "manual.trigger",
+          "actionId": "act-match",
+          "ruleName": "Roadmap 9 match condition proof 20260628105847",
+          "occurredAt": null,
+          "rulePriority": 85,
+          "conditionTrace": [
+            {
+              "id": "cond-ltv-match",
+              "actual": 173.88,
+              "source": "customers.total_spent",
+              "matched": true,
+              "expected": "100",
+              "operator": ">=",
+              "condition": "customer_ltv_gte"
+            }
+          ]
+        },
+        "ticketNumber": "SR-MQXOEMAE"
+      },
+      "createdAt": "2026-06-28T10:58:47.513Z",
+      "updatedAt": "2026-06-28T10:58:47.513Z"
+    }
+  ],
+  "workflowRules": [
+    {
+      "id": "wrule_blbu20g23uzhy173tbu6hndi",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 9 no_match condition proof 20260628105847",
+      "status": "archived",
+      "priority": 85,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-ltv-no_match",
+            "value": "100000",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-no_match",
+            "value": "Roadmap 9 condition no-match task 20260628105847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 85,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T10:58:48.502Z"
+    },
+    {
+      "id": "wrule_o8bene7wkgozwt6uu7q83bqt",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 9 match condition proof 20260628105847",
+      "status": "archived",
+      "priority": 85,
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-ltv-match",
+            "value": "100",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-match",
+            "value": "Roadmap 9 condition match task 20260628105847",
+            "action": "create_task"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 85,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T10:58:48.117Z"
+    }
+  ],
+  "checkedAt": "2026-06-28T11:00:20.330Z"
+}

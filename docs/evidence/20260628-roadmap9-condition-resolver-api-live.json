@@ -1,0 +1,170 @@
+﻿{
+    "proof":  "roadmap9_condition_resolver_live_customer_state",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "customer":  {
+                     "id":  "cust_nw1yip6avbgmk8gito31hw7y",
+                     "shopifyCustomerId":  "7591658356950",
+                     "totalSpent":  173.88,
+                     "ordersCount":  3
+                 },
+    "eventId":  "roadmap9-condition-20260628105847",
+    "matchProducedTask":  true,
+    "noMatchSkipped":  true,
+    "fire":  {
+                 "eventId":  "roadmap9-condition-20260628105847",
+                 "trigger":  "manual.trigger",
+                 "source":  "roadmap9-live-proof",
+                 "matchedRules":  2,
+                 "evaluatedRules":  2,
+                 "tasksCreated":  1,
+                 "tasks":  [
+                               {
+                                   "ruleId":  "wrule_o8bene7wkgozwt6uu7q83bqt",
+                                   "ruleName":  "Roadmap 9 match condition proof 20260628105847",
+                                   "actionId":  "act-match",
+                                   "action":  "create_task",
+                                   "taskId":  "sr_swnhn8iqy8v4g7bkgvemhqgn",
+                                   "title":  "Roadmap 9 condition match task 20260628105847"
+                               }
+                           ],
+                 "results":  [
+                                 {
+                                     "ruleId":  "wrule_blbu20g23uzhy173tbu6hndi",
+                                     "ruleName":  "Roadmap 9 no_match condition proof 20260628105847",
+                                     "status":  "skipped",
+                                     "reason":  "conditions_not_matched",
+                                     "taskIds":  [
+
+                                                 ],
+                                     "conditionTrace":  [
+                                                            {
+                                                                "id":  "cond-ltv-no_match",
+                                                                "condition":  "customer_ltv_gte",
+                                                                "operator":  "\u003e=",
+                                                                "expected":  "100000",
+                                                                "actual":  173.88,
+                                                                "matched":  false,
+                                                                "source":  "customers.total_spent"
+                                                            }
+                                                        ]
+                                 },
+                                 {
+                                     "ruleId":  "wrule_o8bene7wkgozwt6uu7q83bqt",
+                                     "ruleName":  "Roadmap 9 match condition proof 20260628105847",
+                                     "status":  "task_created",
+                                     "taskIds":  [
+                                                     "sr_swnhn8iqy8v4g7bkgvemhqgn"
+                                                 ],
+                                     "conditionTrace":  [
+                                                            {
+                                                                "id":  "cond-ltv-match",
+                                                                "condition":  "customer_ltv_gte",
+                                                                "operator":  "\u003e=",
+                                                                "expected":  "100",
+                                                                "actual":  173.88,
+                                                                "matched":  true,
+                                                                "source":  "customers.total_spent"
+                                                            }
+                                                        ]
+                                 }
+                             ],
+                 "checkedAt":  "2026-06-28T10:58:47.529Z"
+             },
+    "supportTasks":  [
+                         {
+                             "id":  "sr_swnhn8iqy8v4g7bkgvemhqgn",
+                             "tenantId":  "ten_dtfbank",
+                             "customerId":  null,
+                             "customerUserId":  null,
+                             "assignedMemberId":  null,
+                             "source":  "manual",
+                             "surface":  "internal",
+                             "sourceCallId":  null,
+                             "sourceEmailId":  null,
+                             "sourceFormId":  null,
+                             "title":  "Roadmap 9 condition match task 20260628105847",
+                             "description":  "Created by workflow rule \"Roadmap 9 match condition proof 20260628105847\" for trigger \"manual.trigger\".",
+                             "status":  "open",
+                             "priority":  "high",
+                             "createdByActorId":  "tmbr_ten_dtfbank_info_owner",
+                             "closedAt":  null,
+                             "resolutionCode":  null,
+                             "resolutionNote":  null,
+                             "metadata":  {
+                                              "category":  "workflow_rule",
+                                              "workflow":  {
+                                                               "action":  "create_task",
+                                                               "params":  {
+                                                                              "intent":  "inquiry",
+                                                                              "customerId":  "cust_nw1yip6avbgmk8gito31hw7y"
+                                                                          },
+                                                               "ruleId":  "wrule_o8bene7wkgozwt6uu7q83bqt",
+                                                               "source":  "roadmap9-live-proof",
+                                                               "eventId":  "roadmap9-condition-20260628105847",
+                                                               "trigger":  "manual.trigger",
+                                                               "actionId":  "act-match",
+                                                               "ruleName":  "Roadmap 9 match condition proof 20260628105847",
+                                                               "occurredAt":  null,
+                                                               "rulePriority":  85,
+                                                               "conditionTrace":  [
+                                                                                      {
+                                                                                          "id":  "cond-ltv-match",
+                                                                                          "actual":  173.88,
+                                                                                          "source":  "customers.total_spent",
+                                                                                          "matched":  true,
+                                                                                          "expected":  "100",
+                                                                                          "operator":  "\u003e=",
+                                                                                          "condition":  "customer_ltv_gte"
+                                                                                      }
+                                                                                  ]
+                                                           },
+                                              "ticketNumber":  "SR-MQXOEMAE"
+                                          },
+                             "createdAt":  "2026-06-28T10:58:47.513Z",
+                             "updatedAt":  "2026-06-28T10:58:47.513Z",
+                             "customer":  null,
+                             "customerUser":  null,
+                             "assignedMember":  null,
+                             "comments":  [
+
+                                          ],
+                             "ticketNumber":  "SR-MQXOEMAE",
+                             "number":  "SR-MQXOEMAE",
+                             "subject":  "Roadmap 9 condition match task 20260628105847",
+                             "summary":  "Created by workflow rule \"Roadmap 9 match condition proof 20260628105847\" for trigger \"manual.trigger\".",
+                             "category":  "workflow_rule",
+                             "company":  null,
+                             "companyUser":  null,
+                             "assignedTo":  null,
+                             "responses":  [
+
+                                           ],
+                             "firstResponseAt":  null,
+                             "sla":  {
+                                         "firstResponseHours":  4,
+                                         "resolutionHours":  24,
+                                         "firstResponseTargetAt":  "2026-06-28T14:58:47.513Z",
+                                         "resolutionTargetAt":  "2026-06-29T10:58:47.513Z",
+                                         "firstResponseAt":  null,
+                                         "ageMs":  218,
+                                         "firstResponseBreached":  false,
+                                         "resolutionBreached":  false,
+                                         "tone":  "green"
+                                     }
+                         }
+                     ],
+    "archivedRules":  [
+                          {
+                              "id":  "wrule_o8bene7wkgozwt6uu7q83bqt",
+                              "status":  "archived",
+                              "trigger":  "manual.trigger"
+                          },
+                          {
+                              "id":  "wrule_blbu20g23uzhy173tbu6hndi",
+                              "status":  "archived",
+                              "trigger":  "manual.trigger"
+                          }
+                      ],
+    "checkedAt":  "2026-06-28T10:58:49.4058285Z"
+}
