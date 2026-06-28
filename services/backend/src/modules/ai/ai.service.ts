@@ -45,6 +45,7 @@ export class AiService {
           'x-api-key': credentials.key,
           'anthropic-version': '2023-06-01',
         },
+        signal: this.anthropicTimeoutSignal(),
       });
       const latencyMs = Date.now() - startedAt;
       const text = await response.text();
@@ -118,7 +119,7 @@ export class AiService {
     }
 
     const model = await this.resolveModel(credentials.key);
-    const response = await this.callAnthropicResolver(credentials.key, model, input);
+    const response = await this.callAnthropicResolver(credentials.key, model, input, credentials.source);
     const text = extractAnthropicText(response);
     const parsed = transcriptResolverOutputSchema.parse(parseJsonObject(text));
     return {
@@ -152,6 +153,7 @@ export class AiService {
           'x-api-key': key,
           'anthropic-version': '2023-06-01',
         },
+        signal: this.anthropicTimeoutSignal(),
       });
       const body = parseJson(await response.text()) as { data?: Array<{ id?: string }> } | null;
       const ids = Array.isArray(body?.data) ? body.data.map((item) => item.id).filter((id): id is string => Boolean(id)) : [];
@@ -161,35 +163,66 @@ export class AiService {
     }
   }
 
-  private async callAnthropicResolver(key: string, model: string, input: TranscriptResolverTestInput) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
+  private async callAnthropicResolver(
+    key: string,
+    model: string,
+    input: TranscriptResolverTestInput,
+    source: 'tenant_config' | 'env' | 'none',
+  ) {
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: this.anthropicTimeoutSignal(),
+        body: JSON.stringify({
+          model,
+          max_tokens: 1000,
+          temperature: 0,
+          system: resolverSystemPrompt(),
+          messages: [
+            {
+              role: 'user',
+              content: JSON.stringify({
+                transcript: input.transcript,
+                metadata: input.metadata ?? {},
+              }),
+            },
+          ],
+        }),
+      });
+    } catch (error) {
+      const timeoutMs = this.anthropicTimeoutMs();
+      const timeout = isTimeoutError(error);
+      const message = timeout
+        ? `Anthropic resolver timed out after ${timeoutMs}ms.`
+        : `Anthropic resolver could not reach provider: ${error instanceof Error ? error.message : String(error)}`;
+      this.logger.error('ai', timeout ? 'resolver_timeout' : 'resolver_network_failed', message, {
+        key_source: source,
         model,
-        max_tokens: 1000,
-        temperature: 0,
-        system: resolverSystemPrompt(),
-        messages: [
-          {
-            role: 'user',
-            content: JSON.stringify({
-              transcript: input.transcript,
-              metadata: input.metadata ?? {},
-            }),
-          },
-        ],
-      }),
-    });
+        latency_ms: Date.now() - startedAt,
+      });
+      throw new BadRequestException({
+        message,
+        code: timeout ? 'anthropic_resolver_timeout' : 'anthropic_resolver_network_error',
+      });
+    }
     const text = await response.text();
     const body = parseJson(text) as Record<string, unknown> | null;
     if (!response.ok) {
       const message = providerMessage(body as { error?: { message?: unknown } } | null, text)
         ?? `Anthropic resolver failed with HTTP ${response.status}.`;
+      this.logger.error('ai', 'resolver_failed', message, {
+        key_source: source,
+        model,
+        status_code: response.status,
+        latency_ms: Date.now() - startedAt,
+      });
       throw new BadRequestException({
         message,
         code: 'anthropic_resolver_failed',
@@ -197,6 +230,15 @@ export class AiService {
       });
     }
     return body;
+  }
+
+  private anthropicTimeoutMs() {
+    const configured = Number(this.config.get<string>('ANTHROPIC_TIMEOUT_MS') ?? '15000');
+    return Number.isFinite(configured) && configured >= 1000 && configured <= 120000 ? configured : 15000;
+  }
+
+  private anthropicTimeoutSignal() {
+    return AbortSignal.timeout(this.anthropicTimeoutMs());
   }
 }
 
@@ -254,4 +296,8 @@ function parseJsonObject(text: string) {
   } catch {
     throw new BadRequestException('Anthropic resolver returned invalid JSON.');
   }
+}
+
+function isTimeoutError(error: unknown) {
+  return error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
 }
