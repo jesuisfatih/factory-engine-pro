@@ -1,0 +1,206 @@
+﻿{
+  "proof": "roadmap10_action_catalog_db_live",
+  "tenantId": "ten_dtfbank",
+  "eventId": "roadmap10-actions-20260628111708",
+  "taskIds": [
+    "sr_msv72e0yfedlopb9yxwra3t8"
+  ],
+  "ruleIds": [
+    "wrule_t54b4xrkzfi82yf4z6vbcq9e",
+    "wrule_jwftuoukzqb5j3tk36pz0keu"
+  ],
+  "assertions": {
+    "serviceRequestRowsFound": 1,
+    "taskCritical": true,
+    "taskAssignedToMember": true,
+    "taskWatcherPersisted": true,
+    "taskEscalationPersisted": true,
+    "customerProofTagPersisted": true,
+    "customerNoteProofLinePersisted": true,
+    "segmentMembershipRemoved": true,
+    "archivedProofRules": true
+  },
+  "serviceRequests": [
+    {
+      "id": "sr_msv72e0yfedlopb9yxwra3t8",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 10 multi action task 20260628111708",
+      "status": "open",
+      "priority": "critical",
+      "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+      "assignedMemberId": "tmbr_ten_dtfbank_info_owner",
+      "metadata": {
+        "category": "workflow_rule",
+        "workflow": {
+          "action": "create_task",
+          "params": {
+            "intent": "inquiry",
+            "memberId": "tmbr_ten_dtfbank_info_owner",
+            "segmentId": "seg_f5ynq0hsrttju1zrxflgtpye",
+            "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+            "watcherMemberId": "tmbr_ten_dtfbank_info_owner"
+          },
+          "ruleId": "wrule_t54b4xrkzfi82yf4z6vbcq9e",
+          "source": "roadmap10-live-proof",
+          "eventId": "roadmap10-actions-20260628111708",
+          "trigger": "manual.trigger",
+          "actionId": "act-create-task",
+          "ruleName": "Roadmap 10 multi action proof 20260628111708",
+          "watchers": [
+            "tmbr_ten_dtfbank_info_owner"
+          ],
+          "escalated": true,
+          "occurredAt": null,
+          "rulePriority": 88,
+          "watcherEvents": [
+            {
+              "at": "2026-06-28T11:17:13.812Z",
+              "eventId": "roadmap10-actions-20260628111708",
+              "memberId": "tmbr_ten_dtfbank_info_owner"
+            }
+          ],
+          "conditionTrace": [
+            {
+              "id": "cond-ltv-20260628111708",
+              "actual": 173.88,
+              "source": "customers.total_spent",
+              "matched": true,
+              "expected": "0",
+              "operator": ">=",
+              "condition": "customer_ltv_gte"
+            }
+          ],
+          "escalationEvents": [
+            {
+              "at": "2026-06-28T11:17:13.826Z",
+              "eventId": "roadmap10-actions-20260628111708"
+            }
+          ],
+          "escalationReason": "Roadmap 10 escalation 20260628111708"
+        },
+        "ticketNumber": "SR-MQXP2BVK"
+      },
+      "createdAt": "2026-06-28T11:17:13.763Z",
+      "updatedAt": "2026-06-28T11:17:13.828Z"
+    }
+  ],
+  "customer": {
+    "id": "cust_nw1yip6avbgmk8gito31hw7y",
+    "tags": [
+      "Inbox online store chat",
+      "Login with Shop",
+      "Shop",
+      "workflow:pinned",
+      "workflow:pin:roadmap10-20260628111139",
+      "workflow:pin:roadmap10-20260628111708"
+    ],
+    "noteProofLines": [
+      "[2026-06-28T11:17:13.839Z] workflow roadmap10-actions-20260628111708: Roadmap 10 action proof 20260628111708"
+    ],
+    "updatedAt": "2026-06-28T11:17:13.840Z"
+  },
+  "segment": {
+    "id": "seg_f5ynq0hsrttju1zrxflgtpye",
+    "name": "Roadmap 10 proof segment 20260628111708",
+    "isActive": false,
+    "customerCount": 0,
+    "updatedAt": "2026-06-28T11:17:13.887Z",
+    "membershipCountForCustomer": 0
+  },
+  "workflowRules": [
+    {
+      "id": "wrule_t54b4xrkzfi82yf4z6vbcq9e",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 10 multi action proof 20260628111708",
+      "status": "archived",
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-ltv-20260628111708",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-create-task",
+            "value": "Roadmap 10 multi action task 20260628111708",
+            "action": "create_task"
+          },
+          {
+            "id": "act-route-member",
+            "value": "tmbr_ten_dtfbank_info_owner",
+            "action": "route_member"
+          },
+          {
+            "id": "act-add-watcher",
+            "value": "tmbr_ten_dtfbank_info_owner",
+            "action": "add_watcher"
+          },
+          {
+            "id": "act-escalate",
+            "value": "Roadmap 10 escalation 20260628111708",
+            "action": "escalate"
+          },
+          {
+            "id": "act-pin-customer",
+            "value": "roadmap10-20260628111708",
+            "action": "pin_customer"
+          },
+          {
+            "id": "act-add-note",
+            "value": "Roadmap 10 action proof 20260628111708",
+            "action": "add_note"
+          },
+          {
+            "id": "act-segment-add",
+            "value": "seg_f5ynq0hsrttju1zrxflgtpye",
+            "action": "segment_add"
+          },
+          {
+            "id": "act-segment-remove",
+            "value": "seg_f5ynq0hsrttju1zrxflgtpye",
+            "action": "segment_remove"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 88,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T11:17:15.939Z"
+    },
+    {
+      "id": "wrule_jwftuoukzqb5j3tk36pz0keu",
+      "tenantId": "ten_dtfbank",
+      "name": "Roadmap 10 no-op proof 20260628111708",
+      "status": "archived",
+      "trigger": "manual.trigger",
+      "definition": {
+        "when": [
+          {
+            "id": "cond-noop-20260628111708",
+            "value": "0",
+            "operator": ">=",
+            "condition": "customer_ltv_gte"
+          }
+        ],
+        "status": "archived",
+        "actions": [
+          {
+            "id": "act-noop",
+            "value": "Roadmap 10 no-op audit 20260628111708",
+            "action": "no-op"
+          }
+        ],
+        "trigger": "manual.trigger",
+        "priority": 87,
+        "composable": true
+      },
+      "updatedAt": "2026-06-28T11:17:16.142Z"
+    }
+  ],
+  "checkedAt": "2026-06-28T11:17:39.835Z"
+}
