@@ -5,13 +5,17 @@ import {
   type CreateCustomerListInput,
   type CustomerAssignmentAxis,
   type CustomerCommerceQuery,
+  type CustomerDetailPanelDto,
+  type CustomerDetailTab,
   type CustomerListCustomersInput,
+  MEMBER_PERMISSIONS,
   recordCustomerAxisNoAutoReassignSchema,
   taskAxisSchema,
   type AssignCustomerAxisPrimaryInput,
   type RecordCustomerAxisNoAutoReassignInput,
   type UpdateCustomerListInput,
 } from '@factory-engine-pro/contracts';
+import { aircallWhereFor } from '../../shared/contact-match.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -21,7 +25,11 @@ import {
   type CustomerAssignmentWithMember,
   type CustomerWithCommerce,
   CustomersRepository,
+  customerAssignmentInclude,
 } from './customers.repository.js';
+
+const CLOSED_STATUSES = new Set(['closed', 'resolved', 'transferred']);
+const INTERNAL_CUSTOMER_KINDS = new Set(['message_thread', 'note', 'staff_request', 'customer_pin']);
 
 const ALARM_DEFINITIONS = [
   { systemType: 'churn_alarm', name: 'Churn alarm', color: '#dc2626', icon: 'alert-triangle' },
@@ -84,6 +92,305 @@ export class CustomersService {
         fulfillmentStatus: order.fulfillmentStatus,
         processedAt: order.processedAt?.toISOString() ?? null,
       })),
+    };
+  }
+
+  async detail(id: string): Promise<CustomerDetailPanelDto> {
+    const customer = await this.prisma.db.customer.findFirst({
+      where: { id },
+      include: {
+        insight: true,
+        assignments: {
+          include: customerAssignmentInclude,
+          orderBy: [{ axis: 'asc' }, { updatedAt: 'desc' }],
+        },
+        segmentMemberships: {
+          include: {
+            segment: {
+              include: {
+                ownerships: {
+                  include: {
+                    member: { select: { id: true, email: true, firstName: true, lastName: true } },
+                  },
+                  orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+                  take: 5,
+                },
+              },
+            },
+          },
+          orderBy: { matchedAt: 'desc' },
+          take: 25,
+        },
+      },
+    });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    const email = customer.email?.trim() ?? null;
+    const phone = customer.phone?.trim() ?? null;
+    const aircallWhere = aircallWhereFor(email, phone);
+    const [orders, aircallCalls, serviceRequests, mailDeliveries, linkedNotes, linkedMessages] = await Promise.all([
+      this.prisma.db.commerceOrder.findMany({
+        where: { customerId: id },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+      }),
+      aircallWhere
+        ? this.prisma.db.aircallCallEvent.findMany({
+            where: aircallWhere,
+            orderBy: { eventTimestamp: 'desc' },
+            take: 50,
+          })
+        : Promise.resolve([]),
+      this.prisma.db.serviceRequest.findMany({
+        where: { customerId: id },
+        include: {
+          assignedMember: { select: { id: true, email: true, firstName: true, lastName: true } },
+          comments: { orderBy: { createdAt: 'desc' }, take: 20 },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 100,
+      }),
+      email
+        ? this.prisma.db.mailDelivery.findMany({
+            where: { recipientEmail: { equals: email, mode: 'insensitive' } },
+            orderBy: [{ createdAt: 'desc' }],
+            take: 50,
+          })
+        : Promise.resolve([]),
+      this.prisma.db.serviceRequest.findMany({
+        where: {
+          AND: [
+            { metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
+            { metadata: { path: ['linkedCustomer'], equals: id } },
+          ],
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+      }),
+      this.prisma.db.serviceRequest.findMany({
+        where: {
+          AND: [
+            { metadata: { path: ['personWorkspaceKind'], equals: 'message_thread' } },
+            { metadata: { path: ['linkedCustomer'], equals: id } },
+          ],
+        },
+        include: { comments: { orderBy: { createdAt: 'asc' }, take: 50 } },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+      }),
+    ]);
+    const ruleIds = uniqueStrings(serviceRequests.map((row) => row.matchedRuleId));
+    const rules = ruleIds.length
+      ? await this.prisma.db.workflowRule.findMany({
+          where: { id: { in: ruleIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const rulesById = new Map(rules.map((rule) => [rule.id, rule.name]));
+
+    const customerRequests = serviceRequests.filter((row) => !INTERNAL_CUSTOMER_KINDS.has(String(jsonRecord(row.metadata).personWorkspaceKind ?? '')));
+    const supportRows = customerRequests.filter((row) => ['support', 'customer', 'customer_portal', 'email', 'call'].includes(row.surface) || ['email', 'call', 'customer_portal'].includes(row.source));
+    const support = (supportRows.length ? supportRows : customerRequests).map((row) => this.mapDetailRequest(row));
+    const tasks = customerRequests.map((row) => this.mapDetailTask(row, rulesById.get(row.matchedRuleId ?? '') ?? null));
+    const noteRows = [
+      ...linkedNotes.map((row) => this.mapLinkedNote(row)),
+      ...customerRequests.flatMap((row) => row.comments
+        .filter((comment) => comment.internal)
+        .map((comment) => ({
+          id: comment.id,
+          title: `Task note: ${row.title}`,
+          body: comment.body,
+          kind: 'task_comment',
+          createdAt: comment.createdAt.toISOString(),
+          updatedAt: comment.createdAt.toISOString(),
+          linkedQueueId: row.id,
+          authorMemberId: comment.actorId,
+        }))),
+    ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 50);
+    const visibleTabs = this.customerDetailTabs();
+    const recentCutoff = new Date(Date.now() - 30 * 86_400_000);
+    const revenue30d = orders
+      .filter((order) => (order.processedAt ?? order.createdAt).getTime() >= recentCutoff.getTime())
+      .reduce((sum, order) => sum + money(order.totalPrice), 0);
+    const lastContactAt = latestIso([
+      ...orders.map((order) => order.processedAt ?? order.createdAt),
+      ...aircallCalls.map((call) => call.eventTimestamp),
+      ...mailDeliveries.map((mail) => mail.sentAt ?? mail.updatedAt ?? mail.createdAt),
+      ...serviceRequests.map((request) => request.updatedAt),
+    ]);
+
+    this.logger.log('customers', 'customer_detail.read', 'Customer detail panel opened', {
+      customer_id: id,
+      orders: orders.length,
+      calls: aircallCalls.length,
+      support: support.length,
+      emails: mailDeliveries.length,
+    });
+
+    return {
+      customer: {
+        id: customer.id,
+        shopifyCustomerId: customer.shopifyCustomerId,
+        companyName: customer.companyName,
+        legalName: customer.legalName,
+        name: customerDisplayName(customer),
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        status: customer.status,
+        tags: customer.tags,
+        note: customer.note,
+        totalSpent: money(customer.totalSpent),
+        ordersCount: customer.ordersCount,
+        averageOrderValue: money(customer.averageOrderValue),
+        lastOrderAt: customer.lastOrderAt?.toISOString() ?? null,
+        syncedAt: customer.syncedAt?.toISOString() ?? null,
+        createdAt: customer.createdAt.toISOString(),
+        updatedAt: customer.updatedAt.toISOString(),
+        billingAddress: customer.billingAddress,
+        shippingAddress: customer.shippingAddress,
+        insight: {
+          lifecycle: customer.insight?.rfmSegment ?? 'new',
+          clvTier: customer.insight?.clvTier ?? 'new',
+          healthScore: customer.insight?.healthScore ?? null,
+          churnRisk: customer.insight?.churnRisk ?? 'unknown',
+          daysSinceLastOrder: customer.insight?.daysSinceLastOrder ?? null,
+          purchaseFrequency: customer.insight?.purchaseFrequency === null || customer.insight?.purchaseFrequency === undefined
+            ? null
+            : money(customer.insight.purchaseFrequency),
+          projectedClv: customer.insight ? money(customer.insight.projectedClv) : null,
+          calculatedAt: customer.insight?.calculatedAt?.toISOString() ?? null,
+        },
+        metrics: {
+          lifetimeRevenue: money(customer.totalSpent),
+          ordersCount: customer.ordersCount,
+          averageOrderValue: money(customer.averageOrderValue),
+          openSupportCount: support.filter((row) => !CLOSED_STATUSES.has(row.status)).length,
+          openTaskCount: tasks.filter((row) => !CLOSED_STATUSES.has(row.status)).length,
+          callsCount: aircallCalls.length,
+          emailsCount: mailDeliveries.length,
+          lastContactAt,
+        },
+        segments: customer.segmentMemberships.map((membership) => ({
+          id: membership.segment.id,
+          name: membership.segment.name,
+          color: membership.segment.color,
+          priority: membership.segment.priorityGlobal || membership.segment.priority,
+          matchedAt: membership.matchedAt.toISOString(),
+          score: membership.score === null ? null : money(membership.score),
+          owners: membership.segment.ownerships.map((ownership) => ({
+            id: ownership.id,
+            memberId: ownership.memberId,
+            memberName: memberName(ownership.member),
+            memberEmail: ownership.member.email,
+            importance: ownership.importance,
+            priority: ownership.priority,
+          })),
+        })),
+        assignments: customer.assignments.map((assignment) => ({
+          id: assignment.id,
+          axis: assignment.axis,
+          memberId: assignment.memberId,
+          memberName: memberName(assignment.member),
+          memberEmail: assignment.member.email,
+          source: assignment.source,
+          reason: assignment.reason,
+          updatedAt: assignment.updatedAt.toISOString(),
+        })),
+      },
+      visibleTabs,
+      tabs: {
+        profile: {
+          addresses: {
+            billing: customer.billingAddress,
+            shipping: customer.shippingAddress,
+          },
+          tags: customer.tags,
+          rawNote: customer.note,
+        },
+        shopifyOrders: orders.map((order) => ({
+          id: order.id,
+          shopifyOrderId: order.shopifyOrderId,
+          orderNumber: order.shopifyOrderNumber,
+          totalPrice: money(order.totalPrice),
+          subtotal: money(order.subtotal),
+          totalDiscounts: money(order.totalDiscounts),
+          totalTax: money(order.totalTax),
+          totalShipping: money(order.totalShipping),
+          currency: order.currency,
+          financialStatus: order.financialStatus,
+          fulfillmentStatus: order.fulfillmentStatus,
+          fulfillmentMode: order.fulfillmentMode,
+          processedAt: order.processedAt?.toISOString() ?? null,
+          createdAt: order.createdAt.toISOString(),
+          tags: order.tags,
+          lineItems: order.lineItems,
+        })),
+        aircallCalls: aircallCalls.map((call) => {
+          const resolver = jsonRecord(call.resolverOutput);
+          return {
+            id: call.id,
+            externalCallId: call.externalCallId,
+            eventType: call.eventType,
+            eventTimestamp: call.eventTimestamp.toISOString(),
+            direction: call.direction,
+            status: call.status,
+            durationSeconds: call.durationSeconds,
+            contactPhone: call.contactPhoneE164 ?? call.contactPhone,
+            contactEmail: call.contactEmail,
+            hasRecording: Boolean(call.recordingUrl),
+            hasVoicemail: Boolean(call.voicemailUrl),
+            hasTranscript: Boolean(call.transcriptRaw),
+            transcriptPreview: call.transcriptRaw ? trimText(call.transcriptRaw, 280) : null,
+            resolverStatus: call.resolverStatus,
+            resolverSummary: stringOrNull(resolver.summary),
+            resolverIntent: stringOrNull(resolver.call_intent),
+            psychTags: stringArray(resolver.psych_tags),
+          };
+        }),
+        support,
+        email: mailDeliveries.map((mail) => ({
+          id: mail.id,
+          eventKey: mail.eventKey,
+          category: mail.category,
+          recipientEmail: mail.recipientEmail,
+          subject: mail.subject,
+          status: mail.status,
+          provider: mail.provider,
+          preview: trimText(mail.errorMessage ?? mail.text ?? '', 260) || null,
+          errorMessage: mail.errorMessage,
+          attemptCount: mail.attemptCount,
+          createdAt: mail.createdAt.toISOString(),
+          updatedAt: mail.updatedAt.toISOString(),
+          sentAt: mail.sentAt?.toISOString() ?? null,
+        })),
+        messages: linkedMessages.map((thread) => {
+          const comments = thread.comments.map((comment) => mapComment(comment));
+          return {
+            id: thread.id,
+            title: thread.title,
+            participants: stringArray(jsonRecord(thread.metadata).participantIds),
+            latestMessage: comments.at(-1)?.body ?? null,
+            createdAt: thread.createdAt.toISOString(),
+            updatedAt: thread.updatedAt.toISOString(),
+            messages: comments,
+          };
+        }),
+        notes: noteRows,
+        tasks,
+        commission: visibleTabs.includes('commission')
+          ? {
+              eligible: true,
+              lifetimeRevenue: money(customer.totalSpent),
+              revenue30d,
+              orders30d: orders.filter((order) => (order.processedAt ?? order.createdAt).getTime() >= recentCutoff.getTime()).length,
+              projectedCommission: 0,
+              note: 'Commission submit flow is a later roadmap item; this panel exposes the live order basis only.',
+            }
+          : null,
+      },
+      generatedAt: new Date().toISOString(),
     };
   }
 
@@ -481,6 +788,107 @@ export class CustomersService {
     };
   }
 
+  private customerDetailTabs(): CustomerDetailTab[] {
+    const tabs: CustomerDetailTab[] = [
+      'profile',
+      'shopify_orders',
+      'aircall_calls',
+      'support',
+      'email',
+      'messages',
+      'notes',
+      'tasks',
+    ];
+    if (this.tenantContext.require().permissions.includes(MEMBER_PERMISSIONS.commissionSubmit)) {
+      tabs.push('commission');
+    }
+    return tabs;
+  }
+
+  private mapDetailRequest(row: {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    source: string;
+    surface: string;
+    axis: string | null;
+    dueAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    assignedMember: { firstName: string; lastName: string; email: string } | null;
+    comments: Array<{
+      id: string;
+      body: string;
+      actorId: string | null;
+      actorType: string | null;
+      internal: boolean;
+      createdAt: Date;
+    }>;
+  }) {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      priority: row.priority,
+      source: row.source,
+      surface: row.surface,
+      axis: row.axis,
+      assignedMemberName: row.assignedMember ? memberName(row.assignedMember) : null,
+      dueAt: row.dueAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      comments: row.comments.map((comment) => mapComment(comment)),
+    };
+  }
+
+  private mapDetailTask(row: {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    source: string;
+    axis: string | null;
+    matchedRuleId: string | null;
+    dueAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    assignedMember: { firstName: string; lastName: string; email: string } | null;
+  }, matchedRuleName: string | null) {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      priority: row.priority,
+      source: row.source,
+      axis: row.axis,
+      assignedMemberName: row.assignedMember ? memberName(row.assignedMember) : null,
+      matchedRuleId: row.matchedRuleId,
+      matchedRuleName,
+      dueAt: row.dueAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private mapLinkedNote(row: { id: string; title: string; description: string | null; createdByActorId: string | null; metadata: Prisma.JsonValue; createdAt: Date; updatedAt: Date }) {
+    const metadata = jsonRecord(row.metadata);
+    return {
+      id: row.id,
+      title: row.title,
+      body: row.description ?? '',
+      kind: String(metadata.noteKind ?? 'scratch'),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      linkedQueueId: stringOrNull(metadata.linkedQueueId),
+      authorMemberId: row.createdByActorId,
+    };
+  }
+
   private async ensureSystemLists() {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new BadRequestException('Tenant context is required');
@@ -590,4 +998,61 @@ function memberName(member: { firstName: string; lastName: string; email: string
 function jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function mapComment(comment: {
+  id: string;
+  body: string;
+  actorId: string | null;
+  actorType: string | null;
+  internal: boolean;
+  createdAt: Date;
+}) {
+  return {
+    id: comment.id,
+    body: comment.body,
+    actorId: comment.actorId,
+    actorType: comment.actorType,
+    internal: comment.internal,
+    createdAt: comment.createdAt.toISOString(),
+  };
+}
+
+function customerDisplayName(customer: {
+  companyName: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email: string | null;
+  id: string;
+}) {
+  return customer.companyName
+    || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()
+    || customer.email
+    || customer.id;
+}
+
+function latestIso(values: Array<Date | null | undefined>) {
+  const latest = values
+    .filter((value): value is Date => value instanceof Date)
+    .sort((left, right) => right.getTime() - left.getTime())[0];
+  return latest?.toISOString() ?? null;
+}
+
+function trimText(value: string, max: number) {
+  const normalized = value.trim();
+  if (!normalized) return '';
+  return normalized.length > max ? `${normalized.slice(0, max - 3)}...` : normalized;
+}
+
+function stringOrNull(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return raw ? raw : null;
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)));
 }

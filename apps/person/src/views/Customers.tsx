@@ -1,6 +1,8 @@
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCustomers, friendlyError } from '../api/live';
+import { useEffect, useState } from 'react';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
+import { fetchCustomerDetail, fetchCustomers, friendlyError } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -15,6 +17,31 @@ function fmtMoney(value: number) {
 
 export function CustomersView() {
   const { data: customers = [], isLoading, error } = useQuery({ queryKey: ['person', 'customers'], queryFn: fetchCustomers });
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
+  const detailQuery = useQuery({
+    queryKey: ['person', 'customer-detail', detailCustomerId],
+    queryFn: () => fetchCustomerDetail(detailCustomerId ?? ''),
+    enabled: Boolean(detailCustomerId),
+  });
+
+  useEffect(() => {
+    const syncFromUrl = () => setDetailCustomerId(currentCustomerIdFromUrl());
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
+
+  const openCustomerDetail = (customerId: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('customerId', customerId);
+    window.history.pushState({}, '', url);
+    setDetailCustomerId(customerId);
+  };
+  const closeCustomerDetail = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('customerId');
+    window.history.pushState({}, '', url);
+    setDetailCustomerId(null);
+  };
 
   const columns: ColumnDef<CustomerRow>[] = [
     {
@@ -43,8 +70,11 @@ export function CustomersView() {
     {
       id: 'actions',
       header: '',
-      cell: () => (
+      cell: ({ row }) => (
         <div className="actions">
+          <button type="button" className="action-btn" title="Open customer detail" onClick={() => openCustomerDetail(row.original.id)}>
+            <Icon name="customers" size={14} />
+          </button>
           <button type="button" className="action-btn" title="Dial"><Icon name="phone" size={14} /></button>
           <button type="button" className="action-btn" title="Email"><Icon name="mail-action" size={14} /></button>
           <button type="button" className="action-btn" title="Add note"><Icon name="note-action" size={14} /></button>
@@ -89,7 +119,7 @@ export function CustomersView() {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id} onDoubleClick={() => openCustomerDetail(row.original.id)}>
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                 ))}
@@ -99,6 +129,18 @@ export function CustomersView() {
         </table>
       </div>
       </QueryState>
+      <CustomerDetailPanel
+        open={Boolean(detailCustomerId)}
+        detail={detailQuery.data}
+        isLoading={detailQuery.isLoading}
+        error={detailQuery.error ? friendlyError(detailQuery.error) : null}
+        onRetry={() => detailQuery.refetch()}
+        onClose={closeCustomerDetail}
+      />
     </>
   );
+}
+
+function currentCustomerIdFromUrl() {
+  return new URLSearchParams(window.location.search).get('customerId');
 }

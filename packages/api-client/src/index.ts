@@ -20,6 +20,7 @@ import type {
   BootstrapTenantInput,
   CalculatePricesInput,
   CustomerAxisAssignmentsResponse,
+  CustomerDetailPanelDto,
   CreateCustomerUserInput,
   CreateDirectOrderInput,
   CreateMemberInput,
@@ -296,6 +297,10 @@ export class ApiClient {
     return this.get(`/customers/stats${query}`);
   }
 
+  customerDetail(customerId: string) {
+    return this.get<CustomerDetailPanelDto>(`/customers/${encodeURIComponent(customerId)}/detail`);
+  }
+
   customerAssignments(customerId: string) {
     return this.get<CustomerAxisAssignmentsResponse>(`/customers/${encodeURIComponent(customerId)}/assignments`);
   }
@@ -452,6 +457,10 @@ export class ApiClient {
 
   personCustomers() {
     return this.get('/person/workspace/customers');
+  }
+
+  personCustomerDetail(customerId: string) {
+    return this.get<CustomerDetailPanelDto>(`/person/workspace/customers/${encodeURIComponent(customerId)}/detail`);
   }
 
   personCalendarEvents() {

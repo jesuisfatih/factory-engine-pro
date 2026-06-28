@@ -69,6 +69,12 @@ export class PersonWorkspaceController {
     return this.workspace.toggleCustomerPin(id, body);
   }
 
+  @Get('customers/:id/detail')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  customerDetail(@Param('id') id: string) {
+    return this.workspace.customerDetail(id);
+  }
+
   @Get('tasks/:id/brief')
   @RequirePermission(MEMBER_PERMISSIONS.supportRead)
   taskBrief(@Param('id') id: string) {

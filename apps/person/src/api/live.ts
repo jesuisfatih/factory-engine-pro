@@ -1,4 +1,10 @@
-import type { CreatePersonRequestInput, SavePersonNoteInput, SavePersonTaskNoteInput, SchedulePersonTaskFollowUpInput } from '@factory-engine-pro/contracts';
+import type {
+  CreatePersonRequestInput,
+  CustomerDetailPanelDto,
+  SavePersonNoteInput,
+  SavePersonTaskNoteInput,
+  SchedulePersonTaskFollowUpInput,
+} from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
 import type { Card, ColumnId, CustomerRow, DailyOperations, TaskBriefDetail } from '../types';
 
@@ -129,6 +135,7 @@ export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => pers
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
+export const fetchCustomerDetail = (customerId: string) => personApi.personCustomerDetail(customerId) as Promise<CustomerDetailPanelDto>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
 export const fetchTeammates = () => personApi.personTeammates() as Promise<Teammate[]>;
 export const fetchThread = (id: string) => personApi.personThread(id) as Promise<ChatMessage[]>;

@@ -19,10 +19,12 @@ import type {
   WorkflowConditionTrace,
   WorkflowWhenGroupTrace,
 } from '@factory-engine-pro/contracts';
+import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { CustomersService } from '../customers/customers.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
@@ -97,6 +99,7 @@ export class PersonWorkspaceService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly scoring: UrgencyScoringService,
+    private readonly customersService: CustomersService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -631,6 +634,13 @@ export class PersonWorkspaceService {
         urgencyBreakdown,
       };
     }).sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
+  }
+
+  async customerDetail(id: string) {
+    const member = await this.currentMember();
+    const assignments = await this.axisAssignments(member.id);
+    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your axis scope');
+    return this.customersService.detail(id);
   }
 
   async calendar() {
@@ -1499,22 +1509,6 @@ function matchedRuleIdFrom(row: { matchedRuleId: string | null; metadata: Prisma
   const workflow = asRecord(asRecord(row.metadata).workflow);
   return row.matchedRuleId
     ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
-}
-
-function aircallWhereFor(email: string | null, phone: string | null): Prisma.AircallCallEventWhereInput | null {
-  const or: Prisma.AircallCallEventWhereInput[] = [];
-  if (email?.trim()) or.push({ contactEmail: email.trim() });
-  for (const value of phoneVariants(phone)) {
-    or.push({ contactPhone: value }, { contactPhoneE164: value });
-  }
-  return or.length ? { OR: or } : null;
-}
-
-function phoneVariants(value: string | null | undefined) {
-  const raw = value?.trim();
-  if (!raw) return [];
-  const digits = raw.replace(/\D/g, '');
-  return uniqueStrings([raw, digits, digits ? `+${digits}` : null]);
 }
 
 function thirtyDaysAgo() {

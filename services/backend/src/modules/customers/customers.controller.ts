@@ -120,6 +120,12 @@ export class CustomersController {
     return this.customers.assignments(id);
   }
 
+  @Get(':id/detail')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  detail(@Param('id') id: string) {
+    return this.customers.detail(id);
+  }
+
   @Put(':id/assignments/:axis/primary')
   @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
   assignAxisPrimary(

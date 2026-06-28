@@ -14,6 +14,8 @@
       "@factory-engine-pro/contracts/*": ["packages/contracts/src/*"],
       "@factory-engine-pro/api-client": ["packages/api-client/src/index.ts"],
       "@factory-engine-pro/api-client/*": ["packages/api-client/src/*"],
+      "@factory-engine-pro/ui": ["packages/ui/src/index.ts"],
+      "@factory-engine-pro/ui/*": ["packages/ui/src/*"],
       "@factory-engine-pro/integrations": ["services/integrations/src/index.ts"],
       "@factory-engine-pro/integrations/*": ["services/integrations/src/*"]
     }

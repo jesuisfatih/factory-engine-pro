@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Download, Phone, RefreshCw, Search, ShieldCheck, UserCheck, X } from 'lucide-react';
+import { Activity, AlertTriangle, Download, ExternalLink, Phone, RefreshCw, Search, ShieldCheck, UserCheck, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type {
   CustomerAssignmentAxis,
   CustomerAxisAssignmentDto,
@@ -76,9 +77,15 @@ export function CustomersPage() {
   const [sort, setSort] = useState<(typeof SORTS)[number]>('recent_order');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ownerCustomerId, setOwnerCustomerId] = useState('');
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
   const query = useMemo(() => customerQuery({ search, segment, churnRisk, tag, sort }), [search, segment, churnRisk, tag, sort]);
   const customers = useQuery({ queryKey: ['commerce', 'customers', query], queryFn: () => fetchCustomers(query) });
   const stats = useQuery({ queryKey: ['commerce', 'customers', 'stats'], queryFn: () => fetchCustomerStats() });
+  const detail = useQuery({
+    queryKey: ['commerce', 'customers', detailCustomerId, 'detail'],
+    queryFn: () => fetchCustomerDetail(detailCustomerId ?? ''),
+    enabled: Boolean(detailCustomerId),
+  });
   const rows = customers.data?.data ?? [];
   const tagOptions = useMemo(() => Array.from(new Set(rows.flatMap((row) => row.tags))).sort(), [rows]);
   const ownerCustomer = rows.find((row) => row.id === ownerCustomerId) ?? null;
@@ -92,6 +99,12 @@ export function CustomersPage() {
     queryFn: fetchMembers,
     enabled: canWrite,
   });
+
+  useEffect(() => {
+    const syncFromUrl = () => setDetailCustomerId(currentCustomerIdFromUrl());
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
 
   useEffect(() => {
     if (!customers.isSuccess) return;
@@ -142,6 +155,18 @@ export function CustomersPage() {
     setChurnRisk('');
     setTag('');
     setSort('recent_order');
+  };
+  const openCustomerDetail = (customerId: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('customerId', customerId);
+    window.history.pushState({}, '', url);
+    setDetailCustomerId(customerId);
+  };
+  const closeCustomerDetail = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('customerId');
+    window.history.pushState({}, '', url);
+    setDetailCustomerId(null);
   };
   const hasFilters = Boolean(search || segment || churnRisk || tag || sort !== 'recent_order');
   const selectedRows = rows.filter((row) => selected.has(row.id));
@@ -267,7 +292,7 @@ export function CustomersPage() {
             </thead>
             <tbody>
               {rows.map((customer) => (
-                <tr key={customer.id} id={`row-customer-${customer.id}`}>
+                <tr key={customer.id} id={`row-customer-${customer.id}`} onDoubleClick={() => openCustomerDetail(customer.id)}>
                   <td><input type="checkbox" checked={selected.has(customer.id)} onChange={() => toggleOne(customer.id, setSelected)} aria-label={t('customers.select_customer')} /></td>
                   <td>
                     <div className="name">{customer.name ?? customer.companyName}</div>
@@ -290,11 +315,16 @@ export function CustomersPage() {
                   <td><strong>{fmtMoney(customer.totalSpent)}</strong></td>
                   <td className="muted">{fmtDate(customer.lastOrderAt)}</td>
                   <td style={{ textAlign: 'right' }}>
-                    {customer.phone && (
-                      <a className="btn ghost" href={`tel:${customer.phone.replace(/\s/g, '')}`} title={t('customers.call_customer')}>
-                        <Phone size={13} />
-                      </a>
-                    )}
+                    <div style={{ display: 'inline-flex', gap: 6 }}>
+                      <button type="button" className="btn ghost" onClick={() => openCustomerDetail(customer.id)} title="Open customer detail">
+                        <ExternalLink size={13} />
+                      </button>
+                      {customer.phone && (
+                        <a className="btn ghost" href={`tel:${customer.phone.replace(/\s/g, '')}`} title={t('customers.call_customer')}>
+                          <Phone size={13} />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -302,6 +332,14 @@ export function CustomersPage() {
           </table>
         </div>
       )}
+      <CustomerDetailPanel
+        open={Boolean(detailCustomerId)}
+        detail={detail.data}
+        isLoading={detail.isLoading}
+        error={detail.error ? apiErrorMessage(detail.error) : null}
+        onRetry={() => detail.refetch()}
+        onClose={closeCustomerDetail}
+      />
     </>
   );
 }
@@ -316,6 +354,10 @@ function fetchCustomerStats() {
 
 function fetchCustomerAssignments(customerId: string) {
   return adminApi.customerAssignments(customerId);
+}
+
+function fetchCustomerDetail(customerId: string) {
+  return adminApi.customerDetail(customerId);
 }
 
 function fetchMembers() {
@@ -592,4 +634,8 @@ function lifecycleTone(lifecycle: string, churnRisk: string) {
   if (lifecycle === 'vip' || lifecycle === 'loyal') return 'success';
   if (lifecycle === 'dormant') return 'warn';
   return 'info';
+}
+
+function currentCustomerIdFromUrl() {
+  return new URLSearchParams(window.location.search).get('customerId');
 }

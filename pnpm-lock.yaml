@@ -93,6 +93,9 @@ importers:
       '@factory-engine-pro/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@factory-engine-pro/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-dialog':
         specifier: ^1.1.17
         version: 1.1.17(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -178,6 +181,9 @@ importers:
       '@factory-engine-pro/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@factory-engine-pro/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.59.0
         version: 5.101.1(react@18.3.1)
@@ -243,7 +249,20 @@ importers:
         version: 5.9.3
 
   packages/ui:
+    dependencies:
+      '@factory-engine-pro/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      lucide-react:
+        specifier: ^0.453.0
+        version: 0.453.0(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
     devDependencies:
+      '@types/react':
+        specifier: ^18.3.11
+        version: 18.3.31
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
