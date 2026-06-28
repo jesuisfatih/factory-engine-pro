@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import type {
+  AircallConnectionTestResponse,
   AircallNumberDto,
   AircallNumbersResponse,
   AircallSyncLogsResponse,
@@ -235,6 +236,79 @@ export class AircallService {
         lastReceivedAt: lastInbox?.receivedAt.toISOString() ?? null,
       },
     };
+  }
+
+  async testConnection(): Promise<AircallConnectionTestResponse> {
+    const startedAt = Date.now();
+    const tenant = await this.currentTenant();
+    const credentials = await this.credentialState();
+    const webhookUrl = this.webhookUrl(tenant.slug);
+    if (!credentials.hasApiCredentials) {
+      const response: AircallConnectionTestResponse = {
+        ok: false,
+        status: 'missing_credentials',
+        credentialRequired: true,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        userProbeCount: null,
+        numberProbeCount: null,
+        webhookSecretPresent: credentials.hasWebhookSecret,
+        webhookUrl,
+        error: 'Aircall API ID and API token are not configured for this tenant.',
+      };
+      this.logger.warn('aircall', 'connection_test_failed', 'Aircall connection test skipped because credentials are missing', {
+        status: response.status,
+        webhook_secret_present: response.webhookSecretPresent,
+      });
+      return response;
+    }
+
+    try {
+      const client = new AircallClient(await this.resolveCredentials());
+      const [users, numbers] = await Promise.all([
+        client.listUsers(1, 1),
+        client.listNumbers(1, 1),
+      ]);
+      const response: AircallConnectionTestResponse = {
+        ok: true,
+        status: 'ok',
+        credentialRequired: false,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        userProbeCount: Array.isArray(users.users) ? users.users.length : 0,
+        numberProbeCount: Array.isArray(numbers.numbers) ? numbers.numbers.length : 0,
+        webhookSecretPresent: credentials.hasWebhookSecret,
+        webhookUrl,
+        error: null,
+      };
+      this.logger.log('aircall', 'connection_test_ok', 'Aircall connection test succeeded', {
+        latency_ms: response.latencyMs,
+        user_probe_count: response.userProbeCount,
+        number_probe_count: response.numberProbeCount,
+        webhook_secret_present: response.webhookSecretPresent,
+      });
+      return response;
+    } catch (error) {
+      const isProviderError = error instanceof AircallApiError;
+      const response: AircallConnectionTestResponse = {
+        ok: false,
+        status: isProviderError ? 'provider_error' : 'network_error',
+        credentialRequired: false,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        userProbeCount: null,
+        numberProbeCount: null,
+        webhookSecretPresent: credentials.hasWebhookSecret,
+        webhookUrl,
+        error: messageOf(error),
+      };
+      this.logger.warn('aircall', 'connection_test_failed', 'Aircall connection test failed', {
+        status: response.status,
+        latency_ms: response.latencyMs,
+        error: response.error,
+      });
+      return response;
+    }
   }
 
   async syncLogs(): Promise<AircallSyncLogsResponse> {

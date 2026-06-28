@@ -38,6 +38,12 @@ export class AircallController {
     return this.aircall.webhookStatus();
   }
 
+  @Get('connection-test')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  connectionTest() {
+    return this.aircall.testConnection();
+  }
+
   @Get('sync-logs')
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
   syncLogs() {

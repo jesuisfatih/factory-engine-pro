@@ -80,6 +80,19 @@ export interface AircallWebhookStatusResponse {
   };
 }
 
+export interface AircallConnectionTestResponse {
+  ok: boolean;
+  status: 'ok' | 'missing_credentials' | 'provider_error' | 'network_error';
+  credentialRequired: boolean;
+  checkedAt: string;
+  latencyMs: number;
+  userProbeCount: number | null;
+  numberProbeCount: number | null;
+  webhookSecretPresent: boolean;
+  webhookUrl: string | null;
+  error: string | null;
+}
+
 export interface AircallSyncLogDto {
   id: string;
   service: string;

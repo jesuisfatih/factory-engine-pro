@@ -5,6 +5,7 @@ import type {
   TranscriptResolverTestInput,
   TranscriptResolverTestResponse,
   AircallLinkUserInput,
+  AircallConnectionTestResponse,
   AircallNumbersResponse,
   AircallSyncLogsResponse,
   AircallUsersResponse,
@@ -552,6 +553,10 @@ export class ApiClient {
 
   aircallWebhookStatus() {
     return this.get<AircallWebhookStatusResponse>('/aircall/webhooks/status');
+  }
+
+  testAircallConnection() {
+    return this.get<AircallConnectionTestResponse>('/aircall/connection-test');
   }
 
   aircallSyncLogs() {
