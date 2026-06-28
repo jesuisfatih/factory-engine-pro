@@ -61,7 +61,7 @@ export class RulesService {
     this.executor.recognizeTrigger(parsed.trigger);
 
     const eventId = parsed.eventId ?? `wevt_${randomUUID()}`;
-    const rules = await this.repository.findActiveByTrigger(parsed.trigger);
+    const rules = await this.repository.findRunnableByTrigger(parsed.trigger);
     const tasks: WorkflowTriggerFireResponse['tasks'] = [];
     const results: WorkflowTriggerFireResponse['results'] = [];
 
@@ -90,6 +90,27 @@ export class RulesService {
           ruleName: rule.name,
           status: 'skipped',
           reason: 'conditions_not_matched',
+          executionMode: rule.status === 'shadow' ? 'shadow' : 'active',
+          taskIds: [],
+          conditionTrace,
+          whenTrace,
+        });
+        continue;
+      }
+
+      if (rule.status === 'shadow') {
+        this.logger.log('rules', 'shadow_rule_matched', 'Shadow workflow rule matched without mutating state', {
+          event_id: eventId,
+          trigger: parsed.trigger,
+          rule_id: rule.id,
+          when_trace: whenTrace,
+          condition_trace: conditionTrace,
+        });
+        results.push({
+          ruleId: rule.id,
+          ruleName: rule.name,
+          status: 'shadow_matched',
+          executionMode: 'shadow',
           taskIds: [],
           conditionTrace,
           whenTrace,
@@ -132,11 +153,23 @@ export class RulesService {
         ruleName: rule.name,
         status: actionStatus,
         ...(actionStatus === 'skipped' ? { reason: 'actions_skipped' as const } : {}),
+        executionMode: 'active',
+        shortCircuited: !rule.composable && actionStatus !== 'skipped',
         taskIds,
         conditionTrace,
         whenTrace,
         actionTrace,
       });
+
+      if (!rule.composable && actionStatus !== 'skipped') {
+        this.logger.log('rules', 'runtime_short_circuit', 'Workflow runtime stopped after non-composable active rule', {
+          event_id: eventId,
+          trigger: parsed.trigger,
+          rule_id: rule.id,
+          priority: rule.priority,
+        });
+        break;
+      }
     }
 
     const response: WorkflowTriggerFireResponse = {
@@ -577,12 +610,15 @@ export class RulesService {
         occurredAt: context.occurredAt,
         params: context.params,
         ruleId: context.rule.id,
+        matchedRuleId: context.rule.id,
+        matched_rule_id: context.rule.id,
         ruleName: context.rule.name,
         actionId: action.id,
         action: action.action,
         rulePriority: context.rule.priority,
         conditionTrace: context.conditionTrace,
         whenTrace: context.whenTrace,
+        stateSnapshot: fireTimeStateSnapshot(context.state),
       },
     };
   }
@@ -762,6 +798,32 @@ function conditionGroups(definition: WorkflowRuleDefinition): WorkflowRuleWhenGr
   if (definition.whenGroups?.length) return definition.whenGroups;
   if (definition.when.length > 0) return [{ id: 'default', conditions: definition.when }];
   return [];
+}
+
+function fireTimeStateSnapshot(state: WorkflowActionContext['state']) {
+  return {
+    resolvedAt: state.now.toISOString(),
+    customer: state.customer
+      ? {
+          id: state.customer.id,
+          shopifyCustomerId: state.customer.shopifyCustomerId,
+          totalSpent: Number(state.customer.totalSpent),
+          ordersCount: state.customer.ordersCount,
+          lastOrderAt: state.customer.lastOrderAt?.toISOString() ?? null,
+          tags: state.customer.tags,
+        }
+      : null,
+    callEvent: state.callEvent ? { id: state.callEvent.id } : null,
+    resolverOutput: pickResolverOutput(state.resolverOutput),
+  };
+}
+
+function pickResolverOutput(output: Record<string, unknown>) {
+  return Object.fromEntries(
+    ['call_intent', 'psych_tags', 'product_mentions', 'urgency_level', 'summary']
+      .filter((key) => output[key] !== undefined)
+      .map((key) => [key, output[key]]),
+  );
 }
 
 function resultStatus(taskIds: string[], actionTrace: WorkflowActionTrace[]): WorkflowTriggerFireResponse['results'][number]['status'] {

@@ -93,8 +93,10 @@ export interface WorkflowActionTrace {
 export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
-  status: 'task_created' | 'actions_applied' | 'no_op' | 'skipped';
+  status: 'task_created' | 'actions_applied' | 'no_op' | 'shadow_matched' | 'skipped';
   reason?: 'conditions_not_matched' | 'actions_skipped' | 'unsupported_action';
+  executionMode?: 'active' | 'shadow';
+  shortCircuited?: boolean;
   taskIds: string[];
   conditionTrace?: WorkflowConditionTrace[];
   whenTrace?: WorkflowWhenGroupTrace[];

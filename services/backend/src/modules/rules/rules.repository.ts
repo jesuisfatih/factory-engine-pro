@@ -29,6 +29,13 @@ export class RulesRepository {
     });
   }
 
+  findRunnableByTrigger(trigger: WorkflowTrigger) {
+    return this.prisma.db.workflowRule.findMany({
+      where: { trigger, status: { in: ['active', 'shadow'] } },
+      orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+    });
+  }
+
   create(input: SaveWorkflowRuleInput) {
     return this.prisma.db.workflowRule.create({
       data: {
