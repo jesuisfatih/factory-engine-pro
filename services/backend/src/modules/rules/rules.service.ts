@@ -529,11 +529,12 @@ export class RulesService {
       }
     }
 
+    const matchedResults = results.filter((result) => result.status !== 'skipped');
     const response: WorkflowTriggerFireResponse = {
       eventId,
       trigger: parsed.trigger,
       source: parsed.source,
-      matchedRules: rules.length,
+      matchedRules: matchedResults.length,
       evaluatedRules: results.length,
       tasksCreated: tasks.length,
       tasks,
@@ -545,6 +546,7 @@ export class RulesService {
       event_id: eventId,
       trigger: parsed.trigger,
       source: parsed.source,
+      evaluated_rules: response.evaluatedRules,
       matched_rules: response.matchedRules,
       tasks_created: response.tasksCreated,
     });
@@ -1248,7 +1250,11 @@ export class RulesService {
       orderBy: [{ createdAt: 'asc' }, { email: 'asc' }],
     });
     const scored = members
-      .map((member) => ({ member, score: axisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)) }))
+      .map((member) => ({
+        member,
+        score: axisMemberEmailScore(axis, member.email)
+          + axisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)),
+      }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => right.score - left.score || left.member.email.localeCompare(right.member.email));
     const primary = scored.map((entry) => entry.member);
@@ -2115,6 +2121,18 @@ function axisRoleScore(
     if (slug === 'owner') score = Math.max(score, 50);
   }
   return score;
+}
+
+function axisMemberEmailScore(axis: TaskAxis, email: string | null | undefined) {
+  const normalizedEmail = normalize(email);
+  if (!normalizedEmail) return 0;
+  const preferredEmails: Record<TaskAxis, string[]> = {
+    sales: ['ihsan@dtfbank.com'],
+    support: ['dtfbanktx@gmail.com', 'charlette@dtfbank.com'],
+    account: ['info@dtfbank.com'],
+  };
+  const index = preferredEmails[axis].indexOf(normalizedEmail);
+  return index === -1 ? 0 : 1_000 - index;
 }
 
 function numberValue(value: unknown) {
