@@ -1,0 +1,167 @@
+﻿{
+  "checkedAt": "2026-06-28T15:04:19.681Z",
+  "api": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "principal": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "permissions": 8
+  },
+  "tasks": {
+    "supportLow": {
+      "id": "sr_lwriwskitxqu8anfqu48ueu4",
+      "title": "Roadmap 23 support low proof 20260628150336",
+      "metadata": {
+        "intent": "support",
+        "aiUrgency": "low"
+      }
+    },
+    "complaintCritical": {
+      "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+      "title": "Roadmap 23 complaint critical proof 20260628150336",
+      "metadata": {
+        "intent": "complaint",
+        "aiUrgency": "critical"
+      }
+    }
+  },
+  "configBefore": {
+    "segmentWeight": 1.5,
+    "repeatCountWeight": 1,
+    "intentWeight": 1,
+    "aiUrgencyWeight": 2,
+    "waitingHoursWeight": 0.25,
+    "intentScores": {
+      "sales": 12,
+      "reorder": 14,
+      "support": 8,
+      "complaint": 20,
+      "follow_up": 8,
+      "escalation": 18
+    },
+    "aiUrgencyScores": {
+      "low": 3,
+      "high": 20,
+      "medium": 10,
+      "critical": 30
+    }
+  },
+  "modifiedConfig": {
+    "segmentWeight": 0,
+    "repeatCountWeight": 0,
+    "intentWeight": 10,
+    "aiUrgencyWeight": 0,
+    "waitingHoursWeight": 0,
+    "intentScores": {
+      "sales": 12,
+      "reorder": 14,
+      "support": 100,
+      "complaint": 0,
+      "follow_up": 8,
+      "escalation": 18
+    },
+    "aiUrgencyScores": {
+      "low": 3,
+      "high": 20,
+      "medium": 10,
+      "critical": 30
+    }
+  },
+  "configRestored": {
+    "segmentWeight": 1.5,
+    "repeatCountWeight": 1,
+    "intentWeight": 1,
+    "aiUrgencyWeight": 2,
+    "waitingHoursWeight": 0.25,
+    "intentScores": {
+      "sales": 12,
+      "reorder": 14,
+      "support": 8,
+      "complaint": 20,
+      "follow_up": 8,
+      "escalation": 18
+    },
+    "aiUrgencyScores": {
+      "low": 3,
+      "high": 20,
+      "medium": 10,
+      "critical": 30
+    }
+  },
+  "defaultPair": {
+    "aIndex": 1,
+    "bIndex": 0,
+    "a": {
+      "id": "sr_lwriwskitxqu8anfqu48ueu4",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 51,
+      "priority": 7,
+      "intent": "support",
+      "aiUrgency": "low",
+      "repeatCount": 7
+    },
+    "b": {
+      "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 117,
+      "priority": 9,
+      "intent": "complaint",
+      "aiUrgency": "critical",
+      "repeatCount": 7
+    }
+  },
+  "modifiedPair": {
+    "aIndex": 0,
+    "bIndex": 2,
+    "a": {
+      "id": "sr_lwriwskitxqu8anfqu48ueu4",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 1000,
+      "priority": 9,
+      "intent": "support",
+      "aiUrgency": "low",
+      "repeatCount": 7
+    },
+    "b": {
+      "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 0,
+      "priority": 3,
+      "intent": "complaint",
+      "aiUrgency": "critical",
+      "repeatCount": 7
+    }
+  },
+  "restoredPair": {
+    "aIndex": 1,
+    "bIndex": 0,
+    "a": {
+      "id": "sr_lwriwskitxqu8anfqu48ueu4",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 51,
+      "priority": 7,
+      "intent": "support",
+      "aiUrgency": "low",
+      "repeatCount": 7
+    },
+    "b": {
+      "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+      "title": "Northstar Print Supply",
+      "urgencyScore": 117,
+      "priority": 9,
+      "intent": "complaint",
+      "aiUrgency": "critical",
+      "repeatCount": 7
+    }
+  },
+  "assertions": {
+    "defaultComplaintRanksAboveSupport": true,
+    "modifiedSupportRanksAboveComplaint": true,
+    "configRestoredSemantically": true,
+    "restoredComplaintRanksAboveSupport": true
+  }
+}

@@ -1,0 +1,46 @@
+﻿{
+  "checkedAt": "2026-06-28T15:04:59.890Z",
+  "commit": "5908ef4cfc4d40d3ae2c97d317f341ec8c829687",
+  "buildSha": "5908ef4cfc4d40d3ae2c97d317f341ec8c829687",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "adminWorkspaceStatus": {
+    "status": 200,
+    "ok": true
+  },
+  "staffStatus": {
+    "status": 200,
+    "ok": true
+  },
+  "pm2Status": "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1394     │ 111m   │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 12 │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 59166    │ 3m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 11 │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 59117    │ 3m     │ 0    │ online    │ 0%       │ 149.1mb  │ root     │ disabled │\n│ 13 │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 59271    │ 3m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘\n",
+  "migration": [
+    {
+      "migrationName": "202606292_urgency_scoring_config",
+      "finishedAt": "2026-06-28T14:59:38.672Z"
+    }
+  ],
+  "processes": [
+    {
+      "pid": 59117,
+      "cmd": "/usr/local/bin/node dist/services/backend/src/main.js"
+    },
+    {
+      "pid": 59166,
+      "cmd": "/bin/sh -lc cd /app/apps/admin && node_modules/.bin/vite preview --host 0.0.0.0 --port 3000"
+    },
+    {
+      "pid": 59207,
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3000"
+    },
+    {
+      "pid": 59271,
+      "cmd": "/bin/sh -lc cd /app/apps/person && node_modules/.bin/vite preview --host 0.0.0.0 --port 3002"
+    },
+    {
+      "pid": 59317,
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002"
+    }
+  ]
+}

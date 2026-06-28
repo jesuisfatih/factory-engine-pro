@@ -1,0 +1,16 @@
+﻿{
+  "checkedAt": "2026-06-28T15:06:05.785Z",
+  "adminUrl": "https://app.dtfbank.com/settings/workspace",
+  "personUrl": "https://app.dtfbank.com/staff/queue",
+  "screenshots": {
+    "admin": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap23-urgency-admin-config-ui-live-20260628.png",
+    "person": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap23-urgency-person-queue-ui-live-20260628.png"
+  },
+  "adminTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nWorkspace\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nWorkspace identity\nWORKSPACE NAME\nBADGE\nShown when no logo URL is set.\nLOGO URL\nURGENCY SCORING WEIGHTS\nSEGMENT\nREPEAT\nINTENT\nAI URGENCY\nWAITING HOURS\nINTENT SCORES\nCOMPLAINT\nESCALATION\nREORDER\nSALES\nSUPPORT\nFOLLOW UP\nAI URGENCY SCORES\nCRITICAL\nHIGH\nMEDIUM\nLOW\nSave workspace\nLive preview\nD\nDTF Bank\nBack panel\nD\nDTF Bank",
+  "personTextSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n8\nCustomers\n1\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n1\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nCUSTOMERS\n9\nin your queue\nOVERDUE\n1\nU80+ score\nAI-TASKED\n0\nclick to open brief\nPINNED\n0\non board\nSTATUS\nLive\nAPI bound\nUnassigned\n8\nNorthstar Print Supply\nU117\nSR-MQXX5HT2 - U117 - Open - 2m\nother\nPin\nNorthstar Print Supply\nU51\nSR-MQXX5HMN - U51 - Open - 2m\nother\nPin\nNorthstar Print Supply\nU45.1\nSR-MQXWFESL - U45.1 - Open - 23m\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.5\nSR-TEN_DTFBANK-001 - U37.5 - Open - 2h\noperations\nPin\nNorthstar Print Supply\nU37.2\nSR-MQXVBYBE - U37.2 - Open - 53m\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.2\nSR-MQXVB82Y - U37.2 - Open - 54m\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.2\nSR-MQXVAEQQ - U37.2 - Open - 55m\nworkflow_rule\nPin\nRoadmap 20 overdue proof roadmap20-20260628135130\nU0.3\nSR-MQXUKQUH - U0.3 - Open - 1h\nroadmap20\nPin\nIn progress\n0\nPositive\n0\nClosed\n1\nRoadmap 20 completed proof roadmap20-20260628135130\nU0.3\nSR-MQXUKRHQ - U0.3 - Closed - 1h\nroadmap20\nPin\nPinned board\n0\nPin a live queue card to keep it visible here.",
+  "checks": {
+    "adminShowsUrgencyWeights": true,
+    "personShowsUrgencyBadges": true,
+    "personShowsQueue": true
+  }
+}

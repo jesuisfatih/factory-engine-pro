@@ -1,0 +1,72 @@
+﻿{
+  "checkedAt": "2026-06-28T15:04:42.410Z",
+  "database": "factory_engine_pro_test",
+  "migration": [
+    {
+      "migrationName": "202606292_urgency_scoring_config",
+      "finishedAt": "2026-06-28T14:59:38.672Z"
+    }
+  ],
+  "tenantConfig": {
+    "tenantId": "ten_remote_test",
+    "urgencyScoringConfig": {}
+  },
+  "tasks": [
+    {
+      "id": "sr_lwriwskitxqu8anfqu48ueu4",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 23 support low proof 20260628150336",
+      "source": "workflow",
+      "axis": "support",
+      "priority": "medium",
+      "metadata": {
+        "category": "other",
+        "workflow": {
+          "params": {
+            "intent": "support",
+            "aiUrgency": "low"
+          }
+        },
+        "proofLabel": "support_low",
+        "roadmapProof": "roadmap23",
+        "ticketNumber": "SR-MQXX5HMN"
+      },
+      "createdAt": "2026-06-28T15:03:38.114Z",
+      "urgencySignals": {
+        "intent": "support",
+        "aiUrgency": "low"
+      }
+    },
+    {
+      "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+      "tenantId": "ten_dtfbank",
+      "title": "Roadmap 23 complaint critical proof 20260628150336",
+      "source": "workflow",
+      "axis": "support",
+      "priority": "medium",
+      "metadata": {
+        "category": "other",
+        "workflow": {
+          "params": {
+            "intent": "complaint",
+            "aiUrgency": "critical"
+          }
+        },
+        "proofLabel": "complaint_critical",
+        "roadmapProof": "roadmap23",
+        "ticketNumber": "SR-MQXX5HT2"
+      },
+      "createdAt": "2026-06-28T15:03:38.344Z",
+      "urgencySignals": {
+        "intent": "complaint",
+        "aiUrgency": "critical"
+      }
+    }
+  ],
+  "assertions": {
+    "migrationApplied": true,
+    "configColumnReadable": true,
+    "proofTasksExist": true,
+    "taskSignalsPersisted": true
+  }
+}
