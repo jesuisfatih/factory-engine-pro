@@ -1,0 +1,112 @@
+{
+  "item": 3,
+  "title": "Admin / Person login URL drift fix",
+  "checkedAt": "2026-06-28T23:52:02.005Z",
+  "scope": {
+    "app": "https://app.dtfbank.com",
+    "api": "https://api.dtfbank.com/api/v1",
+    "tenantId": "ten_dtfbank",
+    "container": "factoryengine-dtfbank-app",
+    "remote": "root@144.202.125.169"
+  },
+  "git": {
+    "codeCommit": "0c39eee15b4b776b072f268f585f81fad7842645",
+    "deployedBuildSha": "0c39eee15b4b776b072f268f585f81fad7842645",
+    "branch": "main"
+  },
+  "implementation": {
+    "surfaceDecision": "memberSurfaceFromPermissions: settings/members/roles permissions => admin; all other member sessions => person/staff",
+    "storageHandoff": "Wrong-surface login writes the session into the correct localStorage namespace and clears the wrong namespace before redirect.",
+    "personUrlFix": "Successful staff login and existing staff session on /staff/login replace URL with /staff/queue."
+  },
+  "validation": [
+    {
+      "command": "pnpm typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm build",
+      "status": "passed",
+      "note": "9 workspace packages, exit 0; existing Vite chunk-size warnings only"
+    }
+  ],
+  "runtime": {
+    "health": {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "logEvidence": [
+      "Mapped {/api/v1/auth/member/login, POST} route",
+      "Mapped {/api/v1/auth/person/login, POST} route",
+      "Mapped {/api/v1/auth/refresh, POST} route",
+      "Mapped {/api/v1/auth/logout, POST} route",
+      "Nest application successfully started"
+    ],
+    "pm2": {
+      "api": "factory-engine-pro-api online",
+      "admin": "factory-engine-pro-admin online",
+      "person": "factory-engine-pro-person online",
+      "accounts": "factory-engine-pro-accounts online"
+    }
+  },
+  "ui": {
+    "lindaAdminUrlToStaff": {
+      "account": "dtfbanktx@gmail.com",
+      "startUrl": "https://app.dtfbank.com/login",
+      "finalUrl": "https://app.dtfbank.com/staff/queue",
+      "expectedTextVisible": true,
+      "storage": {
+        "admin": false,
+        "person": true
+      },
+      "trace": [
+        {
+          "method": "POST",
+          "path": "/auth/member/login",
+          "status": 201,
+          "ok": true
+        }
+      ],
+      "consoleErrors": [],
+      "screenshot": {
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m03-linda-admin-url-to-staff-live.png",
+        "bytes": 107763,
+        "sha256": "cc94a98a2de778deb5f3e65ae36343be56106cf49b4b6ff8a2a6facdebeaee2f"
+      }
+    },
+    "ownerStaffUrlToAdmin": {
+      "account": "info@dtfbank.com",
+      "startUrl": "https://app.dtfbank.com/staff/login",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "expectedTextVisible": true,
+      "storage": {
+        "admin": true,
+        "person": false
+      },
+      "trace": [
+        {
+          "method": "POST",
+          "path": "/auth/person/login",
+          "status": 201,
+          "ok": true
+        }
+      ],
+      "consoleErrors": [],
+      "screenshot": {
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m03-owner-staff-url-to-admin-live.png",
+        "bytes": 115862,
+        "sha256": "9ae8b88a451694db1087ddc5fc9f06275f4f720719403c9e4f6af11cb40fae1c"
+      }
+    }
+  },
+  "roadmapReread": {
+    "requiredAfterCommitNumber": 5,
+    "completedAfterCommit": "0c39eee15b4b776b072f268f585f81fad7842645"
+  },
+  "nextRoadmapItem": 4,
+  "seedMockPolicy": "No seed/mock data was added. Segment and seed cleanup remains queued by strict sequence."
+}
