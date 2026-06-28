@@ -1,9 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Download, Phone, RefreshCw, Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import type { UseQueryResult } from '@tanstack/react-query';
+import { Activity, AlertTriangle, Download, Phone, RefreshCw, Search, ShieldCheck, UserCheck, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import type {
+  CustomerAssignmentAxis,
+  CustomerAxisAssignmentDto,
+  CustomerAxisAssignmentAuditDto,
+  CustomerAxisAssignmentsResponse,
+} from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
@@ -45,9 +52,18 @@ interface CustomerStats {
   dormantCount: number;
 }
 
+interface MemberRow {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+}
+
 const SEGMENTS = ['vip', 'loyal', 'active', 'dormant', 'new'];
 const CHURN_RISKS = ['low', 'medium', 'high', 'critical', 'unknown'];
 const SORTS = ['recent_order', 'total_spent', 'orders_count', 'health_score', 'name'] as const;
+const ASSIGNMENT_AXES: CustomerAssignmentAxis[] = ['sales', 'support', 'account'];
 
 export function CustomersPage() {
   const { t } = useTranslation();
@@ -59,11 +75,34 @@ export function CustomersPage() {
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<(typeof SORTS)[number]>('recent_order');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [ownerCustomerId, setOwnerCustomerId] = useState('');
   const query = useMemo(() => customerQuery({ search, segment, churnRisk, tag, sort }), [search, segment, churnRisk, tag, sort]);
   const customers = useQuery({ queryKey: ['commerce', 'customers', query], queryFn: () => fetchCustomers(query) });
   const stats = useQuery({ queryKey: ['commerce', 'customers', 'stats'], queryFn: () => fetchCustomerStats() });
   const rows = customers.data?.data ?? [];
   const tagOptions = useMemo(() => Array.from(new Set(rows.flatMap((row) => row.tags))).sort(), [rows]);
+  const ownerCustomer = rows.find((row) => row.id === ownerCustomerId) ?? null;
+  const assignments = useQuery({
+    queryKey: ['commerce', 'customers', ownerCustomerId, 'assignments'],
+    queryFn: () => fetchCustomerAssignments(ownerCustomerId),
+    enabled: Boolean(ownerCustomerId),
+  });
+  const members = useQuery({
+    queryKey: ['identity', 'members', 'customer-assignments'],
+    queryFn: fetchMembers,
+    enabled: canWrite,
+  });
+
+  useEffect(() => {
+    if (!customers.isSuccess) return;
+    if (rows.length === 0) {
+      if (ownerCustomerId) setOwnerCustomerId('');
+      return;
+    }
+    if (!ownerCustomerId || !rows.some((row) => row.id === ownerCustomerId)) {
+      setOwnerCustomerId(rows[0].id);
+    }
+  }, [customers.isSuccess, ownerCustomerId, rows]);
 
   const calculateInsights = useMutation({
     mutationFn: () => adminApi.recalculateCustomerInsights(),
@@ -81,6 +120,20 @@ export function CustomersPage() {
       qc.invalidateQueries({ queryKey: ['commerce', 'customers'] });
     },
     onError: (error) => toast.error(t('customers.alarms_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const assignPrimary = useMutation({
+    mutationFn: (input: { customerId: string; axis: CustomerAssignmentAxis; memberId: string }) => adminApi.assignCustomerAxisPrimary(input.customerId, input.axis, {
+      memberId: input.memberId,
+      source: 'admin_transfer',
+      reason: 'Admin approved axis primary transfer from customer ownership panel',
+    }),
+    onSuccess: (data, input) => {
+      toast.success(t('customers.assignment_saved'));
+      qc.setQueryData(['commerce', 'customers', input.customerId, 'assignments'], data);
+      qc.invalidateQueries({ queryKey: ['commerce', 'customers', input.customerId, 'assignments'] });
+    },
+    onError: (error) => toast.error(t('customers.assignment_failed'), { description: apiErrorMessage(error) }),
   });
 
   const clearFilters = () => {
@@ -169,6 +222,25 @@ export function CustomersPage() {
         </div>
       )}
 
+      {customers.isSuccess && rows.length > 0 && (
+        <CustomerOwnershipPanel
+          rows={rows}
+          selectedCustomerId={ownerCustomerId}
+          selectedCustomer={ownerCustomer}
+          onSelectCustomer={setOwnerCustomerId}
+          assignments={assignments}
+          members={members.data ?? []}
+          membersLoading={members.isLoading}
+          membersError={members.isError ? apiErrorMessage(members.error) : null}
+          canWrite={canWrite}
+          isSaving={assignPrimary.isPending}
+          onAssign={(axis, memberId) => {
+            if (!ownerCustomerId || !memberId) return;
+            assignPrimary.mutate({ customerId: ownerCustomerId, axis, memberId });
+          }}
+        />
+      )}
+
       {customers.isLoading && <StateBlock title={t('common.loading')} body={t('customers.loading_body')} />}
       {customers.isError && <StateBlock title={t('common.error')} body={apiErrorMessage(customers.error)} action={<button type="button" className="btn" onClick={() => customers.refetch()}>{t('common.retry')}</button>} />}
       {customers.isSuccess && rows.length === 0 && (
@@ -242,6 +314,14 @@ function fetchCustomerStats() {
   return adminApi.commerceCustomerStats('?limit=100') as Promise<CustomerStats>;
 }
 
+function fetchCustomerAssignments(customerId: string) {
+  return adminApi.customerAssignments(customerId);
+}
+
+function fetchMembers() {
+  return adminApi.members() as Promise<MemberRow[]>;
+}
+
 function customerQuery(input: { search: string; segment: string; churnRisk: string; tag: string; sort: string }) {
   const params = new URLSearchParams({ limit: '100', sort: input.sort });
   if (input.search.trim()) params.set('search', input.search.trim());
@@ -249,6 +329,181 @@ function customerQuery(input: { search: string; segment: string; churnRisk: stri
   if (input.churnRisk) params.set('churnRisk', input.churnRisk);
   if (input.tag) params.set('tag', input.tag);
   return `?${params.toString()}`;
+}
+
+function CustomerOwnershipPanel({
+  rows,
+  selectedCustomerId,
+  selectedCustomer,
+  onSelectCustomer,
+  assignments,
+  members,
+  membersLoading,
+  membersError,
+  canWrite,
+  isSaving,
+  onAssign,
+}: {
+  rows: CustomerRow[];
+  selectedCustomerId: string;
+  selectedCustomer: CustomerRow | null;
+  onSelectCustomer: (customerId: string) => void;
+  assignments: UseQueryResult<CustomerAxisAssignmentsResponse, Error>;
+  members: MemberRow[];
+  membersLoading: boolean;
+  membersError: string | null;
+  canWrite: boolean;
+  isSaving: boolean;
+  onAssign: (axis: CustomerAssignmentAxis, memberId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const activeMembers = members.filter((member) => member.status === 'active');
+  const assignmentRows = assignments.data?.assignments ?? [];
+  const audits = assignments.data?.audits ?? [];
+  const skippedAudit = audits.find((audit) => audit.action === 'auto_reassign_skipped');
+
+  return (
+    <div className="data-card" style={{ marginBottom: 14 }} id="customer-axis-ownership-panel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div>
+          <div className="name" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <ShieldCheck size={16} /> {t('customers.assignment_title')}
+          </div>
+          <div className="muted">{selectedCustomer ? selectedCustomer.name ?? selectedCustomer.companyName : t('customers.assignment_select_customer')}</div>
+        </div>
+        <select value={selectedCustomerId} onChange={(event) => onSelectCustomer(event.target.value)} aria-label={t('customers.assignment_customer_label')} style={{ minWidth: 260 }}>
+          {rows.map((row) => <option key={row.id} value={row.id}>{row.name ?? row.companyName}</option>)}
+        </select>
+      </div>
+
+      {assignments.isLoading && <StateBlock title={t('common.loading')} body={t('customers.assignment_loading')} />}
+      {assignments.isError && (
+        <StateBlock
+          title={t('common.error')}
+          body={apiErrorMessage(assignments.error)}
+          action={<button type="button" className="btn" onClick={() => assignments.refetch()}>{t('common.retry')}</button>}
+        />
+      )}
+      {assignments.isSuccess && (
+        <>
+          <div className="data-table-wrap">
+            <table className="data-table" id="table-customer-axis-assignments">
+              <thead>
+                <tr>
+                  <th>{t('customers.assignment_axis')}</th>
+                  <th>{t('customers.assignment_primary')}</th>
+                  <th>{t('customers.assignment_source')}</th>
+                  <th>{t('customers.assignment_action')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ASSIGNMENT_AXES.map((axis) => (
+                  <AssignmentAxisRow
+                    key={axis}
+                    axis={axis}
+                    assignment={assignmentRows.find((entry) => entry.axis === axis) ?? null}
+                    members={activeMembers}
+                    membersLoading={membersLoading}
+                    membersError={membersError}
+                    canWrite={canWrite}
+                    isSaving={isSaving}
+                    onAssign={onAssign}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {assignmentRows.length === 0 && (
+            <div className="muted" style={{ marginTop: 10 }}>
+              {canWrite ? t('customers.assignment_empty_cta') : t('customers.assignment_empty_readonly')}
+            </div>
+          )}
+          <AssignmentAuditList audits={audits} skippedAudit={skippedAudit} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function AssignmentAxisRow({
+  axis,
+  assignment,
+  members,
+  membersLoading,
+  membersError,
+  canWrite,
+  isSaving,
+  onAssign,
+}: {
+  axis: CustomerAssignmentAxis;
+  assignment: CustomerAxisAssignmentDto | null;
+  members: MemberRow[];
+  membersLoading: boolean;
+  membersError: string | null;
+  canWrite: boolean;
+  isSaving: boolean;
+  onAssign: (axis: CustomerAssignmentAxis, memberId: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <tr id={`row-customer-assignment-${axis}`}>
+      <td>
+        <span className="pill info">{label(axis)}</span>
+      </td>
+      <td>
+        <div className="name">{assignment?.memberName ?? t('customers.assignment_unassigned')}</div>
+        <div className="muted">{assignment?.memberEmail ?? t('customers.assignment_no_primary')}</div>
+      </td>
+      <td>
+        <div>{assignment?.source ? label(assignment.source) : '-'}</div>
+        <div className="muted">{assignment?.updatedAt ? fmtDate(assignment.updatedAt) : t('customers.assignment_not_set')}</div>
+      </td>
+      <td>
+        {canWrite ? (
+          <select
+            value={assignment?.memberId ?? ''}
+            disabled={isSaving || membersLoading || Boolean(membersError)}
+            onChange={(event) => onAssign(axis, event.target.value)}
+            aria-label={t('customers.assignment_select_member_axis', { axis })}
+            style={{ minWidth: 220 }}
+          >
+            <option value="">{membersLoading ? t('common.loading') : t('customers.assignment_select_member')}</option>
+            {members.map((member) => <option key={member.id} value={member.id}>{memberName(member)}</option>)}
+          </select>
+        ) : (
+          <span className="muted">{t('customers.assignment_readonly')}</span>
+        )}
+        {membersError && <div className="danger-text" style={{ marginTop: 4 }}>{membersError}</div>}
+      </td>
+    </tr>
+  );
+}
+
+function AssignmentAuditList({ audits, skippedAudit }: { audits: CustomerAxisAssignmentAuditDto[]; skippedAudit?: CustomerAxisAssignmentAuditDto }) {
+  const { t } = useTranslation();
+  if (audits.length === 0) {
+    return <div className="muted" style={{ marginTop: 10 }}>{t('customers.assignment_audit_empty')}</div>;
+  }
+  return (
+    <div style={{ marginTop: 12 }}>
+      {skippedAudit && (
+        <div className="pill warn" style={{ marginBottom: 8 }}>
+          <UserCheck size={13} /> {t('customers.assignment_reassign_skipped', {
+            owner: skippedAudit.previousMemberName ?? skippedAudit.previousMemberId ?? 'primary',
+            attempted: skippedAudit.newMemberName ?? skippedAudit.newMemberId ?? 'operator',
+          })}
+        </div>
+      )}
+      <div className="muted" style={{ marginBottom: 6 }}>{t('customers.assignment_audit_title')}</div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        {audits.slice(0, 3).map((audit) => (
+          <div key={audit.id} className="muted" id={`audit-${audit.id}`}>
+            <strong>{label(audit.action)}</strong> - {label(audit.axis)} - {audit.newMemberName ?? audit.newMemberId ?? '-'} - {fmtDate(audit.createdAt)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Kpi({ label, value, sub }: { label: string; value: string | number | null; sub: string }) {
@@ -326,6 +581,10 @@ function fmtDate(value: string | null) {
 
 function label(value: string) {
   return value.replace(/_/g, ' ');
+}
+
+function memberName(member: MemberRow) {
+  return [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
 }
 
 function lifecycleTone(lifecycle: string, churnRisk: string) {

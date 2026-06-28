@@ -9,6 +9,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_JOB, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { CustomersService } from '../customers/customers.service.js';
 import { RulesService } from '../rules/rules.service.js';
 
 export interface ReceiveAircallWebhookInput {
@@ -45,6 +46,7 @@ export class AircallIngestService {
     private readonly crypto: CryptoService,
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
+    private readonly customers: CustomersService,
     private readonly rules: RulesService,
     @Inject(AIRCALL_INGEST_QUEUE) private readonly ingestQueue: Queue | null,
     @Inject(AI_TRANSCRIPT_RESOLVER_QUEUE) private readonly transcriptResolverQueue: Queue | null,
@@ -348,6 +350,7 @@ export class AircallIngestService {
     if (!trigger) return;
 
     const eventId = `aircall:${input.callEvent.id}:${trigger}`;
+    await this.recordNoAutoReassignFromOperator(input, eventId);
     try {
       const result = await this.rules.fireTrigger({
         trigger,
@@ -384,6 +387,33 @@ export class AircallIngestService {
         trigger,
         call_event_id: input.callEvent.id,
         external_call_id: input.callEvent.externalCallId,
+        error: messageOf(error),
+      });
+    }
+  }
+
+  private async recordNoAutoReassignFromOperator(input: Parameters<AircallIngestService['fireWorkflowTrigger']>[0], eventId: string) {
+    if (!input.call.customerId || !input.call.currentOperatorId) return;
+    try {
+      await this.customers.recordNoAutoReassign(input.call.customerId, 'support', {
+        attemptedMemberId: input.call.currentOperatorId,
+        source: 'aircall.current_operator',
+        reason: 'Aircall current operator observed; customer support primary assignment was preserved.',
+        metadata: {
+          eventId,
+          callId: input.call.id,
+          callEventId: input.callEvent.id,
+          externalCallId: input.callEvent.externalCallId,
+          eventType: input.eventType,
+        },
+      });
+    } catch (error) {
+      this.logger.warn('aircall', 'customer_axis_auto_reassign_log_failed', 'Aircall ownership preservation log failed', {
+        event_id: eventId,
+        call_id: input.call.id,
+        call_event_id: input.callEvent.id,
+        customer_id: input.call.customerId,
+        attempted_member_id: input.call.currentOperatorId,
         error: messageOf(error),
       });
     }

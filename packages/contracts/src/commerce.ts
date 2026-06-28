@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { pageQuerySchema } from './common.js';
+import { taskAxisSchema } from './operations.js';
 
 export const fulfillmentModeSchema = z.enum(['pickup', 'shipping', 'local_delivery', 'unknown']);
 export type FulfillmentMode = z.infer<typeof fulfillmentModeSchema>;
@@ -82,6 +83,63 @@ export const updateCustomerListItemNoteSchema = z.object({
   notes: z.string().trim().nullable(),
 });
 export type UpdateCustomerListItemNoteInput = z.infer<typeof updateCustomerListItemNoteSchema>;
+
+export const customerAssignmentAxisSchema = taskAxisSchema;
+export type CustomerAssignmentAxis = z.infer<typeof customerAssignmentAxisSchema>;
+
+export const assignCustomerAxisPrimarySchema = z.object({
+  memberId: z.string().trim().min(1),
+  reason: z.string().trim().max(500).optional(),
+  source: z.string().trim().max(80).default('admin_transfer'),
+});
+export type AssignCustomerAxisPrimaryInput = z.infer<typeof assignCustomerAxisPrimarySchema>;
+
+export const recordCustomerAxisNoAutoReassignSchema = z.object({
+  attemptedMemberId: z.string().trim().min(1),
+  source: z.string().trim().max(80).default('aircall.current_operator'),
+  reason: z.string().trim().max(500).optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+});
+export type RecordCustomerAxisNoAutoReassignInput = z.infer<typeof recordCustomerAxisNoAutoReassignSchema>;
+
+export interface CustomerAxisAssignmentDto {
+  id: string;
+  customerId: string;
+  axis: CustomerAssignmentAxis;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  isPrimary: boolean;
+  source: string;
+  reason: string | null;
+  approvedByMemberId: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerAxisAssignmentAuditDto {
+  id: string;
+  customerId: string;
+  axis: CustomerAssignmentAxis;
+  action: 'primary_assigned' | 'auto_reassign_skipped' | string;
+  previousMemberId: string | null;
+  previousMemberName: string | null;
+  newMemberId: string | null;
+  newMemberName: string | null;
+  actorMemberId: string | null;
+  actorMemberName: string | null;
+  source: string;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface CustomerAxisAssignmentsResponse {
+  customerId: string;
+  assignments: CustomerAxisAssignmentDto[];
+  audits: CustomerAxisAssignmentAuditDto[];
+}
 
 export const discountTypeSchema = z.enum(['percentage', 'fixed_amount', 'fixed_price', 'qty_break']);
 export type DiscountType = z.infer<typeof discountTypeSchema>;

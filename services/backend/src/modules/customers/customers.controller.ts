@@ -1,14 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
+  assignCustomerAxisPrimarySchema,
   createCustomerListSchema,
   customerCommerceQuerySchema,
   customerListCustomersSchema,
   MEMBER_PERMISSIONS,
+  recordCustomerAxisNoAutoReassignSchema,
   updateCustomerListItemNoteSchema,
   updateCustomerListSchema,
+  type AssignCustomerAxisPrimaryInput,
   type CreateCustomerListInput,
   type CustomerCommerceQuery,
   type CustomerListCustomersInput,
+  type RecordCustomerAxisNoAutoReassignInput,
   type UpdateCustomerListInput,
   type UpdateCustomerListItemNoteInput,
 } from '@factory-engine-pro/contracts';
@@ -108,6 +112,32 @@ export class CustomersController {
   @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
   generateAlarms() {
     return this.customers.generateAlarms();
+  }
+
+  @Get(':id/assignments')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  assignments(@Param('id') id: string) {
+    return this.customers.assignments(id);
+  }
+
+  @Put(':id/assignments/:axis/primary')
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
+  assignAxisPrimary(
+    @Param('id') id: string,
+    @Param('axis') axis: string,
+    @Body(new ZodValidationPipe(assignCustomerAxisPrimarySchema)) body: AssignCustomerAxisPrimaryInput,
+  ) {
+    return this.customers.assignAxisPrimary(id, axis, body);
+  }
+
+  @Post(':id/assignments/:axis/no-auto-reassign')
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
+  recordNoAutoReassign(
+    @Param('id') id: string,
+    @Param('axis') axis: string,
+    @Body(new ZodValidationPipe(recordCustomerAxisNoAutoReassignSchema)) body: RecordCustomerAxisNoAutoReassignInput,
+  ) {
+    return this.customers.recordNoAutoReassign(id, axis, body);
   }
 
   @Get(':id')

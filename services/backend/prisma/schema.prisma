@@ -68,6 +68,8 @@ model Tenant {
   customerInsights        CustomerInsight[]
   customerLists           CustomerList[]
   customerListItems       CustomerListItem[]
+  customerAssignments     CustomerAssignment[]
+  customerAssignmentAudits CustomerAssignmentAudit[]
   pricingRules            PricingRule[]
   segments                Segment[]
   segmentOwnerships       SegmentOwnership[]
@@ -140,6 +142,11 @@ model Member {
   tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   roleAssignments MemberRoleAssignment[]
   segmentOwnerships SegmentOwnership[]
+  customerAssignments CustomerAssignment[] @relation("CustomerAssignmentMember")
+  approvedCustomerAssignments CustomerAssignment[] @relation("CustomerAssignmentApprover")
+  previousCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditPreviousMember")
+  newCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditNewMember")
+  actorCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditActor")
   assignedServiceRequests ServiceRequest[]
   taskParticipants TaskParticipant[]
   aircallMemberMaps AircallMemberMap[]
@@ -221,6 +228,8 @@ model Customer {
   activityLogs  CommerceActivityLog[]
   insight       CustomerInsight?
   listItems     CustomerListItem[]
+  assignments   CustomerAssignment[]
+  assignmentAudits CustomerAssignmentAudit[]
   pricingRules  PricingRule[]
   segmentMemberships SegmentCustomerMembership[]
   serviceRequests ServiceRequest[]
@@ -231,6 +240,57 @@ model Customer {
   @@index([tenantId, email])
   @@index([tenantId, lastOrderAt])
   @@map("customers")
+}
+
+model CustomerAssignment {
+  id                 String   @id
+  tenantId           String   @map("tenant_id")
+  customerId         String   @map("customer_id")
+  axis               String
+  memberId           String   @map("member_id")
+  isPrimary          Boolean  @default(true) @map("is_primary")
+  source             String   @default("admin_transfer")
+  reason             String?
+  approvedByMemberId String?  @map("approved_by_member_id")
+  approvedAt         DateTime? @map("approved_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  member     Member   @relation("CustomerAssignmentMember", fields: [memberId], references: [id], onDelete: Restrict)
+  approvedBy Member?  @relation("CustomerAssignmentApprover", fields: [approvedByMemberId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, customerId, axis])
+  @@index([tenantId, memberId, axis])
+  @@index([tenantId, axis])
+  @@map("customer_assignments")
+}
+
+model CustomerAssignmentAudit {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  customerId       String   @map("customer_id")
+  axis             String
+  action           String
+  previousMemberId String?  @map("previous_member_id")
+  newMemberId      String?  @map("new_member_id")
+  actorMemberId    String?  @map("actor_member_id")
+  source           String   @default("admin_transfer")
+  reason           String?
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  previousMember Member?  @relation("CustomerAssignmentAuditPreviousMember", fields: [previousMemberId], references: [id], onDelete: SetNull)
+  newMember      Member?  @relation("CustomerAssignmentAuditNewMember", fields: [newMemberId], references: [id], onDelete: SetNull)
+  actorMember    Member?  @relation("CustomerAssignmentAuditActor", fields: [actorMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, customerId, axis])
+  @@index([tenantId, action])
+  @@index([tenantId, createdAt])
+  @@map("customer_assignment_audits")
 }
 
 model CustomerUser {

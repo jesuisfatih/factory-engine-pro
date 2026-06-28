@@ -5,6 +5,7 @@ import type {
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
   AircallCallEventsResponse,
+  AssignCustomerAxisPrimaryInput,
   TranscriptResolverTestInput,
   TranscriptResolverTestResponse,
   AircallLinkUserInput,
@@ -18,6 +19,7 @@ import type {
   AuthSession,
   BootstrapTenantInput,
   CalculatePricesInput,
+  CustomerAxisAssignmentsResponse,
   CreateCustomerUserInput,
   CreateDirectOrderInput,
   CreateMemberInput,
@@ -63,6 +65,7 @@ import type {
   CloseServiceRequestInput,
   RejectB2BAccessInput,
   PreviewSegmentInput,
+  RecordCustomerAxisNoAutoReassignInput,
   MailProviderHealthResponse,
   MovePersonQueueCardInput,
   SendPersonMessageInput,
@@ -288,6 +291,24 @@ export class ApiClient {
 
   commerceCustomerStats(query = '') {
     return this.get(`/customers/stats${query}`);
+  }
+
+  customerAssignments(customerId: string) {
+    return this.get<CustomerAxisAssignmentsResponse>(`/customers/${encodeURIComponent(customerId)}/assignments`);
+  }
+
+  assignCustomerAxisPrimary(customerId: string, axis: string, input: AssignCustomerAxisPrimaryInput) {
+    return this.put<CustomerAxisAssignmentsResponse>(
+      `/customers/${encodeURIComponent(customerId)}/assignments/${encodeURIComponent(axis)}/primary`,
+      input,
+    );
+  }
+
+  recordCustomerAxisNoAutoReassign(customerId: string, axis: string, input: RecordCustomerAxisNoAutoReassignInput) {
+    return this.post<CustomerAxisAssignmentsResponse>(
+      `/customers/${encodeURIComponent(customerId)}/assignments/${encodeURIComponent(axis)}/no-auto-reassign`,
+      input,
+    );
   }
 
   customerLists() {

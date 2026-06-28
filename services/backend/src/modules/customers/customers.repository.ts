@@ -17,6 +17,20 @@ export const customerInclude = {
 
 export type CustomerWithCommerce = Prisma.CustomerGetPayload<{ include: typeof customerInclude }>;
 
+export const customerAssignmentInclude = {
+  member: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
+  approvedBy: { select: { id: true, email: true, firstName: true, lastName: true } },
+} satisfies Prisma.CustomerAssignmentInclude;
+
+export const customerAssignmentAuditInclude = {
+  previousMember: { select: { id: true, email: true, firstName: true, lastName: true } },
+  newMember: { select: { id: true, email: true, firstName: true, lastName: true } },
+  actorMember: { select: { id: true, email: true, firstName: true, lastName: true } },
+} satisfies Prisma.CustomerAssignmentAuditInclude;
+
+export type CustomerAssignmentWithMember = Prisma.CustomerAssignmentGetPayload<{ include: typeof customerAssignmentInclude }>;
+export type CustomerAssignmentAuditWithMembers = Prisma.CustomerAssignmentAuditGetPayload<{ include: typeof customerAssignmentAuditInclude }>;
+
 @Injectable()
 export class CustomersRepository {
   constructor(
@@ -141,6 +155,106 @@ export class CustomersRepository {
     return this.prisma.db.customerListItem.updateMany({
       where: { id: itemId },
       data: { notes },
+    });
+  }
+
+  listAssignments(customerId: string) {
+    return this.prisma.db.customerAssignment.findMany({
+      where: { customerId },
+      include: customerAssignmentInclude,
+      orderBy: [{ axis: 'asc' }, { updatedAt: 'desc' }],
+    });
+  }
+
+  findAssignment(customerId: string, axis: string) {
+    return this.prisma.db.customerAssignment.findFirst({
+      where: { customerId, axis },
+      include: customerAssignmentInclude,
+    });
+  }
+
+  upsertAssignment(input: {
+    customerId: string;
+    axis: string;
+    memberId: string;
+    source: string;
+    reason?: string;
+    approvedByMemberId: string | null;
+  }) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.customerAssignment.upsert({
+      where: {
+        tenantId_customerId_axis: {
+          tenantId,
+          customerId: input.customerId,
+          axis: input.axis,
+        },
+      },
+      create: {
+        id: prefixedId('casn'),
+        tenantId,
+        customerId: input.customerId,
+        axis: input.axis,
+        memberId: input.memberId,
+        source: input.source,
+        reason: input.reason,
+        approvedByMemberId: input.approvedByMemberId,
+        approvedAt: new Date(),
+      },
+      update: {
+        memberId: input.memberId,
+        source: input.source,
+        reason: input.reason,
+        approvedByMemberId: input.approvedByMemberId,
+        approvedAt: new Date(),
+        isPrimary: true,
+      },
+      include: customerAssignmentInclude,
+    });
+  }
+
+  createAssignmentAudit(input: {
+    customerId: string;
+    axis: string;
+    action: string;
+    previousMemberId?: string | null;
+    newMemberId?: string | null;
+    actorMemberId?: string | null;
+    source: string;
+    reason?: string | null;
+    metadata?: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.db.customerAssignmentAudit.create({
+      data: {
+        id: prefixedId('caud'),
+        tenantId: this.tenantId(),
+        customerId: input.customerId,
+        axis: input.axis,
+        action: input.action,
+        previousMemberId: input.previousMemberId ?? null,
+        newMemberId: input.newMemberId ?? null,
+        actorMemberId: input.actorMemberId ?? null,
+        source: input.source,
+        reason: input.reason ?? null,
+        metadata: input.metadata ?? {},
+      },
+      include: customerAssignmentAuditInclude,
+    });
+  }
+
+  listAssignmentAudits(customerId: string, take = 20) {
+    return this.prisma.db.customerAssignmentAudit.findMany({
+      where: { customerId },
+      include: customerAssignmentAuditInclude,
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+  }
+
+  findActiveMember(memberId: string) {
+    return this.prisma.db.member.findFirst({
+      where: { id: memberId, status: 'active' },
+      select: { id: true, email: true, firstName: true, lastName: true, status: true },
     });
   }
 

@@ -23,6 +23,8 @@ const TENANT_SCOPED_MODELS = new Set([
   'CustomerInsight',
   'CustomerList',
   'CustomerListItem',
+  'CustomerAssignment',
+  'CustomerAssignmentAudit',
   'PricingRule',
   'Segment',
   'SegmentOwnership',

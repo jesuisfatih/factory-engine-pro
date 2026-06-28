@@ -42,6 +42,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { CustomersService } from '../customers/customers.service.js';
 import { SupportService } from '../support/support.service.js';
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
@@ -53,6 +54,7 @@ export class RulesService {
     private readonly repository: RulesRepository,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly customers: CustomersService,
     private readonly support: SupportService,
     private readonly executor: WorkflowExecutorService,
     private readonly prompt: WorkflowPromptService,
@@ -970,24 +972,33 @@ export class RulesService {
       ?? stringParam(context.params, 'assigneeMemberId')
       ?? stringParam(context.params, 'memberId');
     const explicitAssignee = explicitAssigneeId ? await this.findMember(explicitAssigneeId) : null;
+    const customerPrimary = !explicitAssignee
+      ? await this.customers.resolveAxisPrimaryMember(context.state.customer?.id, axis)
+      : null;
     const candidates = await this.findAxisPrimaryMembers(axis);
-    const assignee = explicitAssignee ?? candidates[0] ?? null;
-    const watcherMemberIds = uniqueStrings(candidates.map((member) => member.id))
+    const candidateMembers = customerPrimary
+      ? [customerPrimary.member, ...candidates.filter((member) => member.id !== customerPrimary.member.id)]
+      : candidates;
+    const assignee = explicitAssignee ?? customerPrimary?.member ?? candidateMembers[0] ?? null;
+    const watcherMemberIds = uniqueStrings(candidateMembers.map((member) => member.id))
       .filter((memberId) => memberId !== assignee?.id);
     const assignment: TaskAssignment = {
       axis,
       assigneeMemberId: assignee?.id ?? null,
       watcherMemberIds,
-      candidateMemberIds: candidates.map((member) => member.id),
-      resolutionSource: explicitAssignee ? 'explicit_param' : 'axis_primary_role',
+      candidateMemberIds: candidateMembers.map((member) => member.id),
+      customerAssignmentId: customerPrimary?.assignmentId ?? null,
+      resolutionSource: explicitAssignee ? 'explicit_param' : customerPrimary ? 'customer_axis_primary' : 'axis_primary_role',
     };
-    this.logger.log('rules', 'task_assignment_resolved', 'Workflow task assignment resolved from axis primary roles', {
+    this.logger.log('rules', 'task_assignment_resolved', 'Workflow task assignment resolved', {
       event_id: context.eventId,
       trigger: context.trigger,
       rule_id: context.rule.id,
       axis: assignment.axis,
+      customer_id: context.state.customer?.id ?? null,
       assignee_member_id: assignment.assigneeMemberId,
       watcher_member_ids: assignment.watcherMemberIds,
+      customer_assignment_id: assignment.customerAssignmentId,
       resolution_source: assignment.resolutionSource,
     });
     return assignment;
@@ -1252,6 +1263,7 @@ export class RulesService {
           assigneeMemberId: assignment.assigneeMemberId,
           watcherMemberIds: assignment.watcherMemberIds,
           candidateMemberIds: assignment.candidateMemberIds,
+          customerAssignmentId: assignment.customerAssignmentId,
         },
         watchers: assignment.watcherMemberIds,
         conditionTrace: context.conditionTrace,
@@ -1456,7 +1468,8 @@ type TaskAssignment = {
   assigneeMemberId: string | null;
   watcherMemberIds: string[];
   candidateMemberIds: string[];
-  resolutionSource: 'explicit_param' | 'axis_primary_role';
+  customerAssignmentId: string | null;
+  resolutionSource: 'explicit_param' | 'customer_axis_primary' | 'axis_primary_role';
 };
 
 type BackfillCandidate = {

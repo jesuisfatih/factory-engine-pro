@@ -1,16 +1,27 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
+  assignCustomerAxisPrimarySchema,
   type CreateCustomerListInput,
+  type CustomerAssignmentAxis,
   type CustomerCommerceQuery,
   type CustomerListCustomersInput,
+  recordCustomerAxisNoAutoReassignSchema,
+  taskAxisSchema,
+  type AssignCustomerAxisPrimaryInput,
+  type RecordCustomerAxisNoAutoReassignInput,
   type UpdateCustomerListInput,
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
-import { type CustomerWithCommerce, CustomersRepository } from './customers.repository.js';
+import {
+  type CustomerAssignmentAuditWithMembers,
+  type CustomerAssignmentWithMember,
+  type CustomerWithCommerce,
+  CustomersRepository,
+} from './customers.repository.js';
 
 const ALARM_DEFINITIONS = [
   { systemType: 'churn_alarm', name: 'Churn alarm', color: '#dc2626', icon: 'alert-triangle' },
@@ -73,6 +84,119 @@ export class CustomersService {
         fulfillmentStatus: order.fulfillmentStatus,
         processedAt: order.processedAt?.toISOString() ?? null,
       })),
+    };
+  }
+
+  async assignments(customerId: string) {
+    await this.repository.getRequired(customerId);
+    const [assignments, audits] = await Promise.all([
+      this.repository.listAssignments(customerId),
+      this.repository.listAssignmentAudits(customerId),
+    ]);
+    return {
+      customerId,
+      assignments: assignments.map((assignment) => this.mapAssignment(assignment)),
+      audits: audits.map((audit) => this.mapAssignmentAudit(audit)),
+    };
+  }
+
+  async assignAxisPrimary(customerId: string, axisValue: string, input: AssignCustomerAxisPrimaryInput) {
+    const axis = this.parseAxis(axisValue);
+    const parsed = assignCustomerAxisPrimarySchema.parse(input);
+    await this.repository.getRequired(customerId);
+
+    const member = await this.repository.findActiveMember(parsed.memberId);
+    if (!member) throw new BadRequestException('Assigned member is not active');
+
+    const previous = await this.repository.findAssignment(customerId, axis);
+    const actorMemberId = this.currentMemberId();
+    const assignment = await this.repository.upsertAssignment({
+      customerId,
+      axis,
+      memberId: member.id,
+      source: parsed.source,
+      reason: parsed.reason,
+      approvedByMemberId: actorMemberId,
+    });
+    await this.repository.createAssignmentAudit({
+      customerId,
+      axis,
+      action: 'primary_assigned',
+      previousMemberId: previous?.memberId ?? null,
+      newMemberId: member.id,
+      actorMemberId,
+      source: parsed.source,
+      reason: parsed.reason ?? null,
+      metadata: {
+        assignmentId: assignment.id,
+        previousMemberId: previous?.memberId ?? null,
+        unchanged: previous?.memberId === member.id,
+      },
+    });
+
+    this.logger.log('customers', 'customer_axis_primary_assigned', 'Customer axis primary assignment changed', {
+      customer_id: customerId,
+      axis,
+      previous_member_id: previous?.memberId ?? null,
+      new_member_id: member.id,
+      actor_member_id: actorMemberId,
+      source: parsed.source,
+    });
+    return this.assignments(customerId);
+  }
+
+  async recordNoAutoReassign(
+    customerId: string,
+    axisValue: string,
+    input: RecordCustomerAxisNoAutoReassignInput,
+  ) {
+    const axis = this.parseAxis(axisValue);
+    const parsed = recordCustomerAxisNoAutoReassignSchema.parse(input);
+    await this.repository.getRequired(customerId);
+
+    const attemptedMember = await this.repository.findActiveMember(parsed.attemptedMemberId);
+    if (!attemptedMember) throw new BadRequestException('Attempted member is not active');
+
+    const assignment = await this.repository.findAssignment(customerId, axis);
+    if (assignment?.memberId && assignment.memberId !== attemptedMember.id) {
+      await this.repository.createAssignmentAudit({
+        customerId,
+        axis,
+        action: 'auto_reassign_skipped',
+        previousMemberId: assignment.memberId,
+        newMemberId: attemptedMember.id,
+        actorMemberId: this.currentMemberId(),
+        source: parsed.source,
+        reason: parsed.reason ?? 'Different operator observed; primary owner was preserved.',
+        metadata: {
+          ...parsed.metadata,
+          assignmentId: assignment.id,
+          preservedMemberId: assignment.memberId,
+          attemptedMemberId: attemptedMember.id,
+        },
+      });
+      this.logger.log('customers', 'customer_axis_auto_reassign_skipped', 'Customer axis primary owner preserved', {
+        customer_id: customerId,
+        axis,
+        preserved_member_id: assignment.memberId,
+        attempted_member_id: attemptedMember.id,
+        source: parsed.source,
+      });
+    }
+
+    return this.assignments(customerId);
+  }
+
+  async resolveAxisPrimaryMember(customerId: string | null | undefined, axis: CustomerAssignmentAxis) {
+    if (!customerId) return null;
+    const assignment = await this.repository.findAssignment(customerId, axis);
+    if (!assignment?.isPrimary || assignment.member.status !== 'active') return null;
+    return {
+      assignmentId: assignment.id,
+      customerId,
+      axis,
+      member: assignment.member,
+      source: assignment.source,
     };
   }
 
@@ -311,6 +435,52 @@ export class CustomersService {
     if (count !== customerIds.length) throw new BadRequestException('One or more customers do not exist');
   }
 
+  private parseAxis(axis: string): CustomerAssignmentAxis {
+    return taskAxisSchema.parse(axis);
+  }
+
+  private currentMemberId() {
+    const context = this.tenantContext.require();
+    return context.principalType === 'member' ? context.principalId ?? null : null;
+  }
+
+  private mapAssignment(assignment: CustomerAssignmentWithMember) {
+    return {
+      id: assignment.id,
+      customerId: assignment.customerId,
+      axis: assignment.axis as CustomerAssignmentAxis,
+      memberId: assignment.memberId,
+      memberName: memberName(assignment.member),
+      memberEmail: assignment.member.email,
+      isPrimary: assignment.isPrimary,
+      source: assignment.source,
+      reason: assignment.reason,
+      approvedByMemberId: assignment.approvedByMemberId,
+      approvedAt: assignment.approvedAt?.toISOString() ?? null,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString(),
+    };
+  }
+
+  private mapAssignmentAudit(audit: CustomerAssignmentAuditWithMembers) {
+    return {
+      id: audit.id,
+      customerId: audit.customerId,
+      axis: audit.axis as CustomerAssignmentAxis,
+      action: audit.action,
+      previousMemberId: audit.previousMemberId,
+      previousMemberName: audit.previousMember ? memberName(audit.previousMember) : null,
+      newMemberId: audit.newMemberId,
+      newMemberName: audit.newMember ? memberName(audit.newMember) : null,
+      actorMemberId: audit.actorMemberId,
+      actorMemberName: audit.actorMember ? memberName(audit.actorMember) : null,
+      source: audit.source,
+      reason: audit.reason,
+      metadata: jsonRecord(audit.metadata),
+      createdAt: audit.createdAt.toISOString(),
+    };
+  }
+
   private async ensureSystemLists() {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new BadRequestException('Tenant context is required');
@@ -411,4 +581,13 @@ function averageDaysBetween(dates: Date[]) {
   if (dates.length < 2) return null;
   const gaps = dates.slice(1).map((date, index) => daysBetween(dates[index], date));
   return Math.round((gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length) * 100) / 100;
+}
+
+function memberName(member: { firstName: string; lastName: string; email: string }) {
+  return [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
+}
+
+function jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
 }
