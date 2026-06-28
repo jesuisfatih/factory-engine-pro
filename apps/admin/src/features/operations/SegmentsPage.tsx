@@ -32,10 +32,23 @@ interface SegmentOwner {
 interface SegmentPreview {
   summary: {
     totalCustomers: number;
+    totalCustomerUsers?: number;
+    totalShopifyCustomers?: number;
+    shopifySnapshotCustomers?: number;
+    unlinkedShopifyCustomers?: number;
     matchCount: number;
+    matchedCustomers?: number;
+    matchedCustomerUsers?: number;
+    matchedShopifyCustomers?: number;
     totalRevenue: number;
     avgOrders: number;
     atRisk: number;
+  };
+  breakdown?: {
+    customers: number;
+    customerUsers: number;
+    shopifyCustomers: number;
+    unlinkedShopifyCustomers: number;
   };
   matches: Array<{
     id: string;
@@ -87,6 +100,9 @@ interface ConditionDraft {
   field: SegmentField;
   operator: SegmentOperator;
   value: string;
+  timeframeDays: string;
+  scopeType: 'all' | 'product' | 'collection';
+  scopeValues: string;
 }
 
 interface SegmentDraft {
@@ -101,12 +117,33 @@ interface SegmentDraft {
   conditions: ConditionDraft[];
 }
 
+interface ShopifySegmentOption {
+  id: string;
+  name: string;
+  query: string;
+  customerCount: number | null;
+  lastSyncedAt: string | null;
+  syncStatus: string | null;
+}
+
 const FIELDS: SegmentField[] = [
   'companyStatus',
   'companyName',
+  'companyGroup',
   'companyEmail',
   'companyPhone',
+  'companyTaxId',
+  'currentLifecycleStage',
+  'teamCount',
+  'companyUserRole',
+  'companyUserIsActive',
   'shopifyCustomerTags',
+  'shopifyCustomerSegmentIds',
+  'shopifyCustomerAcceptsMarketing',
+  'shopifyCustomerState',
+  'shopifyCustomerLocale',
+  'shopifyCustomerOrdersCount',
+  'shopifyCustomerTotalSpent',
   'totalRevenue',
   'totalOrders',
   'avgOrderValue',
@@ -115,9 +152,38 @@ const FIELDS: SegmentField[] = [
   'churnRisk',
   'lifecycle',
   'clvTier',
+  'buyerIntent',
+  'segment',
+  'engagementScore',
+  'upsellPotential',
+  'totalSessions',
+  'totalProductViews',
+  'totalAddToCarts',
+  'periodRevenue',
+  'periodOrders',
+  'periodQuantity',
 ];
 const OPERATORS: SegmentOperator[] = ['gt', 'gte', 'lt', 'lte', 'eq', 'neq', 'contains', 'in', 'notIn'];
-const NUMERIC_FIELDS = new Set<SegmentField>(['totalRevenue', 'totalOrders', 'avgOrderValue', 'daysSinceLastOrder', 'healthScore']);
+const NUMERIC_FIELDS = new Set<SegmentField>([
+  'teamCount',
+  'shopifyCustomerOrdersCount',
+  'shopifyCustomerTotalSpent',
+  'totalRevenue',
+  'totalOrders',
+  'avgOrderValue',
+  'daysSinceLastOrder',
+  'healthScore',
+  'engagementScore',
+  'upsellPotential',
+  'totalSessions',
+  'totalProductViews',
+  'totalAddToCarts',
+  'periodRevenue',
+  'periodOrders',
+  'periodQuantity',
+]);
+const BOOLEAN_FIELDS = new Set<SegmentField>(['companyUserIsActive', 'shopifyCustomerAcceptsMarketing']);
+const PERIOD_FIELDS = new Set<SegmentField>(['periodRevenue', 'periodOrders', 'periodQuantity']);
 const IMPORTANCE: SegmentImportance[] = ['critical', 'high', 'normal', 'low'];
 const QK = ['operations', 'segments'] as const;
 
@@ -402,6 +468,11 @@ function SegmentEditor({ draft, onClose }: { draft: SegmentDraft; onClose: () =>
   const qc = useQueryClient();
   const [current, setCurrent] = useState(draft);
   const isCreate = !current.id;
+  const shopifySegments = useQuery({
+    queryKey: ['segments', 'shopify-catalog'],
+    queryFn: fetchShopifySegments,
+    staleTime: 5 * 60 * 1000,
+  });
   useEffect(() => setCurrent(draft), [draft]);
 
   const save = useMutation({
@@ -480,13 +551,63 @@ function SegmentEditor({ draft, onClose }: { draft: SegmentDraft; onClose: () =>
             <h3>{t('segments.modal.conditions')}</h3>
             {current.conditions.map((condition) => (
               <div key={condition.id} className="rule-row">
-                <select value={condition.field} onChange={(event) => updateCondition(condition.id, { field: event.target.value as SegmentField })}>
+                <select
+                  value={condition.field}
+                  onChange={(event) => {
+                    const field = event.target.value as SegmentField;
+                    updateCondition(condition.id, { field, operator: operatorsFor(field)[0], value: defaultValueFor(field) });
+                  }}
+                >
                   {FIELDS.map((field) => <option key={field} value={field}>{label(field)}</option>)}
                 </select>
                 <select value={condition.operator} onChange={(event) => updateCondition(condition.id, { operator: event.target.value as SegmentOperator })}>
-                  {OPERATORS.map((operator) => <option key={operator} value={operator}>{operator}</option>)}
+                  {operatorsFor(condition.field).map((operator) => <option key={operator} value={operator}>{operator}</option>)}
                 </select>
-                <input value={condition.value} onChange={(event) => updateCondition(condition.id, { value: event.target.value })} placeholder={t('segments.modal.condition_value')} required />
+                {condition.field === 'shopifyCustomerSegmentIds' ? (
+                  <select
+                    value={condition.value}
+                    onChange={(event) => updateCondition(condition.id, { value: event.target.value })}
+                    required
+                  >
+                    <option value="">{shopifySegments.isLoading ? t('common.loading') : t('segments.modal.condition_value')}</option>
+                    {(shopifySegments.data ?? []).map((segment) => (
+                      <option key={segment.id} value={segment.id}>{segment.name} ({segment.customerCount ?? '-'})</option>
+                    ))}
+                  </select>
+                ) : BOOLEAN_FIELDS.has(condition.field) ? (
+                  <select value={condition.value || 'true'} onChange={(event) => updateCondition(condition.id, { value: event.target.value })}>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                ) : (
+                  <input value={condition.value} onChange={(event) => updateCondition(condition.id, { value: event.target.value })} placeholder={t('segments.modal.condition_value')} required />
+                )}
+                {PERIOD_FIELDS.has(condition.field) && (
+                  <>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={condition.timeframeDays}
+                      onChange={(event) => updateCondition(condition.id, { timeframeDays: event.target.value })}
+                      aria-label="Timeframe days"
+                      placeholder="30"
+                    />
+                    <select value={condition.scopeType} onChange={(event) => updateCondition(condition.id, { scopeType: event.target.value as ConditionDraft['scopeType'] })}>
+                      <option value="all">All</option>
+                      <option value="product">Product</option>
+                      <option value="collection">Collection</option>
+                    </select>
+                    {condition.scopeType !== 'all' && (
+                      <input
+                        value={condition.scopeValues}
+                        onChange={(event) => updateCondition(condition.id, { scopeValues: event.target.value })}
+                        aria-label="Scope values"
+                        placeholder="ID, SKU, handle"
+                      />
+                    )}
+                  </>
+                )}
                 <button type="button" className="remove" onClick={() => setCurrent({ ...current, conditions: current.conditions.filter((entry) => entry.id !== condition.id) })} disabled={current.conditions.length === 1}>
                   <X size={13} />
                 </button>
@@ -518,6 +639,10 @@ function fetchSegmentStats() {
 
 function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
+}
+
+function fetchShopifySegments() {
+  return adminApi.shopifyCustomerSegments('?limit=100') as Promise<ShopifySegmentOption[]>;
 }
 
 function invalidateSegments(qc: ReturnType<typeof useQueryClient>) {
@@ -552,12 +677,15 @@ function draftFromSegment(segment: SegmentRow): SegmentDraft {
       field: condition.field,
       operator: condition.operator,
       value: Array.isArray(condition.value) ? condition.value.join(', ') : String(condition.value),
+      timeframeDays: condition.timeframeDays ? String(condition.timeframeDays) : '',
+      scopeType: condition.scopeType ?? 'all',
+      scopeValues: condition.scopeValues?.join(', ') ?? '',
     })) : [emptyCondition()],
   };
 }
 
 function emptyCondition(): ConditionDraft {
-  return { id: crypto.randomUUID(), field: 'totalRevenue', operator: 'gte', value: '1000' };
+  return { id: crypto.randomUUID(), field: 'totalRevenue', operator: 'gte', value: '1000', timeframeDays: '', scopeType: 'all', scopeValues: '' };
 }
 
 function toCreateInput(draft: SegmentDraft): CreateSegmentInput {
@@ -586,14 +714,28 @@ function toCondition(condition: ConditionDraft): SegmentConditionInput {
     field: condition.field,
     operator: condition.operator,
     value,
-    scopeType: 'all',
-    scopeValues: [],
+    timeframeDays: condition.timeframeDays ? Number(condition.timeframeDays) : undefined,
+    scopeType: condition.scopeType,
+    scopeValues: condition.scopeValues.split(',').map((entry) => entry.trim()).filter(Boolean),
   };
 }
 
 function coerceValue(field: SegmentField, value: string) {
   if (NUMERIC_FIELDS.has(field)) return Number(value);
+  if (BOOLEAN_FIELDS.has(field)) return value === 'true';
   return value;
+}
+
+function operatorsFor(field: SegmentField): SegmentOperator[] {
+  if (NUMERIC_FIELDS.has(field)) return ['gt', 'gte', 'lt', 'lte', 'eq', 'neq'];
+  if (BOOLEAN_FIELDS.has(field)) return ['eq', 'neq'];
+  if (field === 'shopifyCustomerTags' || field === 'shopifyCustomerSegmentIds' || field === 'companyUserRole') return ['contains', 'in', 'notIn', 'eq', 'neq'];
+  return OPERATORS;
+}
+
+function defaultValueFor(field: SegmentField) {
+  if (BOOLEAN_FIELDS.has(field)) return 'true';
+  return '';
 }
 
 function Kpi({ icon, label, value, sub }: { icon: ReactNode; label: string; value: number | string | null; sub: string }) {

@@ -407,6 +407,14 @@ export class ApiClient {
     return this.post('/segments/preview', input);
   }
 
+  shopifyCustomerSegments(query = '') {
+    return this.get(`/shopify-customers/segments${query}`);
+  }
+
+  syncShopifyCustomerSegment(id: string) {
+    return this.post(`/shopify-customers/segments/sync?id=${encodeURIComponent(id)}`, {});
+  }
+
   evaluateSegment(id: string) {
     return this.post(`/segments/${id}/evaluate`, {});
   }

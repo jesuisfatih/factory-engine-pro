@@ -80,6 +80,14 @@ export class AircallController {
     return this.aircall.reprocessResolver(body);
   }
 
+  @Post('reprocess-resolved')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  reprocessResolvedAlias(
+    @Body(new ZodValidationPipe(aircallResolverReprocessSchema)) body: AircallResolverReprocessInput,
+  ) {
+    return this.aircall.reprocessResolver(body);
+  }
+
   @Post('users/:aircallUserId/link')
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
   linkUser(

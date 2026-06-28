@@ -98,7 +98,7 @@ export class RulesRepository {
     taskIds: string[];
     result: Prisma.InputJsonValue;
   }) {
-    return this.prisma.db.workflowRuleExecution.update({
+    return this.prisma.db.workflowRuleExecution.updateMany({
       where: { id },
       data,
     });

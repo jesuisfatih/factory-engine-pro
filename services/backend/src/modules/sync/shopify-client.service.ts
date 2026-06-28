@@ -128,6 +128,35 @@ export class ShopifyClientService {
       : {};
   }
 
+  async graphql<T = Record<string, unknown>>(
+    credentials: ShopifyCredentials,
+    query: string,
+    variables: Record<string, unknown> = {},
+  ): Promise<T> {
+    const url = this.adminUrl(credentials, '/graphql.json');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'X-Shopify-Access-Token': credentials.adminToken,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const text = await response.text();
+    const body = parseJson(text);
+    const graphqlErrors = Array.isArray(body?.errors) ? body.errors : [];
+    if (!response.ok || graphqlErrors.length > 0) {
+      const providerMessage = extractShopifyError(body) ?? text.trim().slice(0, 240);
+      throw new ShopifyAdminApiError(
+        `Shopify Admin GraphQL failed with ${response.status}${providerMessage ? `: ${providerMessage}` : ''}`,
+        response.status,
+        typeof body?.errors === 'string' ? body.errors : undefined,
+      );
+    }
+    return ((body?.data && typeof body.data === 'object') ? body.data : {}) as T;
+  }
+
   private async getPage<T>(
     credentials: ShopifyCredentials,
     path: string,

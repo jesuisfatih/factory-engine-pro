@@ -59,16 +59,51 @@ export class SegmentsRepository {
 
   listCustomers() {
     return this.prisma.db.customer.findMany({
-      include: { insight: true },
+      include: {
+        insight: true,
+        customerUsers: {
+          include: { roleAssignments: { include: { role: true } } },
+        },
+      },
       orderBy: [{ totalSpent: 'desc' }, { updatedAt: 'desc' }],
-      take: 5000,
     });
   }
 
   findCustomerById(customerId: string) {
     return this.prisma.db.customer.findFirst({
       where: { id: customerId },
-      include: { insight: true },
+      include: {
+        insight: true,
+        customerUsers: {
+          include: { roleAssignments: { include: { role: true } } },
+        },
+      },
+    });
+  }
+
+  listOrdersSince(since: Date | null) {
+    return this.prisma.db.commerceOrder.findMany({
+      where: since ? { OR: [{ processedAt: { gte: since } }, { createdAt: { gte: since } }] } : {},
+      select: {
+        id: true,
+        customerId: true,
+        shopifyCustomerId: true,
+        totalPrice: true,
+        lineItems: true,
+        processedAt: true,
+        createdAt: true,
+      },
+      orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  listProducts() {
+    return this.prisma.db.catalogProduct.findMany({
+      select: {
+        shopifyProductId: true,
+        tags: true,
+        collections: true,
+      },
     });
   }
 
@@ -96,6 +131,13 @@ export class SegmentsRepository {
     });
   }
 
+  listMembershipCustomerIds(segmentId: string) {
+    return this.prisma.db.segmentCustomerMembership.findMany({
+      where: { segmentId },
+      select: { customerId: true },
+    });
+  }
+
   async replaceMemberships(segmentId: string, customerIds: string[]) {
     await this.prisma.db.segmentCustomerMembership.deleteMany({ where: { segmentId } });
     if (customerIds.length > 0) {
@@ -113,6 +155,86 @@ export class SegmentsRepository {
       where: { id: segmentId },
       data: { customerCount: customerIds.length, lastEvaluatedAt: new Date() },
     });
+  }
+
+  async syncAssignmentHistory(segment: {
+    id: string;
+    name: string;
+    lifecycleStage: string | null;
+  }, matchedCustomerIds: string[], metricsByCustomer: Map<string, Record<string, unknown>>) {
+    const tenantId = this.tenantId();
+    const now = new Date();
+    const uniqueMatched = Array.from(new Set(matchedCustomerIds));
+    await this.prisma.db.segmentCustomerAssignment.updateMany({
+      where: { segmentId: segment.id, customerId: { notIn: uniqueMatched } },
+      data: {
+        isMatched: false,
+        isCurrent: false,
+        lastEvaluatedAt: now,
+      },
+    });
+    for (const customerId of uniqueMatched) {
+      await this.prisma.db.segmentCustomerAssignment.upsert({
+        where: { tenantId_customerId_segmentId: { tenantId, customerId, segmentId: segment.id } },
+        create: {
+          id: prefixedId('sasg'),
+          tenantId,
+          customerId,
+          segmentId: segment.id,
+          segmentName: segment.name,
+          lifecycleStage: segment.lifecycleStage,
+          isMatched: true,
+          isCurrent: false,
+          firstMatchedAt: now,
+          lastMatchedAt: now,
+          lastEvaluatedAt: now,
+          matchCount: 1,
+          metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
+        },
+        update: {
+          segmentName: segment.name,
+          lifecycleStage: segment.lifecycleStage,
+          isMatched: true,
+          lastMatchedAt: now,
+          lastEvaluatedAt: now,
+          matchCount: { increment: 1 },
+          metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
+        },
+      });
+    }
+    await this.refreshCurrentAssignments();
+  }
+
+  private async refreshCurrentAssignments() {
+    const tenantId = this.tenantId();
+    const rows = await this.prisma.db.segmentCustomerAssignment.findMany({
+      where: { isMatched: true },
+      include: { segment: { select: { priorityGlobal: true, priority: true } } },
+      orderBy: [{ lastMatchedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const currentByCustomer = new Map<string, string>();
+    for (const row of rows) {
+      const existingId = currentByCustomer.get(row.customerId);
+      if (!existingId) {
+        currentByCustomer.set(row.customerId, row.id);
+        continue;
+      }
+      const existing = rows.find((candidate) => candidate.id === existingId);
+      const existingPriority = (existing?.segment.priorityGlobal ?? existing?.segment.priority ?? 0);
+      const nextPriority = row.segment.priorityGlobal ?? row.segment.priority ?? 0;
+      if (nextPriority > existingPriority) currentByCustomer.set(row.customerId, row.id);
+    }
+    const currentIds = Array.from(currentByCustomer.values());
+    await this.prisma.db.segmentCustomerAssignment.updateMany({
+      where: currentIds.length ? { tenantId, id: { notIn: currentIds } } : { tenantId },
+      data: { isCurrent: false },
+    });
+    if (currentIds.length > 0) {
+      await this.prisma.db.segmentCustomerAssignment.updateMany({
+        where: { tenantId, id: { in: currentIds } },
+        data: { isCurrent: true },
+      });
+    }
   }
 
   async upsertMembership(segmentId: string, customerId: string) {

@@ -114,8 +114,12 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
     fields: [
       { id: 'companyStatus', label: 'Customer status', type: 'string' },
       { id: 'companyName', label: 'Company name', type: 'string' },
+      { id: 'companyGroup', label: 'Company group', type: 'string' },
       { id: 'companyEmail', label: 'Company email', type: 'string' },
       { id: 'companyPhone', label: 'Company phone', type: 'string' },
+      { id: 'companyTaxId', label: 'Tax ID', type: 'string' },
+      { id: 'currentLifecycleStage', label: 'Lifecycle stage', type: 'string' },
+      { id: 'teamCount', label: 'Team count', type: 'number' },
     ],
   },
   {
@@ -123,15 +127,26 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
     fields: [
       { id: 'companyEmail', label: 'Contact email', type: 'string' },
       { id: 'companyPhone', label: 'Contact phone', type: 'string' },
+      { id: 'companyUserRole', label: 'Customer user role', type: 'array' },
+      { id: 'companyUserIsActive', label: 'Customer user active', type: 'boolean' },
     ],
   },
   {
     id: 'shopify',
     fields: [
       { id: 'shopifyCustomerTags', label: 'Shopify tags', type: 'array' },
+      { id: 'shopifyCustomerSegmentIds', label: 'Shopify segment', type: 'array' },
+      { id: 'shopifyCustomerAcceptsMarketing', label: 'Accepts marketing', type: 'boolean' },
+      { id: 'shopifyCustomerState', label: 'Shopify state', type: 'string' },
+      { id: 'shopifyCustomerLocale', label: 'Shopify locale', type: 'string' },
+      { id: 'shopifyCustomerOrdersCount', label: 'Shopify orders', type: 'number' },
+      { id: 'shopifyCustomerTotalSpent', label: 'Shopify total spent', type: 'number' },
       { id: 'totalRevenue', label: 'Total revenue', type: 'number' },
       { id: 'totalOrders', label: 'Total orders', type: 'number' },
       { id: 'avgOrderValue', label: 'Average order value', type: 'number' },
+      { id: 'periodRevenue', label: 'Period revenue', type: 'number' },
+      { id: 'periodOrders', label: 'Period orders', type: 'number' },
+      { id: 'periodQuantity', label: 'Period quantity', type: 'number' },
     ],
   },
   {
@@ -142,6 +157,13 @@ export const FIELD_GROUPS: Array<{ id: FieldGroup; fields: Array<{ id: SegmentFi
       { id: 'churnRisk', label: 'Churn risk', type: 'string' },
       { id: 'lifecycle', label: 'Lifecycle / RFM segment', type: 'string' },
       { id: 'clvTier', label: 'CLV tier', type: 'string' },
+      { id: 'buyerIntent', label: 'Buyer intent', type: 'string' },
+      { id: 'segment', label: 'Behavior segment', type: 'string' },
+      { id: 'engagementScore', label: 'Engagement score', type: 'number' },
+      { id: 'upsellPotential', label: 'Upsell potential', type: 'number' },
+      { id: 'totalSessions', label: 'Total sessions', type: 'number' },
+      { id: 'totalProductViews', label: 'Product views', type: 'number' },
+      { id: 'totalAddToCarts', label: 'Add to carts', type: 'number' },
     ],
   },
 ];
@@ -291,11 +313,12 @@ export async function previewSegment(input: { rules: SegmentRule[]; matchMode: '
   const payload: PreviewSegmentInput = { matchMode: input.matchMode, conditions: input.rules.map(toSegmentCondition) };
   const preview = asRecord(await adminApi.previewSegment(payload));
   const summary = asRecord(preview.summary);
+  const breakdown = asRecord(preview.breakdown);
   const matches = Array.isArray(preview.matches) ? preview.matches.map(asRecord) : [];
   return {
-    matchedCompanies: numberValue(summary.matchCount),
-    shopifyCustomers: numberValue(summary.matchCount),
-    unlinkedShopifyCustomers: Math.max(0, numberValue(summary.totalCustomers) - numberValue(summary.matchCount)),
+    matchedCompanies: numberValue(summary.matchedCustomers ?? summary.matchCount),
+    shopifyCustomers: numberValue(breakdown.shopifyCustomers ?? summary.matchedShopifyCustomers ?? summary.totalShopifyCustomers),
+    unlinkedShopifyCustomers: numberValue(breakdown.unlinkedShopifyCustomers ?? summary.unlinkedShopifyCustomers),
     sampleNames: matches.slice(0, 8).map((row) => stringValue(row.companyName || row.name || row.email)).filter(Boolean),
   };
 }

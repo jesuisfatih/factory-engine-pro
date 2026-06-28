@@ -75,6 +75,9 @@ model Tenant {
   segments                Segment[]
   segmentOwnerships       SegmentOwnership[]
   segmentCustomerMemberships SegmentCustomerMembership[]
+  shopifyCustomerSegments ShopifyCustomerSegment[]
+  shopifyCustomerSegmentMembers ShopifyCustomerSegmentMember[]
+  segmentCustomerAssignments SegmentCustomerAssignment[]
   serviceRequests         ServiceRequest[]
   serviceRequestComments  ServiceRequestComment[]
   b2bAccessRequests       B2BAccessRequest[]
@@ -241,6 +244,7 @@ model Customer {
   assignmentAudits CustomerAssignmentAudit[]
   pricingRules  PricingRule[]
   segmentMemberships SegmentCustomerMembership[]
+  segmentAssignments SegmentCustomerAssignment[]
   serviceRequests ServiceRequest[]
   workflowRuleCooldowns WorkflowRuleCooldown[]
 
@@ -765,6 +769,7 @@ model Segment {
   tenant      Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   memberships SegmentCustomerMembership[]
   ownerships  SegmentOwnership[]
+  customerAssignments SegmentCustomerAssignment[]
 
   @@index([tenantId, isActive])
   @@index([tenantId, priority])
@@ -813,6 +818,77 @@ model SegmentCustomerMembership {
   @@index([tenantId, customerId])
   @@index([tenantId, segmentId])
   @@map("segment_customer_memberships")
+}
+
+model ShopifyCustomerSegment {
+  id               String    @id
+  tenantId         String    @map("tenant_id")
+  shopifySegmentId String    @map("shopify_segment_id")
+  name             String
+  query            String    @db.Text
+  customerCount    Int?      @map("customer_count")
+  lastSeenAt       DateTime  @default(now()) @map("last_seen_at")
+  lastSyncedAt     DateTime? @map("last_synced_at")
+  syncStatus       String    @default("pending") @map("sync_status")
+  syncError        String?   @map("sync_error") @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members ShopifyCustomerSegmentMember[]
+
+  @@unique([tenantId, shopifySegmentId])
+  @@index([tenantId, lastSeenAt])
+  @@index([tenantId, syncStatus])
+  @@map("shopify_customer_segments")
+}
+
+model ShopifyCustomerSegmentMember {
+  id                  String   @id
+  tenantId            String   @map("tenant_id")
+  shopifySegmentRefId String   @map("shopify_segment_ref_id")
+  shopifySegmentId    String   @map("shopify_segment_id")
+  shopifyCustomerId   String   @map("shopify_customer_id")
+  snapshotAt          DateTime @default(now()) @map("snapshot_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  segment ShopifyCustomerSegment @relation(fields: [shopifySegmentRefId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, shopifySegmentId, shopifyCustomerId])
+  @@index([tenantId, shopifySegmentRefId])
+  @@index([tenantId, shopifyCustomerId])
+  @@map("shopify_customer_segment_members")
+}
+
+model SegmentCustomerAssignment {
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  customerId      String    @map("customer_id")
+  segmentId       String    @map("segment_id")
+  segmentName     String    @map("segment_name")
+  lifecycleStage  String?   @map("lifecycle_stage")
+  isMatched       Boolean   @default(true) @map("is_matched")
+  isCurrent       Boolean   @default(false) @map("is_current")
+  source          String    @default("segment_evaluator")
+  firstMatchedAt  DateTime  @default(now()) @map("first_matched_at")
+  lastMatchedAt   DateTime? @map("last_matched_at")
+  lastEvaluatedAt DateTime  @default(now()) @map("last_evaluated_at")
+  matchCount      Int       @default(1) @map("match_count")
+  metricsSnapshot Json      @default("{}") @map("metrics_snapshot")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  segment  Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, customerId, segmentId])
+  @@index([tenantId, customerId, isMatched])
+  @@index([tenantId, segmentId, isMatched])
+  @@index([tenantId, isCurrent])
+  @@map("segment_customer_assignments")
 }
 
 model ServiceRequest {

@@ -29,6 +29,9 @@ const TENANT_SCOPED_MODELS = new Set([
   'Segment',
   'SegmentOwnership',
   'SegmentCustomerMembership',
+  'ShopifyCustomerSegment',
+  'ShopifyCustomerSegmentMember',
+  'SegmentCustomerAssignment',
   'ServiceRequest',
   'TaskParticipant',
   'ServiceRequestComment',
@@ -54,6 +57,9 @@ const TENANT_SCOPED_MODELS = new Set([
   'ShopifySyncState',
   'SyncLog',
   'WorkflowRule',
+  'WorkflowRuleExecution',
+  'WorkflowRuleCooldown',
+  'WorkflowRuleVersion',
   'WorkflowRuleBackfillReport',
 ]);
 

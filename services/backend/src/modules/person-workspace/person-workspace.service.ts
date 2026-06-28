@@ -62,6 +62,7 @@ const serviceRequestInclude = {
   },
   customerUser: true,
   assignedMember: true,
+  participants: true,
   comments: { orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.ServiceRequestInclude;
 
@@ -143,23 +144,6 @@ export class PersonWorkspaceService {
     const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
     const config = await this.urgencyConfig();
 
-    if (visibleCustomerIds.length === 0) {
-      return {
-        summary: {
-          dailyCount: 0,
-          priorityCount: 0,
-          pinnedCount: 0,
-          highUrgencyCount: 0,
-          visibleAxes,
-          segmentGroupCount: 0,
-        },
-        dailyCallList: [],
-        priorityKanban: [],
-        pinBoard: [],
-        segmentGroups: [],
-      };
-    }
-
     const [segmentOwnerships, memberships, requestRows, customerPinRows] = await Promise.all([
       this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
@@ -187,8 +171,9 @@ export class PersonWorkspaceService {
       this.prisma.db.serviceRequest.findMany({
         where: {
           OR: [
-            { customerId: { in: visibleCustomerIds } },
-            { customerId: null, assignedMemberId: member.id },
+            ...(visibleCustomerIds.length > 0 ? [{ customerId: { in: visibleCustomerIds } }] : []),
+            { assignedMemberId: member.id },
+            { participants: { some: { memberId: member.id } } },
           ],
         },
         include: serviceRequestInclude,
@@ -198,9 +183,13 @@ export class PersonWorkspaceService {
       this.customerPins(member.id, visibleCustomerIds),
     ]);
 
+    const contextCustomerIds = uniqueStrings([
+      ...visibleCustomerIds,
+      ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
+    ]);
     const [repeatCounts, cardContext] = await Promise.all([
-      this.repeatCounts(visibleCustomerIds),
-      this.cardContext(visibleCustomerIds),
+      this.repeatCounts(contextCustomerIds),
+      this.cardContext(contextCustomerIds),
     ]);
     const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
@@ -1285,7 +1274,15 @@ export class PersonWorkspaceService {
     }
   }
 
-  private isServiceRequestScoped(row: { customerId: string | null; assignedMemberId: string | null; axis: string | null }, assignments: AxisAssignments, memberId: string) {
+  private isServiceRequestScoped(
+    row: { customerId: string | null; assignedMemberId: string | null; axis: string | null; participants?: Array<{ memberId: string | null }> },
+    assignments: AxisAssignments,
+    memberId: string,
+  ) {
+    if (row.assignedMemberId === memberId) return true;
+    if (Array.isArray(row.participants) && row.participants.some((participant) => participant.memberId === memberId)) {
+      return true;
+    }
     if (!row.customerId) return row.assignedMemberId === memberId;
     const axes = assignments.get(row.customerId);
     if (!axes) return false;
