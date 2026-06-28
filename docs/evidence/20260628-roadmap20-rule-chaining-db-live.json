@@ -1,0 +1,159 @@
+{
+  "runId": "roadmap20-20260628135130",
+  "checkedAt": "2026-06-28T13:52:51.715Z",
+  "migration": [
+    {
+      "migrationName": "202606289_service_request_due_at",
+      "finishedAt": "2026-06-28T13:45:24.474Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "sr_sxxs75agi2hxre7oxyx2kemp",
+      "title": "Roadmap 20 overdue proof roadmap20-20260628135130",
+      "status": "open",
+      "priority": "critical",
+      "dueAt": "2026-06-28T12:51:31.728Z",
+      "closedAt": null,
+      "workflow": {
+        "escalated": true,
+        "escalationEvents": [
+          {
+            "at": "2026-06-28T13:51:31.489Z",
+            "eventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z"
+          }
+        ],
+        "escalationReason": "Roadmap 20 overdue escalation"
+      },
+      "metadata": {
+        "category": "roadmap20",
+        "workflow": {
+          "escalated": true,
+          "escalationEvents": [
+            {
+              "at": "2026-06-28T13:51:31.489Z",
+              "eventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z"
+            }
+          ],
+          "escalationReason": "Roadmap 20 overdue escalation"
+        },
+        "proofRunId": "roadmap20-20260628135130",
+        "ticketNumber": "SR-MQXUKQUH"
+      },
+      "updatedAt": "2026-06-28T13:51:31.490Z"
+    },
+    {
+      "id": "sr_h6hhvp4300zajh06bnaa1rio",
+      "title": "Roadmap 20 completed proof roadmap20-20260628135130",
+      "status": "closed",
+      "priority": "low",
+      "dueAt": null,
+      "closedAt": "2026-06-28T13:51:32.096Z",
+      "workflow": null,
+      "metadata": {
+        "category": "roadmap20",
+        "proofRunId": "roadmap20-20260628135130",
+        "ticketNumber": "SR-MQXUKRHQ"
+      },
+      "updatedAt": "2026-06-28T13:51:32.110Z"
+    }
+  ],
+  "executions": [
+    {
+      "id": "wrex_ey9k4hjhf8weunplougn7ajo",
+      "eventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z",
+      "trigger": "task.overdue",
+      "status": "actions_applied",
+      "taskIds": [],
+      "rule": {
+        "id": "wrule_m33ws180omxs9r774ikftrjz",
+        "name": "Roadmap 20 overdue escalation proof roadmap20-20260628135130",
+        "trigger": "task.overdue",
+        "status": "archived"
+      },
+      "result": {
+        "ruleId": "wrule_m33ws180omxs9r774ikftrjz",
+        "status": "actions_applied",
+        "taskIds": [],
+        "cooldown": {
+          "hours": 0,
+          "limit": 1,
+          "disabled": true,
+          "customerId": null,
+          "lastFiredAt": null,
+          "currentCount": 0,
+          "nextEligibleAt": null,
+          "windowStartedAt": null
+        },
+        "ruleName": "Roadmap 20 overdue escalation proof roadmap20-20260628135130",
+        "whenTrace": [],
+        "actionTrace": [
+          {
+            "action": "escalate",
+            "status": "applied",
+            "message": "Escalated service request priority and workflow metadata.",
+            "actionId": "act-roadmap20-20260628135130-escalate",
+            "targetId": "sr_sxxs75agi2hxre7oxyx2kemp",
+            "targetType": "service_request"
+          }
+        ],
+        "executionMode": "active",
+        "conditionTrace": [],
+        "shortCircuited": false
+      },
+      "firstSeenAt": "2026-06-28T13:51:31.479Z",
+      "updatedAt": "2026-06-28T13:51:31.497Z"
+    },
+    {
+      "id": "wrex_pnm5usb7lm7caqgfixol1qfx",
+      "eventId": "task.completed:sr_h6hhvp4300zajh06bnaa1rio:2026-06-28T13:51:32.096Z",
+      "trigger": "task.completed",
+      "status": "no_op",
+      "taskIds": [],
+      "rule": {
+        "id": "wrule_sp1ew48brgt1xz23fjy4xp6n",
+        "name": "Roadmap 20 completed chain proof roadmap20-20260628135130",
+        "trigger": "task.completed",
+        "status": "archived"
+      },
+      "result": {
+        "ruleId": "wrule_sp1ew48brgt1xz23fjy4xp6n",
+        "status": "no_op",
+        "taskIds": [],
+        "cooldown": {
+          "hours": 0,
+          "limit": 1,
+          "disabled": true,
+          "customerId": null,
+          "lastFiredAt": null,
+          "currentCount": 0,
+          "nextEligibleAt": null,
+          "windowStartedAt": null
+        },
+        "ruleName": "Roadmap 20 completed chain proof roadmap20-20260628135130",
+        "whenTrace": [],
+        "actionTrace": [
+          {
+            "action": "no-op",
+            "status": "applied",
+            "message": "Roadmap 20 completed lifecycle fired",
+            "actionId": "act-roadmap20-20260628135130-noop",
+            "targetType": "audit"
+          }
+        ],
+        "executionMode": "active",
+        "conditionTrace": [],
+        "shortCircuited": false
+      },
+      "firstSeenAt": "2026-06-28T13:51:32.120Z",
+      "updatedAt": "2026-06-28T13:51:32.124Z"
+    }
+  ],
+  "assertions": {
+    "migrationApplied": true,
+    "overdueTaskCritical": true,
+    "overdueWorkflowEscalated": true,
+    "overdueExecutionApplied": true,
+    "completedExecutionSeen": true
+  }
+}

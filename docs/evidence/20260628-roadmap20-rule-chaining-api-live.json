@@ -1,0 +1,84 @@
+{
+  "runId": "roadmap20-20260628135130",
+  "requestId": "roadmap20-20260628135130-api-proof",
+  "checkedAt": "2026-06-28T13:51:33.419Z",
+  "actor": {
+    "tenantId": "ten_dtfbank",
+    "principalEmail": "info@dtfbank.com",
+    "principalType": "member"
+  },
+  "rules": {
+    "overdue": {
+      "id": "wrule_m33ws180omxs9r774ikftrjz",
+      "trigger": "task.overdue",
+      "action": "escalate",
+      "archivedStatus": "archived"
+    },
+    "completed": {
+      "id": "wrule_sp1ew48brgt1xz23fjy4xp6n",
+      "trigger": "task.completed",
+      "action": "no-op",
+      "archivedStatus": "archived"
+    }
+  },
+  "overdueTask": {
+    "id": "sr_sxxs75agi2hxre7oxyx2kemp",
+    "dueAt": "2026-06-28T12:51:31.728Z",
+    "before": {
+      "status": "open",
+      "priority": "medium",
+      "dueAt": "2026-06-28T12:51:31.728Z"
+    },
+    "sweepItem": {
+      "id": "sr_sxxs75agi2hxre7oxyx2kemp",
+      "title": "Roadmap 20 overdue proof roadmap20-20260628135130",
+      "status": "open",
+      "priority": "medium",
+      "dueAt": "2026-06-28T12:51:31.728Z",
+      "eventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z",
+      "evaluatedRules": 1,
+      "tasksCreated": 0,
+      "resultStatuses": [
+        "actions_applied"
+      ]
+    },
+    "after": {
+      "status": "open",
+      "priority": "critical",
+      "dueAt": "2026-06-28T12:51:31.728Z",
+      "metadata": {
+        "category": "roadmap20",
+        "workflow": {
+          "escalated": true,
+          "escalationEvents": [
+            {
+              "at": "2026-06-28T13:51:31.489Z",
+              "eventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z"
+            }
+          ],
+          "escalationReason": "Roadmap 20 overdue escalation"
+        },
+        "proofRunId": "roadmap20-20260628135130",
+        "ticketNumber": "SR-MQXUKQUH"
+      }
+    }
+  },
+  "completedTask": {
+    "id": "sr_h6hhvp4300zajh06bnaa1rio",
+    "status": "closed",
+    "closedAt": "2026-06-28T13:51:32.096Z"
+  },
+  "sweep": {
+    "checkedAt": "2026-06-28T13:51:32.145Z",
+    "scanned": 1,
+    "overdue": 1,
+    "fired": 1,
+    "skipped": 0
+  },
+  "assertions": {
+    "overdueRuleEvaluated": true,
+    "overdueEscalatedPriority": true,
+    "overdueSweepEventId": "task.overdue:sr_sxxs75agi2hxre7oxyx2kemp:2026-06-28T12:51:31.728Z",
+    "completedTaskClosed": true
+  }
+}
