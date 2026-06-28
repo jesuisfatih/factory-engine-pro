@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-06-28T05:25:01.200812+00:00",
+  "appUrl": "https://app.dtfbank.com/settings/ai/health",
+  "screenshot": "docs/evidence/roadmap3-ai-health-live-bound-20260628.png",
+  "assertions": {
+    "providerVisible": true,
+    "resolverProbeVisible": true,
+    "promptRegistryVisible": true,
+    "liveErrorVisible": true,
+    "requestIdVisible": true,
+    "noStubCopyVisible": true
+  },
+  "aiNetwork": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/resolver-prompt",
+      "status": 200,
+      "body": "{\"promptKey\":\"ai.transcript-resolver\",\"promptVersion\":\"2026-06-28.1\",\"prompt\":\"You are FactoryEngine transcript resolver.\\nUse only these psych_tags: angry, purchase_intent, shipping_issue, refund_intent, complaint, info_request, follow_up, satisfied\\nUse only these call_intents: sale, support, inquiry, complaint, follow_up\\nUse only these urgency_levels: low, medium, high, critical\\nResolver-backed conditions: call_intent, psych_tag_includes, product_mentioned, previous_purchase_includes, segment_member, call_count_in_window, is_first_call, customer_ltv_gte, order_count_in_window, last_order_age_lte, open_task_exists_for_intent, axis_primary_is, time_of_day_in_range, day_of_week\\nReturn JSON only. Do not invent enum values.\"}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/health",
+      "status": 200,
+      "body": "{\"provider\":\"anthropic\",\"credentialRequired\":false,\"configured\":true,\"reachable\":true,\"status\":\"ok\",\"source\":\"tenant_config\",\"latencyMs\":184,\"checkedAt\":\"2026-06-28T05:24:57.911Z\",\"modelCount\":1,\"error\":null}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/transcript-resolver/test",
+      "status": 400,
+      "body": "{\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\",\"code\":\"anthropic_resolver_failed\",\"request_id\":\"ee6d067c-f6ed-4889-97de-2e1baed2d016\"}"
+    }
+  ]
+}
