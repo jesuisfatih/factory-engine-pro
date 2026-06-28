@@ -43,7 +43,7 @@ export class AiService {
     }
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/models?limit=1', {
+      const response = await fetch('https://api.anthropic.com/v1/models?limit=20', {
         headers: {
           'x-api-key': credentials.key,
           'anthropic-version': '2023-06-01',
