@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
-import { SHOPIFY_SYNC_QUEUE } from '../../shared/queue.module.js';
+import { SEGMENT_EVALUATION_JOB, SEGMENT_EVALUATION_QUEUE, SHOPIFY_SYNC_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { classifyFulfillment } from '../orders/order-fulfillment-classifier.js';
 import { SegmentsService } from '../segments/segments.service.js';
@@ -37,6 +37,7 @@ export class SyncService {
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
     @Inject(SHOPIFY_SYNC_QUEUE) private readonly syncQueue: Queue | null,
+    @Inject(SEGMENT_EVALUATION_QUEUE) private readonly segmentQueue: Queue | null,
   ) {}
 
   async status(): Promise<ShopifySyncStatus> {
@@ -520,6 +521,20 @@ export class SyncService {
 
   private async evaluateCustomerSegments(customerId: string, source: string) {
     try {
+      if (this.segmentQueue) {
+        const tenantId = this.tenantId();
+        const job = await this.segmentQueue.add(
+          SEGMENT_EVALUATION_JOB,
+          { tenantId, customerId, source },
+          { attempts: 3, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 500, removeOnFail: 500 },
+        );
+        this.logger.log('shopify', 'segment_evaluation_queued', 'Shopify sync queued customer segment evaluation', {
+          customer_id: customerId,
+          source,
+          job_id: job.id,
+        });
+        return;
+      }
       const result = await this.segments.evaluateForCustomer(customerId);
       this.logger.log('shopify', 'segment_evaluation_completed', 'Shopify sync evaluated customer segments', {
         customer_id: customerId,

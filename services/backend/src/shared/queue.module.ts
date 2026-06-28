@@ -9,8 +9,11 @@ export const MAIL_OUTBOUND_QUEUE = Symbol('MAIL_OUTBOUND_QUEUE');
 export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE');
 export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
+export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
 export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
+export const SEGMENT_EVALUATION_QUEUE_NAME = 'segment-evaluation';
+export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
 
 @Global()
 @Module({
@@ -72,8 +75,25 @@ export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
         return new Queue('shopify-sync', { connection });
       },
     },
+    {
+      provide: SEGMENT_EVALUATION_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(SEGMENT_EVALUATION_QUEUE_NAME, { connection });
+      },
+    },
   ],
-  exports: [REDIS_CONNECTION, AUTH_EVENTS_QUEUE, PRICING_RULE_SYNC_QUEUE, MAIL_OUTBOUND_QUEUE, AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_QUEUE, SHOPIFY_SYNC_QUEUE],
+  exports: [
+    REDIS_CONNECTION,
+    AUTH_EVENTS_QUEUE,
+    PRICING_RULE_SYNC_QUEUE,
+    MAIL_OUTBOUND_QUEUE,
+    AIRCALL_INGEST_QUEUE,
+    AI_TRANSCRIPT_RESOLVER_QUEUE,
+    SHOPIFY_SYNC_QUEUE,
+    SEGMENT_EVALUATION_QUEUE,
+  ],
 })
 export class QueueModule {}
 
