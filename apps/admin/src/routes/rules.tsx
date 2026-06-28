@@ -35,6 +35,7 @@ import type {
   WorkflowAction,
   WorkflowCondition,
   WorkflowEnumCatalogResponse,
+  WorkflowRuleDefinition,
   WorkflowRuleDto,
   WorkflowTrigger,
 } from '@factory-engine-pro/contracts';
@@ -80,6 +81,7 @@ interface TriggerNodeData extends Record<string, unknown> {
 interface ConditionNodeData extends Record<string, unknown> {
   catalog: WorkflowEnumCatalogResponse;
   condition: RuleDraftCondition;
+  groupLabel?: string;
   onEdit: (next: RuleDraftCondition) => void;
   onDelete: () => void;
 }
@@ -170,6 +172,7 @@ function ConditionNode({ data }: NodeProps<Node<ConditionNodeData>>) {
           />
         </div>
       )}
+      {data.groupLabel && <div className="rule-node-title">{data.groupLabel}</div>}
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -299,26 +302,26 @@ function buildGraph(
     },
   }];
   const edges: Edge[] = [];
+  const conditions = conditionEntries(draft);
 
-  draft.when.forEach((condition, index) => {
+  conditions.forEach((entry, index) => {
+    const nodeId = conditionNodeId(entry);
     nodes.push({
-      id: `cond-${condition.id}`,
+      id: nodeId,
       type: 'condition',
       position: { x: 260, y: index * 145 + 30 },
       data: {
         catalog,
-        condition,
-        onEdit: (next: RuleDraftCondition) => onChange({
-          ...draft,
-          when: draft.when.map((entry) => entry.id === condition.id ? next : entry),
-        }),
-        onDelete: () => onChange({ ...draft, when: draft.when.filter((entry) => entry.id !== condition.id) }),
+        condition: entry.condition,
+        groupLabel: entry.groupId,
+        onEdit: (next: RuleDraftCondition) => onChange(updateConditionEntry(draft, entry, next)),
+        onDelete: () => onChange(removeConditionEntry(draft, entry)),
       },
     });
     edges.push({
-      id: `e-trigger-${condition.id}`,
+      id: `e-trigger-${nodeId}`,
       source: 'trigger',
-      target: `cond-${condition.id}`,
+      target: nodeId,
       animated: true,
       markerEnd: { type: MarkerType.ArrowClosed },
     });
@@ -340,7 +343,7 @@ function buildGraph(
       },
     });
 
-    if (draft.when.length === 0) {
+    if (conditions.length === 0) {
       edges.push({
         id: `e-trigger-${action.id}`,
         source: 'trigger',
@@ -349,10 +352,11 @@ function buildGraph(
         markerEnd: { type: MarkerType.ArrowClosed },
       });
     } else {
-      draft.when.forEach((condition) => {
+      conditions.forEach((entry) => {
+        const nodeId = conditionNodeId(entry);
         edges.push({
-          id: `e-${condition.id}-${action.id}`,
-          source: `cond-${condition.id}`,
+          id: `e-${nodeId}-${action.id}`,
+          source: nodeId,
           target: `act-${action.id}`,
           markerEnd: { type: MarkerType.ArrowClosed },
         });
@@ -361,6 +365,63 @@ function buildGraph(
   });
 
   return { nodes, edges };
+}
+
+interface ConditionEntry {
+  groupId?: string;
+  condition: RuleDraftCondition;
+}
+
+function conditionEntries(draft: RuleDraft): ConditionEntry[] {
+  if (draft.whenGroups.length > 0) {
+    return draft.whenGroups.flatMap((group) => group.conditions.map((condition) => ({ groupId: group.id, condition })));
+  }
+  return draft.when.map((condition) => ({ condition }));
+}
+
+function conditionNodeId(entry: ConditionEntry) {
+  return `cond-${entry.groupId ?? 'flat'}-${entry.condition.id}`;
+}
+
+function updateConditionEntry(draft: RuleDraft, entry: ConditionEntry, next: RuleDraftCondition): RuleDraft {
+  if (entry.groupId) {
+    return {
+      ...draft,
+      whenGroups: draft.whenGroups.map((group) => group.id === entry.groupId
+        ? { ...group, conditions: group.conditions.map((condition) => condition.id === entry.condition.id ? next : condition) }
+        : group),
+    };
+  }
+  return { ...draft, when: draft.when.map((condition) => condition.id === entry.condition.id ? next : condition) };
+}
+
+function removeConditionEntry(draft: RuleDraft, entry: ConditionEntry): RuleDraft {
+  if (entry.groupId) {
+    const whenGroups = draft.whenGroups
+      .map((group) => group.id === entry.groupId
+        ? { ...group, conditions: group.conditions.filter((condition) => condition.id !== entry.condition.id) }
+        : group)
+      .filter((group) => group.conditions.length > 0);
+    return { ...draft, whenGroups };
+  }
+  return { ...draft, when: draft.when.filter((condition) => condition.id !== entry.condition.id) };
+}
+
+function appendCondition(draft: RuleDraft, catalog: WorkflowEnumCatalogResponse): RuleDraft {
+  const condition = makeCondition(catalog);
+  if (draft.whenGroups.length > 0) {
+    const [first, ...rest] = draft.whenGroups;
+    return { ...draft, whenGroups: [{ ...first, conditions: [...first.conditions, condition] }, ...rest] };
+  }
+  return { ...draft, when: [...draft.when, condition] };
+}
+
+function conditionCount(definition: WorkflowRuleDefinition) {
+  return definition.when.length + (definition.whenGroups ?? []).reduce((sum, group) => sum + group.conditions.length, 0);
+}
+
+function whenGroupCount(definition: WorkflowRuleDefinition) {
+  return definition.whenGroups?.length ?? (definition.when.length > 0 ? 1 : 0);
 }
 
 function RulesView() {
@@ -522,7 +583,8 @@ function RulesView() {
                     {rule.definition.trigger}{' -> '}{rule.definition.actions.map((action) => action.action).join(' + ')}
                   </div>
                   <div className="rule-card-meta">
-                    <span>{rule.definition.when.length} conditions</span>
+                    <span>{conditionCount(rule.definition)} conditions</span>
+                    {whenGroupCount(rule.definition) > 1 && <span>{whenGroupCount(rule.definition)} WHEN groups</span>}
                     <span>{rule.composable ? 'composable' : 'single fire'}</span>
                   </div>
                 </button>
@@ -580,7 +642,7 @@ function RulesView() {
                   <span>Composable</span>
                 </label>
                 <span className={`pill ${LIFECYCLE_TONE[draft.status]}`}>{draft.status}</span>
-                <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, when: [...draft.when, makeCondition(catalog)] })}>
+                <button type="button" className="btn ghost" onClick={() => setDraft(appendCondition(draft, catalog))}>
                   <Plus size={12} /> Condition
                 </button>
                 <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, actions: [...draft.actions, makeAction(catalog)] })}>

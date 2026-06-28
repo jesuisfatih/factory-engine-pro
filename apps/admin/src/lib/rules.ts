@@ -27,6 +27,11 @@ export interface RuleDraftAction {
   value: string;
 }
 
+export interface RuleDraftWhenGroup {
+  id: string;
+  conditions: RuleDraftCondition[];
+}
+
 export interface RuleDraft {
   name: string;
   status: RuleLifecycle;
@@ -34,6 +39,7 @@ export interface RuleDraft {
   composable: boolean;
   trigger: WorkflowTrigger;
   when: RuleDraftCondition[];
+  whenGroups: RuleDraftWhenGroup[];
   actions: RuleDraftAction[];
 }
 
@@ -58,6 +64,7 @@ export function saveWorkflowRule(draft: RuleDraft, id?: string) {
       composable: draft.composable,
       trigger: draft.trigger,
       when: draft.when,
+      whenGroups: draft.whenGroups.length > 0 ? draft.whenGroups : undefined,
       actions: draft.actions,
     },
   };
@@ -76,6 +83,7 @@ export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
     composable: rule.definition.composable,
     trigger: rule.definition.trigger,
     when: rule.definition.when,
+    whenGroups: rule.definition.whenGroups ?? [],
     actions: rule.definition.actions,
   };
 }
@@ -88,6 +96,7 @@ export function makeRuleDraft(catalog: WorkflowEnumCatalogResponse): RuleDraft {
     composable: false,
     trigger: catalog.triggers[0]?.value ?? 'manual.trigger',
     when: [makeCondition(catalog)],
+    whenGroups: [],
     actions: [makeAction(catalog)],
   };
 }
