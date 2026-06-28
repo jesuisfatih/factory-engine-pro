@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-06-28T03:25:04.788Z",
+  "source": "old checkout backend/.env",
+  "keyHash": "b0cb6a60a43a",
+  "length": 108,
+  "modelsStatus": 401,
+  "messageStatus": null,
+  "ok": false,
+  "error": "invalid x-api-key"
+}
