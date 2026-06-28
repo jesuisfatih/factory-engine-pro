@@ -2,6 +2,8 @@ import type {
   AcceptInvitationInput,
   AccountAddressInput,
   AiHealthResponse,
+  TranscriptResolverTestInput,
+  TranscriptResolverTestResponse,
   AircallLinkUserInput,
   AircallNumbersResponse,
   AircallSyncLogsResponse,
@@ -562,6 +564,10 @@ export class ApiClient {
 
   aiResolverPrompt() {
     return this.get<{ promptKey: string; promptVersion: string; prompt: string }>('/ai/resolver-prompt');
+  }
+
+  aiTranscriptResolverTest(input: TranscriptResolverTestInput) {
+    return this.post<TranscriptResolverTestResponse>('/ai/transcript-resolver/test', input);
   }
 
   workflowEnumCatalog() {
