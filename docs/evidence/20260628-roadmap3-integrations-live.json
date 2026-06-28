@@ -1,0 +1,204 @@
+﻿{
+    "generatedAt":  "2026-06-28T08:37:43.350Z",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "appBase":  "https://app.dtfbank.com",
+    "tenantId":  "ten_dtfbank",
+    "buildSha":  "e5ae0fdb5289e0e1bf02e3c11c14977841f91058",
+    "tenantConfig":  {
+                         "shopifyDomain":  "eagle-dtf-print.myshopify.com",
+                         "hasShopifyAdminToken":  true,
+                         "hasAnthropicApiKey":  true,
+                         "hasAircallApiId":  true,
+                         "hasAircallApiToken":  true,
+                         "hasAircallWebhookSecret":  true
+                     },
+    "shopify":  {
+                    "trigger":  {
+                                    "message":  "Shopify initial sync queued.",
+                                    "batchId":  "f2916648-14c2-45a6-9f21-875391f8b52c",
+                                    "queued":  true,
+                                    "resources":  [
+                                                      "customers"
+                                                  ],
+                                    "syncLogIds":  [
+                                                       "slog_o9o3m1unz9regamwsi54xlu6"
+                                                   ]
+                                },
+                    "customerState":  {
+                                          "resource":  "customers",
+                                          "status":  "completed",
+                                          "isRunning":  false,
+                                          "lastCompletedAt":  "2026-06-28T08:39:19.886Z",
+                                          "lastFailedAt":  null,
+                                          "lastError":  null,
+                                          "totalRecordsSynced":  7494,
+                                          "lastRunRecords":  7494,
+                                          "snapshotRecords":  13448,
+                                          "consecutiveFailures":  0,
+                                          "lastCursor":  null,
+                                          "heartbeatAt":  "2026-06-28T08:39:19.886Z"
+                                      },
+                    "log":  {
+                                "id":  "slog_o9o3m1unz9regamwsi54xlu6",
+                                "action":  "initial.customers",
+                                "status":  "completed",
+                                "message":  "customers initial sync completed.",
+                                "startedAt":  "2026-06-28T08:37:43.797Z",
+                                "finishedAt":  "2026-06-28T08:39:19.891Z",
+                                "metadata":  {
+                                                 "pages":  30,
+                                                 "source":  "tenant_config",
+                                                 "resource":  "customers",
+                                                 "recordsProcessed":  7494
+                                             }
+                            },
+                    "completedWithout401":  true
+                },
+    "aircall":  {
+                    "syncSource":  "aircall_api",
+                    "usersSeen":  4,
+                    "membersSeen":  17,
+                    "targetMappings":  [
+                                           {
+                                               "email":  "info@dtfbank.com",
+                                               "memberId":  "tmbr_ten_dtfbank_info_owner",
+                                               "memberName":  "DTF Bank Owner",
+                                               "aircallUserId":  "1831111",
+                                               "aircallUserEmail":  "ibaysal@dtfbank.com",
+                                               "source":  "manual"
+                                           },
+                                           {
+                                               "email":  "dtfbanktx@gmail.com",
+                                               "memberId":  "tmbr_ten_dtfbank_linda_marroquin",
+                                               "memberName":  "Linda Marroquin",
+                                               "aircallUserId":  "1831312",
+                                               "aircallUserEmail":  "dtfbanktx@gmail.com",
+                                               "source":  "email_auto"
+                                           },
+                                           {
+                                               "email":  "charlette@dtfbank.com",
+                                               "memberId":  "tmbr_ten_dtfbank_charlette_boatman",
+                                               "memberName":  "Charlette Boatman",
+                                               "aircallUserId":  "1972780",
+                                               "aircallUserEmail":  "charlette@dtfbank.com",
+                                               "source":  "email_auto"
+                                           },
+                                           {
+                                               "email":  "ihsan@dtfbank.com",
+                                               "memberId":  "tmbr_ten_dtfbank_ihsan_taskiran",
+                                               "memberName":  "Ihsan Taskiran",
+                                               "aircallUserId":  "1831184",
+                                               "aircallUserEmail":  "ihsan@dtfbank.com",
+                                               "source":  "email_auto"
+                                           }
+                                       ],
+                    "mapCount":  4,
+                    "testCall":  {
+                                     "webhook":  {
+                                                     "accepted":  true,
+                                                     "status":  "queued"
+                                                 },
+                                     "testCallId":  "target3-live-1782635960600",
+                                     "inbox":  {
+                                                   "id":  "awin_h7kgpe3yr5qjvg3moeudh1za",
+                                                   "status":  "processed",
+                                                   "rejectionReason":  null,
+                                                   "processedAt":  "2026-06-28T08:39:20.714Z"
+                                               },
+                                     "call":  {
+                                                  "id":  "call_hkj1vv98l0onpoyqdhjwavr5",
+                                                  "aircallCallId":  "target3-live-1782635960600",
+                                                  "currentOperatorId":  "tmbr_ten_dtfbank_linda_marroquin",
+                                                  "status":  "closed",
+                                                  "transcriptRaw":  "Customer asked for the current order tracking status, mentioned a delayed shipment, and requested a same day follow up from support."
+                                              },
+                                     "linkedCorrectMember":  true,
+                                     "transcriptStored":  true
+                                 }
+                },
+    "anthropic":  {
+                      "provider":  "anthropic",
+                      "model":  "claude-haiku-4-5-20251001",
+                      "source":  "tenant_config",
+                      "promptKey":  "ai.transcript-resolver",
+                      "latencyMs":  2297,
+                      "checkedAt":  "2026-06-28T08:39:23.991Z",
+                      "outputKeys":  [
+                                         "customer_match",
+                                         "product_mentions",
+                                         "psych_tags",
+                                         "call_intent",
+                                         "shipping_signals",
+                                         "payment_signals",
+                                         "urgency_signal",
+                                         "competitor_mentioned",
+                                         "summary",
+                                         "language_detected",
+                                         "resolved_with_version"
+                                     ],
+                      "output":  {
+                                     "customer_match":  {
+                                                            "customer_id":  null,
+                                                            "phone":  "+15555553003",
+                                                            "name_hint":  "Jordan",
+                                                            "confidence":  0.6
+                                                        },
+                                     "product_mentions":  [
+                                                              {
+                                                                  "sku":  null,
+                                                                  "name_hint":  "DTF transfer",
+                                                                  "confidence":  0.8
+                                                              }
+                                                          ],
+                                     "psych_tags":  [
+                                                        "shipping_issue",
+                                                        "complaint",
+                                                        "angry"
+                                                    ],
+                                     "call_intent":  "support",
+                                     "shipping_signals":  {
+                                                              "address_mentioned":  false,
+                                                              "tracking_asked":  true,
+                                                              "complaint":  true
+                                                          },
+                                     "payment_signals":  {
+                                                             "method_mentioned":  false,
+                                                             "refund_asked":  false,
+                                                             "complaint":  true
+                                                         },
+                                     "urgency_signal":  "critical",
+                                     "competitor_mentioned":  [
+
+                                                              ],
+                                     "summary":  "Customer Jordan from Northstar Print Supply called regarding a delayed DTF transfer order. Requested tracking information and same-day callback. Customer is upset and threatened payment dispute if issue not resolved urgently.",
+                                     "language_detected":  "en",
+                                     "resolved_with_version":  1
+                                 }
+                  },
+    "runtime":  {
+                    "container":  "factoryengine-dtfbank-app",
+                    "pm2":  [
+                                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1132     │ 14m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1113     │ 14m    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1106     │ 14m    │ 0    │ online    │ 0%       │ 302.8mb  │ root     │ disabled │",
+                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1124     │ 14m    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+                            ],
+                    "logs":  [
+                                 "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:37:01 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"aircall-ingest-awin_jf1munxxz6thf5e2llyziwtq\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"aircall\",\"action\":\"resolver_job_queued\",\"message\":\"Transcript resolver job queued\",\"call_event_id\":\"acev_tdc9xuf58p2qm4rvzz11w74t\",\"external_call_id\":\"target3-live-1782635821161\"}\u001b[39m",
+                                 "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:37:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ai-transcript-resolver-aircall-transcript-ten_dtfbank-target3-live-1782635821161-acev_tdc9xuf58p2qm4rvzz11w74t\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"ai\",\"action\":\"transcript_resolved\",\"message\":\"Aircall transcript resolved into structured output\",\"call_event_id\":\"acev_tdc9xuf58p2qm4rvzz11w74t\",\"external_call_id\":\"target3-live-1782635821161\",\"model\":\"claude-haiku-4-5-20251001\",\"resolved_with_version\":1,\"latency_ms\":2206}\u001b[39m",
+                                 "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:39:19 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"shopify-sync-6\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"shopify\",\"action\":\"sync_completed\",\"message\":\"Shopify sync resource completed\",\"resource\":\"customers\",\"records_processed\":7494}\u001b[39m",
+                                 "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:39:20 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"aircall-ingest-awin_h7kgpe3yr5qjvg3moeudh1za\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"aircall\",\"action\":\"resolver_job_queued\",\"message\":\"Transcript resolver job queued\",\"call_event_id\":\"acev_hyumolkim4dfte6hunnx2ejf\",\"external_call_id\":\"target3-live-1782635960600\"}\u001b[39m",
+                                 "\u001b[32m[Nest] 1106  - \u001b[39m06/28/2026, 8:39:22 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ai-transcript-resolver-aircall-transcript-ten_dtfbank-target3-live-1782635960600-acev_hyumolkim4dfte6hunnx2ejf\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"ai\",\"action\":\"transcript_resolved\",\"message\":\"Aircall transcript resolved into structured output\",\"call_event_id\":\"acev_hyumolkim4dfte6hunnx2ejf\",\"external_call_id\":\"target3-live-1782635960600\",\"model\":\"claude-haiku-4-5-20251001\",\"resolved_with_version\":1,\"latency_ms\":1909}\u001b[39m"
+                             ],
+                    "assertions":  {
+                                       "logHasShopifySyncCompleted":  true,
+                                       "logHasNo401":  true,
+                                       "logHasAircallResolverQueued":  true,
+                                       "logHasTranscriptResolved":  true
+                                   }
+                }
+}

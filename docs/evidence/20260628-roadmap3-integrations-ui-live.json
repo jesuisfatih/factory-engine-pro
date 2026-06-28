@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-06-28T08:43:55.343119+00:00",
+  "appUrl": "https://app.dtfbank.com",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "routes": [
+    {
+      "key": "shopify",
+      "url": "https://app.dtfbank.com/settings/shopify",
+      "screenshot": "docs/evidence/roadmap3-integrations-shopify-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nShopify Admin API\nCustomers, orders, and products sync.\nRefresh\nSHOP DOMAIN\neagle-dtf-print.myshopify.com\nADMIN ACCESS TOKEN\nSaved\nAPI KEY\nSaved\nAPI SECRET\nSaved\nWEBHOOK HMAC SECRET\nSaved\nProvider credentials\nBlank secret fields keep the encrypted value currently stored for this tenant.\n SHOP DOMAIN\nADMIN ACCESS TOKEN\nAPI KEY\nAPI SECRET\nWEBHOOK HMAC SECRET\nLEAVE BLANK TO KEEP EXISTING ENCRYPTED VALUE\nSave\nRuntime check\nValidate the saved shop domain and Admin API token against Shopify before running sync.\nTest live connection\nCredentials are saved. Run a live Shopify Admin API check or start sync.\nInitial sync\nFull backfill for customers, products, and orders. Later webhook and delta sync use the same tenant snapshots.\nRefresh\nRun initial sync\nResource\tStatus\tSnapshot records\tLast run\tFailures\tLast completed\tError\nCustomers\tcompleted\t13448\t7494\t0\t28.06.2026 11:39\t-\nProducts\tcompleted\t304\t303\t0\t27.06.2026 22:55\t-\nOrders\tcompleted\t638\t637\t0\t27.06.2026 22:55\t-"
+    },
+    {
+      "key": "aircall_users",
+      "url": "https://app.dtfbank.com/settings/aircall/users",
+      "screenshot": "docs/evidence/roadmap3-integrations-aircall-users-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nMap Aircall users to sellerusers\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\n4 Aircall user4 linked0 unlinked\nAircall Sync\nAIRCALL USER\tEMAIL\tEXT\tSTATUS\tLINKED MEMBER\t\n\nIB\nIsmail Baysal\n\tibaysal@dtfbank.com\t001\tavailable\t\nDTF Bank Owner\t Unlink\n\nIT\nIhsan Taskiran\n\tihsan@dtfbank.com\t002\tavailable\t\nIhsan Taskiran\t Unlink\n\nLM\nLinda Marroquin\n\tdtfbanktx@gmail.com\t003\tavailable\t\nLinda Marroquin\t Unlink\n\nCB\nCharlette Boatman\n\tcharlette@dtfbank.com\t004\tavailable\t\nCharlette Boatman\t Unlink"
+    },
+    {
+      "key": "aircall_sync_logs",
+      "url": "https://app.dtfbank.com/settings/aircall/sync-logs",
+      "screenshot": "docs/evidence/roadmap3-integrations-aircall-sync-logs-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nRecent Aircall sync and health signals\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nAircall sync logs\nLatest health counts from the call ingestion pipeline.\nRefresh\nSource\tAction\tStatus\tMessage\tAt\naircall\tcalls.backfill_recent\tsuccess\tBackfilled 99/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:20\naircall\tcalls.backfill_recent\tpartial_success\tBackfilled 28/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:15\naircall\tcalls.backfill_recent\tpartial_success\tBackfilled 28/99 Aircall calls from the last 3 day(s).\t28.06.2026 10:10\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:16\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:16\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t28.06.2026 09:14\naircall\tnumbers.sync\tsuccess\tSynced 2 Aircall numbers.\t27.06.2026 22:53\nWebhook\tcall.ended\tprocessed\ttarget3-live-1782635960600\t28.06.2026 11:39\nWebhook\tcall.ended\tprocessed\ttarget3-live-1782635821161\t28.06.2026 11:37\nWebhook\tcall.ended\tprocessed\t3907454172\t28.06.2026 10:20\nWebhook\tcall.ended\tprocessed\t3907275322\t28.06.2026 10:20\nWebhook\tcall.ended\tprocessed\t3907273902\t28.06.20"
+    },
+    {
+      "key": "ai_health",
+      "url": "https://app.dtfbank.com/settings/ai/health",
+      "screenshot": "docs/evidence/roadmap3-integrations-ai-health-live-20260628.png",
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nHealth\nProvider keys, prompt registry, usage log, budget and per-service controls\nRefresh\nanthropic\nPROVIDER\ntenant_config\nCREDENTIAL\nreachable\nMODELS API\nready\nRESOLVER API\nProvider status\nOK\nSOURCE\ntenant_config\nMODEL LISTING\n8 model(s)\nRESOLVER MESSAGES\nok\nCHECKED\n28 Haz 2026 11:44\nLATENCY\n175ms\nTranscript resolver probe\nRun test\n\nUses the live tenant key and the real Anthropic messages API.\n\n{\n  \"customer_match\": {\n    \"customer_id\": null,\n    \"phone\": null,\n    \"name_hint\": null,\n    \"confidence\": 0\n  },\n  \"product_mentions\": [],\n  \"psych_tags\": [\n    \"shipping_issue\",\n    \"complaint\"\n  ],\n  \"call_intent\": \"support\",\n  \"shipping_signals\": {\n    \"address_mentioned\": false,\n    \"tracking_asked\": true,\n    \"complaint\": true\n  },\n  \"payment_signals\": {\n    \"method_mentioned\": false,\n    \"refund_asked\": false,\n    \"complaint\": false\n  },\n  \"urgency_signal\": \"critical\",\n  \"competitor_mentioned\": [],\n  \"summary\": \"Customer reported delayed shipment with no movement. Requested tracking informatio"
+    }
+  ],
+  "assertions": {
+    "shopify_ui_live_url": true,
+    "shopify_ui_shows_completed_customers": true,
+    "shopify_ui_no_visible_401": true,
+    "aircall_users_ui_live_url": true,
+    "aircall_users_ui_four_required_members_linked": true,
+    "aircall_sync_logs_ui_live_url": true,
+    "aircall_sync_logs_show_target3_processed_call": true,
+    "ai_health_ui_live_url": true,
+    "ai_health_ui_shows_ready_provider": true,
+    "ai_health_ui_shows_transcript_json": true
+  },
+  "summary": {
+    "shopifyTextHasDomain": true,
+    "aircallLinkedPeople": [
+      "DTF Bank Owner",
+      "Linda Marroquin",
+      "Charlette Boatman",
+      "Ihsan Taskiran"
+    ],
+    "aircallLogMentionsTarget3": true,
+    "aiHealthSnippet": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider c"
+  }
+}
