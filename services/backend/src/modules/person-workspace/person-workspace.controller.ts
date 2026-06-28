@@ -32,6 +32,12 @@ export class PersonWorkspaceController {
     return this.workspace.queue();
   }
 
+  @Get('daily-operations')
+  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  dailyOperations() {
+    return this.workspace.dailyOperations();
+  }
+
   @Patch('queue/:id/move')
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   moveQueueCard(
@@ -48,6 +54,15 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(togglePersonQueuePinSchema)) body: TogglePersonQueuePinInput,
   ) {
     return this.workspace.toggleQueuePin(id, body);
+  }
+
+  @Post('customers/:id/pin')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  toggleCustomerPin(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(togglePersonQueuePinSchema)) body: TogglePersonQueuePinInput,
+  ) {
+    return this.workspace.toggleCustomerPin(id, body);
   }
 
   @Get('customers')

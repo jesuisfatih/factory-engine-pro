@@ -3,7 +3,7 @@ import type { Card } from '../types';
 
 interface Props {
   pinned: Card[];
-  onUnpin: (id: string) => void;
+  onUnpin: (card: Card) => void;
 }
 
 export function PinPanel({ pinned, onUnpin }: Props) {
@@ -14,7 +14,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       cell: ({ row }) => (
         <>
           <div className="name">{row.original.title}</div>
-          <div className="seg">{row.original.segment} - U{row.original.urgencyScore}</div>
+          <div className="seg">{row.original.kind === 'customer' ? 'Customer' : 'Task'} - {row.original.segment} - U{row.original.urgencyScore}</div>
         </>
       ),
     },
@@ -24,7 +24,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       cell: ({ row }) => (
         <button
           type="button"
-          onClick={() => onUnpin(row.original.id)}
+          onClick={() => onUnpin(row.original)}
           className="pin-btn pinned"
           style={{ float: 'right' }}
         >

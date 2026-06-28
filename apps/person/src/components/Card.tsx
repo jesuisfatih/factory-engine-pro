@@ -1,5 +1,3 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { AlarmClockOff, Sparkles, Tags } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
@@ -23,18 +21,13 @@ const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: 
 };
 
 export function Card({ card, onTogglePin, onOpen }: Props) {
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id });
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   return (
     <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`card${isDragging ? ' dragging' : ''}`}
+      className="card"
       onClick={() => {
-        if (!isDragging) onOpen?.(card.id);
+        onOpen?.(card.id);
       }}
-      {...attributes}
-      {...listeners}
     >
       <div className="row1">
         <span className="title">{card.title}</span>

@@ -19,7 +19,10 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
-const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request']);
+const CUSTOMER_PIN_KIND = 'customer_pin';
+const CUSTOMER_PIN_SOURCE = 'manual_pin';
+const CUSTOMER_PIN_SURFACE = 'person_pin';
+const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request', CUSTOMER_PIN_KIND]);
 const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   unassigned: 'open',
   in_progress: 'in_progress',
@@ -44,6 +47,31 @@ type ServiceRequestRow = Prisma.ServiceRequestGetPayload<{
   include: typeof serviceRequestInclude;
 }>;
 
+type AxisAssignments = Map<string, Set<string>>;
+
+type SegmentMembershipRow = Prisma.SegmentCustomerMembershipGetPayload<{
+  include: {
+    segment: true;
+    customer: {
+      include: {
+        insight: true;
+        segmentMemberships: { include: { segment: true } };
+      };
+    };
+  };
+}>;
+
+type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
+  include: {
+    customer: {
+      include: {
+        insight: true;
+        segmentMemberships: { include: { segment: true } };
+      };
+    };
+  };
+}>;
+
 @Injectable()
 export class PersonWorkspaceService {
   constructor(
@@ -55,21 +83,16 @@ export class PersonWorkspaceService {
 
   async summary() {
     const member = await this.currentMember();
-    const [queueRows, customers, assigned, failedMail] = await Promise.all([
-      this.prisma.db.serviceRequest.findMany({
-        where: { status: { notIn: Array.from(CLOSED) } },
-        select: { metadata: true },
-        take: 5000,
-      }),
-      this.prisma.db.customer.count({ where: { status: 'active' } }),
+    const [operations, assigned, failedMail] = await Promise.all([
+      this.dailyOperationsFor(member),
       this.prisma.db.serviceRequest.count({
         where: { assignedMemberId: member.id, status: { notIn: Array.from(CLOSED) } },
       }),
       this.prisma.db.mailDelivery.count({ where: { status: 'failed' } }),
     ]);
     return {
-      queue: queueRows.filter((row) => this.isQueueVisible(row)).length,
-      customers,
+      queue: operations.summary.priorityCount,
+      customers: operations.summary.dailyCount,
       notifications: assigned + failedMail,
       assigned,
       failedMail,
@@ -78,12 +101,145 @@ export class PersonWorkspaceService {
 
   async queue() {
     const member = await this.currentMember();
+    return (await this.dailyOperationsFor(member)).priorityKanban;
+  }
+
+  async dailyOperations() {
+    const member = await this.currentMember();
+    return this.dailyOperationsFor(member);
+  }
+
+  private async dailyOperationsFor(member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>) {
+    const assignments = await this.axisAssignments(member.id);
+    const visibleCustomerIds = Array.from(assignments.keys());
+    const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
+    const config = await this.urgencyConfig();
+
+    if (visibleCustomerIds.length === 0) {
+      return {
+        summary: {
+          dailyCount: 0,
+          priorityCount: 0,
+          pinnedCount: 0,
+          highUrgencyCount: 0,
+          visibleAxes,
+          segmentGroupCount: 0,
+        },
+        dailyCallList: [],
+        priorityKanban: [],
+        pinBoard: [],
+        segmentGroups: [],
+      };
+    }
+
+    const [segmentOwnerships, memberships, requestRows, customerPinRows] = await Promise.all([
+      this.prisma.db.segmentOwnership.findMany({
+        where: { memberId: member.id },
+        include: { segment: true },
+        orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+        take: 100,
+      }),
+      this.prisma.db.segmentCustomerMembership.findMany({
+        where: {
+          customerId: { in: visibleCustomerIds },
+          segment: { ownerships: { some: { memberId: member.id } } },
+        },
+        include: {
+          segment: true,
+          customer: {
+            include: {
+              insight: true,
+              segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+            },
+          },
+        },
+        orderBy: [{ matchedAt: 'desc' }],
+        take: 5000,
+      }),
+      this.prisma.db.serviceRequest.findMany({
+        where: {
+          OR: [
+            { customerId: { in: visibleCustomerIds } },
+            { customerId: null, assignedMemberId: member.id },
+          ],
+        },
+        include: serviceRequestInclude,
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 500,
+      }),
+      this.customerPins(member.id, visibleCustomerIds),
+    ]);
+
+    const repeatCounts = await this.repeatCounts(visibleCustomerIds);
+    const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
+    const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
+    const dailyByCustomer = new Map<string, ReturnType<PersonWorkspaceService['dailyCallItem']>>();
+
+    const segmentGroups = segmentOwnerships.map((ownership) => {
+      const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
+      const items = segmentMemberships
+        .map((membership) => this.dailyCallItem(membership, ownership, assignments, config, repeatCounts.get(membership.customerId) ?? 0, customerPinsByCustomer.get(membership.customerId) ?? null))
+        .sort(sortDaily)
+        .slice(0, ownership.dailyCap ?? 100);
+
+      for (const item of items) {
+        const existing = dailyByCustomer.get(item.customerId);
+        if (!existing || item.urgencyScore > existing.urgencyScore) dailyByCustomer.set(item.customerId, item);
+      }
+
+      return {
+        segmentId: ownership.segment.id,
+        segmentName: ownership.segment.name,
+        segmentColor: ownership.segment.color,
+        priority: ownership.priority,
+        dailyCap: ownership.dailyCap,
+        totalCustomers: segmentMemberships.length,
+        items,
+      };
+    });
+
+    const scopedRows = requestRows
+      .filter((row) => this.isQueueVisible(row))
+      .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
+    const priorityKanban = scopedRows
+      .filter((row) => !CLOSED.has(row.status))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0))
+      .sort(sortByUrgency)
+      .slice(0, 120);
+    const pinnedTasks = scopedRows
+      .filter((row) => this.isTaskPinned(row, member.id))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0));
+    const pinnedCustomers = customerPinRows
+      .filter((row) => row.customer)
+      .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
+    const pinBoard = [...pinnedTasks, ...pinnedCustomers].sort(sortByUrgency).slice(0, 120);
+    const dailyCallList = Array.from(dailyByCustomer.values()).sort(sortDaily).slice(0, 150);
+
+    return {
+      summary: {
+        dailyCount: dailyCallList.length,
+        priorityCount: priorityKanban.length,
+        pinnedCount: pinBoard.length,
+        highUrgencyCount: uniqueHighUrgencyCount(dailyCallList, priorityKanban),
+        visibleAxes,
+        segmentGroupCount: segmentGroups.length,
+      },
+      dailyCallList,
+      priorityKanban,
+      pinBoard,
+      segmentGroups,
+    };
+  }
+
+  async legacyQueue() {
+    const member = await this.currentMember();
+    const assignments = await this.axisAssignments(member.id);
     const rows = await this.prisma.db.serviceRequest.findMany({
       include: serviceRequestInclude,
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       take: 300,
     });
-    const visible = rows.filter((row) => this.isQueueVisible(row));
+    const visible = rows.filter((row) => this.isQueueVisible(row) && this.isServiceRequestScoped(row, assignments, member.id));
     const [config, repeatCounts] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(visible.map((row) => row.customerId).filter((id): id is string => Boolean(id))),
@@ -97,6 +253,7 @@ export class PersonWorkspaceService {
   async moveQueueCard(id: string, input: MovePersonQueueCardInput) {
     const member = await this.currentMember();
     const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
     const metadata = { ...this.record(row.metadata), personColumnId: input.columnId, personColumnIndex: input.index };
     await this.prisma.db.serviceRequest.updateMany({
       where: { id },
@@ -114,6 +271,7 @@ export class PersonWorkspaceService {
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
     const member = await this.currentMember();
     const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const isPinned = typeof pinnedBy[member.id] === 'number';
@@ -133,8 +291,96 @@ export class PersonWorkspaceService {
     return this.queueCard(updated, member.id, await this.urgencyConfig(), await this.repeatCount(updated.customerId));
   }
 
+  async toggleCustomerPin(id: string, input: TogglePersonQueuePinInput) {
+    const member = await this.currentMember();
+    const assignments = await this.axisAssignments(member.id);
+    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your axis scope');
+
+    const customer = await this.prisma.db.customer.findFirst({ where: { id } });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    const existing = await this.prisma.db.serviceRequest.findFirst({
+      where: {
+        customerId: id,
+        assignedMemberId: member.id,
+        source: CUSTOMER_PIN_SOURCE,
+        surface: CUSTOMER_PIN_SURFACE,
+        metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const isPinned = existing ? !CLOSED.has(existing.status) : false;
+    const nextPinned = input.pinned ?? !isPinned;
+
+    if (nextPinned) {
+      if (existing) {
+        await this.prisma.db.serviceRequest.updateMany({
+          where: { id: existing.id },
+          data: {
+            status: 'open',
+            closedAt: null,
+            metadata: {
+              ...this.record(existing.metadata),
+              personWorkspaceKind: CUSTOMER_PIN_KIND,
+              personPinnedBy: { [member.id]: Date.now() },
+              category: 'customer_pin',
+            } as Prisma.InputJsonValue,
+          },
+        });
+      } else {
+        await this.prisma.db.serviceRequest.create({
+          data: {
+            id: prefixedId('sr'),
+            tenantId: this.tenantId(),
+            customerId: id,
+            assignedMemberId: member.id,
+            axis: Array.from(assignments.get(id) ?? [])[0] ?? null,
+            source: CUSTOMER_PIN_SOURCE,
+            surface: CUSTOMER_PIN_SURFACE,
+            title: `Pinned customer: ${customerDisplayName(customer)}`,
+            description: 'Manual person workspace pin.',
+            status: 'open',
+            priority: 'medium',
+            createdByActorId: member.id,
+            metadata: {
+              personWorkspaceKind: CUSTOMER_PIN_KIND,
+              personPinnedBy: { [member.id]: Date.now() },
+              category: 'customer_pin',
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+    } else if (existing) {
+      await this.prisma.db.serviceRequest.updateMany({
+        where: { id: existing.id },
+        data: {
+          status: 'closed',
+          closedAt: new Date(),
+          metadata: {
+            ...this.record(existing.metadata),
+            personWorkspaceKind: CUSTOMER_PIN_KIND,
+            personPinnedBy: {},
+            category: 'customer_pin',
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    this.logger.log('person_workspace', 'customer.pin', 'Person customer pin toggled', {
+      customer_id: id,
+      member_id: member.id,
+      pinned: nextPinned,
+    });
+    return { ok: true, pinned: nextPinned };
+  }
+
   async customers() {
+    const member = await this.currentMember();
+    const assignments = await this.axisAssignments(member.id);
+    const visibleCustomerIds = Array.from(assignments.keys());
+    if (visibleCustomerIds.length === 0) return [];
     const rows = await this.prisma.db.customer.findMany({
+      where: { id: { in: visibleCustomerIds } },
       include: {
         insight: true,
         segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
@@ -540,6 +786,163 @@ export class PersonWorkspaceService {
     return this.requests();
   }
 
+  private async axisAssignments(memberId: string): Promise<AxisAssignments> {
+    const rows = await this.prisma.db.customerAssignment.findMany({
+      where: { memberId, isPrimary: true },
+      select: { customerId: true, axis: true },
+      take: 10000,
+    });
+    const map: AxisAssignments = new Map();
+    for (const row of rows) {
+      const axes = map.get(row.customerId) ?? new Set<string>();
+      axes.add(row.axis);
+      map.set(row.customerId, axes);
+    }
+    return map;
+  }
+
+  private async assertServiceRequestScoped(row: ServiceRequestRow, memberId: string) {
+    const assignments = await this.axisAssignments(memberId);
+    if (!this.isServiceRequestScoped(row, assignments, memberId)) {
+      throw new ForbiddenException('Customer is outside your axis scope');
+    }
+  }
+
+  private isServiceRequestScoped(row: { customerId: string | null; assignedMemberId: string | null; axis: string | null }, assignments: AxisAssignments, memberId: string) {
+    if (!row.customerId) return row.assignedMemberId === memberId;
+    const axes = assignments.get(row.customerId);
+    if (!axes) return false;
+    return row.axis ? axes.has(row.axis) : true;
+  }
+
+  private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
+    const pinnedBy = this.record(this.record(row.metadata).personPinnedBy);
+    return typeof pinnedBy[memberId] === 'number';
+  }
+
+  private customerPins(memberId: string, customerIds: string[]) {
+    if (customerIds.length === 0) return [];
+    return this.prisma.db.serviceRequest.findMany({
+      where: {
+        customerId: { in: customerIds },
+        assignedMemberId: memberId,
+        source: CUSTOMER_PIN_SOURCE,
+        surface: CUSTOMER_PIN_SURFACE,
+        status: { notIn: Array.from(CLOSED) },
+        metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },
+      },
+      include: {
+        customer: {
+          include: {
+            insight: true,
+            segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+          },
+        },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 500,
+    });
+  }
+
+  private dailyCallItem(
+    membership: SegmentMembershipRow,
+    ownership: { priority: number; dailyCap: number | null; segment: { id: string; name: string; color: string; priority: number; priorityGlobal: number } },
+    assignments: AxisAssignments,
+    config = this.scoring.configFrom({}),
+    repeatCount = 0,
+    pin: CustomerPinRow | null = null,
+  ) {
+    const customer = membership.customer;
+    const axes = assignments.get(customer.id) ?? new Set<string>();
+    const assignedAxis = Array.from(axes).sort().join(', ') || 'unassigned';
+    const urgencyBreakdown = this.scoring.score({
+      priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
+      source: 'daily_customer',
+      axis: assignedAxis,
+      createdAt: customer.lastOrderAt ?? membership.matchedAt,
+      updatedAt: customer.updatedAt,
+      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
+      taskStateSnapshot: {
+        segment: {
+          id: membership.segment.id,
+          name: membership.segment.name,
+          priority: membership.segment.priority,
+          priorityGlobal: membership.segment.priorityGlobal,
+        },
+        segmentMembershipScore: Number(membership.score ?? 0),
+      },
+      segmentPriority: Math.max(membership.segment.priorityGlobal, membership.segment.priority, ownership.priority),
+      repeatCount,
+    }, config);
+    return {
+      kind: 'customer' as const,
+      id: `daily-${membership.segmentId}-${customer.id}`,
+      customerId: customer.id,
+      customerName: customerDisplayName(customer),
+      email: customer.email,
+      phone: customer.phone,
+      ordersCount: customer.ordersCount,
+      totalSpent: money(customer.totalSpent),
+      lastContact: isoDate(customer.lastOrderAt ?? customer.updatedAt),
+      assignedAxis,
+      segment: {
+        id: membership.segment.id,
+        name: membership.segment.name,
+        color: membership.segment.color,
+        priority: ownership.priority,
+        dailyCap: ownership.dailyCap,
+      },
+      urgencyScore: urgencyBreakdown.score,
+      urgencyBreakdown,
+      repeatCount,
+      pinned: Boolean(pin),
+      pinId: pin?.id ?? null,
+      reason: `${membership.segment.name} segment - ${repeatCount} recent requests - ${assignedAxis} axis`,
+    };
+  }
+
+  private customerPinCard(row: CustomerPinRow, assignments: AxisAssignments, config = this.scoring.configFrom({}), repeatCount = 0) {
+    const customer = row.customer;
+    const segment = customer?.segmentMemberships[0]?.segment;
+    const axes = row.customerId ? assignments.get(row.customerId) : null;
+    const assignedAxis = axes ? Array.from(axes).sort().join(', ') : 'unassigned';
+    const metadata = this.record(row.metadata);
+    const pinnedBy = this.record(metadata.personPinnedBy);
+    const pinnedAtValues = Object.values(pinnedBy).filter((value): value is number => typeof value === 'number');
+    const pinnedAt = pinnedAtValues.length ? Math.max(...pinnedAtValues) : row.updatedAt.getTime();
+    const urgencyBreakdown = this.scoring.score({
+      priority: customer?.insight?.churnRisk === 'critical' ? 'critical' : customer?.insight?.churnRisk === 'high' ? 'high' : row.priority,
+      source: 'daily_customer',
+      axis: assignedAxis,
+      createdAt: customer?.lastOrderAt ?? row.createdAt,
+      updatedAt: row.updatedAt,
+      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer?.insight?.churnRisk ?? undefined } } },
+      taskStateSnapshot: row.taskStateSnapshot,
+      segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? 0,
+      repeatCount,
+    }, config);
+    return {
+      kind: 'customer' as const,
+      id: row.id,
+      customerId: row.customerId,
+      title: customer ? customerDisplayName(customer) : row.title,
+      summary: `Pinned customer - U${urgencyBreakdown.score} - ${assignedAxis}`,
+      segment: segment?.name ?? 'Pinned customer',
+      segmentColor: segment?.color ?? colorForUrgency(urgencyBreakdown.score),
+      priority: priorityRankFromUrgency(urgencyBreakdown.score),
+      urgencyScore: urgencyBreakdown.score,
+      urgencyBreakdown,
+      columnId: 'unassigned' as const,
+      pinned: true,
+      pinnedAt,
+      source: 'manual' as const,
+      phone: customer?.phone ?? undefined,
+      email: customer?.email ?? undefined,
+      ordersCount: customer?.ordersCount ?? undefined,
+      totalSpent: customer ? money(customer.totalSpent) : undefined,
+    };
+  }
+
   private async currentMember() {
     const context = this.tenantContext.require();
     if (context.principalType !== 'member' || !context.principalId) {
@@ -589,7 +992,9 @@ export class PersonWorkspaceService {
       repeatCount,
     }, config);
     return {
+      kind: 'task' as const,
       id: row.id,
+      customerId: row.customerId,
       title: customerName,
       summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
       segment: String(metadata.category ?? row.surface ?? 'Support'),
@@ -739,6 +1144,56 @@ function participants(thread: { metadata: Prisma.JsonValue }) {
     ? thread.metadata as Record<string, unknown>
     : {};
   return Array.isArray(metadata.participantIds) ? metadata.participantIds.filter((id): id is string => typeof id === 'string') : [];
+}
+
+function groupBy<T>(rows: T[], keyFn: (row: T) => string) {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = keyFn(row);
+    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+  }
+  return grouped;
+}
+
+function sortDaily(
+  left: { urgencyScore: number; customerName: string; repeatCount: number },
+  right: { urgencyScore: number; customerName: string; repeatCount: number },
+) {
+  return right.urgencyScore - left.urgencyScore
+    || right.repeatCount - left.repeatCount
+    || left.customerName.localeCompare(right.customerName);
+}
+
+function uniqueHighUrgencyCount(
+  daily: { customerId: string; urgencyScore: number }[],
+  tasks: { customerId?: string | null; id: string; urgencyScore: number }[],
+) {
+  const seen = new Set<string>();
+  let count = 0;
+  for (const item of daily) {
+    if (item.urgencyScore < 80) continue;
+    const key = `customer:${item.customerId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      count += 1;
+    }
+  }
+  for (const item of tasks) {
+    if (item.urgencyScore < 80) continue;
+    const key = item.customerId ? `customer:${item.customerId}` : `task:${item.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function customerDisplayName(customer: { companyName: string | null; firstName?: string | null; lastName?: string | null; email: string | null; id: string }) {
+  return customer.companyName
+    || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()
+    || customer.email
+    || customer.id;
 }
 
 function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTaskWorkflowTrace | undefined {

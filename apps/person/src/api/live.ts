@@ -1,6 +1,6 @@
 import type { CreatePersonRequestInput, SavePersonNoteInput } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
-import type { Card, ColumnId, CustomerRow } from '../types';
+import type { Card, ColumnId, CustomerRow, DailyOperations } from '../types';
 
 export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
 export interface PersonSummary {
@@ -119,9 +119,11 @@ export function friendlyError(error: unknown) {
 
 export const fetchSummary = () => personApi.personWorkspaceSummary() as Promise<PersonSummary>;
 export const fetchCards = () => personApi.personQueueCards() as Promise<Card[]>;
+export const fetchDailyOperations = () => personApi.personDailyOperations() as Promise<DailyOperations>;
 export const moveCard = (input: { id: string; columnId: ColumnId; index: number }) =>
   personApi.movePersonQueueCard(input.id, { columnId: input.columnId, index: input.index }) as Promise<Card>;
 export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
+export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
 export const fetchTeammates = () => personApi.personTeammates() as Promise<Teammate[]>;

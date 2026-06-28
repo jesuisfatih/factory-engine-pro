@@ -419,12 +419,20 @@ export class ApiClient {
     return this.get('/person/workspace/queue');
   }
 
+  personDailyOperations() {
+    return this.get('/person/workspace/daily-operations');
+  }
+
   movePersonQueueCard(id: string, input: MovePersonQueueCardInput) {
     return this.patch(`/person/workspace/queue/${encodeURIComponent(id)}/move`, input);
   }
 
   togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {
     return this.post(`/person/workspace/queue/${encodeURIComponent(id)}/pin`, input);
+  }
+
+  togglePersonCustomerPin(customerId: string, input: TogglePersonQueuePinInput = {}) {
+    return this.post(`/person/workspace/customers/${encodeURIComponent(customerId)}/pin`, input);
   }
 
   personCustomers() {

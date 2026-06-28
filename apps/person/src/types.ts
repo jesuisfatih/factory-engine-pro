@@ -1,4 +1,10 @@
-import type { PersonTaskStateSnapshot, PersonTaskWorkflowTrace, PersonUrgencyBreakdown } from '@factory-engine-pro/contracts';
+import type {
+  PersonDailyCallItem,
+  PersonDailyOperationsDto,
+  PersonTaskStateSnapshot,
+  PersonTaskWorkflowTrace,
+  PersonUrgencyBreakdown,
+} from '@factory-engine-pro/contracts';
 
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
@@ -15,7 +21,9 @@ export interface TaskBrief {
   transcriptSnippet?: string;
 }
 export interface Card {
+  kind: 'task' | 'customer';
   id: string;
+  customerId?: string | null;
   title: string;
   summary: string;
   segment: string;
@@ -40,6 +48,9 @@ export interface Card {
   /** Fire-time customer, segment, and recent order state copied onto the task. */
   taskStateSnapshot?: PersonTaskStateSnapshot;
 }
+
+export type DailyCallItem = PersonDailyCallItem;
+export type DailyOperations = PersonDailyOperationsDto;
 
 export interface Column {
   id: ColumnId;

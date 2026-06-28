@@ -8,6 +8,9 @@ export type PersonQueueColumn = z.infer<typeof personQueueColumnSchema>;
 export const personTaskSourceSchema = z.enum(['manual', 'ai_transcript', 'ai_segment', 'ai_stale']);
 export type PersonTaskSource = z.infer<typeof personTaskSourceSchema>;
 
+export const personOperationItemKindSchema = z.enum(['task', 'customer']);
+export type PersonOperationItemKind = z.infer<typeof personOperationItemKindSchema>;
+
 export const DEFAULT_URGENCY_SCORING_CONFIG = {
   segmentWeight: 1.5,
   repeatCountWeight: 1,
@@ -85,7 +88,9 @@ export const personTaskBriefSchema = z.object({
 export type PersonTaskBrief = z.infer<typeof personTaskBriefSchema>;
 
 export const personQueueCardSchema = z.object({
+  kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
+  customerId: z.string().nullable().optional(),
   title: z.string(),
   summary: z.string(),
   segment: z.string(),
@@ -106,6 +111,60 @@ export const personQueueCardSchema = z.object({
   taskStateSnapshot: personTaskStateSnapshotSchema.optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
+
+export const personDailyCallItemSchema = z.object({
+  kind: z.literal('customer').default('customer'),
+  id: z.string(),
+  customerId: z.string(),
+  customerName: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  ordersCount: z.number(),
+  totalSpent: z.number(),
+  lastContact: z.string(),
+  assignedAxis: z.string(),
+  segment: z.object({
+    id: z.string(),
+    name: z.string(),
+    color: z.string(),
+    priority: z.number(),
+    dailyCap: z.number().nullable(),
+  }),
+  urgencyScore: z.number(),
+  urgencyBreakdown: personUrgencyBreakdownSchema,
+  repeatCount: z.number(),
+  pinned: z.boolean(),
+  pinId: z.string().nullable(),
+  reason: z.string(),
+});
+export type PersonDailyCallItem = z.infer<typeof personDailyCallItemSchema>;
+
+export const personSegmentDailyGroupSchema = z.object({
+  segmentId: z.string(),
+  segmentName: z.string(),
+  segmentColor: z.string(),
+  priority: z.number(),
+  dailyCap: z.number().nullable(),
+  totalCustomers: z.number(),
+  items: z.array(personDailyCallItemSchema),
+});
+export type PersonSegmentDailyGroup = z.infer<typeof personSegmentDailyGroupSchema>;
+
+export const personDailyOperationsSchema = z.object({
+  summary: z.object({
+    dailyCount: z.number(),
+    priorityCount: z.number(),
+    pinnedCount: z.number(),
+    highUrgencyCount: z.number(),
+    visibleAxes: z.array(z.string()),
+    segmentGroupCount: z.number(),
+  }),
+  dailyCallList: z.array(personDailyCallItemSchema),
+  priorityKanban: z.array(personQueueCardSchema),
+  pinBoard: z.array(personQueueCardSchema),
+  segmentGroups: z.array(personSegmentDailyGroupSchema),
+});
+export type PersonDailyOperationsDto = z.infer<typeof personDailyOperationsSchema>;
 
 export const movePersonQueueCardSchema = z.object({
   columnId: personQueueColumnSchema,
