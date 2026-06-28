@@ -38,9 +38,14 @@ export class JwtAuthGuard implements CanActivate {
     if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('Bearer token is required');
 
     const accessToken = auth.slice(7);
-    const payload = await this.jwt.verifyAsync<AccessTokenPayload>(accessToken, {
-      secret: getJwtAccessSecret(this.config),
-    });
+    let payload: AccessTokenPayload;
+    try {
+      payload = await this.jwt.verifyAsync<AccessTokenPayload>(accessToken, {
+        secret: getJwtAccessSecret(this.config),
+      });
+    } catch {
+      throw new UnauthorizedException('Session token is invalid');
+    }
     if (await this.authTokens.isAccessTokenRevoked(accessToken)) {
       throw new UnauthorizedException('Session was revoked');
     }

@@ -15,6 +15,10 @@ interface AccessTokenPayload {
   exp?: number;
 }
 
+const SESSION_TTL_DAYS = 365;
+const SESSION_TTL_MS = SESSION_TTL_DAYS * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_EXPIRES_IN = `${SESSION_TTL_DAYS}d`;
+
 @Injectable()
 export class AuthSessionService {
   constructor(
@@ -33,7 +37,7 @@ export class AuthSessionService {
       },
       {
         secret: getJwtAccessSecret(this.config),
-        expiresIn: '15m',
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
       },
     );
     const refreshToken = await this.authTokens.create({
@@ -41,7 +45,7 @@ export class AuthSessionService {
       kind: 'refresh',
       principalType: principal.type,
       principalId: principal.id,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
     });
     return {
       accessToken,
@@ -60,9 +64,14 @@ export class AuthSessionService {
 
   async revokeAccessToken(accessToken: string | undefined) {
     if (!accessToken) return false;
-    const payload = await this.jwt.verifyAsync<AccessTokenPayload>(accessToken, {
-      secret: getJwtAccessSecret(this.config),
-    });
+    let payload: AccessTokenPayload;
+    try {
+      payload = await this.jwt.verifyAsync<AccessTokenPayload>(accessToken, {
+        secret: getJwtAccessSecret(this.config),
+      });
+    } catch {
+      return false;
+    }
     if (!payload.exp) return false;
     const expiresAt = new Date(payload.exp * 1000);
     if (expiresAt.getTime() <= Date.now()) return false;

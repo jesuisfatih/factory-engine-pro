@@ -127,6 +127,8 @@ export class ApiClientError extends Error {
 }
 
 export class ApiClient {
+  private refreshPromise?: Promise<boolean>;
+
   constructor(private readonly options: ApiClientOptions) {}
 
   memberLogin(input: MemberLoginInput) {
@@ -890,36 +892,31 @@ export class ApiClient {
     auth = true,
     extraHeaders: Record<string, string> = {},
   ): Promise<T> {
-    const headers: Record<string, string> = {
-      accept: 'application/json',
-      'content-type': 'application/json',
-      ...extraHeaders,
-    };
-    if (this.options.tenantId) headers['x-tenant-id'] = this.options.tenantId;
-    const accessToken = this.options.tokenStore?.getAccessToken();
-    if (auth && accessToken) headers.authorization = `Bearer ${accessToken}`;
-
-    const response = await fetch(`${this.options.baseUrl}${path}`, {
+    let parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}${path}`, {
       method,
-      headers,
+      headers: this.buildHeaders(auth, extraHeaders, 'application/json'),
       body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    }));
 
-    const requestId = response.headers.get('x-request-id') ?? '';
-    const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
+    if (parsed.status === 401 && auth && await this.refreshStoredSession()) {
+      parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}${path}`, {
+        method,
+        headers: this.buildHeaders(auth, extraHeaders, 'application/json'),
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }));
+    }
 
-    if (!response.ok) {
+    if (!parsed.ok) {
       throw new ApiClientError(
-        payload?.message ?? `Request failed with ${response.status}`,
-        response.status,
-        payload?.request_id ?? requestId,
-        payload?.code ?? 'api_error',
-        payload?.details,
+        parsed.payload?.message ?? `Request failed with ${parsed.status}`,
+        parsed.status,
+        parsed.payload?.request_id ?? parsed.requestId,
+        parsed.payload?.code ?? 'api_error',
+        parsed.payload?.details,
       );
     }
 
-    return payload as T;
+    return parsed.payload as T;
   }
 
   private async requestForm<T>(
@@ -929,44 +926,38 @@ export class ApiClient {
     auth = true,
     extraHeaders: Record<string, string> = {},
   ): Promise<T> {
-    const headers: Record<string, string> = {
-      accept: 'application/json',
-      ...extraHeaders,
-    };
-    if (this.options.tenantId) headers['x-tenant-id'] = this.options.tenantId;
-    const accessToken = this.options.tokenStore?.getAccessToken();
-    if (auth && accessToken) headers.authorization = `Bearer ${accessToken}`;
-
-    const response = await fetch(`${this.options.baseUrl}${path}`, {
+    let parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}${path}`, {
       method,
-      headers,
+      headers: this.buildHeaders(auth, extraHeaders),
       body,
-    });
+    }));
 
-    const requestId = response.headers.get('x-request-id') ?? '';
-    const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
+    if (parsed.status === 401 && auth && await this.refreshStoredSession()) {
+      parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}${path}`, {
+        method,
+        headers: this.buildHeaders(auth, extraHeaders),
+        body,
+      }));
+    }
 
-    if (!response.ok) {
+    if (!parsed.ok) {
       throw new ApiClientError(
-        payload?.message ?? `Request failed with ${response.status}`,
-        response.status,
-        payload?.request_id ?? requestId,
-        payload?.code ?? 'api_error',
-        payload?.details,
+        parsed.payload?.message ?? `Request failed with ${parsed.status}`,
+        parsed.status,
+        parsed.payload?.request_id ?? parsed.requestId,
+        parsed.payload?.code ?? 'api_error',
+        parsed.payload?.details,
       );
     }
 
-    return payload as T;
+    return parsed.payload as T;
   }
 
   private async requestBlob(path: string, auth = true): Promise<Blob> {
-    const headers: Record<string, string> = { accept: '*/*' };
-    if (this.options.tenantId) headers['x-tenant-id'] = this.options.tenantId;
-    const accessToken = this.options.tokenStore?.getAccessToken();
-    if (auth && accessToken) headers.authorization = `Bearer ${accessToken}`;
-
-    const response = await fetch(`${this.options.baseUrl}${path}`, { method: 'GET', headers });
+    let response = await fetch(`${this.options.baseUrl}${path}`, { method: 'GET', headers: this.buildHeaders(auth, {}, '*/*') });
+    if (response.status === 401 && auth && await this.refreshStoredSession()) {
+      response = await fetch(`${this.options.baseUrl}${path}`, { method: 'GET', headers: this.buildHeaders(auth, {}, '*/*') });
+    }
     if (!response.ok) {
       const requestId = response.headers.get('x-request-id') ?? '';
       const text = await response.text();
@@ -980,5 +971,54 @@ export class ApiClient {
       );
     }
     return response.blob();
+  }
+
+  private buildHeaders(auth: boolean, extraHeaders: Record<string, string>, contentType?: string) {
+    const headers: Record<string, string> = {
+      accept: contentType === '*/*' ? '*/*' : 'application/json',
+      ...extraHeaders,
+    };
+    if (contentType && contentType !== '*/*') headers['content-type'] = contentType;
+    if (this.options.tenantId) headers['x-tenant-id'] = this.options.tenantId;
+    const accessToken = this.options.tokenStore?.getAccessToken();
+    if (auth && accessToken) headers.authorization = `Bearer ${accessToken}`;
+    return headers;
+  }
+
+  private async parseJsonResponse(response: Response) {
+    const requestId = response.headers.get('x-request-id') ?? '';
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : null;
+    return {
+      ok: response.ok,
+      status: response.status,
+      requestId,
+      payload,
+    };
+  }
+
+  private async refreshStoredSession() {
+    const tokenStore = this.options.tokenStore;
+    const refreshToken = tokenStore?.getRefreshToken();
+    if (!tokenStore || !refreshToken) return false;
+    this.refreshPromise ??= this.fetchRefreshSession(refreshToken).finally(() => {
+      this.refreshPromise = undefined;
+    });
+    return this.refreshPromise;
+  }
+
+  private async fetchRefreshSession(refreshToken: string) {
+    const response = await fetch(`${this.options.baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: this.buildHeaders(false, {}, 'application/json'),
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!response.ok) {
+      this.options.tokenStore?.clear();
+      return false;
+    }
+    const session = await response.json() as AuthSession;
+    this.options.tokenStore?.setSession(session);
+    return true;
   }
 }
