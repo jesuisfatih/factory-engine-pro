@@ -29,6 +29,7 @@ export type IdPrefix =
   | 'b2bf'
   | 'mail'
   | 'acu'
+  | 'acmap'
   | 'acn'
   | 'awcfg'
   | 'awin'

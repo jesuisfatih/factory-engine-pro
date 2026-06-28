@@ -253,6 +253,8 @@ export class AircallIngestService {
     const status = eventType === 'call.ended' || eventType === 'call.hungup'
       ? 'closed'
       : stringOrNull(data.status) ?? 'open';
+    const aircallUserId = nestedString(data, 'user.id') ?? stringOrNull(data.user_id);
+    const currentOperatorId = await this.resolveMappedMemberId(tenantId, aircallUserId);
 
     return this.prisma.db.call.upsert({
       where: {
@@ -267,6 +269,7 @@ export class AircallIngestService {
         aircallCallId: externalCallId,
         direction: stringOrNull(data.direction),
         status,
+        currentOperatorId,
         callerNumber: contactPhone(data),
         callerNumberE164: e164OrNull(contactPhone(data)),
         callerEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
@@ -280,6 +283,7 @@ export class AircallIngestService {
       update: {
         direction: stringOrNull(data.direction),
         status,
+        currentOperatorId,
         callerNumber: contactPhone(data),
         callerNumberE164: e164OrNull(contactPhone(data)),
         callerEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
@@ -291,6 +295,32 @@ export class AircallIngestService {
         rawPayload: data as Prisma.InputJsonValue,
       },
     });
+  }
+
+  private async resolveMappedMemberId(tenantId: string, aircallUserId: string | null) {
+    if (!aircallUserId) return null;
+    const mapping = await this.prisma.db.aircallMemberMap.findFirst({
+      where: { aircallUserId },
+      select: { memberId: true },
+    });
+    if (mapping) return mapping.memberId;
+
+    const legacyMember = await this.prisma.db.member.findFirst({
+      where: { aircallUserId, status: { not: 'archived' } },
+      select: { id: true },
+    });
+    if (!legacyMember) return null;
+
+    await this.prisma.aircallMemberMap.create({
+      data: {
+        id: prefixedId('acmap'),
+        tenantId,
+        aircallUserId,
+        memberId: legacyMember.id,
+        source: 'member_legacy',
+      },
+    }).catch(() => undefined);
+    return legacyMember.id;
   }
 
   private async resolveTenant(tenantSlug: string) {

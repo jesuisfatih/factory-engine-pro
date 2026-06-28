@@ -60,23 +60,31 @@ export class AircallService {
   ) {}
 
   async listUsers(): Promise<AircallUsersResponse> {
-    const [aircallUsers, members] = await Promise.all([
-      this.fetchAircallUsers(),
+    const aircallUsers = await this.fetchAircallUsers();
+    await this.persistUsers(aircallUsers);
+    await this.autoMapUsersByEmail(aircallUsers);
+
+    const [members, mappings] = await Promise.all([
       this.prisma.db.member.findMany({
         where: { status: { not: 'archived' } },
-        select: { id: true, email: true, firstName: true, lastName: true, aircallUserId: true },
+        select: { id: true, email: true, firstName: true, lastName: true },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      }),
+      this.prisma.db.aircallMemberMap.findMany({
+        select: {
+          aircallUserId: true,
+          memberId: true,
+          member: { select: { id: true, email: true, firstName: true, lastName: true } },
+        },
       }),
     ]);
     const linkedByAircallId = new Map(
-      members
-        .filter((member) => member.aircallUserId)
-        .map((member) => [
-          member.aircallUserId,
-          { id: member.id, email: member.email, name: displayName(member) },
-        ]),
+      mappings.map((mapping) => [
+        mapping.aircallUserId,
+        { id: mapping.member.id, email: mapping.member.email, name: displayName(mapping.member) },
+      ]),
     );
-    await this.persistUsers(aircallUsers);
+    const aircallIdByMemberId = new Map(mappings.map((mapping) => [mapping.memberId, mapping.aircallUserId]));
 
     return {
       source: 'aircall_api',
@@ -93,7 +101,7 @@ export class AircallService {
         id: member.id,
         email: member.email,
         name: displayName(member),
-        aircallUserId: member.aircallUserId,
+        aircallUserId: aircallIdByMemberId.get(member.id) ?? null,
       })),
     };
   }
@@ -262,17 +270,33 @@ export class AircallService {
     const users = await this.fetchAircallUsers();
     const aircallUser = users.find((user) => user.aircallUserId === aircallUserId);
     if (!aircallUser) throw new NotFoundException('Aircall user not found');
+    await this.persistUsers(users);
 
     const member = await this.prisma.db.member.findFirst({ where: { id: memberId } });
     if (!member) throw new NotFoundException('Member not found');
 
-    await this.prisma.db.member.updateMany({
-      where: { aircallUserId, id: { not: memberId } },
-      data: { aircallUserId: null },
-    });
-    await this.prisma.db.member.updateMany({
-      where: { id: memberId },
-      data: { aircallUserId },
+    const tenantId = this.tenantId();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.aircallMemberMap.deleteMany({
+        where: { tenantId, OR: [{ aircallUserId }, { memberId }] },
+      });
+      await tx.aircallMemberMap.create({
+        data: {
+          id: prefixedId('acmap'),
+          tenantId,
+          aircallUserId,
+          memberId,
+          source: 'manual',
+        },
+      });
+      await tx.member.updateMany({
+        where: { tenantId, aircallUserId, id: { not: memberId } },
+        data: { aircallUserId: null },
+      });
+      await tx.member.updateMany({
+        where: { tenantId, id: memberId },
+        data: { aircallUserId },
+      });
     });
     this.logger.log('aircall', 'link_user', 'Aircall user linked to member', {
       aircall_user_id: aircallUserId,
@@ -282,9 +306,13 @@ export class AircallService {
   }
 
   async unlinkUser(aircallUserId: string) {
-    await this.prisma.db.member.updateMany({
-      where: { aircallUserId },
-      data: { aircallUserId: null },
+    const tenantId = this.tenantId();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.aircallMemberMap.deleteMany({ where: { tenantId, aircallUserId } });
+      await tx.member.updateMany({
+        where: { tenantId, aircallUserId },
+        data: { aircallUserId: null },
+      });
     });
     this.logger.log('aircall', 'unlink_user', 'Aircall user unlinked from member', { aircall_user_id: aircallUserId });
     return this.listUsers();
@@ -361,6 +389,59 @@ export class AircallService {
           lastSyncedAt: new Date(),
         },
       });
+    }
+  }
+
+  private async autoMapUsersByEmail(users: PresentedAircallUser[]) {
+    const candidates = users
+      .map((user) => ({ ...user, normalizedEmail: user.email?.trim().toLowerCase() ?? '' }))
+      .filter((user) => user.normalizedEmail);
+    if (candidates.length === 0) return;
+
+    const emails = [...new Set(candidates.map((user) => user.normalizedEmail))];
+    const members = await this.prisma.db.member.findMany({
+      where: { status: { not: 'archived' }, email: { in: emails } },
+      select: { id: true, email: true },
+    });
+    const memberByEmail = new Map(members.map((member) => [member.email.trim().toLowerCase(), member]));
+    const memberIds = members.map((member) => member.id);
+    const aircallUserIds = candidates.map((user) => user.aircallUserId);
+    const existing = await this.prisma.db.aircallMemberMap.findMany({
+      where: { OR: [{ memberId: { in: memberIds } }, { aircallUserId: { in: aircallUserIds } }] },
+      select: { memberId: true, aircallUserId: true },
+    });
+    const mappedMemberIds = new Set(existing.map((mapping) => mapping.memberId));
+    const mappedAircallUserIds = new Set(existing.map((mapping) => mapping.aircallUserId));
+    const tenantId = this.tenantId();
+
+    for (const user of candidates) {
+      const member = memberByEmail.get(user.normalizedEmail);
+      if (!member || mappedMemberIds.has(member.id) || mappedAircallUserIds.has(user.aircallUserId)) continue;
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.aircallMemberMap.create({
+            data: {
+              id: prefixedId('acmap'),
+              tenantId,
+              aircallUserId: user.aircallUserId,
+              memberId: member.id,
+              source: 'email_auto',
+            },
+          });
+          await tx.member.updateMany({
+            where: { tenantId, id: member.id },
+            data: { aircallUserId: user.aircallUserId },
+          });
+        });
+        mappedMemberIds.add(member.id);
+        mappedAircallUserIds.add(user.aircallUserId);
+      } catch (error) {
+        this.logger.warn('aircall', 'auto_map_skipped', 'Aircall auto map by email was skipped', {
+          aircall_user_id: user.aircallUserId,
+          member_id: member.id,
+          error: messageOf(error),
+        });
+      }
     }
   }
 

@@ -33,6 +33,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'B2BAccessRequestFile',
   'MailDelivery',
   'AircallUser',
+  'AircallMemberMap',
   'AircallNumber',
   'AircallWebhookConfig',
   'AircallWebhookInbox',

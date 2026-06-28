@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   buildTranscriptResolverPromptFromEnums,
+  transcriptResolverOutputSchema,
   WORKFLOW_ENUM_VERSION,
   type AiHealthResponse,
+  type TranscriptResolverTestInput,
+  type TranscriptResolverTestResponse,
 } from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -107,6 +110,28 @@ export class AiService {
     };
   }
 
+  async resolveTranscriptTest(input: TranscriptResolverTestInput): Promise<TranscriptResolverTestResponse> {
+    const startedAt = Date.now();
+    const credentials = await this.resolveAnthropicKey();
+    if (!credentials.key) {
+      throw new BadRequestException('Anthropic API key is not configured for this tenant.');
+    }
+
+    const model = await this.resolveModel(credentials.key);
+    const response = await this.callAnthropicResolver(credentials.key, model, input);
+    const text = extractAnthropicText(response);
+    const parsed = transcriptResolverOutputSchema.parse(parseJsonObject(text));
+    return {
+      provider: 'anthropic',
+      model,
+      source: credentials.source === 'none' ? 'env' : credentials.source,
+      promptKey: 'ai.transcript-resolver',
+      output: parsed,
+      latencyMs: Date.now() - startedAt,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
   private async resolveAnthropicKey(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {
     const config = await this.prisma.db.tenantConfig.findFirst({ select: { anthropicApiKeyEncrypted: true } });
     const tenantKey = this.crypto.decrypt(config?.anthropicApiKeyEncrypted)?.trim();
@@ -114,6 +139,64 @@ export class AiService {
     const envKey = this.config.get<string>('ANTHROPIC_API_KEY')?.trim();
     if (envKey) return { key: envKey, source: 'env' };
     return { key: null, source: 'none' };
+  }
+
+  private async resolveModel(key: string) {
+    const configured = this.config.get<string>('ANTHROPIC_RESOLVER_MODEL')?.trim()
+      || this.config.get<string>('ANTHROPIC_MODEL')?.trim();
+    if (configured) return configured;
+    const fallback = 'claude-3-5-haiku-latest';
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/models?limit=20', {
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+      });
+      const body = parseJson(await response.text()) as { data?: Array<{ id?: string }> } | null;
+      const ids = Array.isArray(body?.data) ? body.data.map((item) => item.id).filter((id): id is string => Boolean(id)) : [];
+      return ids.find((id) => id.includes('haiku')) ?? ids[0] ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private async callAnthropicResolver(key: string, model: string, input: TranscriptResolverTestInput) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1000,
+        temperature: 0,
+        system: resolverSystemPrompt(),
+        messages: [
+          {
+            role: 'user',
+            content: JSON.stringify({
+              transcript: input.transcript,
+              metadata: input.metadata ?? {},
+            }),
+          },
+        ],
+      }),
+    });
+    const text = await response.text();
+    const body = parseJson(text) as Record<string, unknown> | null;
+    if (!response.ok) {
+      const message = providerMessage(body as { error?: { message?: unknown } } | null, text)
+        ?? `Anthropic resolver failed with HTTP ${response.status}.`;
+      throw new BadRequestException({
+        message,
+        code: 'anthropic_resolver_failed',
+        status: response.status,
+      });
+    }
+    return body;
   }
 }
 
@@ -128,4 +211,47 @@ function parseJson(text: string): { data?: unknown; error?: { message?: unknown 
 function providerMessage(body: { error?: { message?: unknown } } | null, fallback: string) {
   if (typeof body?.error?.message === 'string' && body.error.message.trim()) return body.error.message.slice(0, 300);
   return fallback.trim().slice(0, 300) || null;
+}
+
+function resolverSystemPrompt() {
+  return `${buildTranscriptResolverPromptFromEnums()}
+
+Return STRICT JSON only. The JSON must exactly match this schema:
+{
+  "customer_match": {"customer_id": string|null, "phone": string|null, "name_hint": string|null, "confidence": number},
+  "product_mentions": [{"sku": string|null, "name_hint": string|null, "confidence": number}],
+  "psych_tags": one or more allowed psych_tags from the enum list,
+  "call_intent": one allowed call_intents enum value,
+  "shipping_signals": {"address_mentioned": boolean, "tracking_asked": boolean, "complaint": boolean},
+  "payment_signals": {"method_mentioned": boolean, "refund_asked": boolean, "complaint": boolean},
+  "urgency_signal": one allowed urgency_levels enum value,
+  "competitor_mentioned": string[],
+  "summary": string under 200 tokens,
+  "language_detected": ISO-like language name or code,
+  "resolved_with_version": 1
+}
+Use null or empty arrays when unknown. Confidence values must be 0..1.`;
+}
+
+function extractAnthropicText(body: Record<string, unknown> | null) {
+  const content = Array.isArray(body?.content) ? body.content as Array<Record<string, unknown>> : [];
+  const text = content
+    .map((item) => (item.type === 'text' && typeof item.text === 'string' ? item.text : ''))
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+  if (!text) throw new BadRequestException('Anthropic resolver returned an empty response.');
+  return text;
+}
+
+function parseJsonObject(text: string) {
+  const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new BadRequestException('Anthropic resolver did not return a JSON object.');
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1)) as unknown;
+  } catch {
+    throw new BadRequestException('Anthropic resolver returned invalid JSON.');
+  }
 }
