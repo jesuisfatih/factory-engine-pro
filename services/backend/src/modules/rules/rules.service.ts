@@ -667,7 +667,9 @@ export class RulesService {
       return { value: stringParam(params, 'intent') ?? stringParam(params, 'callIntent') ?? state.resolverOutput.call_intent ?? null, source: 'event_or_resolver' };
     }
     if (condition === 'psych_tag_includes') {
-      return { value: uniqueStrings([...(arrayParam(params, 'psychTags')), stringParam(params, 'tag'), ...(arrayParam(state.resolverOutput, 'psych_tags'))]), source: 'event_or_resolver' };
+      const eventTag = stringParam(params, 'tag');
+      if (eventTag) return { value: [eventTag], source: 'event_param' };
+      return { value: uniqueStrings([...(arrayParam(params, 'psychTags')), ...(arrayParam(state.resolverOutput, 'psych_tags'))]), source: 'event_or_resolver' };
     }
     if (condition === 'product_mentioned') {
       return { value: productValues(params, state.resolverOutput), source: 'event_or_resolver' };
