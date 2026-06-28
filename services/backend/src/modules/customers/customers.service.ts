@@ -1100,7 +1100,7 @@ function memberName(member: { firstName: string; lastName: string; email: string
 
 function defaultAxisRoleScore(axis: CustomerAssignmentAxis, roles: Array<{ slug: string; permissions: Prisma.JsonValue }>) {
   const slugs = new Set(roles.map((role) => role.slug));
-  if (slugs.has('owner') || slugs.has('admin')) return 100;
+  const isAdminFallback = slugs.has('owner') || slugs.has('admin');
   let score = 0;
   for (const role of roles) {
     const permissions = jsonRecord(role.permissions);
@@ -1121,7 +1121,7 @@ function defaultAxisRoleScore(axis: CustomerAssignmentAxis, roles: Array<{ slug:
       if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportRead)) score += 10;
     }
   }
-  return score;
+  return score > 0 ? score : isAdminFallback ? 1 : 0;
 }
 
 function permissionEnabled(permissions: Record<string, unknown>, permission: string) {
