@@ -104,6 +104,30 @@ export class ShopifyClientService {
     );
   }
 
+  async shop(credentials: ShopifyCredentials) {
+    const url = this.adminUrl(credentials, '/shop.json');
+    const response = await fetch(url, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'X-Shopify-Access-Token': credentials.adminToken,
+      },
+    });
+    const text = await response.text();
+    const body = parseJson(text);
+    if (!response.ok) {
+      const providerMessage = extractShopifyError(body) ?? text.trim().slice(0, 240);
+      throw new ShopifyAdminApiError(
+        `Shopify Admin API failed with ${response.status}${providerMessage ? `: ${providerMessage}` : ''}`,
+        response.status,
+        typeof body?.errors === 'string' ? body.errors : undefined,
+      );
+    }
+    return body?.shop && typeof body.shop === 'object' && !Array.isArray(body.shop)
+      ? body.shop as Record<string, unknown>
+      : {};
+  }
+
   private async getPage<T>(
     credentials: ShopifyCredentials,
     path: string,

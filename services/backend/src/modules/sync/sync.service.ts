@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
+  ShopifyConnectionTestResponse,
   ShopifyInitialSyncInput,
   ShopifyInitialSyncResponse,
   ShopifySyncResource,
@@ -38,6 +39,86 @@ export class SyncService {
 
   async status(): Promise<ShopifySyncStatus> {
     return this.state.status(await this.shopify.credentialState()) as Promise<ShopifySyncStatus>;
+  }
+
+  async testConnection(): Promise<ShopifyConnectionTestResponse> {
+    const startedAt = Date.now();
+    const credentialState = await this.shopify.credentialState();
+    const credentials = await this.shopify.resolveCredentials();
+    if (!credentials) {
+      const response: ShopifyConnectionTestResponse = {
+        ok: false,
+        status: 'missing_credentials',
+        credentialRequired: true,
+        configured: false,
+        source: credentialState.source,
+        shopifyDomain: credentialState.shopifyDomain,
+        apiVersion: null,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        shopId: null,
+        shopName: null,
+        shopEmail: null,
+        error: 'Shopify shop domain and Admin API access token are not configured for this tenant.',
+      };
+      this.logger.warn('shopify', 'connection_test_failed', 'Shopify connection test skipped because credentials are missing', {
+        status: response.status,
+        shopify_domain: response.shopifyDomain,
+      });
+      return response;
+    }
+
+    try {
+      const shop = await this.shopify.shop(credentials);
+      const response: ShopifyConnectionTestResponse = {
+        ok: true,
+        status: 'ok',
+        credentialRequired: false,
+        configured: true,
+        source: credentials.source,
+        shopifyDomain: credentials.shopifyDomain,
+        apiVersion: credentials.apiVersion,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        shopId: stringId(shop.id),
+        shopName: stringOrNull(shop.name),
+        shopEmail: stringOrNull(shop.email),
+        error: null,
+      };
+      this.logger.log('shopify', 'connection_test_ok', 'Shopify connection test succeeded', {
+        shopify_domain: response.shopifyDomain,
+        source: response.source,
+        api_version: response.apiVersion,
+        latency_ms: response.latencyMs,
+        shop_id: response.shopId,
+      });
+      return response;
+    } catch (error) {
+      const response: ShopifyConnectionTestResponse = {
+        ok: false,
+        status: error instanceof ShopifyAdminApiError ? 'provider_error' : 'network_error',
+        credentialRequired: false,
+        configured: true,
+        source: credentials.source,
+        shopifyDomain: credentials.shopifyDomain,
+        apiVersion: credentials.apiVersion,
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        shopId: null,
+        shopName: null,
+        shopEmail: null,
+        error: providerSafeMessage(error),
+      };
+      this.logger.warn('shopify', 'connection_test_failed', 'Shopify connection test failed', {
+        status: response.status,
+        shopify_domain: response.shopifyDomain,
+        source: response.source,
+        provider_status: providerStatus(error),
+        latency_ms: response.latencyMs,
+        error: response.error,
+      });
+      return response;
+    }
   }
 
   async triggerInitialSync(input: ShopifyInitialSyncInput): Promise<ShopifyInitialSyncResponse> {

@@ -50,6 +50,17 @@ function ShopifySettingsView() {
     queryFn: () => adminApi.shopifySyncStatus(),
     refetchInterval: (query) => query.state.data?.isAnySyncing ? 5000 : false,
   });
+  const connectionTest = useMutation({
+    mutationFn: () => adminApi.testShopifyConnection(),
+    onSuccess: (result) => {
+      if (result.ok) {
+        toast.success(t('settings.shopify.connection_test_ok'));
+      } else {
+        toast.error(t('settings.shopify.connection_test_failed'), { description: result.error ?? result.status });
+      }
+    },
+    onError: (error) => toast.error(t('settings.shopify.connection_test_failed'), { description: apiErrorMessage(error) }),
+  });
 
   const saveCredentials = useMutation({
     mutationFn: () => adminApi.updateTenantConfig({
@@ -155,6 +166,49 @@ function ShopifySettingsView() {
         {!canSaveSettings && <div className="form-error">{t('settings.shopify.no_settings_permission')}</div>}
       </section>
 
+      <section className="config-card" id="shopify-runtime">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+          <div>
+            <h3 data-i18n-key="settings.shopify.runtime_title">{t('settings.shopify.runtime_title')}</h3>
+            <div className="sub" data-i18n-key="settings.shopify.runtime_sub">{t('settings.shopify.runtime_sub')}</div>
+          </div>
+          <button
+            id="btn-test-shopify-connection"
+            type="button"
+            className="btn"
+            onClick={() => connectionTest.mutate()}
+            disabled={credentialMissing || connectionTest.isPending || config.isLoading}
+          >
+            <CheckCircle2 size={13} /> {connectionTest.isPending ? t('settings.shopify.testing_connection') : t('settings.shopify.test_connection')}
+          </button>
+        </div>
+        {credentialMissing ? (
+          <div className="webhook-warning">
+            <AlertTriangle size={14} />
+            <span data-i18n-key="settings.shopify.runtime_missing_body">{t('settings.shopify.runtime_missing_body')}</span>
+          </div>
+        ) : (
+          <div className="webhook-warning">
+            <CheckCircle2 size={14} />
+            <span data-i18n-key="settings.shopify.runtime_ready_body">{t('settings.shopify.runtime_ready_body')}</span>
+          </div>
+        )}
+        {connectionTest.data && (
+          <div className="webhook-grid" style={{ marginTop: 12 }}>
+            <CredentialStatus
+              label={t('settings.shopify.connection_status')}
+              ok={connectionTest.data.ok}
+              value={connectionTest.data.ok ? t('settings.shopify.connection_status_ok') : connectionTest.data.error ?? t('settings.shopify.connection_status_failed')}
+            />
+            <RuntimeCell label={t('settings.shopify.checked_at')} value={formatDate(connectionTest.data.checkedAt)} />
+            <RuntimeCell label={t('settings.shopify.latency_ms')} value={`${connectionTest.data.latencyMs}ms`} />
+            <RuntimeCell label={t('settings.shopify.api_version')} value={connectionTest.data.apiVersion ?? '-'} />
+            <RuntimeCell label={t('settings.shopify.shop_name')} value={connectionTest.data.shopName ?? '-'} />
+            <RuntimeCell label={t('settings.shopify.shop_email')} value={connectionTest.data.shopEmail ?? '-'} />
+          </div>
+        )}
+      </section>
+
       <section className="config-card" id="shopify-sync-status">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
@@ -242,6 +296,15 @@ function CredentialStatus({ label, ok, value }: { label: string; ok: boolean; va
         {ok ? <CheckCircle2 size={14} color="var(--success)" /> : <XCircle size={14} color="var(--danger)" />}
         {value}
       </div>
+    </div>
+  );
+}
+
+function RuntimeCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="cell">
+      <div className="lbl">{label}</div>
+      <div className="val">{value}</div>
     </div>
   );
 }

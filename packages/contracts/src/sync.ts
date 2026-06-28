@@ -51,3 +51,19 @@ export const shopifyInitialSyncResponseSchema = z.object({
   syncLogIds: z.array(z.string()),
 });
 export type ShopifyInitialSyncResponse = z.infer<typeof shopifyInitialSyncResponseSchema>;
+
+export interface ShopifyConnectionTestResponse {
+  ok: boolean;
+  status: 'ok' | 'missing_credentials' | 'provider_error' | 'network_error';
+  credentialRequired: boolean;
+  configured: boolean;
+  source: 'tenant_config' | 'env' | 'none';
+  shopifyDomain: string | null;
+  apiVersion: string | null;
+  checkedAt: string;
+  latencyMs: number;
+  shopId: string | null;
+  shopName: string | null;
+  shopEmail: string | null;
+  error: string | null;
+}

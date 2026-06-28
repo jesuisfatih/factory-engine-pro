@@ -18,6 +18,12 @@ export class SyncController {
     return this.sync.status();
   }
 
+  @Get('connection-test')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  connectionTest() {
+    return this.sync.testConnection();
+  }
+
   @Post('initial')
   @RequirePermission(MEMBER_PERMISSIONS.syncTrigger)
   initial(@Body(new ZodValidationPipe(shopifyInitialSyncSchema)) body: ShopifyInitialSyncInput) {

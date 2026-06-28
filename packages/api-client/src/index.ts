@@ -51,6 +51,7 @@ import type {
   MovePersonQueueCardInput,
   SendPersonMessageInput,
   SendTestMailInput,
+  ShopifyConnectionTestResponse,
   ShopifyInitialSyncInput,
   ShopifyInitialSyncResponse,
   ShopifySyncStatus,
@@ -585,6 +586,10 @@ export class ApiClient {
 
   shopifySyncStatus() {
     return this.get<ShopifySyncStatus>('/sync/status');
+  }
+
+  testShopifyConnection() {
+    return this.get<ShopifyConnectionTestResponse>('/sync/connection-test');
   }
 
   triggerShopifyInitialSync(input: ShopifyInitialSyncInput = {}) {
