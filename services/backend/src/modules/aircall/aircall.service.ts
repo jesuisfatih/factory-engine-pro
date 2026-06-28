@@ -454,18 +454,7 @@ export class AircallService {
 
     const where: Prisma.AircallCallEventWhereInput = input.callEventId
       ? { id: input.callEventId }
-      : {
-          AND: [
-            { transcriptRaw: { not: null } },
-            {
-              OR: [
-                { resolvedWithVersion: null },
-                { resolvedWithVersion: { lt: targetVersion } },
-                { resolverStatus: 'failed' },
-              ],
-            },
-          ],
-        };
+      : { transcriptRaw: { not: null } };
     const rows = await this.prisma.db.aircallCallEvent.findMany({
       where,
       orderBy: { eventTimestamp: 'desc' },
