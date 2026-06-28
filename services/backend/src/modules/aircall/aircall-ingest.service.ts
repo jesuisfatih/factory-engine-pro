@@ -344,7 +344,9 @@ export class AircallIngestService {
     });
     if (!callEvent || callEvent.resolverQueuedAt || callEvent.resolverQueueJobId) return;
 
-    const jobId = `aircall-transcript:${callEvent.tenantId}:${callEvent.externalCallId}:${callEvent.id}`;
+    const jobId = ['aircall-transcript', callEvent.tenantId, callEvent.externalCallId, callEvent.id]
+      .map((part) => part.replace(/[^a-zA-Z0-9_-]/g, '_'))
+      .join('-');
     if (!this.transcriptResolverQueue) {
       this.logger.warn('aircall', 'resolver_queue_missing', 'REDIS_URL is not configured; transcript resolver job was not queued', {
         call_event_id: callEvent.id,
