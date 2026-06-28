@@ -21,6 +21,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception instanceof HttpException
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (status >= 500) {
+      const error = exception instanceof Error ? exception : null;
+      console.error(JSON.stringify({
+        request_id: requestId,
+        tenant_id: context?.tenantId ?? null,
+        principal_id: context?.principalId ?? null,
+        principal_type: context?.principalType ?? null,
+        module: 'http',
+        action: 'exception',
+        status,
+        message: error?.message ?? 'Unhandled exception',
+        stack: error?.stack ?? null,
+      }));
+    }
     const raw = exception instanceof HttpException ? exception.getResponse() : undefined;
     const objectResponse = typeof raw === 'object' && raw !== null ? raw as Record<string, unknown> : {};
     const message = typeof raw === 'string'
