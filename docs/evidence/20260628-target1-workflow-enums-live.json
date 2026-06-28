@@ -1,0 +1,105 @@
+﻿{
+    "target":  "ROADMAP item 1 - Master enums.ts single source of truth",
+    "checkedAt":  "2026-06-28T02:03:00.2652340Z",
+    "deployedBuildSha":  "04682e1cd427853ceef4b4e344054b14b250687e",
+    "scope":  {
+                  "container":  "factoryengine-dtfbank-app",
+                  "apiBase":  "https://api.dtfbank.com/api/v1",
+                  "appUrl":  "https://app.dtfbank.com/rules",
+                  "tenantId":  "ten_dtfbank"
+              },
+    "localVerification":  [
+                              "pnpm --filter @factory-engine-pro/contracts build",
+                              "pnpm --filter @factory-engine-pro/backend build",
+                              "pnpm --filter @factory-engine-pro/admin build",
+                              "pnpm typecheck"
+                          ],
+    "api":  {
+                "healthStatus":  200,
+                "catalog":  {
+                                "endpoint":  "GET https://api.dtfbank.com/api/v1/rules/catalog",
+                                "version":  "2026-06-28.1",
+                                "counts":  {
+                                               "psychTags":  8,
+                                               "callIntents":  5,
+                                               "urgencyLevels":  4,
+                                               "triggers":  29,
+                                               "conditions":  14,
+                                               "actions":  9
+                                           },
+                                "sampleTrigger":  "aircall.call.created",
+                                "lastTrigger":  "task.overdue",
+                                "sampleCondition":  "call_intent",
+                                "sampleAction":  "create_task"
+                            },
+                "enumChain":  {
+                                  "endpoint":  "GET https://api.dtfbank.com/api/v1/rules/enum-chain",
+                                  "ok":  true,
+                                  "prompt":  {
+                                                 "promptKey":  "ai.transcript-resolver",
+                                                 "promptVersion":  "2026-06-28.1",
+                                                 "includesAllPsychTags":  true,
+                                                 "includesAllCallIntents":  true,
+                                                 "includesAllUrgencyLevels":  true,
+                                                 "includesAllConditions":  true
+                                             },
+                                  "canvas":  {
+                                                 "source":  "GET /api/v1/rules/catalog",
+                                                 "triggerOptions":  29,
+                                                 "conditionOptions":  14,
+                                                 "actionOptions":  9
+                                             },
+                                  "executor":  {
+                                                   "recognizedTriggers":  29,
+                                                   "recognizedConditions":  14,
+                                                   "recognizedActions":  9
+                                               },
+                                  "probeValues":  {
+                                                      "trigger":  "task.overdue",
+                                                      "condition":  "day_of_week",
+                                                      "action":  "no-op",
+                                                      "psychTag":  "satisfied",
+                                                      "callIntent":  "follow_up",
+                                                      "urgencyLevel":  "critical"
+                                                  }
+                              },
+                "resolverPrompt":  {
+                                       "endpoint":  "GET https://api.dtfbank.com/api/v1/ai/resolver-prompt",
+                                       "promptKey":  "ai.transcript-resolver",
+                                       "promptVersion":  "2026-06-28.1",
+                                       "includesProbePsychTag":  true,
+                                       "includesProbeCallIntent":  true,
+                                       "includesProbeUrgency":  true,
+                                       "includesProbeCondition":  true
+                                   }
+            },
+    "runtime":  {
+                    "pm2Online":  [
+                                      {
+                                          "name":  "factory-engine-pro-api",
+                                          "status":  "online",
+                                          "restartCount":  0
+                                      },
+                                      {
+                                          "name":  "factory-engine-pro-admin",
+                                          "status":  "online",
+                                          "restartCount":  0
+                                      },
+                                      {
+                                          "name":  "factory-engine-pro-person",
+                                          "status":  "online",
+                                          "restartCount":  0
+                                      },
+                                      {
+                                          "name":  "factory-engine-pro-accounts",
+                                          "status":  "online",
+                                          "restartCount":  0
+                                      }
+                                  ],
+                    "enumChainLog":  "\u001b[32m[Nest] 1108  - \u001b[39m06/28/2026, 2:02:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"871af59c-ec16-4ba3-81bc-bcf8c27b82ed\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_prodtest_1782574849914_fa5999f6\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"enum_chain_verified\",\"message\":\"Workflow enum chain verified\",\"catalog_version\":\"2026-06-28.1\",\"counts\":{\"psychTags\":8,\"callIntents\":5,\"urgencyLevels\":4,\"triggers\":29,\"conditions\":14,\"actions\":9},\"prompt_key\":\"ai.transcript-resolver\",\"probe_values\":{\"trigger\":\"task.overdue\",\"condition\":\"day_of_week\",\"action\":\"no-op\",\"psychTag\":\"satisfied\",\"callIntent\":\"follow_up\",\"urgencyLevel\":\"critical\"},\"executor\":{\"recognizedTriggers\":29,\"recognizedConditions\":14,\"recognizedActions\":9}}\u001b[39m"
+                },
+    "notes":  [
+                  "No local URL was used as evidence.",
+                  "Trigger count follows the explicit ROADMAP list: 15 system + 5 AI-derived + 5 aggregate + 2 accounts + 2 chaining-prep = 29."
+              ]
+}

@@ -1,0 +1,10 @@
+{
+  "url": "https://app.dtfbank.com/rules",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target1-workflow-enums-rules-live-20260628.png",
+  "hasMasterCatalog": true,
+  "hasCounts": true,
+  "verifyButtonClicked": true,
+  "enumChainVerifiedVisible": true,
+  "probeTriggerVisible": true,
+  "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nPO\nowner.prodtest+20260627184047@dtfbank.com\nOwner\nWorkspace settings\nRule engine\nD\nDTF Bank\nOwner\nRule engine\nVisual editor for task-generation rules. Author here, the engine consumes the JSON.\nVerify chain\nMASTER ENUM CATALOG V2026-06-28.1\n8 psych tags · 5 call intents · 4 urgency levels · 29 triggers · 14 conditions · 9 actions\nTriggers\n29\nTriggers\naircall.call.created · aircall.call.ended · aircall.call.missed · aircall.transcript.received · shopify.order.created · shopify.order.cancelled · shopify.order.refunded · shopify.customer.created\nConditions\n14\nConditions\ncall_intent · psych_tag_includes · product_mentioned · previous_purchase_includes · segment_member · call_count_in_window · is_first_call · customer_ltv_gte\nActions\n9\nActions\ncreate_task · pin_customer · add_note · segment_add · segment_remove · route_member · add_watcher · escalate · no-op\nPsych tags\n8\nPsych tags\nangry · purchase_intent · shipping_issue · refund_intent · complaint · info_request · follow_up · satisfied\nCall intents\n5\nCall intents\nsale · support · inquiry · complaint · follow_up\nUrgency\n4\nUrgency\nlow · medium · high · critical\ndraft\nshadow\nactive\narchived\ndraft\nCondition\nAction\nTRIGGER\nAircall Call Created\nAircall Call Ended\nAircall Call Missed\nAircall Transcript Received\nShopify Order Created\nShopify Order Cancelled\nShopify"
+}
