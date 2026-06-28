@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { emailSchema } from './common.js';
 
-export const mailDeliveryStatusSchema = z.enum(['queued', 'sending', 'sent', 'failed', 'skipped']);
+export const mailDeliveryStatusSchema = z.enum(['queued', 'queued_disabled', 'sending', 'sent', 'failed', 'skipped']);
 
 export const mailProviderHealthResponseSchema = z.object({
   provider: z.literal('resend'),

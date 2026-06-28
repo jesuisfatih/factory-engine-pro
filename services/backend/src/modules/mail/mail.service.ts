@@ -21,6 +21,15 @@ export interface TransactionalMailInput {
   metadata?: Record<string, unknown>;
 }
 
+export interface WorkflowDisabledMailInput {
+  eventKey: string;
+  to: string;
+  templateId?: string | null;
+  customerId?: string | null;
+  variables?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
 @Injectable()
 export class MailService {
   constructor(
@@ -58,7 +67,60 @@ export class MailService {
     return this.deliverQueued(delivery.id);
   }
 
-  list(query: { status?: 'queued' | 'sending' | 'sent' | 'failed' | 'skipped'; eventKey?: string; recipient?: string; limit: number }) {
+  async queueDisabledWorkflowMail(input: WorkflowDisabledMailInput) {
+    const templateHint = input.templateId?.trim() || null;
+    const template = templateHint
+      ? await this.prisma.db.emailTemplate.findFirst({
+          where: {
+            OR: [
+              { id: templateHint },
+              { slug: { equals: templateHint, mode: 'insensitive' } },
+              { eventKey: { equals: templateHint, mode: 'insensitive' } },
+            ],
+          },
+          orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+        })
+      : null;
+    const variables = input.variables ?? {};
+    const subject = template
+      ? renderTemplate(template.subject, variables)
+      : `Workflow email queued: ${input.eventKey}`;
+    const html = template
+      ? renderTemplate(template.html, variables)
+      : `<p>Workflow email action matched for <strong>${escapeHtml(input.eventKey)}</strong>.</p>`;
+    const text = template?.text
+      ? renderTemplate(template.text, variables)
+      : `Workflow email action matched for ${input.eventKey}.`;
+    const delivery = await this.repository.createDelivery({
+      eventKey: input.eventKey,
+      category: 'workflow',
+      recipientEmail: input.to,
+      subject,
+      html,
+      text,
+      status: 'queued_disabled',
+      provider: 'disabled',
+      errorMessage: 'mail.provider.disabled_in_phase_1',
+      metadata: {
+        ...(input.metadata ?? {}),
+        source: 'workflow_send_mail',
+        sendingEnabled: false,
+        providerMode: 'disabled',
+        templateId: template?.id ?? templateHint,
+        templateFound: Boolean(template),
+        customerId: input.customerId ?? null,
+      } as Prisma.InputJsonValue,
+    });
+    this.logger.warn('mail', 'provider.disabled_in_phase_1', 'Workflow mail delivery was queued with provider disabled', {
+      mail_delivery_id: delivery.id,
+      event_key: input.eventKey,
+      template_id: template?.id ?? templateHint,
+      customer_id: input.customerId ?? null,
+    });
+    return delivery;
+  }
+
+  list(query: { status?: 'queued' | 'queued_disabled' | 'sending' | 'sent' | 'failed' | 'skipped'; eventKey?: string; recipient?: string; limit: number }) {
     return this.repository.list(query);
   }
 
@@ -320,6 +382,16 @@ function providerMessage(body: { error?: { message?: unknown }; message?: unknow
   if (typeof body?.error?.message === 'string' && body.error.message.trim()) return body.error.message.slice(0, 300);
   if (typeof body?.name === 'string' && body.name.trim()) return body.name.slice(0, 300);
   return fallback.trim().slice(0, 300) || null;
+}
+
+function renderTemplate(source: string, variables: Record<string, unknown>) {
+  return source.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, key: string) => {
+    const value = key.split('.').reduce<unknown>((current, part) => {
+      if (!current || typeof current !== 'object') return undefined;
+      return (current as Record<string, unknown>)[part];
+    }, variables);
+    return value === undefined || value === null ? '' : String(value);
+  });
 }
 
 function rootDomain(value: string) {

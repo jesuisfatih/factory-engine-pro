@@ -43,6 +43,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomersService } from '../customers/customers.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { SupportService } from '../support/support.service.js';
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
@@ -55,6 +56,7 @@ export class RulesService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly customers: CustomersService,
+    private readonly mail: MailService,
     private readonly support: SupportService,
     private readonly executor: WorkflowExecutorService,
     private readonly prompt: WorkflowPromptService,
@@ -970,28 +972,89 @@ export class RulesService {
 
   private async sendMailDisabled(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const customer = context.state.customer;
-    this.logger.warn('rules', 'workflow_send_mail_disabled', 'Workflow send_mail action matched but mail delivery is disabled', {
+    const recipientEmail = stringParam(context.params, 'recipientEmail')
+      ?? stringParam(context.params, 'to')
+      ?? customer?.email
+      ?? stringParam(context.params, 'customerEmail')
+      ?? stringParam(context.params, 'email');
+    if (!recipientEmail) {
+      return skippedTrace(action, 'mail_delivery', 'Recipient email was not available for send_mail.');
+    }
+    const templateId = stringParam(context.params, 'templateId')
+      ?? stringParam(context.params, 'template_id')
+      ?? stringParam(context.params, 'mailTemplateId')
+      ?? stringParam(context.params, 'mail_template_id')
+      ?? action.value?.trim()
+      ?? null;
+    const delivery = await this.mail.queueDisabledWorkflowMail({
+      eventKey: `workflow.${context.trigger}`,
+      to: recipientEmail,
+      templateId,
+      customerId: customer?.id ?? null,
+      variables: this.workflowMailVariables(context),
+      metadata: {
+        eventId: context.eventId,
+        trigger: context.trigger,
+        source: context.source,
+        ruleId: context.rule.id,
+        ruleName: context.rule.name,
+        actionId: action.id,
+        actionValue: action.value ?? null,
+      },
+    });
+    this.logger.warn('rules', 'workflow_send_mail_disabled', 'Workflow send_mail queued with provider disabled', {
       event_id: context.eventId,
       trigger: context.trigger,
       rule_id: context.rule.id,
       action_id: action.id,
       customer_id: customer?.id ?? null,
-      template_hint: action.value || null,
+      template_id: templateId,
+      mail_delivery_id: delivery.id,
     });
     return {
       trace: {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'audit' as const,
-        targetId: customer?.id,
-        message: 'send_mail action is connected, but Mail Marketing delivery is disabled for this tenant.',
+        targetType: 'mail_delivery' as const,
+        targetId: delivery.id,
+        message: 'send_mail action queued a disabled mail delivery row; provider sending is off in Phase 1.',
         metadata: {
           sendingEnabled: false,
+          providerMode: 'disabled',
           customerId: customer?.id ?? null,
-          template: action.value || null,
+          recipientEmail,
+          templateId,
         },
       },
+    };
+  }
+
+  private workflowMailVariables(context: WorkflowActionContext): Record<string, unknown> {
+    const customer = context.state.customer;
+    return {
+      customer: customer
+        ? {
+            id: customer.id,
+            email: customer.email,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            companyName: customer.companyName,
+            totalSpent: Number(customer.totalSpent),
+            ordersCount: customer.ordersCount,
+            lastOrderAt: customer.lastOrderAt?.toISOString() ?? null,
+            tags: customer.tags,
+          }
+        : null,
+      workflow: {
+        eventId: context.eventId,
+        trigger: context.trigger,
+        source: context.source,
+        occurredAt: context.occurredAt,
+        ruleId: context.rule.id,
+        ruleName: context.rule.name,
+      },
+      resolverOutput: pickResolverOutput(context.state.resolverOutput),
     };
   }
 

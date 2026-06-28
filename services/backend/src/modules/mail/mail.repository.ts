@@ -18,6 +18,9 @@ export class MailRepository {
     subject: string;
     html: string;
     text?: string | null;
+    status?: MailDeliveryStatus;
+    provider?: string | null;
+    errorMessage?: string | null;
     metadata?: Prisma.InputJsonValue;
   }) {
     return this.prisma.db.mailDelivery.create({
@@ -30,6 +33,9 @@ export class MailRepository {
         subject: input.subject,
         html: input.html,
         text: input.text ?? null,
+        ...(input.status && { status: input.status }),
+        provider: input.provider ?? null,
+        errorMessage: input.errorMessage ?? null,
         metadata: input.metadata ?? {},
       },
     });

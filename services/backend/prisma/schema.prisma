@@ -34,6 +34,7 @@ enum AuthTokenKind {
 
 enum MailDeliveryStatus {
   queued
+  queued_disabled
   sending
   sent
   failed
