@@ -27,19 +27,19 @@ export class PersonWorkspaceController {
   constructor(private readonly workspace: PersonWorkspaceService) {}
 
   @Get('summary')
-  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   summary() {
     return this.workspace.summary();
   }
 
   @Get('queue')
-  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   queue() {
     return this.workspace.queue();
   }
 
   @Get('daily-operations')
-  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   dailyOperations() {
     return this.workspace.dailyOperations();
   }
@@ -84,7 +84,7 @@ export class PersonWorkspaceController {
   }
 
   @Get('tasks/:id/brief')
-  @RequirePermission(MEMBER_PERMISSIONS.supportRead)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   taskBrief(@Param('id') id: string) {
     return this.workspace.taskBrief(id);
   }
