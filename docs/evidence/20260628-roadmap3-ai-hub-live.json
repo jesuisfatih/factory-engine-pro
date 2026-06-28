@@ -1,0 +1,122 @@
+﻿{
+    "capturedAt":  "2026-06-28T09:40:47.6843650+03:00",
+    "principal":  {
+                      "email":  "info@dtfbank.com",
+                      "id":  "tmbr_ten_dtfbank_info_owner",
+                      "type":  "member"
+                  },
+    "buildSha":  "238f79574aed824dc6b32048aa480facdb7b4844",
+    "urls":  {
+                 "settings":  "https://app.dtfbank.com/settings/ai/settings",
+                 "services":  "https://app.dtfbank.com/settings/ai/services",
+                 "usageLog":  "https://app.dtfbank.com/settings/ai/usage-log",
+                 "budget":  "https://app.dtfbank.com/settings/ai/budget"
+             },
+    "screenshots":  {
+                        "settings":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-settings-live-20260628.png",
+                        "services":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-services-live-20260628.png",
+                        "usageLog":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-usage-log-live-20260628.png",
+                        "budget":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-budget-live-20260628.png",
+                        "settingsComposite":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-settings-urlbar-content-live-20260628.png",
+                        "settingsContent":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap3-ai-settings-content-live-20260628.png"
+                    },
+    "api":  {
+                "tenantConfig":  {
+                                     "ok":  true,
+                                     "status":  200,
+                                     "body":  {
+                                                  "workspaceName":  "DTF Bank",
+                                                  "brandBadge":  "DB",
+                                                  "brandLogo":  null,
+                                                  "shopifyDomain":  "eagle-dtf-print.myshopify.com",
+                                                  "hasShopifyAdminToken":  true,
+                                                  "hasShopifyApiKey":  true,
+                                                  "hasShopifyApiSecret":  true,
+                                                  "hasWebhookHmacKey":  true,
+                                                  "hasAircallApiId":  true,
+                                                  "hasAircallApiToken":  true,
+                                                  "hasAircallWebhookSecret":  true,
+                                                  "hasAnthropicApiKey":  true,
+                                                  "hasResendApiKey":  true
+                                              },
+                                     "raw":  "{\"workspaceName\":\"DTF Bank\",\"brandBadge\":\"DB\",\"brandLogo\":null,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"hasShopifyAdminToken\":true,\"hasShopifyApiKey\":true,\"hasShopifyApiSecret\":true,\"hasWebhookHmacKey\":true,\"hasAircallApiId\":true,\"hasAircallApiToken\":true,\"hasAircallWebhookSecret\":true,\"hasAnthropicApiKey\":true,\"hasResendApiKey\":true}"
+                                 },
+                "aiHealth":  {
+                                 "ok":  true,
+                                 "status":  200,
+                                 "body":  {
+                                              "provider":  "anthropic",
+                                              "credentialRequired":  false,
+                                              "configured":  true,
+                                              "reachable":  true,
+                                              "status":  "provider_error",
+                                              "source":  "tenant_config",
+                                              "latencyMs":  192,
+                                              "checkedAt":  "2026-06-28T06:40:18.930Z",
+                                              "modelCount":  1,
+                                              "error":  "Your credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.",
+                                              "resolverReachable":  false,
+                                              "resolverStatus":  "provider_error",
+                                              "resolverError":  "Your credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits."
+                                          },
+                                 "raw":  "{\"provider\":\"anthropic\",\"credentialRequired\":false,\"configured\":true,\"reachable\":true,\"status\":\"provider_error\",\"source\":\"tenant_config\",\"latencyMs\":192,\"checkedAt\":\"2026-06-28T06:40:18.930Z\",\"modelCount\":1,\"error\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\",\"resolverReachable\":false,\"resolverStatus\":\"provider_error\",\"resolverError\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\"}"
+                             },
+                "resolverProbe":  {
+                                      "ok":  false,
+                                      "status":  400,
+                                      "body":  null,
+                                      "raw":  "",
+                                      "error":  "Uzak sunucu hata döndürdü: (400) Hatalı İstek."
+                                  },
+                "resolverProbeRequestId":  "roadmap3-ai-settings-20260628094017"
+            },
+    "uiStates":  {
+                     "budget":  {
+                                    "url":  "https://app.dtfbank.com/settings/ai/budget",
+                                    "hasProviderState":  true,
+                                    "hasResolverState":  true,
+                                    "hasRuntimeLimits":  true,
+                                    "hasCreditErrorText":  true,
+                                    "textSample":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nRefresh\nAnthropic provider guard\nBlocked\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\nLast check 28.06.2026 09:40\nFAIL\nCREDENTIAL\ntenant_config\nMODELS API\n1 model(s)\nRESOLVER API\nprovider_error\nHEALTH LATENCY\n147ms\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\nRuntime limits\nProvider\nanthropic\nCredential required\nno\nResolver status\nprovider_error\nLocal spend totals are not shown until the resolver persists provider usage rows. Provider credit failures are surfaced from the live Anthropic API response above."
+                                },
+                     "usageLog":  {
+                                      "url":  "https://app.dtfbank.com/settings/ai/usage-log",
+                                      "hasLogTable":  true,
+                                      "runButtonText":  "Run resolver call",
+                                      "rows":  4,
+                                      "hasResolverFailureRow":  true,
+                                      "textSample":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nRefresh\nRun resolver call\nTIME\tSERVICE\tMODEL\tPROMPT\tLATENCY\tSTATUS\tMESSAGE\nlatest\ttranscript_resolver\tmessages\tai.transcript-resolver\tn/a\t\n\tYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits. (request_id: 4f511fc6-425b-40e1-ac19-3f78b0945a36)\n28.06.2026 09:40\tanthropic_health\t1 model(s)\tprovider\t146ms\t\n\tYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\n28.06.2026 09:40\ttranscript_resolver\tmessages\tai.transcript-resolver\t146ms\t\n\tYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\ncurrent\tprompt_registry\t2026-06-28.1\tai.transcript-resolver\tn/a\t\n\t650 chars"
+                                  },
+                     "services":  {
+                                      "url":  "https://app.dtfbank.com/settings/ai/services",
+                                      "hasServiceGrid":  true,
+                                      "hasAnthropicProvider":  true,
+                                      "hasTranscriptResolver":  true,
+                                      "hasPromptRegistry":  true,
+                                      "hasCreditErrorText":  true,
+                                      "textSample":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nLive AI service registry\nRefresh\nAnthropic provider\ncredential source: tenant_config\nSTATUS\nprovider_error\nMODELS\n1\nLATENCY\n141ms\nCHECKED\n28.06.2026 09:40\nTranscript resolver\nreal messages API readiness\nSTATUS\nprovider_error\nPROVIDER\nanthropic\nCREDENTIAL\nconfigured\nREQUIRED\nno\nResolver prompt registry\nai.transcript-resolver\nVERSION\n2026-06-28.1\nCHARACTERS\n650\nLINES\n6\nENUM SOURCE\ncontracts\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits."
+                                  },
+                     "settings":  {
+                                      "url":  "https://app.dtfbank.com/settings/ai/settings",
+                                      "hasRuntimePage":  true,
+                                      "hasCredentialInput":  true,
+                                      "hasSaveCredential":  true,
+                                      "hasResolverTest":  true,
+                                      "hasResolverError":  true,
+                                      "resolverButtonText":  "Run test",
+                                      "hasCreditErrorText":  true,
+                                      "textSample":  "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAI Hub\nProvider keys, prompt registry, usage log, budget and per-service controls\nTasks\nUsage Log\nServices\nPrompts\nBudget\nHealth\nSettings\nAnthropic credential\nTenant scoped key used by transcript resolver calls.\nRefresh\nTENANT KEY\nencrypted at rest\nPROVIDER\nanthropic\nCREDENTIAL SOURCE\ntenant_config\nRESOLVER API\nprovider_error\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\nCredential update\nBlank values keep the existing encrypted tenant key.\nANTHROPIC API KEY\nSAVE TENANT CREDENTIAL\nSave\nLive resolver health\nUses the real tenant key against Anthropic model and messages APIs.\nRefresh\nSTATUS\nprovider_error\nMODELS API\nreachable\nMODEL COUNT\n1\nLATENCY\n156ms\nCHECKED\n28.06.2026 09:40\nRESOLVER MESSAGES\nprovider_error\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\nTranscript resolver test\nProduces the JSON output required by the integration gate.\nRun test\nYour credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits. (request_id: ca210551-991b-4802-9d07-b0b23f6450f9)\nResolver prompt registry\nPrompt template compiled from the shared en"
+                                  }
+                 },
+    "pm2":  [
+                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1413     │ 4m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1369     │ 4m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1365     │ 4m     │ 0    │ online    │ 0%       │ 152.8mb  │ root     │ disabled │",
+                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1376     │ 4m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+            ],
+    "containerLog":  "\u001b[31m[Nest] 1365  - \u001b[39m06/28/2026, 6:40:19 AM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[31m{\"request_id\":\"roadmap3-ai-settings-20260628094017\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"ai\",\"action\":\"resolver_failed\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans \u0026 Billing to upgrade or purchase credits.\",\"key_source\":\"tenant_config\",\"model\":\"claude-haiku-4-5-20251001\",\"status_code\":400,\"latency_ms\":108}\u001b[39m"
+}
