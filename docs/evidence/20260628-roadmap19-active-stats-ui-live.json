@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-06-28T13:30:15.172Z",
+  "url": "https://app.dtfbank.com/dashboard",
+  "ruleId": "wrule_kn3hdogmbquq76dk592uw2wq",
+  "eventId": "roadmap19-stats-20260628162848",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap19-active-stats-ui-live-20260628.png",
+  "consoleErrors": [],
+  "assertions": {
+    "activeStatsSectionVisible": true,
+    "proofRuleVisible": true,
+    "fireMetricVisible": true,
+    "matchMetricVisible": true,
+    "avgLatencyColumnVisible": true,
+    "healthVisible": true
+  }
+}

@@ -1,0 +1,21 @@
+﻿{
+    "checkedAt":  "2026-06-28T13:29:33.7468850Z",
+    "buildSha":  "e86ff8e8bafb854d2e3425391b88825de327d91a",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "ruleId":  "wrule_kn3hdogmbquq76dk592uw2wq",
+    "eventId":  "roadmap19-stats-20260628162848",
+    "logLines":  [
+                     "\u001b[32m[Nest] 1842  - \u001b[39m06/28/2026, 1:28:23 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/stats/active, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                     "\u001b[32m[Nest] 1842  - \u001b[39m06/28/2026, 1:28:23 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                     "\u001b[32m[Nest] 1842  - \u001b[39m06/28/2026, 1:28:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"roadmap19-api-proof\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"active_stats_read\",\"message\":\"Active workflow rule stats read\",\"window_days\":7,\"active_rules\":1,\"fire_count\":1,\"match_count\":1,\"avg_latency_ms\":8}\u001b[39m"
+                 ],
+    "assertions":  {
+                       "healthOk":  true,
+                       "buildShaMatches":  true,
+                       "routeMapped":  true,
+                       "activeStatsReadLog":  true
+                   }
+}

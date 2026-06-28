@@ -1,0 +1,28 @@
+﻿{
+  "checkedAt": "2026-06-28T13:29:08.992Z",
+  "ruleId": "wrule_kn3hdogmbquq76dk592uw2wq",
+  "eventId": "roadmap19-stats-20260628162848",
+  "rule": {
+    "id": "wrule_kn3hdogmbquq76dk592uw2wq",
+    "status": "active",
+    "trigger": "manual.trigger",
+    "priority": 999
+  },
+  "execution": {
+    "id": "wrex_ll518xlqcc1yn9jsfgwqex9e",
+    "status": "no_op",
+    "taskIds": [],
+    "firstSeenAt": "2026-06-28T13:28:48.250Z",
+    "updatedAt": "2026-06-28T13:28:48.258Z",
+    "latencyMs": 8
+  },
+  "count7d": 1,
+  "assertions": {
+    "activeRuleExists": true,
+    "executionExists": true,
+    "executionCompleted": true,
+    "executionMatchedNoOp": true,
+    "executionIn7dWindow": true,
+    "noTaskCreatedByProofRule": true
+  }
+}

@@ -1,0 +1,47 @@
+﻿{
+    "checkedAt":  "2026-06-28T13:28:52.0275240Z",
+    "buildSha":  "e86ff8e8bafb854d2e3425391b88825de327d91a",
+    "tenantId":  "ten_dtfbank",
+    "ruleId":  "wrule_kn3hdogmbquq76dk592uw2wq",
+    "eventId":  "roadmap19-stats-20260628162848",
+    "fireResponse":  {
+                         "matchedRules":  2,
+                         "evaluatedRules":  2,
+                         "tasksCreated":  0,
+                         "resultStatuses":  [
+                                                "no_op",
+                                                "skipped"
+                                            ]
+                     },
+    "statsTotals":  {
+                        "activeRules":  1,
+                        "fireCount":  1,
+                        "matchCount":  1,
+                        "taskCreatedCount":  0,
+                        "avgLatencyMs":  8
+                    },
+    "row":  {
+                "ruleId":  "wrule_kn3hdogmbquq76dk592uw2wq",
+                "ruleName":  "Roadmap 19 active stats proof 20260628162848",
+                "trigger":  "manual.trigger",
+                "priority":  999,
+                "fireCount":  1,
+                "matchCount":  1,
+                "matchRate":  100,
+                "taskCreatedCount":  0,
+                "avgLatencyMs":  8,
+                "lastFiredAt":  "2026-06-28T13:28:48.250Z",
+                "health":  "healthy"
+            },
+    "assertions":  {
+                       "ruleCreated":  true,
+                       "fireEndpointEvaluated":  true,
+                       "statsEndpointReturnedRows":  true,
+                       "proofRuleInStats":  true,
+                       "fireCountVisible":  true,
+                       "matchCountVisible":  true,
+                       "matchRateVisible":  true,
+                       "avgLatencyVisible":  true,
+                       "sevenDayWindow":  true
+                   }
+}
