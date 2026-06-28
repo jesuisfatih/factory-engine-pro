@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION, type WorkflowTrigger } from '@factory-engine-pro/contracts';
 import type { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { timingSafeEqual } from 'node:crypto';
@@ -9,6 +9,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_JOB, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { RulesService } from '../rules/rules.service.js';
 
 export interface ReceiveAircallWebhookInput {
   tenantSlug: string;
@@ -44,6 +45,7 @@ export class AircallIngestService {
     private readonly crypto: CryptoService,
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
+    private readonly rules: RulesService,
     @Inject(AIRCALL_INGEST_QUEUE) private readonly ingestQueue: Queue | null,
     @Inject(AI_TRANSCRIPT_RESOLVER_QUEUE) private readonly transcriptResolverQueue: Queue | null,
   ) {}
@@ -245,6 +247,11 @@ export class AircallIngestService {
         ],
         skipDuplicates: true,
       });
+      await this.fireWorkflowTrigger({
+        eventType,
+        callEvent,
+        call,
+      });
 
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEvent.id },
@@ -315,6 +322,71 @@ export class AircallIngestService {
         rawPayload: data as Prisma.InputJsonValue,
       },
     });
+  }
+
+  private async fireWorkflowTrigger(input: {
+    eventType: string;
+    callEvent: {
+      id: string;
+      externalCallId: string;
+      eventTimestamp: Date;
+      direction: string | null;
+      status: string | null;
+      aircallUserId: string | null;
+      contactPhone: string | null;
+      contactPhoneE164: string | null;
+      contactEmail: string | null;
+    };
+    call: {
+      id: string;
+      customerId: string | null;
+      customerUserId: string | null;
+      currentOperatorId: string | null;
+    };
+  }) {
+    const trigger = aircallWorkflowTrigger(input.eventType);
+    if (!trigger) return;
+
+    const eventId = `aircall:${input.callEvent.id}:${trigger}`;
+    try {
+      const result = await this.rules.fireTrigger({
+        trigger,
+        eventId,
+        source: 'aircall-webhook',
+        occurredAt: input.callEvent.eventTimestamp.toISOString(),
+        params: {
+          callId: input.call.id,
+          callEventId: input.callEvent.id,
+          aircallCallEventId: input.callEvent.id,
+          externalCallId: input.callEvent.externalCallId,
+          eventType: input.eventType,
+          direction: input.callEvent.direction,
+          status: input.callEvent.status,
+          aircallUserId: input.callEvent.aircallUserId,
+          contactPhone: input.callEvent.contactPhone,
+          contactPhoneE164: input.callEvent.contactPhoneE164,
+          contactEmail: input.callEvent.contactEmail,
+          customerId: input.call.customerId,
+          customerUserId: input.call.customerUserId,
+          assignedMemberId: input.call.currentOperatorId,
+        },
+      });
+      this.logger.log('aircall', 'workflow_trigger_dispatched', 'Aircall webhook dispatched workflow trigger', {
+        event_id: eventId,
+        trigger,
+        call_event_id: input.callEvent.id,
+        external_call_id: input.callEvent.externalCallId,
+        tasks_created: result.tasksCreated,
+      });
+    } catch (error) {
+      this.logger.warn('aircall', 'workflow_trigger_failed', 'Aircall webhook workflow trigger failed', {
+        event_id: eventId,
+        trigger,
+        call_event_id: input.callEvent.id,
+        external_call_id: input.callEvent.externalCallId,
+        error: messageOf(error),
+      });
+    }
   }
 
   private async resolveMappedMemberId(tenantId: string, aircallUserId: string | null) {
@@ -528,6 +600,14 @@ function extractExternalCallId(payload: Record<string, unknown>) {
 
 function extractEventTimestamp(payload: Record<string, unknown>) {
   return dateFromUnknown(payload.timestamp) ?? new Date();
+}
+
+function aircallWorkflowTrigger(eventType: string): WorkflowTrigger | null {
+  const normalized = eventType.trim().toLowerCase().replace(/^aircall\./, '');
+  if (normalized === 'call.created') return 'aircall.call.created';
+  if (normalized === 'call.ended' || normalized === 'call.hungup') return 'aircall.call.ended';
+  if (normalized === 'call.missed') return 'aircall.call.missed';
+  return null;
 }
 
 function payloadData(payload: Record<string, unknown>) {
