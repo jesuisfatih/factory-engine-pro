@@ -1,0 +1,122 @@
+{
+  "capturedAt": "2026-06-28T07:21:00.000Z",
+  "scope": "roadmap-target-4-aircall-transcript-capture-last-3-days",
+  "live": {
+    "buildSha": "f34adfc191070b4f70f10b629873e2c3be243cb0",
+    "container": "factoryengine-dtfbank-app",
+    "apiHealth": {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "pm2Apps": [
+      "factory-engine-pro-api",
+      "factory-engine-pro-admin",
+      "factory-engine-pro-person",
+      "factory-engine-pro-accounts"
+    ]
+  },
+  "deployment": {
+    "migration": "202606281_aircall_backfill_transcript_queue",
+    "migrateDeploy": "No pending migrations to apply after deployment; migration was applied during first deploy.",
+    "managedRedis": "Resolver queue used the configured managed Redis connection; no local Redis container was added."
+  },
+  "apiProof": {
+    "login": {
+      "url": "POST https://api.dtfbank.com/api/v1/auth/member/login",
+      "tenantId": "ten_dtfbank",
+      "status": 201
+    },
+    "before": {
+      "url": "GET https://api.dtfbank.com/api/v1/aircall/calls",
+      "status": 200,
+      "stats": {
+        "total": 102,
+        "last3d": 102,
+        "withTranscript": 74,
+        "resolverQueued": 0,
+        "lastReceivedAt": "2026-06-28T07:10:03.765Z"
+      }
+    },
+    "backfillRecent": {
+      "url": "POST https://api.dtfbank.com/api/v1/aircall/calls/backfill-recent",
+      "status": 201,
+      "input": {
+        "recentDays": 3,
+        "maxPages": 20
+      },
+      "result": {
+        "fetched": 99,
+        "ingested": 99,
+        "skipped": 0,
+        "errors": 0,
+        "pages": 2,
+        "transcriptsFound": 71,
+        "transcriptsEmpty": 28,
+        "transcriptErrors": 0,
+        "resolverQueued": 71
+      }
+    },
+    "after": {
+      "url": "GET https://api.dtfbank.com/api/v1/aircall/calls",
+      "status": 200,
+      "stats": {
+        "total": 102,
+        "last3d": 102,
+        "withTranscript": 74,
+        "resolverQueued": 71,
+        "lastReceivedAt": "2026-06-28T07:10:03.765Z"
+      },
+      "maskedSample": {
+        "externalCallId": "3906652817",
+        "transcriptPresent": true,
+        "transcriptLength": 412,
+        "resolverQueuedAt": "2026-06-28T07:20:41.812Z",
+        "contact": "+1 3***17"
+      }
+    }
+  },
+  "logProof": {
+    "source": "docker logs --since=2026-06-28T07:20:15Z factoryengine-dtfbank-app",
+    "sample": [
+      {
+        "module": "aircall",
+        "action": "resolver_job_queued",
+        "message": "Transcript resolver job queued",
+        "tenant_id": "ten_dtfbank",
+        "external_call_id": "3901171330"
+      },
+      {
+        "module": "aircall",
+        "action": "resolver_job_queued",
+        "message": "Transcript resolver job queued",
+        "tenant_id": "ten_dtfbank",
+        "external_call_id": "3906652817"
+      }
+    ],
+    "errorCheck": "No recent_backfill_ingest_failed or ingest_dispatch_failed entries in the successful 07:20 run."
+  },
+  "uiProof": {
+    "url": "https://app.dtfbank.com/settings/aircall/connection",
+    "screenshot": "docs/evidence/roadmap4-aircall-backfill-live-20260628.png",
+    "contentScreenshot": "docs/evidence/roadmap4-aircall-backfill-content-live-20260628.png",
+    "visibleStats": {
+      "callsTotal": 102,
+      "last3Days": 102,
+      "withTranscript": 74,
+      "resolverQueued": 71
+    }
+  },
+  "gate": {
+    "status": "passed",
+    "bitti": "son 3 gunun cagri sayisi DB'de + transcript'i olan cagrilarin transcript alaninin dolu olmasi",
+    "notes": [
+      "Backfill uses Aircall /calls and /calls/:id/transcription, then processes synthetic AircallWebhookInbox rows through the same ingest service.",
+      "Transcript-bearing calls are queued into ai-transcript-resolver using managed Redis.",
+      "Anthropic provider billing blocker from target 3 remains separate; target 4 only queues resolver jobs."
+    ]
+  }
+}
