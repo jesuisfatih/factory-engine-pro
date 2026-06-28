@@ -129,19 +129,19 @@ export class PersonWorkspaceController {
   }
 
   @Get('messages/teammates')
-  @RequirePermission(MEMBER_PERMISSIONS.identityRead)
+  @RequirePermission(MEMBER_PERMISSIONS.messagingRead)
   teammates() {
     return this.workspace.teammates();
   }
 
   @Get('messages/threads/:threadId')
-  @RequirePermission(MEMBER_PERMISSIONS.identityRead)
+  @RequirePermission(MEMBER_PERMISSIONS.messagingRead)
   thread(@Param('threadId') threadId: string) {
     return this.workspace.thread(threadId);
   }
 
   @Post('messages')
-  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  @RequirePermission(MEMBER_PERMISSIONS.messagingWrite)
   sendMessage(@Body(new ZodValidationPipe(sendPersonMessageSchema)) body: SendPersonMessageInput) {
     return this.workspace.sendMessage(body);
   }
