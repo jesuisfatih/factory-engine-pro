@@ -1,0 +1,86 @@
+{
+  "generatedAt": "2026-06-28T07:35:18.0835913+03:00",
+  "scope": "vultr /opt/apps/custom/factoryengine env + compose files and factoryengine-* container envs",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "appBase": "https://app.dtfbank.com",
+  "tenantId": "ten_dtfbank",
+  "liveBuildSha": "0f8ddcd645520895ec054018388929b13170d4c5",
+  "health": {
+    "status": 200,
+    "content": {
+      "ok": true,
+      "service": "factory-engine-pro-backend"
+    }
+  },
+  "currentRuntimeKeyCheck": {
+    "container": "factoryengine-dtfbank-app",
+    "keyHash": "9ac789e82c88",
+    "length": 108,
+    "modelsStatus": 200,
+    "messageStatus": 400,
+    "ok": false,
+    "error": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+  },
+  "vultrScopeKeyScan": {
+    "uniqueKeys": 3,
+    "results": [
+      {
+        "keyHash": "b0cb6a60a43a",
+        "length": 108,
+        "sourceCount": 6,
+        "modelsStatus": 401,
+        "messageStatus": 401,
+        "ok": false,
+        "error": "invalid x-api-key",
+        "sources": [
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-2026-05-07-redis-rotate",
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-image-fba77bf35-20260506171912",
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-20260528204655-anthropic-rotate",
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-redis-rotate-20260511-132223",
+          "/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/eagledtfprint/.env",
+          "/opt/apps/custom/factoryengine/eagledtfprint-source/backend/.env"
+        ]
+      },
+      {
+        "keyHash": "9ac789e82c88",
+        "length": 108,
+        "sourceCount": 9,
+        "modelsStatus": 200,
+        "messageStatus": 400,
+        "ok": false,
+        "error": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+        "sources": [
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-predeploy-cd86bac",
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env",
+          "/opt/apps/custom/factoryengine/eagledtfprint/.env.bak-predeploy-next1625",
+          "container:factoryengine-dtfbank-app:env",
+          "container:factoryengine-dtfprint-app:env",
+          "container:factoryengine-eagledtfsupply-app:env",
+          "container:factoryengine-fastdtfsupply-app:env",
+          "container:factoryengine-fastdtftransfer-app:env",
+          "container:factoryengine-dtfprintdepot-app:env"
+        ]
+      },
+      {
+        "keyHash": "dec7c3ee145f",
+        "length": 108,
+        "sourceCount": 2,
+        "modelsStatus": 200,
+        "messageStatus": 400,
+        "ok": false,
+        "error": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+        "sources": [
+          "/opt/apps/custom/factoryengine/eagledtfprint-source/tenant-configs/dtfbank/.env",
+          "/opt/apps/custom/factoryengine/dtfbank/.env"
+        ]
+      }
+    ]
+  },
+  "conclusion": {
+    "roadmapItem3Complete": false,
+    "shopifyAndAircallEvidenceAlreadyPresent": true,
+    "blockingRequirement": "Bitti requires a test transcript JSON output from Anthropic resolver.",
+    "blocker": "No usable credited Anthropic key found in dtfbank/factoryengine Vultr scope. Available keys are either invalid or valid-but-out-of-credit.",
+    "nextRequiredInput": "Add credits to Anthropic account or provide a credited Anthropic API key for TenantConfig."
+  }
+}
