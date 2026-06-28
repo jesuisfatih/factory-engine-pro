@@ -122,6 +122,7 @@ export const createServiceRequestSchema = z.object({
   customerId: z.string().trim().optional(),
   customerUserId: z.string().trim().optional(),
   assignedMemberId: z.string().trim().nullable().optional(),
+  dueAt: z.string().datetime().nullable().optional(),
   sourceCallId: z.string().trim().optional(),
   sourceEmailId: z.string().trim().optional(),
   sourceFormId: z.string().trim().optional(),
@@ -139,6 +140,7 @@ export type AssignServiceRequestInput = z.infer<typeof assignServiceRequestSchem
 export const updateServiceRequestSchema = z.object({
   priority: serviceRequestPrioritySchema.optional(),
   category: z.string().trim().max(80).optional(),
+  dueAt: z.string().datetime().nullable().optional(),
 });
 export type UpdateServiceRequestInput = z.infer<typeof updateServiceRequestSchema>;
 

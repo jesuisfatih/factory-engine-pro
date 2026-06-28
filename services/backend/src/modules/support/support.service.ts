@@ -127,6 +127,7 @@ export class SupportService {
       description: input.description ?? null,
       status: 'open',
       priority: input.priority ?? 'medium',
+      dueAt: input.dueAt ? new Date(input.dueAt) : null,
       createdByActorId: this.tenantContext.get()?.principalId,
       metadata,
       ...(input.taskStateSnapshot && { taskStateSnapshot: input.taskStateSnapshot as Prisma.InputJsonValue }),
@@ -140,6 +141,7 @@ export class SupportService {
     const metadata = this.asRecord(existing.metadata);
     const updated = await this.repository.update(id, {
       ...(input.priority && { priority: input.priority }),
+      ...(input.dueAt !== undefined && { dueAt: input.dueAt ? new Date(input.dueAt) : null }),
       ...(input.category !== undefined && { metadata: this.cleanMetadata({ ...metadata, category: input.category || 'other' }) }),
     });
     await this.addSystemComment(id, 'details_changed', {
@@ -234,18 +236,14 @@ export class SupportService {
     const checkedAt = input.now ? new Date(input.now) : new Date();
     if (Number.isNaN(checkedAt.getTime())) throw new BadRequestException('A valid ISO datetime is required for now.');
 
-    const rows = await this.repository.listOpenForOverdueSweep(Array.from(CLOSED_STATUSES), input.limit ?? 100);
+    const rows = await this.repository.listOpenForOverdueSweep(Array.from(CLOSED_STATUSES), checkedAt, input.limit ?? 100);
     const items: SweepOverdueServiceRequestItem[] = [];
     let overdue = 0;
     let skipped = 0;
 
     for (const row of rows) {
-      const dueAt = this.extractExplicitDueAt(row.metadata);
-      if (!dueAt) {
-        skipped += 1;
-        continue;
-      }
-      if (dueAt.getTime() > checkedAt.getTime()) continue;
+      const dueAt = row.dueAt ?? this.extractExplicitDueAt(row.metadata);
+      if (!dueAt || dueAt.getTime() > checkedAt.getTime()) continue;
 
       overdue += 1;
       const result = await this.fireTaskLifecycleTrigger('task.overdue', row, {
@@ -390,6 +388,7 @@ export class SupportService {
           assignedMemberId: row.assignedMemberId ?? undefined,
           status: row.status,
           priority: row.priority,
+          dueAt: row.dueAt?.toISOString?.() ?? extraParams.dueAt,
           surface: row.surface,
           source: row.source,
           title: row.title,
