@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-06-28T14:15:42.427Z",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "buildSha": "84508d13bab7ead098f895598df0f12b7c18c7e1",
+  "docker": {
+    "Command": "\"docker-entrypoint.s…\"",
+    "CreatedAt": "2026-06-28 13:11:35 +0000 UTC",
+    "ID": "06addf615303",
+    "Image": "registry.depot.dev/hpjq16qkwn:464c42c",
+    "Labels": "build.sha=464c42c",
+    "LocalVolumes": "0",
+    "Mounts": "/opt/apps/cust…,/opt/apps/cust…",
+    "Names": "factoryengine-dtfbank-app",
+    "Networks": "appnet",
+    "Platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    },
+    "Ports": "3000-3001/tcp, 4000/tcp",
+    "RunningFor": "About an hour ago",
+    "Size": "25.2MB (virtual 3.24GB)",
+    "State": "running",
+    "Status": "Up About an hour"
+  },
+  "pm2": [
+    {
+      "name": "factory-engine-pro-admin",
+      "status": "online",
+      "pid": 32121,
+      "restarts": 156,
+      "uptimeMs": 4909
+    },
+    {
+      "name": "factory-engine-pro-person",
+      "status": "online",
+      "pid": 1383,
+      "restarts": 0,
+      "uptimeMs": 3739253
+    },
+    {
+      "name": "factory-engine-pro-accounts",
+      "status": "online",
+      "pid": 1394,
+      "restarts": 0,
+      "uptimeMs": 3739251
+    },
+    {
+      "name": "factory-engine-pro-api",
+      "status": "online",
+      "pid": 17861,
+      "restarts": 0,
+      "uptimeMs": 372422
+    }
+  ],
+  "migration": {
+    "migration_name": "202606290_task_assignee_resolution",
+    "finished_at": "2026-06-28T14:09:25.712Z",
+    "rolled_back_at": null
+  },
+  "assertions": {
+    "healthOk": true,
+    "buildShaDeployed": true,
+    "apiOnline": true,
+    "adminOnline": true,
+    "migrationApplied": true
+  }
+}

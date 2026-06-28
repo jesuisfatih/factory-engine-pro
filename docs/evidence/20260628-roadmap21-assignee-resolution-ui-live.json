@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-06-28T14:16:59.881Z",
+  "url": "https://app.dtfbank.com/support",
+  "taskId": "sr_z9jrz48yjia7zu0rde60ekx3",
+  "ruleId": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap21-assignee-resolution-ui-live-20260628.png",
+  "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nSupport\nD\nDTF Bank\nOwner\nSupport\nService requests across customer-facing and internal surfaces\nRefresh\nNew request\nOPEN\n5\nIN PROGRESS\n0\nURGENT\n5\nRESOLVED\n1\nAll\nInternal\nCustomer-facing\nSR\tTITLE\tCUSTOMER\tSTATUS\tPRIORITY\tASSIGNEE\tLAST ACTIVITY\nSR-MQXVBYBE\t\nRoadmap 21 task proof 20260628141127\nWorkflow Rule / Workflow / Support\n\tNorthstar Print Supply\tOPEN\tCritical\tCharlette Boatman\t28.06.2026 17:12:40\nSR-MQXVB82Y\t\nRoadmap 21 task proof 20260628141127\nWorkflow Rule / Workflow / Support\n\tNorthstar Print Supply\tOPEN\tCritical\tCharlette Boatman\t28.06.2026 17:12:06\nSR-MQXVAEQQ\t\nRoadmap 21 task proof 20260628141127\nWorkflow Rule / Workflow / Support\n\tNorthstar Print Supply\tOPEN\tCritical\tCharlette Boatman\t28.06.2026 17:11:28\nSR-MQXUKRHQ\t\nRoadmap 20 completed proof roadmap20-20260628135130\nRoadmap20 / Manual / No axis\n\tNo customer\tCLOSED\tLow\tUnassigned\t28.06.2026 16:51:32\nSR-MQXUKQUH\t\nRoadmap 20 overdue proof roadmap20-20260628135130\nRoadmap20 / Manual / No axis\n\tNo customer\tOPEN\tCritical\tUnassigned\t28.06.2026 16:51:31\nSR-TEN_DTFBANK-001\t\nSeed support follow-up\nOperations / Manual / No axis\n\tNorthstar Print Supply\tOPEN\tHigh\tDTF Bank Owner\t28.06.2026 16:13:21\nSR-MQXVBYBE\nCritical\nRoadmap 21 task proof 20260628141127\n\nCreated by workflow rule \"Roadmap 21 assignee proof 20260628141127\" for trigger \"manual.trigger\".\n\nCustomer\nNorthstar Print Supply\nSurface\nInternal\nAxis\nSupport\nMatched rule\nwrule_zc0s585zk6pqbyxnaag1gsaz\nCondition trace\n1 condition(s)\nWatchers\nLinda Marroquin, Ihsan Taskiran, DTF Bank Owner\nCreated\n28.06.2026 17:12:40\nResolution target\n29.06.2026 17:12:40\nWORKFLOW\nSTATUS\nOpen\nIn Progress\nWaiting\nWaiting On Customer\nPending Resolve\nResolved\nClosed\nReopened\nSave status\nASSIGNEE\nUnassigned\nIhsan Taskiran (ihsan@dtfbank.com)\nCharlette Boatman (charlette@dtfbank.com)\nLinda Marroquin (dtfbanktx@gmail.com)\nDTF Bank Owner (info@dtfbank.com)\nSave assignee\nCOMMENTS\nNo comments yet.\nCOMMENT\nAdd internal note\nAdd comment\nClose request",
+  "assertions": {
+    "taskTitleVisible": true,
+    "axisVisible": true,
+    "matchedRuleVisible": true,
+    "watchersVisible": true,
+    "conditionTraceVisible": true
+  }
+}

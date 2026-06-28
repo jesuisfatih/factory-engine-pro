@@ -1,0 +1,159 @@
+{
+  "checkedAt": "2026-06-28T14:12:39.435Z",
+  "api": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "principal": {
+    "id": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "permissions": 25
+  },
+  "rule": {
+    "id": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+    "name": "Roadmap 21 assignee proof 20260628141127",
+    "statusBeforeArchive": "active",
+    "statusAfterArchive": "archived",
+    "trigger": "manual.trigger"
+  },
+  "archivedStaleProofRules": [
+    {
+      "id": "wrule_kn3hdogmbquq76dk592uw2wq",
+      "name": "Roadmap 19 active stats proof 20260628162848",
+      "status": "archived"
+    }
+  ],
+  "fire": {
+    "eventId": "roadmap21:final:20260628141239",
+    "tasksCreated": 1,
+    "matchedRules": 3,
+    "evaluatedRules": 3,
+    "resultStatuses": [
+      "no_op",
+      "task_created",
+      "shadow_matched"
+    ],
+    "taskIds": [
+      "sr_z9jrz48yjia7zu0rde60ekx3"
+    ]
+  },
+  "task": {
+    "id": "sr_z9jrz48yjia7zu0rde60ekx3",
+    "title": "Roadmap 21 task proof 20260628141127",
+    "source": "workflow",
+    "axis": "support",
+    "matchedRuleId": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+    "assignedTo": {
+      "id": "tmbr_ten_dtfbank_charlette_boatman",
+      "name": "Charlette Boatman",
+      "email": "charlette@dtfbank.com"
+    },
+    "watchers": [
+      {
+        "id": "tpar_wsq92g15ksf1rczwkt0qd0x3",
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "role": "watcher",
+        "source": "axis_primary",
+        "createdAt": "2026-06-28T14:12:40.461Z",
+        "member": {
+          "id": "tmbr_ten_dtfbank_linda_marroquin",
+          "name": "Linda Marroquin",
+          "email": "dtfbanktx@gmail.com"
+        }
+      },
+      {
+        "id": "tpar_obga80b3wvtuy71l3ygnyt92",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "role": "watcher",
+        "source": "axis_primary",
+        "createdAt": "2026-06-28T14:12:40.465Z",
+        "member": {
+          "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "name": "Ihsan Taskiran",
+          "email": "ihsan@dtfbank.com"
+        }
+      },
+      {
+        "id": "tpar_b87w6obihcgk5fvkidyt01cs",
+        "memberId": "tmbr_ten_dtfbank_info_owner",
+        "role": "watcher",
+        "source": "axis_primary",
+        "createdAt": "2026-06-28T14:12:40.468Z",
+        "member": {
+          "id": "tmbr_ten_dtfbank_info_owner",
+          "name": "DTF Bank Owner",
+          "email": "info@dtfbank.com"
+        }
+      }
+    ],
+    "conditionTrace": [
+      {
+        "id": "intent",
+        "actual": "roadmap21_support_20260628141127",
+        "source": "event_or_resolver",
+        "matched": true,
+        "expected": "roadmap21_support_20260628141127",
+        "operator": "=",
+        "condition": "call_intent"
+      }
+    ],
+    "taskStateSnapshotKeys": [
+      "segment",
+      "customer",
+      "segments",
+      "callEvent",
+      "resolvedAt",
+      "recent_orders",
+      "resolverOutput"
+    ],
+    "workflow": {
+      "axis": "support",
+      "matchedRuleId": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+      "assigneeResolution": {
+        "source": "axis_primary_role",
+        "assigneeMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+        "watcherMemberIds": [
+          "tmbr_ten_dtfbank_linda_marroquin",
+          "tmbr_ten_dtfbank_ihsan_taskiran",
+          "tmbr_ten_dtfbank_info_owner"
+        ],
+        "candidateMemberIds": [
+          "tmbr_ten_dtfbank_charlette_boatman",
+          "tmbr_ten_dtfbank_linda_marroquin",
+          "tmbr_ten_dtfbank_ihsan_taskiran",
+          "tmbr_ten_dtfbank_info_owner"
+        ]
+      },
+      "watcherMemberIds": [
+        "tmbr_ten_dtfbank_linda_marroquin",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "stateSnapshotKeys": [
+        "segment",
+        "customer",
+        "segments",
+        "callEvent",
+        "resolvedAt",
+        "recent_orders",
+        "resolverOutput"
+      ]
+    }
+  },
+  "assertions": {
+    "healthOk": true,
+    "loginPrincipal": true,
+    "ruleArchived": true,
+    "fireCreatedTask": true,
+    "taskSourceWorkflow": true,
+    "taskAssigneePresent": true,
+    "taskWatcherPresent": true,
+    "taskAxisSupport": true,
+    "taskMatchedRule": true,
+    "taskConditionTracePresent": true,
+    "taskSnapshotPresent": true,
+    "workflowSnapshotPresent": true
+  }
+}

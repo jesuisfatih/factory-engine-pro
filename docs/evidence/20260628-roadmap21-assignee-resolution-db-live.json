@@ -1,0 +1,103 @@
+{
+  "checkedAt": "2026-06-28T14:14:52.611Z",
+  "tenantId": "ten_dtfbank",
+  "task": {
+    "id": "sr_z9jrz48yjia7zu0rde60ekx3",
+    "source": "workflow",
+    "axis": "support",
+    "matchedRuleId": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+    "assignedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+    "assignedMemberEmail": "charlette@dtfbank.com",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "customerEmail": "orders+northstar@example.com",
+    "conditionTrace": [
+      {
+        "id": "intent",
+        "actual": "roadmap21_support_20260628141127",
+        "source": "event_or_resolver",
+        "matched": true,
+        "expected": "roadmap21_support_20260628141127",
+        "operator": "=",
+        "condition": "call_intent"
+      }
+    ],
+    "taskStateSnapshotKeys": [
+      "segment",
+      "customer",
+      "segments",
+      "callEvent",
+      "resolvedAt",
+      "recent_orders",
+      "resolverOutput"
+    ],
+    "workflow": {
+      "axis": "support",
+      "matchedRuleId": "wrule_zc0s585zk6pqbyxnaag1gsaz",
+      "assigneeResolution": {
+        "source": "axis_primary_role",
+        "assigneeMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+        "watcherMemberIds": [
+          "tmbr_ten_dtfbank_linda_marroquin",
+          "tmbr_ten_dtfbank_ihsan_taskiran",
+          "tmbr_ten_dtfbank_info_owner"
+        ],
+        "candidateMemberIds": [
+          "tmbr_ten_dtfbank_charlette_boatman",
+          "tmbr_ten_dtfbank_linda_marroquin",
+          "tmbr_ten_dtfbank_ihsan_taskiran",
+          "tmbr_ten_dtfbank_info_owner"
+        ]
+      },
+      "watcherMemberIds": [
+        "tmbr_ten_dtfbank_linda_marroquin",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "stateSnapshotKeys": [
+        "segment",
+        "customer",
+        "segments",
+        "callEvent",
+        "resolvedAt",
+        "recent_orders",
+        "resolverOutput"
+      ]
+    }
+  },
+  "participants": [
+    {
+      "id": "tpar_wsq92g15ksf1rczwkt0qd0x3",
+      "role": "watcher",
+      "source": "axis_primary",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "memberEmail": "dtfbanktx@gmail.com",
+      "createdAt": "2026-06-28T14:12:40.461Z"
+    },
+    {
+      "id": "tpar_obga80b3wvtuy71l3ygnyt92",
+      "role": "watcher",
+      "source": "axis_primary",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "memberEmail": "ihsan@dtfbank.com",
+      "createdAt": "2026-06-28T14:12:40.465Z"
+    },
+    {
+      "id": "tpar_b87w6obihcgk5fvkidyt01cs",
+      "role": "watcher",
+      "source": "axis_primary",
+      "memberId": "tmbr_ten_dtfbank_info_owner",
+      "memberEmail": "info@dtfbank.com",
+      "createdAt": "2026-06-28T14:12:40.468Z"
+    }
+  ],
+  "assertions": {
+    "taskFound": true,
+    "sourceWorkflow": true,
+    "axisSupport": true,
+    "matchedRulePresent": true,
+    "assigneePresent": true,
+    "watcherParticipantPresent": true,
+    "conditionTracePresent": true,
+    "taskStateSnapshotPresent": true
+  }
+}
