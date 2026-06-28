@@ -28,6 +28,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'SegmentOwnership',
   'SegmentCustomerMembership',
   'ServiceRequest',
+  'TaskParticipant',
   'ServiceRequestComment',
   'B2BAccessRequest',
   'B2BAccessRequestFile',

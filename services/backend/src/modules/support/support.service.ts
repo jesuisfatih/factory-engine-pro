@@ -109,15 +109,25 @@ export class SupportService {
     if (input.customerId) await this.ensureCustomer(input.customerId);
     if (input.customerUserId) await this.ensureCustomerUser(input.customerUserId);
     if (input.assignedMemberId) await this.ensureMember(input.assignedMemberId);
+    const watcherMemberIds = uniqueStrings(input.watcherMemberIds ?? []).filter((memberId) => memberId !== input.assignedMemberId);
+    for (const memberId of watcherMemberIds) await this.ensureMember(memberId);
     const metadata = this.cleanMetadata({
       ...(input.metadata ?? {}),
       category: (input.metadata?.category as string | undefined) || 'other',
       ticketNumber: `SR-${Date.now().toString(36).toUpperCase()}`,
     });
+    const workflow = this.asRecord(this.asRecord(metadata).workflow);
+    const conditionTrace = input.conditionTrace
+      ?? (Array.isArray(workflow.conditionTrace) ? workflow.conditionTrace : []);
+    const matchedRuleId = input.matchedRuleId
+      ?? stringValue(workflow.matchedRuleId)
+      ?? stringValue(workflow.matched_rule_id);
     const created = await this.repository.create({
       customerId: input.customerId ?? null,
       customerUserId: input.customerUserId ?? null,
       assignedMemberId: input.assignedMemberId ?? null,
+      axis: input.axis ?? null,
+      matchedRuleId: matchedRuleId ?? null,
       source: input.source ?? 'manual',
       surface: input.surface ?? 'internal',
       sourceCallId: input.sourceCallId,
@@ -130,9 +140,19 @@ export class SupportService {
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
       createdByActorId: this.tenantContext.get()?.principalId,
       metadata,
+      conditionTrace: conditionTrace as Prisma.InputJsonValue,
       ...(input.taskStateSnapshot && { taskStateSnapshot: input.taskStateSnapshot as Prisma.InputJsonValue }),
     });
-    this.logger.log('support', 'create', 'Service request created', { service_request_id: created.id, surface: created.surface });
+    if (watcherMemberIds.length > 0) {
+      await this.repository.upsertParticipants(created.id, watcherMemberIds, 'watcher', 'axis_primary');
+    }
+    this.logger.log('support', 'create', 'Service request created', {
+      service_request_id: created.id,
+      surface: created.surface,
+      axis: created.axis ?? null,
+      matched_rule_id: created.matchedRuleId ?? null,
+      watcher_count: watcherMemberIds.length,
+    });
     return this.getById(created.id);
   }
 
@@ -164,6 +184,18 @@ export class SupportService {
       reason: input.reason ?? null,
     });
     this.logger.log('support', 'assign', 'Service request assigned', { service_request_id: id, member_id: input.assignedMemberId ?? null });
+    return this.getById(id);
+  }
+
+  async addWatcher(id: string, memberId: string, source = 'workflow_action') {
+    await this.requireRow(id);
+    await this.ensureMember(memberId);
+    await this.repository.upsertParticipants(id, [memberId], 'watcher', source);
+    this.logger.log('support', 'watcher_added', 'Service request watcher added', {
+      service_request_id: id,
+      member_id: memberId,
+      source,
+    });
     return this.getById(id);
   }
 
@@ -388,12 +420,14 @@ export class SupportService {
           assignedMemberId: row.assignedMemberId ?? undefined,
           status: row.status,
           priority: row.priority,
+          axis: row.axis ?? undefined,
           dueAt: row.dueAt?.toISOString?.() ?? extraParams.dueAt,
           surface: row.surface,
           source: row.source,
           title: row.title,
           category: metadata.category,
-          matchedRuleId: workflow.matchedRuleId ?? workflow.matched_rule_id,
+          matchedRuleId: row.matchedRuleId ?? workflow.matchedRuleId ?? workflow.matched_rule_id,
+          conditionTrace: Array.isArray(row.conditionTrace) ? row.conditionTrace : [],
           workflow,
           ...extraParams,
         },
@@ -438,8 +472,23 @@ export class SupportService {
 
   private present(row: any) {
     const metadata = this.asRecord(row.metadata);
+    const workflow = this.asRecord(metadata.workflow);
     const ticketNumber = String(metadata.ticketNumber || `SR-${String(row.id).slice(-8).toUpperCase()}`);
     const firstResponseAt = row.comments?.find((comment: any) => comment.actorType !== 'system' && !comment.internal)?.createdAt ?? null;
+    const participants = (row.participants ?? []).map((participant: any) => ({
+      id: participant.id,
+      memberId: participant.memberId,
+      role: participant.role,
+      source: participant.source,
+      createdAt: participant.createdAt,
+      member: participant.member
+        ? {
+            id: participant.member.id,
+            name: `${participant.member.firstName} ${participant.member.lastName}`,
+            email: participant.member.email,
+          }
+        : null,
+    }));
     return {
       ...row,
       ticketNumber,
@@ -451,6 +500,11 @@ export class SupportService {
       company: row.customer ? { id: row.customer.id, name: row.customer.companyName, email: row.customer.email } : null,
       companyUser: row.customerUser ? { id: row.customerUser.id, email: row.customerUser.email, firstName: row.customerUser.firstName, lastName: row.customerUser.lastName } : null,
       assignedTo: row.assignedMember ? { id: row.assignedMember.id, name: `${row.assignedMember.firstName} ${row.assignedMember.lastName}`, email: row.assignedMember.email } : null,
+      axis: row.axis ?? null,
+      matchedRuleId: row.matchedRuleId ?? stringValue(workflow.matchedRuleId) ?? stringValue(workflow.matched_rule_id),
+      conditionTrace: Array.isArray(row.conditionTrace) ? row.conditionTrace : [],
+      participants,
+      watchers: participants.filter((participant: any) => participant.role === 'watcher'),
       comments: (row.comments ?? []).map((comment: any) => ({
         id: comment.id,
         body: comment.body,
@@ -487,6 +541,14 @@ function parseDate(value: unknown) {
     if (!Number.isNaN(date.getTime())) return date;
   }
   return null;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value)).map((value) => value.trim()).filter(Boolean)));
 }
 
 function buildSla(row: any, firstResponseAt: Date | string | null) {

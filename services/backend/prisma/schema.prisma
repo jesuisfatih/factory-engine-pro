@@ -93,6 +93,7 @@ model Tenant {
   workflowRuleCooldowns   WorkflowRuleCooldown[]
   workflowRuleVersions    WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
+  taskParticipants        TaskParticipant[]
 
   @@map("tenants")
 }
@@ -140,6 +141,7 @@ model Member {
   roleAssignments MemberRoleAssignment[]
   segmentOwnerships SegmentOwnership[]
   assignedServiceRequests ServiceRequest[]
+  taskParticipants TaskParticipant[]
   aircallMemberMaps AircallMemberMap[]
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
@@ -750,6 +752,8 @@ model ServiceRequest {
   customerId       String?  @map("customer_id")
   customerUserId   String?  @map("customer_user_id")
   assignedMemberId String?  @map("assigned_member_id")
+  axis             String?
+  matchedRuleId    String?  @map("matched_rule_id")
   source           String   @default("manual")
   surface          String   @default("internal")
   sourceCallId     String?  @map("source_call_id")
@@ -765,6 +769,7 @@ model ServiceRequest {
   resolutionCode   String?  @map("resolution_code")
   resolutionNote   String?  @map("resolution_note")
   metadata         Json     @default("{}")
+  conditionTrace   Json     @default("[]") @map("condition_trace")
   taskStateSnapshot Json    @default("{}") @map("task_state_snapshot")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
@@ -774,15 +779,37 @@ model ServiceRequest {
   customerUser CustomerUser?           @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
   assignedMember Member?               @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
   comments     ServiceRequestComment[]
+  participants TaskParticipant[]
 
   @@index([tenantId, customerId])
   @@index([tenantId, customerUserId])
   @@index([tenantId, assignedMemberId])
+  @@index([tenantId, axis])
+  @@index([tenantId, matchedRuleId])
   @@index([tenantId, status])
   @@index([tenantId, dueAt])
   @@index([tenantId, surface])
   @@index([tenantId, updatedAt])
   @@map("service_requests")
+}
+
+model TaskParticipant {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  serviceRequestId String   @map("service_request_id")
+  memberId         String   @map("member_id")
+  role             String   @default("watcher")
+  source           String   @default("axis_primary")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, serviceRequestId, memberId, role])
+  @@index([tenantId, serviceRequestId])
+  @@index([tenantId, memberId])
+  @@map("task_participants")
 }
 
 model ServiceRequestComment {

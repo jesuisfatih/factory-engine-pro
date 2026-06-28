@@ -19,6 +19,7 @@ import {
   type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
   type RollbackWorkflowRuleInput,
+  type TaskAxis,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
   type WorkflowEnumChainProbeResponse,
@@ -870,14 +871,20 @@ export class RulesService {
 
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
+      const assignment = await this.resolveTaskAssignment(context);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
         description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
-        source: 'manual',
+        source: 'workflow',
         surface: 'internal',
         priority: priorityForRule(context.rule.priority),
-        metadata: this.workflowMetadata(action, context, taskStateSnapshot),
+        axis: assignment.axis,
+        assignedMemberId: assignment.assigneeMemberId,
+        watcherMemberIds: assignment.watcherMemberIds,
+        matchedRuleId: context.rule.id,
+        conditionTrace: context.conditionTrace,
+        metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
         taskStateSnapshot,
       });
       result = {
@@ -889,6 +896,13 @@ export class RulesService {
           targetType: 'service_request',
           targetId: task.id,
           message: 'Created service request from workflow action.',
+          metadata: {
+            axis: assignment.axis,
+            assignedMemberId: assignment.assigneeMemberId,
+            watcherMemberIds: assignment.watcherMemberIds,
+            matchedRuleId: context.rule.id,
+            conditionTraceCount: context.conditionTrace.length,
+          },
         },
       };
     } else if (action.action === 'pin_customer') {
@@ -944,9 +958,67 @@ export class RulesService {
         rule_id: context.rule.id,
         action_id: action.id,
         task_id: result.task.id,
+        axis: result.trace.metadata && 'axis' in result.trace.metadata ? result.trace.metadata.axis : null,
       });
     }
     return result;
+  }
+
+  private async resolveTaskAssignment(context: WorkflowActionContext): Promise<TaskAssignment> {
+    const axis = this.resolveTaskAxis(context);
+    const explicitAssigneeId = stringParam(context.params, 'assignedMemberId')
+      ?? stringParam(context.params, 'assigneeMemberId')
+      ?? stringParam(context.params, 'memberId');
+    const explicitAssignee = explicitAssigneeId ? await this.findMember(explicitAssigneeId) : null;
+    const candidates = await this.findAxisPrimaryMembers(axis);
+    const assignee = explicitAssignee ?? candidates[0] ?? null;
+    const watcherMemberIds = uniqueStrings(candidates.map((member) => member.id))
+      .filter((memberId) => memberId !== assignee?.id);
+    const assignment: TaskAssignment = {
+      axis,
+      assigneeMemberId: assignee?.id ?? null,
+      watcherMemberIds,
+      candidateMemberIds: candidates.map((member) => member.id),
+      resolutionSource: explicitAssignee ? 'explicit_param' : 'axis_primary_role',
+    };
+    this.logger.log('rules', 'task_assignment_resolved', 'Workflow task assignment resolved from axis primary roles', {
+      event_id: context.eventId,
+      trigger: context.trigger,
+      rule_id: context.rule.id,
+      axis: assignment.axis,
+      assignee_member_id: assignment.assigneeMemberId,
+      watcher_member_ids: assignment.watcherMemberIds,
+      resolution_source: assignment.resolutionSource,
+    });
+    return assignment;
+  }
+
+  private resolveTaskAxis(context: WorkflowActionContext): TaskAxis {
+    return normalizeTaskAxis(stringParam(context.params, 'axis'))
+      ?? normalizeTaskAxis(stringParam(context.params, 'taskAxis'))
+      ?? normalizeTaskAxis(stringParam(context.params, 'intent'))
+      ?? normalizeTaskAxis(stringParam(context.params, 'callIntent'))
+      ?? normalizeTaskAxis(stringParam(context.params, 'taskIntent'))
+      ?? normalizeTaskAxis(stringValue(context.state.resolverOutput.call_intent))
+      ?? normalizeTaskAxis(context.trigger)
+      ?? 'support';
+  }
+
+  private async findAxisPrimaryMembers(axis: TaskAxis) {
+    const members = await this.prisma.db.member.findMany({
+      where: { status: 'active' },
+      include: { roleAssignments: { include: { role: true } } },
+      orderBy: [{ createdAt: 'asc' }, { email: 'asc' }],
+    });
+    const scored = members
+      .map((member) => ({ member, score: axisRoleScore(axis, member.roleAssignments.map((assignment) => assignment.role)) }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score || left.member.email.localeCompare(right.member.email));
+    const primary = scored.map((entry) => entry.member);
+    if (primary.length >= 2) return primary.slice(0, 6);
+
+    const fallback = members.filter((member) => !primary.some((entry) => entry.id === member.id));
+    return [...primary, ...fallback].slice(0, 6);
   }
 
   private async pinCustomer(action: WorkflowRuleAction, context: WorkflowActionContext) {
@@ -1067,6 +1139,7 @@ export class RulesService {
       watcherEvents: [...recordArray(workflow.watcherEvents), { memberId: member.id, eventId: context.eventId, at: new Date().toISOString() }],
     }));
     if (!updated) return skippedTrace(action, 'service_request', 'Service request target was not found for add_watcher.');
+    await this.support.addWatcher(taskId, member.id, 'workflow_action');
     return {
       trace: {
         actionId: action.id,
@@ -1074,7 +1147,7 @@ export class RulesService {
         status: 'applied' as const,
         targetType: 'service_request' as const,
         targetId: taskId,
-        message: 'Added member watcher to service request metadata.',
+        message: 'Added member watcher to service request participant table.',
         metadata: { memberId: member.id, email: member.email },
       },
     };
@@ -1156,6 +1229,7 @@ export class RulesService {
     action: WorkflowRuleAction,
     context: WorkflowActionContext,
     taskStateSnapshot: Record<string, unknown>,
+    assignment: TaskAssignment,
   ) {
     return {
       category: 'workflow_rule',
@@ -1172,6 +1246,14 @@ export class RulesService {
         actionId: action.id,
         action: action.action,
         rulePriority: context.rule.priority,
+        axis: assignment.axis,
+        assigneeResolution: {
+          source: assignment.resolutionSource,
+          assigneeMemberId: assignment.assigneeMemberId,
+          watcherMemberIds: assignment.watcherMemberIds,
+          candidateMemberIds: assignment.candidateMemberIds,
+        },
+        watchers: assignment.watcherMemberIds,
         conditionTrace: context.conditionTrace,
         whenTrace: context.whenTrace,
         cooldown: context.cooldown,
@@ -1367,6 +1449,14 @@ type WorkflowActionContext = {
   whenTrace: WorkflowWhenGroupTrace[];
   cooldown: WorkflowCooldownTrace;
   taskIds: string[];
+};
+
+type TaskAssignment = {
+  axis: TaskAxis;
+  assigneeMemberId: string | null;
+  watcherMemberIds: string[];
+  candidateMemberIds: string[];
+  resolutionSource: 'explicit_param' | 'axis_primary_role';
 };
 
 type BackfillCandidate = {
@@ -1656,6 +1746,44 @@ function inList(actual: unknown, expected: string) {
 
 function normalize(value: unknown) {
   return String(value ?? '').trim().toLowerCase();
+}
+
+function normalizeTaskAxis(value: unknown): TaskAxis | null {
+  const raw = normalize(value);
+  if (!raw) return null;
+  if (['sales', 'sale', 'selling', 'revenue'].some((key) => raw === key || raw.includes(key))) return 'sales';
+  if (['order', 'quote', 'invoice', 'discount', 'pricing', 'commission'].some((key) => raw.includes(key))) return 'sales';
+  if (['support', 'service', 'complaint', 'refund', 'shipping', 'artwork', 'quality', 'ticket'].some((key) => raw.includes(key))) return 'support';
+  if (['account', 'accounts', 'billing', 'b2b', 'access', 'subuser', 'login'].some((key) => raw.includes(key))) return 'account';
+  return null;
+}
+
+function axisRoleScore(
+  axis: TaskAxis,
+  roles: Array<{ slug: string; name: string; permissions: unknown }>,
+) {
+  const keywords: Record<TaskAxis, string[]> = {
+    sales: ['sales', 'sale', 'order', 'pricing', 'commission'],
+    support: ['support', 'service', 'customer_service', 'aircall'],
+    account: ['account', 'b2b', 'billing', 'access', 'subuser', 'customer'],
+  };
+  let score = 0;
+  for (const role of roles) {
+    const slug = normalize(role.slug);
+    const name = normalize(role.name);
+    const permissions = asRecord(role.permissions);
+    const permissionKeys = Object.entries(permissions)
+      .filter(([, enabled]) => enabled === true)
+      .map(([permission]) => normalize(permission));
+    const haystack = [slug, name, ...permissionKeys].join(' ');
+    if (keywords[axis].some((keyword) => haystack.includes(keyword))) score = Math.max(score, 120);
+    if (axis === 'sales' && permissionKeys.some((permission) => permission.includes('orders') || permission.includes('pricing'))) score = Math.max(score, 90);
+    if (axis === 'support' && permissionKeys.some((permission) => permission.includes('support') || permission.includes('task.assign'))) score = Math.max(score, 90);
+    if (axis === 'account' && permissionKeys.some((permission) => permission.includes('customers') || permission.includes('b2b_access') || permission.includes('identity'))) score = Math.max(score, 90);
+    if (slug === 'admin') score = Math.max(score, 60);
+    if (slug === 'owner') score = Math.max(score, 50);
+  }
+  return score;
 }
 
 function numberValue(value: unknown) {

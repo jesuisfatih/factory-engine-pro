@@ -78,9 +78,10 @@ export const upsertSegmentOwnershipSchema = z.object({
 });
 export type UpsertSegmentOwnershipInput = z.infer<typeof upsertSegmentOwnershipSchema>;
 
-export const serviceRequestSourceSchema = z.enum(['call', 'email', 'form', 'manual']);
+export const serviceRequestSourceSchema = z.enum(['call', 'email', 'form', 'manual', 'workflow']);
 export const serviceRequestSurfaceSchema = z.enum(['internal', 'customer_facing']);
 export const serviceRequestPrioritySchema = z.enum(['critical', 'urgent', 'high', 'medium', 'low']);
+export const taskAxisSchema = z.enum(['sales', 'support', 'account']);
 export const serviceRequestStatusSchema = z.enum([
   'open',
   'in_progress',
@@ -96,6 +97,7 @@ export const serviceRequestStatusSchema = z.enum([
 export type ServiceRequestSource = z.infer<typeof serviceRequestSourceSchema>;
 export type ServiceRequestSurface = z.infer<typeof serviceRequestSurfaceSchema>;
 export type ServiceRequestPriority = z.infer<typeof serviceRequestPrioritySchema>;
+export type TaskAxis = z.infer<typeof taskAxisSchema>;
 export type ServiceRequestStatus = z.infer<typeof serviceRequestStatusSchema>;
 
 export const supportQuerySchema = pageQuerySchema.extend({
@@ -119,9 +121,13 @@ export const createServiceRequestSchema = z.object({
   source: serviceRequestSourceSchema.default('manual'),
   surface: serviceRequestSurfaceSchema.default('internal'),
   priority: serviceRequestPrioritySchema.default('medium'),
+  axis: taskAxisSchema.optional(),
   customerId: z.string().trim().optional(),
   customerUserId: z.string().trim().optional(),
   assignedMemberId: z.string().trim().nullable().optional(),
+  watcherMemberIds: z.array(z.string().trim().min(1)).max(25).default([]).optional(),
+  matchedRuleId: z.string().trim().optional(),
+  conditionTrace: z.array(z.unknown()).default([]).optional(),
   dueAt: z.string().datetime().nullable().optional(),
   sourceCallId: z.string().trim().optional(),
   sourceEmailId: z.string().trim().optional(),

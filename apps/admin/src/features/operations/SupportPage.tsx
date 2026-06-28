@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ServiceRequestPriority, ServiceRequestStatus, ServiceRequestSurface } from '@factory-engine-pro/contracts';
+import type { ServiceRequestPriority, ServiceRequestStatus, ServiceRequestSurface, TaskAxis } from '@factory-engine-pro/contracts';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
@@ -32,6 +32,15 @@ interface SupportComment {
   createdAt: string;
 }
 
+interface TaskParticipant {
+  id: string;
+  memberId: string;
+  role: string;
+  source: string;
+  createdAt: string;
+  member: { id: string; name: string; email: string } | null;
+}
+
 interface SupportRow {
   id: string;
   ticketNumber: string;
@@ -43,6 +52,11 @@ interface SupportRow {
   surface: ServiceRequestSurface;
   status: ServiceRequestStatus;
   priority: ServiceRequestPriority;
+  axis: TaskAxis | null;
+  matchedRuleId: string | null;
+  conditionTrace: unknown[];
+  participants: TaskParticipant[];
+  watchers: TaskParticipant[];
   customer: { id: string; companyName: string; email: string | null } | null;
   companyUser: { id: string; email: string; firstName: string; lastName: string } | null;
   assignedTo: { id: string; name: string; email: string } | null;
@@ -240,7 +254,7 @@ export function SupportPage() {
                 {rows.map((row) => (
                   <tr key={row.id} id={`support-row-${row.id}`} onClick={() => setSelectedId(row.id)} style={{ cursor: 'pointer' }}>
                     <td><span className="pill accent" style={{ fontFamily: 'monospace' }}>{row.ticketNumber}</span></td>
-                    <td><div className="name">{row.title}</div><div className="muted">{label(row.category)} / {label(row.source)}</div></td>
+                    <td><div className="name">{row.title}</div><div className="muted">{label(row.category)} / {label(row.source)} / {row.axis ? label(row.axis) : t('support.no_axis')}</div></td>
                     <td>{row.customer?.companyName ?? <span className="muted">{t('support.no_customer')}</span>}</td>
                     <td><span className={`sr-status-pill ${statusClass(row.status)}`}>{label(row.status)}</span></td>
                     <td><span className={`pill ${priorityTone(row.priority)}`}>{label(row.priority)}</span></td>
@@ -265,6 +279,10 @@ export function SupportPage() {
                 <div className="row-stack">
                   <DetailLine label={t('support.detail_customer')} value={selected.customer?.companyName ?? t('support.no_customer')} />
                   <DetailLine label={t('support.detail_surface')} value={label(selected.surface)} />
+                  <DetailLine label={t('support.detail_axis')} value={selected.axis ? label(selected.axis) : t('support.no_axis')} />
+                  <DetailLine label={t('support.detail_matched_rule')} value={selected.matchedRuleId ?? t('support.no_matched_rule')} />
+                  <DetailLine label={t('support.detail_condition_trace')} value={t('support.condition_trace_count', { count: selected.conditionTrace?.length ?? 0 })} />
+                  <DetailLine label={t('support.detail_watchers')} value={watcherNames(selected.watchers, t('support.no_watchers'))} />
                   <DetailLine label={t('support.detail_created')} value={fmtDate(selected.createdAt)} />
                   <DetailLine label={t('support.detail_sla')} value={selected.sla?.resolutionBreached ? t('support.sla_breached') : fmtDate(selected.sla?.resolutionTargetAt)} danger={selected.sla?.resolutionBreached} />
                 </div>
@@ -511,6 +529,11 @@ function statusClass(status: ServiceRequestStatus) {
 function fmtDate(value?: string | null) {
   if (!value) return 'Never';
   return new Date(value).toLocaleString();
+}
+
+function watcherNames(watchers: TaskParticipant[] | undefined, empty: string) {
+  if (!watchers?.length) return empty;
+  return watchers.map((watcher) => watcher.member?.name || watcher.member?.email || watcher.memberId).join(', ');
 }
 
 function label(value: string) {

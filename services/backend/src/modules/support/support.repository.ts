@@ -21,6 +21,7 @@ export class SupportRepository {
         customer: true,
         customerUser: true,
         assignedMember: true,
+        participants: { include: { member: true }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }] },
         comments: { orderBy: { createdAt: 'asc' } },
       },
     });
@@ -45,6 +46,7 @@ export class SupportRepository {
         customer: true,
         customerUser: true,
         assignedMember: true,
+        participants: { include: { member: true }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }] },
         comments: { orderBy: { createdAt: 'asc' } },
       },
     });
@@ -61,9 +63,36 @@ export class SupportRepository {
         customer: true,
         customerUser: true,
         assignedMember: true,
+        participants: { include: { member: true }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }] },
         comments: true,
       },
     });
+  }
+
+  async upsertParticipants(serviceRequestId: string, memberIds: string[], role = 'watcher', source = 'axis_primary') {
+    const tenantId = this.tenantId();
+    const uniqueMemberIds = Array.from(new Set(memberIds.map((memberId) => memberId.trim()).filter(Boolean)));
+    for (const memberId of uniqueMemberIds) {
+      await this.prisma.db.taskParticipant.upsert({
+        where: {
+          tenantId_serviceRequestId_memberId_role: {
+            tenantId,
+            serviceRequestId,
+            memberId,
+            role,
+          },
+        },
+        create: {
+          id: prefixedId('tpar'),
+          tenantId,
+          serviceRequestId,
+          memberId,
+          role,
+          source,
+        },
+        update: { source },
+      });
+    }
   }
 
   async update(id: string, data: Prisma.ServiceRequestUncheckedUpdateManyInput) {
@@ -109,6 +138,7 @@ export class SupportRepository {
         customer: true,
         customerUser: true,
         assignedMember: true,
+        participants: { include: { member: true }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }] },
         comments: { orderBy: { createdAt: 'asc' } },
       },
     });

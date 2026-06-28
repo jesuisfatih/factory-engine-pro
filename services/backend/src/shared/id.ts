@@ -25,6 +25,7 @@ export type IdPrefix =
   | 'smem'
   | 'sr'
   | 'srcm'
+  | 'tpar'
   | 'b2br'
   | 'b2bf'
   | 'mail'
