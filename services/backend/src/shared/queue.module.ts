@@ -9,6 +9,8 @@ export const MAIL_OUTBOUND_QUEUE = Symbol('MAIL_OUTBOUND_QUEUE');
 export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE');
 export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
+export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
+export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
 
 @Global()
 @Module({
@@ -59,7 +61,7 @@ export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
       inject: [REDIS_CONNECTION],
       useFactory: (connection: ConnectionOptions | null) => {
         if (!connection) return null;
-        return new Queue('ai-transcript-resolver', { connection });
+        return new Queue(AI_TRANSCRIPT_RESOLVER_QUEUE_NAME, { connection });
       },
     },
     {

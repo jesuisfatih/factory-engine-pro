@@ -341,6 +341,8 @@ function ConnectionView() {
               <RuntimeCell label={t('aircall_hub.connection.calls_last_3d')} value={String(callEvents.data.stats.last3d)} />
               <RuntimeCell label={t('aircall_hub.connection.calls_with_transcript')} value={String(callEvents.data.stats.withTranscript)} />
               <RuntimeCell label={t('aircall_hub.connection.calls_resolver_queued')} value={String(callEvents.data.stats.resolverQueued)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_resolver_succeeded')} value={String(callEvents.data.stats.resolverSucceeded)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_resolver_failed')} value={String(callEvents.data.stats.resolverFailed)} />
               <RuntimeCell label={t('aircall_hub.connection.calls_last_received')} value={formatDate(callEvents.data.stats.lastReceivedAt)} />
             </div>
             {callEvents.data.calls.length === 0 ? (
@@ -357,6 +359,7 @@ function ConnectionView() {
                     <th>{t('aircall_hub.connection.col_contact')}</th>
                     <th>{t('aircall_hub.connection.col_transcript')}</th>
                     <th>{t('aircall_hub.connection.col_queue')}</th>
+                    <th>{t('aircall_hub.connection.col_resolver')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -382,6 +385,12 @@ function ConnectionView() {
                         <span className={call.resolverQueuedAt ? 'pill success dot' : 'pill warning dot'}>
                           {call.resolverQueuedAt ? formatDate(call.resolverQueuedAt) : t('aircall_hub.connection.queue_pending')}
                         </span>
+                      </td>
+                      <td>
+                        <span className={resolverPillClass(call.resolverStatus)}>
+                          {resolverStatusLabel(call)}
+                        </span>
+                        {call.resolverError && <div className="muted">{call.resolverError.slice(0, 90)}</div>}
                       </td>
                     </tr>
                   ))}
@@ -419,6 +428,19 @@ function RuntimeCell({ label, value }: { label: string; value: string }) {
 function formatDate(value: string | null) {
   if (!value) return '-';
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+}
+
+function resolverPillClass(status: string | null) {
+  if (status === 'succeeded') return 'pill success dot';
+  if (status === 'failed') return 'pill danger dot';
+  return 'pill warning dot';
+}
+
+function resolverStatusLabel(call: { resolverStatus: string | null; resolvedWithVersion: number | null; resolvedAt: string | null }) {
+  if (call.resolverStatus === 'succeeded') {
+    return call.resolvedWithVersion ? `v${call.resolvedWithVersion} / ${formatDate(call.resolvedAt)}` : 'Resolved';
+  }
+  return call.resolverStatus ?? 'Not resolved';
 }
 
 export const Route = createFileRoute('/settings/aircall/connection')({ component: ConnectionView });

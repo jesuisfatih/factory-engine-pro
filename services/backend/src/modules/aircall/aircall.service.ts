@@ -223,6 +223,15 @@ export class AircallService {
         transcriptPulledAt: true,
         resolverQueuedAt: true,
         resolverQueueJobId: true,
+        resolverStatus: true,
+        resolverStartedAt: true,
+        resolverOutput: true,
+        resolverError: true,
+        resolverModel: true,
+        resolverPromptKey: true,
+        resolverLatencyMs: true,
+        resolvedAt: true,
+        resolvedWithVersion: true,
         receivedAt: true,
       },
     });
@@ -245,6 +254,16 @@ export class AircallService {
         transcriptPulledAt: row.transcriptPulledAt?.toISOString() ?? null,
         resolverQueuedAt: row.resolverQueuedAt?.toISOString() ?? null,
         resolverQueueJobId: row.resolverQueueJobId,
+        resolverStatus: row.resolverStatus,
+        resolverStartedAt: row.resolverStartedAt?.toISOString() ?? null,
+        resolverOutputPresent: Boolean(row.resolverOutput),
+        resolverOutput: row.resolverOutput as AircallCallEventsResponse['calls'][number]['resolverOutput'],
+        resolverError: row.resolverError,
+        resolverModel: row.resolverModel,
+        resolverPromptKey: row.resolverPromptKey,
+        resolverLatencyMs: row.resolverLatencyMs,
+        resolvedAt: row.resolvedAt?.toISOString() ?? null,
+        resolvedWithVersion: row.resolvedWithVersion,
         receivedAt: row.receivedAt.toISOString(),
       })),
     };
@@ -616,7 +635,7 @@ export class AircallService {
 
   private async callEventStats(): Promise<AircallCallEventsResponse['stats']> {
     const since = new Date(Date.now() - 3 * 86_400_000);
-    const [totalRows, last3dRows, withTranscript, resolverQueued, lastReceived] = await Promise.all([
+    const [totalRows, last3dRows, withTranscript, resolverQueued, resolverSucceeded, resolverFailed, lastReceived] = await Promise.all([
       this.prisma.db.aircallCallEvent.findMany({ select: { externalCallId: true } }),
       this.prisma.db.aircallCallEvent.findMany({
         where: { eventTimestamp: { gte: since } },
@@ -624,6 +643,8 @@ export class AircallService {
       }),
       this.prisma.db.aircallCallEvent.count({ where: { transcriptRaw: { not: null } } }),
       this.prisma.db.aircallCallEvent.count({ where: { resolverQueuedAt: { not: null } } }),
+      this.prisma.db.aircallCallEvent.count({ where: { resolverStatus: 'succeeded' } }),
+      this.prisma.db.aircallCallEvent.count({ where: { resolverStatus: 'failed' } }),
       this.prisma.db.aircallCallEvent.findFirst({
         orderBy: { receivedAt: 'desc' },
         select: { receivedAt: true },
@@ -634,6 +655,8 @@ export class AircallService {
       last3d: new Set(last3dRows.map((row) => row.externalCallId)).size,
       withTranscript,
       resolverQueued,
+      resolverSucceeded,
+      resolverFailed,
       lastReceivedAt: lastReceived?.receivedAt.toISOString() ?? null,
     };
   }

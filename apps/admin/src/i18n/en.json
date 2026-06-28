@@ -1470,6 +1470,8 @@
       "calls_last_3d": "LAST 3 DAYS",
       "calls_with_transcript": "WITH TRANSCRIPT",
       "calls_resolver_queued": "RESOLVER QUEUED",
+      "calls_resolver_succeeded": "RESOLVED",
+      "calls_resolver_failed": "RESOLVER FAILED",
       "calls_last_received": "LAST RECEIVED",
       "call_events_empty_title": "No Aircall calls captured yet",
       "call_events_empty_body": "Run the last 3 days pull after credentials are saved. Calls with transcripts will be queued for resolver processing.",
@@ -1478,6 +1480,7 @@
       "col_contact": "Contact",
       "col_transcript": "Transcript",
       "col_queue": "Queue",
+      "col_resolver": "Resolver output",
       "transcript_present": "{{count}} chars",
       "transcript_missing": "Missing",
       "queue_pending": "Not queued"

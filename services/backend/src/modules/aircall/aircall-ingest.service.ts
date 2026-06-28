@@ -6,7 +6,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
-import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
+import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_JOB, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 
 export interface ReceiveAircallWebhookInput {
@@ -340,9 +340,12 @@ export class AircallIngestService {
         externalCallId: true,
         resolverQueuedAt: true,
         resolverQueueJobId: true,
+        resolverStatus: true,
+        resolvedAt: true,
       },
     });
-    if (!callEvent || callEvent.resolverQueuedAt || callEvent.resolverQueueJobId) return;
+    if (!callEvent || callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt) return;
+    if (callEvent.resolverQueuedAt && callEvent.resolverQueueJobId && callEvent.resolverStatus !== 'failed') return;
 
     const jobId = ['aircall-transcript', callEvent.tenantId, callEvent.externalCallId, callEvent.id]
       .map((part) => part.replace(/[^a-zA-Z0-9_-]/g, '_'))
@@ -357,7 +360,7 @@ export class AircallIngestService {
     }
 
     await this.transcriptResolverQueue.add(
-      'resolve',
+      AI_TRANSCRIPT_RESOLVER_JOB,
       {
         tenantId: callEvent.tenantId,
         callEventId: callEvent.id,
@@ -373,7 +376,7 @@ export class AircallIngestService {
     );
     await this.prisma.db.aircallCallEvent.updateMany({
       where: { id: callEvent.id },
-      data: { resolverQueuedAt: new Date(), resolverQueueJobId: jobId },
+      data: { resolverQueuedAt: new Date(), resolverQueueJobId: jobId, resolverStatus: 'queued', resolverError: null },
     });
     this.logger.log('aircall', 'resolver_job_queued', 'Transcript resolver job queued', {
       call_event_id: callEvent.id,

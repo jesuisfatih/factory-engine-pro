@@ -129,6 +129,10 @@ export class AiService {
   }
 
   async resolveTranscriptTest(input: TranscriptResolverTestInput): Promise<TranscriptResolverTestResponse> {
+    return this.resolveTranscript(input);
+  }
+
+  async resolveTranscript(input: TranscriptResolverTestInput): Promise<TranscriptResolverTestResponse> {
     const startedAt = Date.now();
     const credentials = await this.resolveAnthropicKey();
     if (!credentials.key) {

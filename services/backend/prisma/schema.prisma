@@ -1005,6 +1005,15 @@ model AircallCallEvent {
   transcriptPulledAt DateTime? @map("transcript_pulled_at")
   resolverQueuedAt  DateTime? @map("resolver_queued_at")
   resolverQueueJobId String?  @map("resolver_queue_job_id")
+  resolverStatus    String?   @map("resolver_status")
+  resolverStartedAt DateTime? @map("resolver_started_at")
+  resolverOutput    Json?     @map("resolver_output")
+  resolverError     String?   @map("resolver_error") @db.Text
+  resolverModel     String?   @map("resolver_model")
+  resolverPromptKey String?   @map("resolver_prompt_key")
+  resolverLatencyMs Int?      @map("resolver_latency_ms")
+  resolvedAt        DateTime? @map("resolved_at")
+  resolvedWithVersion Int?    @map("resolved_with_version")
   tags              Json      @default("[]")
   comments          Json      @default("[]")
   rawPayload        Json      @map("raw_payload")
@@ -1021,6 +1030,8 @@ model AircallCallEvent {
   @@index([receivedAt])
   @@index([contactPhoneE164])
   @@index([resolverQueuedAt])
+  @@index([resolverStatus])
+  @@index([resolvedAt])
   @@map("aircall_call_events")
 }
 

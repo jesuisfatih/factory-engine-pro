@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { TranscriptResolverOutput } from './ai.js';
 
 export const aircallLinkUserSchema = z.object({
   memberId: z.string().trim().min(1),
@@ -139,6 +140,16 @@ export interface AircallCallEventDto {
   transcriptPulledAt: string | null;
   resolverQueuedAt: string | null;
   resolverQueueJobId: string | null;
+  resolverStatus: string | null;
+  resolverStartedAt: string | null;
+  resolverOutputPresent: boolean;
+  resolverOutput: TranscriptResolverOutput | null;
+  resolverError: string | null;
+  resolverModel: string | null;
+  resolverPromptKey: string | null;
+  resolverLatencyMs: number | null;
+  resolvedAt: string | null;
+  resolvedWithVersion: number | null;
   receivedAt: string;
 }
 
@@ -149,6 +160,8 @@ export interface AircallCallEventsResponse {
     last3d: number;
     withTranscript: number;
     resolverQueued: number;
+    resolverSucceeded: number;
+    resolverFailed: number;
     lastReceivedAt: string | null;
   };
   calls: AircallCallEventDto[];
