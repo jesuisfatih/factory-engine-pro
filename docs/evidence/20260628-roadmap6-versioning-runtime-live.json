@@ -1,0 +1,16 @@
+{
+    "checkedAt":  "2026-06-28T10:20:23.8550517Z",
+    "source":  "docker logs --since=10m factoryengine-dtfbank-app",
+    "container":  "factoryengine-dtfbank-app",
+    "buildSha":  "4810458cd3cac4630fbd815db53e5861adbad444",
+    "lines":  [
+                  "[Nest] 1120  - 06/28/2026, 10:17:42 AM     LOG [RouterExplorer] Mapped {/api/v1/aircall/calls/resolver/reprocess, POST} route +0ms",
+                  "[Nest] 1120  - 06/28/2026, 10:19:38 AM     LOG [AppLogger] {\"request_id\":\"8d856a0c-701e-4682-b31d-12d529e7e79f\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"aircall\",\"action\":\"resolver_job_queued\",\"message\":\"Transcript resolver job queued\",\"call_event_id\":\"acev_hk6wji7fkdnxx6zsauirgwp2\",\"external_call_id\":\"3906587992\",\"target_version\":2,\"force_reprocess\":true,\"source\":\"manual_reprocess\"}",
+                  "[Nest] 1120  - 06/28/2026, 10:19:41 AM     LOG [AppLogger] {\"request_id\":\"ai-transcript-resolver-aircall-transcript-ten_dtfbank-3906587992-acev_hk6wji7fkdnxx6zsauirgwp2\",\"tenant_id\":\"ten_dtfbank\",\"module\":\"ai\",\"action\":\"transcript_resolved\",\"message\":\"Aircall transcript resolved into structured output\",\"call_event_id\":\"acev_hk6wji7fkdnxx6zsauirgwp2\",\"external_call_id\":\"3906587992\",\"model\":\"claude-haiku-4-5-20251001\",\"resolved_with_version\":2,\"target_version\":2,\"force_reprocess\":true,\"latency_ms\":2459}"
+              ],
+    "assertions":  {
+                       "routeMapped":  true,
+                       "resolverJobQueuedForTarget":  true,
+                       "transcriptResolvedForTarget":  true
+                   }
+}

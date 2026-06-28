@@ -1,0 +1,194 @@
+{
+  "generatedAt": "2026-06-28T10:19:45.372Z",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "appUrl": "https://app.dtfbank.com/settings/aircall/connection",
+  "buildSha": "4810458cd3cac4630fbd815db53e5861adbad444",
+  "schema": {
+    "currentResolverSchemaVersion": 2,
+    "fields": [
+      "customer_match",
+      "product_mentions",
+      "psych_tags",
+      "call_intent",
+      "shipping_signals",
+      "payment_signals",
+      "urgency_signal",
+      "competitor_mentioned",
+      "summary",
+      "language_detected",
+      "resolved_with_version"
+    ],
+    "fieldCount": 11,
+    "aiDerivedTriggers": [
+      "psych.tag.detected",
+      "product.detected_in_transcript",
+      "customer.matched_from_transcript",
+      "call_intent.classified",
+      "psych.analysis.completed"
+    ],
+    "aiDerivedTriggerCount": 5,
+    "triggerCatalogTotal": 29
+  },
+  "before": {
+    "oldVersionCall": {
+      "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+      "externalCallId": "3906652817",
+      "eventTimestamp": "2026-06-26T23:22:43.000Z",
+      "transcriptPresent": true,
+      "transcriptLength": 412,
+      "transcriptSource": "aircall_ci",
+      "resolverStatus": "succeeded",
+      "resolverOutputPresent": true,
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolverPromptKey": "ai.transcript-resolver",
+      "resolverLatencyMs": 3227,
+      "resolvedAt": "2026-06-28T08:59:29.745Z",
+      "resolvedWithVersion": 1,
+      "resolverOutputKeys": [
+        "summary",
+        "psych_tags",
+        "call_intent",
+        "customer_match",
+        "urgency_signal",
+        "payment_signals",
+        "product_mentions",
+        "shipping_signals",
+        "language_detected",
+        "competitor_mentioned",
+        "resolved_with_version"
+      ],
+      "resolvedWithVersionInJson": 1
+    },
+    "targetCall": {
+      "id": "acev_hk6wji7fkdnxx6zsauirgwp2",
+      "externalCallId": "3906587992",
+      "eventTimestamp": "2026-06-26T22:20:52.000Z",
+      "transcriptPresent": true,
+      "transcriptLength": 793,
+      "transcriptSource": "aircall_ci",
+      "resolverStatus": "queued",
+      "resolverOutputPresent": false,
+      "resolverModel": null,
+      "resolverPromptKey": null,
+      "resolverLatencyMs": null,
+      "resolvedAt": null,
+      "resolvedWithVersion": null,
+      "resolverOutputKeys": [],
+      "resolvedWithVersionInJson": null
+    }
+  },
+  "reprocess": {
+    "endpoint": "POST https://api.dtfbank.com/api/v1/aircall/calls/resolver/reprocess",
+    "request": {
+      "targetVersion": 2,
+      "limit": 1,
+      "callEventId": "acev_hk6wji7fkdnxx6zsauirgwp2"
+    },
+    "response": {
+      "targetVersion": 2,
+      "scanned": 1,
+      "queued": 1,
+      "skipped": 0,
+      "callEvents": [
+        {
+          "id": "acev_hk6wji7fkdnxx6zsauirgwp2",
+          "externalCallId": "3906587992",
+          "previousVersion": null,
+          "previousStatus": "queued",
+          "queued": true,
+          "skippedReason": null
+        }
+      ],
+      "stats": {
+        "total": 104,
+        "last3d": 104,
+        "withTranscript": 76,
+        "resolverQueued": 73,
+        "resolverSucceeded": 3,
+        "resolverFailed": 0,
+        "lastReceivedAt": "2026-06-28T08:39:20.664Z"
+      }
+    }
+  },
+  "after": {
+    "stats": {
+      "total": 104,
+      "last3d": 104,
+      "withTranscript": 76,
+      "resolverQueued": 73,
+      "resolverSucceeded": 4,
+      "resolverFailed": 0,
+      "lastReceivedAt": "2026-06-28T08:39:20.664Z"
+    },
+    "oldVersionCall": {
+      "id": "acev_vnemm2nihwqswx3jjnqdfcr6",
+      "externalCallId": "3906652817",
+      "eventTimestamp": "2026-06-26T23:22:43.000Z",
+      "transcriptPresent": true,
+      "transcriptLength": 412,
+      "transcriptSource": "aircall_ci",
+      "resolverStatus": "succeeded",
+      "resolverOutputPresent": true,
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolverPromptKey": "ai.transcript-resolver",
+      "resolverLatencyMs": 3227,
+      "resolvedAt": "2026-06-28T08:59:29.745Z",
+      "resolvedWithVersion": 1,
+      "resolverOutputKeys": [
+        "summary",
+        "psych_tags",
+        "call_intent",
+        "customer_match",
+        "urgency_signal",
+        "payment_signals",
+        "product_mentions",
+        "shipping_signals",
+        "language_detected",
+        "competitor_mentioned",
+        "resolved_with_version"
+      ],
+      "resolvedWithVersionInJson": 1
+    },
+    "targetCall": {
+      "id": "acev_hk6wji7fkdnxx6zsauirgwp2",
+      "externalCallId": "3906587992",
+      "eventTimestamp": "2026-06-26T22:20:52.000Z",
+      "transcriptPresent": true,
+      "transcriptLength": 793,
+      "transcriptSource": "aircall_ci",
+      "resolverStatus": "succeeded",
+      "resolverOutputPresent": true,
+      "resolverModel": "claude-haiku-4-5-20251001",
+      "resolverPromptKey": "ai.transcript-resolver",
+      "resolverLatencyMs": 2459,
+      "resolvedAt": "2026-06-28T10:19:41.367Z",
+      "resolvedWithVersion": 2,
+      "resolverOutputKeys": [
+        "summary",
+        "psych_tags",
+        "call_intent",
+        "customer_match",
+        "urgency_signal",
+        "payment_signals",
+        "product_mentions",
+        "shipping_signals",
+        "language_detected",
+        "competitor_mentioned",
+        "resolved_with_version"
+      ],
+      "resolvedWithVersionInJson": 2
+    }
+  },
+  "assertions": {
+    "liveCatalogLoaded": true,
+    "aiDerivedTriggerCountIsFive": true,
+    "schemaFieldCountIsEleven": true,
+    "aiDerivedTriggerCountLessThanSchemaFieldCount": true,
+    "newTriggerCatalogSeparateFromSchemaFields": true,
+    "oldRealEventRemainedV1": true,
+    "targetRealEventWasQueuedByOptInReprocess": true,
+    "targetRealEventSucceededV2": true,
+    "targetRealEventJsonVersionV2": true,
+    "targetRealEventHasAll11Fields": true
+  }
+}
