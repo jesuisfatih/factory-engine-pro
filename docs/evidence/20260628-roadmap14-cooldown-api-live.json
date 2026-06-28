@@ -1,0 +1,191 @@
+﻿{
+  "proof": "roadmap14_cooldown_api_live",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+  "buildSha": "f30c9bc6d74c4473413640b05f4ecd36c8732a1b",
+  "rule": {
+    "id": "wrule_xhq8t8osv9fp606zcelcxg92",
+    "name": "Roadmap 14 cooldown proof 20260628121051",
+    "status": "active",
+    "priority": 1000,
+    "composable": false,
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "active",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": {
+        "hours": 24,
+        "limit": 1
+      },
+      "when": [],
+      "actions": [
+        {
+          "id": "act-roadmap14-create-task",
+          "action": "create_task",
+          "value": "Roadmap 14 cooldown first task 20260628121051"
+        }
+      ]
+    },
+    "createdAt": "2026-06-28T12:10:51.844Z",
+    "updatedAt": "2026-06-28T12:10:51.844Z"
+  },
+  "events": {
+    "firstEventId": "roadmap14-cooldown-first-20260628121051",
+    "secondEventId": "roadmap14-cooldown-second-20260628121051"
+  },
+  "firstFire": {
+    "eventId": "roadmap14-cooldown-first-20260628121051",
+    "trigger": "manual.trigger",
+    "source": "roadmap14-live-proof",
+    "matchedRules": 2,
+    "evaluatedRules": 1,
+    "tasksCreated": 1,
+    "tasks": [
+      {
+        "ruleId": "wrule_xhq8t8osv9fp606zcelcxg92",
+        "ruleName": "Roadmap 14 cooldown proof 20260628121051",
+        "actionId": "act-roadmap14-create-task",
+        "action": "create_task",
+        "taskId": "sr_kkkbphndxkahvzhuotecx01d",
+        "title": "Roadmap 14 cooldown first task 20260628121051"
+      }
+    ],
+    "results": [
+      {
+        "ruleId": "wrule_xhq8t8osv9fp606zcelcxg92",
+        "ruleName": "Roadmap 14 cooldown proof 20260628121051",
+        "status": "task_created",
+        "executionMode": "active",
+        "shortCircuited": true,
+        "taskIds": [
+          "sr_kkkbphndxkahvzhuotecx01d"
+        ],
+        "conditionTrace": [],
+        "whenTrace": [],
+        "cooldown": {
+          "disabled": false,
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+          "hours": 24,
+          "limit": 1,
+          "currentCount": 0,
+          "windowStartedAt": null,
+          "lastFiredAt": null,
+          "nextEligibleAt": null
+        },
+        "actionTrace": [
+          {
+            "actionId": "act-roadmap14-create-task",
+            "action": "create_task",
+            "status": "applied",
+            "targetType": "service_request",
+            "targetId": "sr_kkkbphndxkahvzhuotecx01d",
+            "message": "Created service request from workflow action."
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T12:10:52.511Z"
+  },
+  "secondFire": {
+    "eventId": "roadmap14-cooldown-second-20260628121051",
+    "trigger": "manual.trigger",
+    "source": "roadmap14-live-proof",
+    "matchedRules": 2,
+    "evaluatedRules": 2,
+    "tasksCreated": 0,
+    "tasks": [],
+    "results": [
+      {
+        "ruleId": "wrule_xhq8t8osv9fp606zcelcxg92",
+        "ruleName": "Roadmap 14 cooldown proof 20260628121051",
+        "status": "skipped",
+        "reason": "cooldown",
+        "executionMode": "active",
+        "taskIds": [],
+        "conditionTrace": [],
+        "whenTrace": [],
+        "cooldown": {
+          "disabled": false,
+          "customerId": "cust_nw1yip6avbgmk8gito31hw7y",
+          "hours": 24,
+          "limit": 1,
+          "currentCount": 1,
+          "windowStartedAt": "2026-06-28T12:10:52.433Z",
+          "lastFiredAt": "2026-06-28T12:10:52.433Z",
+          "nextEligibleAt": "2026-06-29T12:10:52.433Z"
+        }
+      },
+      {
+        "ruleId": "wrule_bkgp5ru0g9kq1gmxevlw9vbd",
+        "ruleName": "Roadmap 7 persisted rule 20260628103457",
+        "status": "shadow_matched",
+        "executionMode": "shadow",
+        "taskIds": [],
+        "conditionTrace": [
+          {
+            "id": "cond-roadmap7",
+            "condition": "call_intent",
+            "operator": "=",
+            "expected": "inquiry",
+            "actual": "inquiry",
+            "matched": true,
+            "source": "event_or_resolver"
+          }
+        ],
+        "whenTrace": [
+          {
+            "id": "default",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "cond-roadmap7",
+                "condition": "call_intent",
+                "operator": "=",
+                "expected": "inquiry",
+                "actual": "inquiry",
+                "matched": true,
+                "source": "event_or_resolver"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-06-28T12:10:52.764Z"
+  },
+  "archivedRule": {
+    "id": "wrule_xhq8t8osv9fp606zcelcxg92",
+    "status": "archived",
+    "trigger": "manual.trigger",
+    "definition": {
+      "status": "archived",
+      "priority": 1000,
+      "composable": false,
+      "trigger": "manual.trigger",
+      "cooldown": {
+        "hours": 24,
+        "limit": 1
+      },
+      "when": [],
+      "actions": [
+        {
+          "id": "act-roadmap14-create-task",
+          "action": "create_task",
+          "value": "Roadmap 14 cooldown first task 20260628121051"
+        }
+      ]
+    }
+  },
+  "assertions": {
+    "firstCreatedOneTask": true,
+    "secondCreatedNoTask": true,
+    "secondSkippedByCooldown": true,
+    "cooldownTracePresent": true,
+    "distinctEventsNotIdempotency": true,
+    "proofRuleArchived": true
+  },
+  "checkedAt": "2026-06-28T12:10:53.830Z"
+}

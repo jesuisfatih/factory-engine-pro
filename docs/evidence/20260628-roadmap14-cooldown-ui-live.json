@@ -1,0 +1,34 @@
+﻿{
+  "proof": "roadmap14_cooldown_ui_live",
+  "appUrl": "https://app.dtfbank.com/rules",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "ruleId": "wrule_xhq8t8osv9fp606zcelcxg92",
+  "proofName": "Roadmap 14 cooldown proof 20260628121051",
+  "checks": {
+    "reachedRulesPage": true,
+    "hasProofRule": true,
+    "hasCooldownLabelInList": true,
+    "hasCooldownHoursInput": true,
+    "hasLimitInput": true,
+    "selectedProofRule": true,
+    "hasRulesNetwork": true,
+    "hasCatalogNetwork": true,
+    "finalUrlIsLive": true
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/catalog",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules",
+      "status": 200
+    }
+  ],
+  "finalUrl": "https://app.dtfbank.com/rules",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap14-cooldown-ui-live-20260628.png",
+  "proofContext": "94\nRoadmap 12 shadow dry run 20260628113847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np95\nRoadmap 12 draft ignored 20260628113847\nmanual.trigger -> create_task\n1 conditions\ncomposable\n1/24h cooldown\narchived\np1000\nRoadmap 14 cooldown proof 20260628121051\nmanual.trigger -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\narchived\np1000\nRoadmap 13 Aircall event idempotency 20260628115630\naircall.call.created -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\nCATALOG\nV2026-06-28.1\nTriggers\n29\nTriggers\naircall.call.created · aircall.call.ended · aircall.call.missed · aircall.transcript.received · shopify.order.created · shopify.order.cancelled · shopify.order.refunded · shopify.customer.created\nConditions\n14\nConditions\ncall_intent · psych_tag_includes · product_mentioned · previous_purchase_includes · segment_member · call_count_in_window · is_first_call · customer_ltv_gte\nActions\n9\nActions\ncreate_task · pin_customer · add_note · segment_add · segment_remove · route_member · add_watcher · escalate · no-op\nPsych tags\n8\nPsych tags\nangry · purchase_intent · shipping_issue · refund_intent · complaint · info_request · follow_up · satisfie",
+  "toolbarContext": "ember · add_watcher · escalate · no-op\nPsych tags\n8\nPsych tags\nangry · purchase_intent · shipping_issue · refund_intent · complaint · info_request · follow_up · satisfied\nCall intents\n5\nCall intents\nsale · support · inquiry · complaint · follow_up\nUrgency\n4\nUrgency\nlow · medium · high · critical\nNew\ndraft\nshadow\nactive\narchived\nPriority\nComposable\nCooldown h\nLimit\narchived\nCondition\nAction\nFire event\nUpdate rule\nTRIGGER\nAircall Call Created\nAircall Call Ended\nAircall Call Missed\nAircall Transcript Received\nShopify Order Created\nShopify Order Cancelled\nShopify Order Refunded\nShopify Customer Created\nShopify Customer Updated\nSegment Member Added\nSegment Member Removed\nB2b Access Request Created\nSupport Request Created\nSchedule Daily\nManual Trigger\nPsych Tag Detected\nProduct Detected In Transcript\nCustomer Matched From Transcript\nCall Intent Classified\nPsych Analysis Completed\nCustomer Repeat Call Detected\nCustomer First Call Detected\nCustomer Ltv Crossed Threshold\nCustomer Tagged In Admin\nSegment Weight Changed\nCustomer Order Created\nSu",
+  "checkedAt": "2026-06-28T12:14:50.920Z"
+}
