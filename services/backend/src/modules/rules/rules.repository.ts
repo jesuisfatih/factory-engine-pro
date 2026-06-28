@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { SaveWorkflowRuleInput } from '@factory-engine-pro/contracts';
+import type { SaveWorkflowRuleInput, WorkflowTrigger } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -20,6 +20,13 @@ export class RulesRepository {
 
   findById(id: string) {
     return this.prisma.db.workflowRule.findFirst({ where: { id } });
+  }
+
+  findActiveByTrigger(trigger: WorkflowTrigger) {
+    return this.prisma.db.workflowRule.findMany({
+      where: { trigger, status: 'active' },
+      orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+    });
   }
 
   create(input: SaveWorkflowRuleInput) {

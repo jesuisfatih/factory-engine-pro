@@ -1,5 +1,5 @@
 import { HttpException, Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION, type TranscriptResolverOutput } from '@factory-engine-pro/contracts';
 import type { Prisma } from '@prisma/client';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -10,6 +10,7 @@ import {
 } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { RulesService } from '../rules/rules.service.js';
 import { AiService } from './ai.service.js';
 
 type ResolverJobData = {
@@ -27,6 +28,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
   constructor(
     @Inject(REDIS_CONNECTION) private readonly connection: ConnectionOptions | null,
     private readonly ai: AiService,
+    private readonly rules: RulesService,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
@@ -161,6 +163,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         force_reprocess: Boolean(job.data?.forceReprocess),
         latency_ms: result.latencyMs,
       });
+      await this.fireDerivedWorkflowTriggers(callEvent, result.output);
       return { status: 'succeeded', resolvedWithVersion: result.output.resolved_with_version };
     } catch (error) {
       const message = messageOf(error).slice(0, 500);
@@ -182,6 +185,68 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         throw error;
       }
       return { status: 'failed', error: message };
+    }
+  }
+
+  private async fireDerivedWorkflowTriggers(
+    callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null },
+    output: TranscriptResolverOutput,
+  ) {
+    const baseParams = {
+      callEventId: callEvent.id,
+      externalCallId: callEvent.externalCallId,
+      contactPhoneE164: callEvent.contactPhoneE164 ?? null,
+      contactEmail: callEvent.contactEmail ?? null,
+    };
+    try {
+      await this.rules.fireTrigger({
+        trigger: 'call_intent.classified',
+        eventId: `${callEvent.id}:call_intent:${output.call_intent}`,
+        source: 'ai-transcript-resolver',
+        params: { ...baseParams, intent: output.call_intent },
+      });
+      for (const tag of output.psych_tags) {
+        await this.rules.fireTrigger({
+          trigger: 'psych.tag.detected',
+          eventId: `${callEvent.id}:psych_tag:${tag}`,
+          source: 'ai-transcript-resolver',
+          params: { ...baseParams, tag },
+        });
+      }
+      for (const mention of output.product_mentions) {
+        await this.rules.fireTrigger({
+          trigger: 'product.detected_in_transcript',
+          eventId: `${callEvent.id}:product:${mention.sku ?? mention.name_hint ?? 'unknown'}`,
+          source: 'ai-transcript-resolver',
+          params: { ...baseParams, sku: mention.sku, nameHint: mention.name_hint, confidence: mention.confidence },
+        });
+      }
+      if (output.customer_match.customer_id) {
+        await this.rules.fireTrigger({
+          trigger: 'customer.matched_from_transcript',
+          eventId: `${callEvent.id}:customer:${output.customer_match.customer_id}`,
+          source: 'ai-transcript-resolver',
+          params: { ...baseParams, customerId: output.customer_match.customer_id, confidence: output.customer_match.confidence },
+        });
+      }
+      await this.rules.fireTrigger({
+        trigger: 'psych.analysis.completed',
+        eventId: `${callEvent.id}:psych_analysis_completed:${output.resolved_with_version}`,
+        source: 'ai-transcript-resolver',
+        params: {
+          ...baseParams,
+          psychTags: output.psych_tags,
+          callIntent: output.call_intent,
+          urgencySignal: output.urgency_signal,
+          resolvedWithVersion: output.resolved_with_version,
+        },
+      });
+    } catch (error) {
+      this.logger.warn('rules', 'ai_derived_trigger_fire_failed', 'AI-derived workflow triggers could not be evaluated', {
+        call_event_id: callEvent.id,
+        external_call_id: callEvent.externalCallId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

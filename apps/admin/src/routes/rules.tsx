@@ -44,6 +44,7 @@ import {
   defaultOperator,
   defaultValue,
   draftFromWorkflowRule,
+  fireWorkflowTrigger,
   fetchWorkflowCatalog,
   fetchWorkflowRules,
   LIFECYCLE_TONE,
@@ -414,6 +415,20 @@ function RulesView() {
     },
     onError: (error) => toast.error('Rule save failed', { description: apiErrorMessage(error) }),
   });
+  const fireMutation = useMutation({
+    mutationFn: async () => {
+      if (!draft) throw new Error('Rule draft is not ready.');
+      return fireWorkflowTrigger({
+        trigger: draft.trigger,
+        source: 'rules-ui',
+        params: defaultTriggerParams(draft.trigger),
+      });
+    },
+    onSuccess: (result) => toast.success('Event fired', {
+      description: `${result.tasksCreated} task(s) created from ${result.matchedRules} active rule(s).`,
+    }),
+    onError: (error) => toast.error('Event fire failed', { description: apiErrorMessage(error) }),
+  });
 
   return (
     <>
@@ -573,6 +588,15 @@ function RulesView() {
                 </button>
                 <button
                   type="button"
+                  id="btn-fire-workflow-trigger"
+                  className="btn ghost"
+                  disabled={!draft || fireMutation.isPending}
+                  onClick={() => fireMutation.mutate()}
+                >
+                  <Zap size={12} /> {fireMutation.isPending ? 'Firing...' : 'Fire event'}
+                </button>
+                <button
+                  type="button"
                   id="btn-save-workflow-rule"
                   className="btn primary"
                   disabled={!draft || saveMutation.isPending}
@@ -593,8 +617,10 @@ function RulesView() {
                 <span><strong>Prompt:</strong> ai.transcript-resolver</span>
                 <span><strong>Canvas source:</strong> /api/v1/rules/catalog</span>
                 <span><strong>Rule JSON source:</strong> {selectedRuleId ? `/api/v1/rules/${selectedRuleId}` : '/api/v1/rules'}</span>
+                {fireMutation.data && <span><strong>Last fire:</strong> {fireMutation.data.tasksCreated} task(s)</span>}
                 <span><strong>Executor:</strong> {verify.data ? 'verified' : 'not checked'}</span>
                 {saveMutation.isError && <span className="danger-text">{apiErrorMessage(saveMutation.error)}</span>}
+                {fireMutation.isError && <span className="danger-text">{apiErrorMessage(fireMutation.error)}</span>}
                 {verify.data && (
                   <>
                     <span><CheckCircle2 size={11} /> {verify.data.probeValues.trigger}</span>
@@ -610,6 +636,14 @@ function RulesView() {
       )}
     </>
   );
+}
+
+function defaultTriggerParams(trigger: WorkflowTrigger) {
+  if (trigger === 'shopify.order.created') return { shopifyOrderId: `ui-${Date.now()}`, totalPrice: 0 };
+  if (trigger === 'psych.tag.detected') return { tag: 'angry' };
+  if (trigger === 'customer.repeat_call.detected') return { count: 2, windowDays: 30 };
+  if (trigger === 'call_intent.classified') return { intent: 'inquiry' };
+  return {};
 }
 
 function CatalogCard({ title, count, values }: { title: string; count: number; values: string[] }) {

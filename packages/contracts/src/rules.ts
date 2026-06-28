@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { workflowActionSchema, workflowConditionSchema, workflowTriggerSchema } from './enums.js';
+import { workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
 
 export const workflowRuleStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
 export type WorkflowRuleStatus = z.infer<typeof workflowRuleStatusSchema>;
@@ -53,4 +53,42 @@ export interface WorkflowRuleDto {
 
 export interface WorkflowRulesResponse {
   rules: WorkflowRuleDto[];
+}
+
+export const fireWorkflowTriggerSchema = z.object({
+  trigger: workflowTriggerSchema,
+  eventId: z.string().trim().min(1).max(180).optional(),
+  source: z.string().trim().min(1).max(80).default('manual'),
+  occurredAt: z.string().datetime().optional(),
+  params: z.record(z.string(), z.unknown()).default({}),
+});
+export type WorkflowTriggerFireInput = z.infer<typeof fireWorkflowTriggerSchema>;
+
+export interface WorkflowTriggerFireTask {
+  ruleId: string;
+  ruleName: string;
+  actionId: string;
+  action: string;
+  taskId: string;
+  title: string;
+}
+
+export interface WorkflowTriggerFireResult {
+  ruleId: string;
+  ruleName: string;
+  status: 'task_created' | 'skipped';
+  reason?: 'conditions_pending_resolver' | 'unsupported_action';
+  taskIds: string[];
+}
+
+export interface WorkflowTriggerFireResponse {
+  eventId: string;
+  trigger: WorkflowTrigger;
+  source: string;
+  matchedRules: number;
+  evaluatedRules: number;
+  tasksCreated: number;
+  tasks: WorkflowTriggerFireTask[];
+  results: WorkflowTriggerFireResult[];
+  checkedAt: string;
 }

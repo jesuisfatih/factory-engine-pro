@@ -8,5 +8,6 @@ import { SupportService } from './support.service.js';
   imports: [SharedModule],
   controllers: [SupportController],
   providers: [SupportRepository, SupportService],
+  exports: [SupportService],
 })
 export class SupportModule {}

@@ -46,6 +46,8 @@ import type {
   UpsertSegmentOwnershipInput,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
+  WorkflowTriggerFireInput,
+  WorkflowTriggerFireResponse,
   WorkflowRuleDto,
   WorkflowRulesResponse,
   AssignServiceRequestInput,
@@ -618,6 +620,10 @@ export class ApiClient {
 
   updateWorkflowRule(id: string, input: SaveWorkflowRuleInput) {
     return this.put<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}`, input);
+  }
+
+  fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
+    return this.post<WorkflowTriggerFireResponse>('/rules/events/fire', input);
   }
 
   shopifySyncStatus() {

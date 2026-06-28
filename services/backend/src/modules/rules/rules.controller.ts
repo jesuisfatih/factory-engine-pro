@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { MEMBER_PERMISSIONS, saveWorkflowRuleSchema, type SaveWorkflowRuleInput } from '@factory-engine-pro/contracts';
+import {
+  fireWorkflowTriggerSchema,
+  MEMBER_PERMISSIONS,
+  saveWorkflowRuleSchema,
+  type SaveWorkflowRuleInput,
+  type WorkflowTriggerFireInput,
+} from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { RulesService } from './rules.service.js';
@@ -18,6 +24,12 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   createRule(@Body(new ZodValidationPipe(saveWorkflowRuleSchema)) body: SaveWorkflowRuleInput) {
     return this.rules.createRule(body);
+  }
+
+  @Post('events/fire')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  fireTrigger(@Body(new ZodValidationPipe(fireWorkflowTriggerSchema)) body: WorkflowTriggerFireInput) {
+    return this.rules.fireTrigger(body);
   }
 
   @Get('catalog')

@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { RulesModule } from '../rules/rules.module.js';
 import { AiController } from './ai.controller.js';
 import { AiTranscriptResolverWorker } from './ai-transcript-resolver.worker.js';
 import { AiService } from './ai.service.js';
 
 @Module({
+  imports: [RulesModule],
   controllers: [AiController],
   providers: [AiService, AiTranscriptResolverWorker],
   exports: [AiService],

@@ -6,6 +6,7 @@ import type {
   WorkflowRuleDto,
   WorkflowTrigger,
   SaveWorkflowRuleInput,
+  WorkflowTriggerFireInput,
 } from '@factory-engine-pro/contracts';
 import { adminApi } from './api';
 
@@ -61,6 +62,10 @@ export function saveWorkflowRule(draft: RuleDraft, id?: string) {
     },
   };
   return id ? adminApi.updateWorkflowRule(id, input) : adminApi.createWorkflowRule(input);
+}
+
+export function fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
+  return adminApi.fireWorkflowTrigger(input);
 }
 
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
