@@ -73,6 +73,11 @@ function ConnectionView() {
     onError: (error) => toast.error(t('aircall_hub.connection.connection_test_failed'), { description: apiErrorMessage(error) }),
   });
 
+  const callEvents = useQuery({
+    queryKey: ['aircall', 'calls'],
+    queryFn: () => adminApi.aircallCallEvents(),
+  });
+
   const refreshDirectory = useMutation({
     mutationFn: async () => {
       const [users, numbers] = await Promise.all([
@@ -88,6 +93,22 @@ function ConnectionView() {
       toast.success(t('aircall_hub.connection.directory_refresh_ok'));
     },
     onError: (error) => toast.error(t('aircall_hub.connection.directory_refresh_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const backfillRecent = useMutation({
+    mutationFn: () => adminApi.backfillRecentAircallCalls({ recentDays: 3, maxPages: 20 }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      toast.success(t('aircall_hub.connection.backfill_recent_ok'), {
+        description: t('aircall_hub.connection.backfill_recent_ok_body', {
+          ingested: result.ingested,
+          fetched: result.fetched,
+          transcripts: result.transcriptsFound,
+        }),
+      });
+    },
+    onError: (error) => toast.error(t('aircall_hub.connection.backfill_recent_failed'), { description: apiErrorMessage(error) }),
   });
 
   const setField = (field: keyof CredentialForm, value: string) => {
@@ -271,8 +292,104 @@ function ConnectionView() {
           >
             <Save size={13} /> {refreshDirectory.isPending ? t('aircall_hub.connection.directory_refreshing') : t('aircall_hub.connection.directory_refresh')}
           </button>
+          <button
+            id="btn-backfill-aircall-recent"
+            type="button"
+            className="btn primary"
+            disabled={missingCredentials || !canSyncDirectory || backfillRecent.isPending || config.isLoading}
+            onClick={() => backfillRecent.mutate()}
+          >
+            <RefreshCw size={13} /> {backfillRecent.isPending ? t('aircall_hub.connection.backfill_recent_running') : t('aircall_hub.connection.backfill_recent')}
+          </button>
         </div>
         {!canSyncDirectory && <div className="form-error" style={{ marginTop: 12 }}>{t('aircall_hub.connection.no_aircall_write_permission')}</div>}
+        {backfillRecent.data && (
+          <div className="webhook-grid" style={{ marginTop: 12 }}>
+            <RuntimeCell label={t('aircall_hub.connection.backfill_fetched')} value={String(backfillRecent.data.fetched)} />
+            <RuntimeCell label={t('aircall_hub.connection.backfill_ingested')} value={String(backfillRecent.data.ingested)} />
+            <RuntimeCell label={t('aircall_hub.connection.backfill_transcripts')} value={String(backfillRecent.data.transcriptsFound)} />
+            <RuntimeCell label={t('aircall_hub.connection.backfill_queued')} value={String(backfillRecent.data.resolverQueued)} />
+          </div>
+        )}
+      </section>
+
+      <section className="config-card" id="aircall-call-events">
+        <div className="head">
+          <div>
+            <h3 data-i18n-key="aircall_hub.connection.call_events_title">{t('aircall_hub.connection.call_events_title')}</h3>
+            <div className="sub" data-i18n-key="aircall_hub.connection.call_events_sub">{t('aircall_hub.connection.call_events_sub')}</div>
+          </div>
+          <button type="button" className="btn" onClick={() => callEvents.refetch()} disabled={callEvents.isFetching}>
+            <RefreshCw size={13} /> {t('common.retry')}
+          </button>
+        </div>
+        {callEvents.isLoading && (
+          <div className="empty-state small" data-i18n-key="aircall_hub.connection.call_events_loading">
+            {t('aircall_hub.connection.call_events_loading')}
+          </div>
+        )}
+        {callEvents.isError && (
+          <div className="error-state">
+            <strong data-i18n-key="aircall_hub.connection.call_events_failed">{t('aircall_hub.connection.call_events_failed')}</strong>
+            <p>{apiErrorMessage(callEvents.error)}</p>
+          </div>
+        )}
+        {callEvents.data && (
+          <>
+            <div className="webhook-grid">
+              <RuntimeCell label={t('aircall_hub.connection.calls_total')} value={String(callEvents.data.stats.total)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_last_3d')} value={String(callEvents.data.stats.last3d)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_with_transcript')} value={String(callEvents.data.stats.withTranscript)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_resolver_queued')} value={String(callEvents.data.stats.resolverQueued)} />
+              <RuntimeCell label={t('aircall_hub.connection.calls_last_received')} value={formatDate(callEvents.data.stats.lastReceivedAt)} />
+            </div>
+            {callEvents.data.calls.length === 0 ? (
+              <div className="empty-state" style={{ marginTop: 12 }}>
+                <strong>{t('aircall_hub.connection.call_events_empty_title')}</strong>
+                <p>{t('aircall_hub.connection.call_events_empty_body')}</p>
+              </div>
+            ) : (
+              <table className="data-table" id="aircall-call-events-table" style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th>{t('aircall_hub.connection.col_call')}</th>
+                    <th>{t('aircall_hub.connection.col_when')}</th>
+                    <th>{t('aircall_hub.connection.col_contact')}</th>
+                    <th>{t('aircall_hub.connection.col_transcript')}</th>
+                    <th>{t('aircall_hub.connection.col_queue')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {callEvents.data.calls.slice(0, 12).map((call) => (
+                    <tr key={call.id}>
+                      <td>
+                        <strong>{call.externalCallId}</strong>
+                        <div className="muted">{call.eventType} / {call.direction ?? '-'}</div>
+                      </td>
+                      <td>{formatDate(call.eventTimestamp)}</td>
+                      <td>
+                        <div>{call.contactEmail ?? call.contactPhone ?? '-'}</div>
+                        <div className="muted">{call.aircallUserId ?? '-'}</div>
+                      </td>
+                      <td>
+                        <span className={call.transcriptPresent ? 'pill success dot' : 'pill warning dot'}>
+                          {call.transcriptPresent
+                            ? t('aircall_hub.connection.transcript_present', { count: call.transcriptLength })
+                            : t('aircall_hub.connection.transcript_missing')}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={call.resolverQueuedAt ? 'pill success dot' : 'pill warning dot'}>
+                          {call.resolverQueuedAt ? formatDate(call.resolverQueuedAt) : t('aircall_hub.connection.queue_pending')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
       </section>
     </>
   );

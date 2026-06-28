@@ -34,6 +34,25 @@ export class AircallClient {
     });
   }
 
+  listCalls(params: {
+    from?: number;
+    to?: number;
+    page?: number;
+    per_page?: number;
+    fetch_contact?: boolean;
+    fetch_short_urls?: boolean;
+    fetch_call_timeline?: boolean;
+    order?: 'asc' | 'desc';
+  }) {
+    return this.request<{ calls?: unknown[]; meta?: { next_page_link?: string | null } }>('/calls', {
+      query: params,
+    });
+  }
+
+  getCallTranscription(id: string | number) {
+    return this.request<Record<string, unknown>>(`/calls/${id}/transcription`);
+  }
+
   listWebhooks() {
     return this.request<{ webhooks?: unknown[]; meta?: { next_page_link?: string | null } }>('/webhooks');
   }

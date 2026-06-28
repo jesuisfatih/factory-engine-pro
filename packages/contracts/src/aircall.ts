@@ -5,6 +5,12 @@ export const aircallLinkUserSchema = z.object({
 });
 export type AircallLinkUserInput = z.infer<typeof aircallLinkUserSchema>;
 
+export const aircallBackfillRecentSchema = z.object({
+  recentDays: z.coerce.number().int().min(1).max(7).default(3),
+  maxPages: z.coerce.number().int().min(1).max(40).default(20),
+});
+export type AircallBackfillRecentInput = z.infer<typeof aircallBackfillRecentSchema>;
+
 export interface AircallUserDto {
   id: string;
   aircallUserId: string;
@@ -115,4 +121,51 @@ export interface AircallSyncLogsResponse {
     receivedAt: string;
     processedAt: string | null;
   }>;
+}
+
+export interface AircallCallEventDto {
+  id: string;
+  externalCallId: string;
+  eventType: string;
+  eventTimestamp: string;
+  direction: string | null;
+  status: string | null;
+  aircallUserId: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  transcriptPresent: boolean;
+  transcriptLength: number;
+  transcriptSource: string | null;
+  transcriptPulledAt: string | null;
+  resolverQueuedAt: string | null;
+  resolverQueueJobId: string | null;
+  receivedAt: string;
+}
+
+export interface AircallCallEventsResponse {
+  credentialRequired: boolean;
+  stats: {
+    total: number;
+    last3d: number;
+    withTranscript: number;
+    resolverQueued: number;
+    lastReceivedAt: string | null;
+  };
+  calls: AircallCallEventDto[];
+}
+
+export interface AircallBackfillRecentResponse {
+  recentDays: number;
+  from: string;
+  to: string;
+  fetched: number;
+  ingested: number;
+  skipped: number;
+  errors: number;
+  pages: number;
+  transcriptsFound: number;
+  transcriptsEmpty: number;
+  transcriptErrors: number;
+  resolverQueued: number;
+  stats: AircallCallEventsResponse['stats'];
 }

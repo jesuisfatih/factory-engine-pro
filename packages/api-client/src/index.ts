@@ -2,6 +2,9 @@ import type {
   AcceptInvitationInput,
   AccountAddressInput,
   AiHealthResponse,
+  AircallBackfillRecentInput,
+  AircallBackfillRecentResponse,
+  AircallCallEventsResponse,
   TranscriptResolverTestInput,
   TranscriptResolverTestResponse,
   AircallLinkUserInput,
@@ -562,6 +565,14 @@ export class ApiClient {
 
   aircallSyncLogs() {
     return this.get<AircallSyncLogsResponse>('/aircall/sync-logs');
+  }
+
+  aircallCallEvents() {
+    return this.get<AircallCallEventsResponse>('/aircall/calls');
+  }
+
+  backfillRecentAircallCalls(input: AircallBackfillRecentInput = { recentDays: 3, maxPages: 20 }) {
+    return this.post<AircallBackfillRecentResponse>('/aircall/calls/backfill-recent', input);
   }
 
   aiHealth() {

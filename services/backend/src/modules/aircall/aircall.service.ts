@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import type {
+  AircallBackfillRecentInput,
+  AircallBackfillRecentResponse,
+  AircallCallEventsResponse,
   AircallConnectionTestResponse,
   AircallNumberDto,
   AircallNumbersResponse,
@@ -15,6 +18,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallApiError, AircallClient, type AircallCredentials } from './aircall.client.js';
+import { AircallIngestService } from './aircall-ingest.service.js';
 import { AircallRepository } from './aircall.repository.js';
 
 type AircallUserPayload = {
@@ -58,6 +62,7 @@ export class AircallService {
     private readonly logger: AppLogger,
     private readonly tenantContext: TenantContextService,
     private readonly repository: AircallRepository,
+    private readonly ingest: AircallIngestService,
   ) {}
 
   async listUsers(): Promise<AircallUsersResponse> {
@@ -190,6 +195,223 @@ export class AircallService {
       if (error instanceof AircallApiError) {
         throw new BadRequestException({
           message: 'Aircall numbers could not be synced.',
+          code: 'aircall_api_error',
+          details: { status: error.status },
+        });
+      }
+      throw error;
+    }
+  }
+
+  async callEvents(): Promise<AircallCallEventsResponse> {
+    const credentials = await this.credentialState();
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      orderBy: { eventTimestamp: 'desc' },
+      take: 80,
+      select: {
+        id: true,
+        externalCallId: true,
+        eventType: true,
+        eventTimestamp: true,
+        direction: true,
+        status: true,
+        aircallUserId: true,
+        contactPhone: true,
+        contactEmail: true,
+        transcriptRaw: true,
+        transcriptSource: true,
+        transcriptPulledAt: true,
+        resolverQueuedAt: true,
+        resolverQueueJobId: true,
+        receivedAt: true,
+      },
+    });
+    return {
+      credentialRequired: !credentials.hasApiCredentials,
+      stats: await this.callEventStats(),
+      calls: rows.map((row) => ({
+        id: row.id,
+        externalCallId: row.externalCallId,
+        eventType: row.eventType,
+        eventTimestamp: row.eventTimestamp.toISOString(),
+        direction: row.direction,
+        status: row.status,
+        aircallUserId: row.aircallUserId,
+        contactPhone: row.contactPhone,
+        contactEmail: row.contactEmail,
+        transcriptPresent: Boolean(row.transcriptRaw?.trim()),
+        transcriptLength: row.transcriptRaw?.length ?? 0,
+        transcriptSource: row.transcriptSource,
+        transcriptPulledAt: row.transcriptPulledAt?.toISOString() ?? null,
+        resolverQueuedAt: row.resolverQueuedAt?.toISOString() ?? null,
+        resolverQueueJobId: row.resolverQueueJobId,
+        receivedAt: row.receivedAt.toISOString(),
+      })),
+    };
+  }
+
+  async backfillRecentCalls(input: AircallBackfillRecentInput): Promise<AircallBackfillRecentResponse> {
+    const startedAt = new Date();
+    const tenant = await this.currentTenant();
+    const client = new AircallClient(await this.resolveCredentials());
+    const recentDays = input.recentDays;
+    const maxPages = input.maxPages;
+    const to = new Date();
+    const from = new Date(to.getTime() - recentDays * 86_400_000);
+    const fromUnix = Math.floor(from.getTime() / 1000);
+    const toUnix = Math.floor(to.getTime() / 1000);
+
+    let page = 1;
+    let fetched = 0;
+    let ingested = 0;
+    let skipped = 0;
+    let errors = 0;
+    let transcriptsFound = 0;
+    let transcriptsEmpty = 0;
+    let transcriptErrors = 0;
+    let resolverQueued = 0;
+
+    try {
+      while (page <= maxPages) {
+        const response = await client.listCalls({
+          from: fromUnix,
+          to: toUnix,
+          page,
+          per_page: 50,
+          order: 'asc',
+          fetch_contact: true,
+          fetch_short_urls: true,
+          fetch_call_timeline: true,
+        });
+        const calls = (response.calls ?? []) as Array<Record<string, unknown>>;
+        if (calls.length === 0) break;
+        fetched += calls.length;
+
+        for (const raw of calls) {
+          const externalCallId = stringOrNull(raw.id);
+          if (!externalCallId) {
+            skipped++;
+            continue;
+          }
+
+          const existing = await this.prisma.db.aircallCallEvent.findFirst({
+            where: { externalCallId, eventType: 'call.ended', transcriptRaw: { not: null } },
+            select: { id: true },
+          });
+          if (existing) {
+            skipped++;
+            continue;
+          }
+
+          const callPayload = { ...raw };
+          try {
+            const pulled = await this.pullTranscript(client, externalCallId);
+            if (pulled.status === 'found' && pulled.transcript) {
+              callPayload.transcript = pulled.transcript;
+              callPayload.transcript_source = 'aircall_ci';
+              transcriptsFound++;
+            } else {
+              transcriptsEmpty++;
+            }
+          } catch (error) {
+            transcriptErrors++;
+            this.logger.warn('aircall', 'transcript_pull_failed', 'Aircall transcript pull failed during recent backfill', {
+              external_call_id: externalCallId,
+              error: messageOf(error),
+            });
+          }
+
+          try {
+            const inbox = await this.prisma.aircallWebhookInbox.create({
+              data: {
+                id: prefixedId('awin'),
+                tenantId: tenant.id,
+                tenantSlug: tenant.slug,
+                rawBody: JSON.stringify({
+                  event: 'call.ended',
+                  resource: 'call',
+                  timestamp: callTimestamp(callPayload),
+                  data: callPayload,
+                  token: 'backfill',
+                }),
+                headers: {
+                  source: 'aircall_recent_backfill',
+                  recentDays,
+                  page,
+                } as Prisma.InputJsonValue,
+                signature: null,
+                tokenClaim: 'backfill',
+                status: 'verified',
+                eventType: 'call.ended',
+                externalCallId,
+              },
+              select: { id: true },
+            });
+            await this.ingest.processInboxRow(inbox.id);
+            ingested++;
+            if (typeof callPayload.transcript === 'string' && callPayload.transcript.trim()) resolverQueued++;
+          } catch (error) {
+            errors++;
+            this.logger.warn('aircall', 'recent_backfill_ingest_failed', 'Aircall recent backfill ingest failed', {
+              external_call_id: externalCallId,
+              error: messageOf(error),
+            });
+          }
+        }
+
+        if (!response.meta?.next_page_link) break;
+        page++;
+      }
+
+      const stats = await this.callEventStats();
+      await this.repository.createSyncLog({
+        action: 'calls.backfill_recent',
+        status: errors ? 'partial_success' : 'success',
+        message: `Backfilled ${ingested}/${fetched} Aircall calls from the last ${recentDays} day(s).`,
+        startedAt,
+        finishedAt: new Date(),
+        metadata: {
+          recentDays,
+          from: from.toISOString(),
+          to: to.toISOString(),
+          fetched,
+          ingested,
+          skipped,
+          errors,
+          pages: page,
+          transcriptsFound,
+          transcriptsEmpty,
+          transcriptErrors,
+          resolverQueued,
+        },
+      });
+      return {
+        recentDays,
+        from: from.toISOString(),
+        to: to.toISOString(),
+        fetched,
+        ingested,
+        skipped,
+        errors,
+        pages: page,
+        transcriptsFound,
+        transcriptsEmpty,
+        transcriptErrors,
+        resolverQueued,
+        stats,
+      };
+    } catch (error) {
+      await this.repository.createSyncLog({
+        action: 'calls.backfill_recent',
+        status: 'failed',
+        message: messageOf(error),
+        startedAt,
+        finishedAt: new Date(),
+        metadata: { recentDays, from: from.toISOString(), to: to.toISOString(), page, fetched, ingested },
+      });
+      if (error instanceof AircallApiError) {
+        throw new BadRequestException({
+          message: 'Aircall recent call backfill failed.',
           code: 'aircall_api_error',
           details: { status: error.status },
         });
@@ -390,6 +612,46 @@ export class AircallService {
     });
     this.logger.log('aircall', 'unlink_user', 'Aircall user unlinked from member', { aircall_user_id: aircallUserId });
     return this.listUsers();
+  }
+
+  private async callEventStats(): Promise<AircallCallEventsResponse['stats']> {
+    const since = new Date(Date.now() - 3 * 86_400_000);
+    const [totalRows, last3dRows, withTranscript, resolverQueued, lastReceived] = await Promise.all([
+      this.prisma.db.aircallCallEvent.findMany({ select: { externalCallId: true } }),
+      this.prisma.db.aircallCallEvent.findMany({
+        where: { eventTimestamp: { gte: since } },
+        select: { externalCallId: true },
+      }),
+      this.prisma.db.aircallCallEvent.count({ where: { transcriptRaw: { not: null } } }),
+      this.prisma.db.aircallCallEvent.count({ where: { resolverQueuedAt: { not: null } } }),
+      this.prisma.db.aircallCallEvent.findFirst({
+        orderBy: { receivedAt: 'desc' },
+        select: { receivedAt: true },
+      }),
+    ]);
+    return {
+      total: new Set(totalRows.map((row) => row.externalCallId)).size,
+      last3d: new Set(last3dRows.map((row) => row.externalCallId)).size,
+      withTranscript,
+      resolverQueued,
+      lastReceivedAt: lastReceived?.receivedAt.toISOString() ?? null,
+    };
+  }
+
+  private async pullTranscript(client: AircallClient, externalCallId: string): Promise<{ status: 'found'; transcript: string } | { status: 'empty'; transcript: null }> {
+    try {
+      const response = await client.getCallTranscription(externalCallId);
+      const utterances = getAircallUtterances(response);
+      const transcript = formatAircallTranscript(utterances);
+      return transcript
+        ? { status: 'found', transcript }
+        : { status: 'empty', transcript: null };
+    } catch (error) {
+      if (error instanceof AircallApiError && error.status === 404) {
+        return { status: 'empty', transcript: null };
+      }
+      throw error;
+    }
   }
 
   private async fetchAircallUsers() {
@@ -639,4 +901,40 @@ function displayName(member: { firstName: string; lastName: string; email: strin
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function stringOrNull(value: unknown) {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
+function callTimestamp(call: Record<string, unknown>) {
+  return call.ended_at
+    ?? call.answered_at
+    ?? call.started_at
+    ?? call.created_at
+    ?? Math.floor(Date.now() / 1000);
+}
+
+function getAircallUtterances(payload: Record<string, unknown>): Array<Record<string, unknown>> {
+  const transcription = payload.transcription;
+  const contentSource = transcription && typeof transcription === 'object'
+    ? (transcription as Record<string, unknown>).content
+    : payload.content;
+  const content = contentSource && typeof contentSource === 'object'
+    ? contentSource as Record<string, unknown>
+    : payload;
+  return Array.isArray(content.utterances) ? content.utterances as Array<Record<string, unknown>> : [];
+}
+
+function formatAircallTranscript(utterances: Array<Record<string, unknown>>) {
+  return utterances
+    .map((utterance) => {
+      const speaker = utterance.participant_type === 'external' ? 'Customer' : 'Agent';
+      const text = stringOrNull(utterance.text);
+      return text ? `${speaker}: ${text}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
 }

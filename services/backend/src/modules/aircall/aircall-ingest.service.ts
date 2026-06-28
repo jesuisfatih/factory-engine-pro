@@ -6,7 +6,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
-import { AIRCALL_INGEST_QUEUE } from '../../shared/queue.module.js';
+import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 
 export interface ReceiveAircallWebhookInput {
@@ -32,6 +32,7 @@ export class AircallIngestService {
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
     @Inject(AIRCALL_INGEST_QUEUE) private readonly ingestQueue: Queue | null,
+    @Inject(AI_TRANSCRIPT_RESOLVER_QUEUE) private readonly transcriptResolverQueue: Queue | null,
   ) {}
 
   async receiveWebhook(input: ReceiveAircallWebhookInput): Promise<ReceiveAircallWebhookResult> {
@@ -167,6 +168,7 @@ export class AircallIngestService {
     }
 
     const data = payloadData(envelope);
+    const transcriptRaw = extractTranscript(data);
     try {
       const callEvent = await this.prisma.db.aircallCallEvent.upsert({
         where: {
@@ -193,7 +195,9 @@ export class AircallIngestService {
           contactEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
           recordingUrl: stringOrNull(data.recording) ?? stringOrNull(data.recording_short_url),
           voicemailUrl: stringOrNull(data.voicemail),
-          transcriptRaw: extractTranscript(data),
+          transcriptRaw,
+          transcriptSource: transcriptRaw ? stringOrNull(data.transcript_source) ?? 'aircall_payload' : null,
+          transcriptPulledAt: transcriptRaw ? new Date() : null,
           rawPayload: envelope as Prisma.InputJsonValue,
         },
         update: {
@@ -201,11 +205,14 @@ export class AircallIngestService {
           durationSeconds: numberOrNull(data.duration),
           recordingUrl: stringOrNull(data.recording) ?? stringOrNull(data.recording_short_url),
           voicemailUrl: stringOrNull(data.voicemail),
-          transcriptRaw: extractTranscript(data),
+          transcriptRaw,
+          transcriptSource: transcriptRaw ? stringOrNull(data.transcript_source) ?? 'aircall_payload' : undefined,
+          transcriptPulledAt: transcriptRaw ? new Date() : undefined,
         },
       });
 
       const call = await this.mirrorCall(inbox.tenantId, externalCallId, eventType, data);
+      await this.enqueueTranscriptResolver(callEvent.id, transcriptRaw);
       await this.prisma.db.callEvent.createMany({
         data: [
           {
@@ -321,6 +328,56 @@ export class AircallIngestService {
       },
     }).catch(() => undefined);
     return legacyMember.id;
+  }
+
+  private async enqueueTranscriptResolver(callEventId: string, transcriptRaw: string | null) {
+    if (!transcriptRaw?.trim()) return;
+    const callEvent = await this.prisma.db.aircallCallEvent.findUnique({
+      where: { id: callEventId },
+      select: {
+        id: true,
+        tenantId: true,
+        externalCallId: true,
+        resolverQueuedAt: true,
+        resolverQueueJobId: true,
+      },
+    });
+    if (!callEvent || callEvent.resolverQueuedAt || callEvent.resolverQueueJobId) return;
+
+    const jobId = `aircall-transcript:${callEvent.tenantId}:${callEvent.externalCallId}:${callEvent.id}`;
+    if (!this.transcriptResolverQueue) {
+      this.logger.warn('aircall', 'resolver_queue_missing', 'REDIS_URL is not configured; transcript resolver job was not queued', {
+        call_event_id: callEvent.id,
+        tenant_id: callEvent.tenantId,
+        external_call_id: callEvent.externalCallId,
+      });
+      return;
+    }
+
+    await this.transcriptResolverQueue.add(
+      'resolve',
+      {
+        tenantId: callEvent.tenantId,
+        callEventId: callEvent.id,
+        externalCallId: callEvent.externalCallId,
+      },
+      {
+        jobId,
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 10_000 },
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
+      },
+    );
+    await this.prisma.db.aircallCallEvent.update({
+      where: { id: callEvent.id },
+      data: { resolverQueuedAt: new Date(), resolverQueueJobId: jobId },
+    });
+    this.logger.log('aircall', 'resolver_job_queued', 'Transcript resolver job queued', {
+      call_event_id: callEvent.id,
+      tenant_id: callEvent.tenantId,
+      external_call_id: callEvent.externalCallId,
+    });
   }
 
   private async resolveTenant(tenantSlug: string) {
@@ -456,8 +513,35 @@ function e164OrNull(phone: string | null) {
 function extractTranscript(data: Record<string, unknown>) {
   const raw = data.transcript ?? data.transcription ?? data.content;
   if (typeof raw === 'string') return raw.trim() || null;
-  if (raw && typeof raw === 'object') return JSON.stringify(raw);
+  if (raw && typeof raw === 'object') {
+    const utterances = getAircallUtterances(raw as Record<string, unknown>);
+    const formatted = formatAircallTranscript(utterances);
+    if (formatted) return formatted;
+    return JSON.stringify(raw);
+  }
   return null;
+}
+
+function getAircallUtterances(payload: Record<string, unknown>): Array<Record<string, unknown>> {
+  const transcription = payload.transcription;
+  const contentSource = transcription && typeof transcription === 'object'
+    ? (transcription as Record<string, unknown>).content
+    : payload.content;
+  const content = contentSource && typeof contentSource === 'object'
+    ? contentSource as Record<string, unknown>
+    : payload;
+  return Array.isArray(content.utterances) ? content.utterances as Array<Record<string, unknown>> : [];
+}
+
+function formatAircallTranscript(utterances: Array<Record<string, unknown>>) {
+  return utterances
+    .map((utterance) => {
+      const speaker = utterance.participant_type === 'external' ? 'Customer' : 'Agent';
+      const text = stringOrNull(utterance.text);
+      return text ? `${speaker}: ${text}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
 }
 
 function dateFromUnknown(value: unknown) {

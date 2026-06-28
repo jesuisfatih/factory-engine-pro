@@ -1,5 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { aircallLinkUserSchema, MEMBER_PERMISSIONS, type AircallLinkUserInput } from '@factory-engine-pro/contracts';
+import {
+  aircallBackfillRecentSchema,
+  aircallLinkUserSchema,
+  MEMBER_PERMISSIONS,
+  type AircallBackfillRecentInput,
+  type AircallLinkUserInput,
+} from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { AircallService } from './aircall.service.js';
@@ -48,6 +54,20 @@ export class AircallController {
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
   syncLogs() {
     return this.aircall.syncLogs();
+  }
+
+  @Get('calls')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  calls() {
+    return this.aircall.callEvents();
+  }
+
+  @Post('calls/backfill-recent')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  backfillRecentCalls(
+    @Body(new ZodValidationPipe(aircallBackfillRecentSchema)) body: AircallBackfillRecentInput,
+  ) {
+    return this.aircall.backfillRecentCalls(body);
   }
 
   @Post('users/:aircallUserId/link')
