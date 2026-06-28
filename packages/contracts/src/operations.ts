@@ -126,6 +126,7 @@ export const createServiceRequestSchema = z.object({
   sourceEmailId: z.string().trim().optional(),
   sourceFormId: z.string().trim().optional(),
   metadata: z.record(z.string(), z.unknown()).default({}),
+  taskStateSnapshot: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateServiceRequestInput = z.infer<typeof createServiceRequestSchema>;
 

@@ -4,6 +4,7 @@ import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonQueueColumn,
+  PersonTaskStateSnapshot,
   PersonTaskWorkflowTrace,
   SavePersonNoteInput,
   SendPersonMessageInput,
@@ -559,6 +560,7 @@ export class PersonWorkspaceService {
       totalSpent: row.customer ? money(row.customer.totalSpent) : undefined,
       aiBrief: source === 'manual' ? undefined : this.brief(row),
       workflowTrace,
+      taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
     };
   }
 
@@ -701,6 +703,11 @@ function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTas
   }
 
   return trace;
+}
+
+function taskStateSnapshotFromJson(value: unknown): PersonTaskStateSnapshot | undefined {
+  const snapshot = asRecord(value);
+  return Object.keys(snapshot).length ? snapshot : undefined;
 }
 
 function normalizeWhenTrace(value: unknown): WorkflowWhenGroupTrace[] {

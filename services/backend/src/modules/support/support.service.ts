@@ -121,6 +121,7 @@ export class SupportService {
       priority: input.priority ?? 'medium',
       createdByActorId: this.tenantContext.get()?.principalId,
       metadata,
+      ...(input.taskStateSnapshot && { taskStateSnapshot: input.taskStateSnapshot as Prisma.InputJsonValue }),
     });
     this.logger.log('support', 'create', 'Service request created', { service_request_id: created.id, surface: created.surface });
     return this.getById(created.id);

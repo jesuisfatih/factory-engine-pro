@@ -760,6 +760,7 @@ model ServiceRequest {
   resolutionCode   String?  @map("resolution_code")
   resolutionNote   String?  @map("resolution_note")
   metadata         Json     @default("{}")
+  taskStateSnapshot Json    @default("{}") @map("task_state_snapshot")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

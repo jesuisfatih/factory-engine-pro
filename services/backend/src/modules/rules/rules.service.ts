@@ -487,6 +487,7 @@ export class RulesService {
     let result: { trace: WorkflowActionTrace; task?: { id: string; title: string } };
 
     if (action.action === 'create_task') {
+      const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
@@ -494,7 +495,8 @@ export class RulesService {
         source: 'manual',
         surface: 'internal',
         priority: priorityForRule(context.rule.priority),
-        metadata: this.workflowMetadata(action, context),
+        metadata: this.workflowMetadata(action, context, taskStateSnapshot),
+        taskStateSnapshot,
       });
       result = {
         task: { id: task.id, title: task.title },
@@ -718,7 +720,61 @@ export class RulesService {
     };
   }
 
-  private workflowMetadata(action: WorkflowRuleAction, context: WorkflowActionContext) {
+  private async fireTimeStateSnapshot(state: WorkflowActionContext['state']) {
+    const base = fireTimeStateSnapshot(state);
+    if (!state.customer) {
+      return { ...base, segment: null, segments: [], recent_orders: [] };
+    }
+
+    const [memberships, recentOrders] = await Promise.all([
+      this.prisma.db.segmentCustomerMembership.findMany({
+        where: { customerId: state.customer.id },
+        include: { segment: true },
+        orderBy: [{ matchedAt: 'desc' }, { updatedAt: 'desc' }],
+        take: 20,
+      }),
+      this.prisma.db.commerceOrder.findMany({
+        where: { customerId: state.customer.id },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 5,
+      }),
+    ]);
+
+    const segments = memberships.map((membership) => ({
+      id: membership.segment.id,
+      name: membership.segment.name,
+      color: membership.segment.color,
+      priority: membership.segment.priority,
+      priorityGlobal: membership.segment.priorityGlobal,
+      score: membership.score === null ? null : Number(membership.score),
+      matchedAt: membership.matchedAt.toISOString(),
+      isActive: membership.segment.isActive,
+    }));
+
+    return {
+      ...base,
+      segment: segments[0] ?? null,
+      segments,
+      recent_orders: recentOrders.map((order) => ({
+        id: order.id,
+        shopifyOrderId: order.shopifyOrderId,
+        shopifyOrderNumber: order.shopifyOrderNumber,
+        totalPrice: Number(order.totalPrice),
+        currency: order.currency,
+        financialStatus: order.financialStatus,
+        fulfillmentStatus: order.fulfillmentStatus,
+        processedAt: order.processedAt?.toISOString() ?? null,
+        createdAt: order.createdAt.toISOString(),
+        lineItems: order.lineItems,
+      })),
+    };
+  }
+
+  private workflowMetadata(
+    action: WorkflowRuleAction,
+    context: WorkflowActionContext,
+    taskStateSnapshot: Record<string, unknown>,
+  ) {
     return {
       category: 'workflow_rule',
       workflow: {
@@ -737,7 +793,7 @@ export class RulesService {
         conditionTrace: context.conditionTrace,
         whenTrace: context.whenTrace,
         cooldown: context.cooldown,
-        stateSnapshot: fireTimeStateSnapshot(context.state),
+        stateSnapshot: taskStateSnapshot,
       },
     };
   }

@@ -45,6 +45,26 @@ function traceValue(value: unknown): string {
   return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function snapshotSegmentName(snapshot: Record<string, unknown>) {
+  const segment = asRecord(snapshot.segment);
+  if (typeof segment.name === 'string' && segment.name.trim()) return segment.name;
+  const first = asRecord(asArray(snapshot.segments)[0]);
+  return typeof first.name === 'string' && first.name.trim() ? first.name : 'None';
+}
+
+function snapshotCustomerId(snapshot: Record<string, unknown>) {
+  const customer = asRecord(snapshot.customer);
+  return typeof customer.id === 'string' ? customer.id : 'Not captured';
+}
+
 interface NarrativeFieldProps {
   label: string;
   aiValue: string;
@@ -116,6 +136,10 @@ export function TaskBriefModal({ card, onClose }: Props) {
     ? workflowTrace.conditionTrace
     : workflowTrace?.whenTrace.flatMap((group) => group.conditionTrace) ?? [];
   const matchedCount = traceItems.filter((item) => item.matched).length;
+  const taskStateSnapshot = asRecord(card.taskStateSnapshot);
+  const hasTaskStateSnapshot = Object.keys(taskStateSnapshot).length > 0;
+  const snapshotOrders = asArray(taskStateSnapshot.recent_orders);
+  const snapshotSegments = asArray(taskStateSnapshot.segments);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -324,6 +348,28 @@ export function TaskBriefModal({ card, onClose }: Props) {
                 </div>
               </div>
             </div>
+
+            {hasTaskStateSnapshot && (
+              <div className="brief-card brief-card-meta">
+                <div className="brief-card-head"><GitBranch size={12} /> Fire-time snapshot</div>
+                <div className="brief-card-row">
+                  <span className="lbl">Customer</span>
+                  <span className="val">{snapshotCustomerId(taskStateSnapshot)}</span>
+                </div>
+                <div className="brief-card-row">
+                  <span className="lbl">Segment</span>
+                  <span className="val">{snapshotSegmentName(taskStateSnapshot)}</span>
+                </div>
+                <div className="brief-card-row">
+                  <span className="lbl">Segments</span>
+                  <span className="val">{snapshotSegments.length}</span>
+                </div>
+                <div className="brief-card-row">
+                  <span className="lbl">Recent orders</span>
+                  <span className="val">{snapshotOrders.length}</span>
+                </div>
+              </div>
+            )}
 
             {hasBrief && card.aiBrief && (
               <div className="brief-card brief-card-meta">

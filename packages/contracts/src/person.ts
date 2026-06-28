@@ -22,6 +22,9 @@ export const personTaskWorkflowTraceSchema = z.object({
 });
 export type PersonTaskWorkflowTrace = z.infer<typeof personTaskWorkflowTraceSchema>;
 
+export const personTaskStateSnapshotSchema = z.record(z.string(), z.unknown());
+export type PersonTaskStateSnapshot = z.infer<typeof personTaskStateSnapshotSchema>;
+
 export const personTaskBriefSchema = z.object({
   whyCalling: z.string(),
   upsetAbout: z.string(),
@@ -52,6 +55,7 @@ export const personQueueCardSchema = z.object({
   totalSpent: z.number().optional(),
   aiBrief: personTaskBriefSchema.optional(),
   workflowTrace: personTaskWorkflowTraceSchema.optional(),
+  taskStateSnapshot: personTaskStateSnapshotSchema.optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 

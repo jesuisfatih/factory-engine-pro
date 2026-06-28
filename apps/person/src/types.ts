@@ -1,4 +1,4 @@
-import type { PersonTaskWorkflowTrace } from '@factory-engine-pro/contracts';
+import type { PersonTaskStateSnapshot, PersonTaskWorkflowTrace } from '@factory-engine-pro/contracts';
 
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
@@ -35,6 +35,8 @@ export interface Card {
   aiBrief?: TaskBrief;
   /** Workflow decision context saved when rules created or routed the task. */
   workflowTrace?: PersonTaskWorkflowTrace;
+  /** Fire-time customer, segment, and recent order state copied onto the task. */
+  taskStateSnapshot?: PersonTaskStateSnapshot;
 }
 
 export interface Column {
