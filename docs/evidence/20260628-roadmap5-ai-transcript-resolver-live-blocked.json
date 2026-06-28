@@ -1,0 +1,80 @@
+{
+  "target": "ROADMAP 5 - AI Transcript Resolver + Output Schema",
+  "status": "implemented_but_external_provider_blocked",
+  "commit": "3e327bf7ff37a74cadee072adc6cb41ad0de62a0",
+  "deployedContainer": "factoryengine-dtfbank-app",
+  "deployedBuildSha": "3e327bf7ff37a74cadee072adc6cb41ad0de62a0",
+  "migration": {
+    "name": "202606282_ai_transcript_resolver_output",
+    "result": "applied on live Vultr managed Postgres schema factory_engine_pro",
+    "columns": [
+      "resolver_status",
+      "resolver_started_at",
+      "resolver_output",
+      "resolver_error",
+      "resolver_model",
+      "resolver_prompt_key",
+      "resolver_latency_ms",
+      "resolved_at",
+      "resolved_with_version"
+    ]
+  },
+  "verification": {
+    "localBuilds": [
+      "pnpm --filter @factory-engine-pro/contracts typecheck",
+      "pnpm --filter @factory-engine-pro/contracts build",
+      "pnpm --filter @factory-engine-pro/backend typecheck",
+      "pnpm --filter @factory-engine-pro/backend build",
+      "pnpm --filter @factory-engine-pro/admin build"
+    ],
+    "liveApi": {
+      "baseUrl": "https://api.dtfbank.com/api/v1",
+      "loginStatus": 201,
+      "aircallCallsStatus": 200,
+      "stats": {
+        "total": 102,
+        "last3d": 102,
+        "withTranscript": 74,
+        "resolverQueued": 71,
+        "resolverSucceeded": 0,
+        "resolverFailed": 71,
+        "lastReceivedAt": "2026-06-28T07:10:03.765Z"
+      },
+      "sample": {
+        "externalCallId": "3906652817",
+        "transcriptPresent": true,
+        "resolverQueuedAt": "2026-06-28T07:20:41.812Z",
+        "resolverStatus": "failed",
+        "resolverOutputPresent": false,
+        "resolvedWithVersion": null
+      }
+    },
+    "liveDb": {
+      "schema": "factory_engine_pro",
+      "aircallCallEvents": 111,
+      "queued": 0,
+      "processing": 0,
+      "failed": 71,
+      "succeeded": 0,
+      "outputCount": 0,
+      "versionCount": 0
+    },
+    "logs": {
+      "migration": "All migrations have been successfully applied.",
+      "workerErrorAction": "transcript_resolve_failed",
+      "providerErrorCode": "anthropic_resolver_failed",
+      "providerError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+    },
+    "uiScreenshots": [
+      "docs/evidence/roadmap5-ai-resolver-failed-live-20260628.png",
+      "docs/evidence/roadmap5-ai-resolver-failed-call-events-live-20260628.png"
+    ],
+    "uiTextProof": "CALLS TOTAL 102 / LAST 3 DAYS 102 / WITH TRANSCRIPT 74 / RESOLVER QUEUED 71 / RESOLVED 0 / RESOLVER FAILED 71"
+  },
+  "bittiGate": {
+    "required": "A real AircallCallEvent resolver_output JSON with all 11 fields and resolved_with_version.",
+    "actual": "Worker is deployed and processes real transcript jobs, but Anthropic low-credit response prevents successful structured output.",
+    "blockedBy": "Anthropic tenant_config key billing/credit state",
+    "mockUsed": false
+  }
+}
