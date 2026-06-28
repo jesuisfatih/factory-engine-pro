@@ -1,0 +1,206 @@
+{
+  "checkedAt": "2026-06-28T15:54:10.042Z",
+  "commit": "161ca6c35322d8e7eebfe2e1aa2fef59612e57f0",
+  "liveBase": "https://api.dtfbank.com/api/v1",
+  "principal": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "permissions": [
+      "orders.read",
+      "task.assign",
+      "support.read",
+      "segments.read",
+      "support.write",
+      "customers.read",
+      "customers.write",
+      "aircall.users.read"
+    ]
+  },
+  "taskId": "sr_roadmap24_linda_priority",
+  "customerId": "cust_roadmap24_linda",
+  "ruleId": "wrule_roadmap25_linda_task_brief",
+  "requests": [
+    {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/auth/person/login",
+      "status": 201,
+      "requestId": "211752b6-defd-48f7-b6a0-9f9b716fb7a5"
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/brief",
+      "status": 200,
+      "requestId": "8c123790-ada1-42eb-9a92-6d3614b7fd47"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/notes",
+      "status": 201,
+      "requestId": "ae4e0468-bc2e-4d17-9c9e-5e1202cd4ccb"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/calendar",
+      "status": 201,
+      "requestId": "5094646d-8002-4820-9576-bb9b8857ab38"
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/calendar",
+      "status": 200,
+      "requestId": "4fab8d2f-10ab-4b8e-91c1-f75313e6b0e5"
+    },
+    {
+      "method": "GET",
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+      "status": 200,
+      "requestId": "ec6ed91c-b9ba-410a-af72-a793ee1de3e1"
+    }
+  ],
+  "proofSummary": {
+    "before": {
+      "title": "Roadmap 24 Linda Axis Customer",
+      "matchedRuleId": "wrule_roadmap25_linda_task_brief",
+      "timelineKinds": [
+        "activity",
+        "aircall",
+        "note",
+        "order",
+        "task"
+      ],
+      "notes": 1
+    },
+    "afterSchedule": {
+      "orderNumber": "#R25-3001",
+      "totalPrice": 487.5,
+      "performance30d": {
+        "orders": 1,
+        "revenue": 487.5,
+        "calls": 1,
+        "callMinutes": 9,
+        "serviceRequests": 2
+      },
+      "shopifyCustomer": {
+        "customerId": "cust_roadmap24_linda",
+        "shopifyCustomerId": "roadmap25-linda-shopify-customer",
+        "phoneMatched": true,
+        "emailMatched": true
+      },
+      "rule": {
+        "id": "wrule_roadmap25_linda_task_brief",
+        "name": "Roadmap 25 Linda task brief proof",
+        "status": "active",
+        "trigger": "aircall.call.resolved",
+        "canvasUrl": "/rules?ruleId=wrule_roadmap25_linda_task_brief"
+      },
+      "timelineKinds": [
+        "activity",
+        "aircall",
+        "note",
+        "order",
+        "task"
+      ],
+      "noteCount": 3,
+      "aiPsychAnalysis": {
+        "communicationStyle": "complaint",
+        "decisionMakingStyle": "critical",
+        "trustLevel": null,
+        "engagementLevel": null,
+        "winProbability": null,
+        "motivators": [
+          "complaint",
+          "shipping_issue",
+          "refund_intent",
+          "purchase_intent"
+        ],
+        "objections": [
+          "Shipping complaint",
+          "Payment complaint",
+          "Refund asked",
+          "Complaint language",
+          "Refund intent"
+        ],
+        "buyingSignals": [
+          "Mentioned Roadmap proof gang sheet",
+          "Purchase intent"
+        ],
+        "hesitationSignals": [
+          "Shipping issue",
+          "Urgency critical"
+        ],
+        "talkTrack": "Customer needs a same-day status update, shipment clarity, and a follow-up before placing another gang sheet reorder.",
+        "generatedAt": "2026-06-28T15:53:01.708Z"
+      },
+      "customerDetailUrl": "/staff/customers?customerId=cust_roadmap24_linda"
+    },
+    "calendarTask": {
+      "id": "sr-sr_roadmap24_linda_priority",
+      "title": "Roadmap 24 Linda Axis Customer",
+      "customer": "Roadmap 24 Linda Axis Customer",
+      "customerEmail": "roadmap25.linda.customer@example.com",
+      "customerPhone": "+13105550125",
+      "dayIso": "2026-06-29",
+      "startHour": 17,
+      "durationMinutes": 30,
+      "kind": "task",
+      "source": "ai_transcript",
+      "aiBrief": {
+        "whyCalling": "Roadmap 25 live task brief proof with Shopify, Aircall, rule trace, AI psych, note and calendar context.",
+        "upsetAbout": "High-priority service request needs a human response.",
+        "painPoints": [
+          "Critical",
+          "Open",
+          "roadmap25_task_brief"
+        ],
+        "callGoal": "Move the service request to the next accountable status.",
+        "suggestedActions": [
+          "Review customer context",
+          "Add an internal note",
+          "Update status before leaving the screen"
+        ],
+        "promptKey": "person.workspace.live-context",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Roadmap 25 live task brief proof with Shopify, Aircall, rule trace, AI psych, note and calendar context."
+      }
+    },
+    "priorityCard": {
+      "id": "sr_roadmap24_linda_priority",
+      "customerId": "cust_roadmap24_linda",
+      "miniOrder": {
+        "id": "ord_roadmap25_linda_3001",
+        "orderNumber": "#R25-3001",
+        "totalPrice": 487.5,
+        "currency": "USD",
+        "financialStatus": "paid",
+        "fulfillmentStatus": "unfulfilled",
+        "processedAt": "2026-06-26T15:53:01.708Z",
+        "createdAt": "2026-06-28T15:53:01.823Z"
+      },
+      "performance30d": {
+        "orders": 1,
+        "revenue": 487.5,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 2
+      },
+      "matchedRuleId": "wrule_roadmap25_linda_task_brief",
+      "urgencyScore": 145.1
+    }
+  },
+  "assertions": {
+    "loginSucceeded": true,
+    "briefCardLoaded": true,
+    "cardHasMiniOrder": true,
+    "cardHas30dPerformance": true,
+    "shopifyCustomerMatchedByPhoneAndEmail": true,
+    "ruleTraceLinked": true,
+    "timelineHasOrderAircallNoteActivity": true,
+    "aiPsychAnalysisPresent": true,
+    "notePersistedViaApi": true,
+    "calendarPersistedViaApi": true,
+    "dailyPriorityCardHasAnatomy": true,
+    "customerDetailLinkPresent": true
+  }
+}

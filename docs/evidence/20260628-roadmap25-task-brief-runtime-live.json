@@ -1,0 +1,68 @@
+{
+  "checkedAt": "2026-06-28T15:55:53.917Z",
+  "container": "factoryengine-dtfbank-app",
+  "host": "new-mothership",
+  "scope": "dtfbank app container only",
+  "buildSha": "161ca6c35322d8e7eebfe2e1aa2fef59612e57f0",
+  "expectedCommit": "161ca6c35322d8e7eebfe2e1aa2fef59612e57f0",
+  "pm2": "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 73095    │ 10m    │ 2    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │\n│ 12 │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 80793    │ 8m     │ 105  │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 11 │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 70687    │ 11m    │ 82   │ online    │ 0%       │ 155.5mb  │ root     │ disabled │\n│ 13 │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 70707    │ 11m    │ 34   │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘",
+  "listeners": [
+    {
+      "port": 3000,
+      "pid": "80828",
+      "ppid": "80793",
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3000"
+    },
+    {
+      "port": 3001,
+      "pid": "73123",
+      "ppid": "73095",
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3001"
+    },
+    {
+      "port": 3002,
+      "pid": "70772",
+      "ppid": "70707",
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002"
+    },
+    {
+      "port": 4000,
+      "pid": "70687",
+      "ppid": "1",
+      "cmd": "/usr/local/bin/node dist/services/backend/src/main.js"
+    }
+  ],
+  "http": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "ms": 602
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/",
+      "status": 200,
+      "ms": 560
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/queue",
+      "status": 200,
+      "ms": 563
+    },
+    {
+      "url": "https://app.dtfbank.com/rules?ruleId=wrule_roadmap25_linda_task_brief",
+      "status": 200,
+      "ms": 186
+    }
+  ],
+  "logSample": "\u001b[32m[Nest] 68950  - \u001b[39m06/28/2026, 3:28:17 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"dbffc95e-7b96-4528-bc79-8e65c127dfb1\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"customer.pin\",\"message\":\"Person customer pin toggled\",\"customer_id\":\"cust_roadmap24_linda\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"pinned\":true}\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mHealthController {/api/v1/health}:\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/health, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/ai/health, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/mail/health, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:44:18 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/brief, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:54:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"ae4e0468-bc2e-4d17-9c9e-5e1202cd4ccb\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.note\",\"message\":\"Task brief note saved\",\"service_request_id\":\"sr_roadmap24_linda_priority\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"customer_id\":\"cust_roadmap24_linda\"}\u001b[39m\n\u001b[32m[Nest] 70687  - \u001b[39m06/28/2026, 3:54:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"5094646d-8002-4820-9576-bb9b8857ab38\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.calendar\",\"message\":\"Task follow-up scheduled\",\"service_request_id\":\"sr_roadmap24_linda_priority\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"scheduled_at\":\"2026-06-29T17:54:10.042Z\"}\u001b[39m",
+  "assertions": {
+    "buildShaMatchesCommit": true,
+    "apiProcessOnline": true,
+    "adminProcessOnline": true,
+    "personProcessOnline": true,
+    "accountsProcessOnline": true,
+    "allExpectedPortsListening": true,
+    "httpsRoutesHealthy": true,
+    "logShowsTaskBriefActions": true
+  }
+}

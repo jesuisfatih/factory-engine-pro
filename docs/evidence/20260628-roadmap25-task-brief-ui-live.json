@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-06-28T15:58:53.735Z",
+  "appUrl": "https://app.dtfbank.com/staff/queue",
+  "finalUrl": "https://app.dtfbank.com/staff/queue",
+  "screenshot": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/roadmap25-task-brief-ui-live-20260628.png",
+  "taskId": "sr_roadmap24_linda_priority",
+  "customerId": "cust_roadmap24_linda",
+  "ruleId": "wrule_roadmap25_linda_task_brief",
+  "principal": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com"
+  },
+  "responses": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/brief",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/notes",
+      "status": 201
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/tasks/sr_roadmap24_linda_priority/calendar",
+      "status": 201
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+      "status": 200
+    }
+  ],
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    }
+  ],
+  "visibleTextSample": "AI - Transcript\nHigh risk - P9\nroadmap25_task_brief\nU145.1\nRoadmap 24 Linda Axis Customer\n+13105550125\nroadmap25.linda.customer@example.com\n#R25-3001 $488\nWHY YOU'RE CALLING\nRoadmap 25 live task brief proof with Shopify, Aircall, rule trace, AI psych, note and calendar context.\nWHAT THEY'RE UPSET ABOUT\nHigh-priority service request needs a human response.\nYOUR GOAL\nMove the service request to the next accountable status.\nSUGGESTED ACTIONS\nReview customer context\nAdd an internal note\nUpdate status before leaving the screen\nTRANSCRIPT SNIPPET\nRoadmap 25 live task brief proof with Shopify, Aircall, rule trace, AI psych, note and calendar context.\nWHY THIS TASK\n3/3 matched\nRoadmap 25 Linda task brief proof\nAircall.Call.Resolved\nroadmap25-live-proof\nOpen rule canvas\nPsych Tags\ncontains\nExpected complaint\nActual complaint, shipping_issue, refund_intent\naircall.resolver\nRecent Orders 30d\ngte\nExpected 1\nActual 1\nshopify.orders\nAxis Primary Owner\neq\nExpected tmbr_ten_dtfbank_linda_marroquin\nActual tmbr_ten_dtfbank_linda_marroquin\nassignment.axis\nSHOPIFY DETAIL\nmatched\nCustomer id\ncust_roadmap24_linda\nShopify id\nroadmap25-linda-shopify-customer\nPhone match\nYes\nEmail match\nYes\n#R25-3001\n$488\npaid\nAI PSYCH ANALYSIS\nINTENT\nComplaint\nURGENCY\nCritical\nMOTIVATORS\ncomplaint, shipping_issue, refund_intent, purchase_intent\nOBJECTIONS\nShipping complaint, Payment complaint, Refund asked, Complaint language, Refund intent\n\nCustomer needs a same-day status update, shipment clarity, and a follow-up before placing another gang sheet reorder.\n\nORDER AND CUSTOMER TIMELINE\n12\nNote\nTask note\n\nFollow-up scheduled: Roadmap 25 UI schedule 2026-06-28T15:58:53.735Z\n\n28.06.2026 18:58:58\nNote\nTask note\n\nRoadmap 25 UI note 2026-06-28T15:58:53.735Z\n\n28.06.2026 18:58:58\nNote\nTask note\n\nFollow-up scheduled: Roadmap 25 UI schedule 2026-06-28T15:58:16.938Z\n\n28.06.2026 18:58:21\nNote\nTask note\n\nRoadmap 25 UI note 2026-06-28T15:58:16.938Z\n\n28.06.2026 18:58:21\nNote\nTask note\n\nFollow-up scheduled: Roadmap 25 live calendar follow-up proof\n\n28.06.2026 18:54:10\nNote\nTask note\n\nRoadmap 25 live API note 2026-06-28T15:54:10.042Z\n\n28.06.2026 18:54:10\nNote\nTask note\n\nRoadmap 25 seed note: verify artwork status, shipping ETA, and reorder intent in one call.\n\n28.06.2026 18:53:01\nTask\nPinned customer: Roadmap 24 Linda Axis Customer\n\nOpen - Medium\n\n28.06.2026 18:28:17\nTask\nRoadmap 24 Linda Axis Customer\n\nRoadmap 25 live task brief proof with Shopify, Aircall, rule trace, AI psych, note and calendar context.\n\n28.06.2026 18:27:51\nAircall\nCall.Ended inbound\n\nCustomer needs a same-day status update, shipment clarity, and a follow-up before placing another gang sheet reorder.\n\n27.06.2026 06:53:01\nActivity\nProduct Viewed\n\nViewed roadmap proof gang sheet before support call\n\n27.06.2026 02:53:01\nOrder\nOrder #R25-3001\n\nUSD 487.5 - paid\n\n26.06.2026 18:53:01\nTASK NOTE\n7 saved\nPersisted as a service request comment.\nSave note\n28.06.2026 18:58:58\n\nFollow-up scheduled: Roadmap 25 UI schedule 2026-06-28T15:58:53.735Z\n\n",
+  "assertions": {
+    "finalUrlIsLiveStaffQueue": true,
+    "cardVisible": true,
+    "modalVisible": true,
+    "shopifyDetailVisible": true,
+    "aiPsychVisible": true,
+    "ruleCanvasVisible": true,
+    "customerDetailVisible": true,
+    "timelineVisible": true,
+    "noteSavedInUi": true,
+    "scheduleSavedInUi": true,
+    "liveBriefApi200": true,
+    "noteApi200": true,
+    "calendarApi200": true,
+    "screenshotInspected": true
+  }
+}

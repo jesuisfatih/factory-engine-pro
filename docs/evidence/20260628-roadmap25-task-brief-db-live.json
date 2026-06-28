@@ -1,0 +1,401 @@
+{
+  "checkedAt": "2026-06-28T15:54:52.481Z",
+  "commit": "161ca6c35322d8e7eebfe2e1aa2fef59612e57f0",
+  "source": "Prisma read inside factoryengine-dtfbank-app against managed Vultr Postgres",
+  "tenantId": "ten_dtfbank",
+  "taskId": "sr_roadmap24_linda_priority",
+  "customerId": "cust_roadmap24_linda",
+  "ruleId": "wrule_roadmap25_linda_task_brief",
+  "request": {
+    "id": "sr_roadmap24_linda_priority",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_roadmap24_linda",
+    "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "axis": "support",
+    "matchedRuleId": "wrule_roadmap25_linda_task_brief",
+    "source": "aircall",
+    "surface": "person_workspace",
+    "sourceCallId": "acev_roadmap25_linda_brief",
+    "status": "open",
+    "priority": "critical",
+    "dueAt": "2026-06-29T17:54:10.042Z",
+    "metadata": {
+      "category": "roadmap25_task_brief",
+      "workflow": {
+        "action": "person.task_brief",
+        "ruleId": "wrule_roadmap25_linda_task_brief",
+        "source": "roadmap25-live-proof",
+        "eventId": "acev_roadmap25_linda_brief",
+        "trigger": "aircall.call.resolved",
+        "actionId": "show_live_brief_modal",
+        "ruleName": "Roadmap 25 Linda task brief proof",
+        "whenTrace": [
+          {
+            "id": "support-high-urgency",
+            "matched": true,
+            "conditionTrace": [
+              {
+                "id": "psych-tags-complaint",
+                "actual": [
+                  "complaint",
+                  "shipping_issue",
+                  "refund_intent"
+                ],
+                "source": "aircall.resolver",
+                "matched": true,
+                "expected": "complaint",
+                "operator": "contains",
+                "condition": "psych_tags"
+              },
+              {
+                "id": "shopify-order-recent",
+                "actual": 1,
+                "source": "shopify.orders",
+                "matched": true,
+                "expected": 1,
+                "operator": "gte",
+                "condition": "recent_orders_30d"
+              }
+            ]
+          }
+        ],
+        "matchedRuleId": "wrule_roadmap25_linda_task_brief",
+        "conditionTrace": [
+          {
+            "id": "psych-tags-complaint",
+            "actual": [
+              "complaint",
+              "shipping_issue",
+              "refund_intent"
+            ],
+            "source": "aircall.resolver",
+            "matched": true,
+            "expected": "complaint",
+            "operator": "contains",
+            "condition": "psych_tags"
+          },
+          {
+            "id": "shopify-order-recent",
+            "actual": 1,
+            "source": "shopify.orders",
+            "matched": true,
+            "expected": 1,
+            "operator": "gte",
+            "condition": "recent_orders_30d"
+          },
+          {
+            "id": "axis-owner",
+            "actual": "tmbr_ten_dtfbank_linda_marroquin",
+            "source": "assignment.axis",
+            "matched": true,
+            "expected": "tmbr_ten_dtfbank_linda_marroquin",
+            "operator": "eq",
+            "condition": "axis_primary_owner"
+          }
+        ]
+      },
+      "roadmap25": {
+        "proof": true,
+        "ruleId": "wrule_roadmap25_linda_task_brief",
+        "orderId": "ord_roadmap25_linda_3001",
+        "aircallId": "acev_roadmap25_linda_brief",
+        "updatedAt": "2026-06-28T15:53:01.708Z"
+      },
+      "ticketNumber": "R25-LINDA-BRIEF",
+      "scheduledFollowUps": [
+        {
+          "id": "srcm_de7bxv8rjyuvpp646kal3671",
+          "note": "Roadmap 25 live calendar follow-up proof",
+          "createdAt": "2026-06-28T15:54:10.934Z",
+          "scheduledAt": "2026-06-29T17:54:10.042Z",
+          "createdByMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+        }
+      ]
+    },
+    "conditionTrace": [
+      {
+        "id": "psych-tags-complaint",
+        "actual": [
+          "complaint",
+          "shipping_issue",
+          "refund_intent"
+        ],
+        "source": "aircall.resolver",
+        "matched": true,
+        "expected": "complaint",
+        "operator": "contains",
+        "condition": "psych_tags"
+      },
+      {
+        "id": "shopify-order-recent",
+        "actual": 1,
+        "source": "shopify.orders",
+        "matched": true,
+        "expected": 1,
+        "operator": "gte",
+        "condition": "recent_orders_30d"
+      },
+      {
+        "id": "axis-owner",
+        "actual": "tmbr_ten_dtfbank_linda_marroquin",
+        "source": "assignment.axis",
+        "matched": true,
+        "expected": "tmbr_ten_dtfbank_linda_marroquin",
+        "operator": "eq",
+        "condition": "axis_primary_owner"
+      }
+    ],
+    "taskStateSnapshot": {
+      "axis": "support",
+      "source": "roadmap25-live-proof",
+      "urgency": "critical",
+      "customerId": "cust_roadmap24_linda",
+      "matchedRuleId": "wrule_roadmap25_linda_task_brief"
+    },
+    "updatedAt": "2026-06-28T15:54:10.936Z"
+  },
+  "rule": {
+    "id": "wrule_roadmap25_linda_task_brief",
+    "tenantId": "ten_dtfbank",
+    "name": "Roadmap 25 Linda task brief proof",
+    "status": "active",
+    "trigger": "aircall.call.resolved",
+    "priority": 95,
+    "definition": {
+      "when": [
+        {
+          "id": "support-high-urgency",
+          "matched": true,
+          "conditionTrace": [
+            {
+              "id": "psych-tags-complaint",
+              "actual": [
+                "complaint",
+                "shipping_issue",
+                "refund_intent"
+              ],
+              "source": "aircall.resolver",
+              "matched": true,
+              "expected": "complaint",
+              "operator": "contains",
+              "condition": "psych_tags"
+            },
+            {
+              "id": "shopify-order-recent",
+              "actual": 1,
+              "source": "shopify.orders",
+              "matched": true,
+              "expected": 1,
+              "operator": "gte",
+              "condition": "recent_orders_30d"
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "show_live_brief_modal",
+          "type": "person.task_brief",
+          "config": {
+            "taskId": "sr_roadmap24_linda_priority",
+            "customerId": "cust_roadmap24_linda"
+          },
+          "target": "assigned_member"
+        }
+      ],
+      "trigger": "aircall.call.resolved",
+      "conditions": [
+        {
+          "id": "psych-tags-complaint",
+          "actual": [
+            "complaint",
+            "shipping_issue",
+            "refund_intent"
+          ],
+          "source": "aircall.resolver",
+          "matched": true,
+          "expected": "complaint",
+          "operator": "contains",
+          "condition": "psych_tags"
+        },
+        {
+          "id": "shopify-order-recent",
+          "actual": 1,
+          "source": "shopify.orders",
+          "matched": true,
+          "expected": 1,
+          "operator": "gte",
+          "condition": "recent_orders_30d"
+        },
+        {
+          "id": "axis-owner",
+          "actual": "tmbr_ten_dtfbank_linda_marroquin",
+          "source": "assignment.axis",
+          "matched": true,
+          "expected": "tmbr_ten_dtfbank_linda_marroquin",
+          "operator": "eq",
+          "condition": "axis_primary_owner"
+        }
+      ],
+      "description": "Live proof rule for roadmap 25 person task brief modal."
+    }
+  },
+  "order": {
+    "id": "ord_roadmap25_linda_3001",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_roadmap24_linda",
+    "shopifyOrderId": "roadmap25-linda-3001",
+    "shopifyOrderNumber": "#R25-3001",
+    "totalPrice": "487.5",
+    "currency": "USD",
+    "financialStatus": "paid",
+    "fulfillmentStatus": "unfulfilled",
+    "processedAt": "2026-06-26T15:53:01.708Z"
+  },
+  "orderCount30d": 1,
+  "aircall": {
+    "id": "acev_roadmap25_linda_brief",
+    "tenantId": "ten_dtfbank",
+    "externalCallId": "roadmap25-linda-brief-call",
+    "eventType": "call.ended",
+    "eventTimestamp": "2026-06-27T03:53:01.708Z",
+    "contactEmail": "roadmap25.linda.customer@example.com",
+    "contactPhoneE164": "+13105550125",
+    "resolverStatus": "succeeded",
+    "resolverOutput": {
+      "summary": "Customer needs a same-day status update, shipment clarity, and a follow-up before placing another gang sheet reorder.",
+      "psych_tags": [
+        "complaint",
+        "shipping_issue",
+        "refund_intent",
+        "purchase_intent"
+      ],
+      "call_intent": "complaint",
+      "customer_match": {
+        "matchedBy": [
+          "phone",
+          "email"
+        ],
+        "confidence": 0.99,
+        "customerId": "cust_roadmap24_linda"
+      },
+      "urgency_signal": "critical",
+      "payment_signals": {
+        "complaint": true,
+        "refund_asked": true
+      },
+      "product_mentions": [
+        {
+          "sku": "R25-GANG-22",
+          "name_hint": "Roadmap proof gang sheet"
+        }
+      ],
+      "shipping_signals": {
+        "delay": true,
+        "complaint": true
+      },
+      "language_detected": "en",
+      "resolved_with_version": 2
+    },
+    "resolvedWithVersion": 2,
+    "resolverOutputKeys": [
+      "summary",
+      "psych_tags",
+      "call_intent",
+      "customer_match",
+      "urgency_signal",
+      "payment_signals",
+      "product_mentions",
+      "shipping_signals",
+      "language_detected",
+      "resolved_with_version"
+    ]
+  },
+  "activity": {
+    "id": "calog_roadmap25_linda_product_view",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_roadmap24_linda",
+    "eventType": "product_viewed",
+    "payload": {
+      "source": "roadmap25-live-proof",
+      "summary": "Viewed roadmap proof gang sheet before support call"
+    },
+    "createdAt": "2026-06-26T23:53:01.708Z"
+  },
+  "assignment": {
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_roadmap24_linda",
+    "axis": "support",
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "isPrimary": true,
+    "source": "roadmap25-live-proof"
+  },
+  "recentComments": [
+    {
+      "id": "srcm_tjd63fk400pkt4lrldkjy45y",
+      "tenantId": "ten_dtfbank",
+      "serviceRequestId": "sr_roadmap24_linda_priority",
+      "actorId": "tmbr_ten_dtfbank_linda_marroquin",
+      "actorType": "member",
+      "body": "Follow-up scheduled: Roadmap 25 live calendar follow-up proof",
+      "internal": true,
+      "attachmentsJson": [
+        {
+          "id": "srcm_de7bxv8rjyuvpp646kal3671",
+          "kind": "calendar_follow_up",
+          "note": "Roadmap 25 live calendar follow-up proof",
+          "createdAt": "2026-06-28T15:54:10.934Z",
+          "scheduledAt": "2026-06-29T17:54:10.042Z",
+          "createdByMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+        }
+      ],
+      "createdAt": "2026-06-28T15:54:10.942Z"
+    },
+    {
+      "id": "srcm_kvjr0n4bqi6qqytetqku5nnp",
+      "tenantId": "ten_dtfbank",
+      "serviceRequestId": "sr_roadmap24_linda_priority",
+      "actorId": "tmbr_ten_dtfbank_linda_marroquin",
+      "actorType": "member",
+      "body": "Roadmap 25 live API note 2026-06-28T15:54:10.042Z",
+      "internal": true,
+      "attachmentsJson": [
+        {
+          "kind": "person_task_note",
+          "customerId": "cust_roadmap24_linda"
+        }
+      ],
+      "createdAt": "2026-06-28T15:54:10.646Z"
+    },
+    {
+      "id": "srcm_roadmap25_linda_seed_note",
+      "tenantId": "ten_dtfbank",
+      "serviceRequestId": "sr_roadmap24_linda_priority",
+      "actorId": "tmbr_ten_dtfbank_linda_marroquin",
+      "actorType": "member",
+      "body": "Roadmap 25 seed note: verify artwork status, shipping ETA, and reorder intent in one call.",
+      "internal": true,
+      "attachmentsJson": [
+        {
+          "kind": "roadmap25_seed_note",
+          "orderId": "ord_roadmap25_linda_3001",
+          "aircallId": "acev_roadmap25_linda_brief"
+        }
+      ],
+      "createdAt": "2026-06-28T15:53:01.860Z"
+    }
+  ],
+  "assertions": {
+    "requestTenantScoped": true,
+    "requestMatchedRulePersisted": true,
+    "conditionTracePersisted": true,
+    "ruleIsActive": true,
+    "orderPersistedForCustomer": true,
+    "orderCount30dPositive": true,
+    "aircallResolverPersisted": true,
+    "activityTimelineSourcePersisted": true,
+    "supportAssignmentPersisted": true,
+    "apiNoteAndCalendarCommentsPersisted": true,
+    "dueAtPersisted": true
+  }
+}
