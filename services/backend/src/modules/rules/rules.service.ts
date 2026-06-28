@@ -1009,11 +1009,12 @@ export class RulesService {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
+      const source = this.workflowTaskSource(context, sourceCallId);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
         description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
-        source: sourceCallId ? 'call' : 'workflow',
+        source,
         surface: 'internal',
         priority: priorityForRule(context.rule.priority),
         axis: assignment.axis,
@@ -1520,6 +1521,13 @@ export class RulesService {
       ?? stringParam(context.params, 'aircallCallEventId')
       ?? stringParam(context.params, 'externalCallId')
       ?? null;
+  }
+
+  private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null) {
+    const aiSource = this.workflowAiSource(context);
+    if (aiSource === 'transcript') return 'ai_transcript';
+    if (sourceCallId) return 'call';
+    return 'workflow';
   }
 
   private workflowAiSource(context: WorkflowActionContext) {
