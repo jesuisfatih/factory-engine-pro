@@ -1,0 +1,172 @@
+{
+  "item": 1,
+  "title": "Logout butonu calisir (admin + person)",
+  "checkedAt": "2026-06-28T23:33:09.266Z",
+  "scope": {
+    "app": "https://app.dtfbank.com",
+    "api": "https://api.dtfbank.com/api/v1",
+    "tenantId": "ten_dtfbank",
+    "container": "factoryengine-dtfbank-app",
+    "remote": "root@144.202.125.169"
+  },
+  "git": {
+    "codeCommit": "d031e58c27904f287b52267ae7af15ac928e7283",
+    "deployedBuildSha": "d031e58c27904f287b52267ae7af15ac928e7283",
+    "branch": "main"
+  },
+  "validation": [
+    {
+      "command": "pnpm typecheck",
+      "status": "passed",
+      "note": "9 workspace packages, turbo cache replay, exit 0"
+    },
+    {
+      "command": "pnpm build",
+      "status": "passed",
+      "note": "9 workspace packages, exit 0; existing Vite chunk-size warnings only"
+    }
+  ],
+  "runtime": {
+    "health": {
+      "url": "https://api.dtfbank.com/api/v1/health",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "buildShaCommand": "ssh root@144.202.125.169 \"docker exec factoryengine-dtfbank-app cat /app/.build-sha\"",
+    "logEvidence": [
+      "Mapped {/api/v1/auth/logout, POST} route",
+      "Nest application successfully started"
+    ]
+  },
+  "api": {
+    "person": {
+      "account": "dtfbanktx@gmail.com",
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "protectedCheckBeforeLogout": {
+        "path": "/person/workspace/summary",
+        "status": 200,
+        "requestId": "685784ce-7ec0-4df5-a448-2cf4574b6809"
+      },
+      "logout": {
+        "path": "/auth/logout",
+        "status": 201,
+        "ok": true,
+        "requestId": "f804d767-f054-495a-b2d7-e420465cfca8"
+      },
+      "oldAccessAfterLogout": {
+        "path": "/person/workspace/summary",
+        "status": 401,
+        "message": "Session was revoked",
+        "code": "unauthorized",
+        "requestId": "8e953db2-5792-4b4a-b71a-5e6e7a4c9dbf"
+      }
+    },
+    "admin": {
+      "account": "info@dtfbank.com",
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "protectedCheckBeforeLogout": {
+        "path": "/auth/me",
+        "status": 200,
+        "requestId": "cafe106d-9875-47c4-9b8b-2b8fc9ab458e"
+      },
+      "logout": {
+        "path": "/auth/logout",
+        "status": 201,
+        "ok": true,
+        "requestId": "ef0a295c-e4e0-4028-8801-193d178f8d0b"
+      },
+      "oldAccessAfterLogout": {
+        "path": "/auth/me",
+        "status": 401,
+        "message": "Session was revoked",
+        "code": "unauthorized",
+        "requestId": "8ae8cc91-f8b2-40c0-b8db-b63516c9d327"
+      }
+    },
+    "tokenValuesPersistedInEvidence": false
+  },
+  "db": {
+    "query": "auth_tokens where kind=access_revocation and tenantId=ten_dtfbank created in last 20 minutes",
+    "checkedAt": "2026-06-28T23:30:34.474Z",
+    "result": {
+      "count": 2,
+      "byPrincipal": {
+        "tmbr_ten_dtfbank_info_owner": 1,
+        "tmbr_ten_dtfbank_linda_marroquin": 1
+      },
+      "sample": [
+        {
+          "tenantId": "ten_dtfbank",
+          "principalType": "member",
+          "principalId": "tmbr_ten_dtfbank_info_owner",
+          "expiresAt": "2026-06-28T23:44:14.000Z",
+          "createdAt": "2026-06-28T23:29:14.668Z",
+          "metadata": {
+            "source": "logout"
+          }
+        },
+        {
+          "tenantId": "ten_dtfbank",
+          "principalType": "member",
+          "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+          "expiresAt": "2026-06-28T23:44:11.000Z",
+          "createdAt": "2026-06-28T23:29:13.518Z",
+          "metadata": {
+            "source": "logout"
+          }
+        }
+      ]
+    },
+    "tokenHashRedacted": true
+  },
+  "ui": {
+    "person": {
+      "account": "dtfbanktx@gmail.com",
+      "loginUrl": "https://app.dtfbank.com/staff/login",
+      "loggedInUrl": "https://app.dtfbank.com/staff/login",
+      "finalUrl": "https://app.dtfbank.com/staff/login",
+      "note": "Person SPA shows logged-in staff queue while URL remains /staff/login; URL drift is ROADMAP item 3. Item 1 was verified by visible logged-in staff shell, logout API 201, storage cleared, and login form visible after logout.",
+      "sessionBefore": true,
+      "sessionAfter": false,
+      "logoutResponse": {
+        "url": "https://api.dtfbank.com/api/v1/auth/logout",
+        "status": 201,
+        "ok": true
+      },
+      "loggedInTextIncludesUser": true,
+      "finalTextIncludesLoginForm": true,
+      "consoleErrors": [],
+      "screenshot": {
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m01-person-logout-ui-live.png",
+        "bytes": 490066,
+        "sha256": "428df8e43f5c1946b859ecfaf9c4eebc2a28f2998564d1f48435ee388507e2bc"
+      }
+    },
+    "admin": {
+      "account": "info@dtfbank.com",
+      "loginUrl": "https://app.dtfbank.com/login",
+      "loggedInUrl": "https://app.dtfbank.com/dashboard",
+      "finalUrl": "https://app.dtfbank.com/login",
+      "sessionBefore": true,
+      "sessionAfter": false,
+      "logoutResponse": {
+        "url": "https://api.dtfbank.com/api/v1/auth/logout",
+        "status": 201,
+        "ok": true
+      },
+      "loggedInTextIncludesUser": true,
+      "finalTextIncludesLoginForm": true,
+      "consoleErrors": [],
+      "screenshot": {
+        "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m01-admin-logout-ui-live.png",
+        "bytes": 466275,
+        "sha256": "4c0a1c33dfde378f8cfbb09b1476d0f3a08cb88d62121bfde70edf97e7bc4548"
+      }
+    }
+  },
+  "nextRoadmapItem": 2,
+  "seedMockPolicy": "No seed/mock data was added. User warning about segment/seed cleanup is carried forward; relevant cleanup remains in ROADMAP items 6, 12, 20-25, and 33."
+}
