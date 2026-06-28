@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-06-28T03:21:14.778396+00:00",
+  "appUrl": "https://app.dtfbank.com",
+  "accounts": [
+    {
+      "key": "owner",
+      "email": "info@dtfbank.com",
+      "role": "Owner",
+      "dashboardUrl": "https://app.dtfbank.com/dashboard",
+      "dashboardScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-owner-dashboard-live-20260628.png",
+      "principalVisible": true,
+      "roleVisible": true,
+      "commissionsNavVisible": true,
+      "aircallSettingsNavVisible": true
+    },
+    {
+      "key": "linda",
+      "email": "dtfbanktx@gmail.com",
+      "role": "Customer Service",
+      "dashboardUrl": "https://app.dtfbank.com/dashboard",
+      "dashboardScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-linda-dashboard-live-20260628.png",
+      "principalVisible": true,
+      "roleVisible": true,
+      "commissionsNavVisible": false,
+      "aircallSettingsNavVisible": false
+    },
+    {
+      "key": "charlette",
+      "email": "charlette@dtfbank.com",
+      "role": "Customer Service",
+      "dashboardUrl": "https://app.dtfbank.com/dashboard",
+      "dashboardScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-charlette-dashboard-live-20260628.png",
+      "principalVisible": true,
+      "roleVisible": true,
+      "commissionsNavVisible": false,
+      "aircallSettingsNavVisible": false
+    },
+    {
+      "key": "ihsan",
+      "email": "ihsan@dtfbank.com",
+      "role": "Sales Personel",
+      "dashboardUrl": "https://app.dtfbank.com/dashboard",
+      "dashboardScreenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-ihsan-dashboard-live-20260628.png",
+      "principalVisible": true,
+      "roleVisible": true,
+      "commissionsNavVisible": true,
+      "aircallSettingsNavVisible": false
+    }
+  ],
+  "permissionRoutes": [
+    {
+      "key": "owner",
+      "email": "info@dtfbank.com",
+      "requested": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/settings/aircall/connection",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-owner-aircall-live-20260628.png",
+      "hasAircallSettings": true,
+      "hasCommissionPage": true,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.integrations\nD\nDTF Bank\nOwner\nSettings\nAPI keys, integrations, and provider configuration\nWorkspace\nAI\nAircall\nShopify\nINTEGRATION\nAircall\nCredentials, routing defaults and backfill controls\nConnection\nUsers\nNumbers\nWebhooks\nSync Logs\nCredential Status\nSaved encrypted values from TenantConfig\nRetry\nAPI ID\nSaved\nAPI TOKEN\nSaved\nWEBHOOK SECRET (OPTIONAL)\nSaved\nCredentials\nSave Aircall credentials into TenantConfig. Values are encrypted at rest and never returned to the browser.\n API ID\n API TOKEN\n WEBHOOK SECRET (OPTIONAL)\nLEAVE FIELDS BLANK TO KEEP EXISTING ENCRYPTED VALUES.\nSave credentials\nRuntime actions\nWebhook registration and backfill require live Aircall credentials first\nTest ping and historical backfill stay disabled until valid Aircall credentials are saved and synced.\nTest ping\nStart backfill"
+    },
+    {
+      "key": "owner",
+      "email": "info@dtfbank.com",
+      "requested": "https://app.dtfbank.com/team/commissions",
+      "finalUrl": "https://app.dtfbank.com/team/commissions",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-owner-commissions-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": true,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nnav.team\nD\nDTF Bank\nOwner\nTeam\nRoles, users, and commission rules\nNew profile\nRoles\nUsers\nCommissions\nCommission rules\n\nOnly the Sales Service role is paid commission. Define base rate, tiers, and overrides.\n\nCommission rules apply to the Sales Service role only.\nTeam\nSales Service \u00b7 base\nSales Service\n3 rules \u00b7 base 5%\n26.06.2026 09:14\nRep\nLinda \u00b7 VIP segment override\nLinda Anderson\n1 rule \u00b7 base 0%\n24.06.2026 16:42"
+    },
+    {
+      "key": "linda",
+      "email": "dtfbanktx@gmail.com",
+      "requested": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-linda-aircall-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": false,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nOPERATIONS\nSegments\nSupport\nTask Management\nLM\ndtfbanktx@gmail.com\nCustomer Service\nDashboard\nD\nDTF Bank\nCustomer Service\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading\u2026\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\n06-15\n06-16\n06-17\n06-18\n06-19\n06-20\n06-21\n06-22\n06-23\n06-24\n06-25\n06-26\n06-27\n06-28\nRecent support\n5 records\nSR-TEN_DTFBANK-001 - Seed support follow-up\nNorthstar Print Supply - Invite Prodtest\n\thigh\tJun 28, 06:17 AM\n\nSR-NMVUFNGZ - Internal chat: owner.prodtest+20260627184047@dtfbank.com / flow1.member+20260627165606@dtfbank.com\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-L2EPURAZ - Target 4 staff request 20260628024306\nNo customer - Unassigned\n\tmedium\tJun 28, 02:43 AM\n\nSR-AI004MP4 - Target 4 live note 20260628024306\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-MQX09O2F - Target 4 person queue proof 20260628024306\nNo customer - Unassigned\n\thigh\tJun 28, 02:43 AM\nRecent mail\n0 records\nLoading\u2026\nLoading recent transactional deliveries from the API."
+    },
+    {
+      "key": "linda",
+      "email": "dtfbanktx@gmail.com",
+      "requested": "https://app.dtfbank.com/team/commissions",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-linda-commissions-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": false,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nOPERATIONS\nSegments\nSupport\nTask Management\nLM\ndtfbanktx@gmail.com\nCustomer Service\nDashboard\nD\nDTF Bank\nCustomer Service\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading\u2026\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\n06-15\n06-16\n06-17\n06-18\n06-19\n06-20\n06-21\n06-22\n06-23\n06-24\n06-25\n06-26\n06-27\n06-28\nRecent support\n5 records\nSR-TEN_DTFBANK-001 - Seed support follow-up\nNorthstar Print Supply - Invite Prodtest\n\thigh\tJun 28, 06:17 AM\n\nSR-NMVUFNGZ - Internal chat: owner.prodtest+20260627184047@dtfbank.com / flow1.member+20260627165606@dtfbank.com\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-L2EPURAZ - Target 4 staff request 20260628024306\nNo customer - Unassigned\n\tmedium\tJun 28, 02:43 AM\n\nSR-AI004MP4 - Target 4 live note 20260628024306\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-MQX09O2F - Target 4 person queue proof 20260628024306\nNo customer - Unassigned\n\thigh\tJun 28, 02:43 AM\nRecent mail\n0 records\nLoading\u2026\nLoading recent transactional deliveries from the API."
+    },
+    {
+      "key": "charlette",
+      "email": "charlette@dtfbank.com",
+      "requested": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-charlette-aircall-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": false,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nOPERATIONS\nSegments\nSupport\nTask Management\nCB\ncharlette@dtfbank.com\nCustomer Service\nDashboard\nD\nDTF Bank\nCustomer Service\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading\u2026\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\n06-15\n06-16\n06-17\n06-18\n06-19\n06-20\n06-21\n06-22\n06-23\n06-24\n06-25\n06-26\n06-27\n06-28\nRecent support\n5 records\nSR-TEN_DTFBANK-001 - Seed support follow-up\nNorthstar Print Supply - Invite Prodtest\n\thigh\tJun 28, 06:17 AM\n\nSR-NMVUFNGZ - Internal chat: owner.prodtest+20260627184047@dtfbank.com / flow1.member+20260627165606@dtfbank.com\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-L2EPURAZ - Target 4 staff request 20260628024306\nNo customer - Unassigned\n\tmedium\tJun 28, 02:43 AM\n\nSR-AI004MP4 - Target 4 live note 20260628024306\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-MQX09O2F - Target 4 person queue proof 20260628024306\nNo customer - Unassigned\n\thigh\tJun 28, 02:43 AM\nRecent mail\n0 records\nLoading\u2026\nLoading recent transactional deliveries from the API."
+    },
+    {
+      "key": "charlette",
+      "email": "charlette@dtfbank.com",
+      "requested": "https://app.dtfbank.com/team/commissions",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-charlette-commissions-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": false,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nOPERATIONS\nSegments\nSupport\nTask Management\nCB\ncharlette@dtfbank.com\nCustomer Service\nDashboard\nD\nDTF Bank\nCustomer Service\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading\u2026\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\n06-15\n06-16\n06-17\n06-18\n06-19\n06-20\n06-21\n06-22\n06-23\n06-24\n06-25\n06-26\n06-27\n06-28\nRecent support\n5 records\nSR-TEN_DTFBANK-001 - Seed support follow-up\nNorthstar Print Supply - Invite Prodtest\n\thigh\tJun 28, 06:17 AM\n\nSR-NMVUFNGZ - Internal chat: owner.prodtest+20260627184047@dtfbank.com / flow1.member+20260627165606@dtfbank.com\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-L2EPURAZ - Target 4 staff request 20260628024306\nNo customer - Unassigned\n\tmedium\tJun 28, 02:43 AM\n\nSR-AI004MP4 - Target 4 live note 20260628024306\nNo customer - Unassigned\n\tlow\tJun 28, 02:43 AM\n\nSR-MQX09O2F - Target 4 person queue proof 20260628024306\nNo customer - Unassigned\n\thigh\tJun 28, 02:43 AM\nRecent mail\n0 records\nLoading\u2026\nLoading recent transactional deliveries from the API."
+    },
+    {
+      "key": "ihsan",
+      "email": "ihsan@dtfbank.com",
+      "requested": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-ihsan-aircall-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": true,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nTask Management\nORGANIZATION\nCommissions\nIT\nihsan@dtfbank.com\nSales Personel\nDashboard\nD\nDTF Bank\nSales Personel\nDashboard\nLive overview of Shopify orders, customers, support, and transactional mail\nLoading\u2026\nLoading tenant dashboard metrics from the API.\nShopify sales - last 14 days\n14 day window\n06-15\n06-16\n06-17\n06-18\n06-19\n06-20\n06-21\n06-22\n06-23\n06-24\n06-25\n06-26\n06-27\n06-28\nRecent support\n0 records\nLoading\u2026\nLoading recent service requests from the API.\nRecent mail\n0 records\nLoading\u2026\nLoading recent transactional deliveries from the API."
+    },
+    {
+      "key": "ihsan",
+      "email": "ihsan@dtfbank.com",
+      "requested": "https://app.dtfbank.com/team/commissions",
+      "finalUrl": "https://app.dtfbank.com/team/commissions",
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap2-ihsan-commissions-live-20260628.png",
+      "hasAircallSettings": false,
+      "hasCommissionPage": true,
+      "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nTask Management\nORGANIZATION\nCommissions\nIT\nihsan@dtfbank.com\nSales Personel\nnav.team\nD\nDTF Bank\nSales Personel\nTeam\nRoles, users, and commission rules\nNew profile\nRoles\nUsers\nCommissions\nCommission rules\n\nOnly the Sales Service role is paid commission. Define base rate, tiers, and overrides.\n\nCommission rules apply to the Sales Service role only.\nTeam\nSales Service \u00b7 base\nSales Service\n3 rules \u00b7 base 5%\n26.06.2026 09:14\nRep\nLinda \u00b7 VIP segment override\nLinda Anderson\n1 rule \u00b7 base 0%\n24.06.2026 16:42"
+    }
+  ]
+}

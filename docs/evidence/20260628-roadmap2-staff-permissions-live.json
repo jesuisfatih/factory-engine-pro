@@ -1,0 +1,410 @@
+﻿{
+    "target":  "ROADMAP item 2 - real staff accounts and permission lock",
+    "checkedAt":  "2026-06-28T03:18:28.4397901Z",
+    "tenantId":  "ten_dtfbank",
+    "buildSha":  "0f8ddcd645520895ec054018388929b13170d4c5",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "accounts":  [
+                     {
+                         "email":  "info@dtfbank.com",
+                         "expectedRole":  "owner",
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_info_owner",
+                                           "type":  "member",
+                                           "email":  "info@dtfbank.com",
+                                           "firstName":  "DTF Bank",
+                                           "lastName":  "Owner",
+                                           "permissions":  [
+                                                               "roles.read",
+                                                               "orders.read",
+                                                               "roles.write",
+                                                               "task.assign",
+                                                               "members.read",
+                                                               "orders.write",
+                                                               "pricing.read",
+                                                               "support.read",
+                                                               "sync.trigger",
+                                                               "identity.read",
+                                                               "members.write",
+                                                               "pricing.write",
+                                                               "segments.read",
+                                                               "settings.read",
+                                                               "support.write",
+                                                               "customers.read",
+                                                               "identity.write",
+                                                               "segments.write",
+                                                               "settings.write",
+                                                               "b2b_access.read",
+                                                               "customers.write",
+                                                               "b2b_access.write",
+                                                               "commission.submit",
+                                                               "aircall.users.read",
+                                                               "aircall.users.write"
+                                                           ]
+                                       },
+                         "permissions":  [
+                                             "roles.read",
+                                             "orders.read",
+                                             "roles.write",
+                                             "task.assign",
+                                             "members.read",
+                                             "orders.write",
+                                             "pricing.read",
+                                             "support.read",
+                                             "sync.trigger",
+                                             "identity.read",
+                                             "members.write",
+                                             "pricing.write",
+                                             "segments.read",
+                                             "settings.read",
+                                             "support.write",
+                                             "customers.read",
+                                             "identity.write",
+                                             "segments.write",
+                                             "settings.write",
+                                             "b2b_access.read",
+                                             "customers.write",
+                                             "b2b_access.write",
+                                             "commission.submit",
+                                             "aircall.users.read",
+                                             "aircall.users.write"
+                                         ],
+                         "hasCommissionSubmit":  true,
+                         "hasAircallUsersWrite":  true,
+                         "hasSettingsAny":  true,
+                         "hasMembersAny":  true,
+                         "hasRolesAny":  true,
+                         "hasIdentityAny":  true,
+                         "hasSyncTrigger":  true,
+                         "tenantConfigGetStatus":  200,
+                         "aircallUsersGetStatus":  200,
+                         "memberRolesStatus":  200,
+                         "membersStatus":  200
+                     },
+                     {
+                         "email":  "dtfbanktx@gmail.com",
+                         "expectedRole":  "Customer Service",
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_linda_marroquin",
+                                           "type":  "member",
+                                           "email":  "dtfbanktx@gmail.com",
+                                           "firstName":  "Linda",
+                                           "lastName":  "Marroquin",
+                                           "permissions":  [
+                                                               "orders.read",
+                                                               "task.assign",
+                                                               "support.read",
+                                                               "segments.read",
+                                                               "support.write",
+                                                               "customers.read",
+                                                               "customers.write",
+                                                               "aircall.users.read"
+                                                           ]
+                                       },
+                         "permissions":  [
+                                             "orders.read",
+                                             "task.assign",
+                                             "support.read",
+                                             "segments.read",
+                                             "support.write",
+                                             "customers.read",
+                                             "customers.write",
+                                             "aircall.users.read"
+                                         ],
+                         "hasCommissionSubmit":  false,
+                         "hasAircallUsersWrite":  false,
+                         "hasSettingsAny":  false,
+                         "hasMembersAny":  false,
+                         "hasRolesAny":  false,
+                         "hasIdentityAny":  false,
+                         "hasSyncTrigger":  false,
+                         "tenantConfigGetStatus":  403,
+                         "aircallUsersGetStatus":  200,
+                         "memberRolesStatus":  403,
+                         "membersStatus":  403
+                     },
+                     {
+                         "email":  "charlette@dtfbank.com",
+                         "expectedRole":  "Customer Service",
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_charlette_boatman",
+                                           "type":  "member",
+                                           "email":  "charlette@dtfbank.com",
+                                           "firstName":  "Charlette",
+                                           "lastName":  "Boatman",
+                                           "permissions":  [
+                                                               "orders.read",
+                                                               "task.assign",
+                                                               "support.read",
+                                                               "segments.read",
+                                                               "support.write",
+                                                               "customers.read",
+                                                               "customers.write",
+                                                               "aircall.users.read"
+                                                           ]
+                                       },
+                         "permissions":  [
+                                             "orders.read",
+                                             "task.assign",
+                                             "support.read",
+                                             "segments.read",
+                                             "support.write",
+                                             "customers.read",
+                                             "customers.write",
+                                             "aircall.users.read"
+                                         ],
+                         "hasCommissionSubmit":  false,
+                         "hasAircallUsersWrite":  false,
+                         "hasSettingsAny":  false,
+                         "hasMembersAny":  false,
+                         "hasRolesAny":  false,
+                         "hasIdentityAny":  false,
+                         "hasSyncTrigger":  false,
+                         "tenantConfigGetStatus":  403,
+                         "aircallUsersGetStatus":  200,
+                         "memberRolesStatus":  403,
+                         "membersStatus":  403
+                     },
+                     {
+                         "email":  "ihsan@dtfbank.com",
+                         "expectedRole":  "Sales Personel",
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_ihsan_taskiran",
+                                           "type":  "member",
+                                           "email":  "ihsan@dtfbank.com",
+                                           "firstName":  "Ihsan",
+                                           "lastName":  "Taskiran",
+                                           "permissions":  [
+                                                               "orders.read",
+                                                               "task.assign",
+                                                               "orders.write",
+                                                               "pricing.read",
+                                                               "pricing.write",
+                                                               "segments.read",
+                                                               "customers.read",
+                                                               "customers.write",
+                                                               "commission.submit",
+                                                               "aircall.users.read"
+                                                           ]
+                                       },
+                         "permissions":  [
+                                             "orders.read",
+                                             "task.assign",
+                                             "orders.write",
+                                             "pricing.read",
+                                             "pricing.write",
+                                             "segments.read",
+                                             "customers.read",
+                                             "customers.write",
+                                             "commission.submit",
+                                             "aircall.users.read"
+                                         ],
+                         "hasCommissionSubmit":  true,
+                         "hasAircallUsersWrite":  false,
+                         "hasSettingsAny":  false,
+                         "hasMembersAny":  false,
+                         "hasRolesAny":  false,
+                         "hasIdentityAny":  false,
+                         "hasSyncTrigger":  false,
+                         "tenantConfigGetStatus":  403,
+                         "aircallUsersGetStatus":  200,
+                         "memberRolesStatus":  403,
+                         "membersStatus":  403
+                     }
+                 ],
+    "retiredProdtestMembers":  {
+                                   "value":  [
+                                                 {
+                                                     "id":  "tmbr_prodtest_1782574849914_fa5999f6",
+                                                     "tenantId":  "ten_dtfbank",
+                                                     "email":  "owner.prodtest+20260627184047@dtfbank.com",
+                                                     "firstName":  "Prod",
+                                                     "lastName":  "Owner",
+                                                     "phone":  null,
+                                                     "status":  "disabled",
+                                                     "lastLoginAt":  "2026-06-28T02:06:37.021Z",
+                                                     "invitationAcceptedAt":  "2026-06-27T15:40:50.152Z",
+                                                     "aircallUserId":  null,
+                                                     "createdAt":  "2026-06-27T15:40:50.440Z",
+                                                     "updatedAt":  "2026-06-28T03:17:08.241Z",
+                                                     "roleAssignments":  [
+                                                                             {
+                                                                                 "id":  "mra_prodtest_1782574850449_482e8778",
+                                                                                 "tenantId":  "ten_dtfbank",
+                                                                                 "memberId":  "tmbr_prodtest_1782574849914_fa5999f6",
+                                                                                 "roleId":  "mrol_prodtest_1782574849867_5d819c38",
+                                                                                 "createdAt":  "2026-06-27T15:40:50.450Z",
+                                                                                 "role":  {
+                                                                                              "id":  "mrol_prodtest_1782574849867_5d819c38",
+                                                                                              "tenantId":  "ten_dtfbank",
+                                                                                              "slug":  "owner",
+                                                                                              "name":  "Owner",
+                                                                                              "description":  "Full workspace administration",
+                                                                                              "permissions":  {
+                                                                                                                  "roles.read":  true,
+                                                                                                                  "orders.read":  true,
+                                                                                                                  "roles.write":  true,
+                                                                                                                  "task.assign":  true,
+                                                                                                                  "members.read":  true,
+                                                                                                                  "orders.write":  true,
+                                                                                                                  "pricing.read":  true,
+                                                                                                                  "support.read":  true,
+                                                                                                                  "sync.trigger":  true,
+                                                                                                                  "identity.read":  true,
+                                                                                                                  "members.write":  true,
+                                                                                                                  "pricing.write":  true,
+                                                                                                                  "segments.read":  true,
+                                                                                                                  "settings.read":  true,
+                                                                                                                  "support.write":  true,
+                                                                                                                  "customers.read":  true,
+                                                                                                                  "identity.write":  true,
+                                                                                                                  "segments.write":  true,
+                                                                                                                  "settings.write":  true,
+                                                                                                                  "b2b_access.read":  true,
+                                                                                                                  "customers.write":  true,
+                                                                                                                  "b2b_access.write":  true,
+                                                                                                                  "commission.submit":  true,
+                                                                                                                  "aircall.users.read":  true,
+                                                                                                                  "aircall.users.write":  true
+                                                                                                              },
+                                                                                              "isSystem":  true,
+                                                                                              "createdAt":  "2026-06-27T15:40:49.869Z",
+                                                                                              "updatedAt":  "2026-06-28T03:17:05.766Z"
+                                                                                          }
+                                                                             }
+                                                                         ]
+                                                 }
+                                             ],
+                                   "Count":  1
+                               },
+    "roles":  [
+                  {
+                      "name":  "Admin",
+                      "slug":  "admin",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  true,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "segments.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Agent",
+                      "slug":  "agent",
+                      "permissions":  {
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "identity.read":  true,
+                                          "segments.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "b2b_access.read":  true,
+                                          "aircall.users.read":  true
+                                      }
+                  },
+                  {
+                      "name":  "Customer Service",
+                      "slug":  "customer_service",
+                      "permissions":  {
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "support.read":  true,
+                                          "segments.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "customers.write":  true,
+                                          "aircall.users.read":  true
+                                      }
+                  },
+                  {
+                      "name":  "Owner",
+                      "slug":  "owner",
+                      "permissions":  {
+                                          "roles.read":  true,
+                                          "orders.read":  true,
+                                          "roles.write":  true,
+                                          "task.assign":  true,
+                                          "members.read":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "support.read":  true,
+                                          "sync.trigger":  true,
+                                          "identity.read":  true,
+                                          "members.write":  true,
+                                          "pricing.write":  true,
+                                          "segments.read":  true,
+                                          "settings.read":  true,
+                                          "support.write":  true,
+                                          "customers.read":  true,
+                                          "identity.write":  true,
+                                          "segments.write":  true,
+                                          "settings.write":  true,
+                                          "b2b_access.read":  true,
+                                          "customers.write":  true,
+                                          "b2b_access.write":  true,
+                                          "commission.submit":  true,
+                                          "aircall.users.read":  true,
+                                          "aircall.users.write":  true
+                                      }
+                  },
+                  {
+                      "name":  "Sales Personel",
+                      "slug":  "sales_personel",
+                      "permissions":  {
+                                          "orders.read":  true,
+                                          "task.assign":  true,
+                                          "orders.write":  true,
+                                          "pricing.read":  true,
+                                          "pricing.write":  true,
+                                          "segments.read":  true,
+                                          "customers.read":  true,
+                                          "customers.write":  true,
+                                          "commission.submit":  true,
+                                          "aircall.users.read":  true
+                                      }
+                  }
+              ],
+    "runtime":  {
+                    "pm2":  [
+                                "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                                "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                                "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1137     │ 75s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1112     │ 75s    │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                                "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1107     │ 75s    │ 0    │ online    │ 0%       │ 147.5mb  │ root     │ disabled │",
+                                "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1130     │ 75s    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                                "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+                            ],
+                    "log":  [
+                                "No pending migrations to apply.",
+                                "\u001b[32m[Nest] 1107  - \u001b[39m06/28/2026, 3:17:18 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                            ]
+                },
+    "assertions":  {
+                       "fourAccountsLogin":  true,
+                       "customerServiceNoCommission":  true,
+                       "salesHasCommission":  true,
+                       "nonOwnerNoAircallWrite":  true,
+                       "nonOwnerNoSettingsMembersRolesIdentitySync":  true,
+                       "nonOwnerTenantConfigForbidden":  true,
+                       "allCanReadAircallUsers":  true
+                   }
+}
