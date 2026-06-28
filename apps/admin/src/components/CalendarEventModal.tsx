@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X, Sparkles, Phone, Mail, Clock, User, AlarmClockOff, RefreshCw, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Dialog, DialogTitle, DialogClose } from '@/components/Dialog';
-import { fetchCalendarEventById, type CalendarEvent, type EventSource } from '@/lib/mock';
+import { adminApi, apiErrorMessage } from '@/lib/api';
+import { fetchCalendarEventById, type EventSource } from '@/lib/live-data';
 import { useCan } from '@/lib/permissions';
 
 interface Props { eventId: string; onClose: () => void; }
@@ -31,17 +32,14 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
     queryFn: () => fetchCalendarEventById(eventId),
   });
 
-  const snooze = useMutation({
-    mutationFn: async () => { await new Promise((r) => setTimeout(r, 200)); },
-    onSuccess: () => toast('Event snoozed', { description: 'Will appear again in 1 hour.' }),
-  });
-  const reassign = useMutation({
-    mutationFn: async () => { await new Promise((r) => setTimeout(r, 200)); },
-    onSuccess: () => toast('Event reassigned', { description: 'Operator picker opens next.' }),
-  });
   const complete = useMutation({
-    mutationFn: async (id: string) => { await new Promise((r) => setTimeout(r, 200)); return id; },
-    onSuccess: () => toast.success('Event completed', { description: 'Notes saved to customer history.' }),
+    mutationFn: async (id: string) => {
+      if (!id.startsWith('sr-')) throw new Error('Only service request calendar events can be completed from this view.');
+      await adminApi.changeSupportStatus(id.slice(3), { status: 'resolved' });
+      return id;
+    },
+    onSuccess: () => toast.success('Event completed', { description: 'Service request marked resolved.' }),
+    onError: (error) => toast.error('Complete failed', { description: apiErrorMessage(error) }),
   });
 
   const form = useForm({
@@ -174,11 +172,11 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
 
         <footer className="modal-foot">
           <button id={`btn-snooze-${event.id}`} type="button" className="btn ghost"
-            disabled={!canWrite || snooze.isPending} onClick={() => snooze.mutate()}>
+            disabled title="No live snooze endpoint is available yet">
             <AlarmClockOff size={13} /> {t('calendar_view.modal_actions.snooze')}
           </button>
           <button id={`btn-reassign-${event.id}`} type="button" className="btn ghost"
-            disabled={!canWrite || reassign.isPending} onClick={() => reassign.mutate()}>
+            disabled title="Use the support detail page to change assignee">
             <RefreshCw size={13} /> {t('calendar_view.modal_actions.reassign')}
           </button>
           <button id={`btn-complete-${event.id}`} type="button" className="save-btn"

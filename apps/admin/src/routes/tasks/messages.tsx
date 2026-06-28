@@ -8,7 +8,8 @@ import { Search, SendHorizonal } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import { fetchPersonnelPresence, fetchThread, sendMessage, type PresenceStatus } from '@/lib/mock';
+import { apiErrorMessage } from '@/lib/api';
+import { fetchPersonnelPresence, fetchThread, sendMessage, type PresenceStatus } from '@/lib/live-data';
 import { useCan } from '@/lib/permissions';
 
 function presenceLabelKey(status: PresenceStatus) {
@@ -28,7 +29,8 @@ function MessagesView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const { data: people = [] } = useQuery({ queryKey: ['messages', 'directory'], queryFn: fetchPersonnelPresence });
+  const peopleQuery = useQuery({ queryKey: ['messages', 'directory'], queryFn: fetchPersonnelPresence });
+  const people = peopleQuery.data ?? [];
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return people.filter((p) => !q || `${p.name} ${p.email}`.toLowerCase().includes(q));
@@ -41,11 +43,12 @@ function MessagesView() {
     setSelectedId(firstOnline.id);
   }, [people, selectedId]);
 
-  const { data: messages = [] } = useQuery({
+  const messagesQuery = useQuery({
     queryKey: ['messages', 'thread', selectedId],
     queryFn: () => fetchThread(selectedId!),
     enabled: !!selectedId,
   });
+  const messages = messagesQuery.data ?? [];
 
   const send = useMutation({
     mutationFn: sendMessage,
@@ -108,6 +111,11 @@ function MessagesView() {
               placeholder={t('messages.search_placeholder')} />
           </div>
           <div className="msg-people" id="msg-people-list">
+            {peopleQuery.isLoading && <div className="msg-empty">{t('common.loading')}</div>}
+            {peopleQuery.isError && <div className="msg-empty">{apiErrorMessage(peopleQuery.error)}</div>}
+            {peopleQuery.isSuccess && filtered.length === 0 && (
+              <div className="msg-empty">{t('messages.empty_directory', { defaultValue: 'No live teammates found.' })}</div>
+            )}
             {filtered.map((person) => (
               <button key={person.id} id={`msg-person-${person.id}`} type="button"
                 className={`msg-person${selectedId === person.id ? ' active' : ''}`}
@@ -181,6 +189,11 @@ function MessagesView() {
               </form>
 
               <div className="msg-thread-body" id="msg-thread-body" ref={scrollRef}>
+                {messagesQuery.isLoading && <div className="msg-empty">{t('common.loading')}</div>}
+                {messagesQuery.isError && <div className="msg-empty">{apiErrorMessage(messagesQuery.error)}</div>}
+                {messagesQuery.isSuccess && messages.length === 0 && (
+                  <div className="msg-empty">{t('messages.empty_messages', { defaultValue: 'No messages in this live thread yet.' })}</div>
+                )}
                 <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
                   {rowVirtualizer.getVirtualItems().map((virt) => {
                     const message = messages[virt.index];

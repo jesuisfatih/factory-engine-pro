@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Kpi } from '@/components/Kpi';
-import { fetchTasks, type TaskSurface } from '@/lib/mock';
+import { apiErrorMessage } from '@/lib/api';
+import { fetchTasks, type TaskSurface } from '@/lib/live-data';
 
 interface Props { surface: TaskSurface; }
 
@@ -12,7 +13,8 @@ const FILTERS: FilterId[] = ['all', 'mine', 'team', 'unassigned'];
 export function TaskList({ surface }: Props) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterId>('all');
-  const { data: tasks = [] } = useQuery({ queryKey: ['tasks', surface], queryFn: () => fetchTasks(surface) });
+  const tasksQuery = useQuery({ queryKey: ['tasks', surface], queryFn: () => fetchTasks(surface) });
+  const tasks = tasksQuery.data ?? [];
 
   const open = tasks.filter((task) => task.status === 'open' || task.status === 'in_progress').length;
   const overdue = tasks.filter((task) => task.status === 'overdue').length;
@@ -50,6 +52,11 @@ export function TaskList({ surface }: Props) {
       </div>
 
       <div className="data-card">
+        {tasksQuery.isLoading && <div className="pricing-list-empty">{t('common.loading')}</div>}
+        {tasksQuery.isError && <div className="error-state">{apiErrorMessage(tasksQuery.error)}</div>}
+        {tasksQuery.isSuccess && tasks.length === 0 && (
+          <div className="pricing-list-empty">{t('tasks.empty_state', { defaultValue: 'No live tasks found for this queue.' })}</div>
+        )}
         <table className="data-table" id={`table-tasks-${surface}`}>
           <thead>
             <tr>

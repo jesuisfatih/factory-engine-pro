@@ -10,7 +10,7 @@ import {
   FIELD_GROUPS, RULE_OPERATORS,
   previewSegment, saveSegment,
   type SegmentRule, type FieldGroup, type RuleOperator, type LifecycleStage,
-} from '@/lib/mock';
+} from '@/lib/live-data';
 
 /** Zod schema for the segment wizard. Used as a TanStack Form onChange validator. */
 const SegmentSchema = z.object({
@@ -272,7 +272,7 @@ export function SegmentModal({ open, onClose }: Props) {
                                   const nextField = findField(group, fieldId);
                                   const nextOps = nextField ? RULE_OPERATORS[nextField.type] : ['eq' as RuleOperator];
                                   const updated = [...rulesField.state.value];
-                                  updated[index] = { ...updated[index], group, field: fieldId, operator: nextOps[0] };
+                                  updated[index] = { ...updated[index], group, field: fieldId as SegmentRule['field'], operator: nextOps[0] };
                                   rulesField.handleChange(updated);
                                 }}
                               >
@@ -309,7 +309,7 @@ export function SegmentModal({ open, onClose }: Props) {
                               fieldDef?.type === 'boolean' ? (
                                 <input
                                   id={`rule-${index}-value`}
-                                  value={rule.operator === 'true' ? 'true' : 'false'}
+                                  value={String(valFld.state.value || 'false')}
                                   disabled
                                   placeholder={t('segments.modal.rule_value_placeholder')}
                                 />

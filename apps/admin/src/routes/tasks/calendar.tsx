@@ -5,7 +5,8 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CalendarEventModal } from '@/components/CalendarEventModal';
-import { fetchCalendarEvents, type CalendarEvent, type EventSource } from '@/lib/mock';
+import { apiErrorMessage } from '@/lib/api';
+import { fetchCalendarEvents, type EventSource } from '@/lib/live-data';
 
 const SOURCE_KEY: Record<EventSource, string> = {
   manual: 'calendar_view.source_manual',
@@ -18,7 +19,7 @@ const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
 
 function weekDaysFrom(startMs: number) {
   const days: { iso: string; label: string; dayNum: number; isToday: boolean }[] = [];
-  const todayIso = new Date('2026-06-22').toISOString().slice(0, 10);
+  const todayIso = new Date().toISOString().slice(0, 10);
   for (let i = 0; i < 7; i += 1) {
     const d = new Date(startMs + i * 86_400_000);
     const iso = d.toISOString().slice(0, 10);
@@ -34,10 +35,11 @@ function weekDaysFrom(startMs: number) {
 
 function CalendarView() {
   const { t } = useTranslation();
-  const [weekStart, setWeekStart] = useState<number>(new Date('2026-06-22').getTime());
+  const [weekStart, setWeekStart] = useState<number>(() => startOfWeek(new Date()).getTime());
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  const { data: events = [] } = useQuery({ queryKey: ['calendar', 'events'], queryFn: fetchCalendarEvents });
+  const eventsQuery = useQuery({ queryKey: ['calendar', 'events'], queryFn: fetchCalendarEvents });
+  const events = eventsQuery.data ?? [];
 
   const days = useMemo(() => weekDaysFrom(weekStart), [weekStart]);
 
@@ -55,12 +57,18 @@ function CalendarView() {
     <>
       <PageHeader titleI18nKey="calendar_view.title" subtitleI18nKey="calendar_view.subtitle" />
 
+      {eventsQuery.isLoading && <div className="pricing-list-empty">{t('common.loading')}</div>}
+      {eventsQuery.isError && <div className="error-state">{apiErrorMessage(eventsQuery.error)}</div>}
+      {eventsQuery.isSuccess && events.length === 0 && (
+        <div className="pricing-list-empty">{t('calendar_view.empty_state', { defaultValue: 'No live calendar events found.' })}</div>
+      )}
+
       <div className="cal-shell">
         <div className="cal-toolbar">
           <button id="cal-prev" type="button" className="nav-btn" onClick={() => setWeekStart((value) => value - 7 * 86_400_000)}>
             <ChevronLeft size={14} />
           </button>
-          <button id="cal-today" type="button" className="btn ghost" onClick={() => setWeekStart(new Date('2026-06-22').getTime())}>
+          <button id="cal-today" type="button" className="btn ghost" onClick={() => setWeekStart(startOfWeek(new Date()).getTime())}>
             {t('calendar_view.today')}
           </button>
           <button id="cal-next" type="button" className="nav-btn" onClick={() => setWeekStart((value) => value + 7 * 86_400_000)}>
@@ -118,6 +126,15 @@ function CalendarView() {
       )}
     </>
   );
+}
+
+function startOfWeek(date: Date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  return copy;
 }
 
 export const Route = createFileRoute('/tasks/calendar')({ component: CalendarView });

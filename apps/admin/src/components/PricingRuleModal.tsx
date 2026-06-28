@@ -7,7 +7,7 @@ import { Dialog, DialogTitle, DialogDescription, DialogClose } from '@/component
 import {
   savePricingRule,
   type PricingRule, type PricingTargetType, type PricingScopeType, type PricingDiscountType, type PricingQtyBreak,
-} from '@/lib/mock';
+} from '@/lib/live-data';
 
 interface Props { open: boolean; rule: PricingRule; onClose: () => void; }
 

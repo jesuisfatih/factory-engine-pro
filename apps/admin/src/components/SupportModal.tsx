@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { X, Send, ShieldAlert, User, Clock } from 'lucide-react';
 import { Dialog, DialogTitle, DialogClose } from '@/components/Dialog';
-import { fetchServiceRequestTimeline, replyServiceRequest, type ServiceRequestRow } from '@/lib/mock';
+import { fetchServiceRequestTimeline, replyServiceRequest, type ServiceRequestRow } from '@/lib/live-data';
 import { useCan } from '@/lib/permissions';
 
 const ReplySchema = z.object({
