@@ -111,6 +111,7 @@ export class WorkflowExecutorService {
       case 'route_member':
       case 'add_watcher':
       case 'escalate':
+      case 'send_mail':
       case 'no-op':
         return { action, accepted: true };
       default:

@@ -18,6 +18,7 @@ import { Route as RulesRouteImport } from './routes/rules'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as MailMarketingRouteImport } from './routes/mail-marketing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -96,6 +97,11 @@ const PricingRoute = PricingRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MailMarketingRoute = MailMarketingRouteImport.update({
+  id: '/mail-marketing',
+  path: '/mail-marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mail-marketing': typeof MailMarketingRoute
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mail-marketing': typeof MailMarketingRoute
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mail-marketing': typeof MailMarketingRoute
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -413,6 +422,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mail-marketing'
     | '/orders'
     | '/pricing'
     | '/reset-password'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mail-marketing'
     | '/orders'
     | '/pricing'
     | '/reset-password'
@@ -501,6 +512,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mail-marketing'
     | '/orders'
     | '/pricing'
     | '/reset-password'
@@ -547,6 +559,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  MailMarketingRoute: typeof MailMarketingRoute
   OrdersRoute: typeof OrdersRoute
   PricingRoute: typeof PricingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -622,6 +635,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mail-marketing': {
+      id: '/mail-marketing'
+      path: '/mail-marketing'
+      fullPath: '/mail-marketing'
+      preLoaderRoute: typeof MailMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -991,6 +1011,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  MailMarketingRoute: MailMarketingRoute,
   OrdersRoute: OrdersRoute,
   PricingRoute: PricingRoute,
   ResetPasswordRoute: ResetPasswordRoute,

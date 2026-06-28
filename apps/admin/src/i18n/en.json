@@ -24,6 +24,7 @@
     "team_roles": "Roles",
     "team_commissions": "Commissions",
     "system_mail": "System mail",
+    "mail_marketing": "Mail Marketing",
     "workspace_settings": "Workspace",
     "aircall_settings": "Aircall",
     "ai_settings_legacy": "AI keys",
@@ -1271,6 +1272,10 @@
     "approve_failed": "Approval failed",
     "reject_failed": "Reject failed",
     "approval_result": "Approval result"
+  },
+  "mail_marketing": {
+    "title": "Mail Marketing",
+    "subtitle": "Templates, audiences, flows, and disabled delivery state from the live tenant API"
   },
   "system_mail": {
     "title": "System mail",

@@ -921,6 +921,8 @@ export class RulesService {
       result = await this.addTaskWatcher(action, context);
     } else if (action.action === 'escalate') {
       result = await this.escalateTask(action, context);
+    } else if (action.action === 'send_mail') {
+      result = await this.sendMailDisabled(action, context);
     } else {
       result = {
         trace: {
@@ -964,6 +966,33 @@ export class RulesService {
       });
     }
     return result;
+  }
+
+  private async sendMailDisabled(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const customer = context.state.customer;
+    this.logger.warn('rules', 'workflow_send_mail_disabled', 'Workflow send_mail action matched but mail delivery is disabled', {
+      event_id: context.eventId,
+      trigger: context.trigger,
+      rule_id: context.rule.id,
+      action_id: action.id,
+      customer_id: customer?.id ?? null,
+      template_hint: action.value || null,
+    });
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'audit' as const,
+        targetId: customer?.id,
+        message: 'send_mail action is connected, but Mail Marketing delivery is disabled for this tenant.',
+        metadata: {
+          sendingEnabled: false,
+          customerId: customer?.id ?? null,
+          template: action.value || null,
+        },
+      },
+    };
   }
 
   private async resolveTaskAssignment(context: WorkflowActionContext): Promise<TaskAssignment> {

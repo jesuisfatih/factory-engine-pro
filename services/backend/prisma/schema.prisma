@@ -79,6 +79,13 @@ model Tenant {
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
   mailDeliveries          MailDelivery[]
+  emailTemplates          EmailTemplate[]
+  emailTemplateVersions   EmailTemplateVersion[]
+  mailContacts            MailContact[]
+  mailAudiences           MailAudience[]
+  mailFlows               MailFlow[]
+  mailMarketingEvents     MailMarketingEvent[]
+  mailMarketingSettings   MailMarketingSetting?
   aircallUsers            AircallUser[]
   aircallMemberMaps       AircallMemberMap[]
   aircallNumbers          AircallNumber[]
@@ -967,6 +974,159 @@ model MailDelivery {
   @@index([tenantId, eventKey, createdAt])
   @@index([tenantId, recipientEmail])
   @@map("mail_deliveries")
+}
+
+model EmailTemplate {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  slug           String
+  name           String
+  eventKey       String   @map("event_key")
+  templateType   String   @default("transactional") @map("template_type")
+  folderKey      String   @default("general") @map("folder_key")
+  subject        String
+  html           String
+  text           String?
+  status         String   @default("draft")
+  approvalState  String   @default("draft") @map("approval_state")
+  variables      Json     @default("[]")
+  metadata       Json     @default("{}")
+  publishedAt    DateTime? @map("published_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions EmailTemplateVersion[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, eventKey, status])
+  @@index([tenantId, templateType, folderKey, updatedAt])
+  @@map("email_templates")
+}
+
+model EmailTemplateVersion {
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  templateId    String   @map("template_id")
+  versionNumber Int      @map("version_number")
+  subject       String
+  html          String
+  text          String?
+  status        String   @default("draft")
+  approvalState String   @default("draft") @map("approval_state")
+  variables     Json     @default("[]")
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, templateId, versionNumber])
+  @@index([tenantId, templateId, createdAt])
+  @@map("email_template_versions")
+}
+
+model MailContact {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  customerId      String?  @map("customer_id")
+  email           String
+  normalizedEmail String   @map("normalized_email")
+  name            String?
+  phone           String?
+  tags            Json     @default("[]")
+  buyerIntent     String?  @map("buyer_intent")
+  lifecycleStage  String?  @map("lifecycle_stage")
+  isSendable      Boolean  @default(true) @map("is_sendable")
+  lastActivityAt  DateTime? @map("last_activity_at")
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, normalizedEmail])
+  @@index([tenantId, isSendable])
+  @@index([tenantId, customerId])
+  @@index([tenantId, lastActivityAt])
+  @@map("mail_contacts")
+}
+
+model MailAudience {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  slug             String
+  name             String
+  description      String?
+  filters          Json     @default("{}")
+  contactCount     Int      @default(0) @map("contact_count")
+  isArchived       Boolean  @default(false) @map("is_archived")
+  lastCalculatedAt DateTime? @map("last_calculated_at")
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, isArchived, updatedAt])
+  @@map("mail_audiences")
+}
+
+model MailFlow {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  slug        String
+  name        String
+  triggerType String   @map("trigger_type")
+  status      String   @default("draft")
+  graph       Json     @default("{}")
+  metadata    Json     @default("{}")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status, updatedAt])
+  @@index([tenantId, triggerType])
+  @@map("mail_flows")
+}
+
+model MailMarketingEvent {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  eventType String   @map("event_type")
+  status    String   @default("recorded")
+  source    String   @default("system")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, eventType, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("mail_marketing_events")
+}
+
+model MailMarketingSetting {
+  id                 String   @id
+  tenantId           String   @unique @map("tenant_id")
+  sendingEnabled     Boolean  @default(false) @map("sending_enabled")
+  providerMode       String   @default("disabled") @map("provider_mode")
+  defaultSenderName  String   @default("Factory Engine Pro") @map("default_sender_name")
+  defaultSenderEmail String?  @map("default_sender_email")
+  quietHours         Json     @default("{}") @map("quiet_hours")
+  dailySendCap       Int      @default(0) @map("daily_send_cap")
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("mail_marketing_settings")
 }
 
 model AircallUser {

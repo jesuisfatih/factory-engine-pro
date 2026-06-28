@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-28.1';
+export const WORKFLOW_ENUM_VERSION = '2026-06-28.2';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -86,6 +86,7 @@ export const WORKFLOW_ACTIONS = [
   'route_member',
   'add_watcher',
   'escalate',
+  'send_mail',
   'no-op',
 ] as const;
 
@@ -206,6 +207,7 @@ export const WORKFLOW_ACTION_OPTIONS: readonly WorkflowActionOption[] = [
   { value: 'route_member', label: 'Route member', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'add_watcher', label: 'Add watcher', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'escalate', label: 'Escalate', createsTask: false, mutatesCustomer: false, auditOnly: false },
+  { value: 'send_mail', label: 'Send mail (disabled)', createsTask: false, mutatesCustomer: false, auditOnly: true },
   { value: 'no-op', label: 'No-op', createsTask: false, mutatesCustomer: false, auditOnly: true },
 ] as const;
 

@@ -68,6 +68,12 @@ import type {
   PreviewSegmentInput,
   RecordCustomerAxisNoAutoReassignInput,
   MailProviderHealthResponse,
+  MailMarketingContactQuery,
+  MailMarketingSettingsInput,
+  MailTemplateQuery,
+  PatchEmailTemplateInput,
+  PatchMailAudienceInput,
+  PatchMailFlowInput,
   MovePersonQueueCardInput,
   SendPersonMessageInput,
   SendTestMailInput,
@@ -77,6 +83,9 @@ import type {
   ShopifySyncStatus,
   SavePersonNoteInput,
   SavePersonTaskNoteInput,
+  SaveEmailTemplateInput,
+  SaveMailAudienceInput,
+  SaveMailFlowInput,
   SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
   SweepOverdueServiceRequestsResponse,
@@ -612,6 +621,96 @@ export class ApiClient {
 
   sendTestMail(input: SendTestMailInput) {
     return this.post('/mail/test', input);
+  }
+
+  emailTemplateWorkspace() {
+    return this.get('/email-templates/workspace');
+  }
+
+  emailTemplates(query = '') {
+    return this.get(`/email-templates${query}`);
+  }
+
+  emailTemplate(id: string) {
+    return this.get(`/email-templates/variants/${encodeURIComponent(id)}`);
+  }
+
+  createEmailTemplate(input: SaveEmailTemplateInput) {
+    return this.post('/email-templates/events/' + encodeURIComponent(input.eventKey) + '/variants', input);
+  }
+
+  updateEmailTemplate(id: string, input: PatchEmailTemplateInput) {
+    return this.patch(`/email-templates/variants/${encodeURIComponent(id)}`, input);
+  }
+
+  mailMarketingOverview() {
+    return this.get('/mail-marketing/overview');
+  }
+
+  mailMarketingSettingsBootstrap() {
+    return this.get('/mail-marketing/settings/bootstrap');
+  }
+
+  mailMarketingSettings() {
+    return this.get('/mail-marketing/settings');
+  }
+
+  updateMailMarketingSettings(input: MailMarketingSettingsInput) {
+    return this.patch('/mail-marketing/settings', input);
+  }
+
+  mailMarketingContacts(input: MailMarketingContactQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.search) params.set('search', input.search);
+    if (input.sendable !== undefined) params.set('sendable', String(input.sendable));
+    params.set('limit', String(input.limit ?? 50));
+    return this.get(`/mail-marketing/contacts?${params.toString()}`);
+  }
+
+  mailMarketingTemplates(query: string | MailTemplateQuery = '') {
+    if (typeof query === 'string') return this.get(`/mail-marketing/templates${query}`);
+    const params = new URLSearchParams();
+    if (query.type) params.set('type', query.type);
+    if (query.status) params.set('status', query.status);
+    if (query.search) params.set('search', query.search);
+    params.set('limit', String(query.limit ?? 100));
+    return this.get(`/mail-marketing/templates?${params.toString()}`);
+  }
+
+  createMailMarketingTemplate(input: SaveEmailTemplateInput) {
+    return this.post('/mail-marketing/templates', input);
+  }
+
+  updateMailMarketingTemplate(id: string, input: PatchEmailTemplateInput) {
+    return this.patch(`/mail-marketing/templates/${encodeURIComponent(id)}`, input);
+  }
+
+  mailMarketingAudiences() {
+    return this.get('/mail-marketing/audiences');
+  }
+
+  createMailMarketingAudience(input: SaveMailAudienceInput) {
+    return this.post('/mail-marketing/audiences', input);
+  }
+
+  updateMailMarketingAudience(id: string, input: PatchMailAudienceInput) {
+    return this.patch(`/mail-marketing/audiences/${encodeURIComponent(id)}`, input);
+  }
+
+  mailMarketingFlows() {
+    return this.get('/mail-marketing/flows');
+  }
+
+  createMailMarketingFlow(input: SaveMailFlowInput) {
+    return this.post('/mail-marketing/flows', input);
+  }
+
+  updateMailMarketingFlow(id: string, input: PatchMailFlowInput) {
+    return this.patch(`/mail-marketing/flows/${encodeURIComponent(id)}`, input);
+  }
+
+  publishMailMarketingFlow(id: string) {
+    return this.post(`/mail-marketing/flows/${encodeURIComponent(id)}/publish`, {});
   }
 
   aircallUsers() {
