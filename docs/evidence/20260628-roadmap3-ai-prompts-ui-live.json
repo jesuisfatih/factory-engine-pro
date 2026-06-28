@@ -1,0 +1,46 @@
+{
+  "capturedAt": "2026-06-28T05:57:00.291458+00:00",
+  "url": "https://app.dtfbank.com/settings/ai/prompts",
+  "screenshot": "docs\\evidence\\roadmap3-ai-prompts-live-bound-20260628.png",
+  "assertions": {
+    "page_loaded": true,
+    "resolver_prompt_visible": true,
+    "prompt_body_visible": true,
+    "resolver_blocked_visible": true,
+    "provider_error_visible": true,
+    "resolver_prompt_api_200": true,
+    "ai_health_api_200": true,
+    "resolver_prompt_contract_live": true,
+    "ai_health_provider_error": true,
+    "ai_health_not_reachable": true,
+    "no_legacy_static_labels": true
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/resolver-prompt",
+      "status": 200,
+      "body": "{\"promptKey\":\"ai.transcript-resolver\",\"promptVersion\":\"2026-06-28.1\",\"prompt\":\"You are FactoryEngine transcript resolver.\\nUse only these psych_tags: angry, purchase_intent, shipping_issue, refund_intent, complaint, info_request, follow_up, satisfied\\nUse only these call_intents: sale, support, inquiry, complaint, follow_up\\nUse only these urgency_levels: low, medium, high, critical\\nResolver-backed conditions: call_intent, psych_tag_includes, product_mentioned, previous_purchase_includes, segment_member, call_count_in_window, is_first_call, customer_ltv_gte, order_count_in_window, last_order_age_lte, open_task_exists_for_intent, axis_primary_is, time_of_day_in_range, day_of_week\\nReturn JSON only. Do not invent enum values.\"}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/ai/health",
+      "status": 200,
+      "body": "{\"provider\":\"anthropic\",\"credentialRequired\":false,\"configured\":true,\"reachable\":true,\"status\":\"provider_error\",\"source\":\"tenant_config\",\"latencyMs\":253,\"checkedAt\":\"2026-06-28T05:56:57.308Z\",\"modelCount\":1,\"error\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\",\"resolverReachable\":false,\"resolverStatus\":\"provider_error\",\"resolverError\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"}"
+    }
+  ],
+  "promptSummary": {
+    "promptKey": "ai.transcript-resolver",
+    "promptVersion": "2026-06-28.1",
+    "promptPreview": "You are FactoryEngine transcript resolver.\nUse only these psych_tags: angry, purchase_intent, shipping_issue, refund_intent, complaint, info_request, follow_up, satisfied\nUse only these call_intents: sale, support, inquiry, complaint, follow_up\nUse only these urgency_levels: low, medium, high, criti"
+  },
+  "healthSummary": {
+    "provider": "anthropic",
+    "source": "tenant_config",
+    "status": "provider_error",
+    "configured": true,
+    "reachable": true,
+    "resolverReachable": false,
+    "resolverStatus": "provider_error",
+    "resolverError": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+  },
+  "console": []
+}
