@@ -73,13 +73,24 @@ export interface WorkflowTriggerFireTask {
   title: string;
 }
 
+export interface WorkflowActionTrace {
+  actionId: string;
+  action: string;
+  status: 'applied' | 'skipped';
+  targetType: 'service_request' | 'customer' | 'segment_membership' | 'member' | 'audit';
+  targetId?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
-  status: 'task_created' | 'skipped';
-  reason?: 'conditions_not_matched' | 'unsupported_action';
+  status: 'task_created' | 'actions_applied' | 'no_op' | 'skipped';
+  reason?: 'conditions_not_matched' | 'actions_skipped' | 'unsupported_action';
   taskIds: string[];
   conditionTrace?: WorkflowConditionTrace[];
+  actionTrace?: WorkflowActionTrace[];
 }
 
 export interface WorkflowConditionTrace {

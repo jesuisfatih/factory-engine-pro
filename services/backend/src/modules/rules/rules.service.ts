@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import {
   fireWorkflowTriggerSchema,
@@ -8,18 +9,22 @@ import {
   WORKFLOW_ENUM_VERSION,
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
+  type WorkflowActionTrace,
   type SaveWorkflowRuleInput,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
   type WorkflowEnumChainProbeResponse,
+  type WorkflowRuleAction,
   type WorkflowRuleCondition,
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
   type WorkflowRuleDto,
   type WorkflowRulesResponse,
 } from '@factory-engine-pro/contracts';
+import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { TenantContextService } from '../../shared/tenant-context.js';
 import { SupportService } from '../support/support.service.js';
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
@@ -30,6 +35,7 @@ export class RulesService {
   constructor(
     private readonly repository: RulesRepository,
     private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
     private readonly support: SupportService,
     private readonly executor: WorkflowExecutorService,
     private readonly prompt: WorkflowPromptService,
@@ -58,7 +64,8 @@ export class RulesService {
 
     for (const row of rules) {
       const rule = toDto(row);
-      const conditionTrace = await this.resolveConditions(rule.definition.when, parsed.params);
+      const state = await this.resolveConditionState(parsed.params);
+      const conditionTrace = await this.resolveConditions(rule.definition.when, state);
       const conditionsMatched = conditionTrace.every((entry) => entry.matched);
       this.logger.log(
         'rules',
@@ -85,60 +92,42 @@ export class RulesService {
       }
 
       const taskIds: string[] = [];
-      let unsupportedAction = false;
+      const actionTrace: WorkflowActionTrace[] = [];
       for (const action of rule.definition.actions) {
-        if (action.action !== 'create_task') {
-          unsupportedAction = true;
-          continue;
-        }
-        const task = await this.support.create({
-          title: action.value?.trim() || `Workflow task: ${rule.name}`,
-          description: `Created by workflow rule "${rule.name}" for trigger "${parsed.trigger}".`,
-          source: 'manual',
-          surface: 'internal',
-          priority: priorityForRule(rule.priority),
-          metadata: {
-            category: 'workflow_rule',
-            workflow: {
-              eventId,
-              trigger: parsed.trigger,
-              source: parsed.source,
-              occurredAt: parsed.occurredAt ?? null,
-              params: parsed.params,
-              ruleId: rule.id,
-              ruleName: rule.name,
-              actionId: action.id,
-              action: action.action,
-              rulePriority: rule.priority,
-              conditionTrace,
-            },
-          },
-        });
-        taskIds.push(task.id);
-        tasks.push({
-          ruleId: rule.id,
-          ruleName: rule.name,
-          actionId: action.id,
-          action: action.action,
-          taskId: task.id,
-          title: task.title,
-        });
-        this.logger.log('rules', 'workflow_task_created', 'Workflow rule created a task', {
-          event_id: eventId,
+        const applied = await this.applyAction(action, {
+          eventId,
           trigger: parsed.trigger,
-          rule_id: rule.id,
-          action_id: action.id,
-          task_id: task.id,
+          source: parsed.source,
+          occurredAt: parsed.occurredAt ?? null,
+          params: parsed.params,
+          rule,
+          state,
+          conditionTrace,
+          taskIds,
         });
+        actionTrace.push(applied.trace);
+        if (applied.task) {
+          taskIds.push(applied.task.id);
+          tasks.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            actionId: action.id,
+            action: action.action,
+            taskId: applied.task.id,
+            title: applied.task.title,
+          });
+        }
       }
 
+      const actionStatus = resultStatus(taskIds, actionTrace);
       results.push({
         ruleId: rule.id,
         ruleName: rule.name,
-        status: taskIds.length > 0 ? 'task_created' : 'skipped',
-        ...(taskIds.length === 0 && unsupportedAction ? { reason: 'unsupported_action' as const } : {}),
+        status: actionStatus,
+        ...(actionStatus === 'skipped' ? { reason: 'actions_skipped' as const } : {}),
         taskIds,
         conditionTrace,
+        actionTrace,
       });
     }
 
@@ -166,10 +155,9 @@ export class RulesService {
 
   private async resolveConditions(
     conditions: WorkflowRuleCondition[],
-    params: Record<string, unknown>,
+    state: Awaited<ReturnType<RulesService['resolveConditionState']>>,
   ): Promise<WorkflowConditionTrace[]> {
     if (conditions.length === 0) return [];
-    const state = await this.resolveConditionState(params);
     const traces: WorkflowConditionTrace[] = [];
     for (const condition of conditions) {
       const actual = await this.resolveConditionValue(condition.condition, state, condition.value);
@@ -308,6 +296,338 @@ export class RulesService {
     return { value: null, source: 'unknown' };
   }
 
+  private async applyAction(action: WorkflowRuleAction, context: {
+    eventId: string;
+    trigger: WorkflowTriggerFireInput['trigger'];
+    source: string;
+    occurredAt: string | null;
+    params: Record<string, unknown>;
+    rule: WorkflowRuleDto;
+    state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
+    conditionTrace: WorkflowConditionTrace[];
+    taskIds: string[];
+  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
+    this.executor.recognizeAction(action.action);
+    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string } };
+
+    if (action.action === 'create_task') {
+      const task = await this.support.create({
+        customerId: context.state.customer?.id,
+        title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
+        description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
+        source: 'manual',
+        surface: 'internal',
+        priority: priorityForRule(context.rule.priority),
+        metadata: this.workflowMetadata(action, context),
+      });
+      result = {
+        task: { id: task.id, title: task.title },
+        trace: {
+          actionId: action.id,
+          action: action.action,
+          status: 'applied',
+          targetType: 'service_request',
+          targetId: task.id,
+          message: 'Created service request from workflow action.',
+        },
+      };
+    } else if (action.action === 'pin_customer') {
+      result = await this.pinCustomer(action, context);
+    } else if (action.action === 'add_note') {
+      result = await this.addCustomerNote(action, context);
+    } else if (action.action === 'segment_add') {
+      result = await this.addCustomerToSegment(action, context);
+    } else if (action.action === 'segment_remove') {
+      result = await this.removeCustomerFromSegment(action, context);
+    } else if (action.action === 'route_member') {
+      result = await this.routeTaskToMember(action, context);
+    } else if (action.action === 'add_watcher') {
+      result = await this.addTaskWatcher(action, context);
+    } else if (action.action === 'escalate') {
+      result = await this.escalateTask(action, context);
+    } else {
+      result = {
+        trace: {
+          actionId: action.id,
+          action: action.action,
+          status: 'applied',
+          targetType: 'audit',
+          message: action.value?.trim() || 'No-op workflow action matched; no state mutation requested.',
+        },
+      };
+    }
+
+    this.logger.log(
+      'rules',
+      action.action === 'no-op' && result.trace.status === 'applied'
+        ? 'workflow_no_op'
+        : result.trace.status === 'applied'
+          ? 'workflow_action_applied'
+          : 'workflow_action_skipped',
+      'Workflow action evaluated',
+      {
+        event_id: context.eventId,
+        trigger: context.trigger,
+        rule_id: context.rule.id,
+        action_id: action.id,
+        action: action.action,
+        status: result.trace.status,
+        target_type: result.trace.targetType,
+        target_id: result.trace.targetId ?? null,
+        message: result.trace.message,
+      },
+    );
+    if (result.task) {
+      this.logger.log('rules', 'workflow_task_created', 'Workflow rule created a task', {
+        event_id: context.eventId,
+        trigger: context.trigger,
+        rule_id: context.rule.id,
+        action_id: action.id,
+        task_id: result.task.id,
+      });
+    }
+    return result;
+  }
+
+  private async pinCustomer(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const customer = context.state.customer;
+    if (!customer) return skippedTrace(action, 'customer', 'No customer was resolved for pin_customer.');
+    const pinTag = action.value?.trim() ? `workflow:pin:${slug(action.value)}` : 'workflow:pinned';
+    const tags = uniqueStrings([...customer.tags, 'workflow:pinned', pinTag]);
+    await this.prisma.db.customer.updateMany({ where: { id: customer.id }, data: { tags: { set: tags } } });
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'customer' as const,
+        targetId: customer.id,
+        message: 'Pinned customer with workflow tag.',
+        metadata: { tags },
+      },
+    };
+  }
+
+  private async addCustomerNote(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const customer = context.state.customer;
+    if (!customer) return skippedTrace(action, 'customer', 'No customer was resolved for add_note.');
+    const note = action.value?.trim() || `Workflow note from ${context.rule.name}`;
+    const line = `[${new Date().toISOString()}] workflow ${context.eventId}: ${note}`;
+    await this.prisma.db.customer.updateMany({
+      where: { id: customer.id },
+      data: { note: [customer.note?.trim(), line].filter(Boolean).join('\n') },
+    });
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'customer' as const,
+        targetId: customer.id,
+        message: 'Added workflow note to customer.',
+      },
+    };
+  }
+
+  private async addCustomerToSegment(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const customer = context.state.customer;
+    if (!customer) return skippedTrace(action, 'segment_membership', 'No customer was resolved for segment_add.');
+    const segment = await this.findSegment(action.value || stringParam(context.params, 'segmentId') || stringParam(context.params, 'segmentName'));
+    if (!segment) return skippedTrace(action, 'segment_membership', 'Segment target was not found.');
+    const tenantId = this.tenantId();
+    await this.prisma.db.segmentCustomerMembership.upsert({
+      where: { tenantId_segmentId_customerId: { tenantId, segmentId: segment.id, customerId: customer.id } },
+      create: { id: prefixedId('smem'), tenantId, segmentId: segment.id, customerId: customer.id, score: 1 },
+      update: { matchedAt: new Date(), score: 1 },
+    });
+    await this.refreshSegmentCount(segment.id);
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'segment_membership' as const,
+        targetId: segment.id,
+        message: 'Added customer to segment.',
+        metadata: { customerId: customer.id, segmentName: segment.name },
+      },
+    };
+  }
+
+  private async removeCustomerFromSegment(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const customer = context.state.customer;
+    if (!customer) return skippedTrace(action, 'segment_membership', 'No customer was resolved for segment_remove.');
+    const segment = await this.findSegment(action.value || stringParam(context.params, 'segmentId') || stringParam(context.params, 'segmentName'));
+    if (!segment) return skippedTrace(action, 'segment_membership', 'Segment target was not found.');
+    const deleted = await this.prisma.db.segmentCustomerMembership.deleteMany({
+      where: { segmentId: segment.id, customerId: customer.id },
+    });
+    await this.refreshSegmentCount(segment.id);
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'segment_membership' as const,
+        targetId: segment.id,
+        message: 'Removed customer from segment.',
+        metadata: { customerId: customer.id, deleted: deleted.count, segmentName: segment.name },
+      },
+    };
+  }
+
+  private async routeTaskToMember(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const taskId = this.targetTaskId(context);
+    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_member.');
+    const member = await this.findMember(action.value || stringParam(context.params, 'memberId') || stringParam(context.params, 'assignedMemberId'));
+    if (!member) return skippedTrace(action, 'member', 'Member target was not found.');
+    const updated = await this.prisma.db.serviceRequest.updateMany({ where: { id: taskId }, data: { assignedMemberId: member.id } });
+    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_member.');
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'service_request' as const,
+        targetId: taskId,
+        message: 'Routed service request to member.',
+        metadata: { memberId: member.id, email: member.email },
+      },
+    };
+  }
+
+  private async addTaskWatcher(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const taskId = this.targetTaskId(context);
+    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for add_watcher.');
+    const member = await this.findMember(action.value || stringParam(context.params, 'watcherMemberId') || stringParam(context.params, 'memberId'));
+    if (!member) return skippedTrace(action, 'member', 'Member target was not found.');
+    const updated = await this.updateTaskWorkflow(taskId, (workflow) => ({
+      ...workflow,
+      watchers: uniqueStrings([...arrayParam(workflow, 'watchers'), member.id]),
+      watcherEvents: [...recordArray(workflow.watcherEvents), { memberId: member.id, eventId: context.eventId, at: new Date().toISOString() }],
+    }));
+    if (!updated) return skippedTrace(action, 'service_request', 'Service request target was not found for add_watcher.');
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'service_request' as const,
+        targetId: taskId,
+        message: 'Added member watcher to service request metadata.',
+        metadata: { memberId: member.id, email: member.email },
+      },
+    };
+  }
+
+  private async escalateTask(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const taskId = this.targetTaskId(context);
+    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for escalate.');
+    const updated = await this.updateTaskWorkflow(taskId, (workflow) => ({
+      ...workflow,
+      escalated: true,
+      escalationReason: action.value?.trim() || 'Workflow escalation',
+      escalationEvents: [...recordArray(workflow.escalationEvents), { eventId: context.eventId, at: new Date().toISOString() }],
+    }), { priority: 'critical' });
+    if (!updated) return skippedTrace(action, 'service_request', 'Service request target was not found for escalate.');
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'service_request' as const,
+        targetId: taskId,
+        message: 'Escalated service request priority and workflow metadata.',
+      },
+    };
+  }
+
+  private workflowMetadata(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    return {
+      category: 'workflow_rule',
+      workflow: {
+        eventId: context.eventId,
+        trigger: context.trigger,
+        source: context.source,
+        occurredAt: context.occurredAt,
+        params: context.params,
+        ruleId: context.rule.id,
+        ruleName: context.rule.name,
+        actionId: action.id,
+        action: action.action,
+        rulePriority: context.rule.priority,
+        conditionTrace: context.conditionTrace,
+      },
+    };
+  }
+
+  private targetTaskId(context: WorkflowActionContext) {
+    return context.taskIds.at(-1)
+      ?? stringParam(context.params, 'taskId')
+      ?? stringParam(context.params, 'serviceRequestId')
+      ?? null;
+  }
+
+  private async findSegment(raw: string | null) {
+    const target = raw?.trim();
+    if (!target) return null;
+    return this.prisma.db.segment.findFirst({
+      where: {
+        OR: [
+          { id: target },
+          { name: { equals: target, mode: 'insensitive' } },
+        ],
+      },
+    });
+  }
+
+  private async findMember(raw: string | null) {
+    const target = raw?.trim() || this.tenantContext.get()?.principalId || '';
+    if (!target) return null;
+    return this.prisma.db.member.findFirst({
+      where: {
+        status: 'active',
+        OR: [
+          { id: target },
+          { email: { equals: target, mode: 'insensitive' } },
+        ],
+      },
+    });
+  }
+
+  private async refreshSegmentCount(segmentId: string) {
+    const count = await this.prisma.db.segmentCustomerMembership.count({ where: { segmentId } });
+    await this.prisma.db.segment.updateMany({ where: { id: segmentId }, data: { customerCount: count, lastEvaluatedAt: new Date() } });
+  }
+
+  private async updateTaskWorkflow(
+    taskId: string,
+    update: (workflow: Record<string, unknown>) => Record<string, unknown>,
+    data: Prisma.ServiceRequestUncheckedUpdateManyInput = {},
+  ) {
+    const task = await this.prisma.db.serviceRequest.findFirst({ where: { id: taskId }, select: { metadata: true } });
+    if (!task) return false;
+    const metadata = asRecord(task.metadata);
+    const workflow = asRecord(metadata.workflow);
+    await this.prisma.db.serviceRequest.updateMany({
+      where: { id: taskId },
+      data: {
+        ...data,
+        metadata: {
+          ...metadata,
+          workflow: update(workflow),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return true;
+  }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new Error('Tenant context is required');
+    return tenantId;
+  }
+
   async createRule(input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
     const rule = await this.repository.create(parsed);
@@ -397,6 +717,42 @@ export class RulesService {
 
     return response;
   }
+}
+
+type WorkflowActionContext = {
+  eventId: string;
+  trigger: WorkflowTriggerFireInput['trigger'];
+  source: string;
+  occurredAt: string | null;
+  params: Record<string, unknown>;
+  rule: WorkflowRuleDto;
+  state: Awaited<ReturnType<RulesService['resolveConditionState']>>;
+  conditionTrace: WorkflowConditionTrace[];
+  taskIds: string[];
+};
+
+function resultStatus(taskIds: string[], actionTrace: WorkflowActionTrace[]): WorkflowTriggerFireResponse['results'][number]['status'] {
+  if (taskIds.length > 0) return 'task_created';
+  const applied = actionTrace.filter((entry) => entry.status === 'applied');
+  if (applied.length === 0) return 'skipped';
+  if (applied.every((entry) => entry.action === 'no-op')) return 'no_op';
+  return 'actions_applied';
+}
+
+function skippedTrace(
+  action: WorkflowRuleAction,
+  targetType: WorkflowActionTrace['targetType'],
+  message: string,
+): { trace: WorkflowActionTrace } {
+  return {
+    trace: {
+      actionId: action.id,
+      action: action.action,
+      status: 'skipped',
+      targetType,
+      message,
+    },
+  };
 }
 
 function toDto(rule: {
@@ -525,8 +881,17 @@ function arrayParam(params: Record<string, unknown>, key: string) {
   return value.map((entry) => String(entry)).filter(Boolean);
 }
 
+function recordArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === 'object' && !Array.isArray(entry)));
+}
+
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.filter((value): value is string => Boolean(value)).map((value) => value.trim()).filter(Boolean)));
+}
+
+function slug(value: string) {
+  return normalize(value).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'pinned';
 }
 
 function productValues(params: Record<string, unknown>, resolverOutput: Record<string, unknown>) {
