@@ -1,3 +1,5 @@
+import type { PersonTaskWorkflowTrace } from '@factory-engine-pro/contracts';
+
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
 export type TaskSource = 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale';
@@ -31,6 +33,8 @@ export interface Card {
   totalSpent?: number;
   /** Present only when source !== 'manual'. */
   aiBrief?: TaskBrief;
+  /** Workflow decision context saved when rules created or routed the task. */
+  workflowTrace?: PersonTaskWorkflowTrace;
 }
 
 export interface Column {

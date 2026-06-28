@@ -100,6 +100,36 @@ export interface WorkflowActionTrace {
   metadata?: Record<string, unknown>;
 }
 
+export const workflowConditionTraceSchema = z.object({
+  id: z.string(),
+  condition: z.string(),
+  operator: z.string(),
+  expected: z.unknown(),
+  actual: z.unknown(),
+  matched: z.boolean(),
+  source: z.string(),
+});
+export type WorkflowConditionTrace = z.infer<typeof workflowConditionTraceSchema>;
+
+export const workflowWhenGroupTraceSchema = z.object({
+  id: z.string(),
+  matched: z.boolean(),
+  conditionTrace: z.array(workflowConditionTraceSchema),
+});
+export type WorkflowWhenGroupTrace = z.infer<typeof workflowWhenGroupTraceSchema>;
+
+export const workflowCooldownTraceSchema = z.object({
+  disabled: z.boolean(),
+  customerId: z.string().nullable(),
+  hours: z.number(),
+  limit: z.number(),
+  currentCount: z.number(),
+  windowStartedAt: z.string().nullable(),
+  lastFiredAt: z.string().nullable(),
+  nextEligibleAt: z.string().nullable(),
+});
+export type WorkflowCooldownTrace = z.infer<typeof workflowCooldownTraceSchema>;
+
 export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
@@ -112,33 +142,6 @@ export interface WorkflowTriggerFireResult {
   whenTrace?: WorkflowWhenGroupTrace[];
   cooldown?: WorkflowCooldownTrace;
   actionTrace?: WorkflowActionTrace[];
-}
-
-export interface WorkflowConditionTrace {
-  id: string;
-  condition: string;
-  operator: string;
-  expected: unknown;
-  actual: unknown;
-  matched: boolean;
-  source: string;
-}
-
-export interface WorkflowWhenGroupTrace {
-  id: string;
-  matched: boolean;
-  conditionTrace: WorkflowConditionTrace[];
-}
-
-export interface WorkflowCooldownTrace {
-  disabled: boolean;
-  customerId: string | null;
-  hours: number;
-  limit: number;
-  currentCount: number;
-  windowStartedAt: string | null;
-  lastFiredAt: string | null;
-  nextEligibleAt: string | null;
 }
 
 export interface WorkflowTriggerFireResponse {

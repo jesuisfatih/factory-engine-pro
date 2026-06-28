@@ -4,9 +4,12 @@ import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonQueueColumn,
+  PersonTaskWorkflowTrace,
   SavePersonNoteInput,
   SendPersonMessageInput,
   TogglePersonQueuePinInput,
+  WorkflowConditionTrace,
+  WorkflowWhenGroupTrace,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -538,6 +541,7 @@ export class PersonWorkspaceService {
     const source = taskSource(row);
     const customerName = row.customer?.companyName ?? row.customerUser?.email ?? row.title;
     const ticket = ticketNumber(row);
+    const workflowTrace = workflowTraceFromMetadata(metadata);
     return {
       id: row.id,
       title: customerName,
@@ -554,6 +558,7 @@ export class PersonWorkspaceService {
       ordersCount: row.customer?.ordersCount ?? undefined,
       totalSpent: row.customer ? money(row.customer.totalSpent) : undefined,
       aiBrief: source === 'manual' ? undefined : this.brief(row),
+      workflowTrace,
     };
   }
 
@@ -663,6 +668,84 @@ function participants(thread: { metadata: Prisma.JsonValue }) {
     ? thread.metadata as Record<string, unknown>
     : {};
   return Array.isArray(metadata.participantIds) ? metadata.participantIds.filter((id): id is string => typeof id === 'string') : [];
+}
+
+function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTaskWorkflowTrace | undefined {
+  const workflow = asRecord(metadata.workflow);
+  if (!Object.keys(workflow).length) return undefined;
+
+  const conditionTrace = normalizeConditionTrace(workflow.conditionTrace);
+  const whenTrace = normalizeWhenTrace(workflow.whenTrace);
+  const trace: PersonTaskWorkflowTrace = {
+    ruleId: stringOrNull(workflow.ruleId),
+    matchedRuleId: stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id),
+    ruleName: stringOrNull(workflow.ruleName),
+    trigger: stringOrNull(workflow.trigger),
+    source: stringOrNull(workflow.source),
+    eventId: stringOrNull(workflow.eventId),
+    action: stringOrNull(workflow.action),
+    actionId: stringOrNull(workflow.actionId),
+    conditionTrace,
+    whenTrace,
+  };
+
+  if (
+    !trace.ruleId
+    && !trace.matchedRuleId
+    && !trace.ruleName
+    && !trace.trigger
+    && conditionTrace.length === 0
+    && whenTrace.length === 0
+  ) {
+    return undefined;
+  }
+
+  return trace;
+}
+
+function normalizeWhenTrace(value: unknown): WorkflowWhenGroupTrace[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const row = asRecord(entry);
+    const conditionTrace = normalizeConditionTrace(row.conditionTrace);
+    if (!row.id && conditionTrace.length === 0) return [];
+    return [{
+      id: stringOrNull(row.id) ?? 'when-group',
+      matched: row.matched === true,
+      conditionTrace,
+    }];
+  });
+}
+
+function normalizeConditionTrace(value: unknown): WorkflowConditionTrace[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const row = asRecord(entry);
+    const condition = stringOrNull(row.condition);
+    if (!condition) return [];
+    return [{
+      id: stringOrNull(row.id) ?? condition,
+      condition,
+      operator: stringOrNull(row.operator) ?? '=',
+      expected: has(row, 'expected') ? row.expected : null,
+      actual: has(row, 'actual') ? row.actual : null,
+      matched: row.matched === true,
+      source: stringOrNull(row.source) ?? 'workflow',
+    }];
+  });
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function stringOrNull(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return raw ? raw : null;
+}
+
+function has(record: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(record, key);
 }
 
 function latestComment(thread?: { comments?: { body: string; createdAt: Date }[] } | null) {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   X, Phone, Mail, ExternalLink, Sparkles, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
+  GitBranch, XCircle,
 } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
@@ -22,6 +23,26 @@ function riskTier(priority: number) {
   if (priority >= 7) return { label: 'Watch', tone: 'warn' as const };
   if (priority >= 5) return { label: 'Steady', tone: 'success' as const };
   return { label: 'Routine', tone: 'info' as const };
+}
+
+function labelize(value: string | null | undefined) {
+  if (!value) return 'Not captured';
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function traceValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'empty';
+  if (Array.isArray(value)) return value.length ? value.map((item) => traceValue(item)).join(', ') : '[]';
+  if (typeof value === 'object') {
+    try {
+      const serialized = JSON.stringify(value);
+      return serialized.length > 160 ? `${serialized.slice(0, 157)}...` : serialized;
+    } catch {
+      return 'object';
+    }
+  }
+  const text = String(value);
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
 interface NarrativeFieldProps {
@@ -90,6 +111,11 @@ export function TaskBriefModal({ card, onClose }: Props) {
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
   const tier = riskTier(card.priority);
+  const workflowTrace = card.workflowTrace;
+  const traceItems = workflowTrace?.conditionTrace?.length
+    ? workflowTrace.conditionTrace
+    : workflowTrace?.whenTrace.flatMap((group) => group.conditionTrace) ?? [];
+  const matchedCount = traceItems.filter((item) => item.matched).length;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -194,6 +220,54 @@ export function TaskBriefModal({ card, onClose }: Props) {
                 </div>
               </div>
             )}
+
+            <div className="brief-block rule-trace-block">
+              <div className="brief-block-head">
+                <span className="lbl">Why this task</span>
+                {workflowTrace ? (
+                  <span className="rule-trace-count">{matchedCount}/{traceItems.length} matched</span>
+                ) : null}
+              </div>
+              {workflowTrace ? (
+                <>
+                  <div className="rule-trace-meta">
+                    <span><GitBranch size={11} /> {workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
+                    <span>{labelize(workflowTrace.trigger)}</span>
+                    <span>{workflowTrace.source ?? 'workflow'}</span>
+                  </div>
+                  {traceItems.length ? (
+                    <div className="rule-trace-list">
+                      {traceItems.map((trace, index) => (
+                        <div className={`rule-trace-row${trace.matched ? ' matched' : ' missed'}`} key={`${trace.id}-${index}`}>
+                          <div className="rule-trace-status" title={trace.matched ? 'Matched' : 'Not matched'}>
+                            {trace.matched ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                          </div>
+                          <div className="rule-trace-content">
+                            <div className="rule-trace-condition">
+                              <strong>{labelize(trace.condition)}</strong>
+                              <span>{trace.operator}</span>
+                            </div>
+                            <div className="rule-trace-values">
+                              <span>Expected <strong>{traceValue(trace.expected)}</strong></span>
+                              <span>Actual <strong>{traceValue(trace.actual)}</strong></span>
+                            </div>
+                            <div className="rule-trace-source">{trace.source}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="brief-val brief-val-muted">
+                      Rule metadata is present, but this task did not save condition-level trace entries.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="brief-val brief-val-muted">
+                  No workflow rule trace is saved for this task. Operator-created tasks only carry manual context.
+                </div>
+              )}
+            </div>
 
             <div className="brief-block">
               <div className="brief-block-head">

@@ -1,11 +1,59 @@
 import { z } from 'zod';
 import { serviceRequestPrioritySchema } from './operations.js';
+import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './rules.js';
 
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
 export type PersonQueueColumn = z.infer<typeof personQueueColumnSchema>;
 
 export const personTaskSourceSchema = z.enum(['manual', 'ai_transcript', 'ai_segment', 'ai_stale']);
 export type PersonTaskSource = z.infer<typeof personTaskSourceSchema>;
+
+export const personTaskWorkflowTraceSchema = z.object({
+  ruleId: z.string().nullable(),
+  matchedRuleId: z.string().nullable(),
+  ruleName: z.string().nullable(),
+  trigger: z.string().nullable(),
+  source: z.string().nullable(),
+  eventId: z.string().nullable(),
+  action: z.string().nullable(),
+  actionId: z.string().nullable(),
+  conditionTrace: z.array(workflowConditionTraceSchema).default([]),
+  whenTrace: z.array(workflowWhenGroupTraceSchema).default([]),
+});
+export type PersonTaskWorkflowTrace = z.infer<typeof personTaskWorkflowTraceSchema>;
+
+export const personTaskBriefSchema = z.object({
+  whyCalling: z.string(),
+  upsetAbout: z.string(),
+  callGoal: z.string(),
+  suggestedActions: z.array(z.string()),
+  promptKey: z.string(),
+  promptVersion: z.string(),
+  modelUsed: z.string(),
+  confidence: z.number(),
+  transcriptSnippet: z.string().optional(),
+});
+export type PersonTaskBrief = z.infer<typeof personTaskBriefSchema>;
+
+export const personQueueCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  segment: z.string(),
+  segmentColor: z.string(),
+  priority: z.number(),
+  columnId: personQueueColumnSchema,
+  pinned: z.boolean(),
+  pinnedAt: z.number().nullable(),
+  source: personTaskSourceSchema,
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  ordersCount: z.number().optional(),
+  totalSpent: z.number().optional(),
+  aiBrief: personTaskBriefSchema.optional(),
+  workflowTrace: personTaskWorkflowTraceSchema.optional(),
+});
+export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 
 export const movePersonQueueCardSchema = z.object({
   columnId: personQueueColumnSchema,
