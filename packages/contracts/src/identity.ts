@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema, pageQuerySchema, passwordSchema } from './common.js';
+import { urgencyScoringConfigSchema } from './person.js';
 
 export const permissionRecordSchema = z.record(z.string(), z.boolean());
 export type PermissionRecord = z.infer<typeof permissionRecordSchema>;
@@ -67,6 +68,7 @@ export const tenantConfigSchema = z.object({
   workspaceName: z.string().trim().min(1).optional(),
   brandBadge: z.string().trim().min(1).max(6).optional(),
   brandLogo: z.string().trim().url().optional(),
+  urgencyScoringConfig: urgencyScoringConfigSchema.optional(),
   shopifyDomain: z.string().trim().optional(),
   shopifyAdminToken: z.string().optional(),
   shopifyApiKey: z.string().optional(),

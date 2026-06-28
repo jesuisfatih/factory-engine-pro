@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Save, RefreshCw, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { tenantConfigSchema, type TenantConfigInput } from '@factory-engine-pro/contracts';
+import {
+  DEFAULT_URGENCY_SCORING_CONFIG,
+  tenantConfigSchema,
+  type TenantConfigInput,
+  type UrgencyScoringConfig,
+} from '@factory-engine-pro/contracts';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCurrentPrincipal } from '@/lib/current-principal';
 import { workspaceBadge, workspaceBrandQueryKey, workspaceName } from '@/lib/workspace-brand';
@@ -12,6 +17,7 @@ interface TenantConfigResponse {
   workspaceName: string | null;
   brandBadge: string | null;
   brandLogo: string | null;
+  urgencyScoringConfig: UrgencyScoringConfig;
 }
 
 interface WorkspaceFormState {
@@ -28,12 +34,17 @@ const emptyForm: WorkspaceFormState = {
   brandLogo: '',
 };
 
+const URGENCY_WEIGHT_FIELDS = ['segmentWeight', 'repeatCountWeight', 'intentWeight', 'aiUrgencyWeight', 'waitingHoursWeight'] as const;
+const INTENT_SCORE_FIELDS = ['complaint', 'escalation', 'reorder', 'sales', 'support', 'follow_up'] as const;
+const AI_URGENCY_SCORE_FIELDS = ['critical', 'high', 'medium', 'low'] as const;
+
 export function WorkspaceSettingsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const principal = useCurrentPrincipal().data;
   const canWrite = new Set(principal?.permissions ?? []).has('settings.write');
   const [form, setForm] = useState<WorkspaceFormState>(emptyForm);
+  const [urgencyForm, setUrgencyForm] = useState<UrgencyScoringConfig>(() => defaultUrgencyConfig());
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const config = useQuery({
@@ -49,6 +60,7 @@ export function WorkspaceSettingsPage() {
       brandBadge: config.data.brandBadge ?? '',
       brandLogo: config.data.brandLogo ?? '',
     });
+    setUrgencyForm(config.data.urgencyScoringConfig ?? defaultUrgencyConfig());
   }, [config.data]);
 
   const save = useMutation({
@@ -74,6 +86,7 @@ export function WorkspaceSettingsPage() {
       workspaceName: clean(form.workspaceName),
       brandBadge: clean(form.brandBadge),
       brandLogo: clean(form.brandLogo),
+      urgencyScoringConfig: urgencyForm,
     };
     const parsed = tenantConfigSchema.safeParse(input);
     if (!parsed.success) {
@@ -159,6 +172,74 @@ export function WorkspaceSettingsPage() {
             />
           </div>
         </div>
+        <div className="field">
+          <label>{t('settings.workspace.urgency_weights')}</label>
+          <div className="field-row">
+            {URGENCY_WEIGHT_FIELDS.map((field) => (
+              <div className="field" key={field}>
+                <label htmlFor={`field-${field}`}>{t(`settings.workspace.${field}`)}</label>
+                <input
+                  id={`field-${field}`}
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={urgencyForm[field]}
+                  disabled={!canWrite || save.isPending}
+                  onChange={(event) => setUrgencyForm((current) => ({ ...current, [field]: Number(event.target.value) }))}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <label>{t('settings.workspace.intent_scores')}</label>
+            <div className="field-row">
+              {INTENT_SCORE_FIELDS.map((field) => (
+                <div className="field" key={field}>
+                  <label htmlFor={`intent-${field}`}>{field.replace(/_/g, ' ')}</label>
+                  <input
+                    id={`intent-${field}`}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={urgencyForm.intentScores[field] ?? 0}
+                    disabled={!canWrite || save.isPending}
+                    onChange={(event) => setUrgencyForm((current) => ({
+                      ...current,
+                      intentScores: { ...current.intentScores, [field]: Number(event.target.value) },
+                    }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>{t('settings.workspace.ai_urgency_scores')}</label>
+            <div className="field-row">
+              {AI_URGENCY_SCORE_FIELDS.map((field) => (
+                <div className="field" key={field}>
+                  <label htmlFor={`ai-urgency-${field}`}>{field}</label>
+                  <input
+                    id={`ai-urgency-${field}`}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={urgencyForm.aiUrgencyScores[field] ?? 0}
+                    disabled={!canWrite || save.isPending}
+                    onChange={(event) => setUrgencyForm((current) => ({
+                      ...current,
+                      aiUrgencyScores: { ...current.aiUrgencyScores, [field]: Number(event.target.value) },
+                    }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="workspace-form-actions">
           <button id="btn-save-workspace" type="submit" className="btn primary" disabled={!canWrite || save.isPending}>
             <Save size={14} />
@@ -189,4 +270,16 @@ export function WorkspaceSettingsPage() {
 function clean(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function defaultUrgencyConfig(): UrgencyScoringConfig {
+  return {
+    segmentWeight: DEFAULT_URGENCY_SCORING_CONFIG.segmentWeight,
+    repeatCountWeight: DEFAULT_URGENCY_SCORING_CONFIG.repeatCountWeight,
+    intentWeight: DEFAULT_URGENCY_SCORING_CONFIG.intentWeight,
+    aiUrgencyWeight: DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyWeight,
+    waitingHoursWeight: DEFAULT_URGENCY_SCORING_CONFIG.waitingHoursWeight,
+    intentScores: { ...DEFAULT_URGENCY_SCORING_CONFIG.intentScores },
+    aiUrgencyScores: { ...DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyScores },
+  };
 }

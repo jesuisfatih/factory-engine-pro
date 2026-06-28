@@ -16,6 +16,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
 const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request']);
@@ -25,17 +26,22 @@ const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   positive: 'pending_resolve',
   closed: 'closed',
 };
-const PRIORITY_SCORE: Record<string, number> = {
-  critical: 9,
-  urgent: 9,
-  high: 7,
-  medium: 5,
-  low: 3,
-};
 const SEGMENT_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#b45309', '#b91c1c', '#475569'];
 
+const serviceRequestInclude = {
+  customer: {
+    include: {
+      insight: true,
+      segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+    },
+  },
+  customerUser: true,
+  assignedMember: true,
+  comments: { orderBy: { createdAt: 'asc' } },
+} satisfies Prisma.ServiceRequestInclude;
+
 type ServiceRequestRow = Prisma.ServiceRequestGetPayload<{
-  include: { customer: true; customerUser: true; assignedMember: true; comments: true };
+  include: typeof serviceRequestInclude;
 }>;
 
 @Injectable()
@@ -43,6 +49,7 @@ export class PersonWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly scoring: UrgencyScoringService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -72,11 +79,19 @@ export class PersonWorkspaceService {
   async queue() {
     const member = await this.currentMember();
     const rows = await this.prisma.db.serviceRequest.findMany({
-      include: { customer: true, customerUser: true, assignedMember: true, comments: { orderBy: { createdAt: 'asc' } } },
+      include: serviceRequestInclude,
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       take: 300,
     });
-    return rows.filter((row) => this.isQueueVisible(row)).slice(0, 120).map((row) => this.queueCard(row, member.id));
+    const visible = rows.filter((row) => this.isQueueVisible(row));
+    const [config, repeatCounts] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCounts(visible.map((row) => row.customerId).filter((id): id is string => Boolean(id))),
+    ]);
+    return visible
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0))
+      .sort(sortByUrgency)
+      .slice(0, 120);
   }
 
   async moveQueueCard(id: string, input: MovePersonQueueCardInput) {
@@ -92,7 +107,8 @@ export class PersonWorkspaceService {
       member_id: member.id,
       column_id: input.columnId,
     });
-    return this.queueCard(await this.requireServiceRequest(id), member.id);
+    const updated = await this.requireServiceRequest(id);
+    return this.queueCard(updated, member.id, await this.urgencyConfig(), await this.repeatCount(updated.customerId));
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
@@ -113,7 +129,8 @@ export class PersonWorkspaceService {
       member_id: member.id,
       pinned: nextPinned,
     });
-    return this.queueCard(await this.requireServiceRequest(id), member.id);
+    const updated = await this.requireServiceRequest(id);
+    return this.queueCard(updated, member.id, await this.urgencyConfig(), await this.repeatCount(updated.customerId));
   }
 
   async customers() {
@@ -125,8 +142,23 @@ export class PersonWorkspaceService {
       orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
       take: 120,
     });
+    const [config, repeatCounts] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCounts(rows.map((row) => row.id)),
+    ]);
     return rows.map((customer, index) => {
       const segment = customer.segmentMemberships[0]?.segment;
+      const urgencyBreakdown = this.scoring.score({
+        priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
+        source: 'daily_customer',
+        axis: 'support',
+        createdAt: customer.lastOrderAt ?? customer.updatedAt,
+        updatedAt: customer.updatedAt,
+        metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
+        taskStateSnapshot: {},
+        segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? index,
+        repeatCount: repeatCounts.get(customer.id) ?? 0,
+      }, config);
       return {
         id: customer.id,
         name: customer.companyName || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.email || customer.id,
@@ -141,15 +173,17 @@ export class PersonWorkspaceService {
           name: segment?.name ?? titleize(customer.insight?.rfmSegment ?? 'General'),
           color: segment?.color ?? SEGMENT_COLORS[index % SEGMENT_COLORS.length],
         },
+        urgencyScore: urgencyBreakdown.score,
+        urgencyBreakdown,
       };
-    });
+    }).sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
   }
 
   async calendar() {
     const [requests, calls, mail] = await Promise.all([
       this.prisma.db.serviceRequest.findMany({
         where: { status: { notIn: Array.from(CLOSED) } },
-        include: { customer: true, customerUser: true, assignedMember: true, comments: true },
+        include: serviceRequestInclude,
         orderBy: [{ updatedAt: 'desc' }],
         take: 150,
       }),
@@ -528,13 +562,13 @@ export class PersonWorkspaceService {
   private async requireServiceRequest(id: string) {
     const row = await this.prisma.db.serviceRequest.findFirst({
       where: { id },
-      include: { customer: true, customerUser: true, assignedMember: true, comments: { orderBy: { createdAt: 'asc' } } },
+      include: serviceRequestInclude,
     });
     if (!row) throw new NotFoundException('Service request not found');
     return row;
   }
 
-  private queueCard(row: ServiceRequestRow, memberId: string) {
+  private queueCard(row: ServiceRequestRow, memberId: string, config = this.scoring.configFrom({}), repeatCount = 0) {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
@@ -543,13 +577,26 @@ export class PersonWorkspaceService {
     const customerName = row.customer?.companyName ?? row.customerUser?.email ?? row.title;
     const ticket = ticketNumber(row);
     const workflowTrace = workflowTraceFromMetadata(metadata);
+    const urgencyBreakdown = this.scoring.score({
+      priority: row.priority,
+      source: row.source,
+      axis: row.axis,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      metadata: row.metadata,
+      taskStateSnapshot: row.taskStateSnapshot,
+      segmentPriority: row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
+      repeatCount,
+    }, config);
     return {
       id: row.id,
       title: customerName,
-      summary: `${ticket} - ${titleize(row.priority)} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
+      summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
       segment: String(metadata.category ?? row.surface ?? 'Support'),
-      segmentColor: colorFor(row.priority),
-      priority: PRIORITY_SCORE[row.priority] ?? 5,
+      segmentColor: colorForUrgency(urgencyBreakdown.score),
+      priority: priorityRankFromUrgency(urgencyBreakdown.score),
+      urgencyScore: urgencyBreakdown.score,
+      urgencyBreakdown,
       columnId,
       pinned: pinnedAt !== null,
       pinnedAt,
@@ -562,6 +609,28 @@ export class PersonWorkspaceService {
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
     };
+  }
+
+  private async urgencyConfig() {
+    const config = await this.prisma.db.tenantConfig.findFirst({ select: { urgencyScoringConfig: true } });
+    return this.scoring.configFrom(config?.urgencyScoringConfig ?? {});
+  }
+
+  private async repeatCounts(customerIds: string[]) {
+    const uniqueIds = Array.from(new Set(customerIds));
+    if (uniqueIds.length === 0) return new Map<string, number>();
+    const rows = await this.prisma.db.serviceRequest.groupBy({
+      by: ['customerId'],
+      where: { customerId: { in: uniqueIds } },
+      _count: { _all: true },
+    });
+    return new Map(rows.flatMap((row) => row.customerId ? [[row.customerId, row._count._all] as const] : []));
+  }
+
+  private async repeatCount(customerId: string | null) {
+    if (!customerId) return 0;
+    const counts = await this.repeatCounts([customerId]);
+    return counts.get(customerId) ?? 0;
   }
 
   private calendarFromRequest(row: ServiceRequestRow) {
@@ -798,10 +867,16 @@ function titleize(value: string) {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function colorFor(priority: string) {
-  if (priority === 'critical' || priority === 'urgent') return '#b91c1c';
-  if (priority === 'high') return '#b45309';
-  if (priority === 'medium') return '#2563eb';
+function sortByUrgency(left: { urgencyScore: number; pinnedAt: number | null; title: string }, right: { urgencyScore: number; pinnedAt: number | null; title: string }) {
+  return right.urgencyScore - left.urgencyScore
+    || (right.pinnedAt ?? 0) - (left.pinnedAt ?? 0)
+    || left.title.localeCompare(right.title);
+}
+
+function colorForUrgency(score: number) {
+  if (score >= 80) return '#b91c1c';
+  if (score >= 50) return '#b45309';
+  if (score >= 25) return '#2563eb';
   return '#0f766e';
 }
 

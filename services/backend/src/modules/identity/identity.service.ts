@@ -4,6 +4,7 @@ import {
   DEFAULT_CUSTOMER_ROLES,
   DEFAULT_MEMBER_ROLES,
   MEMBER_PERMISSIONS,
+  urgencyScoringConfigSchema,
   type CreateCustomerUserInput,
   type CreateMemberInput,
   type CreateMemberRoleInput,
@@ -240,6 +241,7 @@ export class IdentityService {
         workspaceName: null,
         brandBadge: null,
         brandLogo: null,
+        urgencyScoringConfig: urgencyScoringConfigSchema.parse({}),
         shopifyDomain: null,
         hasShopifyAdminToken: false,
         hasShopifyApiKey: false,
@@ -256,6 +258,7 @@ export class IdentityService {
       workspaceName: config.workspaceName,
       brandBadge: config.brandBadge,
       brandLogo: config.brandLogo,
+      urgencyScoringConfig: parseUrgencyScoringConfig(config.urgencyScoringConfig),
       shopifyDomain: config.shopifyDomain,
       hasShopifyAdminToken: Boolean(config.shopifyAdminTokenEncrypted),
       hasShopifyApiKey: Boolean(config.shopifyApiKeyEncrypted),
@@ -292,6 +295,7 @@ export class IdentityService {
       workspaceName: input.workspaceName,
       brandBadge: input.brandBadge,
       brandLogo: input.brandLogo,
+      urgencyScoringConfig: input.urgencyScoringConfig,
       shopifyDomain: input.shopifyDomain,
       shopifyAdminTokenEncrypted: this.crypto.encrypt(input.shopifyAdminToken),
       shopifyApiKeyEncrypted: this.crypto.encrypt(input.shopifyApiKey),
@@ -383,6 +387,11 @@ function uniqueConflict(error: unknown, message: string): never {
 
 function stripUndefined<T extends Record<string, unknown>>(input: T) {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== null)) as Partial<T>;
+}
+
+function parseUrgencyScoringConfig(value: Prisma.JsonValue) {
+  const parsed = urgencyScoringConfigSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  return parsed.success ? parsed.data : urgencyScoringConfigSchema.parse({});
 }
 
 function stripPasswordHash<T extends { passwordHash?: unknown }>(record: T) {

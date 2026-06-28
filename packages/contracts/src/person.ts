@@ -8,6 +8,52 @@ export type PersonQueueColumn = z.infer<typeof personQueueColumnSchema>;
 export const personTaskSourceSchema = z.enum(['manual', 'ai_transcript', 'ai_segment', 'ai_stale']);
 export type PersonTaskSource = z.infer<typeof personTaskSourceSchema>;
 
+export const DEFAULT_URGENCY_SCORING_CONFIG = {
+  segmentWeight: 1.5,
+  repeatCountWeight: 1,
+  intentWeight: 1,
+  aiUrgencyWeight: 2,
+  waitingHoursWeight: 0.25,
+  intentScores: {
+    complaint: 20,
+    escalation: 18,
+    reorder: 14,
+    sales: 12,
+    support: 8,
+    follow_up: 8,
+  },
+  aiUrgencyScores: {
+    critical: 30,
+    high: 20,
+    medium: 10,
+    low: 3,
+  },
+} as const;
+
+export const urgencyScoringConfigSchema = z.object({
+  segmentWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.segmentWeight),
+  repeatCountWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.repeatCountWeight),
+  intentWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.intentWeight),
+  aiUrgencyWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyWeight),
+  waitingHoursWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.waitingHoursWeight),
+  intentScores: z.record(z.string(), z.coerce.number().min(0).max(100)).default(DEFAULT_URGENCY_SCORING_CONFIG.intentScores),
+  aiUrgencyScores: z.record(z.string(), z.coerce.number().min(0).max(100)).default(DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyScores),
+});
+export type UrgencyScoringConfig = z.infer<typeof urgencyScoringConfigSchema>;
+
+export const personUrgencyBreakdownSchema = z.object({
+  score: z.number(),
+  segmentScore: z.number(),
+  repeatCount: z.number(),
+  intent: z.string().nullable(),
+  intentScore: z.number(),
+  aiUrgency: z.string().nullable(),
+  aiUrgencyScore: z.number(),
+  waitingHours: z.number(),
+  weights: urgencyScoringConfigSchema,
+});
+export type PersonUrgencyBreakdown = z.infer<typeof personUrgencyBreakdownSchema>;
+
 export const personTaskWorkflowTraceSchema = z.object({
   ruleId: z.string().nullable(),
   matchedRuleId: z.string().nullable(),
@@ -45,6 +91,8 @@ export const personQueueCardSchema = z.object({
   segment: z.string(),
   segmentColor: z.string(),
   priority: z.number(),
+  urgencyScore: z.number(),
+  urgencyBreakdown: personUrgencyBreakdownSchema,
   columnId: personQueueColumnSchema,
   pinned: z.boolean(),
   pinnedAt: z.number().nullable(),

@@ -44,7 +44,9 @@ export function Card({ card, onTogglePin, onOpen }: Props) {
             <span>{meta.label}</span>
           </span>
         ) : null}
-        <span className={priorityClass(card.priority)}>P{card.priority}</span>
+        <span className={priorityClass(card.priority)} title={card.urgencyBreakdown.intent ?? 'urgency score'}>
+          U{card.urgencyScore}
+        </span>
       </div>
       <div className="summary">{card.summary}</div>
       <div className="row2">

@@ -14,7 +14,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       cell: ({ row }) => (
         <>
           <div className="name">{row.original.title}</div>
-          <div className="seg">{row.original.segment} - P{row.original.priority}</div>
+          <div className="seg">{row.original.segment} - U{row.original.urgencyScore}</div>
         </>
       ),
     },

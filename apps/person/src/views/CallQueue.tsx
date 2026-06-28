@@ -83,12 +83,12 @@ export function CallQueueView() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 120, tolerance: 6 } }));
   const groups = useMemo(() => groupByColumn(cards), [cards]);
   const pinned = useMemo(
-    () => [...cards.filter((card) => card.pinned)].sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0)),
+    () => [...cards.filter((card) => card.pinned)].sort((a, b) => b.urgencyScore - a.urgencyScore || (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0)),
     [cards],
   );
   const activeCard = cards.find((card) => card.id === activeId) ?? null;
   const selectedCard = cards.find((card) => card.id === selectedId) ?? null;
-  const overdue = cards.filter((card) => card.priority >= 9).length;
+  const overdue = cards.filter((card) => card.urgencyScore >= 80).length;
   const aiCount = cards.filter((card) => card.source !== 'manual').length;
 
   const onDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id));
@@ -130,7 +130,7 @@ export function CallQueueView() {
     <div className="queue-wrap">
       <div className="kpis">
         <div className="kpi"><div className="label">Customers</div><div className="val">{cards.length}</div><div className="sub">in your queue</div></div>
-        <div className="kpi"><div className="label">Overdue</div><div className="val">{overdue}</div><div className="sub">P9 priority</div></div>
+        <div className="kpi"><div className="label">Overdue</div><div className="val">{overdue}</div><div className="sub">U80+ score</div></div>
         <div className="kpi"><div className="label">AI-tasked</div><div className="val">{aiCount}</div><div className="sub">click to open brief</div></div>
         <div className="kpi"><div className="label">Pinned</div><div className="val">{pinned.length}</div><div className="sub">on board</div></div>
         <div className="kpi"><div className="label">Status</div><div className="val">{isLoading ? '...' : 'Live'}</div><div className="sub">API bound</div></div>

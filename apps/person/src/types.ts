@@ -1,4 +1,4 @@
-import type { PersonTaskStateSnapshot, PersonTaskWorkflowTrace } from '@factory-engine-pro/contracts';
+import type { PersonTaskStateSnapshot, PersonTaskWorkflowTrace, PersonUrgencyBreakdown } from '@factory-engine-pro/contracts';
 
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
@@ -21,6 +21,8 @@ export interface Card {
   segment: string;
   segmentColor: string;
   priority: number;
+  urgencyScore: number;
+  urgencyBreakdown: PersonUrgencyBreakdown;
   columnId: ColumnId;
   pinned: boolean;
   pinnedAt: number | null;
@@ -61,6 +63,8 @@ export interface CustomerRow {
   lastContact: string;
   lifecycle: 'lead' | 'engaged' | 'active' | 'at_risk' | 'churned';
   segment: { id: string; name: string; color: string };
+  urgencyScore?: number;
+  urgencyBreakdown?: PersonUrgencyBreakdown;
 }
 
 export type NavId =
