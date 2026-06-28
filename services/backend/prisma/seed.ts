@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { createCipheriv, createHash, pbkdf2Sync, randomBytes } from 'node:crypto';
-import { DEFAULT_MEMBER_ROLES, MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { DEFAULT_MEMBER_ROLES, MEMBER_PERMISSIONS, type SaveWorkflowRuleInput } from '@factory-engine-pro/contracts';
 
 const prisma = new PrismaClient();
 
@@ -19,6 +19,7 @@ async function main() {
   await seedTenantConfig(tenantId, suffix);
   await seedRoadmapMemberRoles(tenantId, suffix);
   await seedDtfbankRoadmapStaff(tenantId, suffix);
+  await seedDefaultWorkflowRules(tenantId, suffix);
 
   const customerId = `cust_${suffix}_northstar`;
   await prisma.customer.upsert({
@@ -246,6 +247,8 @@ async function main() {
       },
     });
   }
+  await seedDefaultRfmSegments(tenantId, suffix);
+  await seedDefaultRfmMemberships(tenantId);
 
   const serviceRequestId = `sr_${suffix}_welcome`;
   await prisma.serviceRequest.upsert({
@@ -359,6 +362,315 @@ async function main() {
       shopifySyncState: 'not_applicable',
     },
   });
+}
+
+const SEED_VERSION = '2026-06-28.1';
+
+const DEFAULT_RFM_SEGMENTS = [
+  {
+    key: 'champions',
+    name: 'Champions',
+    color: '#16a34a',
+    priority: 10,
+    description: 'Old RFM mapping: r >= 4 && f >= 4 && m >= 4.',
+  },
+  {
+    key: 'loyal',
+    name: 'Loyal customers',
+    color: '#22c55e',
+    priority: 9,
+    description: 'Old RFM mapping: r >= 3 && f >= 4.',
+  },
+  {
+    key: 'potential_loyalist',
+    name: 'Potential loyalists',
+    color: '#0ea5e9',
+    priority: 8,
+    description: 'Old RFM mapping: r >= 4 && f >= 2 && f <= 3.',
+  },
+  {
+    key: 'new_customers',
+    name: 'New customers',
+    color: '#38bdf8',
+    priority: 7,
+    description: 'Old RFM mapping: r >= 4 && f <= 1.',
+  },
+  {
+    key: 'promising',
+    name: 'Promising',
+    color: '#6366f1',
+    priority: 6,
+    description: 'Old RFM mapping: r >= 3 && f <= 2.',
+  },
+  {
+    key: 'at_risk',
+    name: 'At risk',
+    color: '#f97316',
+    priority: 5,
+    description: 'Old RFM mapping: r <= 2 && f >= 3.',
+  },
+  {
+    key: 'about_to_sleep',
+    name: 'About to sleep',
+    color: '#f59e0b',
+    priority: 4,
+    description: 'Old RFM mapping: r === 2 && f <= 2.',
+  },
+  {
+    key: 'hibernating',
+    name: 'Hibernating',
+    color: '#64748b',
+    priority: 3,
+    description: 'Old RFM mapping: r <= 2 && f <= 2.',
+  },
+] as const;
+
+async function seedDefaultWorkflowRules(tenantId: string, suffix: string) {
+  const defaults: Array<{ key: string; input: SaveWorkflowRuleInput }> = [
+    {
+      key: 'angry-support',
+      input: defaultRule('Angry customer support follow-up', 'psych.tag.detected', [
+        condition('psych_tag_includes', 'contains', 'angry'),
+      ], [
+        action('create_task', 'support: Angry customer follow-up'),
+      ]),
+    },
+    {
+      key: 'purchase-intent-sales',
+      input: defaultRule('Purchase intent sales follow-up', 'psych.tag.detected', [
+        condition('psych_tag_includes', 'contains', 'purchase_intent'),
+      ], [
+        action('create_task', 'sales: Purchase intent follow-up'),
+      ]),
+    },
+    {
+      key: 'shipping-issue-escalation',
+      input: defaultRule('Shipping issue escalation', 'psych.tag.detected', [
+        condition('psych_tag_includes', 'contains', 'shipping_issue'),
+      ], [
+        action('create_task', 'support: Shipping issue follow-up'),
+        action('escalate', 'Shipping issue escalation'),
+      ]),
+    },
+    {
+      key: 'refund-intent-account-watcher',
+      input: defaultRule('Refund intent account watcher', 'psych.tag.detected', [
+        condition('psych_tag_includes', 'contains', 'refund_intent'),
+      ], [
+        action('create_task', 'support: Refund intent follow-up'),
+        action('add_watcher', 'account'),
+      ]),
+    },
+    {
+      key: 'first-call-onboarding',
+      input: defaultRule('First call onboarding', 'customer.first_call.detected', [], [
+        action('create_task', 'account: First call onboarding'),
+      ]),
+    },
+    {
+      key: 'repeat-call-escalation',
+      input: defaultRule('Repeat call escalation', 'customer.repeat_call.detected', [
+        condition('call_count_in_window', '>=', '3 in 7 days'),
+      ], [
+        action('escalate', 'Repeat call escalation'),
+        action('add_watcher', 'account'),
+      ]),
+    },
+    {
+      key: 'ltv-vip-pin',
+      input: defaultRule('LTV threshold VIP pin', 'customer.ltv.crossed_threshold', [
+        condition('customer_ltv_gte', '>=', '1000'),
+      ], [
+        action('segment_add', 'VIP B2B Customers'),
+        action('pin_customer', 'VIP threshold crossed'),
+      ]),
+    },
+    {
+      key: 'first-order-note',
+      input: defaultRule('First Shopify order note', 'shopify.order.created', [
+        condition('order_count_in_window', '=', '1 in 3650 days'),
+      ], [
+        action('add_note', 'new customer first order'),
+      ]),
+    },
+    {
+      key: 'overdue-task-escalation',
+      input: defaultRule('Overdue task escalation', 'task.overdue', [], [
+        action('escalate', 'Task overdue for 24h+'),
+        action('add_watcher', 'account'),
+      ]),
+    },
+    {
+      key: 'missed-call-callback',
+      input: defaultRule('Missed call callback', 'aircall.call.missed', [], [
+        action('create_task', 'support: Missed call callback'),
+      ]),
+    },
+  ];
+
+  for (const item of defaults) {
+    await seedWorkflowRule(tenantId, suffix, item.key, item.input);
+  }
+}
+
+async function seedWorkflowRule(tenantId: string, suffix: string, key: string, input: SaveWorkflowRuleInput) {
+  const id = `wrule_${suffix}_seed_${key}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 190);
+  const existing = await prisma.workflowRule.findFirst({ where: { tenantId, id } });
+  if (existing) return;
+  await prisma.workflowRule.create({
+    data: {
+      id,
+      tenantId,
+      name: input.name,
+      status: input.definition.status,
+      priority: input.definition.priority,
+      composable: input.definition.composable,
+      trigger: input.definition.trigger,
+      definition: input.definition as Prisma.InputJsonValue,
+    },
+  });
+  await prisma.workflowRuleVersion.create({
+    data: {
+      id: `wrv_${suffix}_seed_${key}_v1`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 190),
+      tenantId,
+      ruleId: id,
+      versionNo: 1,
+      jsonSnapshot: { name: input.name, definition: input.definition } as Prisma.InputJsonValue,
+      comment: 'Seed workflow rule created',
+    },
+  });
+}
+
+function defaultRule(
+  name: string,
+  trigger: SaveWorkflowRuleInput['definition']['trigger'],
+  when: SaveWorkflowRuleInput['definition']['when'],
+  actions: SaveWorkflowRuleInput['definition']['actions'],
+): SaveWorkflowRuleInput {
+  return {
+    name,
+    definition: {
+      status: 'active',
+      priority: 100,
+      composable: false,
+      trigger,
+      cooldown: { hours: 24, limit: 1 },
+      metadata: { source: 'seed', seed_version: SEED_VERSION },
+      when,
+      actions,
+    },
+    comment: 'Default workflow seed',
+  };
+}
+
+function condition(
+  conditionName: SaveWorkflowRuleInput['definition']['when'][number]['condition'],
+  operator: SaveWorkflowRuleInput['definition']['when'][number]['operator'],
+  value: string,
+): SaveWorkflowRuleInput['definition']['when'][number] {
+  return {
+    id: `cond_${conditionName}_${operator}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 60),
+    condition: conditionName,
+    operator,
+    value,
+  };
+}
+
+function action(
+  actionName: SaveWorkflowRuleInput['definition']['actions'][number]['action'],
+  value: string,
+): SaveWorkflowRuleInput['definition']['actions'][number] {
+  return {
+    id: `act_${actionName}_${value}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 80),
+    action: actionName,
+    value,
+  };
+}
+
+async function seedDefaultRfmSegments(tenantId: string, suffix: string) {
+  for (const segment of DEFAULT_RFM_SEGMENTS) {
+    const id = `seg_${suffix}_rfm_${segment.key}`;
+    const existing = await prisma.segment.findFirst({
+      where: { tenantId, OR: [{ id }, { name: segment.name }] },
+      select: { id: true },
+    });
+    if (existing) continue;
+    const conditions = [
+      { field: 'lifecycle', operator: 'eq', value: segment.key, scopeType: 'all', scopeValues: [] },
+    ];
+    await prisma.segment.create({
+      data: {
+        id,
+        tenantId,
+        name: segment.name,
+        description: `${segment.description} Source: backend/src/customers/customer-intelligence.service.ts#getRFMSegment.`,
+        color: segment.color,
+        priority: segment.priority,
+        priorityGlobal: segment.priority,
+        audienceType: 'customer',
+        lifecycleStage: segment.key,
+        matchMode: 'all',
+        conditions,
+        rules: {
+          matchMode: 'all',
+          conditions,
+          metadata: {
+            source: 'seed',
+            seed_version: SEED_VERSION,
+            old_source: 'backend/src/customers/customer-intelligence.service.ts#getRFMSegment',
+          },
+        },
+        rulesHash: `seed-rfm-${segment.key}-${SEED_VERSION}`,
+        customerCount: 0,
+        lastEvaluatedAt: null,
+        isActive: true,
+      },
+    });
+  }
+}
+
+async function seedDefaultRfmMemberships(tenantId: string) {
+  const segments = await prisma.segment.findMany({
+    where: { tenantId, rulesHash: { startsWith: 'seed-rfm-' }, isActive: true },
+    select: { id: true, lifecycleStage: true },
+  });
+  for (const segment of segments) {
+    const key = segment.lifecycleStage;
+    if (!key) continue;
+    const customers = await prisma.customer.findMany({
+      where: { tenantId, insight: { is: { rfmSegment: key } } },
+      select: { id: true },
+    });
+    await prisma.segmentCustomerMembership.deleteMany({ where: { tenantId, segmentId: segment.id } });
+    for (const batch of chunks(customers, 1000)) {
+      await prisma.segmentCustomerMembership.createMany({
+        data: batch.map((customer) => ({
+          id: `smem_${shortHash(`${segment.id}:${customer.id}`)}`,
+          tenantId,
+          segmentId: segment.id,
+          customerId: customer.id,
+          score: 1,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await prisma.segment.updateMany({
+      where: { tenantId, id: segment.id },
+      data: { customerCount: customers.length, lastEvaluatedAt: new Date() },
+    });
+  }
+}
+
+function chunks<T>(items: T[], size: number) {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    result.push(items.slice(index, index + size));
+  }
+  return result;
+}
+
+function shortHash(value: string) {
+  return createHash('sha1').update(value).digest('hex').slice(0, 16);
 }
 
 function hashSeedPassword(password: string) {

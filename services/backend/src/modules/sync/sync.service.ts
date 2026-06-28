@@ -15,6 +15,7 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { SHOPIFY_SYNC_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { classifyFulfillment } from '../orders/order-fulfillment-classifier.js';
+import { SegmentsService } from '../segments/segments.service.js';
 import { ShopifyAdminApiError, ShopifyClientService, type ShopifyCredentials } from './shopify-client.service.js';
 import { SHOPIFY_INITIAL_SYNC_JOB, SHOPIFY_SYNC_RESOURCES } from './shopify-sync.constants.js';
 import { ShopifySyncStateService } from './shopify-sync-state.service.js';
@@ -32,6 +33,7 @@ export class SyncService {
     private readonly prisma: PrismaService,
     private readonly shopify: ShopifyClientService,
     private readonly state: ShopifySyncStateService,
+    private readonly segments: SegmentsService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
     @Inject(SHOPIFY_SYNC_QUEUE) private readonly syncQueue: Queue | null,
@@ -283,7 +285,7 @@ export class SyncService {
       || email
       || `Shopify Customer ${shopifyCustomerId}`;
 
-    await this.prisma.db.customer.upsert({
+    const customer = await this.prisma.db.customer.upsert({
       where: { tenantId_shopifyCustomerId: { tenantId: this.tenantId(), shopifyCustomerId } },
       create: {
         id: prefixedId('cust'),
@@ -321,6 +323,7 @@ export class SyncService {
         syncedAt: new Date(),
       },
     });
+    await this.evaluateCustomerSegments(customer.id, 'shopify_customer_sync');
   }
 
   private async persistProduct(raw: Record<string, unknown>) {
@@ -486,14 +489,17 @@ export class SyncService {
     const shopifyCustomerId = stringId(customer.id);
     if (!shopifyCustomerId) return null;
     const existing = await this.prisma.db.customer.findFirst({ where: { shopifyCustomerId } });
-    if (existing) return existing;
+    if (existing) {
+      await this.evaluateCustomerSegments(existing.id, 'shopify_order_customer_sync');
+      return existing;
+    }
     const firstName = stringOrNull(customer.first_name);
     const lastName = stringOrNull(customer.last_name);
     const email = stringOrNull(customer.email);
     const companyName = [firstName, lastName].filter(Boolean).join(' ').trim()
       || email
       || `Shopify Customer ${shopifyCustomerId}`;
-    return this.prisma.db.customer.create({
+    const created = await this.prisma.db.customer.create({
       data: {
         id: prefixedId('cust'),
         tenantId: this.tenantId(),
@@ -508,6 +514,28 @@ export class SyncService {
         syncedAt: new Date(),
       },
     });
+    await this.evaluateCustomerSegments(created.id, 'shopify_order_customer_sync');
+    return created;
+  }
+
+  private async evaluateCustomerSegments(customerId: string, source: string) {
+    try {
+      const result = await this.segments.evaluateForCustomer(customerId);
+      this.logger.log('shopify', 'segment_evaluation_completed', 'Shopify sync evaluated customer segments', {
+        customer_id: customerId,
+        source,
+        matched_count: result.matched.length,
+        added_count: result.added.length,
+        removed_count: result.removed.length,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn('shopify', 'segment_evaluation_failed', 'Shopify sync segment evaluation failed', {
+        customer_id: customerId,
+        source,
+        error: message,
+      });
+    }
   }
 
   private async createQueuedLogs(resources: ShopifySyncResource[], batchId: string) {

@@ -44,6 +44,7 @@ export const workflowRuleDefinitionSchema = z.object({
   composable: z.boolean(),
   trigger: workflowTriggerSchema,
   cooldown: workflowRuleCooldownSchema.optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   when: z.array(workflowRuleConditionSchema),
   whenGroups: z.array(workflowRuleWhenGroupSchema).optional(),
   actions: z.array(workflowRuleActionSchema).min(1),

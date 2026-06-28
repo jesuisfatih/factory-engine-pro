@@ -65,6 +65,28 @@ export class SegmentsRepository {
     });
   }
 
+  findCustomerById(customerId: string) {
+    return this.prisma.db.customer.findFirst({
+      where: { id: customerId },
+      include: { insight: true },
+    });
+  }
+
+  listActiveSegments() {
+    return this.prisma.db.segment.findMany({
+      where: { isActive: true },
+      include: { ownerships: { include: { member: true } } },
+      orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+    });
+  }
+
+  listMembershipsForCustomer(customerId: string) {
+    return this.prisma.db.segmentCustomerMembership.findMany({
+      where: { customerId },
+      include: { segment: true },
+    });
+  }
+
   listMemberships(segmentId: string) {
     return this.prisma.db.segmentCustomerMembership.findMany({
       where: { segmentId },
@@ -91,6 +113,36 @@ export class SegmentsRepository {
       where: { id: segmentId },
       data: { customerCount: customerIds.length, lastEvaluatedAt: new Date() },
     });
+  }
+
+  async upsertMembership(segmentId: string, customerId: string) {
+    const tenantId = this.tenantId();
+    await this.prisma.db.segmentCustomerMembership.upsert({
+      where: { tenantId_segmentId_customerId: { tenantId, segmentId, customerId } },
+      create: {
+        id: prefixedId('smem'),
+        tenantId,
+        segmentId,
+        customerId,
+        score: 1,
+      },
+      update: { matchedAt: new Date(), score: 1 },
+    });
+    return this.refreshSegmentCount(segmentId);
+  }
+
+  async deleteMembership(segmentId: string, customerId: string) {
+    await this.prisma.db.segmentCustomerMembership.deleteMany({ where: { segmentId, customerId } });
+    return this.refreshSegmentCount(segmentId);
+  }
+
+  async refreshSegmentCount(segmentId: string) {
+    const count = await this.prisma.db.segmentCustomerMembership.count({ where: { segmentId } });
+    await this.prisma.db.segment.updateMany({
+      where: { id: segmentId },
+      data: { customerCount: count, lastEvaluatedAt: new Date() },
+    });
+    return count;
   }
 
   async upsertOwnership(segmentId: string, input: {

@@ -8,6 +8,7 @@ import type {
   UpdateSegmentInput,
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
+import { RulesService } from '../rules/rules.service.js';
 import { SegmentsRepository } from './segments.repository.js';
 
 type CustomerCandidate = Awaited<ReturnType<SegmentsRepository['listCustomers']>>[number];
@@ -16,6 +17,7 @@ type CustomerCandidate = Awaited<ReturnType<SegmentsRepository['listCustomers']>
 export class SegmentsService {
   constructor(
     private readonly repository: SegmentsRepository,
+    private readonly rules: RulesService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -142,6 +144,55 @@ export class SegmentsService {
     return { evaluated };
   }
 
+  async evaluateForCustomer(customerId: string) {
+    const customer = await this.repository.findCustomerById(customerId);
+    if (!customer) throw new NotFoundException('Customer not found for segment evaluation');
+    const [segments, existingMemberships] = await Promise.all([
+      this.repository.listActiveSegments(),
+      this.repository.listMembershipsForCustomer(customerId),
+    ]);
+    const existingSegmentIds = new Set(existingMemberships.map((membership) => membership.segmentId));
+    const matchedSegments = segments.filter((segment) => {
+      const conditions = this.normalizeConditions(segment.conditions);
+      return this.matchCustomers([customer], conditions, segment.matchMode as 'all' | 'any').length > 0;
+    });
+    const matchedSegmentIds = new Set(matchedSegments.map((segment) => segment.id));
+    const added = matchedSegments.filter((segment) => !existingSegmentIds.has(segment.id));
+    const removed = existingMemberships.filter((membership) => !matchedSegmentIds.has(membership.segmentId));
+
+    for (const segment of added) {
+      await this.repository.upsertMembership(segment.id, customerId);
+      await this.fireSegmentMembershipTrigger('segment.member_added', customerId, segment.id, segment.name);
+    }
+    for (const membership of removed) {
+      await this.repository.deleteMembership(membership.segmentId, customerId);
+      await this.fireSegmentMembershipTrigger('segment.member_removed', customerId, membership.segmentId, membership.segment.name);
+    }
+
+    this.logger.log('segments', 'evaluate_customer', 'Customer segment memberships evaluated', {
+      customer_id: customerId,
+      matched_count: matchedSegments.length,
+      added_count: added.length,
+      removed_count: removed.length,
+    });
+    return {
+      customerId,
+      matched: matchedSegments.map((segment) => ({ id: segment.id, name: segment.name })),
+      added: added.map((segment) => ({ id: segment.id, name: segment.name })),
+      removed: removed.map((membership) => ({ id: membership.segmentId, name: membership.segment.name })),
+    };
+  }
+
+  async evaluateBatch(customerIds: string[]) {
+    const uniqueIds = Array.from(new Set(customerIds.filter(Boolean)));
+    const results = [];
+    for (const customerId of uniqueIds) {
+      results.push(await this.evaluateForCustomer(customerId));
+    }
+    this.logger.log('segments', 'evaluate_batch', 'Customer segment batch evaluated', { customer_count: uniqueIds.length });
+    return { evaluated: results.length, results };
+  }
+
   async getOwnerships(id: string) {
     const segment = await this.requireSegment(id);
     return segment.ownerships.map((ownership) => this.presentOwnership(ownership));
@@ -178,6 +229,35 @@ export class SegmentsService {
     const segment = await this.repository.findById(id);
     if (!segment) throw new NotFoundException('Segment not found');
     return segment;
+  }
+
+  private async fireSegmentMembershipTrigger(
+    trigger: 'segment.member_added' | 'segment.member_removed',
+    customerId: string,
+    segmentId: string,
+    segmentName: string,
+  ) {
+    try {
+      await this.rules.fireTrigger({
+        trigger,
+        eventId: `segment-${trigger}-${customerId}-${segmentId}-${Date.now()}`,
+        source: 'segments.evaluate_for_customer',
+        params: { customerId, segmentId, segmentName },
+      });
+      this.logger.log('segments', trigger, 'Segment membership workflow trigger fired', {
+        customer_id: customerId,
+        segment_id: segmentId,
+        segment_name: segmentName,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn('segments', 'workflow_trigger_failed', 'Segment membership workflow trigger failed', {
+        trigger,
+        customer_id: customerId,
+        segment_id: segmentId,
+        error: message,
+      });
+    }
   }
 
   private matchCustomers(customers: CustomerCandidate[], conditions: SegmentConditionInput[], matchMode: 'all' | 'any') {

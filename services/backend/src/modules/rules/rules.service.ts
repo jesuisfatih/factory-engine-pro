@@ -873,7 +873,7 @@ export class RulesService {
 
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
-      const assignment = await this.resolveTaskAssignment(context);
+      const assignment = await this.resolveTaskAssignment(context, action);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
@@ -995,8 +995,8 @@ export class RulesService {
     };
   }
 
-  private async resolveTaskAssignment(context: WorkflowActionContext): Promise<TaskAssignment> {
-    const axis = this.resolveTaskAxis(context);
+  private async resolveTaskAssignment(context: WorkflowActionContext, action?: WorkflowRuleAction): Promise<TaskAssignment> {
+    const axis = this.resolveTaskAxis(context, action);
     const explicitAssigneeId = stringParam(context.params, 'assignedMemberId')
       ?? stringParam(context.params, 'assigneeMemberId')
       ?? stringParam(context.params, 'memberId');
@@ -1033,8 +1033,9 @@ export class RulesService {
     return assignment;
   }
 
-  private resolveTaskAxis(context: WorkflowActionContext): TaskAxis {
-    return normalizeTaskAxis(stringParam(context.params, 'axis'))
+  private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): TaskAxis {
+    return normalizeTaskAxis(action?.value)
+      ?? normalizeTaskAxis(stringParam(context.params, 'axis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'taskAxis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'intent'))
       ?? normalizeTaskAxis(stringParam(context.params, 'callIntent'))
@@ -1171,7 +1172,11 @@ export class RulesService {
   private async addTaskWatcher(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
     if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for add_watcher.');
-    const member = await this.findMember(action.value || stringParam(context.params, 'watcherMemberId') || stringParam(context.params, 'memberId'));
+    let member = await this.findMember(action.value || stringParam(context.params, 'watcherMemberId') || stringParam(context.params, 'memberId'));
+    if (!member) {
+      const axis = normalizeTaskAxis(action.value);
+      member = axis ? (await this.findAxisPrimaryMembers(axis))[0] ?? null : null;
+    }
     if (!member) return skippedTrace(action, 'member', 'Member target was not found.');
     const updated = await this.updateTaskWorkflow(taskId, (workflow) => ({
       ...workflow,
