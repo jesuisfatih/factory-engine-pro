@@ -1,0 +1,42 @@
+﻿{
+  "checkedAt": "2026-06-28T14:45:35.457Z",
+  "commit": "f8830878ee2dc4f6d4f08460c26c6401e48ad910",
+  "buildSha": "f8830878ee2dc4f6d4f08460c26c6401e48ad910",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "adminCustomersStatus": {
+    "status": 200,
+    "ok": true
+  },
+  "pm2Status": "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1394     │ 92m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 10 │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 54401    │ 4m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 9  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 51605    │ 4m     │ 0    │ online    │ 0%       │ 156.9mb  │ root     │ disabled │\n│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1383     │ 92m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘\n",
+  "migration": [
+    {
+      "migrationName": "202606291_customer_axis_assignments",
+      "finishedAt": "2026-06-28T14:39:22.122Z"
+    }
+  ],
+  "processes": [
+    {
+      "pid": 51605,
+      "cmd": "/usr/local/bin/node dist/services/backend/src/main.js"
+    },
+    {
+      "pid": 54401,
+      "cmd": "/bin/sh -lc cd /app/apps/admin && node_modules/.bin/vite preview --host 0.0.0.0 --port 3000"
+    },
+    {
+      "pid": 54442,
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3000"
+    }
+  ],
+  "structuredLogs": [
+    "\u001b[32m[Nest] 17861  - \u001b[39m06/28/2026, 2:11:28 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"531e48af-7cf3-4036-af83-01cb63a09eab\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"task_assignment_resolved\",\"message\":\"Workflow task assignment resolved from axis primary roles\",\"event_id\":\"roadmap21:20260628141127\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_zc0s585zk6pqbyxnaag1gsaz\",\"axis\":\"support\",\"assignee_member_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"watcher_member_ids\":[\"tmbr_ten_dtfbank_linda_marroquin\",\"tmbr_ten_dtfbank_ihsan_taskiran\",\"tmbr_ten_dtfbank_info_owner\"],\"resolution_source\":\"axis_primary_role\"}\u001b[39m",
+    "\u001b[32m[Nest] 17861  - \u001b[39m06/28/2026, 2:12:06 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d22f19f2-fdc3-4e57-ae9a-4f289366711d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"task_assignment_resolved\",\"message\":\"Workflow task assignment resolved from axis primary roles\",\"event_id\":\"roadmap21:retry:1782655927045\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_zc0s585zk6pqbyxnaag1gsaz\",\"axis\":\"support\",\"assignee_member_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"watcher_member_ids\":[\"tmbr_ten_dtfbank_linda_marroquin\",\"tmbr_ten_dtfbank_ihsan_taskiran\",\"tmbr_ten_dtfbank_info_owner\"],\"resolution_source\":\"axis_primary_role\"}\u001b[39m",
+    "\u001b[32m[Nest] 17861  - \u001b[39m06/28/2026, 2:12:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"0117c35e-77bc-40ab-9143-d77d33f7f549\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"task_assignment_resolved\",\"message\":\"Workflow task assignment resolved from axis primary roles\",\"event_id\":\"roadmap21:final:20260628141239\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_zc0s585zk6pqbyxnaag1gsaz\",\"axis\":\"support\",\"assignee_member_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"watcher_member_ids\":[\"tmbr_ten_dtfbank_linda_marroquin\",\"tmbr_ten_dtfbank_ihsan_taskiran\",\"tmbr_ten_dtfbank_info_owner\"],\"resolution_source\":\"axis_primary_role\"}\u001b[39m",
+    "\u001b[32m[Nest] 51605  - \u001b[39m06/28/2026, 2:43:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"a1dd3081-da93-4df1-af10-61013f0a6c63\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_axis_primary_assigned\",\"message\":\"Customer axis primary assignment changed\",\"customer_id\":\"cust_ten_dtfbank_northstar\",\"axis\":\"support\",\"previous_member_id\":null,\"new_member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"actor_member_id\":\"tmbr_ten_dtfbank_info_owner\",\"source\":\"roadmap22_live_proof\"}\u001b[39m",
+    "\u001b[32m[Nest] 51605  - \u001b[39m06/28/2026, 2:43:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"bde2b514-2b8e-467b-9f41-ed77eb6d166d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"customers\",\"action\":\"customer_axis_auto_reassign_skipped\",\"message\":\"Customer axis primary owner preserved\",\"customer_id\":\"cust_ten_dtfbank_northstar\",\"axis\":\"support\",\"preserved_member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"attempted_member_id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"source\":\"aircall.current_operator\"}\u001b[39m",
+    "\u001b[32m[Nest] 51605  - \u001b[39m06/28/2026, 2:43:21 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d1d92450-645c-425a-9af7-350994a7ea27\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"task_assignment_resolved\",\"message\":\"Workflow task assignment resolved\",\"event_id\":\"roadmap22:20260628144319\",\"trigger\":\"manual.trigger\",\"rule_id\":\"wrule_f13pa2aj4f4qvuwblau85774\",\"axis\":\"support\",\"customer_id\":\"cust_ten_dtfbank_northstar\",\"assignee_member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"watcher_member_ids\":[\"tmbr_ten_dtfbank_charlette_boatman\",\"tmbr_ten_dtfbank_ihsan_taskiran\",\"tmbr_ten_dtfbank_info_owner\"],\"customer_assignment_id\":\"casn_ijq337xivywwaqj8zye2nhse\",\"resolution_source\":\"customer_axis_primary\"}\u001b[39m"
+  ]
+}

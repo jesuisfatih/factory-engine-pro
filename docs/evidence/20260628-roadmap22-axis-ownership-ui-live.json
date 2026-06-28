@@ -1,0 +1,13 @@
+﻿{
+  "checkedAt": "2026-06-28T14:48:30.988Z",
+  "url": "https://app.dtfbank.com/customers",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap22-axis-ownership-ui-live-20260628.png",
+  "customerId": "cust_ten_dtfbank_northstar",
+  "textSample": "Axis ownership\nNorthstar Print Supply\nNorthstar Print Supply\nAXIS\tPRIMARY OWNER\tSOURCE\tACTION\nsales\t\nNo primary owner\nAssign a primary member for this axis.\n\t\n-\nNot set\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\nsupport\t\nLinda Marroquin\ndtfbanktx@gmail.com\n\t\nroadmap22 live proof\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\naccount\t\nNo primary owner\nAssign a primary member for this axis.\n\t\n-\nNot set\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\nAuto-reassign skipped: Linda Marroquin stayed primary while Charlette Boatman handled the call.\nRecent ownership log\nauto reassign skipped - support - Charlette Boatman - Jun 28, 2026\nprimary assigned - support - Linda Marroquin - Jun 28, 2026",
+  "checks": {
+    "hasPanel": true,
+    "showsLinda": true,
+    "showsSkippedAudit": true,
+    "hasSupportAxis": true
+  }
+}

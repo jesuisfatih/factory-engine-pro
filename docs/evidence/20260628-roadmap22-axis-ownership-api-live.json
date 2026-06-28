@@ -1,0 +1,121 @@
+﻿{
+  "checkedAt": "2026-06-28T14:43:23.027Z",
+  "api": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "principal": {
+    "id": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "permissions": 25
+  },
+  "customer": {
+    "id": "cust_ten_dtfbank_northstar",
+    "name": "Northstar Print Supply",
+    "email": "orders+northstar@example.com"
+  },
+  "members": {
+    "primary": {
+      "id": "tmbr_ten_dtfbank_linda_marroquin",
+      "name": "Linda Marroquin",
+      "email": "dtfbanktx@gmail.com"
+    },
+    "attemptedOperator": {
+      "id": "tmbr_ten_dtfbank_charlette_boatman",
+      "name": "Charlette Boatman",
+      "email": "charlette@dtfbank.com"
+    }
+  },
+  "assignment": {
+    "id": "casn_ijq337xivywwaqj8zye2nhse",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "axis": "support",
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "memberName": "Linda Marroquin",
+    "memberEmail": "dtfbanktx@gmail.com",
+    "isPrimary": true,
+    "source": "roadmap22_live_proof",
+    "reason": "Roadmap 22 proof primary 20260628144319",
+    "approvedByMemberId": "tmbr_ten_dtfbank_info_owner",
+    "approvedAt": "2026-06-28T14:43:20.499Z",
+    "createdAt": "2026-06-28T14:43:20.501Z",
+    "updatedAt": "2026-06-28T14:43:20.501Z"
+  },
+  "skippedAudit": {
+    "id": "caud_i85af6fnycesvlg3oepbb0q9",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "axis": "support",
+    "action": "auto_reassign_skipped",
+    "previousMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "previousMemberName": "Linda Marroquin",
+    "newMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+    "newMemberName": "Charlette Boatman",
+    "actorMemberId": "tmbr_ten_dtfbank_info_owner",
+    "actorMemberName": "DTF Bank Owner",
+    "source": "aircall.current_operator",
+    "reason": "Roadmap 22 proof no auto reassign 20260628144319",
+    "metadata": {
+      "proof": "roadmap22_axis_ownership",
+      "stamp": "20260628144319",
+      "assignmentId": "casn_ijq337xivywwaqj8zye2nhse",
+      "attemptedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "preservedMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+    },
+    "createdAt": "2026-06-28T14:43:20.837Z"
+  },
+  "rule": {
+    "id": "wrule_f13pa2aj4f4qvuwblau85774",
+    "name": "Roadmap 22 customer ownership proof 20260628144319",
+    "statusAfterArchive": "archived",
+    "trigger": "manual.trigger"
+  },
+  "fire": {
+    "eventId": "roadmap22:20260628144319",
+    "tasksCreated": 1,
+    "matchedRules": 2,
+    "evaluatedRules": 2,
+    "taskIds": [
+      "sr_bn0843qxubs4u4yce3es78o5"
+    ],
+    "proofTaskId": "sr_bn0843qxubs4u4yce3es78o5"
+  },
+  "task": {
+    "id": "sr_bn0843qxubs4u4yce3es78o5",
+    "title": "Roadmap 22 ownership proof task 20260628144319",
+    "source": "workflow",
+    "axis": "support",
+    "matchedRuleId": "wrule_f13pa2aj4f4qvuwblau85774",
+    "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "assignedTo": {
+      "id": "tmbr_ten_dtfbank_linda_marroquin",
+      "name": "Linda Marroquin",
+      "email": "dtfbanktx@gmail.com"
+    },
+    "watcherCount": 3,
+    "assigneeResolution": {
+      "source": "customer_axis_primary",
+      "assigneeMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "watcherMemberIds": [
+        "tmbr_ten_dtfbank_charlette_boatman",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "candidateMemberIds": [
+        "tmbr_ten_dtfbank_linda_marroquin",
+        "tmbr_ten_dtfbank_charlette_boatman",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "customerAssignmentId": "casn_ijq337xivywwaqj8zye2nhse"
+    }
+  },
+  "assertions": {
+    "primaryAssignmentCreated": true,
+    "autoReassignSkippedLogged": true,
+    "assignmentPreservedAfterDifferentOperator": true,
+    "taskUsedCustomerAxisPrimary": true,
+    "proofRuleArchived": true
+  }
+}

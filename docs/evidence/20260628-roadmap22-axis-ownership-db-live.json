@@ -1,0 +1,79 @@
+﻿{
+  "checkedAt": "2026-06-28T14:44:32.752Z",
+  "database": "factory_engine_pro_test",
+  "customerId": "cust_ten_dtfbank_northstar",
+  "assignment": {
+    "id": "casn_ijq337xivywwaqj8zye2nhse",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "axis": "support",
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "memberEmail": "dtfbanktx@gmail.com",
+    "isPrimary": true,
+    "source": "roadmap22_live_proof",
+    "reason": "Roadmap 22 proof primary 20260628144319",
+    "approvedByMemberId": "tmbr_ten_dtfbank_info_owner",
+    "approvedAt": "2026-06-28T14:43:20.499Z",
+    "updatedAt": "2026-06-28T14:43:20.501Z"
+  },
+  "audit": {
+    "id": "caud_i85af6fnycesvlg3oepbb0q9",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_ten_dtfbank_northstar",
+    "axis": "support",
+    "action": "auto_reassign_skipped",
+    "previousMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "previousMemberEmail": "dtfbanktx@gmail.com",
+    "newMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+    "newMemberEmail": "charlette@dtfbank.com",
+    "source": "aircall.current_operator",
+    "reason": "Roadmap 22 proof no auto reassign 20260628144319",
+    "metadata": {
+      "proof": "roadmap22_axis_ownership",
+      "stamp": "20260628144319",
+      "assignmentId": "casn_ijq337xivywwaqj8zye2nhse",
+      "attemptedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "preservedMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+    },
+    "createdAt": "2026-06-28T14:43:20.837Z"
+  },
+  "task": {
+    "id": "sr_bn0843qxubs4u4yce3es78o5",
+    "source": "workflow",
+    "axis": "support",
+    "matchedRuleId": "wrule_f13pa2aj4f4qvuwblau85774",
+    "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "assignedMemberEmail": "dtfbanktx@gmail.com",
+    "participantCount": 3,
+    "assigneeResolution": {
+      "source": "customer_axis_primary",
+      "assigneeMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "watcherMemberIds": [
+        "tmbr_ten_dtfbank_charlette_boatman",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "candidateMemberIds": [
+        "tmbr_ten_dtfbank_linda_marroquin",
+        "tmbr_ten_dtfbank_charlette_boatman",
+        "tmbr_ten_dtfbank_ihsan_taskiran",
+        "tmbr_ten_dtfbank_info_owner"
+      ],
+      "customerAssignmentId": "casn_ijq337xivywwaqj8zye2nhse"
+    },
+    "totalSpentAtSnapshot": 1842.5
+  },
+  "rule": {
+    "id": "wrule_f13pa2aj4f4qvuwblau85774",
+    "name": "Roadmap 22 customer ownership proof 20260628144319",
+    "status": "archived"
+  },
+  "assertions": {
+    "assignmentRowExists": true,
+    "assignmentPrimaryIsLinda": true,
+    "auditRowExists": true,
+    "auditPreservedLindaAgainstCharlette": true,
+    "taskAssignedFromCustomerAxisPrimary": true,
+    "proofRuleArchived": true
+  }
+}
