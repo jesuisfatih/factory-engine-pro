@@ -118,6 +118,8 @@ export const DEFAULT_MEMBER_ROLES = [
       [MEMBER_PERMISSIONS.pricingRead]: true,
       [MEMBER_PERMISSIONS.pricingWrite]: true,
       [MEMBER_PERMISSIONS.segmentsRead]: true,
+      [MEMBER_PERMISSIONS.supportRead]: true,
+      [MEMBER_PERMISSIONS.supportWrite]: true,
       [MEMBER_PERMISSIONS.taskAssign]: true,
       [MEMBER_PERMISSIONS.aircallUsersRead]: true,
       [MEMBER_PERMISSIONS.commissionSubmit]: true,
