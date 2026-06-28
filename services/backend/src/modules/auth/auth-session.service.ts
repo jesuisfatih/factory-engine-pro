@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { AuthSession } from '@factory-engine-pro/contracts';
 import { AuthTokenService } from '../../shared/auth-token.service.js';
+import { getJwtAccessSecret } from '../../shared/jwt-secret.js';
 import type { PrincipalRecord } from './auth.types.js';
 
 @Injectable()
@@ -22,7 +23,7 @@ export class AuthSessionService {
         permissions: principal.permissions,
       },
       {
-        secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        secret: getJwtAccessSecret(this.config),
         expiresIn: '15m',
       },
     );

@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import type { PrincipalType } from '@factory-engine-pro/contracts';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
+import { getJwtAccessSecret } from './jwt-secret.js';
 import { TenantContextService } from './tenant-context.js';
 
 interface AccessTokenPayload {
@@ -35,7 +36,7 @@ export class JwtAuthGuard implements CanActivate {
     if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('Bearer token is required');
 
     const payload = await this.jwt.verifyAsync<AccessTokenPayload>(auth.slice(7), {
-      secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      secret: getJwtAccessSecret(this.config),
     });
     this.tenantContext.set({
       tenantId: payload.tenant_id,
