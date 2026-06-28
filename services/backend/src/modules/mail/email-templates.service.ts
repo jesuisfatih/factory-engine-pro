@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
   mailTemplateQuerySchema,
@@ -61,20 +61,20 @@ export class EmailTemplatesService {
 
   async create(input: SaveEmailTemplateInput) {
     const parsed = saveEmailTemplateSchema.parse(input);
-    const created = await this.repository.create({
+    const created = await this.toConflictOnDuplicateSlug(() => this.repository.create({
       ...parsed,
       slug: parsed.slug ?? slug(parsed.name),
       text: parsed.text ?? null,
       variables: parsed.variables as Prisma.InputJsonValue,
       metadata: parsed.metadata as Prisma.InputJsonValue,
-    });
+    }));
     this.logger.log('mail_template', 'create', 'Email template created', { template_id: created.id, event_key: created.eventKey });
     return { ...toTemplateDto(created), versions: created.versions.map(toVersionDto) };
   }
 
   async update(id: string, input: PatchEmailTemplateInput) {
     const parsed = patchEmailTemplateSchema.parse(input);
-    const updated = await this.repository.update(id, {
+    const updated = await this.toConflictOnDuplicateSlug(() => this.repository.update(id, {
       ...(parsed.name !== undefined && { name: parsed.name }),
       ...(parsed.slug !== undefined && { slug: parsed.slug || undefined }),
       ...(parsed.eventKey !== undefined && { eventKey: parsed.eventKey }),
@@ -86,7 +86,7 @@ export class EmailTemplatesService {
       ...(parsed.status !== undefined && { status: parsed.status }),
       ...(parsed.variables !== undefined && { variables: parsed.variables as Prisma.InputJsonValue }),
       ...(parsed.metadata !== undefined && { metadata: parsed.metadata as Prisma.InputJsonValue }),
-    });
+    }));
     this.logger.log('mail_template', 'update', 'Email template updated', { template_id: id, event_key: updated.eventKey });
     return { ...toTemplateDto(updated), versions: updated.versions.map(toVersionDto) };
   }
@@ -122,6 +122,17 @@ export class EmailTemplatesService {
       revisionId,
       message: 'Mail Marketing delivery is disabled for this tenant; no email was sent.',
     };
+  }
+
+  private async toConflictOnDuplicateSlug<T>(operation: () => Promise<T>) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (isUniqueConstraint(error)) {
+        throw new ConflictException('An email template with this slug already exists.');
+      }
+      throw error;
+    }
   }
 }
 
@@ -218,4 +229,8 @@ function slug(value: string) {
 
 function asRecord(value: Prisma.JsonValue): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function isUniqueConstraint(error: unknown) {
+  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
 }
