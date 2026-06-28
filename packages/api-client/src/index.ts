@@ -18,6 +18,7 @@ import type {
   AircallWebhookStatusResponse,
   AssignDefaultCustomerAxisInput,
   AuthSession,
+  BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
   CalculatePricesInput,
   CustomerAxisAssignmentsResponse,
@@ -804,6 +805,10 @@ export class ApiClient {
 
   createWorkflowRule(input: SaveWorkflowRuleInput) {
     return this.post<WorkflowRuleDto>('/rules', input);
+  }
+
+  bootstrapDefaultWorkflowRules() {
+    return this.post<BootstrapWorkflowDefaultsResponse>('/rules/defaults/bootstrap', {});
   }
 
   updateWorkflowRule(id: string, input: SaveWorkflowRuleInput) {

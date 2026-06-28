@@ -2,12 +2,14 @@ import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
   activeWorkflowRuleStatsQuerySchema,
   backfillWorkflowRuleSchema,
+  bootstrapWorkflowDefaultsSchema,
   fireWorkflowTriggerSchema,
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
   type ActiveWorkflowRuleStatsQuery,
   type BackfillWorkflowRuleInput,
+  type BootstrapWorkflowDefaultsInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
@@ -30,6 +32,12 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   createRule(@Body(new ZodValidationPipe(saveWorkflowRuleSchema)) body: SaveWorkflowRuleInput) {
     return this.rules.createRule(body);
+  }
+
+  @Post('defaults/bootstrap')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  bootstrapDefaults(@Body(new ZodValidationPipe(bootstrapWorkflowDefaultsSchema)) _body: BootstrapWorkflowDefaultsInput) {
+    return this.rules.bootstrapDefaults();
   }
 
   @Post('events/fire')

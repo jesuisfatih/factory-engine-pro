@@ -15,6 +15,7 @@ import {
   type ActiveWorkflowRuleStatsQuery,
   type ActiveWorkflowRuleStatsResponse,
   type BackfillWorkflowRuleInput,
+  type BootstrapWorkflowDefaultsResponse,
   type WorkflowActionTrace,
   type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
@@ -49,6 +50,100 @@ import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
 import { WorkflowPromptService } from './workflow-prompt.service.js';
 
+const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
+  defaultRule(
+    'psych_angry_support_task',
+    'Default: Angry customer support follow-up',
+    'psych.tag.detected',
+    [defaultCondition('tag_angry', 'psych_tag_includes', '=', 'angry')],
+    [defaultAction('create_support_task', 'create_task', 'support: Angry customer follow-up')],
+    70,
+  ),
+  defaultRule(
+    'psych_purchase_intent_sales_task',
+    'Default: Purchase intent sales follow-up',
+    'psych.tag.detected',
+    [defaultCondition('tag_purchase_intent', 'psych_tag_includes', '=', 'purchase_intent')],
+    [defaultAction('create_sales_task', 'create_task', 'sales: Purchase intent follow-up')],
+  ),
+  defaultRule(
+    'psych_shipping_issue_support_escalation',
+    'Default: Shipping issue escalation',
+    'psych.tag.detected',
+    [defaultCondition('tag_shipping_issue', 'psych_tag_includes', '=', 'shipping_issue')],
+    [
+      defaultAction('create_shipping_task', 'create_task', 'support: Shipping issue follow-up'),
+      defaultAction('escalate_shipping_task', 'escalate', 'Shipping issue escalation'),
+    ],
+    70,
+  ),
+  defaultRule(
+    'psych_refund_intent_support_account_watcher',
+    'Default: Refund intent support task',
+    'psych.tag.detected',
+    [defaultCondition('tag_refund_intent', 'psych_tag_includes', '=', 'refund_intent')],
+    [
+      defaultAction('create_refund_task', 'create_task', 'support: Refund intent follow-up'),
+      defaultAction('add_account_watcher', 'add_watcher', 'account'),
+    ],
+    70,
+  ),
+  defaultRule(
+    'customer_first_call_account_onboarding',
+    'Default: First call account onboarding',
+    'customer.first_call.detected',
+    [],
+    [defaultAction('create_account_task', 'create_task', 'account: First call onboarding')],
+  ),
+  defaultRule(
+    'customer_repeat_call_account_escalation',
+    'Default: Repeat call account escalation',
+    'customer.repeat_call.detected',
+    [defaultCondition('call_count_7d', 'call_count_in_window', '>=', '3')],
+    [
+      defaultAction('escalate_repeat_call', 'escalate', 'Repeat call escalation'),
+      defaultAction('add_account_watcher', 'add_watcher', 'account'),
+    ],
+    70,
+  ),
+  defaultRule(
+    'customer_ltv_vip_pin',
+    'Default: VIP customer pin',
+    'customer.ltv.crossed_threshold',
+    [defaultCondition('ltv_gte_1000', 'customer_ltv_gte', '>=', '1000')],
+    [
+      defaultAction('add_vip_segment', 'segment_add', 'VIP'),
+      defaultAction('pin_vip_customer', 'pin_customer', 'VIP customer'),
+    ],
+  ),
+  defaultRule(
+    'shopify_first_order_note',
+    'Default: First order customer note',
+    'shopify.order.created',
+    [defaultCondition('first_order', 'order_count_in_window', '=', '1')],
+    [defaultAction('add_first_order_note', 'add_note', 'New customer first order')],
+  ),
+  defaultRule(
+    'task_overdue_account_escalation',
+    'Default: Overdue task escalation',
+    'task.overdue',
+    [],
+    [
+      defaultAction('escalate_overdue_task', 'escalate', 'Overdue task escalation'),
+      defaultAction('add_account_watcher', 'add_watcher', 'account'),
+    ],
+    70,
+  ),
+  defaultRule(
+    'aircall_missed_call_support_callback',
+    'Default: Missed call callback',
+    'aircall.call.missed',
+    [],
+    [defaultAction('create_callback_task', 'create_task', 'support: Missed call callback')],
+    70,
+  ),
+];
+
 @Injectable()
 export class RulesService {
   constructor(
@@ -66,6 +161,39 @@ export class RulesService {
   async listRules(): Promise<WorkflowRulesResponse> {
     const rules = await this.repository.list();
     return { rules: rules.map(toDto) };
+  }
+
+  async bootstrapDefaults(): Promise<BootstrapWorkflowDefaultsResponse> {
+    const existing = await this.repository.list();
+    const existingKeys = new Set(existing.map((rule) => defaultRuleKeyFromDefinition(rule.definition)).filter(Boolean));
+    const existingNames = new Set(existing.map((rule) => rule.name.trim().toLowerCase()));
+    const created: WorkflowRuleDto[] = [];
+    const skippedKeys: string[] = [];
+
+    for (const input of DEFAULT_WORKFLOW_RULES) {
+      const key = defaultRuleKeyFromInput(input);
+      if (existingKeys.has(key) || existingNames.has(input.name.trim().toLowerCase())) {
+        skippedKeys.push(key);
+        continue;
+      }
+      const rule = await this.repository.create(input, this.editedByMemberId());
+      created.push(toDto(rule));
+    }
+
+    this.logger.log('rules', 'default_rules_bootstrap', 'Default workflow rules bootstrap completed', {
+      created: created.length,
+      skipped: skippedKeys.length,
+      total_defaults: DEFAULT_WORKFLOW_RULES.length,
+      skipped_keys: skippedKeys,
+    });
+
+    return {
+      created: created.length,
+      skipped: skippedKeys.length,
+      totalDefaults: DEFAULT_WORKFLOW_RULES.length,
+      rules: created,
+      skippedKeys,
+    };
   }
 
   async getRule(id: string): Promise<WorkflowRuleDto> {
@@ -1773,6 +1901,61 @@ function toVersionDto(version: {
     editedAt: version.editedAt.toISOString(),
     comment: version.comment,
   };
+}
+
+function defaultRule(
+  key: string,
+  name: string,
+  trigger: WorkflowRuleDefinition['trigger'],
+  when: WorkflowRuleCondition[],
+  actions: WorkflowRuleAction[],
+  priority = 50,
+): SaveWorkflowRuleInput {
+  return {
+    name,
+    definition: {
+      status: 'active',
+      priority,
+      composable: false,
+      trigger,
+      cooldown: { hours: 24, limit: 1 },
+      metadata: {
+        defaultRuleKey: key,
+        source: 'dtfbank_default_workflow_rules',
+      },
+      when,
+      actions,
+    },
+    comment: 'Default workflow rule bootstrap',
+  };
+}
+
+function defaultCondition(
+  id: string,
+  condition: WorkflowRuleCondition['condition'],
+  operator: WorkflowRuleCondition['operator'],
+  value: string,
+): WorkflowRuleCondition {
+  return { id, condition, operator, value };
+}
+
+function defaultAction(
+  id: string,
+  action: WorkflowRuleAction['action'],
+  value: string,
+): WorkflowRuleAction {
+  return { id, action, value };
+}
+
+function defaultRuleKeyFromInput(input: SaveWorkflowRuleInput) {
+  return String(input.definition.metadata?.defaultRuleKey ?? input.name).trim();
+}
+
+function defaultRuleKeyFromDefinition(value: Prisma.JsonValue) {
+  const parsed = workflowRuleDefinitionSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const key = parsed.data.metadata?.defaultRuleKey;
+  return typeof key === 'string' && key.trim() ? key.trim() : null;
 }
 
 function toBackfillReportDto(report: {

@@ -58,6 +58,17 @@ export const saveWorkflowRuleSchema = z.object({
 });
 export type SaveWorkflowRuleInput = z.infer<typeof saveWorkflowRuleSchema>;
 
+export const bootstrapWorkflowDefaultsSchema = z.object({});
+export type BootstrapWorkflowDefaultsInput = z.infer<typeof bootstrapWorkflowDefaultsSchema>;
+
+export interface BootstrapWorkflowDefaultsResponse {
+  created: number;
+  skipped: number;
+  totalDefaults: number;
+  rules: WorkflowRuleDto[];
+  skippedKeys: string[];
+}
+
 export const rollbackWorkflowRuleSchema = z.object({
   versionNo: z.coerce.number().int().min(1),
   comment: z.string().trim().max(500).optional(),
