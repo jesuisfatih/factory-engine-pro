@@ -1,0 +1,291 @@
+﻿{
+    "generatedAt":  "2026-06-28T02:23:57.153Z",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "appUrls":  [
+                    "https://app.dtfbank.com/login",
+                    "https://app.dtfbank.com/settings/aircall"
+                ],
+    "tenantId":  "ten_dtfbank",
+    "deployedBuildSha":  "b3604eed147da316cfa3dbf2695633d2db5a501f",
+    "accounts":  [
+                     {
+                         "email":  "info@dtfbank.com",
+                         "label":  "owner",
+                         "loginStatus":  201,
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_info_owner",
+                                           "type":  "member",
+                                           "email":  "info@dtfbank.com",
+                                           "firstName":  "DTF Bank",
+                                           "lastName":  "Owner"
+                                       },
+                         "permissionCheck":  {
+                                                 "actual":  [
+                                                                "aircall.users.read",
+                                                                "aircall.users.write",
+                                                                "b2b_access.read",
+                                                                "b2b_access.write",
+                                                                "commission.submit",
+                                                                "customers.read",
+                                                                "customers.write",
+                                                                "identity.read",
+                                                                "identity.write",
+                                                                "members.read",
+                                                                "members.write",
+                                                                "orders.read",
+                                                                "orders.write",
+                                                                "pricing.read",
+                                                                "pricing.write",
+                                                                "roles.read",
+                                                                "roles.write",
+                                                                "segments.read",
+                                                                "segments.write",
+                                                                "settings.read",
+                                                                "settings.write",
+                                                                "support.read",
+                                                                "support.write",
+                                                                "sync.trigger",
+                                                                "task.assign"
+                                                            ],
+                                                 "hasOwnerWriteKeys":  true,
+                                                 "forbiddenPresent":  [
+
+                                                                      ],
+                                                 "hasCommissionSubmit":  true
+                                             }
+                     },
+                     {
+                         "email":  "dtfbanktx@gmail.com",
+                         "label":  "Linda Marroquin",
+                         "loginStatus":  201,
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_linda_marroquin",
+                                           "type":  "member",
+                                           "email":  "dtfbanktx@gmail.com",
+                                           "firstName":  "Linda",
+                                           "lastName":  "Marroquin"
+                                       },
+                         "permissionCheck":  {
+                                                 "actual":  [
+                                                                "aircall.users.read",
+                                                                "customers.read",
+                                                                "customers.write",
+                                                                "orders.read",
+                                                                "segments.read",
+                                                                "support.read",
+                                                                "support.write",
+                                                                "task.assign"
+                                                            ],
+                                                 "expected":  [
+                                                                  "aircall.users.read",
+                                                                  "customers.read",
+                                                                  "customers.write",
+                                                                  "orders.read",
+                                                                  "segments.read",
+                                                                  "support.read",
+                                                                  "support.write",
+                                                                  "task.assign"
+                                                              ],
+                                                 "missing":  [
+
+                                                             ],
+                                                 "forbiddenPresent":  [
+
+                                                                      ],
+                                                 "hasCommissionSubmit":  false,
+                                                 "hasAircallSettingsPermission":  false
+                                             }
+                     },
+                     {
+                         "email":  "charlette@dtfbank.com",
+                         "label":  "Charlette Boatman",
+                         "loginStatus":  201,
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_charlette_boatman",
+                                           "type":  "member",
+                                           "email":  "charlette@dtfbank.com",
+                                           "firstName":  "Charlette",
+                                           "lastName":  "Boatman"
+                                       },
+                         "permissionCheck":  {
+                                                 "actual":  [
+                                                                "aircall.users.read",
+                                                                "customers.read",
+                                                                "customers.write",
+                                                                "orders.read",
+                                                                "segments.read",
+                                                                "support.read",
+                                                                "support.write",
+                                                                "task.assign"
+                                                            ],
+                                                 "expected":  [
+                                                                  "aircall.users.read",
+                                                                  "customers.read",
+                                                                  "customers.write",
+                                                                  "orders.read",
+                                                                  "segments.read",
+                                                                  "support.read",
+                                                                  "support.write",
+                                                                  "task.assign"
+                                                              ],
+                                                 "missing":  [
+
+                                                             ],
+                                                 "forbiddenPresent":  [
+
+                                                                      ],
+                                                 "hasCommissionSubmit":  false,
+                                                 "hasAircallSettingsPermission":  false
+                                             }
+                     },
+                     {
+                         "email":  "ihsan@dtfbank.com",
+                         "label":  "Ihsan Taskiran",
+                         "loginStatus":  201,
+                         "principal":  {
+                                           "id":  "tmbr_ten_dtfbank_ihsan_taskiran",
+                                           "type":  "member",
+                                           "email":  "ihsan@dtfbank.com",
+                                           "firstName":  "Ihsan",
+                                           "lastName":  "Taskiran"
+                                       },
+                         "permissionCheck":  {
+                                                 "actual":  [
+                                                                "aircall.users.read",
+                                                                "commission.submit",
+                                                                "customers.read",
+                                                                "customers.write",
+                                                                "orders.read",
+                                                                "orders.write",
+                                                                "pricing.read",
+                                                                "pricing.write",
+                                                                "segments.read",
+                                                                "task.assign"
+                                                            ],
+                                                 "expected":  [
+                                                                  "aircall.users.read",
+                                                                  "commission.submit",
+                                                                  "customers.read",
+                                                                  "customers.write",
+                                                                  "orders.read",
+                                                                  "orders.write",
+                                                                  "pricing.read",
+                                                                  "pricing.write",
+                                                                  "segments.read",
+                                                                  "task.assign"
+                                                              ],
+                                                 "missing":  [
+
+                                                             ],
+                                                 "forbiddenPresent":  [
+
+                                                                      ],
+                                                 "hasCommissionSubmit":  true,
+                                                 "hasAircallSettingsPermission":  false
+                                             }
+                     }
+                 ],
+    "gates":  {
+                  "customerService":  [
+                                          {
+                                              "path":  "/identity/member-roles",
+                                              "method":  "GET",
+                                              "status":  403,
+                                              "message":  "You do not have permission to perform this action."
+                                          },
+                                          {
+                                              "path":  "/identity/members",
+                                              "method":  "GET",
+                                              "status":  403,
+                                              "message":  "You do not have permission to perform this action."
+                                          },
+                                          {
+                                              "path":  "/identity/tenant-config",
+                                              "method":  "GET",
+                                              "status":  403,
+                                              "message":  "You do not have permission to perform this action."
+                                          },
+                                          {
+                                              "path":  "/aircall/users",
+                                              "method":  "GET",
+                                              "status":  200,
+                                              "message":  null
+                                          },
+                                          {
+                                              "path":  "/aircall/users/sync",
+                                              "method":  "POST",
+                                              "status":  403,
+                                              "message":  "You do not have permission to perform this action."
+                                          },
+                                          {
+                                              "path":  "/sync/initial",
+                                              "method":  "POST",
+                                              "status":  403,
+                                              "message":  "You do not have permission to perform this action."
+                                          }
+                                      ],
+                  "salesPersonel":  [
+                                        {
+                                            "path":  "/identity/member-roles",
+                                            "method":  "GET",
+                                            "status":  403,
+                                            "message":  "You do not have permission to perform this action."
+                                        },
+                                        {
+                                            "path":  "/identity/members",
+                                            "method":  "GET",
+                                            "status":  403,
+                                            "message":  "You do not have permission to perform this action."
+                                        },
+                                        {
+                                            "path":  "/identity/tenant-config",
+                                            "method":  "GET",
+                                            "status":  403,
+                                            "message":  "You do not have permission to perform this action."
+                                        },
+                                        {
+                                            "path":  "/aircall/users",
+                                            "method":  "GET",
+                                            "status":  200,
+                                            "message":  null
+                                        },
+                                        {
+                                            "path":  "/aircall/users/sync",
+                                            "method":  "POST",
+                                            "status":  403,
+                                            "message":  "You do not have permission to perform this action."
+                                        }
+                                    ],
+                  "owner":  [
+                                {
+                                    "path":  "/identity/member-roles",
+                                    "method":  "GET",
+                                    "status":  200,
+                                    "message":  null
+                                },
+                                {
+                                    "path":  "/identity/members",
+                                    "method":  "GET",
+                                    "status":  200,
+                                    "message":  null
+                                },
+                                {
+                                    "path":  "/identity/tenant-config",
+                                    "method":  "GET",
+                                    "status":  200,
+                                    "message":  null
+                                }
+                            ]
+              },
+    "oldProdtestRetired":  {
+                               "email":  "owner.prodtest+20260627184047@dtfbank.com",
+                               "loginStatus":  401,
+                               "message":  "Invalid email or password"
+                           },
+    "liveRuntime":  {
+                        "healthStatus":  200,
+                        "buildSha":  "b3604eed147da316cfa3dbf2695633d2db5a501f",
+                        "pm2":  "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐\n│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │\n├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤\n│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1337     │ 8m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1318     │ 8m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │\n│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1313     │ 8m     │ 0    │ online    │ 0%       │ 261.3mb  │ root     │ disabled │\n│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1325     │ 8m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │\n└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘",
+                        "logExcerpt":  "No pending migrations to apply.\n\u001b[32m[Nest] 1313  - \u001b[39m06/28/2026, 2:21:02 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                    }
+}

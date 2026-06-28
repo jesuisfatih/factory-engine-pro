@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-06-28T02:28:26.398030+00:00",
+  "appUrl": "https://app.dtfbank.com",
+  "loginRoute": "https://app.dtfbank.com/login",
+  "deployedBuildSha": "b3604eed147da316cfa3dbf2695633d2db5a501f",
+  "accounts": [
+    {
+      "email": "info@dtfbank.com",
+      "expectedName": "DTF Bank Owner",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "loginReachedDashboard": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-owner-dashboard-live-20260628.png",
+      "visibleChecks": {
+        "hasExpectedName": true,
+        "showsAircallSettingsNav": false,
+        "showsCommissionsNav": true,
+        "showsRoleCustomerService": false,
+        "showsRoleSalesPersonel": false,
+        "showsRoleOwner": true
+      }
+    },
+    {
+      "email": "dtfbanktx@gmail.com",
+      "expectedName": "Linda Marroquin",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "loginReachedDashboard": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-linda-dashboard-live-20260628.png",
+      "visibleChecks": {
+        "hasExpectedName": true,
+        "showsAircallSettingsNav": false,
+        "showsCommissionsNav": false,
+        "showsRoleCustomerService": true,
+        "showsRoleSalesPersonel": false,
+        "showsRoleOwner": false
+      }
+    },
+    {
+      "email": "charlette@dtfbank.com",
+      "expectedName": "Charlette Boatman",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "loginReachedDashboard": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-charlette-dashboard-live-20260628.png",
+      "visibleChecks": {
+        "hasExpectedName": true,
+        "showsAircallSettingsNav": false,
+        "showsCommissionsNav": false,
+        "showsRoleCustomerService": true,
+        "showsRoleSalesPersonel": false,
+        "showsRoleOwner": false
+      }
+    },
+    {
+      "email": "ihsan@dtfbank.com",
+      "expectedName": "Ihsan Taskiran",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "loginReachedDashboard": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-ihsan-dashboard-live-20260628.png",
+      "visibleChecks": {
+        "hasExpectedName": true,
+        "showsAircallSettingsNav": false,
+        "showsCommissionsNav": false,
+        "showsRoleCustomerService": false,
+        "showsRoleSalesPersonel": true,
+        "showsRoleOwner": false
+      }
+    }
+  ],
+  "routeGuards": {
+    "ownerAircallSettings": {
+      "requestedUrl": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/settings/aircall/connection",
+      "stayedInAircallSettings": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-owner-aircall-settings-live-20260628.png"
+    },
+    "customerServiceAircallSettings": {
+      "requestedUrl": "https://app.dtfbank.com/settings/aircall",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "redirectedToDashboard": true,
+      "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\target2-staff-linda-aircall-redirect-live-20260628.png"
+    }
+  }
+}
