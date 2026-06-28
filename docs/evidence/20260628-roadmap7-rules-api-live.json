@@ -1,0 +1,59 @@
+﻿{
+    "proof":  "roadmap7_workflow_rule_json_live_api",
+    "liveBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "ruleId":  "wrule_bkgp5ru0g9kq1gmxevlw9vbd",
+    "createdStatus":  "shadow",
+    "fetchedMatchesCreated":  true,
+    "listContainsRule":  true,
+    "savedDefinition":  {
+                            "status":  "shadow",
+                            "priority":  17,
+                            "composable":  false,
+                            "trigger":  "manual.trigger",
+                            "when":  [
+                                         {
+                                             "id":  "cond-roadmap7",
+                                             "condition":  "call_intent",
+                                             "operator":  "=",
+                                             "value":  "inquiry",
+                                             "confidenceGte":  0.8
+                                         }
+                                     ],
+                            "actions":  [
+                                            {
+                                                "id":  "act-roadmap7",
+                                                "action":  "create_task",
+                                                "value":  "roadmap7-db-json-proof"
+                                            }
+                                        ]
+                        },
+    "responseShape":  {
+                          "create":  [
+                                         "id",
+                                         "name",
+                                         "status",
+                                         "priority",
+                                         "composable",
+                                         "trigger",
+                                         "definition",
+                                         "createdAt",
+                                         "updatedAt"
+                                     ],
+                          "get":  [
+                                      "id",
+                                      "name",
+                                      "status",
+                                      "priority",
+                                      "composable",
+                                      "trigger",
+                                      "definition",
+                                      "createdAt",
+                                      "updatedAt"
+                                  ],
+                          "listTopLevel":  [
+                                               "rules"
+                                           ]
+                      },
+    "checkedAt":  "2026-06-28T10:34:58.2281605Z"
+}

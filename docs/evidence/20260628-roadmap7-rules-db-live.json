@@ -1,0 +1,46 @@
+﻿{
+  "proof": "roadmap7_workflow_rule_json_live_db",
+  "source": "container_prisma_workflow_rules",
+  "schema": {
+    "schema": "factory_engine_pro",
+    "search_path": "factory_engine_pro"
+  },
+  "ruleId": "wrule_bkgp5ru0g9kq1gmxevlw9vbd",
+  "tenantId": "ten_dtfbank",
+  "columnsMirrorDefinition": true,
+  "definitionActionValue": "roadmap7-db-json-proof",
+  "row": {
+    "id": "wrule_bkgp5ru0g9kq1gmxevlw9vbd",
+    "tenantId": "ten_dtfbank",
+    "name": "Roadmap 7 persisted rule 20260628103457",
+    "status": "shadow",
+    "priority": 17,
+    "composable": false,
+    "trigger": "manual.trigger",
+    "definition": {
+      "when": [
+        {
+          "id": "cond-roadmap7",
+          "value": "inquiry",
+          "operator": "=",
+          "condition": "call_intent",
+          "confidenceGte": 0.8
+        }
+      ],
+      "status": "shadow",
+      "actions": [
+        {
+          "id": "act-roadmap7",
+          "value": "roadmap7-db-json-proof",
+          "action": "create_task"
+        }
+      ],
+      "trigger": "manual.trigger",
+      "priority": 17,
+      "composable": false
+    },
+    "createdAt": "2026-06-28T10:34:56.907Z",
+    "updatedAt": "2026-06-28T10:34:56.907Z"
+  },
+  "checkedAt": "2026-06-28T10:36:49.423Z"
+}

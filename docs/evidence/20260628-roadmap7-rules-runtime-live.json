@@ -1,0 +1,34 @@
+﻿{
+    "proof":  "roadmap7_rules_runtime_live",
+    "buildSha":  "e996556a5be27286bc4011e00111fa525c63ab43",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "containerStatus":  "/factoryengine-dtfbank-app running 2026-06-28T10:31:45.073161787Z",
+    "pm2List":  [
+                    "┌────┬────────────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐",
+                    "│ id │ name                           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │",
+                    "├────┼────────────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤",
+                    "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1148     │ 5m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                    "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 1123     │ 5m     │ 0    │ online    │ 0%       │ 2.2mb    │ root     │ disabled │",
+                    "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 1118     │ 5m     │ 0    │ online    │ 0%       │ 144.3mb  │ root     │ disabled │",
+                    "│ 2  │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 1141     │ 5m     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                    "└────┴────────────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘"
+                ],
+    "routeLogs":  [
+                      "Applying migration `202606283_workflow_rules`",
+                      "  └─ 202606283_workflow_rules/",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/catalog, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/enum-chain, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id, PUT} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                      "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                  ],
+    "checkedAt":  "2026-06-28T10:39:17.8931900Z",
+    "ruleSavedLogs":  [
+                          "\u001b[32m[Nest] 1118  - \u001b[39m06/28/2026, 10:34:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"0a87b343-57d1-48d8-8c01-21b926ba2e53\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"rule_saved\",\"message\":\"Workflow rule persisted\",\"rule_id\":\"wrule_bkgp5ru0g9kq1gmxevlw9vbd\",\"status\":\"shadow\",\"trigger\":\"manual.trigger\",\"priority\":17}\u001b[39m"
+                      ]
+}

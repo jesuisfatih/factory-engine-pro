@@ -1,0 +1,31 @@
+{
+  "proof": "roadmap7_rules_ui_live",
+  "appUrl": "https://app.dtfbank.com/rules",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "ruleId": "wrule_bkgp5ru0g9kq1gmxevlw9vbd",
+  "checks": {
+    "hasSavedRule": true,
+    "hasSaveButton": true,
+    "hasNewButton": true,
+    "hasRuleJsonSource": true,
+    "hasSavedRulesSection": true,
+    "hasApiRulesNetwork": true
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules/catalog",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/rules",
+      "status": 200
+    }
+  ],
+  "visibleSnippets": {
+    "ruleName": "Roadmap 7 persisted rule 20260628103457",
+    "saveButtonText": "Update rule"
+  },
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap7-rules-ui-live-20260628.png",
+  "checkedAt": "2026-06-28T10:38:30.148Z"
+}
