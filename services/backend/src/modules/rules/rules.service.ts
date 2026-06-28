@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import {
+  backfillWorkflowRuleSchema,
   fireWorkflowTriggerSchema,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
@@ -10,6 +11,7 @@ import {
   WORKFLOW_ENUM_VERSION,
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
+  type BackfillWorkflowRuleInput,
   type WorkflowActionTrace,
   type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
@@ -25,6 +27,10 @@ import {
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
   type WorkflowRuleDto,
+  type WorkflowRuleBackfillReportDto,
+  type WorkflowRuleBackfillReportsResponse,
+  type WorkflowRuleBackfillRunResponse,
+  type WorkflowRuleBackfillSample,
   type WorkflowRuleVersionsResponse,
   type WorkflowRulesResponse,
 } from '@factory-engine-pro/contracts';
@@ -65,6 +71,72 @@ export class RulesService {
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     const versions = await this.repository.listVersions(id);
     return { ruleId: id, versions: versions.map(toVersionDto) };
+  }
+
+  async listBackfillReports(id: string): Promise<WorkflowRuleBackfillReportsResponse> {
+    const rule = await this.repository.findById(id);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    const reports = await this.repository.listBackfillReports(id);
+    return { ruleId: id, reports: reports.map(toBackfillReportDto) };
+  }
+
+  async runBackfill(id: string, input: BackfillWorkflowRuleInput): Promise<WorkflowRuleBackfillRunResponse> {
+    const parsed = backfillWorkflowRuleSchema.parse(input);
+    const row = await this.repository.findById(id);
+    if (!row) throw new NotFoundException('Workflow rule was not found.');
+    const rule = toDto(row);
+    this.executor.recognizeTrigger(rule.definition.trigger);
+
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd.getTime() - parsed.recentDays * 24 * 60 * 60 * 1000);
+    const taskCountBefore = await this.prisma.db.serviceRequest.count({ where: {} });
+    const candidates = await this.backfillCandidates(rule.definition.trigger, windowStart, windowEnd, parsed.limit);
+    const samples: WorkflowRuleBackfillSample[] = [];
+
+    for (const candidate of candidates) {
+      samples.push(await this.evaluateBackfillCandidate(rule, candidate));
+    }
+
+    const taskCountAfter = await this.prisma.db.serviceRequest.count({ where: {} });
+    const actualTasksCreated = Math.max(0, taskCountAfter - taskCountBefore);
+    const matchedEvents = samples.filter((sample) => sample.matched).length;
+    const wouldCreateTasks = samples.reduce((sum, sample) => sum + sample.wouldCreateTaskCount, 0);
+    const finishedAt = new Date();
+    const report = await this.repository.createBackfillReport({
+      ruleId: rule.id,
+      ruleName: rule.name,
+      trigger: rule.definition.trigger,
+      recentDays: parsed.recentDays,
+      status: actualTasksCreated === 0 ? 'completed' : 'failed',
+      windowStart,
+      windowEnd,
+      evaluatedEvents: samples.length,
+      matchedEvents,
+      skippedEvents: samples.length - matchedEvents,
+      wouldCreateTasks,
+      actualTasksCreated,
+      result: {
+        noMutation: actualTasksCreated === 0,
+        candidateSource: backfillCandidateSource(rule.definition.trigger),
+        sampleLimit: parsed.limit,
+        samples,
+      } as unknown as Prisma.InputJsonValue,
+      createdByMemberId: this.editedByMemberId(),
+      finishedAt,
+    });
+
+    this.logger.log('rules', 'backfill_completed', 'Workflow rule backfill completed in shadow mode', {
+      rule_id: rule.id,
+      trigger: rule.definition.trigger,
+      recent_days: parsed.recentDays,
+      evaluated_events: samples.length,
+      matched_events: matchedEvents,
+      would_create_tasks: wouldCreateTasks,
+      actual_tasks_created: actualTasksCreated,
+      report_id: report.id,
+    });
+
+    return { report: toBackfillReportDto(report) };
   }
 
   async fireTrigger(input: WorkflowTriggerFireInput): Promise<WorkflowTriggerFireResponse> {
@@ -478,6 +550,240 @@ export class RulesService {
       return { value: dayName(state.now), source: 'server_time' };
     }
     return { value: null, source: 'unknown' };
+  }
+
+  private async evaluateBackfillCandidate(
+    rule: WorkflowRuleDto,
+    candidate: BackfillCandidate,
+  ): Promise<WorkflowRuleBackfillSample> {
+    const state = await this.resolveConditionState({
+      ...candidate.params,
+      now: candidate.occurredAt.toISOString(),
+    });
+    const whenTrace = await this.resolveWhenGroups(conditionGroups(rule.definition), state);
+    const conditionTrace = whenTrace.flatMap((group) => group.conditionTrace);
+    const conditionsMatched = whenTrace.every((entry) => entry.matched);
+    const cooldown = conditionsMatched ? await this.evaluateCooldown(rule, state) : undefined;
+    const matched = conditionsMatched && (cooldown?.allowed ?? true);
+    return {
+      eventId: candidate.eventId,
+      sourceType: candidate.sourceType,
+      sourceId: candidate.sourceId,
+      occurredAt: candidate.occurredAt.toISOString(),
+      customerId: state.customer?.id ?? null,
+      matched,
+      status: matched ? 'shadow_matched' : 'skipped',
+      ...(conditionsMatched && cooldown && !cooldown.allowed ? { reason: 'cooldown' as const } : {}),
+      ...(!conditionsMatched ? { reason: 'conditions_not_matched' as const } : {}),
+      wouldCreateTaskCount: matched
+        ? rule.definition.actions.filter((action) => action.action === 'create_task').length
+        : 0,
+      conditionTrace,
+      whenTrace,
+      ...(cooldown ? { cooldown: cooldown.trace } : {}),
+    };
+  }
+
+  private async backfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    if (trigger.includes('order')) {
+      return this.orderBackfillCandidates(trigger, windowStart, windowEnd, limit);
+    }
+    if (trigger.startsWith('aircall.') || trigger.includes('call') || trigger.includes('transcript') || trigger.includes('psych') || trigger.includes('product.detected')) {
+      return this.aircallBackfillCandidates(trigger, windowStart, windowEnd, limit);
+    }
+    if (trigger.startsWith('segment.')) {
+      return this.segmentBackfillCandidates(trigger, windowStart, windowEnd, limit);
+    }
+    if (trigger.startsWith('support.') || trigger.startsWith('task.')) {
+      return this.taskBackfillCandidates(trigger, windowStart, windowEnd, limit);
+    }
+    return this.customerBackfillCandidates(trigger, windowStart, windowEnd, limit);
+  }
+
+  private async orderBackfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const orders = await this.prisma.db.commerceOrder.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        OR: [
+          { processedAt: { gte: windowStart, lte: windowEnd } },
+          { createdAt: { gte: windowStart, lte: windowEnd } },
+        ],
+      },
+      orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    });
+    return orders.map((order) => {
+      const occurredAt = order.processedAt ?? order.createdAt;
+      return {
+        eventId: `backfill:${trigger}:${order.id}:${occurredAt.getTime()}`,
+        sourceType: 'commerce_order',
+        sourceId: order.id,
+        occurredAt,
+        params: {
+          orderId: order.id,
+          shopifyOrderId: order.shopifyOrderId,
+          shopifyOrderNumber: order.shopifyOrderNumber,
+          shopifyCustomerId: order.shopifyCustomerId,
+          customerId: order.customerId,
+          customerEmail: order.email,
+          customerPhone: order.phone,
+          totalPrice: Number(order.totalPrice),
+          lineItems: order.lineItems,
+        },
+      };
+    });
+  }
+
+  private async aircallBackfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const eventFilter = trigger.startsWith('aircall.call.')
+      ? { eventType: { contains: trigger.split('.').at(-1) ?? '', mode: 'insensitive' as const } }
+      : {};
+    const events = await this.prisma.db.aircallCallEvent.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        eventTimestamp: { gte: windowStart, lte: windowEnd },
+        ...eventFilter,
+      },
+      orderBy: { eventTimestamp: 'desc' },
+      take: limit,
+    });
+    return events.map((event) => {
+      const resolver = asRecord(event.resolverOutput);
+      return {
+        eventId: `backfill:${trigger}:${event.id}:${event.eventTimestamp.getTime()}`,
+        sourceType: 'aircall_call_event',
+        sourceId: event.id,
+        occurredAt: event.eventTimestamp,
+        params: {
+          callEventId: event.id,
+          aircallCallEventId: event.id,
+          externalCallId: event.externalCallId,
+          contactPhone: event.contactPhone,
+          contactPhoneE164: event.contactPhoneE164,
+          customerPhone: event.contactPhoneE164 ?? event.contactPhone,
+          contactEmail: event.contactEmail,
+          customerEmail: event.contactEmail,
+          intent: stringValue(resolver.call_intent),
+          callIntent: stringValue(resolver.call_intent),
+          psychTags: stringArray(resolver.psych_tags),
+          productMentions: valueArray(resolver.product_mentions),
+          urgencyLevel: stringValue(resolver.urgency_level),
+          durationSeconds: event.durationSeconds,
+        },
+      };
+    });
+  }
+
+  private async segmentBackfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const memberships = await this.prisma.db.segmentCustomerMembership.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        matchedAt: { gte: windowStart, lte: windowEnd },
+      },
+      include: { segment: true },
+      orderBy: { matchedAt: 'desc' },
+      take: limit,
+    });
+    return memberships.map((membership) => ({
+      eventId: `backfill:${trigger}:${membership.id}:${membership.matchedAt.getTime()}`,
+      sourceType: 'segment_customer_membership',
+      sourceId: membership.id,
+      occurredAt: membership.matchedAt,
+      params: {
+        customerId: membership.customerId,
+        segmentId: membership.segmentId,
+        segmentName: membership.segment.name,
+      },
+    }));
+  }
+
+  private async taskBackfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const tasks = await this.prisma.db.serviceRequest.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        OR: [
+          { createdAt: { gte: windowStart, lte: windowEnd } },
+          { updatedAt: { gte: windowStart, lte: windowEnd } },
+          { closedAt: { gte: windowStart, lte: windowEnd } },
+        ],
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    });
+    return tasks.map((task) => ({
+      eventId: `backfill:${trigger}:${task.id}:${task.updatedAt.getTime()}`,
+      sourceType: 'service_request',
+      sourceId: task.id,
+      occurredAt: task.closedAt ?? task.updatedAt ?? task.createdAt,
+      params: {
+        taskId: task.id,
+        serviceRequestId: task.id,
+        customerId: task.customerId,
+        assignedMemberId: task.assignedMemberId,
+        intent: stringParam(asRecord(asRecord(task.metadata).workflow), 'trigger') ?? task.source,
+      },
+    }));
+  }
+
+  private async customerBackfillCandidates(
+    trigger: WorkflowTriggerFireInput['trigger'],
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const customers = await this.prisma.db.customer.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        OR: [
+          { createdAt: { gte: windowStart, lte: windowEnd } },
+          { updatedAt: { gte: windowStart, lte: windowEnd } },
+          { lastOrderAt: { gte: windowStart, lte: windowEnd } },
+        ],
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    });
+    return customers.map((customer) => ({
+      eventId: `backfill:${trigger}:${customer.id}:${customer.updatedAt.getTime()}`,
+      sourceType: 'customer',
+      sourceId: customer.id,
+      occurredAt: customer.updatedAt,
+      params: {
+        customerId: customer.id,
+        shopifyCustomerId: customer.shopifyCustomerId,
+        customerEmail: customer.email,
+        email: customer.email,
+        customerPhone: customer.phone,
+        phone: customer.phone,
+        totalSpent: Number(customer.totalSpent),
+        orderCount: customer.ordersCount,
+      },
+    }));
   }
 
   private async applyAction(action: WorkflowRuleAction, context: {
@@ -997,6 +1303,14 @@ type WorkflowActionContext = {
   taskIds: string[];
 };
 
+type BackfillCandidate = {
+  eventId: string;
+  sourceType: string;
+  sourceId: string | null;
+  occurredAt: Date;
+  params: Record<string, unknown>;
+};
+
 type RuleCooldownConfig = {
   disabled: boolean;
   hours: number;
@@ -1159,6 +1473,67 @@ function toVersionDto(version: {
   };
 }
 
+function toBackfillReportDto(report: {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  trigger: string;
+  recentDays: number;
+  status: string;
+  windowStart: Date;
+  windowEnd: Date;
+  evaluatedEvents: number;
+  matchedEvents: number;
+  skippedEvents: number;
+  wouldCreateTasks: number;
+  actualTasksCreated: number;
+  createdByMemberId: string | null;
+  createdAt: Date;
+  finishedAt: Date | null;
+  result: Prisma.JsonValue;
+}): WorkflowRuleBackfillReportDto {
+  return {
+    id: report.id,
+    ruleId: report.ruleId,
+    ruleName: report.ruleName,
+    trigger: report.trigger,
+    recentDays: report.recentDays,
+    status: report.status === 'failed' ? 'failed' : 'completed',
+    windowStart: report.windowStart.toISOString(),
+    windowEnd: report.windowEnd.toISOString(),
+    evaluatedEvents: report.evaluatedEvents,
+    matchedEvents: report.matchedEvents,
+    skippedEvents: report.skippedEvents,
+    wouldCreateTasks: report.wouldCreateTasks,
+    actualTasksCreated: report.actualTasksCreated,
+    createdByMemberId: report.createdByMemberId,
+    createdAt: report.createdAt.toISOString(),
+    finishedAt: report.finishedAt?.toISOString() ?? null,
+    result: backfillResult(report.result),
+  };
+}
+
+function backfillResult(value: Prisma.JsonValue) {
+  const record = asRecord(value);
+  const rawSamples = Array.isArray(record.samples) ? record.samples : [];
+  return {
+    noMutation: record.noMutation === true,
+    candidateSource: String(record.candidateSource ?? 'unknown'),
+    sampleLimit: typeof record.sampleLimit === 'number' ? record.sampleLimit : rawSamples.length,
+    samples: rawSamples.map((sample) => sample as WorkflowRuleBackfillSample),
+  };
+}
+
+function backfillCandidateSource(trigger: WorkflowTriggerFireInput['trigger']) {
+  if (trigger.includes('order')) return 'commerce_orders';
+  if (trigger.startsWith('aircall.') || trigger.includes('call') || trigger.includes('transcript') || trigger.includes('psych') || trigger.includes('product.detected')) {
+    return 'aircall_call_events';
+  }
+  if (trigger.startsWith('segment.')) return 'segment_customer_memberships';
+  if (trigger.startsWith('support.') || trigger.startsWith('task.')) return 'service_requests';
+  return 'customers';
+}
+
 function priorityForRule(priority: number): 'critical' | 'high' | 'medium' | 'low' {
   if (priority >= 90) return 'critical';
   if (priority >= 70) return 'high';
@@ -1258,6 +1633,19 @@ function arrayParam(params: Record<string, unknown>, key: string) {
   const value = params[key];
   if (!Array.isArray(value)) return [];
   return value.map((entry) => String(entry)).filter(Boolean);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function stringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => String(entry)).filter(Boolean);
+}
+
+function valueArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
 }
 
 function recordArray(value: unknown): Record<string, unknown>[] {

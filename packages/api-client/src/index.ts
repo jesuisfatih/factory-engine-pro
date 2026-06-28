@@ -28,6 +28,7 @@ import type {
   CreateSegmentInput,
   CreateServiceRequestInput,
   CreateSubUserInput,
+  BackfillWorkflowRuleInput,
   CustomerLoginInput,
   CustomerRegisterInput,
   ForgotPasswordInput,
@@ -50,6 +51,8 @@ import type {
   WorkflowTriggerFireInput,
   WorkflowTriggerFireResponse,
   WorkflowRuleDto,
+  WorkflowRuleBackfillReportsResponse,
+  WorkflowRuleBackfillRunResponse,
   WorkflowRuleVersionsResponse,
   WorkflowRulesResponse,
   AssignServiceRequestInput,
@@ -630,6 +633,14 @@ export class ApiClient {
 
   rollbackWorkflowRule(id: string, input: RollbackWorkflowRuleInput) {
     return this.post<WorkflowRuleDto>(`/rules/${encodeURIComponent(id)}/rollback`, input);
+  }
+
+  backfillWorkflowRule(id: string, input: BackfillWorkflowRuleInput) {
+    return this.post<WorkflowRuleBackfillRunResponse>(`/rules/${encodeURIComponent(id)}/backfill`, input);
+  }
+
+  workflowRuleBackfills(id: string) {
+    return this.get<WorkflowRuleBackfillReportsResponse>(`/rules/${encodeURIComponent(id)}/backfills`);
   }
 
   fireWorkflowTrigger(input: WorkflowTriggerFireInput) {

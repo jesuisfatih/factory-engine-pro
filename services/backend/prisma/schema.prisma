@@ -92,6 +92,7 @@ model Tenant {
   workflowRuleExecutions  WorkflowRuleExecution[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
   workflowRuleVersions    WorkflowRuleVersion[]
+  workflowRuleBackfillReports WorkflowRuleBackfillReport[]
 
   @@map("tenants")
 }
@@ -141,6 +142,7 @@ model Member {
   assignedServiceRequests ServiceRequest[]
   aircallMemberMaps AircallMemberMap[]
   workflowRuleVersions WorkflowRuleVersion[]
+  workflowRuleBackfillReports WorkflowRuleBackfillReport[]
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -1180,6 +1182,7 @@ model WorkflowRule {
   executions WorkflowRuleExecution[]
   cooldowns  WorkflowRuleCooldown[]
   versions   WorkflowRuleVersion[]
+  backfillReports WorkflowRuleBackfillReport[]
 
   @@index([tenantId, status])
   @@index([tenantId, trigger])
@@ -1205,6 +1208,36 @@ model WorkflowRuleVersion {
   @@index([tenantId, ruleId, editedAt])
   @@index([tenantId, editedByMemberId])
   @@map("rule_versions")
+}
+
+model WorkflowRuleBackfillReport {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  ruleId            String   @map("rule_id")
+  ruleName          String   @map("rule_name")
+  trigger           String
+  recentDays        Int      @map("recent_days")
+  status            String   @default("completed")
+  windowStart       DateTime @map("window_start")
+  windowEnd         DateTime @map("window_end")
+  evaluatedEvents   Int      @default(0) @map("evaluated_events")
+  matchedEvents     Int      @default(0) @map("matched_events")
+  skippedEvents     Int      @default(0) @map("skipped_events")
+  wouldCreateTasks  Int      @default(0) @map("would_create_tasks")
+  actualTasksCreated Int     @default(0) @map("actual_tasks_created")
+  result            Json     @default("{}")
+  createdByMemberId String?  @map("created_by_member_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  finishedAt        DateTime? @map("finished_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule   WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  creator Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, ruleId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, createdByMemberId])
+  @@map("workflow_rule_backfill_reports")
 }
 
 model WorkflowRuleExecution {

@@ -4,6 +4,7 @@ import type {
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
   WorkflowRuleDto,
+  WorkflowRuleBackfillReportsResponse,
   WorkflowRuleVersionsResponse,
   WorkflowTrigger,
   SaveWorkflowRuleInput,
@@ -91,6 +92,14 @@ export function rollbackWorkflowRule(id: string, versionNo: number) {
     versionNo,
     comment: `Rollback from rules canvas to v${versionNo}`,
   });
+}
+
+export function runWorkflowRuleBackfill(id: string, recentDays = 7) {
+  return adminApi.backfillWorkflowRule(id, { recentDays, limit: 100 });
+}
+
+export function fetchWorkflowRuleBackfills(id: string): Promise<WorkflowRuleBackfillReportsResponse> {
+  return adminApi.workflowRuleBackfills(id);
 }
 
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {

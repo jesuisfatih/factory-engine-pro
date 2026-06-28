@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import {
+  backfillWorkflowRuleSchema,
   fireWorkflowTriggerSchema,
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
+  type BackfillWorkflowRuleInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
@@ -59,6 +61,21 @@ export class RulesController {
     @Body(new ZodValidationPipe(rollbackWorkflowRuleSchema)) body: RollbackWorkflowRuleInput,
   ) {
     return this.rules.rollbackRule(id, body);
+  }
+
+  @Get(':id/backfills')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  backfills(@Param('id') id: string) {
+    return this.rules.listBackfillReports(id);
+  }
+
+  @Post(':id/backfill')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  backfill(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(backfillWorkflowRuleSchema)) body: BackfillWorkflowRuleInput,
+  ) {
+    return this.rules.runBackfill(id, body);
   }
 
   @Get(':id')

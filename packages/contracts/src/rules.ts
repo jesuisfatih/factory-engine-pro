@@ -63,6 +63,12 @@ export const rollbackWorkflowRuleSchema = z.object({
 });
 export type RollbackWorkflowRuleInput = z.infer<typeof rollbackWorkflowRuleSchema>;
 
+export const backfillWorkflowRuleSchema = z.object({
+  recentDays: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+});
+export type BackfillWorkflowRuleInput = z.infer<typeof backfillWorkflowRuleSchema>;
+
 export interface WorkflowRuleDto {
   id: string;
   name: string;
@@ -92,6 +98,57 @@ export interface WorkflowRuleVersionDto {
 export interface WorkflowRuleVersionsResponse {
   ruleId: string;
   versions: WorkflowRuleVersionDto[];
+}
+
+export interface WorkflowRuleBackfillSample {
+  eventId: string;
+  sourceType: string;
+  sourceId: string | null;
+  occurredAt: string;
+  customerId: string | null;
+  matched: boolean;
+  status: 'shadow_matched' | 'skipped';
+  reason?: 'conditions_not_matched' | 'cooldown';
+  wouldCreateTaskCount: number;
+  conditionTrace: WorkflowConditionTrace[];
+  whenTrace: WorkflowWhenGroupTrace[];
+  cooldown?: WorkflowCooldownTrace;
+}
+
+export interface WorkflowRuleBackfillResult {
+  noMutation: boolean;
+  candidateSource: string;
+  sampleLimit: number;
+  samples: WorkflowRuleBackfillSample[];
+}
+
+export interface WorkflowRuleBackfillReportDto {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  trigger: string;
+  recentDays: number;
+  status: 'completed' | 'failed';
+  windowStart: string;
+  windowEnd: string;
+  evaluatedEvents: number;
+  matchedEvents: number;
+  skippedEvents: number;
+  wouldCreateTasks: number;
+  actualTasksCreated: number;
+  createdByMemberId: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+  result: WorkflowRuleBackfillResult;
+}
+
+export interface WorkflowRuleBackfillRunResponse {
+  report: WorkflowRuleBackfillReportDto;
+}
+
+export interface WorkflowRuleBackfillReportsResponse {
+  ruleId: string;
+  reports: WorkflowRuleBackfillReportDto[];
 }
 
 export const fireWorkflowTriggerSchema = z.object({

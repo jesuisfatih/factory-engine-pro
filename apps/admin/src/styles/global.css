@@ -1233,6 +1233,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .rule-card-meta .pill { padding: 1px 6px; font-size: 9px; }
 .rule-version-card { cursor: default; }
 .rule-version-card .btn { margin-top: 4px; align-self: flex-start; }
+.rule-backfill-card { cursor: default; }
+.rule-backfill-card .rule-card-desc { -webkit-line-clamp: 3; line-clamp: 3; }
 
 .rules-canvas-wrap {
   background: var(--surface); border: 1px solid var(--border);

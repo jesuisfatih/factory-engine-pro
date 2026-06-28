@@ -29,6 +29,14 @@ export class RulesRepository {
     });
   }
 
+  listBackfillReports(ruleId: string) {
+    return this.prisma.db.workflowRuleBackfillReport.findMany({
+      where: { ruleId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+  }
+
   findActiveByTrigger(trigger: WorkflowTrigger) {
     return this.prisma.db.workflowRule.findMany({
       where: { trigger, status: 'active' },
@@ -190,6 +198,46 @@ export class RulesRepository {
         comment ?? `Rollback to version ${versionNo}`,
       );
       return rule;
+    });
+  }
+
+  createBackfillReport(input: {
+    ruleId: string;
+    ruleName: string;
+    trigger: string;
+    recentDays: number;
+    status: string;
+    windowStart: Date;
+    windowEnd: Date;
+    evaluatedEvents: number;
+    matchedEvents: number;
+    skippedEvents: number;
+    wouldCreateTasks: number;
+    actualTasksCreated: number;
+    result: Prisma.InputJsonValue;
+    createdByMemberId: string | null;
+    finishedAt: Date;
+  }) {
+    return this.prisma.db.workflowRuleBackfillReport.create({
+      data: {
+        id: prefixedId('wrbf'),
+        tenantId: this.tenantId(),
+        ruleId: input.ruleId,
+        ruleName: input.ruleName,
+        trigger: input.trigger,
+        recentDays: input.recentDays,
+        status: input.status,
+        windowStart: input.windowStart,
+        windowEnd: input.windowEnd,
+        evaluatedEvents: input.evaluatedEvents,
+        matchedEvents: input.matchedEvents,
+        skippedEvents: input.skippedEvents,
+        wouldCreateTasks: input.wouldCreateTasks,
+        actualTasksCreated: input.actualTasksCreated,
+        result: input.result,
+        createdByMemberId: input.createdByMemberId,
+        finishedAt: input.finishedAt,
+      },
     });
   }
 

@@ -20,6 +20,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  BarChart3,
   CheckCircle2,
   Database,
   FilePlus2,
@@ -50,6 +51,7 @@ import {
   draftFromWorkflowRule,
   fireWorkflowTrigger,
   fetchWorkflowCatalog,
+  fetchWorkflowRuleBackfills,
   fetchWorkflowRuleVersions,
   fetchWorkflowRules,
   LIFECYCLE_TONE,
@@ -57,6 +59,7 @@ import {
   makeCondition,
   makeRuleDraft,
   rollbackWorkflowRule,
+  runWorkflowRuleBackfill,
   saveWorkflowRule,
   type ConditionOperator,
   type RuleDraft,
@@ -68,6 +71,7 @@ import {
 const CATALOG_QK = ['rules', 'catalog'] as const;
 const RULES_QK = ['rules', 'saved'] as const;
 const versionsQk = (ruleId: string | null) => ['rules', 'versions', ruleId ?? 'none'] as const;
+const backfillsQk = (ruleId: string | null) => ['rules', 'backfills', ruleId ?? 'none'] as const;
 
 const OPERATORS_BY_TYPE: Record<string, ConditionOperator[]> = {
   string: ['=', '!=', 'contains'],
@@ -437,10 +441,16 @@ function RulesView() {
   const verify = useMutation({ mutationFn: verifyWorkflowEnumChain });
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [backfillDays, setBackfillDays] = useState(7);
   const [didHydratePersistedRule, setDidHydratePersistedRule] = useState(false);
   const versionsQuery = useQuery({
     queryKey: versionsQk(selectedRuleId),
     queryFn: () => fetchWorkflowRuleVersions(selectedRuleId!),
+    enabled: Boolean(selectedRuleId),
+  });
+  const backfillsQuery = useQuery({
+    queryKey: backfillsQk(selectedRuleId),
+    queryFn: () => fetchWorkflowRuleBackfills(selectedRuleId!),
     enabled: Boolean(selectedRuleId),
   });
 
@@ -484,6 +494,7 @@ function RulesView() {
       setDraft(draftFromWorkflowRule(rule));
       await queryClient.invalidateQueries({ queryKey: RULES_QK });
       await queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) });
+      await queryClient.invalidateQueries({ queryKey: backfillsQk(rule.id) });
       toast.success('Rule saved', { description: `${rule.name} is now persisted as workflow JSON.` });
     },
     onError: (error) => toast.error('Rule save failed', { description: apiErrorMessage(error) }),
@@ -499,6 +510,7 @@ function RulesView() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: RULES_QK }),
         queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) }),
+        queryClient.invalidateQueries({ queryKey: backfillsQk(rule.id) }),
       ]);
       toast.success('Rule rolled back', { description: `${rule.name} restored and audited as a new version.` });
     },
@@ -518,6 +530,20 @@ function RulesView() {
     }),
     onError: (error) => toast.error('Event fire failed', { description: apiErrorMessage(error) }),
   });
+  const backfillMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedRuleId) throw new Error('Save or select a rule before running backfill.');
+      return runWorkflowRuleBackfill(selectedRuleId, backfillDays);
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: backfillsQk(result.report.ruleId) });
+      toast.success('Shadow backfill completed', {
+        description: `${result.report.matchedEvents}/${result.report.evaluatedEvents} event(s), ${result.report.actualTasksCreated} task(s) created.`,
+      });
+    },
+    onError: (error) => toast.error('Backfill failed', { description: apiErrorMessage(error) }),
+  });
+  const latestBackfill = backfillsQuery.data?.reports[0];
 
   return (
     <>
@@ -667,6 +693,58 @@ function RulesView() {
               ))}
 
               <div className="rules-section-head">
+                <span><BarChart3 size={12} /> Shadow reports</span>
+                <span className="muted">{backfillsQuery.data?.reports.length ?? 0}</span>
+              </div>
+              {!selectedRuleId && (
+                <div className="rules-empty">
+                  <BarChart3 size={16} /> Select a saved rule to inspect shadow reports.
+                </div>
+              )}
+              {selectedRuleId && backfillsQuery.isLoading && (
+                <div className="rules-empty">
+                  <RefreshCw size={16} /> Loading shadow reports...
+                </div>
+              )}
+              {selectedRuleId && backfillsQuery.isError && (
+                <div className="rules-empty danger-text">
+                  <AlertTriangle size={16} /> {apiErrorMessage(backfillsQuery.error)}
+                </div>
+              )}
+              {selectedRuleId && backfillsQuery.isSuccess && backfillsQuery.data.reports.length === 0 && (
+                <div className="rules-empty">
+                  <BarChart3 size={16} />
+                  <div>No shadow backfill reports yet.</div>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={backfillMutation.isPending}
+                    onClick={() => backfillMutation.mutate()}
+                  >
+                    <Activity size={12} /> Run 7d
+                  </button>
+                </div>
+              )}
+              {selectedRuleId && backfillsQuery.isSuccess && backfillsQuery.data.reports.map((report) => (
+                <div className="rule-card rule-backfill-card" key={report.id}>
+                  <div className="rule-card-head">
+                    <span className={`pill ${report.status === 'completed' && report.actualTasksCreated === 0 ? 'success' : 'danger'}`}>
+                      {report.actualTasksCreated === 0 ? 'shadow' : 'mutated'}
+                    </span>
+                    <span className="muted">{new Date(report.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div className="rule-card-name">{report.recentDays}d backfill</div>
+                  <div className="rule-card-desc">
+                    {report.matchedEvents}/{report.evaluatedEvents} matched Â· {report.wouldCreateTasks} task(s) would create
+                  </div>
+                  <div className="rule-card-meta">
+                    <span>{report.result.candidateSource}</span>
+                    <span>{report.actualTasksCreated} real task(s)</span>
+                  </div>
+                </div>
+              ))}
+
+              <div className="rules-section-head">
                 <span><Network size={12} /> Catalog</span>
                 <span className="muted">v{catalog.version}</span>
               </div>
@@ -756,6 +834,26 @@ function RulesView() {
                 >
                   <Zap size={12} /> {fireMutation.isPending ? 'Firing...' : 'Fire event'}
                 </button>
+                <label className="rules-inline-control">
+                  <span>Backfill d</span>
+                  <input
+                    className="rules-priority-input"
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={backfillDays}
+                    onChange={(event) => setBackfillDays(Math.max(1, Math.min(90, Number(event.target.value) || 7)))}
+                  />
+                </label>
+                <button
+                  type="button"
+                  id="btn-backfill-workflow-rule"
+                  className="btn ghost"
+                  disabled={!selectedRuleId || backfillMutation.isPending}
+                  onClick={() => backfillMutation.mutate()}
+                >
+                  <Activity size={12} /> {backfillMutation.isPending ? 'Running...' : 'Run shadow'}
+                </button>
                 <button
                   type="button"
                   id="btn-save-workflow-rule"
@@ -779,9 +877,16 @@ function RulesView() {
                 <span><strong>Canvas source:</strong> /api/v1/rules/catalog</span>
                 <span><strong>Rule JSON source:</strong> {selectedRuleId ? `/api/v1/rules/${selectedRuleId}` : '/api/v1/rules'}</span>
                 {fireMutation.data && <span><strong>Last fire:</strong> {fireMutation.data.tasksCreated} task(s)</span>}
+                <span>
+                  <strong>Shadow:</strong>{' '}
+                  {latestBackfill
+                    ? `${latestBackfill.recentDays}d ${latestBackfill.matchedEvents}/${latestBackfill.evaluatedEvents} matched, ${latestBackfill.actualTasksCreated} real task(s)`
+                    : 'no report'}
+                </span>
                 <span><strong>Executor:</strong> {verify.data ? 'verified' : 'not checked'}</span>
                 {saveMutation.isError && <span className="danger-text">{apiErrorMessage(saveMutation.error)}</span>}
                 {fireMutation.isError && <span className="danger-text">{apiErrorMessage(fireMutation.error)}</span>}
+                {backfillMutation.isError && <span className="danger-text">{apiErrorMessage(backfillMutation.error)}</span>}
                 {verify.data && (
                   <>
                     <span><CheckCircle2 size={11} /> {verify.data.probeValues.trigger}</span>

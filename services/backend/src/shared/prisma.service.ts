@@ -44,6 +44,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'ShopifySyncState',
   'SyncLog',
   'WorkflowRule',
+  'WorkflowRuleBackfillReport',
 ]);
 
 @Injectable()

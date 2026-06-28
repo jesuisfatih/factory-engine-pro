@@ -42,7 +42,8 @@ export type IdPrefix =
   | 'wrule'
   | 'wrex'
   | 'wrcd'
-  | 'wrv';
+  | 'wrv'
+  | 'wrbf';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;
