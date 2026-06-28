@@ -1,0 +1,64 @@
+{
+  "capturedAt": "2026-06-28T06:16:57.044458+00:00",
+  "url": "https://app.dtfbank.com/settings/aircall/connection",
+  "screenshot": "docs\\evidence\\roadmap3-aircall-connection-runtime-live-20260628.png",
+  "assertions": {
+    "page_url_live": true,
+    "test_button_enabled_initially": true,
+    "refresh_button_enabled_initially": true,
+    "connection_test_api_200": true,
+    "connection_test_ok": true,
+    "ui_shows_connected": true,
+    "ui_shows_runtime_actions": true,
+    "no_disabled_runtime_copy": true,
+    "refresh_button_remains_usable": true
+  },
+  "optionalNetwork": {
+    "users_sync_api_2xx": true,
+    "numbers_sync_api_2xx": true
+  },
+  "summary": {
+    "initialDisabled": {
+      "test": false,
+      "refresh": false
+    },
+    "finalDisabled": {
+      "test": false,
+      "refresh": false
+    },
+    "connection": {
+      "ok": true,
+      "status": "ok",
+      "latencyMs": 246,
+      "userProbeCount": 1,
+      "numberProbeCount": 1,
+      "webhookSecretPresent": true,
+      "webhookUrl": "https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank"
+    },
+    "usersSyncCount": 4,
+    "numbersSyncCount": 2
+  },
+  "network": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/tenant-config",
+      "status": 200,
+      "body": "{\"workspaceName\":\"DTF Bank\",\"brandBadge\":\"DB\",\"brandLogo\":null,\"shopifyDomain\":\"eagle-dtf-print.myshopify.com\",\"hasShopifyAdminToken\":true,\"hasShopifyApiKey\":true,\"hasShopifyApiSecret\":true,\"hasWebhookHmacKey\":true,\"hasAircallApiId\":true,\"hasAircallApiToken\":true,\"hasAircallWebhookSecret\":true,\"hasAnthropicApiKey\":true,\"hasResendApiKey\":true}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/connection-test",
+      "status": 200,
+      "body": "{\"ok\":true,\"status\":\"ok\",\"credentialRequired\":false,\"checkedAt\":\"2026-06-28T06:16:48.150Z\",\"latencyMs\":246,\"userProbeCount\":1,\"numberProbeCount\":1,\"webhookSecretPresent\":true,\"webhookUrl\":\"https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank\",\"error\":null}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/users/sync",
+      "status": 201,
+      "body": "{\"source\":\"aircall_api\",\"users\":[{\"id\":\"1831111\",\"aircallUserId\":\"1831111\",\"name\":\"Ismail Baysal\",\"email\":\"ibaysal@dtfbank.com\",\"extension\":\"001\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_info_owner\",\"email\":\"info@dtfbank.com\",\"name\":\"DTF Bank Owner\"}},{\"id\":\"1831184\",\"aircallUserId\":\"1831184\",\"name\":\"Ihsan Taskiran\",\"email\":\"ihsan@dtfbank.com\",\"extension\":\"002\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"email\":\"ihsan@dtfbank.com\",\"name\":\"Ihsan Taskiran\"}},{\"id\":\"1831312\",\"aircallUserId\":\"1831312\",\"name\":\"Linda Marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"extension\":\"003\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"name\":\"Linda Marroquin\"}},{\"id\":\"1972780\",\"aircallUserId\":\"1972780\",\"name\":\"Charlette Boatman\",\"email\":\"charlette@dtfbank.com\",\"extension\":\"004\",\"availableStatus\":\"available\",\"linkedMember\":{\"id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"email\":\"charlette@dtfbank.com\",\"name\":\"Charlette Boatman\"}}],\"members\":[{\"id\":\"tmbr_ten_dtfbank_charlette_boatman\",\"email\":\"charlette@dtfbank.com\",\"name\":\"Charlette Boatman\",\"aircallUserId\":\"1972780\"},{\"id\":\"tmbr_ten_dtfbank_info_owner\",\"email\":\"info@dtfbank.com\",\"name\":\"DTF Bank Owner\",\"aircallUserId\":\"1831111\"},{\"id\":\"tmbr_emx64m3u1orn46wdtrghrxjl\",\"email\":\"flow1.member+20260627165606@dtfbank.com\",\"name\":\"Flow Invite\",\"aircallUserId\":null},{\"id\":\"tmbr_gu9niu9cld9mkqy1u99bxvo9\",\"email\":\"flow1.ui+20260627165928@dtfbank.com\",\"name\":\"Flow Ui\",\"aircallUserId\":null},{\"id\":\"tmbr_safmfipyjwpnezes1kqzjqjr\",\"email\":\"flow1.ui+20260627120260627165759@dtfbank.com\",\"name\":\"Flow Ui\",\"aircallUserId\":null},{\"id\":\"tmbr_tsoglfkltia3ifoihgk3jibz\",\"email\":\"flow1.wizard+20260627171322@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_hefib4cyfldodtk2okppitug\",\"email\":\"flow1.wizard+20260627171449@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_if0rxlogwbxvq1hc4sz3v6vw\",\"email\":\"flow1.wizard+20260627171903@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_wjrl6ehc48d0zzvruknx56io\",\"email\":\"flow1.wizard+20260627171646@dtfbank.com\",\"name\":\"Flow Wizard\",\"aircallUserId\":null},{\"id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"email\":\"ihsan@dtfbank.com\",\"name\":\"Ihsan Taskiran\",\"aircallUserId\":\"1831184\"},{\"id\":\"tmbr_h1qxrf78cx0j03bf5x8mpn9b\",\"email\":\"invite.prodtest+1782575676710@dtfbank.com\",\"name\":\"Invite Prodtest\",\"aircallUserId\":null},{\"id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"email\":\"dtfbanktx@gmail.com\",\"name\":\"Linda Marroquin\",\"aircallUserId\":\"1831312\"},{\"id\":\"tmbr_o6jpfqed8u25bnesnpe490zu\",\"email\":\"melis@dtfbank.com\",\"name\":\"Melis hebelehübele\",\"aircallUserId\":null},{\"id\":\"tmbr_prodtest_1782574849914_fa5999f6\",\"email\":\"owner.prodtest+20260627184047@dtfbank.com\",\"name\":\"Prod Owner\",\"aircallUserId\":null},{\"id\":\"tmbr_yb6n0h3h18flhl46liup45i3\",\"email\":\"target2.rbac.20260627220337@dtfbank.com\",\"name\":\"Target2 RBAC\",\"aircallUserId\":null},{\"id\":\"tmbr_qkt66tv1tkjt8g0man4ur1zs\",\"email\":\"test@gmail.com\",\"name\":\"test test\",\"aircallUserId\":null},{\"id\":\"tmbr_yckroayjl8fknl353yqfcrzx\",\"email\":\"testerrr@gmail.com\",\"name\":\"tester tester\",\"aircallUserId\":null}]}"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/aircall/numbers/sync",
+      "status": 201,
+      "body": "{\"credentialRequired\":false,\"source\":\"aircall_api\",\"stats\":{\"total\":2,\"ivr\":0,\"countries\":[\"US\"]},\"numbers\":[{\"id\":\"acn_np6i535znoxps1gfxypvtea2\",\"aircallNumberId\":\"1251762\",\"name\":\"DTF BANK\",\"digits\":\"+1 346-479-9224\",\"country\":\"US\",\"timezone\":\"America/Chicago\",\"isIvr\":false,\"tenantSlug\":\"dtfbank\",\"lastSyncedAt\":\"2026-06-28T06:16:50.828Z\"},{\"id\":\"acn_hxt6e7lfqkfmc7dzsnm5jpn6\",\"aircallNumberId\":\"1179166\",\"name\":\"DTF BANK Printers and Equipments\",\"digits\":\"+1 832-899-4008\",\"country\":\"US\",\"timezone\":\"America/Chicago\",\"isIvr\":false,\"tenantSlug\":\"dtfbank\",\"lastSyncedAt\":\"2026-06-28T06:16:50.818Z\"}]}"
+    }
+  ],
+  "console": []
+}

@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-06-28T06:16:48Z",
+  "scope": "roadmap-item-3-aircall-connection-runtime",
+  "liveBuildSha": "64917d4ab772420680b3480d1002ca6cc4ed7322",
+  "container": "factoryengine-dtfbank-app",
+  "endpoint": "GET https://api.dtfbank.com/api/v1/aircall/connection-test",
+  "response": {
+    "ok": true,
+    "status": "ok",
+    "credentialRequired": false,
+    "latencyMs": 246,
+    "userProbeCount": 1,
+    "numberProbeCount": 1,
+    "webhookSecretPresent": true,
+    "webhookUrl": "https://api.dtfbank.com/api/v1/webhooks/aircall/dtfbank"
+  },
+  "containerLog": {
+    "request_id": "f6ed36b6-0548-40bd-8ede-b12a40cb4260",
+    "tenant_id": "ten_dtfbank",
+    "principal_id": "tmbr_ten_dtfbank_info_owner",
+    "principal_type": "member",
+    "module": "aircall",
+    "action": "connection_test_ok",
+    "message": "Aircall connection test succeeded",
+    "latency_ms": 246,
+    "user_probe_count": 1,
+    "number_probe_count": 1,
+    "webhook_secret_present": true
+  },
+  "uiProof": {
+    "url": "https://app.dtfbank.com/settings/aircall/connection",
+    "screenshot": "docs/evidence/roadmap3-aircall-connection-runtime-live-20260628.png",
+    "json": "docs/evidence/20260628-roadmap3-aircall-connection-runtime-live.json"
+  }
+}
