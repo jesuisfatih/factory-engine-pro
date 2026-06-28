@@ -1,54 +1,83 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, MarkerType,
-  Position, Handle, useNodesState, useEdgesState,
-  type Node, type Edge, type NodeProps,
+  Background,
+  Controls,
+  Handle,
+  MarkerType,
+  MiniMap,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  type Edge,
+  type Node,
+  type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
-  AlertTriangle, Plus, Trash2, Save, Filter, Zap, Network, ArrowRight,
-  Activity, Eye, EyeOff, Archive,
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Filter,
+  Network,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Zap,
 } from 'lucide-react';
+import type {
+  WorkflowAction,
+  WorkflowCondition,
+  WorkflowEnumCatalogResponse,
+  WorkflowTrigger,
+} from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
+import { apiErrorMessage } from '@/lib/api';
 import {
-  fetchRules, saveRule, deleteRule, makeDraftRule, makeCondition, makeAction,
-  CONDITION_FIELDS, LIFECYCLE_TONE, ACTION_LABEL, TRIGGER_LABEL,
-  type Rule, type RuleAction, type RuleCondition, type ConditionField,
-  type ConditionOperator, type AssigneeAxis, type RuleLifecycle,
+  defaultOperator,
+  defaultValue,
+  fetchWorkflowCatalog,
+  LIFECYCLE_TONE,
+  makeAction,
+  makeCondition,
+  makeRuleDraft,
+  type ConditionOperator,
+  type RuleDraft,
+  type RuleDraftAction,
+  type RuleDraftCondition,
+  verifyWorkflowEnumChain,
 } from '@/lib/rules';
 
-const QK = ['rules'] as const;
+const CATALOG_QK = ['rules', 'catalog'] as const;
 
-const LIFECYCLE_ICON: Record<RuleLifecycle, typeof Eye> = {
-  draft: EyeOff, shadow: Eye, active: Activity, archived: Archive,
-};
-
-const AXES: AssigneeAxis[] = ['sales', 'customer_service', 'support_lead', 'accounting', 'admin'];
 const OPERATORS_BY_TYPE: Record<string, ConditionOperator[]> = {
-  string:  ['=', '!=', 'contains', 'starts_with'],
-  number:  ['>=', '<=', '>', '<', '=', '!='],
-  enum:    ['=', '!=', 'in', 'not_in'],
-  multi:   ['contains', 'in', 'not_in'],
+  string: ['=', '!=', 'contains'],
+  number: ['>=', '<=', '=', '!='],
   boolean: ['='],
+  enum: ['=', '!=', 'in', 'not_in'],
+  range: ['in'],
+  window: ['>=', '<='],
 };
 
-/* ─── Node types (React Flow custom nodes) ─────────────────────── */
-
-interface TriggerNodeData extends Record<string, unknown> { label: string; }
-interface ConditionNodeData extends Record<string, unknown> {
-  condition: RuleCondition;
-  fieldLabel: string;
-  onEdit: (next: RuleCondition) => void;
-  onDelete: () => void;
-  aiDerived: boolean;
+interface TriggerNodeData extends Record<string, unknown> {
+  catalog: WorkflowEnumCatalogResponse;
+  trigger: WorkflowTrigger;
+  onChange: (trigger: WorkflowTrigger) => void;
 }
+
+interface ConditionNodeData extends Record<string, unknown> {
+  catalog: WorkflowEnumCatalogResponse;
+  condition: RuleDraftCondition;
+  onEdit: (next: RuleDraftCondition) => void;
+  onDelete: () => void;
+}
+
 interface ActionNodeData extends Record<string, unknown> {
-  action: RuleAction;
-  onEdit: (next: RuleAction) => void;
+  catalog: WorkflowEnumCatalogResponse;
+  action: RuleDraftAction;
+  onEdit: (next: RuleDraftAction) => void;
   onDelete: () => void;
 }
 
@@ -59,16 +88,22 @@ function TriggerNode({ data }: NodeProps<Node<TriggerNodeData>>) {
         <Zap size={12} />
         <span>TRIGGER</span>
       </div>
-      <div className="rule-node-title">{data.label}</div>
+      <select value={data.trigger} onChange={(event) => data.onChange(event.target.value as WorkflowTrigger)}>
+        {data.catalog.triggers.map((trigger) => (
+          <option key={trigger.value} value={trigger.value}>
+            {trigger.label}
+          </option>
+        ))}
+      </select>
+      <div className="rule-node-title">{data.catalog.triggers.find((entry) => entry.value === data.trigger)?.family}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 
 function ConditionNode({ data }: NodeProps<Node<ConditionNodeData>>) {
-  const { condition, fieldLabel, onEdit, onDelete, aiDerived } = data;
-  const fieldDef = CONDITION_FIELDS.find((entry) => entry.id === condition.field)!;
-  const ops = OPERATORS_BY_TYPE[fieldDef.value_type] ?? ['='];
+  const field = data.catalog.conditions.find((entry) => entry.value === data.condition.condition) ?? data.catalog.conditions[0];
+  const ops = OPERATORS_BY_TYPE[field?.valueType ?? 'enum'] ?? ['='];
 
   return (
     <div className="rule-node rule-node-condition">
@@ -76,377 +111,154 @@ function ConditionNode({ data }: NodeProps<Node<ConditionNodeData>>) {
       <div className="rule-node-head">
         <Filter size={11} />
         <span>WHEN</span>
-        <button type="button" className="rule-node-x" onClick={onDelete} title="Remove">
+        <button type="button" className="rule-node-x" onClick={data.onDelete} title="Remove">
           <Trash2 size={10} />
         </button>
       </div>
 
       <select
-        value={condition.field}
+        value={data.condition.condition}
         onChange={(event) => {
-          const nextField = event.target.value as ConditionField;
-          const nextDef = CONDITION_FIELDS.find((entry) => entry.id === nextField)!;
-          onEdit({
-            ...condition,
-            field: nextField,
-            op: (OPERATORS_BY_TYPE[nextDef.value_type] ?? ['='])[0],
-            value: nextDef.value_type === 'boolean' ? true : nextDef.value_type === 'number' ? 0 : '',
-            confidence_gte: nextDef.ai_derived ? (condition.confidence_gte ?? 0.8) : undefined,
+          const nextCondition = event.target.value as WorkflowCondition;
+          const nextField = data.catalog.conditions.find((entry) => entry.value === nextCondition) ?? data.catalog.conditions[0];
+          data.onEdit({
+            ...data.condition,
+            condition: nextCondition,
+            operator: defaultOperator(nextField.valueType),
+            value: defaultValue(nextField.optionSource, data.catalog),
+            confidenceGte: nextField.aiDerived ? (data.condition.confidenceGte ?? 0.8) : undefined,
           });
         }}
       >
-        {CONDITION_FIELDS.map((entry) => (
-          <option key={entry.id} value={entry.id}>{entry.label}</option>
+        {data.catalog.conditions.map((condition) => (
+          <option key={condition.value} value={condition.value}>
+            {condition.label}
+          </option>
         ))}
       </select>
 
       <div className="rule-node-row">
         <select
-          value={condition.op}
-          onChange={(event) => onEdit({ ...condition, op: event.target.value as ConditionOperator })}
+          value={data.condition.operator}
+          onChange={(event) => data.onEdit({ ...data.condition, operator: event.target.value as ConditionOperator })}
         >
           {ops.map((op) => <option key={op} value={op}>{op}</option>)}
         </select>
-
-        {fieldDef.value_type === 'enum' ? (
-          <select
-            value={String(condition.value ?? '')}
-            onChange={(event) => onEdit({ ...condition, value: event.target.value })}
-          >
-            {(fieldDef.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-        ) : fieldDef.value_type === 'boolean' ? (
-          <select
-            value={String(condition.value)}
-            onChange={(event) => onEdit({ ...condition, value: event.target.value === 'true' })}
-          >
-            <option value="true">true</option>
-            <option value="false">false</option>
-          </select>
-        ) : (
-          <input
-            type={fieldDef.value_type === 'number' ? 'number' : 'text'}
-            value={String(condition.value ?? '')}
-            onChange={(event) => onEdit({
-              ...condition,
-              value: fieldDef.value_type === 'number' ? Number(event.target.value) : event.target.value,
-            })}
-          />
-        )}
+        <ConditionValueInput catalog={data.catalog} condition={data.condition} onEdit={data.onEdit} />
       </div>
 
-      {aiDerived && (
+      {field?.aiDerived && (
         <div className="rule-node-confidence">
-          <span className="muted">AI confidence ≥</span>
+          <span className="muted">AI confidence &gt;=</span>
           <input
             type="number"
-            step="0.05" min="0" max="1"
-            value={condition.confidence_gte ?? 0.8}
-            onChange={(event) => onEdit({ ...condition, confidence_gte: Number(event.target.value) })}
+            step="0.05"
+            min="0"
+            max="1"
+            value={data.condition.confidenceGte ?? 0.8}
+            onChange={(event) => data.onEdit({ ...data.condition, confidenceGte: Number(event.target.value) })}
           />
         </div>
       )}
-
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 
-function ActionNode({ data }: NodeProps<Node<ActionNodeData>>) {
-  const { action, onEdit, onDelete } = data;
+function ConditionValueInput({
+  catalog,
+  condition,
+  onEdit,
+}: {
+  catalog: WorkflowEnumCatalogResponse;
+  condition: RuleDraftCondition;
+  onEdit: (next: RuleDraftCondition) => void;
+}) {
+  const field = catalog.conditions.find((entry) => entry.value === condition.condition);
+  if (field?.optionSource === 'call_intents') {
+    return (
+      <select value={condition.value} onChange={(event) => onEdit({ ...condition, value: event.target.value })}>
+        {catalog.callIntents.map((intent) => <option key={intent.value} value={intent.value}>{intent.label}</option>)}
+      </select>
+    );
+  }
+  if (field?.optionSource === 'psych_tags') {
+    return (
+      <select value={condition.value} onChange={(event) => onEdit({ ...condition, value: event.target.value })}>
+        {catalog.psychTags.map((tag) => <option key={tag.value} value={tag.value}>{tag.label}</option>)}
+      </select>
+    );
+  }
+  if (field?.valueType === 'boolean') {
+    return (
+      <select value={condition.value || 'true'} onChange={(event) => onEdit({ ...condition, value: event.target.value })}>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    );
+  }
   return (
-    <div className={`rule-node rule-node-action action-${action.type}`}>
+    <input
+      type={field?.valueType === 'number' || field?.valueType === 'window' ? 'number' : 'text'}
+      value={condition.value}
+      onChange={(event) => onEdit({ ...condition, value: event.target.value })}
+      placeholder={field?.valueType === 'range' ? '09:00-17:00' : 'value'}
+    />
+  );
+}
+
+function ActionNode({ data }: NodeProps<Node<ActionNodeData>>) {
+  const actionMeta = data.catalog.actions.find((entry) => entry.value === data.action.action);
+  return (
+    <div className={`rule-node rule-node-action action-${data.action.action.replace(/[^a-z0-9]/g, '-')}`}>
       <Handle type="target" position={Position.Left} />
       <div className="rule-node-head">
         <ArrowRight size={11} />
-        <span>{ACTION_LABEL[action.type].toUpperCase()}</span>
-        <button type="button" className="rule-node-x" onClick={onDelete} title="Remove">
+        <span>ACTION</span>
+        <button type="button" className="rule-node-x" onClick={data.onDelete} title="Remove">
           <Trash2 size={10} />
         </button>
       </div>
-
-      {action.type === 'create_task' && (
-        <>
-          <label>assignee</label>
-          <select
-            value={action.config.assignee_axis}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, assignee_axis: event.target.value as AssigneeAxis } })}
-          >
-            {AXES.map((axis) => <option key={axis} value={axis}>{axis}</option>)}
-          </select>
-
-          <label>priority</label>
-          <select
-            value={action.config.priority}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, priority: event.target.value as 'low' | 'normal' | 'high' | 'urgent' } })}
-          >
-            <option value="low">low</option>
-            <option value="normal">normal</option>
-            <option value="high">high</option>
-            <option value="urgent">urgent</option>
-          </select>
-        </>
-      )}
-
-      {action.type === 'escalate' && (
-        <>
-          <label>to axis</label>
-          <select
-            value={action.config.to}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, to: event.target.value as AssigneeAxis } })}
-          >
-            {AXES.map((axis) => <option key={axis} value={axis}>{axis}</option>)}
-          </select>
-          <label>reason</label>
-          <input
-            value={action.config.reason}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, reason: event.target.value } })}
-          />
-        </>
-      )}
-
-      {action.type === 'skip' && (
-        <>
-          <label>reason</label>
-          <input
-            value={action.config.reason}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, reason: event.target.value } })}
-          />
-        </>
-      )}
-
-      {action.type === 'add_watcher' && (
-        <>
-          <label>axis</label>
-          <select
-            value={action.config.axis}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, axis: event.target.value as AssigneeAxis } })}
-          >
-            {AXES.map((axis) => <option key={axis} value={axis}>{axis}</option>)}
-          </select>
-        </>
-      )}
-
-      {action.type === 'notify' && (
-        <>
-          <label>channel</label>
-          <select
-            value={action.config.channel}
-            onChange={(event) => onEdit({ ...action, config: { ...action.config, channel: event.target.value as 'slack' | 'email' } })}
-          >
-            <option value="slack">slack</option>
-            <option value="email">email</option>
-          </select>
-        </>
-      )}
-
-      {action.type === 'append_existing' && (
-        <div className="muted">Appends call to the open task for this intent.</div>
-      )}
+      <select
+        value={data.action.action}
+        onChange={(event) => data.onEdit({ ...data.action, action: event.target.value as WorkflowAction })}
+      >
+        {data.catalog.actions.map((action) => (
+          <option key={action.value} value={action.value}>
+            {action.label}
+          </option>
+        ))}
+      </select>
+      <input
+        value={data.action.value}
+        onChange={(event) => data.onEdit({ ...data.action, value: event.target.value })}
+        placeholder={actionMeta?.auditOnly ? 'audit reason' : 'target or note'}
+      />
+      <div className="rule-node-title">{actionMeta?.auditOnly ? 'audit only' : actionMeta?.createsTask ? 'task output' : 'state output'}</div>
     </div>
   );
 }
 
 const NODE_TYPES = { trigger: TriggerNode, condition: ConditionNode, action: ActionNode };
 
-/* ─── Canvas (renders one selected rule) ──────────────────────── */
-
-/* Tighter default layout — nodes are now compact, so columns are closer. */
-const LAYOUT = {
-  TRIGGER_X: 20, TRIGGER_Y: 140,
-  COND_X: 240, COND_Y_STEP: 130,
-  ACT_X: 500, ACT_Y_STEP: 150,
-};
-
-function buildInitialGraph(rule: Rule, handlers: {
-  onConditionEdit: (id: string, next: RuleCondition) => void;
-  onConditionDelete: (id: string) => void;
-  onActionEdit: (id: string, next: RuleAction) => void;
-  onActionDelete: (id: string) => void;
+function RuleCanvas({
+  catalog,
+  draft,
+  onChange,
+}: {
+  catalog: WorkflowEnumCatalogResponse;
+  draft: RuleDraft;
+  onChange: (next: RuleDraft) => void;
 }) {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-
-  nodes.push({
-    id: 'trigger',
-    type: 'trigger',
-    position: { x: LAYOUT.TRIGGER_X, y: LAYOUT.TRIGGER_Y },
-    data: { label: TRIGGER_LABEL[rule.trigger.type] },
-  });
-
-  rule.conditions.forEach((condition, index) => {
-    const fieldDef = CONDITION_FIELDS.find((entry) => entry.id === condition.field)!;
-    nodes.push({
-      id: `cond-${condition.id}`,
-      type: 'condition',
-      position: { x: LAYOUT.COND_X, y: index * LAYOUT.COND_Y_STEP },
-      data: {
-        condition,
-        fieldLabel: fieldDef.label,
-        aiDerived: fieldDef.ai_derived,
-        onEdit: (next: RuleCondition) => handlers.onConditionEdit(condition.id, next),
-        onDelete: () => handlers.onConditionDelete(condition.id),
-      },
-    });
-    edges.push({
-      id: `e-trigger-${condition.id}`,
-      source: 'trigger',
-      target: `cond-${condition.id}`,
-      animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed },
-    });
-  });
-
-  rule.actions.forEach((action, index) => {
-    nodes.push({
-      id: `act-${action.id}`,
-      type: 'action',
-      position: { x: LAYOUT.ACT_X, y: index * LAYOUT.ACT_Y_STEP + 40 },
-      data: {
-        action,
-        onEdit: (next: RuleAction) => handlers.onActionEdit(action.id, next),
-        onDelete: () => handlers.onActionDelete(action.id),
-      },
-    });
-    if (rule.conditions.length === 0) {
-      edges.push({
-        id: `e-trigger-${action.id}`,
-        source: 'trigger',
-        target: `act-${action.id}`,
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed },
-      });
-    } else {
-      rule.conditions.forEach((condition) => {
-        edges.push({
-          id: `e-${condition.id}-${action.id}`,
-          source: `cond-${condition.id}`,
-          target: `act-${action.id}`,
-          markerEnd: { type: MarkerType.ArrowClosed },
-        });
-      });
-    }
-  });
-
-  return { nodes, edges };
-}
-
-/**
- * The canvas owns node positions (`useNodesState`) — once the user drags a node,
- * we never recompute its position from `buildInitialGraph`. We do reseed on
- * `rule.id` change (different rule selected) and on add/remove of conditions
- * or actions (we splice new nodes in or remove ones whose id is gone).
- */
-function RuleCanvas({ rule, onChange }: { rule: Rule; onChange: (next: Rule) => void }) {
-  const onConditionEdit = useCallback((id: string, next: RuleCondition) => {
-    onChange({ ...rule, conditions: rule.conditions.map((condition) => condition.id === id ? next : condition) });
-  }, [rule, onChange]);
-  const onConditionDelete = useCallback((id: string) => {
-    onChange({ ...rule, conditions: rule.conditions.filter((condition) => condition.id !== id) });
-  }, [rule, onChange]);
-  const onActionEdit = useCallback((id: string, next: RuleAction) => {
-    onChange({ ...rule, actions: rule.actions.map((action) => action.id === id ? next : action) as RuleAction[] });
-  }, [rule, onChange]);
-  const onActionDelete = useCallback((id: string) => {
-    onChange({ ...rule, actions: rule.actions.filter((action) => action.id !== id) });
-  }, [rule, onChange]);
-
-  const handlers = useMemo(() => ({ onConditionEdit, onConditionDelete, onActionEdit, onActionDelete }),
-    [onConditionEdit, onConditionDelete, onActionEdit, onActionDelete]);
-
-  const initial = useMemo(() => buildInitialGraph(rule, handlers), [rule.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
-
-  /* When user adds/removes a condition or action elsewhere in the form,
-   * splice the corresponding node in / out without touching others' positions. */
-  useEffect(() => {
-    setNodes((current) => {
-      const byId = new Map(current.map((node) => [node.id, node] as const));
-      const next: Node[] = [];
-
-      // trigger always stays
-      next.push(byId.get('trigger') ?? {
-        id: 'trigger', type: 'trigger',
-        position: { x: LAYOUT.TRIGGER_X, y: LAYOUT.TRIGGER_Y },
-        data: { label: TRIGGER_LABEL[rule.trigger.type] },
-      });
-
-      rule.conditions.forEach((condition, index) => {
-        const nodeId = `cond-${condition.id}`;
-        const fieldDef = CONDITION_FIELDS.find((entry) => entry.id === condition.field)!;
-        const data = {
-          condition,
-          fieldLabel: fieldDef.label,
-          aiDerived: fieldDef.ai_derived,
-          onEdit: (input: RuleCondition) => handlers.onConditionEdit(condition.id, input),
-          onDelete: () => handlers.onConditionDelete(condition.id),
-        };
-        const existing = byId.get(nodeId);
-        if (existing) next.push({ ...existing, data });
-        else next.push({ id: nodeId, type: 'condition', position: { x: LAYOUT.COND_X, y: index * LAYOUT.COND_Y_STEP }, data });
-      });
-
-      rule.actions.forEach((action, index) => {
-        const nodeId = `act-${action.id}`;
-        const data = {
-          action,
-          onEdit: (input: RuleAction) => handlers.onActionEdit(action.id, input),
-          onDelete: () => handlers.onActionDelete(action.id),
-        };
-        const existing = byId.get(nodeId);
-        if (existing) next.push({ ...existing, data });
-        else next.push({ id: nodeId, type: 'action', position: { x: LAYOUT.ACT_X, y: index * LAYOUT.ACT_Y_STEP + 40 }, data });
-      });
-
-      return next;
-    });
-
-    /* Edges: rebuild from scratch each time the underlying rule changes.
-     * Edge positions are derived from node handles, so this isn't disruptive. */
-    const nextEdges: Edge[] = [];
-    rule.conditions.forEach((condition) => {
-      nextEdges.push({
-        id: `e-trigger-${condition.id}`,
-        source: 'trigger',
-        target: `cond-${condition.id}`,
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed },
-      });
-    });
-    rule.actions.forEach((action) => {
-      if (rule.conditions.length === 0) {
-        nextEdges.push({
-          id: `e-trigger-${action.id}`,
-          source: 'trigger',
-          target: `act-${action.id}`,
-          animated: true,
-          markerEnd: { type: MarkerType.ArrowClosed },
-        });
-      } else {
-        rule.conditions.forEach((condition) => {
-          nextEdges.push({
-            id: `e-${condition.id}-${action.id}`,
-            source: `cond-${condition.id}`,
-            target: `act-${action.id}`,
-            markerEnd: { type: MarkerType.ArrowClosed },
-          });
-        });
-      }
-    });
-    setEdges(nextEdges);
-  }, [rule, handlers, setNodes, setEdges]);
+  const graph = useMemo(() => buildGraph(catalog, draft, onChange), [catalog, draft, onChange]);
 
   return (
     <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
+      nodes={graph.nodes}
+      edges={graph.edges}
       nodeTypes={NODE_TYPES}
       fitView
-      fitViewOptions={{ padding: 0.15, minZoom: 0.8, maxZoom: 1 }}
-      panOnScroll
+      fitViewOptions={{ padding: 0.18, minZoom: 0.75, maxZoom: 1 }}
       proOptions={{ hideAttribution: true }}
       defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
     >
@@ -461,53 +273,101 @@ function RuleCanvas({ rule, onChange }: { rule: Rule; onChange: (next: Rule) => 
   );
 }
 
-/* ─── Main page ─────────────────────────────────────────────── */
+function buildGraph(
+  catalog: WorkflowEnumCatalogResponse,
+  draft: RuleDraft,
+  onChange: (next: RuleDraft) => void,
+): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [{
+    id: 'trigger',
+    type: 'trigger',
+    position: { x: 20, y: 150 },
+    data: {
+      catalog,
+      trigger: draft.trigger,
+      onChange: (trigger: WorkflowTrigger) => onChange({ ...draft, trigger }),
+    },
+  }];
+  const edges: Edge[] = [];
+
+  draft.when.forEach((condition, index) => {
+    nodes.push({
+      id: `cond-${condition.id}`,
+      type: 'condition',
+      position: { x: 260, y: index * 145 + 30 },
+      data: {
+        catalog,
+        condition,
+        onEdit: (next: RuleDraftCondition) => onChange({
+          ...draft,
+          when: draft.when.map((entry) => entry.id === condition.id ? next : entry),
+        }),
+        onDelete: () => onChange({ ...draft, when: draft.when.filter((entry) => entry.id !== condition.id) }),
+      },
+    });
+    edges.push({
+      id: `e-trigger-${condition.id}`,
+      source: 'trigger',
+      target: `cond-${condition.id}`,
+      animated: true,
+      markerEnd: { type: MarkerType.ArrowClosed },
+    });
+  });
+
+  draft.actions.forEach((action, index) => {
+    nodes.push({
+      id: `act-${action.id}`,
+      type: 'action',
+      position: { x: 540, y: index * 145 + 60 },
+      data: {
+        catalog,
+        action,
+        onEdit: (next: RuleDraftAction) => onChange({
+          ...draft,
+          actions: draft.actions.map((entry) => entry.id === action.id ? next : entry),
+        }),
+        onDelete: () => onChange({ ...draft, actions: draft.actions.filter((entry) => entry.id !== action.id) }),
+      },
+    });
+
+    if (draft.when.length === 0) {
+      edges.push({
+        id: `e-trigger-${action.id}`,
+        source: 'trigger',
+        target: `act-${action.id}`,
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed },
+      });
+    } else {
+      draft.when.forEach((condition) => {
+        edges.push({
+          id: `e-${condition.id}-${action.id}`,
+          source: `cond-${condition.id}`,
+          target: `act-${action.id}`,
+          markerEnd: { type: MarkerType.ArrowClosed },
+        });
+      });
+    }
+  });
+
+  return { nodes, edges };
+}
 
 function RulesView() {
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const { data: rules = [], isLoading } = useQuery({ queryKey: QK, queryFn: fetchRules });
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Rule | null>(null);
+  const catalogQuery = useQuery({ queryKey: CATALOG_QK, queryFn: fetchWorkflowCatalog });
+  const verify = useMutation({ mutationFn: verifyWorkflowEnumChain });
+  const [draft, setDraft] = useState<RuleDraft | null>(null);
 
   useEffect(() => {
-    if (!selectedId && rules[0]) setSelectedId(rules[0].id);
-  }, [rules, selectedId]);
+    if (catalogQuery.data && !draft) setDraft(makeRuleDraft(catalogQuery.data));
+  }, [catalogQuery.data, draft]);
 
-  useEffect(() => {
-    const current = rules.find((rule) => rule.id === selectedId) ?? null;
-    setDraft(current);
-  }, [rules, selectedId]);
-
-  const save = useMutation({
-    mutationFn: saveRule,
-    onSuccess: () => { toast.success('Rule saved (UI only — engine off)'); qc.invalidateQueries({ queryKey: QK }); },
-    onError: (error) => toast.error('Save failed', { description: (error as Error).message }),
-  });
-  const remove = useMutation({
-    mutationFn: deleteRule,
-    onSuccess: () => { toast.success('Rule deleted'); qc.invalidateQueries({ queryKey: QK }); setSelectedId(null); setDraft(null); },
-    onError: (error) => toast.error('Delete failed', { description: (error as Error).message }),
-  });
-
-  const addRule = () => {
-    const next = makeDraftRule();
-    save.mutate(next, { onSuccess: () => setSelectedId(next.id) });
-  };
-
-  const addCondition = () => {
-    if (!draft) return;
-    setDraft({ ...draft, conditions: [...draft.conditions, makeCondition()] });
-  };
-  const addAction = (type: RuleAction['type']) => {
-    if (!draft) return;
-    setDraft({ ...draft, actions: [...draft.actions, makeAction(type)] });
-  };
-
-  const isDirty = draft && rules.some((rule) => rule.id === draft.id)
-    ? JSON.stringify(draft) !== JSON.stringify(rules.find((rule) => rule.id === draft.id))
-    : false;
+  const catalog = catalogQuery.data;
+  const catalogEmpty = catalog && (
+    catalog.triggers.length === 0
+    || catalog.conditions.length === 0
+    || catalog.actions.length === 0
+  );
 
   return (
     <>
@@ -515,146 +375,125 @@ function RulesView() {
         titleI18nKey="rules.title"
         subtitleI18nKey="rules.subtitle"
         actions={(
-          <button type="button" className="btn primary" onClick={addRule}>
-            <Plus size={14} /> {t('rules.new_rule')}
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!catalog || verify.isPending}
+            onClick={() => verify.mutate()}
+          >
+            <RefreshCw size={14} /> Verify chain
           </button>
         )}
       />
 
-      <div className="rules-banner">
-        <AlertTriangle size={18} />
-        <div>
-          <div className="rules-banner-title">{t('rules.banner_title')}</div>
-          <div className="rules-banner-body">{t('rules.banner_body')}</div>
+      {catalogQuery.isLoading && (
+        <div className="rules-empty">
+          <RefreshCw size={16} /> Loading live enum catalog...
         </div>
-      </div>
+      )}
 
-      <div className="rules-shell">
-        <aside className="rules-list">
-          {isLoading && <div className="muted" style={{ padding: 16 }}>{t('common.loading')}</div>}
-          {rules.map((rule) => {
-            const Icon = LIFECYCLE_ICON[rule.lifecycle];
-            return (
-              <button
-                key={rule.id}
-                type="button"
-                className={`rule-card${selectedId === rule.id ? ' active' : ''}`}
-                onClick={() => setSelectedId(rule.id)}
-              >
-                <div className="rule-card-head">
-                  <span className={`pill ${LIFECYCLE_TONE[rule.lifecycle]}`}>
-                    <Icon size={9} /> {rule.lifecycle}
-                  </span>
-                  <span className="muted">P{rule.priority}</span>
-                </div>
-                <div className="rule-card-name">{rule.name}</div>
-                <div className="rule-card-desc">{rule.description || '—'}</div>
-                <div className="rule-card-meta">
-                  <span title="Conditions"><Filter size={9} /> {rule.conditions.length}</span>
-                  <span title="Actions"><ArrowRight size={9} /> {rule.actions.length}</span>
-                  <span title="Fires in last 7 days">
-                    <Activity size={9} /> {rule.telemetry.fires_count_7d}
-                  </span>
-                  {!rule.terminating && <span className="pill" title="Composable rule">compose</span>}
-                </div>
-              </button>
-            );
-          })}
-        </aside>
+      {catalogQuery.isError && (
+        <div className="rules-banner">
+          <AlertTriangle size={18} />
+          <div>
+            <div className="rules-banner-title">Catalog failed</div>
+            <div className="rules-banner-body">{apiErrorMessage(catalogQuery.error)}</div>
+          </div>
+        </div>
+      )}
 
-        <main className="rules-canvas-wrap">
-          {!draft ? (
-            <div className="muted" style={{ padding: 32, textAlign: 'center' }}>{t('rules.no_selection')}</div>
-          ) : (
-            <>
+      {catalogEmpty && (
+        <div className="rules-empty">
+          <AlertTriangle size={16} /> Enum catalog returned empty groups.
+        </div>
+      )}
+
+      {catalog && draft && !catalogEmpty && (
+        <>
+          <div className="rules-banner">
+            <Network size={18} />
+            <div>
+              <div className="rules-banner-title">Master enum catalog v{catalog.version}</div>
+              <div className="rules-banner-body">
+                {catalog.counts.psychTags} psych tags · {catalog.counts.callIntents} call intents · {catalog.counts.urgencyLevels} urgency levels · {catalog.counts.triggers} triggers · {catalog.counts.conditions} conditions · {catalog.counts.actions} actions
+              </div>
+            </div>
+          </div>
+
+          <div className="rules-shell">
+            <aside className="rules-list">
+              <CatalogCard title="Triggers" count={catalog.counts.triggers} values={catalog.triggers.slice(0, 8).map((entry) => entry.value)} />
+              <CatalogCard title="Conditions" count={catalog.counts.conditions} values={catalog.conditions.slice(0, 8).map((entry) => entry.value)} />
+              <CatalogCard title="Actions" count={catalog.counts.actions} values={catalog.actions.map((entry) => entry.value)} />
+              <CatalogCard title="Psych tags" count={catalog.counts.psychTags} values={catalog.psychTags.map((entry) => entry.value)} />
+              <CatalogCard title="Call intents" count={catalog.counts.callIntents} values={catalog.callIntents.map((entry) => entry.value)} />
+              <CatalogCard title="Urgency" count={catalog.counts.urgencyLevels} values={catalog.urgencyLevels.map((entry) => entry.value)} />
+            </aside>
+
+            <main className="rules-canvas-wrap">
               <div className="rules-canvas-toolbar">
-                <div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input
-                    className="rules-name-input"
-                    value={draft.name}
-                    onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                    placeholder="Rule name"
-                  />
-                  <select
-                    value={draft.lifecycle}
-                    onChange={(event) => setDraft({ ...draft, lifecycle: event.target.value as RuleLifecycle })}
-                    title="Lifecycle"
-                  >
-                    <option value="draft">draft</option>
-                    <option value="shadow">shadow (log only)</option>
-                    <option value="active">active</option>
-                    <option value="archived">archived</option>
-                  </select>
-                  <label className="muted" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                    Priority
-                    <input
-                      type="number"
-                      style={{ width: 64 }}
-                      value={draft.priority}
-                      onChange={(event) => setDraft({ ...draft, priority: Number(event.target.value) })}
-                    />
-                  </label>
-                  <label className="checkbox-row" style={{ marginBottom: 0 }}>
-                    <input
-                      type="checkbox"
-                      checked={!draft.terminating}
-                      onChange={(event) => setDraft({ ...draft, terminating: !event.target.checked })}
-                    />
-                    Composable (don't stop on match)
-                  </label>
-                </div>
-
-                <button type="button" className="btn ghost" onClick={addCondition}>
-                  <Filter size={12} /> {t('rules.add_condition')}
-                </button>
-                <details className="rules-add-action">
-                  <summary className="btn ghost"><ArrowRight size={12} /> {t('rules.add_action')}</summary>
-                  <div className="rules-add-menu">
-                    {(['create_task', 'append_existing', 'escalate', 'add_watcher', 'notify', 'skip'] as const).map((type) => (
-                      <button key={type} type="button" onClick={() => addAction(type)}>
-                        {ACTION_LABEL[type]}
-                      </button>
-                    ))}
-                  </div>
-                </details>
-
-                <button
-                  type="button"
-                  className="btn danger-outline"
-                  onClick={() => { if (confirm('Delete this rule?')) remove.mutate(draft.id); }}
+                <input
+                  className="rules-name-input"
+                  value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  placeholder="Rule name"
+                />
+                <select
+                  value={draft.status}
+                  onChange={(event) => setDraft({ ...draft, status: event.target.value as RuleDraft['status'] })}
                 >
-                  <Trash2 size={12} />
+                  <option value="draft">draft</option>
+                  <option value="shadow">shadow</option>
+                  <option value="active">active</option>
+                  <option value="archived">archived</option>
+                </select>
+                <span className={`pill ${LIFECYCLE_TONE[draft.status]}`}>{draft.status}</span>
+                <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, when: [...draft.when, makeCondition(catalog)] })}>
+                  <Plus size={12} /> Condition
                 </button>
-                <button
-                  type="button"
-                  className="save-btn"
-                  disabled={!isDirty || !draft.name.trim()}
-                  onClick={() => save.mutate(draft)}
-                >
-                  <Save size={13} /> {t('common.save')}
+                <button type="button" className="btn ghost" onClick={() => setDraft({ ...draft, actions: [...draft.actions, makeAction(catalog)] })}>
+                  <Plus size={12} /> Action
                 </button>
               </div>
 
               <div className="rules-canvas">
                 <ReactFlowProvider>
-                  <RuleCanvas rule={draft} onChange={setDraft} />
+                  <RuleCanvas catalog={catalog} draft={draft} onChange={setDraft} />
                 </ReactFlowProvider>
               </div>
 
               <div className="rules-telemetry">
-                <Network size={11} />
-                <span className="muted">Telemetry preview (engine will fill these):</span>
-                <span><strong>{draft.telemetry.fires_total}</strong> total fires</span>
-                <span><strong>{draft.telemetry.fires_count_7d}</strong> last 7d</span>
-                <span><strong>{draft.telemetry.avg_resolution_hours ?? '—'}</strong> avg resolution (h)</span>
-                <span><strong>{draft.telemetry.last_fired_at ?? '—'}</strong> last fired</span>
-                <span><strong>{draft.telemetry.reassignment_rate_7d ?? '—'}</strong> reassign rate</span>
+                <Activity size={11} />
+                <span><strong>Prompt:</strong> ai.transcript-resolver</span>
+                <span><strong>Canvas source:</strong> /api/v1/rules/catalog</span>
+                <span><strong>Executor:</strong> {verify.data ? 'verified' : 'not checked'}</span>
+                {verify.data && (
+                  <>
+                    <span><CheckCircle2 size={11} /> {verify.data.probeValues.trigger}</span>
+                    <span>{verify.data.probeValues.condition}</span>
+                    <span>{verify.data.probeValues.action}</span>
+                  </>
+                )}
+                {verify.isError && <span className="danger-text">{apiErrorMessage(verify.error)}</span>}
               </div>
-            </>
-          )}
-        </main>
-      </div>
+            </main>
+          </div>
+        </>
+      )}
     </>
+  );
+}
+
+function CatalogCard({ title, count, values }: { title: string; count: number; values: string[] }) {
+  return (
+    <div className="rule-card">
+      <div className="rule-card-head">
+        <span className="pill success">{title}</span>
+        <span className="muted">{count}</span>
+      </div>
+      <div className="rule-card-name">{title}</div>
+      <div className="rule-card-desc">{values.join(' · ')}</div>
+    </div>
   );
 }
 

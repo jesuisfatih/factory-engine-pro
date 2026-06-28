@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AiHealthResponse } from '@factory-engine-pro/contracts';
+import {
+  buildTranscriptResolverPromptFromEnums,
+  WORKFLOW_ENUM_VERSION,
+  type AiHealthResponse,
+} from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -92,6 +96,15 @@ export class AiService {
         error: message,
       };
     }
+  }
+
+  resolverPromptPreview() {
+    const prompt = buildTranscriptResolverPromptFromEnums();
+    return {
+      promptKey: 'ai.transcript-resolver',
+      promptVersion: WORKFLOW_ENUM_VERSION,
+      prompt,
+    };
   }
 
   private async resolveAnthropicKey(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {

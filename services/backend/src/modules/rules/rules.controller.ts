@@ -1,21 +1,21 @@
 import { Controller, Get } from '@nestjs/common';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
-import { AiService } from './ai.service.js';
+import { RulesService } from './rules.service.js';
 
-@Controller('ai')
-export class AiController {
-  constructor(private readonly ai: AiService) {}
+@Controller('rules')
+export class RulesController {
+  constructor(private readonly rules: RulesService) {}
 
-  @Get('health')
+  @Get('catalog')
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
-  health() {
-    return this.ai.health();
+  catalog() {
+    return this.rules.catalog();
   }
 
-  @Get('resolver-prompt')
+  @Get('enum-chain')
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
-  resolverPrompt() {
-    return this.ai.resolverPromptPreview();
+  enumChainProbe() {
+    return this.rules.enumChainProbe();
   }
 }

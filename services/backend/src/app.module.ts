@@ -13,6 +13,7 @@ import { MailModule } from './modules/mail/mail.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { PersonWorkspaceModule } from './modules/person-workspace/person-workspace.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
+import { RulesModule } from './modules/rules/rules.module.js';
 import { SegmentsModule } from './modules/segments/segments.module.js';
 import { SupportModule } from './modules/support/support.module.js';
 import { SyncModule } from './modules/sync/sync.module.js';
@@ -40,6 +41,7 @@ import { HealthController } from './health.controller.js';
     PersonWorkspaceModule,
     CustomersModule,
     PricingModule,
+    RulesModule,
     SegmentsModule,
     SupportModule,
     B2BAccessModule,

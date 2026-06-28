@@ -35,6 +35,8 @@ import type {
   UpdateMemberRoleInput,
   UpdatePricingRuleInput,
   UpsertSegmentOwnershipInput,
+  WorkflowEnumCatalogResponse,
+  WorkflowEnumChainProbeResponse,
   AssignServiceRequestInput,
   AddServiceRequestCommentInput,
   BulkServiceRequestsInput,
@@ -556,6 +558,18 @@ export class ApiClient {
 
   aiHealth() {
     return this.get<AiHealthResponse>('/ai/health');
+  }
+
+  aiResolverPrompt() {
+    return this.get<{ promptKey: string; promptVersion: string; prompt: string }>('/ai/resolver-prompt');
+  }
+
+  workflowEnumCatalog() {
+    return this.get<WorkflowEnumCatalogResponse>('/rules/catalog');
+  }
+
+  workflowEnumChainProbe() {
+    return this.get<WorkflowEnumChainProbeResponse>('/rules/enum-chain');
   }
 
   shopifySyncStatus() {
