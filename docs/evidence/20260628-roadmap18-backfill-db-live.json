@@ -1,0 +1,26 @@
+﻿{
+  "checkedAt": "2026-06-28T13:15:29.044Z",
+  "reportId": "wrbf_gx508efzxcqmw1jmny8g6n32",
+  "ruleId": "wrule_rllktqy8jly1jnjbolxf8bda",
+  "serviceRequestCount": 3,
+  "report": {
+    "id": "wrbf_gx508efzxcqmw1jmny8g6n32",
+    "ruleId": "wrule_rllktqy8jly1jnjbolxf8bda",
+    "recentDays": 7,
+    "evaluatedEvents": 1,
+    "matchedEvents": 1,
+    "wouldCreateTasks": 1,
+    "actualTasksCreated": 0,
+    "status": "completed",
+    "noMutation": true,
+    "candidateSource": "customers"
+  },
+  "assertions": {
+    "tableExists": true,
+    "migrationApplied": true,
+    "reportRowExists": true,
+    "reportIsSevenDays": true,
+    "reportNoMutation": true,
+    "reportBelongsToRule": true
+  }
+}

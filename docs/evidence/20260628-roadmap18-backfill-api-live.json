@@ -1,0 +1,93 @@
+﻿{
+    "checkedAt":  "2026-06-28T13:15:06.9208174Z",
+    "buildSha":  "20045a0f38daa0760705ead6e405a55346d9068d",
+    "tenantId":  "ten_dtfbank",
+    "ruleId":  "wrule_rllktqy8jly1jnjbolxf8bda",
+    "reportId":  "wrbf_gx508efzxcqmw1jmny8g6n32",
+    "reportListCount":  1,
+    "taskBefore":  1,
+    "taskAfter":  1,
+    "assertions":  {
+                       "ruleCreated":  true,
+                       "backfillEndpointReturnedReport":  true,
+                       "sevenDayWindow":  true,
+                       "shadowNoMutation":  true,
+                       "noRealTaskCreated":  true,
+                       "reportListed":  true,
+                       "wouldCreateTaskCountPresent":  true,
+                       "routeUsesSelectedRule":  true
+                   },
+    "report":  {
+                   "id":  "wrbf_gx508efzxcqmw1jmny8g6n32",
+                   "ruleId":  "wrule_rllktqy8jly1jnjbolxf8bda",
+                   "ruleName":  "Roadmap 18 backfill proof 20260628161502",
+                   "trigger":  "manual.trigger",
+                   "recentDays":  7,
+                   "status":  "completed",
+                   "windowStart":  "2026-06-21T13:15:02.589Z",
+                   "windowEnd":  "2026-06-28T13:15:02.589Z",
+                   "evaluatedEvents":  1,
+                   "matchedEvents":  1,
+                   "skippedEvents":  0,
+                   "wouldCreateTasks":  1,
+                   "actualTasksCreated":  0,
+                   "createdByMemberId":  "tmbr_ten_dtfbank_info_owner",
+                   "createdAt":  "2026-06-28T13:15:02.619Z",
+                   "finishedAt":  "2026-06-28T13:15:02.616Z",
+                   "result":  {
+                                  "noMutation":  true,
+                                  "candidateSource":  "customers",
+                                  "sampleLimit":  100,
+                                  "samples":  [
+                                                  {
+                                                      "status":  "shadow_matched",
+                                                      "eventId":  "backfill:manual.trigger:cust_ten_dtfbank_northstar:1782652401710",
+                                                      "matched":  true,
+                                                      "cooldown":  {
+                                                                       "hours":  0,
+                                                                       "limit":  1,
+                                                                       "disabled":  true,
+                                                                       "customerId":  "cust_ten_dtfbank_northstar",
+                                                                       "lastFiredAt":  null,
+                                                                       "currentCount":  0,
+                                                                       "nextEligibleAt":  null,
+                                                                       "windowStartedAt":  null
+                                                                   },
+                                                      "sourceId":  "cust_ten_dtfbank_northstar",
+                                                      "whenTrace":  [
+                                                                        {
+                                                                            "id":  "default",
+                                                                            "matched":  true,
+                                                                            "conditionTrace":  [
+                                                                                                   {
+                                                                                                       "id":  "cond-20260628161502",
+                                                                                                       "actual":  1842.5,
+                                                                                                       "source":  "customers.total_spent",
+                                                                                                       "matched":  true,
+                                                                                                       "expected":  "0",
+                                                                                                       "operator":  "\u003e=",
+                                                                                                       "condition":  "customer_ltv_gte"
+                                                                                                   }
+                                                                                               ]
+                                                                        }
+                                                                    ],
+                                                      "customerId":  "cust_ten_dtfbank_northstar",
+                                                      "occurredAt":  "2026-06-28T13:13:21.710Z",
+                                                      "sourceType":  "customer",
+                                                      "conditionTrace":  [
+                                                                             {
+                                                                                 "id":  "cond-20260628161502",
+                                                                                 "actual":  1842.5,
+                                                                                 "source":  "customers.total_spent",
+                                                                                 "matched":  true,
+                                                                                 "expected":  "0",
+                                                                                 "operator":  "\u003e=",
+                                                                                 "condition":  "customer_ltv_gte"
+                                                                             }
+                                                                         ],
+                                                      "wouldCreateTaskCount":  1
+                                                  }
+                                              ]
+                              }
+               }
+}

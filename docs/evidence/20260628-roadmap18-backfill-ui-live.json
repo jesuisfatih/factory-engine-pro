@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-06-28T13:22:10.375Z",
+  "url": "https://app.dtfbank.com/rules",
+  "ruleId": "wrule_rllktqy8jly1jnjbolxf8bda",
+  "reportId": "wrbf_gx508efzxcqmw1jmny8g6n32",
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap18-backfill-ui-live-20260628.png",
+  "consoleErrors": [],
+  "assertions": {
+    "proofRuleVisible": true,
+    "shadowReportsVisible": true,
+    "sevenDayReportVisible": true,
+    "zeroRealTasksVisible": true,
+    "telemetryShadowVisible": true,
+    "runShadowButtonVisible": true
+  }
+}

@@ -1,0 +1,23 @@
+﻿{
+    "checkedAt":  "2026-06-28T13:22:34.3285697Z",
+    "buildSha":  "964718288e3fe3127e239aef216176b3d04ce9a0",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "ruleId":  "wrule_rllktqy8jly1jnjbolxf8bda",
+    "reportId":  "wrbf_gx508efzxcqmw1jmny8g6n32",
+    "logLines":  [
+                     "\u001b[32m[Nest] 1362  - \u001b[39m06/28/2026, 1:13:26 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/backfills, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                     "\u001b[32m[Nest] 1362  - \u001b[39m06/28/2026, 1:13:26 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/backfill, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                     "\u001b[32m[Nest] 1362  - \u001b[39m06/28/2026, 1:13:26 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                     "\u001b[32m[Nest] 1362  - \u001b[39m06/28/2026, 1:15:02 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"roadmap18-api-proof\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_info_owner\",\"principal_type\":\"member\",\"module\":\"rules\",\"action\":\"backfill_completed\",\"message\":\"Workflow rule backfill completed in shadow mode\",\"rule_id\":\"wrule_rllktqy8jly1jnjbolxf8bda\",\"trigger\":\"manual.trigger\",\"recent_days\":7,\"evaluated_events\":1,\"matched_events\":1,\"would_create_tasks\":1,\"actual_tasks_created\":0,\"report_id\":\"wrbf_gx508efzxcqmw1jmny8g6n32\"}\u001b[39m"
+                 ],
+    "assertions":  {
+                       "healthOk":  true,
+                       "buildShaMatches":  true,
+                       "routeMapped":  true,
+                       "runtimeStarted":  true,
+                       "backfillCompletedLog":  true
+                   }
+}
