@@ -1,9 +1,13 @@
 {
   "target": "ROADMAP 5 - AI Transcript Resolver + Output Schema",
   "status": "implemented_but_external_provider_blocked",
-  "commit": "3e327bf7ff37a74cadee072adc6cb41ad0de62a0",
+  "commit": "8ebab25d49c1b29b965b88200592c48b851efd9b",
+  "commits": [
+    "3e327bf7ff37a74cadee072adc6cb41ad0de62a0",
+    "8ebab25d49c1b29b965b88200592c48b851efd9b"
+  ],
   "deployedContainer": "factoryengine-dtfbank-app",
-  "deployedBuildSha": "3e327bf7ff37a74cadee072adc6cb41ad0de62a0",
+  "deployedBuildSha": "8ebab25d49c1b29b965b88200592c48b851efd9b",
   "migration": {
     "name": "202606282_ai_transcript_resolver_output",
     "result": "applied on live Vultr managed Postgres schema factory_engine_pro",
@@ -31,6 +35,7 @@
       "baseUrl": "https://api.dtfbank.com/api/v1",
       "loginStatus": 201,
       "aircallCallsStatus": 200,
+      "failedResolverRequeueReady": true,
       "stats": {
         "total": 102,
         "last3d": 102,
