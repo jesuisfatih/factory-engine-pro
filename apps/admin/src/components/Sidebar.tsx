@@ -16,7 +16,7 @@ interface NavLeaf {
   i18nKey: string;
   id: string;
   icon: typeof LayoutDashboard;
-  permission?: string;
+  permission?: string | string[];
 }
 
 const NAV: { groupKey: string; children: NavLeaf[] }[] = [
@@ -54,7 +54,14 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     children: [
       { to: '/team/users', matchPrefix: '/team/users', i18nKey: 'nav.team_members', id: 'nav-team-users', icon: Users, permission: 'members.read' },
       { to: '/team/roles', matchPrefix: '/team/roles', i18nKey: 'nav.team_roles', id: 'nav-team-roles', icon: KeyRound, permission: 'roles.read' },
-      { to: '/team/commissions', matchPrefix: '/team/commissions', i18nKey: 'nav.team_commissions', id: 'nav-team-commissions', icon: DollarSign, permission: MEMBER_PERMISSIONS.membersRead },
+      {
+        to: '/team/commissions',
+        matchPrefix: '/team/commissions',
+        i18nKey: 'nav.team_commissions',
+        id: 'nav-team-commissions',
+        icon: DollarSign,
+        permission: [MEMBER_PERMISSIONS.membersRead, MEMBER_PERMISSIONS.commissionSubmit],
+      },
     ],
   },
   {
@@ -84,7 +91,10 @@ export function Sidebar({ collapsed }: Props) {
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const permissions = new Set(principal?.permissions ?? []);
-  const can = (permission?: string) => !permission || permissions.has(permission);
+  const can = (permission?: string | string[]) => !permission
+    || (Array.isArray(permission)
+      ? permission.some((item) => permissions.has(item))
+      : permissions.has(permission));
   const sections = NAV.map((section) => ({
     ...section,
     children: section.children.filter((leaf) => can(leaf.permission)),

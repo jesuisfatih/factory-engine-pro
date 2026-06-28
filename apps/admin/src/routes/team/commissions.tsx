@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { ChevronDown, ChevronUp, Plus, Save, Trash2, Users as UsersIcon, User } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
@@ -277,7 +278,7 @@ function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, ca
 function CommissionsView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const canWrite = useCan('team.commissions.write');
+  const canWrite = useCan(MEMBER_PERMISSIONS.commissionSubmit);
 
   const { data: profiles = [] } = useQuery({ queryKey: QK, queryFn: fetchCommissionProfiles });
 

@@ -24,11 +24,11 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
 ];
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
-const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string }> = [
+const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> = [
   { test: /^\/team\/users\/add/, permission: MEMBER_PERMISSIONS.membersWrite },
   { test: /^\/team\/users/, permission: MEMBER_PERMISSIONS.membersRead },
   { test: /^\/team\/roles/, permission: MEMBER_PERMISSIONS.rolesRead },
-  { test: /^\/team\/commissions/, permission: MEMBER_PERMISSIONS.membersRead },
+  { test: /^\/team\/commissions/, permission: [MEMBER_PERMISSIONS.membersRead, MEMBER_PERMISSIONS.commissionSubmit] },
   { test: /^\/orders/, permission: MEMBER_PERMISSIONS.ordersRead },
   { test: /^\/customers/, permission: MEMBER_PERMISSIONS.customersRead },
   { test: /^\/pricing/, permission: MEMBER_PERMISSIONS.pricingRead },
@@ -55,6 +55,13 @@ function redirectTarget(pathname: string, searchStr: string) {
 
 function requiredPermission(pathname: string) {
   return ROUTE_PERMISSIONS.find((item) => item.test.test(pathname))?.permission;
+}
+
+function hasRoutePermission(permissions: string[], required: string | string[] | undefined) {
+  if (!required) return true;
+  return Array.isArray(required)
+    ? required.some((permission) => permissions.includes(permission))
+    : permissions.includes(required);
 }
 
 function RootLayout() {
@@ -103,7 +110,7 @@ export const Route = createRootRoute({
     }
 
     const permission = requiredPermission(location.pathname);
-    if (hasSession && !authRoute && permission && !session?.principal.permissions.includes(permission)) {
+    if (hasSession && !authRoute && !hasRoutePermission(session?.principal.permissions ?? [], permission)) {
       throw redirect({ to: '/dashboard' });
     }
   },
