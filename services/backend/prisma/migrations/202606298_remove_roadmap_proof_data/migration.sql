@@ -62,25 +62,38 @@ WHERE segment_id IN (SELECT id FROM _roadmap_fake_segments);
 DELETE FROM segments
 WHERE id IN (SELECT id FROM _roadmap_fake_segments);
 
-DELETE FROM workflow_rule_backfill_reports
-WHERE lower(rule_name) LIKE 'roadmap %'
-   OR lower(rule_name) LIKE '% proof %';
+DO $$
+BEGIN
+  IF to_regclass('workflow_rule_backfill_reports') IS NOT NULL THEN
+    DELETE FROM workflow_rule_backfill_reports
+    WHERE lower(rule_name) LIKE 'roadmap %'
+       OR lower(rule_name) LIKE '% proof %';
+  END IF;
 
-DELETE FROM workflow_rule_versions
-WHERE lower(name) LIKE 'roadmap %'
-   OR lower(definition::text) LIKE '%roadmap%';
+  IF to_regclass('rule_versions') IS NOT NULL THEN
+    DELETE FROM rule_versions
+    WHERE lower(json_snapshot::text) LIKE '%roadmap%'
+       OR lower(json_snapshot::text) LIKE '%proof%';
+  END IF;
 
-DELETE FROM workflow_rule_executions
-WHERE lower(event_id) LIKE 'roadmap%'
-   OR lower(event_id) LIKE '%proof%';
+  IF to_regclass('workflow_rule_executions') IS NOT NULL THEN
+    DELETE FROM workflow_rule_executions
+    WHERE lower(event_id) LIKE 'roadmap%'
+       OR lower(event_id) LIKE '%proof%';
+  END IF;
 
-DELETE FROM workflow_rule_cooldowns
-WHERE customer_id IN (SELECT id FROM _roadmap_fake_customers);
+  IF to_regclass('workflow_rule_cooldowns') IS NOT NULL THEN
+    DELETE FROM workflow_rule_cooldowns
+    WHERE customer_id IN (SELECT id FROM _roadmap_fake_customers);
+  END IF;
 
-DELETE FROM workflow_rules
-WHERE lower(name) LIKE 'roadmap %'
-   OR lower(description) LIKE '%roadmap%'
-   OR lower(description) LIKE '%proof%';
+  IF to_regclass('workflow_rules') IS NOT NULL THEN
+    DELETE FROM workflow_rules
+    WHERE lower(name) LIKE 'roadmap %'
+       OR lower(definition::text) LIKE '%roadmap%'
+       OR lower(definition::text) LIKE '%proof%';
+  END IF;
+END $$;
 
 DELETE FROM commerce_pickup_orders
 WHERE order_id IN (SELECT id FROM _roadmap_fake_orders)
