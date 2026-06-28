@@ -1,0 +1,42 @@
+﻿{
+    "checkedAt":  "2026-06-28T15:29:59.8540873Z",
+    "buildSha":  "e92c2e2c9f25d2857101413edcb7d20d92d7fae7",
+    "health":  {
+                   "body":  "{\"ok\":true,\"service\":\"factory-engine-pro-backend\"}",
+                   "status":  200
+               },
+    "staff":  {
+                  "status":  200,
+                  "title":  "Factory Engine Pro Staff"
+              },
+    "pm2":  [
+                "│ 3  │ factory-engine-pro-accounts    │ default     │ N/A     │ fork    │ 1394     │ 2h     │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 12 │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 59166    │ 28m    │ 0    │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+                "│ 11 │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 68950    │ 4m     │ 82   │ online    │ 0%       │ 153.4mb  │ root     │ disabled │",
+                "│ 13 │ factory-engine-pro-person      │ default     │ N/A     │ fork    │ 66025    │ 10m    │ 34   │ online    │ 0%       │ 2.3mb    │ root     │ disabled │"
+            ],
+    "listeners":  [
+                      {
+                          "pid":  66060,
+                          "ports":  [
+                                        3002
+                                    ],
+                          "cmd":  "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002"
+                      },
+                      {
+                          "pid":  68950,
+                          "ports":  [
+                                        4000
+                                    ],
+                          "cmd":  "/usr/local/bin/node dist/services/backend/src/main.js"
+                      }
+                  ],
+    "assertions":  {
+                       "staffOk":  true,
+                       "personOnline":  true,
+                       "apiSingleListener":  true,
+                       "healthOk":  true,
+                       "personSingleListener":  true,
+                       "apiOnline":  true
+                   }
+}

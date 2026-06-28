@@ -1,0 +1,479 @@
+{
+  "checkedAt": "2026-06-28T15:28:19.308Z",
+  "commit": "e92c2e2c9f25d2857101413edcb7d20d92d7fae7",
+  "endpoint": "GET https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+  "proofData": {
+    "hiddenSalesCustomerId": "cust_roadmap24_hidden_sales",
+    "lindaCustomerId": "cust_roadmap24_linda",
+    "charletteCustomerId": "cust_roadmap24_charlette",
+    "ihsanCustomerId": "cust_roadmap24_ihsan"
+  },
+  "sessions": {
+    "dtfbanktx@gmail.com": {
+      "loginStatus": 201,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_linda_marroquin",
+        "email": "dtfbanktx@gmail.com",
+        "permissions": [
+          "orders.read",
+          "task.assign",
+          "support.read",
+          "segments.read",
+          "support.write",
+          "customers.read",
+          "customers.write",
+          "aircall.users.read"
+        ]
+      }
+    },
+    "charlette@dtfbank.com": {
+      "loginStatus": 201,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_charlette_boatman",
+        "email": "charlette@dtfbank.com",
+        "permissions": [
+          "orders.read",
+          "task.assign",
+          "support.read",
+          "segments.read",
+          "support.write",
+          "customers.read",
+          "customers.write",
+          "aircall.users.read"
+        ]
+      }
+    },
+    "ihsan@dtfbank.com": {
+      "loginStatus": 201,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "email": "ihsan@dtfbank.com",
+        "permissions": [
+          "orders.read",
+          "task.assign",
+          "orders.write",
+          "pricing.read",
+          "support.read",
+          "pricing.write",
+          "segments.read",
+          "support.write",
+          "customers.read",
+          "customers.write",
+          "commission.submit",
+          "aircall.users.read"
+        ]
+      }
+    }
+  },
+  "before": {
+    "dtfbanktx@gmail.com": {
+      "status": 200,
+      "summary": {
+        "dailyCount": 1,
+        "priorityCount": 8,
+        "pinnedCount": 0,
+        "highUrgencyCount": 2,
+        "visibleAxes": [
+          "support"
+        ],
+        "segmentGroupCount": 1
+      },
+      "sorted": {
+        "daily": true,
+        "priority": true,
+        "pins": true
+      },
+      "dailyIds": [
+        "cust_roadmap24_linda"
+      ],
+      "priorityIds": [
+        "cust_roadmap24_linda",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar",
+        "cust_ten_dtfbank_northstar"
+      ],
+      "pinIds": [],
+      "dailyTop": [
+        {
+          "customerId": "cust_roadmap24_linda",
+          "name": "Roadmap 24 Linda Axis Customer",
+          "score": 216,
+          "axis": "support",
+          "segment": "Roadmap 24 Linda Daily Segment",
+          "pinned": false
+        }
+      ],
+      "priorityTop": [
+        {
+          "id": "sr_roadmap24_linda_priority",
+          "customerId": "cust_roadmap24_linda",
+          "title": "Roadmap 24 Linda Axis Customer",
+          "score": 216,
+          "intent": "complaint",
+          "pinned": false
+        },
+        {
+          "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+          "customerId": "cust_ten_dtfbank_northstar",
+          "title": "Northstar Print Supply",
+          "score": 117.1,
+          "intent": "complaint",
+          "pinned": false
+        },
+        {
+          "id": "sr_lwriwskitxqu8anfqu48ueu4",
+          "customerId": "cust_ten_dtfbank_northstar",
+          "title": "Northstar Print Supply",
+          "score": 51.1,
+          "intent": "support",
+          "pinned": false
+        },
+        {
+          "id": "sr_bn0843qxubs4u4yce3es78o5",
+          "customerId": "cust_ten_dtfbank_northstar",
+          "title": "Northstar Print Supply",
+          "score": 45.2,
+          "intent": "support",
+          "pinned": false
+        },
+        {
+          "id": "sr_ten_dtfbank_welcome",
+          "customerId": "cust_ten_dtfbank_northstar",
+          "title": "Northstar Print Supply",
+          "score": 37.6,
+          "intent": "manual",
+          "pinned": false
+        },
+        {
+          "id": "sr_z9jrz48yjia7zu0rde60ekx3",
+          "customerId": "cust_ten_dtfbank_northstar",
+          "title": "Northstar Print Supply",
+          "score": 37.3,
+          "intent": "roadmap21_support_20260628141127",
+          "pinned": false
+        }
+      ]
+    },
+    "charlette@dtfbank.com": {
+      "status": 200,
+      "summary": {
+        "dailyCount": 1,
+        "priorityCount": 1,
+        "pinnedCount": 0,
+        "highUrgencyCount": 1,
+        "visibleAxes": [
+          "support"
+        ],
+        "segmentGroupCount": 1
+      },
+      "sorted": {
+        "daily": true,
+        "priority": true,
+        "pins": true
+      },
+      "dailyIds": [
+        "cust_roadmap24_charlette"
+      ],
+      "priorityIds": [
+        "cust_roadmap24_charlette"
+      ],
+      "pinIds": [],
+      "dailyTop": [
+        {
+          "customerId": "cust_roadmap24_charlette",
+          "name": "Roadmap 24 Charlette Axis Customer",
+          "score": 166,
+          "axis": "support",
+          "segment": "Roadmap 24 Charlette Daily Segment",
+          "pinned": false
+        }
+      ],
+      "priorityTop": [
+        {
+          "id": "sr_roadmap24_charlette_priority",
+          "customerId": "cust_roadmap24_charlette",
+          "title": "Roadmap 24 Charlette Axis Customer",
+          "score": 154,
+          "intent": "support",
+          "pinned": false
+        }
+      ]
+    },
+    "ihsan@dtfbank.com": {
+      "status": 200,
+      "summary": {
+        "dailyCount": 2,
+        "priorityCount": 2,
+        "pinnedCount": 0,
+        "highUrgencyCount": 2,
+        "visibleAxes": [
+          "sales"
+        ],
+        "segmentGroupCount": 1
+      },
+      "sorted": {
+        "daily": true,
+        "priority": true,
+        "pins": true
+      },
+      "dailyIds": [
+        "cust_roadmap24_hidden_sales",
+        "cust_roadmap24_ihsan"
+      ],
+      "priorityIds": [
+        "cust_roadmap24_hidden_sales",
+        "cust_roadmap24_ihsan"
+      ],
+      "pinIds": [],
+      "dailyTop": [
+        {
+          "customerId": "cust_roadmap24_hidden_sales",
+          "name": "Roadmap 24 Hidden Sales Customer",
+          "score": 201,
+          "axis": "sales",
+          "segment": "Roadmap 24 Ihsan Sales Segment",
+          "pinned": false
+        },
+        {
+          "customerId": "cust_roadmap24_ihsan",
+          "name": "Roadmap 24 Ihsan Sales Customer",
+          "score": 201,
+          "axis": "sales",
+          "segment": "Roadmap 24 Ihsan Sales Segment",
+          "pinned": false
+        }
+      ],
+      "priorityTop": [
+        {
+          "id": "sr_roadmap24_hidden_sales_priority",
+          "customerId": "cust_roadmap24_hidden_sales",
+          "title": "Roadmap 24 Hidden Sales Customer",
+          "score": 208,
+          "intent": "sales",
+          "pinned": false
+        },
+        {
+          "id": "sr_roadmap24_ihsan_priority",
+          "customerId": "cust_roadmap24_ihsan",
+          "title": "Roadmap 24 Ihsan Sales Customer",
+          "score": 193,
+          "intent": "sales",
+          "pinned": false
+        }
+      ]
+    }
+  },
+  "afterPin": {
+    "status": 200,
+    "summary": {
+      "dailyCount": 1,
+      "priorityCount": 8,
+      "pinnedCount": 1,
+      "highUrgencyCount": 2,
+      "visibleAxes": [
+        "support"
+      ],
+      "segmentGroupCount": 1
+    },
+    "sorted": {
+      "daily": true,
+      "priority": true,
+      "pins": true
+    },
+    "dailyIds": [
+      "cust_roadmap24_linda"
+    ],
+    "priorityIds": [
+      "cust_roadmap24_linda",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar"
+    ],
+    "pinIds": [
+      {
+        "id": "sr_foz2img3z3k9wlaq4va4f32i",
+        "kind": "customer",
+        "customerId": "cust_roadmap24_linda",
+        "score": 217
+      }
+    ],
+    "dailyTop": [
+      {
+        "customerId": "cust_roadmap24_linda",
+        "name": "Roadmap 24 Linda Axis Customer",
+        "score": 217,
+        "axis": "support",
+        "segment": "Roadmap 24 Linda Daily Segment",
+        "pinned": true
+      }
+    ],
+    "priorityTop": [
+      {
+        "id": "sr_roadmap24_linda_priority",
+        "customerId": "cust_roadmap24_linda",
+        "title": "Roadmap 24 Linda Axis Customer",
+        "score": 217,
+        "intent": "complaint",
+        "pinned": false
+      },
+      {
+        "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 117.1,
+        "intent": "complaint",
+        "pinned": false
+      },
+      {
+        "id": "sr_lwriwskitxqu8anfqu48ueu4",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 51.1,
+        "intent": "support",
+        "pinned": false
+      },
+      {
+        "id": "sr_bn0843qxubs4u4yce3es78o5",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 45.2,
+        "intent": "support",
+        "pinned": false
+      },
+      {
+        "id": "sr_ten_dtfbank_welcome",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 37.6,
+        "intent": "manual",
+        "pinned": false
+      },
+      {
+        "id": "sr_z9jrz48yjia7zu0rde60ekx3",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 37.3,
+        "intent": "roadmap21_support_20260628141127",
+        "pinned": false
+      }
+    ]
+  },
+  "afterRefresh": {
+    "status": 200,
+    "summary": {
+      "dailyCount": 1,
+      "priorityCount": 8,
+      "pinnedCount": 1,
+      "highUrgencyCount": 2,
+      "visibleAxes": [
+        "support"
+      ],
+      "segmentGroupCount": 1
+    },
+    "sorted": {
+      "daily": true,
+      "priority": true,
+      "pins": true
+    },
+    "dailyIds": [
+      "cust_roadmap24_linda"
+    ],
+    "priorityIds": [
+      "cust_roadmap24_linda",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar",
+      "cust_ten_dtfbank_northstar"
+    ],
+    "pinIds": [
+      {
+        "id": "sr_foz2img3z3k9wlaq4va4f32i",
+        "kind": "customer",
+        "customerId": "cust_roadmap24_linda",
+        "score": 217
+      }
+    ],
+    "dailyTop": [
+      {
+        "customerId": "cust_roadmap24_linda",
+        "name": "Roadmap 24 Linda Axis Customer",
+        "score": 217,
+        "axis": "support",
+        "segment": "Roadmap 24 Linda Daily Segment",
+        "pinned": true
+      }
+    ],
+    "priorityTop": [
+      {
+        "id": "sr_roadmap24_linda_priority",
+        "customerId": "cust_roadmap24_linda",
+        "title": "Roadmap 24 Linda Axis Customer",
+        "score": 217,
+        "intent": "complaint",
+        "pinned": false
+      },
+      {
+        "id": "sr_ro7tq4grikq71a5ug1wd1r32",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 117.1,
+        "intent": "complaint",
+        "pinned": false
+      },
+      {
+        "id": "sr_lwriwskitxqu8anfqu48ueu4",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 51.1,
+        "intent": "support",
+        "pinned": false
+      },
+      {
+        "id": "sr_bn0843qxubs4u4yce3es78o5",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 45.2,
+        "intent": "support",
+        "pinned": false
+      },
+      {
+        "id": "sr_ten_dtfbank_welcome",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 37.6,
+        "intent": "manual",
+        "pinned": false
+      },
+      {
+        "id": "sr_z9jrz48yjia7zu0rde60ekx3",
+        "customerId": "cust_ten_dtfbank_northstar",
+        "title": "Northstar Print Supply",
+        "score": 37.3,
+        "intent": "roadmap21_support_20260628141127",
+        "pinned": false
+      }
+    ]
+  },
+  "assertions": {
+    "lindaHasDailyProofCustomer": true,
+    "lindaCannotSeeHiddenSalesDaily": true,
+    "lindaCannotSeeHiddenSalesPriority": true,
+    "ihsanCanSeeHiddenSalesDaily": true,
+    "ihsanCanSeeHiddenSalesPriority": true,
+    "charletteHasDailyProofCustomer": true,
+    "allListsSorted": true,
+    "pinPersistedAfterRefresh": true,
+    "dailyMarkedPinnedAfterRefresh": true
+  }
+}

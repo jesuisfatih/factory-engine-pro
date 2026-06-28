@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-06-28T15:28:55.699Z",
+  "url": "https://app.dtfbank.com/staff/queue",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\roadmap24-daily-operations-ui-live-20260628.png",
+  "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n8\nCustomers\n1\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n3\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nDAILY CALLS\n1\naxis-scoped customers\nPRIORITY TASKS\n8\nurgency desc\nPINNED\n1\npersistent board\nU80+\n2\nsame formula\nAXES\n1\nsupport\nDaily call list\n\nSegment-driven customers, sorted by the urgency formula.\n\nAll assigned segments\nRoadmap 24 Linda Daily Segment (1/50)\nRoadmap 24 Linda Axis Customer\nU217\nRoadmap 24 Linda Daily Segment segment - 2 recent requests - support axis\nRoadmap 24 Linda Daily Segment\n18 orders · $6.200\nPinned\nPriority kanban\n\nRule-engine tasks, axis-scoped and urgency-desc.\n\nRoadmap 24 Linda Axis Customer\nU217\nSR-PRIORITY - U217 - Open - 1m\nroadmap24\nPin\nNorthstar Print Supply\nU117.1\nSR-MQXX5HT2 - U117.1 - Open - 25m\nother\nPin\nNorthstar Print Supply\nU51.1\nSR-MQXX5HMN - U51.1 - Open - 25m\nother\nPin\nNorthstar Print Supply\nU45.2\nSR-MQXWFESL - U45.2 - Open - 46m\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.6\nSR-TEN_DTFBANK-001 - U37.6 - Open - 2h\noperations\nPin\nNorthstar Print Supply\nU37.3\nSR-MQXVBYBE - U37.3 - Open - 1h\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.3\nSR-MQXVB82Y - U37.3 - Open - 1h\nworkflow_rule\nPin\nNorthstar Print Supply\nU37.3\nSR-MQXVAEQQ - U37.3 - Open - 1h\nworkflow_rule\nPin\nPinned board\n1\nPINNED CARD\t\n\nRoadmap 24 Linda Axis Customer\nCustomer - Roadmap 24 Linda Daily Segment - U217\n\t\nUnpin",
+  "checks": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "showsDailyList": true,
+    "showsPriorityKanban": true,
+    "showsPinnedBoard": true,
+    "showsSegmentDropdown": true,
+    "showsLindaProofCustomer": true,
+    "hidesHiddenSalesCustomer": true,
+    "showsPinnedState": true,
+    "noQueryError": true
+  }
+}

@@ -1,0 +1,146 @@
+﻿{
+  "checkedAt": "2026-06-28T15:29:18.519Z",
+  "salesRolePermission": {
+    "supportRead": true,
+    "supportWrite": true
+  },
+  "assignments": [
+    {
+      "customerId": "cust_roadmap24_ihsan",
+      "axis": "sales",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "isPrimary": true
+    },
+    {
+      "customerId": "cust_roadmap24_hidden_sales",
+      "axis": "sales",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "isPrimary": true
+    },
+    {
+      "customerId": "cust_roadmap24_linda",
+      "axis": "support",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "isPrimary": true
+    },
+    {
+      "customerId": "cust_roadmap24_charlette",
+      "axis": "support",
+      "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "isPrimary": true
+    }
+  ],
+  "segmentOwnerships": [
+    {
+      "segmentId": "seg_roadmap24_charlette",
+      "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "priority": 70,
+      "dailyCap": 50
+    },
+    {
+      "segmentId": "seg_roadmap24_ihsan",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "priority": 80,
+      "dailyCap": 50
+    },
+    {
+      "segmentId": "seg_roadmap24_linda",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "priority": 90,
+      "dailyCap": 50
+    }
+  ],
+  "memberships": [
+    {
+      "segmentId": "seg_roadmap24_charlette",
+      "customerId": "cust_roadmap24_charlette"
+    },
+    {
+      "segmentId": "seg_roadmap24_ihsan",
+      "customerId": "cust_roadmap24_ihsan"
+    },
+    {
+      "segmentId": "seg_roadmap24_ihsan",
+      "customerId": "cust_roadmap24_hidden_sales"
+    },
+    {
+      "segmentId": "seg_roadmap24_linda",
+      "customerId": "cust_roadmap24_linda"
+    },
+    {
+      "segmentId": "seg_roadmap24_linda",
+      "customerId": "cust_roadmap24_hidden_sales"
+    }
+  ],
+  "requests": [
+    {
+      "id": "sr_roadmap24_linda_priority",
+      "customerId": "cust_roadmap24_linda",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "status": "open",
+      "priority": "critical",
+      "workflowParams": {
+        "intent": "complaint",
+        "aiUrgency": "critical"
+      }
+    },
+    {
+      "id": "sr_roadmap24_charlette_priority",
+      "customerId": "cust_roadmap24_charlette",
+      "assignedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "axis": "support",
+      "status": "open",
+      "priority": "high",
+      "workflowParams": {
+        "intent": "support",
+        "aiUrgency": "high"
+      }
+    },
+    {
+      "id": "sr_roadmap24_ihsan_priority",
+      "customerId": "cust_roadmap24_ihsan",
+      "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "axis": "sales",
+      "status": "open",
+      "priority": "critical",
+      "workflowParams": {
+        "intent": "sales",
+        "aiUrgency": "critical"
+      }
+    },
+    {
+      "id": "sr_roadmap24_hidden_sales_priority",
+      "customerId": "cust_roadmap24_hidden_sales",
+      "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "axis": "sales",
+      "status": "open",
+      "priority": "critical",
+      "workflowParams": {
+        "intent": "sales",
+        "aiUrgency": "critical"
+      }
+    }
+  ],
+  "pins": [
+    {
+      "id": "sr_foz2img3z3k9wlaq4va4f32i",
+      "customerId": "cust_roadmap24_linda",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "status": "open",
+      "metadata": {
+        "category": "customer_pin",
+        "personPinnedBy": {
+          "tmbr_ten_dtfbank_linda_marroquin": 1782660497943
+        },
+        "personWorkspaceKind": "customer_pin"
+      }
+    }
+  ],
+  "assertions": {
+    "lindaSegmentContainsHiddenSalesMembership": true,
+    "hiddenSalesAssignedOnlyToIhsanSales": true,
+    "lindaCustomerPinned": true,
+    "allProofRequestsExist": true
+  }
+}
