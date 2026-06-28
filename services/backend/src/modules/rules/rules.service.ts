@@ -370,7 +370,7 @@ export class RulesService {
         trigger: context.trigger,
         rule_id: context.rule.id,
         action_id: action.id,
-        action: action.action,
+        workflow_action: action.action,
         status: result.trace.status,
         target_type: result.trace.targetType,
         target_id: result.trace.targetId ?? null,
