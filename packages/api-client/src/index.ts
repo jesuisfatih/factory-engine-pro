@@ -95,6 +95,7 @@ import type {
   SaveEmailTemplateInput,
   SaveMailAudienceInput,
   SaveMailFlowInput,
+  SavePersonEmailDraftInput,
   SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
   SweepOverdueServiceRequestsResponse,
@@ -575,6 +576,10 @@ export class ApiClient {
 
   personEmails() {
     return this.get('/person/workspace/emails');
+  }
+
+  savePersonEmailDraft(input: SavePersonEmailDraftInput) {
+    return this.post('/person/workspace/emails/drafts', input);
   }
 
   personAnnouncements() {

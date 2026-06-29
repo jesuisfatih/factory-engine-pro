@@ -3,6 +3,7 @@ import type {
   CustomerDetailPanelDto,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  SavePersonEmailDraftInput,
   SavePersonNoteInput,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
@@ -152,6 +153,7 @@ export const sendChatMessage = (input: { threadId: string; text: string }) =>
 export const fetchNotes = () => personApi.personNotes() as Promise<NoteRow[]>;
 export const saveNote = (input: SavePersonNoteInput) => personApi.savePersonNote(input) as Promise<NoteRow>;
 export const fetchEmails = () => personApi.personEmails() as Promise<EmailRow[]>;
+export const saveEmailDraft = (input: SavePersonEmailDraftInput) => personApi.savePersonEmailDraft(input) as Promise<EmailRow>;
 export const fetchAnnouncements = () => personApi.personAnnouncements() as Promise<Announcement[]>;
 export const fetchNotifications = () => personApi.personNotifications() as Promise<NotificationRow[]>;
 export const fetchTraining = () => personApi.personTraining() as Promise<TrainingResponse>;

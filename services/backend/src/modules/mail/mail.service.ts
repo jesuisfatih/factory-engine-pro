@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 import type { Prisma } from '@prisma/client';
-import type { MailProviderHealthResponse } from '@factory-engine-pro/contracts';
+import type { MailListQuery, MailProviderHealthResponse } from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -120,7 +120,7 @@ export class MailService {
     return delivery;
   }
 
-  list(query: { status?: 'queued' | 'queued_disabled' | 'sending' | 'sent' | 'failed' | 'skipped'; eventKey?: string; recipient?: string; limit: number }) {
+  list(query: MailListQuery) {
     return this.repository.list(query);
   }
 

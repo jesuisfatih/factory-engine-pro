@@ -17,6 +17,7 @@ import type {
   PersonTransferTarget,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  SavePersonEmailDraftInput,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
@@ -1217,17 +1218,48 @@ export class PersonWorkspaceService {
   }
 
   async emails() {
-    const rows = await this.prisma.db.mailDelivery.findMany({ orderBy: [{ createdAt: 'desc' }], take: 50 });
-    return rows.map((row) => ({
-      id: row.id,
-      from: row.provider ?? row.category,
-      fromEmail: row.recipientEmail,
-      subject: row.subject,
-      preview: row.errorMessage ?? row.text?.slice(0, 220) ?? row.eventKey,
-      unread: row.status === 'failed',
-      at: relative(row.createdAt),
-      status: row.status,
-    }));
+    const member = await this.currentMember();
+    const rows = await this.prisma.db.mailDelivery.findMany({
+      where: {
+        OR: [
+          { status: { not: 'draft' } },
+          { status: 'draft', metadata: { path: ['createdByMemberId'], equals: member.id } },
+        ],
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 50,
+    });
+    return rows.map((row) => this.emailRow(row));
+  }
+
+  async saveEmailDraft(input: SavePersonEmailDraftInput) {
+    const member = await this.currentMember();
+    const created = await this.prisma.db.mailDelivery.create({
+      data: {
+        id: prefixedId('mail'),
+        tenantId: this.tenantId(),
+        eventKey: 'person.email.draft',
+        category: 'person_draft',
+        recipientEmail: input.to,
+        subject: input.subject,
+        html: htmlFromPlainText(input.body),
+        text: input.body,
+        status: 'draft',
+        provider: 'disabled',
+        metadata: {
+          source: 'person_email_compose',
+          surface: 'staff',
+          createdByMemberId: member.id,
+          createdByMemberEmail: member.email,
+          sendingEnabled: false,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('person_workspace', 'email.draft', 'Person email draft saved', {
+      mail_delivery_id: created.id,
+      member_id: member.id,
+    });
+    return this.emailRow(created);
   }
 
   async announcements() {
@@ -1615,6 +1647,30 @@ export class PersonWorkspaceService {
     });
     if (!row) throw new NotFoundException('Service request not found');
     return row;
+  }
+
+  private emailRow(row: {
+    id: string;
+    provider: string | null;
+    category: string;
+    recipientEmail: string;
+    subject: string;
+    errorMessage: string | null;
+    text: string | null;
+    eventKey: string;
+    status: string;
+    createdAt: Date;
+  }) {
+    return {
+      id: row.id,
+      from: row.status === 'draft' ? 'Draft' : row.provider ?? row.category,
+      fromEmail: row.recipientEmail,
+      subject: row.subject,
+      preview: row.errorMessage ?? row.text?.slice(0, 220) ?? row.eventKey,
+      unread: row.status === 'failed',
+      at: relative(row.createdAt),
+      status: row.status,
+    };
   }
 
   private queueCard(
@@ -2524,4 +2580,17 @@ function relative(value: Date) {
   if (hours < 48) return `${hours}h`;
   const days = Math.round(hours / 24);
   return `${days}d`;
+}
+
+function htmlFromPlainText(value: string) {
+  return `<p>${escapeHtml(value).replace(/\r?\n/g, '<br>')}</p>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

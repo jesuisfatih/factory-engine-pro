@@ -605,16 +605,72 @@ button { font-family: inherit; }
 .note-editor .linked { font-size: 11px; color: var(--text-muted); }
 
 /* ─── Email list ─────────────────────────────────────────── */
+.email-compose-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 34px; padding: 7px 12px;
+  border: 1px solid var(--accent); border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.email-compose-toggle:hover { filter: brightness(.96); }
+.email-compose-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow);
+}
+.email-compose-grid { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 10px; }
+.email-compose-grid label { display: grid; gap: 5px; min-width: 0; }
+.email-compose-grid label.wide { grid-column: 1 / -1; }
+.email-compose-grid span {
+  font-size: 10px; color: var(--text-faint); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .35px;
+}
+.email-compose-grid input,
+.email-compose-grid textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-2); color: var(--text);
+  padding: 9px 11px; font-size: 13px; outline: none;
+}
+.email-compose-grid textarea { min-height: 150px; resize: vertical; line-height: 1.45; }
+.email-compose-grid input:focus,
+.email-compose-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.email-compose-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.email-compose-actions button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 34px; border-radius: 8px; padding: 7px 13px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.email-send-disabled { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-faint); }
+.email-save-draft { border: 1px solid var(--success); background: var(--success); color: #fff; }
+.email-compose-actions button:disabled { opacity: .6; cursor: not-allowed; }
+.email-compose-error {
+  margin-top: 10px; padding: 9px 11px; border-radius: 8px;
+  border: 1px solid var(--danger-soft); background: var(--danger-soft);
+  color: var(--danger); font-size: 12px; font-weight: 600;
+}
 .email-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .email-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 200px 1fr 80px; gap: 14px; cursor: pointer; }
 .email-row:last-child { border-bottom: none; }
 .email-row:hover { background: var(--surface-2); }
 .email-row.unread { background: var(--accent-soft); }
+.email-row.draft { border-left: 3px solid var(--success); }
 .email-row .from { font-weight: 600; color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .email-row .from-email { font-size: 11px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.email-row .subject { font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email-row .subject { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .email-row .preview { font-size: 11px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .email-row .when { font-size: 11px; color: var(--text-faint); text-align: right; }
+.email-status {
+  flex-shrink: 0; border-radius: 4px; padding: 2px 6px;
+  background: var(--success-soft); color: var(--success);
+  font-size: 10px; font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .email-compose-grid { grid-template-columns: 1fr; }
+  .email-compose-actions { justify-content: stretch; }
+  .email-compose-actions button { flex: 1; }
+  .email-row { grid-template-columns: 1fr; gap: 5px; }
+  .email-row .when { text-align: left; }
+}
 
 /* ─── Announcements ─────────────────────────────────────── */
 .announce-feed { display: flex; flex-direction: column; gap: 10px; }

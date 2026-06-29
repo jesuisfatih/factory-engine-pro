@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { emailSchema } from './common.js';
 import { serviceRequestPrioritySchema } from './operations.js';
 import { customerAssignmentAxisSchema } from './commerce.js';
 import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './rules.js';
@@ -349,6 +350,13 @@ export const savePersonNoteSchema = z.object({
   linkedQueueId: z.string().trim().max(80).optional(),
 });
 export type SavePersonNoteInput = z.infer<typeof savePersonNoteSchema>;
+
+export const savePersonEmailDraftSchema = z.object({
+  to: emailSchema,
+  subject: z.string().trim().min(1).max(240),
+  body: z.string().trim().min(1).max(12000),
+});
+export type SavePersonEmailDraftInput = z.infer<typeof savePersonEmailDraftSchema>;
 
 export const createPersonRequestSchema = z.object({
   title: z.string().trim().min(2).max(200),

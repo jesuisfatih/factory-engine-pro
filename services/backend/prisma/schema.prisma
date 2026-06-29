@@ -34,6 +34,7 @@ enum AuthTokenKind {
 }
 
 enum MailDeliveryStatus {
+  draft
   queued
   queued_disabled
   sending
