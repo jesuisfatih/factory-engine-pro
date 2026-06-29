@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { serviceRequestPrioritySchema, taskAxisSchema } from './operations.js';
+import { createTaskAxisSchema } from './enums.js';
+import { serviceRequestPrioritySchema } from './operations.js';
 
 export const callCenterMemberSchema = z.object({
   id: z.string(),
@@ -198,14 +199,14 @@ export type CallCenterSaveCustomerNoteInput = z.infer<typeof callCenterSaveCusto
 
 export const callCenterTransferTaskSchema = z.object({
   targetMemberId: z.string().min(1),
-  targetAxis: taskAxisSchema.optional(),
+  targetAxis: createTaskAxisSchema.optional(),
   reason: z.string().trim().min(1).max(1000),
 });
 export type CallCenterTransferTaskInput = z.infer<typeof callCenterTransferTaskSchema>;
 
 export const callCenterCreateCustomerTaskSchema = z.object({
   targetMemberId: z.string().min(1),
-  targetAxis: taskAxisSchema.default('sales'),
+  targetAxis: createTaskAxisSchema.default('sales'),
   note: z.string().trim().min(1).max(1000),
   priority: serviceRequestPrioritySchema.default('medium'),
   dueAt: z.string().datetime().optional(),

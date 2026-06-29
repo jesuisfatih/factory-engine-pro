@@ -64,7 +64,7 @@ function CallCenterView() {
     },
   });
   const transferWork = useMutation({
-    mutationFn: (input: { target: TransferTarget; targetMemberId: string; targetAxis: 'sales' | 'support' | 'account'; reason: string }) => {
+    mutationFn: (input: { target: TransferTarget; targetMemberId: string; targetAxis: 'sales' | 'account'; reason: string }) => {
       if (input.target.mode === 'task') {
         return transferCallCenterTask(input.target.task.id, {
           targetMemberId: input.targetMemberId,
@@ -533,10 +533,10 @@ function TransferModal({
   isSaving: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (payload: { targetMemberId: string; targetAxis: 'sales' | 'support' | 'account'; reason: string }) => void;
+  onSubmit: (payload: { targetMemberId: string; targetAxis: 'sales' | 'account'; reason: string }) => void;
 }) {
   const [targetMemberId, setTargetMemberId] = useState(members[0]?.id ?? '');
-  const [targetAxis, setTargetAxis] = useState<'sales' | 'support' | 'account'>(target.mode === 'task' && isAxis(target.task.axis) ? target.task.axis : 'sales');
+  const [targetAxis, setTargetAxis] = useState<'sales' | 'account'>(target.mode === 'task' && isFollowUpAxis(target.task.axis) ? target.task.axis : 'sales');
   const [reason, setReason] = useState(target.mode === 'customer'
     ? `Follow up with ${target.customer.customerName} from ${target.ownerName}'s assigned segment.`
     : `Admin reassigned ${target.task.title}.`);
@@ -559,10 +559,9 @@ function TransferModal({
             ))}
           </select>
           <label className="field-label" htmlFor="call-center-transfer-axis">Axis</label>
-          <select id="call-center-transfer-axis" value={targetAxis} onChange={(event) => setTargetAxis(event.target.value as 'sales' | 'support' | 'account')}>
+          <select id="call-center-transfer-axis" value={targetAxis} onChange={(event) => setTargetAxis(event.target.value as 'sales' | 'account')}>
             <option value="sales">Sales</option>
             <option value="account">Account</option>
-            {target.mode === 'task' ? <option value="support">Support</option> : null}
           </select>
           <label className="field-label" htmlFor="call-center-transfer-reason">Reason</label>
           <textarea
@@ -582,7 +581,7 @@ function TransferModal({
             disabled={!targetMemberId || !reason.trim() || isSaving}
             onClick={() => onSubmit({
               targetMemberId,
-              targetAxis: target.mode === 'customer' && targetAxis === 'support' ? 'sales' : targetAxis,
+              targetAxis,
               reason: reason.trim(),
             })}
           >
@@ -618,8 +617,8 @@ function StateBlock({ title, body, action }: { title: string; body: string; acti
   );
 }
 
-function isAxis(value: unknown): value is 'sales' | 'support' | 'account' {
-  return value === 'sales' || value === 'support' || value === 'account';
+function isFollowUpAxis(value: unknown): value is 'sales' | 'account' {
+  return value === 'sales' || value === 'account';
 }
 
 function formatMoney(value: number) {

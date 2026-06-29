@@ -138,7 +138,11 @@ export class CallCenterService {
     if (!row) throw new NotFoundException('Task not found');
     if (CLOSED.has(row.status)) throw new BadRequestException('Closed or resolved tasks cannot be transferred');
     const target = await this.requireActiveMember(input.targetMemberId);
-    const toAxis = input.targetAxis ?? row.axis ?? 'sales';
+    const rawAxis = input.targetAxis ?? row.axis ?? 'sales';
+    if (rawAxis === 'support') {
+      throw new BadRequestException('Call Center task transfers can only target sales or account. Open customer requests from the Support case flow.');
+    }
+    const toAxis = rawAxis === 'account' ? 'account' : 'sales';
     const tenantId = this.tenantId();
     const transferredAt = new Date();
     const metadata = record(row.metadata);
@@ -233,7 +237,7 @@ export class CallCenterService {
 
   async createCustomerTask(id: string, input: CallCenterCreateCustomerTaskInput): Promise<CallCenterActionResult> {
     const actor = await this.currentMember();
-    if (input.targetAxis === 'support') {
+    if (String(input.targetAxis) === 'support') {
       throw new BadRequestException('Customer follow-up tasks can only target sales or account. Open support cases from the Support case flow.');
     }
     const [customer, target] = await Promise.all([
