@@ -1,29 +1,11 @@
-﻿{
-    "proof":  "roadmap_m08_task_header_runtime_live",
-    "checkedAt":  "2026-06-29T01:01:18.5212961Z",
-    "deployedBuildSha":  "faaa6e90ce1f2340ddb55652caa68dd53d07b24c",
-    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
-    "health":  {
-                   "ok":  true,
-                   "service":  "factory-engine-pro-backend"
-               },
-    "containerScope":  "factoryengine-dtfbank-app only",
-    "containers":  [
-                       "factoryengine-dtfbank-app|Up 3 minutes",
-                       "factoryengine-dtfprint-app|Up 6 days",
-                       "factoryengine-eagledtfsupply-app|Up 6 days",
-                       "factoryengine-fastdtfsupply-app|Up 6 days",
-                       "factoryengine-fastdtftransfer-app|Up 6 days",
-                       "factoryengine-dtfprintdepot-app|Up 6 days"
-                   ],
-    "startupLogSample":  [
-                             "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
-                             "33 migrations found in prisma/migrations",
-                             "No pending migrations to apply.",
-                             "\u001b[32m[Nest] 1228  - \u001b[39m06/29/2026, 12:55:07 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                             "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
-                             "33 migrations found in prisma/migrations",
-                             "No pending migrations to apply.",
-                             "\u001b[32m[Nest] 1221  - \u001b[39m06/29/2026, 12:59:47 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
-                         ]
+{
+  "proof": "roadmap_m08_task_header_runtime_live",
+  "checkedAt": "2026-06-29T04:14:19.963Z",
+  "deployedBuildSha": "3cf66372121de9911e848e3ca6976011fb488bf9",
+  "raw": "BUILD_SHA=3cf66372121de9911e848e3ca6976011fb488bf9\nHEALTH={\"ok\":true,\"service\":\"factory-engine-pro-backend\"}\nCONTAINERS\nfactoryengine-dtfbank-app Up 48 minutes\nfactoryengine-dtfprint-app Up 6 days\nfactoryengine-eagledtfsupply-app Up 6 days\nfactoryengine-fastdtfsupply-app Up 6 days\nfactoryengine-fastdtftransfer-app Up 6 days\nfactoryengine-dtfprintdepot-app Up 6 days\n\nLOG_TAIL\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/brief, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/transfer, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/notes, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/calendar, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n",
+  "assertions": {
+    "healthOk": true,
+    "currentBuild": true,
+    "dtfbankContainerListed": true
+  }
 }
