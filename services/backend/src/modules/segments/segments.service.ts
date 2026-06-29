@@ -280,15 +280,29 @@ export class SegmentsService {
     return this.getOne(id);
   }
 
-  async evaluateAll() {
+  async evaluateAll(options: { continueOnError?: boolean } = {}) {
     const segments = await this.repository.list();
     let evaluated = 0;
+    let failed = 0;
+    const failures: Array<{ id: string; name: string; error: string }> = [];
     for (const segment of segments) {
-      await this.evaluate(segment.id);
-      evaluated += 1;
+      try {
+        await this.evaluate(segment.id);
+        evaluated += 1;
+      } catch (error) {
+        if (!options.continueOnError) throw error;
+        failed += 1;
+        const message = messageOf(error);
+        failures.push({ id: segment.id, name: segment.name, error: message });
+        this.logger.warn('segments', 'evaluate_all_segment_failed', 'Segment evaluate-all skipped a failed segment', {
+          segment_id: segment.id,
+          segment_name: segment.name,
+          error: message,
+        });
+      }
     }
-    this.logger.log('segments', 'evaluate_all', 'All segments evaluated', { evaluated });
-    return { evaluated };
+    this.logger.log('segments', 'evaluate_all', 'All segments evaluated', { evaluated, failed });
+    return { evaluated, failed, failures };
   }
 
   async syncShopifySegments(input: SyncShopifySegmentsInput = {}): Promise<SyncShopifySegmentsResponse> {
@@ -1205,6 +1219,10 @@ function riskScore(value: unknown) {
   if (normalized === 'low') return 20;
   if (normalized === 'unknown') return 0;
   return numberValue(normalized);
+}
+
+function messageOf(error: unknown) {
+  return error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {

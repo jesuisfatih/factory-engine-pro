@@ -185,7 +185,10 @@ export class RollingBackfillService {
       return success(`Synced ${result.scanned} Shopify-native segment(s).`, result);
     }));
     steps.push(await this.captureStep('segment_evaluation', async () => {
-      const result = await this.segments.evaluateAll();
+      const result = await this.segments.evaluateAll({ continueOnError: true });
+      if (result.failed > 0) {
+        return skipped(`Evaluated ${result.evaluated} canonical segment(s); ${result.failed} segment(s) returned provider errors.`, result);
+      }
       return success(`Evaluated ${result.evaluated} canonical segment(s).`, result);
     }));
     steps.push(await this.captureStep('aircall_recent_calls', async () => {

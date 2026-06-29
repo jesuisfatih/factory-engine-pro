@@ -231,9 +231,17 @@ function parseJson(text: string): Record<string, unknown> | null {
 function extractShopifyError(body: Record<string, unknown> | null) {
   if (!body) return null;
   if (typeof body.errors === 'string') return body.errors.slice(0, 240);
-  if (Array.isArray(body.errors)) return body.errors.join(', ').slice(0, 240);
+  if (Array.isArray(body.errors)) return body.errors.map(formatShopifyError).join(', ').slice(0, 240);
   if (body.errors && typeof body.errors === 'object') return JSON.stringify(body.errors).slice(0, 240);
   return null;
+}
+
+function formatShopifyError(error: unknown) {
+  if (!error || typeof error !== 'object') return String(error);
+  const record = error as Record<string, unknown>;
+  const message = typeof record.message === 'string' ? record.message : JSON.stringify(record);
+  const path = Array.isArray(record.path) ? ` path=${record.path.join('.')}` : '';
+  return `${message}${path}`;
 }
 
 function nextPageInfo(linkHeader: string | null) {
