@@ -1,178 +1,161 @@
-﻿{
-    "proof":  "roadmap_m06_daily_segment_groups_api_live",
-    "checkedAt":  "2026-06-29T00:34:08.4767900Z",
-    "url":  "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
-    "summary":  {
-                    "dailyCount":  90,
-                    "priorityCount":  3,
-                    "pinnedCount":  0,
-                    "highUrgencyCount":  90,
-                    "visibleAxes":  [
-                                        "support"
-                                    ],
-                    "segmentGroupCount":  5
-                },
-    "segmentGroups":  [
-                          {
-                              "segmentId":  "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-                              "segmentName":  "Min 2 max 5 purchase",
-                              "totalCustomers":  356,
-                              "renderedItems":  25,
-                              "dailyCap":  25,
-                              "firstCustomers":  [
-                                                     {
-                                                         "customerId":  "cust_yiq7m5fer8hsmabh621l87wd",
-                                                         "customerName":  "OWNER",
-                                                         "segment":  "Min 2 max 5 purchase",
-                                                         "urgencyScore":  151.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_pwa8sxfbodvgc692zu2fh8j8",
-                                                         "customerName":  "#gregsvinyl",
-                                                         "segment":  "Min 2 max 5 purchase",
-                                                         "urgencyScore":  150.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_zmjpes6ztnzuvl09zo5roa4l",
-                                                         "customerName":  "1st Place Awards \u0026 Embroidery",
-                                                         "segment":  "Min 2 max 5 purchase",
-                                                         "urgencyScore":  150.6
-                                                     }
-                                                 ]
-                          },
-                          {
-                              "segmentId":  "seg_i2igf1ynhxp1umg8relmg5aa",
-                              "segmentName":  "Customers over 20 orders",
-                              "totalCustomers":  17,
-                              "renderedItems":  17,
-                              "dailyCap":  17,
-                              "firstCustomers":  [
-                                                     {
-                                                         "customerId":  "cust_dejnli6ghj1lqx3lm5w8mwlg",
-                                                         "customerName":  "AA FASHION EXPRESS PRESS",
-                                                         "segment":  "Customers over 20 orders",
-                                                         "urgencyScore":  143.1
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_xtces1c98kuzt7tkfrjhffr5",
-                                                         "customerName":  "Ashley Fairchild",
-                                                         "segment":  "Customers over 20 orders",
-                                                         "urgencyScore":  143.1
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_uuqib7l3yh7k825cxxwx60z7",
-                                                         "customerName":  "Beary Creative",
-                                                         "segment":  "Customers over 20 orders",
-                                                         "urgencyScore":  143.1
-                                                     }
-                                                 ]
-                          },
-                          {
-                              "segmentId":  "seg_ui2gyn7udvfekebsyyuyn0mo",
-                              "segmentName":  "Wholesale Customers",
-                              "totalCustomers":  30,
-                              "renderedItems":  25,
-                              "dailyCap":  25,
-                              "firstCustomers":  [
-                                                     {
-                                                         "customerId":  "cust_qqpanovsy8vudlaanh0mbhjv",
-                                                         "customerName":  "2G Nitrile LLC",
-                                                         "segment":  "Wholesale Customers",
-                                                         "urgencyScore":  135.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_r7qbxl63zhiq3fhuq7h98p7d",
-                                                         "customerName":  "Atolye LLC",
-                                                         "segment":  "Wholesale Customers",
-                                                         "urgencyScore":  135.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_ph5li3pmsk7vy1133gq31jjj",
-                                                         "customerName":  "Bella Vision MA LLC",
-                                                         "segment":  "Wholesale Customers",
-                                                         "urgencyScore":  135.6
-                                                     }
-                                                 ]
-                          },
-                          {
-                              "segmentId":  "seg_rz3xkyzxykilcj4pswvdixtd",
-                              "segmentName":  "Customers who have purchased DTF or UV DTF Printer",
-                              "totalCustomers":  12,
-                              "renderedItems":  12,
-                              "dailyCap":  12,
-                              "firstCustomers":  [
-                                                     {
-                                                         "customerId":  "cust_wji7h8ljaus28jktwf3wzloe",
-                                                         "customerName":  "Alpha DTF Print",
-                                                         "segment":  "Customers who have purchased DTF or UV DTF Printer",
-                                                         "urgencyScore":  128.1
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_cp0z4yv5syurtbvwpcusbb9c",
-                                                         "customerName":  "Alpha Print LLC",
-                                                         "segment":  "Customers who have purchased DTF or UV DTF Printer",
-                                                         "urgencyScore":  128.1
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_tthaz3zrppxel7mz62ksnu4b",
-                                                         "customerName":  "Emma Collins",
-                                                         "segment":  "Customers who have purchased DTF or UV DTF Printer",
-                                                         "urgencyScore":  128.1
-                                                     }
-                                                 ]
-                          },
-                          {
-                              "segmentId":  "seg_eftzjgf9bcyvnjz09d66b6h6",
-                              "segmentName":  "Customers who have purchased DTF inks, DTF films, or DTF powders",
-                              "totalCustomers":  563,
-                              "renderedItems":  25,
-                              "dailyCap":  25,
-                              "firstCustomers":  [
-                                                     {
-                                                         "customerId":  "cust_yiq7m5fer8hsmabh621l87wd",
-                                                         "customerName":  "OWNER",
-                                                         "segment":  "Customers who have purchased DTF inks, DTF films, or DTF powders",
-                                                         "urgencyScore":  121.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_pwa8sxfbodvgc692zu2fh8j8",
-                                                         "customerName":  "#gregsvinyl",
-                                                         "segment":  "Customers who have purchased DTF inks, DTF films, or DTF powders",
-                                                         "urgencyScore":  120.6
-                                                     },
-                                                     {
-                                                         "customerId":  "cust_qqpanovsy8vudlaanh0mbhjv",
-                                                         "customerName":  "2G Nitrile LLC",
-                                                         "segment":  "Customers who have purchased DTF inks, DTF films, or DTF powders",
-                                                         "urgencyScore":  120.6
-                                                     }
-                                                 ]
-                          }
-                      ],
-    "priorityTasks":  [
-                          {
-                              "id":  "sr_d6ihmleb8guaoj5o3mb9iixu",
-                              "title":  "Yafreisy Roman",
-                              "source":  "ai_transcript",
-                              "segment":  "workflow_rule",
-                              "urgencyScore":  2,
-                              "matchedRuleId":  "wrule_t87wvlbk0281ezjscshujq27"
-                          },
-                          {
-                              "id":  "sr_zr38glp4hkdgpjpa1pzrln5q",
-                              "title":  "sales: Purchase intent follow-up",
-                              "source":  "ai_transcript",
-                              "segment":  "workflow_rule",
-                              "urgencyScore":  1,
-                              "matchedRuleId":  "wrule_t87wvlbk0281ezjscshujq27"
-                          },
-                          {
-                              "id":  "sr_cejjrh2us5rmequ02jlvx12p",
-                              "title":  "sales: Purchase intent follow-up",
-                              "source":  "ai_transcript",
-                              "segment":  "workflow_rule",
-                              "urgencyScore":  1,
-                              "matchedRuleId":  "wrule_t87wvlbk0281ezjscshujq27"
-                          }
-                      ]
+{
+  "proof": "roadmap_m06_daily_segment_groups_api_live",
+  "checkedAt": "2026-06-29T04:02:10.462Z",
+  "pass": true,
+  "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+  "git": {
+    "codeCommit": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
+    "deployedBuildSha": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
+    "branch": "main"
+  },
+  "status": 200,
+  "summary": {
+    "dailyCount": 91,
+    "priorityCount": 0,
+    "pinnedCount": 0,
+    "highUrgencyCount": 91,
+    "visibleAxes": [
+      "support"
+    ],
+    "segmentGroupCount": 5
+  },
+  "segmentGroups": [
+    {
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "totalCustomers": 355,
+      "renderedItems": 25,
+      "dailyCap": 25,
+      "firstCustomers": [
+        {
+          "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
+          "customerName": "OWNER",
+          "segment": "Min 2 max 5 purchase",
+          "urgencyScore": 152.1
+        },
+        {
+          "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerName": "#gregsvinyl",
+          "segment": "Min 2 max 5 purchase",
+          "urgencyScore": 151.1
+        },
+        {
+          "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+          "customerName": "1st Place Awards & Embroidery",
+          "segment": "Min 2 max 5 purchase",
+          "urgencyScore": 151.1
+        }
+      ]
+    },
+    {
+      "segmentId": "seg_i2igf1ynhxp1umg8relmg5aa",
+      "segmentName": "Customers over 20 orders",
+      "totalCustomers": 17,
+      "renderedItems": 17,
+      "dailyCap": 17,
+      "firstCustomers": [
+        {
+          "customerId": "cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerName": "AA FASHION EXPRESS PRESS",
+          "segment": "Customers over 20 orders",
+          "urgencyScore": 143.6
+        },
+        {
+          "customerId": "cust_xtces1c98kuzt7tkfrjhffr5",
+          "customerName": "Ashley Fairchild",
+          "segment": "Customers over 20 orders",
+          "urgencyScore": 143.6
+        },
+        {
+          "customerId": "cust_uuqib7l3yh7k825cxxwx60z7",
+          "customerName": "Beary Creative",
+          "segment": "Customers over 20 orders",
+          "urgencyScore": 143.6
+        }
+      ]
+    },
+    {
+      "segmentId": "seg_ui2gyn7udvfekebsyyuyn0mo",
+      "segmentName": "Wholesale Customers",
+      "totalCustomers": 30,
+      "renderedItems": 25,
+      "dailyCap": 25,
+      "firstCustomers": [
+        {
+          "customerId": "cust_qqpanovsy8vudlaanh0mbhjv",
+          "customerName": "2G Nitrile LLC",
+          "segment": "Wholesale Customers",
+          "urgencyScore": 136.1
+        },
+        {
+          "customerId": "cust_r7qbxl63zhiq3fhuq7h98p7d",
+          "customerName": "Atolye LLC",
+          "segment": "Wholesale Customers",
+          "urgencyScore": 136.1
+        },
+        {
+          "customerId": "cust_ph5li3pmsk7vy1133gq31jjj",
+          "customerName": "Bella Vision MA LLC",
+          "segment": "Wholesale Customers",
+          "urgencyScore": 136.1
+        }
+      ]
+    },
+    {
+      "segmentId": "seg_rz3xkyzxykilcj4pswvdixtd",
+      "segmentName": "Customers who have purchased DTF or UV DTF Printer",
+      "totalCustomers": 12,
+      "renderedItems": 12,
+      "dailyCap": 12,
+      "firstCustomers": [
+        {
+          "customerId": "cust_wji7h8ljaus28jktwf3wzloe",
+          "customerName": "Alpha DTF Print",
+          "segment": "Customers who have purchased DTF or UV DTF Printer",
+          "urgencyScore": 128.6
+        },
+        {
+          "customerId": "cust_cp0z4yv5syurtbvwpcusbb9c",
+          "customerName": "Alpha Print LLC",
+          "segment": "Customers who have purchased DTF or UV DTF Printer",
+          "urgencyScore": 128.6
+        },
+        {
+          "customerId": "cust_tthaz3zrppxel7mz62ksnu4b",
+          "customerName": "Emma Collins",
+          "segment": "Customers who have purchased DTF or UV DTF Printer",
+          "urgencyScore": 128.6
+        }
+      ]
+    },
+    {
+      "segmentId": "seg_eftzjgf9bcyvnjz09d66b6h6",
+      "segmentName": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+      "totalCustomers": 563,
+      "renderedItems": 25,
+      "dailyCap": 25,
+      "firstCustomers": [
+        {
+          "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
+          "customerName": "OWNER",
+          "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+          "urgencyScore": 122.1
+        },
+        {
+          "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerName": "#gregsvinyl",
+          "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+          "urgencyScore": 121.1
+        },
+        {
+          "customerId": "cust_qqpanovsy8vudlaanh0mbhjv",
+          "customerName": "2G Nitrile LLC",
+          "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+          "urgencyScore": 121.1
+        }
+      ]
+    }
+  ],
+  "priorityTasks": [],
+  "tokenValuesPersistedInEvidence": false
 }
