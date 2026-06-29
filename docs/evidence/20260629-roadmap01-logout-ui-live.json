@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-06-29T03:30:26.190Z",
+  "roadmapItem": 1,
+  "requirement": "Logout clears local session, redirects to login, and revokes access token for admin and Linda staff surfaces.",
+  "appBase": "https://app.dtfbank.com",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "results": [
+    {
+      "surface": "admin",
+      "actor": {
+        "id": "tmbr_ten_dtfbank_info_owner",
+        "email": "info@dtfbank.com",
+        "roles": [
+          "owner"
+        ]
+      },
+      "beforeUrl": "https://app.dtfbank.com/dashboard",
+      "afterUrl": "https://app.dtfbank.com/login",
+      "beforeStorage": true,
+      "storageCleared": true,
+      "secondaryStoragePresent": false,
+      "beforeTokenStatus": {
+        "status": 200,
+        "ok": true,
+        "message": null,
+        "requestId": null
+      },
+      "afterTokenStatus": {
+        "status": 401,
+        "ok": false,
+        "message": "Session was revoked",
+        "requestId": "8abb3225-05e3-4f2f-8e8a-8e7484fc9eef"
+      },
+      "revoked": true,
+      "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\m01-admin-logout-live-20260629.png",
+      "consoleErrors": [],
+      "failedResponses": []
+    },
+    {
+      "surface": "person",
+      "actor": {
+        "id": "tmbr_ten_dtfbank_linda_marroquin",
+        "email": "dtfbanktx@gmail.com",
+        "roles": [
+          "customer_service"
+        ]
+      },
+      "beforeUrl": "https://app.dtfbank.com/staff/queue",
+      "afterUrl": "https://app.dtfbank.com/staff/login",
+      "beforeStorage": true,
+      "storageCleared": true,
+      "secondaryStoragePresent": false,
+      "beforeTokenStatus": {
+        "status": 200,
+        "ok": true,
+        "message": null,
+        "requestId": null
+      },
+      "afterTokenStatus": {
+        "status": 401,
+        "ok": false,
+        "message": "Session was revoked",
+        "requestId": "d36bd21a-15fc-4781-a49d-fa7fdb15cd33"
+      },
+      "revoked": true,
+      "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\m01-person-linda-logout-live-20260629.png",
+      "consoleErrors": [],
+      "failedResponses": []
+    }
+  ],
+  "pass": true
+}
