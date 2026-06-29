@@ -93,6 +93,19 @@ export class RulesRepository {
     }
   }
 
+  findExecution(input: {
+    eventId: string;
+    ruleId: string;
+  }) {
+    return this.prisma.db.workflowRuleExecution.findFirst({
+      where: {
+        tenantId: this.tenantId(),
+        eventId: input.eventId,
+        ruleId: input.ruleId,
+      },
+    });
+  }
+
   completeExecution(id: string, data: {
     status: string;
     taskIds: string[];

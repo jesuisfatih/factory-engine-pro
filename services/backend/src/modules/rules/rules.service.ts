@@ -461,64 +461,90 @@ export class RulesService {
         continue;
       }
 
-      const execution = await this.repository.claimExecution({
+      let execution = await this.repository.claimExecution({
         eventId,
         ruleId: rule.id,
         trigger: parsed.trigger,
       });
+      let recoveringStaleExecution = false;
       if (!execution) {
-        this.logger.log('rules', 'event_duplicate_skipped', 'Duplicate workflow event/rule execution skipped', {
+        const existing = await this.repository.findExecution({ eventId, ruleId: rule.id });
+        const stale = await this.staleExecutionRecovery(existing);
+        if (!existing || !stale.recover) {
+          this.logger.log('rules', 'event_duplicate_skipped', 'Duplicate workflow event/rule execution skipped', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            execution_mode: rule.status === 'shadow' ? 'shadow' : 'active',
+            short_circuited: rule.status === 'active' && !rule.composable,
+            duplicate_reason: stale.reason,
+          });
+          results.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            status: 'skipped',
+            reason: 'duplicate_event',
+            executionMode: rule.status === 'shadow' ? 'shadow' : 'active',
+            shortCircuited: rule.status === 'active' && !rule.composable,
+            taskIds: [],
+            conditionTrace,
+            whenTrace,
+          });
+          if (rule.status === 'active' && !rule.composable) break;
+          continue;
+        }
+        execution = existing;
+        recoveringStaleExecution = true;
+        this.logger.warn('rules', 'stale_execution_recovered', 'Workflow execution referenced missing task rows; actions will be replayed.', {
           event_id: eventId,
           trigger: parsed.trigger,
           rule_id: rule.id,
-          execution_mode: rule.status === 'shadow' ? 'shadow' : 'active',
-          short_circuited: rule.status === 'active' && !rule.composable,
+          execution_id: execution.id,
+          stale_task_ids: stale.taskIds,
+          missing_task_count: stale.missingTaskCount,
         });
-        results.push({
-          ruleId: rule.id,
-          ruleName: rule.name,
-          status: 'skipped',
-          reason: 'duplicate_event',
-          executionMode: rule.status === 'shadow' ? 'shadow' : 'active',
-          shortCircuited: rule.status === 'active' && !rule.composable,
-          taskIds: [],
-          conditionTrace,
-          whenTrace,
-        });
-        if (rule.status === 'active' && !rule.composable) break;
-        continue;
       }
 
       const cooldown = await this.evaluateCooldown(rule, state);
       if (!cooldown.allowed) {
-        this.logger.log('rules', 'cooldown_skipped', 'Workflow rule skipped by per-customer cooldown', {
-          event_id: eventId,
-          trigger: parsed.trigger,
-          rule_id: rule.id,
-          customer_id: cooldown.trace.customerId,
-          cooldown_hours: cooldown.trace.hours,
-          cooldown_limit: cooldown.trace.limit,
-          cooldown_count: cooldown.trace.currentCount,
-          next_eligible_at: cooldown.trace.nextEligibleAt,
-        });
-        const cooldownResult: WorkflowTriggerFireResponse['results'][number] = {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          status: 'skipped',
-          reason: 'cooldown',
-          executionMode: 'active',
-          taskIds: [],
-          conditionTrace,
-          whenTrace,
-          cooldown: cooldown.trace,
-        };
-        results.push(cooldownResult);
-        await this.repository.completeExecution(execution.id, {
-          status: cooldownResult.status,
-          taskIds: [],
-          result: cooldownResult as unknown as Prisma.InputJsonValue,
-        });
-        continue;
+        if (recoveringStaleExecution) {
+          this.logger.warn('rules', 'stale_execution_cooldown_bypassed', 'Workflow stale execution recovery bypassed cooldown because the original task row is missing.', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            customer_id: cooldown.trace.customerId,
+            next_eligible_at: cooldown.trace.nextEligibleAt,
+          });
+        } else {
+          this.logger.log('rules', 'cooldown_skipped', 'Workflow rule skipped by per-customer cooldown', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            customer_id: cooldown.trace.customerId,
+            cooldown_hours: cooldown.trace.hours,
+            cooldown_limit: cooldown.trace.limit,
+            cooldown_count: cooldown.trace.currentCount,
+            next_eligible_at: cooldown.trace.nextEligibleAt,
+          });
+          const cooldownResult: WorkflowTriggerFireResponse['results'][number] = {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            status: 'skipped',
+            reason: 'cooldown',
+            executionMode: 'active',
+            taskIds: [],
+            conditionTrace,
+            whenTrace,
+            cooldown: cooldown.trace,
+          };
+          results.push(cooldownResult);
+          await this.repository.completeExecution(execution.id, {
+            status: cooldownResult.status,
+            taskIds: [],
+            result: cooldownResult as unknown as Prisma.InputJsonValue,
+          });
+          continue;
+        }
       }
 
       if (rule.status === 'shadow') {
@@ -597,7 +623,7 @@ export class RulesService {
         taskIds,
         result: activeResult as unknown as Prisma.InputJsonValue,
       });
-      await this.recordCooldownFire(rule, cooldown, actionStatus);
+      if (!recoveringStaleExecution) await this.recordCooldownFire(rule, cooldown, actionStatus);
 
       if (!rule.composable && actionStatus !== 'skipped') {
         this.logger.log('rules', 'runtime_short_circuit', 'Workflow runtime stopped after non-composable active rule', {
@@ -632,6 +658,36 @@ export class RulesService {
       tasks_created: response.tasksCreated,
     });
     return response;
+  }
+
+  private async staleExecutionRecovery(
+    execution: Awaited<ReturnType<RulesRepository['findExecution']>>,
+  ): Promise<
+    | { recover: true; reason: 'missing_task_rows'; taskIds: string[]; missingTaskCount: number }
+    | { recover: false; reason: 'execution_not_found' | 'not_task_created' | 'no_task_ids' | 'tasks_present' | 'partial_tasks_present'; taskIds: string[]; missingTaskCount: number }
+  > {
+    if (!execution) return { recover: false, reason: 'execution_not_found', taskIds: [], missingTaskCount: 0 };
+    const taskIds = uniqueStrings(execution.taskIds);
+    if (execution.status !== 'task_created') {
+      return { recover: false, reason: 'not_task_created', taskIds, missingTaskCount: 0 };
+    }
+    if (taskIds.length === 0) {
+      return { recover: false, reason: 'no_task_ids', taskIds, missingTaskCount: 0 };
+    }
+    const existingTaskCount = await this.prisma.db.serviceRequest.count({
+      where: {
+        tenantId: this.tenantId(),
+        id: { in: taskIds },
+      },
+    });
+    const missingTaskCount = taskIds.length - existingTaskCount;
+    if (existingTaskCount === taskIds.length) {
+      return { recover: false, reason: 'tasks_present', taskIds, missingTaskCount };
+    }
+    if (existingTaskCount > 0) {
+      return { recover: false, reason: 'partial_tasks_present', taskIds, missingTaskCount };
+    }
+    return { recover: true, reason: 'missing_task_rows', taskIds, missingTaskCount };
   }
 
   private async resolveWhenGroups(
