@@ -907,6 +907,7 @@ function transcriptOperationalSignals(output: TranscriptResolverOutput, options:
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return 'failed';
   if (response.tasksCreated > 0) return 'task_created';
+  if (response.results.some((result) => result.status === 'cooldown_suppressed')) return 'cooldown_suppressed';
   if (response.matchedRules > 0 && signal.intent === 'no_action') return 'no_action';
   if (response.matchedRules > 0) return 'matched_without_task';
   return signal.action_required ? 'no_matching_rule' : 'no_action_unmatched';
@@ -915,6 +916,10 @@ function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, respons
 function transcriptEvaluationReason(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return signal.reason;
   if (response.tasksCreated > 0) return signal.reason;
+  const cooldown = response.results.find((result) => result.status === 'cooldown_suppressed')?.cooldown;
+  if (cooldown) {
+    return `Workflow matched but task creation was suppressed by cooldown until ${cooldown.nextEligibleAt ?? 'the next eligible window'}. ${signal.reason}`;
+  }
   if (response.matchedRules > 0 && signal.intent === 'no_action') return signal.reason;
   if (response.matchedRules > 0) return `Matched rule without creating task: ${signal.reason}`;
   if (signal.action_required) return `No active rule matched operational intent ${signal.intent}. ${signal.reason}`;
@@ -926,6 +931,7 @@ function recoveredExecutionStatus(status: string): WorkflowTriggerFireResponse['
     || status === 'actions_applied'
     || status === 'no_op'
     || status === 'shadow_matched'
+    || status === 'cooldown_suppressed'
     || status === 'skipped') {
     return status;
   }

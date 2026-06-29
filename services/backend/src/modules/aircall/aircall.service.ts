@@ -357,6 +357,7 @@ export class AircallService {
       noActionEvaluations: evaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
       taskCreatedEvaluations: evaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
       matchedWithoutTaskEvaluations: evaluations.filter((row) => row.status === 'matched_without_task').length,
+      cooldownSuppressedEvaluations: evaluations.filter((row) => row.status === 'cooldown_suppressed').length,
       failedEvaluations,
       unmatchedEvaluations,
       localFallbackResolvedEvents: transcriptRows.filter((row) => row.resolverModel === 'local-rule-fallback').length,
@@ -1293,6 +1294,7 @@ function workflowActionRepairMode(row: {
 function isCompletedWorkflowEvaluationStatus(status: string) {
   return status === 'task_created'
     || status === 'matched_without_task'
+    || status === 'cooldown_suppressed'
     || status === 'no_action';
 }
 
@@ -1311,6 +1313,7 @@ function signalOutcomeRows(evaluations: WorkflowEvaluationCoverageRow[]): Aircal
       actionRequired: 0,
       taskCreated: 0,
       matchedWithoutTask: 0,
+      cooldownSuppressed: 0,
       noAction: 0,
       noMatchingRule: 0,
       failed: 0,
@@ -1325,6 +1328,7 @@ function signalOutcomeRows(evaluations: WorkflowEvaluationCoverageRow[]): Aircal
     if (evaluation.actionRequired) row.actionRequired += 1;
     if (evaluation.tasksCreated > 0 || evaluation.status === 'task_created') row.taskCreated += 1;
     if (evaluation.status === 'matched_without_task') row.matchedWithoutTask += 1;
+    if (evaluation.status === 'cooldown_suppressed') row.cooldownSuppressed += 1;
     if (evaluation.status === 'no_action' || evaluation.status === 'no_action_unmatched') row.noAction += 1;
     if (isUnmatchedWorkflowEvaluationStatus(evaluation.status)) row.noMatchingRule += 1;
     if (evaluation.status === 'failed') row.failed += 1;

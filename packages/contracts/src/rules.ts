@@ -170,7 +170,7 @@ export interface WorkflowRuleBackfillSample {
   occurredAt: string;
   customerId: string | null;
   matched: boolean;
-  status: 'shadow_matched' | 'skipped';
+  status: 'shadow_matched' | 'cooldown_suppressed' | 'skipped';
   reason?: 'conditions_not_matched' | 'cooldown';
   wouldCreateTaskCount: number;
   conditionTrace: WorkflowConditionTrace[];
@@ -410,7 +410,7 @@ export type WorkflowCooldownTrace = z.infer<typeof workflowCooldownTraceSchema>;
 export interface WorkflowTriggerFireResult {
   ruleId: string;
   ruleName: string;
-  status: 'task_created' | 'actions_applied' | 'no_op' | 'shadow_matched' | 'skipped';
+  status: 'task_created' | 'actions_applied' | 'no_op' | 'shadow_matched' | 'cooldown_suppressed' | 'skipped';
   reason?: 'conditions_not_matched' | 'actions_skipped' | 'duplicate_event' | 'cooldown' | 'unsupported_action';
   executionMode?: 'active' | 'shadow';
   shortCircuited?: boolean;

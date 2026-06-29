@@ -646,9 +646,10 @@ export class RulesService {
           const cooldownResult: WorkflowTriggerFireResponse['results'][number] = {
             ruleId: rule.id,
             ruleName: rule.name,
-            status: 'skipped',
+            status: 'cooldown_suppressed',
             reason: 'cooldown',
             executionMode: 'active',
+            shortCircuited: !rule.composable,
             taskIds: [],
             conditionTrace,
             whenTrace,
@@ -660,6 +661,7 @@ export class RulesService {
             taskIds: [],
             result: cooldownResult as unknown as Prisma.InputJsonValue,
           });
+          if (!rule.composable) break;
           continue;
         }
       }
@@ -1036,7 +1038,8 @@ export class RulesService {
     const conditionTrace = whenTrace.flatMap((group) => group.conditionTrace);
     const conditionsMatched = whenTrace.every((entry) => entry.matched);
     const cooldown = conditionsMatched ? await this.evaluateCooldown(rule, state) : undefined;
-    const matched = conditionsMatched && (cooldown?.allowed ?? true);
+    const cooldownSuppressed = conditionsMatched && cooldown && !cooldown.allowed;
+    const matched = conditionsMatched;
     return {
       eventId: candidate.eventId,
       sourceType: candidate.sourceType,
@@ -1044,10 +1047,10 @@ export class RulesService {
       occurredAt: candidate.occurredAt.toISOString(),
       customerId: state.customer?.id ?? null,
       matched,
-      status: matched ? 'shadow_matched' : 'skipped',
-      ...(conditionsMatched && cooldown && !cooldown.allowed ? { reason: 'cooldown' as const } : {}),
+      status: cooldownSuppressed ? 'cooldown_suppressed' : matched ? 'shadow_matched' : 'skipped',
+      ...(cooldownSuppressed ? { reason: 'cooldown' as const } : {}),
       ...(!conditionsMatched ? { reason: 'conditions_not_matched' as const } : {}),
-      wouldCreateTaskCount: matched
+      wouldCreateTaskCount: matched && !cooldownSuppressed
         ? rule.definition.actions.filter((action) => action.action === 'create_task').length
         : 0,
       conditionTrace,

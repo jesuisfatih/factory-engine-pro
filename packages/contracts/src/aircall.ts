@@ -198,6 +198,7 @@ export interface AircallWorkflowCoverageResponse {
   noActionEvaluations: number;
   taskCreatedEvaluations: number;
   matchedWithoutTaskEvaluations: number;
+  cooldownSuppressedEvaluations: number;
   failedEvaluations: number;
   unmatchedEvaluations: number;
   localFallbackResolvedEvents: number;
@@ -212,6 +213,7 @@ export interface AircallWorkflowCoverageResponse {
     actionRequired: number;
     taskCreated: number;
     matchedWithoutTask: number;
+    cooldownSuppressed: number;
     noAction: number;
     noMatchingRule: number;
     failed: number;

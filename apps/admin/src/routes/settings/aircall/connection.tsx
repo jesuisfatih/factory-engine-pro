@@ -440,6 +440,7 @@ function ConnectionView() {
               <RuntimeCell label={t('aircall_hub.connection.workflow_no_action')} value={String(workflowCoverage.data.noActionEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_task_created')} value={String(workflowCoverage.data.taskCreatedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_matched_without_task')} value={String(workflowCoverage.data.matchedWithoutTaskEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_cooldown')} value={String(workflowCoverage.data.cooldownSuppressedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_failed')} value={String(workflowCoverage.data.failedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_unmatched')} value={String(workflowCoverage.data.unmatchedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_missing')} value={String(workflowCoverage.data.missingEvaluations)} />
@@ -454,6 +455,7 @@ function ConnectionView() {
                     <th>{t('aircall_hub.connection.col_signal')}</th>
                     <th>{t('aircall_hub.connection.col_evaluations')}</th>
                     <th>{t('aircall_hub.connection.col_task_created')}</th>
+                    <th>{t('aircall_hub.connection.col_cooldown')}</th>
                     <th>{t('aircall_hub.connection.col_no_action')}</th>
                     <th>{t('aircall_hub.connection.col_unmatched')}</th>
                     <th>{t('aircall_hub.connection.col_axis')}</th>
@@ -465,6 +467,7 @@ function ConnectionView() {
                       <td>{signal.signal}</td>
                       <td>{signal.evaluations}</td>
                       <td>{signal.taskCreated}</td>
+                      <td>{signal.cooldownSuppressed}</td>
                       <td>{signal.noAction}</td>
                       <td>{signal.noMatchingRule + signal.failed}</td>
                       <td>{`S:${signal.recommendedAxis.sales} A:${signal.recommendedAxis.account} -:${signal.recommendedAxis.none} ?:${signal.recommendedAxis.other}`}</td>
