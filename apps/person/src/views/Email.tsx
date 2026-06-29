@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Mail, Save, Send, X } from 'lucide-react';
-import { fetchEmails, friendlyError, saveEmailDraft } from '../api/live';
+import { fetchEmailContacts, fetchEmails, friendlyError, saveEmailDraft } from '../api/live';
 import { QueryState } from '../components/QueryState';
 
 export function EmailView() {
   const queryClient = useQueryClient();
   const { data: emails = [], isLoading, error } = useQuery({ queryKey: ['person', 'emails'], queryFn: fetchEmails });
+  const { data: contacts = [] } = useQuery({ queryKey: ['person', 'emails', 'contacts'], queryFn: fetchEmailContacts });
   const unread = emails.filter((email) => email.unread).length;
   const drafts = emails.filter((email) => email.status === 'draft').length;
   const [composing, setComposing] = useState(false);
@@ -60,9 +61,30 @@ export function EmailView() {
                 type="email"
                 value={draft.to}
                 onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))}
+                list="person-email-contacts"
                 autoComplete="email"
                 required
               />
+              <datalist id="person-email-contacts">
+                {contacts.map((contact) => (
+                  <option key={`${contact.source}-${contact.id}`} value={contact.email}>
+                    {contactLabel(contact)}
+                  </option>
+                ))}
+              </datalist>
+              {contacts.length > 0 ? (
+                <div className="email-contact-quick">
+                  {contacts.slice(0, 8).map((contact) => (
+                    <button
+                      key={`${contact.source}-quick-${contact.id}`}
+                      type="button"
+                      onClick={() => setDraft((current) => ({ ...current, to: contact.email }))}
+                    >
+                      {contact.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </label>
             <label>
               <span>Subject</span>
@@ -129,4 +151,8 @@ export function EmailView() {
 
 function emptyDraft() {
   return { to: '', subject: '', body: '' };
+}
+
+function contactLabel(contact: { name: string; phone: string | null; source: string }) {
+  return [contact.name, contact.phone, contact.source === 'customer' ? 'customer' : 'recent mail'].filter(Boolean).join(' - ');
 }

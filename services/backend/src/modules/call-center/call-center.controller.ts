@@ -22,6 +22,12 @@ export class CallCenterController {
     return this.callCenter.overview();
   }
 
+  @Post('tasks/sync')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  syncTasks() {
+    return this.callCenter.syncTasks();
+  }
+
   @Get('customers/:id/detail')
   @RequirePermission(MEMBER_PERMISSIONS.customersRead)
   customerDetail(@Param('id') id: string) {

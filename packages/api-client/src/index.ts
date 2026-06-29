@@ -26,6 +26,7 @@ import type {
   CallCenterCreateCustomerTaskInput,
   CallCenterOverview,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSyncResult,
   CallCenterTransferTaskInput,
   CommissionProfileDto,
   CustomerAxisAssignmentsResponse,
@@ -116,6 +117,8 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
+  PersonEmailContact,
+  PersonTaskSyncResult,
   PersonTaskTransferResult,
   PersonTransferTarget,
   TransferPersonTaskInput,
@@ -519,6 +522,10 @@ export class ApiClient {
     return this.get<CallCenterOverview>('/call-center/overview');
   }
 
+  syncCallCenterTasks() {
+    return this.post<CallCenterSyncResult>('/call-center/tasks/sync', {});
+  }
+
   callCenterCustomerDetail(customerId: string) {
     return this.get<CustomerDetailPanelDto>(`/call-center/customers/${encodeURIComponent(customerId)}/detail`);
   }
@@ -570,6 +577,10 @@ export class ApiClient {
 
   archivePersonDailyCall(id: string) {
     return this.post<ArchivePersonDailyCallResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/archive`, {});
+  }
+
+  syncPersonTasks() {
+    return this.post<PersonTaskSyncResult>('/person/workspace/tasks/sync', {});
   }
 
   togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {
@@ -638,6 +649,10 @@ export class ApiClient {
 
   personEmails() {
     return this.get('/person/workspace/emails');
+  }
+
+  personEmailContacts() {
+    return this.get<PersonEmailContact[]>('/person/workspace/emails/contacts');
   }
 
   savePersonEmailDraft(input: SavePersonEmailDraftInput) {

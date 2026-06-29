@@ -1,7 +1,9 @@
 import type {
   CreatePersonRequestInput,
   CustomerDetailPanelDto,
+  PersonEmailContact,
   PersonDailyOperationRange,
+  PersonTaskSyncResult,
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -140,6 +142,7 @@ export const reorderDailyCalls = (input: ReorderPersonDailyCallInput) =>
   personApi.reorderPersonDailyCalls(input) as Promise<ReorderPersonDailyCallResult>;
 export const archiveDailyCall = (id: string) =>
   personApi.archivePersonDailyCall(id) as Promise<ArchivePersonDailyCallResult>;
+export const syncPersonTasks = () => personApi.syncPersonTasks() as Promise<PersonTaskSyncResult>;
 export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
 export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
 export const fetchTransferTargets = () => personApi.personTransferTargets() as Promise<TransferTarget[]>;
@@ -161,6 +164,7 @@ export const sendChatMessage = (input: { threadId: string; text: string }) =>
 export const fetchNotes = () => personApi.personNotes() as Promise<NoteRow[]>;
 export const saveNote = (input: SavePersonNoteInput) => personApi.savePersonNote(input) as Promise<NoteRow>;
 export const fetchEmails = () => personApi.personEmails() as Promise<EmailRow[]>;
+export const fetchEmailContacts = () => personApi.personEmailContacts() as Promise<PersonEmailContact[]>;
 export const saveEmailDraft = (input: SavePersonEmailDraftInput) => personApi.savePersonEmailDraft(input) as Promise<EmailRow>;
 export const fetchAnnouncements = () => personApi.personAnnouncements() as Promise<Announcement[]>;
 export const fetchNotifications = () => personApi.personNotifications() as Promise<NotificationRow[]>;

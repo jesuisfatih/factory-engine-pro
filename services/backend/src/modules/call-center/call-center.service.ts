@@ -11,14 +11,17 @@ import type {
   CallCenterPin,
   CallCenterPriorityGroup,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSyncResult,
   CallCenterTask,
   CallCenterTransferTaskInput,
   CustomerDetailPanelDto,
 } from '@factory-engine-pro/contracts';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'cancelled']);
@@ -32,6 +35,7 @@ export class CallCenterService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly customers: CustomersService,
+    private readonly aircall: AircallService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -93,6 +97,37 @@ export class CallCenterService {
 
   async customerDetail(id: string): Promise<CustomerDetailPanelDto> {
     return this.customers.detail(id);
+  }
+
+  async syncTasks(): Promise<CallCenterSyncResult> {
+    const [backfill, resolver] = await Promise.all([
+      this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 }),
+      this.aircall.reprocessResolver({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 500 }),
+    ]);
+    const syncedAt = new Date().toISOString();
+    this.logger.log('call_center', 'tasks.sync', 'Call Center task sync requested from admin surface', {
+      fetched: backfill.fetched,
+      ingested: backfill.ingested,
+      resolver_queued: resolver.queued,
+    });
+    return {
+      ok: true,
+      backfill: {
+        recentDays: backfill.recentDays,
+        fetched: backfill.fetched,
+        ingested: backfill.ingested,
+        resolverQueued: backfill.resolverQueued,
+        transcriptsFound: backfill.transcriptsFound,
+        errors: backfill.errors,
+      },
+      resolver: {
+        scanned: resolver.scanned,
+        queued: resolver.queued,
+        skipped: resolver.skipped,
+        targetVersion: resolver.targetVersion,
+      },
+      syncedAt,
+    };
   }
 
   async saveCustomerNote(id: string, input: CallCenterSaveCustomerNoteInput): Promise<CustomerDetailPanelDto> {
@@ -851,6 +886,9 @@ export class CallCenterService {
       assignedMemberId: row.assignedMemberId,
       assignedMemberName: member?.name ?? (row.assignedMember ? memberName(row.assignedMember) : 'Unassigned'),
       assignedMemberRole: member?.role ?? row.assignedMember?.roleAssignments[0]?.role.name ?? 'Member',
+      activeMemberId: row.assignedMemberId,
+      activeMemberName: member?.name ?? (row.assignedMember ? memberName(row.assignedMember) : 'Unassigned'),
+      activeMemberRole: member?.role ?? row.assignedMember?.roleAssignments[0]?.role.name ?? 'Member',
       axis: row.axis,
       status: row.status,
       priority: row.priority,

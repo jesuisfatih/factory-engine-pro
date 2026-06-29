@@ -22,6 +22,9 @@ export const callCenterTaskSchema = z.object({
   assignedMemberId: z.string().nullable(),
   assignedMemberName: z.string(),
   assignedMemberRole: z.string(),
+  activeMemberId: z.string().nullable(),
+  activeMemberName: z.string(),
+  activeMemberRole: z.string(),
   axis: z.string().nullable(),
   status: z.string(),
   priority: z.string(),
@@ -222,3 +225,23 @@ export const callCenterActionResultSchema = z.object({
   axis: z.string().nullable(),
 });
 export type CallCenterActionResult = z.infer<typeof callCenterActionResultSchema>;
+
+export const callCenterSyncResultSchema = z.object({
+  ok: z.literal(true),
+  backfill: z.object({
+    recentDays: z.number(),
+    fetched: z.number(),
+    ingested: z.number(),
+    resolverQueued: z.number(),
+    transcriptsFound: z.number(),
+    errors: z.number(),
+  }),
+  resolver: z.object({
+    scanned: z.number(),
+    queued: z.number(),
+    skipped: z.number(),
+    targetVersion: z.number(),
+  }),
+  syncedAt: z.string(),
+});
+export type CallCenterSyncResult = z.infer<typeof callCenterSyncResultSchema>;

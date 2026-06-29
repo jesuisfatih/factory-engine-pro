@@ -1,13 +1,15 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
   PersonDailyCallItem,
+  PersonEmailContact,
   PersonDailyOperationRange,
   PersonDailyOperationsQuery,
+  PersonTaskSyncResult,
   PersonTaskTransferResult,
   PersonMiniOrder,
   PersonPerformance30d,
@@ -31,6 +33,7 @@ import type {
   WorkflowConditionTrace,
   WorkflowWhenGroupTrace,
   CustomerAssignmentAxis,
+  CreateTaskAxis,
   ArchivePersonDailyCallResult,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
@@ -38,6 +41,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
@@ -57,7 +61,7 @@ const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   closed: 'closed',
 };
 const SEGMENT_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#b45309', '#b91c1c', '#475569'];
-const TRANSFER_AXES = ['sales', 'support', 'account'] as const satisfies readonly CustomerAssignmentAxis[];
+const TRANSFER_AXES = ['sales', 'account'] as const satisfies readonly CreateTaskAxis[];
 const EMPTY_PERFORMANCE_30D: PersonPerformance30d = {
   orders: 0,
   revenue: 0,
@@ -155,6 +159,7 @@ export class PersonWorkspaceService {
     private readonly tenantContext: TenantContextService,
     private readonly scoring: UrgencyScoringService,
     private readonly customersService: CustomersService,
+    private readonly aircall: AircallService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -378,7 +383,13 @@ export class PersonWorkspaceService {
     const trigger = String(workflow.trigger ?? '');
     if (!row.matchedRuleId && !workflow.matchedRuleId && !workflow.ruleId) return false;
     if (!DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''))) return false;
-    return DAILY_WORKFLOW_TRIGGERS.has(trigger) && taskSource(row) === 'call_analysis';
+    const workflowSource = String(workflow.source ?? '');
+    const dailySignal = DAILY_WORKFLOW_TRIGGERS.has(trigger)
+      || row.sourceCallId
+      || metadata.aiSource === 'transcript'
+      || workflowSource.includes('aircall')
+      || workflowSource.includes('transcript');
+    return Boolean(dailySignal) && taskSource(row) === 'call_analysis';
   }
 
   private applyDailyTaskOrder(
@@ -617,6 +628,37 @@ export class PersonWorkspaceService {
     return { ok: true, taskId: row.id, archived: true, archivedAt };
   }
 
+  async syncTasks(): Promise<PersonTaskSyncResult> {
+    const [backfill, resolver] = await Promise.all([
+      this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 }),
+      this.aircall.reprocessResolver({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 500 }),
+    ]);
+    const syncedAt = new Date().toISOString();
+    this.logger.log('person_workspace', 'tasks.sync', 'Person workspace task sync requested', {
+      fetched: backfill.fetched,
+      ingested: backfill.ingested,
+      resolver_queued: resolver.queued,
+    });
+    return {
+      ok: true,
+      backfill: {
+        recentDays: backfill.recentDays,
+        fetched: backfill.fetched,
+        ingested: backfill.ingested,
+        resolverQueued: backfill.resolverQueued,
+        transcriptsFound: backfill.transcriptsFound,
+        errors: backfill.errors,
+      },
+      resolver: {
+        scanned: resolver.scanned,
+        queued: resolver.queued,
+        skipped: resolver.skipped,
+        targetVersion: resolver.targetVersion,
+      },
+      syncedAt,
+    };
+  }
+
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
     const member = await this.currentMember();
     const row = await this.requireServiceRequest(id);
@@ -784,7 +826,7 @@ export class PersonWorkspaceService {
     if (targetAxes.length === 0) throw new BadRequestException('Transfer target does not have a transferable workspace axis');
 
     const fromAxis = axisOrNull(row.axis);
-    const toAxis = input.targetAxis ?? fromAxis ?? targetAxes[0];
+    const toAxis = input.targetAxis ?? (isTransferAxis(fromAxis) ? fromAxis : null) ?? targetAxes[0];
     if (!targetAxes.includes(toAxis)) throw new BadRequestException(`Transfer target cannot receive ${toAxis} work`);
 
     const tenantId = this.tenantId();
@@ -1480,6 +1522,74 @@ export class PersonWorkspaceService {
     return rows.map((row) => this.emailRow(row));
   }
 
+  async emailContacts(): Promise<PersonEmailContact[]> {
+    const member = await this.currentMember();
+    const assignments = await this.axisAssignments(member.id);
+    const assignedCustomerIds = Array.from(assignments.keys());
+    const ownedSegments = await this.prisma.db.segmentOwnership.findMany({
+      where: { memberId: member.id },
+      select: { segmentId: true },
+      take: 100,
+    });
+    const ownedSegmentIds = ownedSegments.map((row) => row.segmentId);
+    const segmentMemberships = ownedSegmentIds.length
+      ? await this.prisma.db.segmentCustomerMembership.findMany({
+          where: { segmentId: { in: ownedSegmentIds }, customer: { email: { not: null }, status: 'active' } },
+          select: { customerId: true },
+          take: 1000,
+        })
+      : [];
+    const customerIds = uniqueStrings([...assignedCustomerIds, ...segmentMemberships.map((row) => row.customerId)]);
+    const [customers, recentMail] = await Promise.all([
+      customerIds.length
+        ? this.prisma.db.customer.findMany({
+            where: { id: { in: customerIds }, email: { not: null }, status: 'active' },
+            orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
+            take: 500,
+          })
+        : Promise.resolve([]),
+      this.prisma.db.mailDelivery.findMany({
+        where: {
+          OR: [
+            { metadata: { path: ['createdByMemberId'], equals: member.id } },
+            { eventKey: 'person.email.draft' },
+          ],
+        },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 100,
+      }),
+    ]);
+
+    const rows = new Map<string, PersonEmailContact>();
+    for (const customer of customers) {
+      const email = customer.email?.trim().toLowerCase();
+      if (!email) continue;
+      rows.set(email, {
+        id: customer.id,
+        name: customerDisplayName(customer),
+        email,
+        phone: customer.phone,
+        source: 'customer',
+        lastContactAt: (customer.lastOrderAt ?? customer.updatedAt).toISOString(),
+      });
+    }
+    for (const mail of recentMail) {
+      const email = mail.recipientEmail.trim().toLowerCase();
+      if (!email || rows.has(email)) continue;
+      rows.set(email, {
+        id: mail.id,
+        name: mail.recipientEmail,
+        email,
+        phone: null,
+        source: 'mail_delivery',
+        lastContactAt: mail.updatedAt.toISOString(),
+      });
+    }
+    return Array.from(rows.values())
+      .sort((left, right) => String(right.lastContactAt ?? '').localeCompare(String(left.lastContactAt ?? '')) || left.name.localeCompare(right.name))
+      .slice(0, 100);
+  }
+
   async saveEmailDraft(input: SavePersonEmailDraftInput) {
     const member = await this.currentMember();
     const created = await this.prisma.db.mailDelivery.create({
@@ -1808,7 +1918,7 @@ export class PersonWorkspaceService {
   ): PersonDailyCallItem {
     const customer = membership.customer;
     const axes = assignments.get(customer.id) ?? new Set<string>();
-    const assignedAxis = Array.from(axes).sort().join(', ') || 'unassigned';
+    const assignedAxis = Array.from(axes).filter((axis) => DAILY_WORKFLOW_AXES.has(axis)).sort().join(', ') || 'unassigned';
     const urgencyBreakdown = this.scoring.score({
       priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
       source: 'daily_customer',
@@ -2362,15 +2472,20 @@ function normalizeText(value: unknown) {
 }
 
 function axisOrNull(value: string | null | undefined): CustomerAssignmentAxis | null {
-  return TRANSFER_AXES.includes(value as CustomerAssignmentAxis) ? value as CustomerAssignmentAxis : null;
+  if (value === 'sales' || value === 'account') return value;
+  return null;
 }
 
-function transferAxesForRoles(roles: Array<{ slug: string; permissions: unknown }>): CustomerAssignmentAxis[] {
+function isTransferAxis(value: CustomerAssignmentAxis | null): value is CreateTaskAxis {
+  return value === 'sales' || value === 'account';
+}
+
+function transferAxesForRoles(roles: Array<{ slug: string; permissions: unknown }>): CreateTaskAxis[] {
   const slugs = new Set(roles.map((role) => role.slug));
   if (slugs.has('owner') || slugs.has('admin')) return [...TRANSFER_AXES];
 
-  const axes: CustomerAssignmentAxis[] = [];
-  const add = (axis: CustomerAssignmentAxis) => {
+  const axes: CreateTaskAxis[] = [];
+  const add = (axis: CreateTaskAxis) => {
     if (!axes.includes(axis)) axes.push(axis);
   };
 
@@ -2380,10 +2495,6 @@ function transferAxesForRoles(roles: Array<{ slug: string; permissions: unknown 
       || permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersWrite)
       || permissionEnabled(permissions, MEMBER_PERMISSIONS.pricingWrite)) {
       add('sales');
-    }
-    if (permissionEnabled(permissions, MEMBER_PERMISSIONS.supportRead)
-      || permissionEnabled(permissions, MEMBER_PERMISSIONS.supportWrite)) {
-      add('support');
     }
     if (permissionEnabled(permissions, MEMBER_PERMISSIONS.customersRead)
       && permissionEnabled(permissions, MEMBER_PERMISSIONS.ordersRead)) {

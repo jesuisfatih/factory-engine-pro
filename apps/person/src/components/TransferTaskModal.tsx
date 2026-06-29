@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowRightLeft, X } from 'lucide-react';
-import type { CustomerAssignmentAxis } from '@factory-engine-pro/contracts';
 import { fetchTransferTargets, friendlyError, transferTask } from '../api/live';
 import type { Card as CardData, TransferTaskResult } from '../types';
+
+type TransferAxis = 'sales' | 'account';
 
 interface Props {
   card: CardData;
@@ -13,7 +14,7 @@ interface Props {
 
 export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
   const [targetMemberId, setTargetMemberId] = useState('');
-  const [targetAxis, setTargetAxis] = useState<CustomerAssignmentAxis>(card.axis ?? 'support');
+  const [targetAxis, setTargetAxis] = useState<TransferAxis>(isTransferAxis(card.axis) ? card.axis : 'sales');
   const [reason, setReason] = useState('');
   const { data: targets = [], isLoading, error } = useQuery({
     queryKey: ['person', 'transfer-targets'],
@@ -31,7 +32,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
 
   useEffect(() => {
     if (!selectedTarget) return;
-    if (!selectedTarget.axes.includes(targetAxis)) setTargetAxis(selectedTarget.axes[0]);
+    if (!selectedTarget.axes.includes(targetAxis)) setTargetAxis(selectedTarget.axes[0] ?? 'sales');
   }, [selectedTarget, targetAxis]);
 
   const mutation = useMutation({
@@ -144,4 +145,8 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
       </form>
     </div>
   );
+}
+
+function isTransferAxis(value: unknown): value is TransferAxis {
+  return value === 'sales' || value === 'account';
 }

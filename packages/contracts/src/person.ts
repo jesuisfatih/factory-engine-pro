@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { emailSchema } from './common.js';
 import { serviceRequestPrioritySchema } from './operations.js';
 import { customerAssignmentAxisSchema } from './commerce.js';
+import { createTaskAxisSchema } from './enums.js';
 import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './rules.js';
 
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
@@ -312,7 +313,7 @@ export type TogglePersonQueuePinInput = z.infer<typeof togglePersonQueuePinSchem
 
 export const transferPersonTaskSchema = z.object({
   targetMemberId: z.string().trim().min(1),
-  targetAxis: customerAssignmentAxisSchema.optional(),
+  targetAxis: createTaskAxisSchema.optional(),
   reason: z.string().trim().max(500).optional(),
 });
 export type TransferPersonTaskInput = z.infer<typeof transferPersonTaskSchema>;
@@ -322,7 +323,7 @@ export const personTransferTargetSchema = z.object({
   name: z.string(),
   email: z.string(),
   roleNames: z.array(z.string()),
-  axes: z.array(customerAssignmentAxisSchema),
+  axes: z.array(createTaskAxisSchema),
 });
 export type PersonTransferTarget = z.infer<typeof personTransferTargetSchema>;
 
@@ -382,6 +383,36 @@ export const savePersonEmailDraftSchema = z.object({
   body: z.string().trim().min(1).max(12000),
 });
 export type SavePersonEmailDraftInput = z.infer<typeof savePersonEmailDraftSchema>;
+
+export const personEmailContactSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: emailSchema,
+  phone: z.string().nullable(),
+  source: z.enum(['customer', 'mail_delivery']),
+  lastContactAt: z.string().nullable(),
+});
+export type PersonEmailContact = z.infer<typeof personEmailContactSchema>;
+
+export const personTaskSyncResultSchema = z.object({
+  ok: z.literal(true),
+  backfill: z.object({
+    recentDays: z.number(),
+    fetched: z.number(),
+    ingested: z.number(),
+    resolverQueued: z.number(),
+    transcriptsFound: z.number(),
+    errors: z.number(),
+  }),
+  resolver: z.object({
+    scanned: z.number(),
+    queued: z.number(),
+    skipped: z.number(),
+    targetVersion: z.number(),
+  }),
+  syncedAt: z.string(),
+});
+export type PersonTaskSyncResult = z.infer<typeof personTaskSyncResultSchema>;
 
 export const createPersonRequestSchema = z.object({
   title: z.string().trim().min(2).max(200),

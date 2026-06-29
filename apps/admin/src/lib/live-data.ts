@@ -2,6 +2,7 @@ import type {
   CallCenterCreateCustomerTaskInput,
   CallCenterOverview,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSyncResult,
   CallCenterTransferTaskInput,
   CustomerDetailPanelDto,
   CreatePricingRuleInput,
@@ -239,6 +240,10 @@ export const SELLERUSERS: SelleruserOption[] = [];
 
 export async function fetchCallCenterOverview(): Promise<CallCenterOverview> {
   return adminApi.callCenterOverview();
+}
+
+export async function syncCallCenterTasks(): Promise<CallCenterSyncResult> {
+  return adminApi.syncCallCenterTasks();
 }
 
 export async function fetchCallCenterCustomerDetail(customerId: string): Promise<CustomerDetailPanelDto> {

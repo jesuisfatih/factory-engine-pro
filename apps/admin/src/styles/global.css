@@ -1862,6 +1862,21 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 10px;
   margin-bottom: 14px;
 }
+.call-center-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.call-center-sync-proof {
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted, var(--text-muted));
+  padding: 8px 10px;
+  font-size: 12px;
+}
 .call-center-preview-card {
   border: 1px solid var(--border);
   background: var(--surface);

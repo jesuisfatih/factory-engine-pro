@@ -697,6 +697,13 @@ button { font-family: inherit; }
 .email-compose-grid textarea { min-height: 150px; resize: vertical; line-height: 1.45; }
 .email-compose-grid input:focus,
 .email-compose-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.email-contact-quick { display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; }
+.email-contact-quick button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  border-radius: 999px; padding: 3px 7px; font-size: 10px; cursor: pointer;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.email-contact-quick button:hover { border-color: var(--accent); color: var(--accent); }
 .email-compose-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .email-compose-actions button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -727,6 +734,8 @@ button { font-family: inherit; }
   background: var(--success-soft); color: var(--success);
   font-size: 10px; font-weight: 800;
 }
+.queue-sync-card { text-align: left; cursor: pointer; border: 1px solid var(--border); }
+.queue-sync-card:disabled { opacity: .65; cursor: not-allowed; }
 
 @media (max-width: 760px) {
   .email-compose-grid { grid-template-columns: 1fr; }

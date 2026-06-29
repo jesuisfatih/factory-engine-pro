@@ -22,6 +22,7 @@ import {
   fetchCallCenterCustomerDetail,
   fetchCallCenterOverview,
   saveCallCenterCustomerNote,
+  syncCallCenterTasks,
   transferCallCenterTask,
 } from '@/lib/live-data';
 
@@ -86,6 +87,13 @@ function CallCenterView() {
       if (customerId) void queryClient.invalidateQueries({ queryKey: ['call-center', 'customer-detail', customerId] });
     },
   });
+  const syncTasks = useMutation({
+    mutationFn: syncCallCenterTasks,
+    onSuccess: () => {
+      void query.refetch();
+      void queryClient.invalidateQueries({ queryKey: ['call-center'] });
+    },
+  });
   const data = query.data;
 
   return (
@@ -94,11 +102,23 @@ function CallCenterView() {
         titleI18nKey="call_center.title"
         subtitleI18nKey="call_center.subtitle"
         actions={(
-          <button type="button" className="btn" onClick={() => query.refetch()} disabled={query.isFetching}>
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="call-center-header-actions">
+            <button type="button" className="btn primary" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
+              {syncTasks.isPending ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
+              Sync tasks
+            </button>
+            <button type="button" className="btn" onClick={() => query.refetch()} disabled={query.isFetching}>
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
         )}
       />
+      {syncTasks.isError && <div className="state-block error"><p>{apiErrorMessage(syncTasks.error)}</p></div>}
+      {syncTasks.data && (
+        <div className="call-center-sync-proof">
+          Synced {syncTasks.data.backfill.ingested} calls, queued {syncTasks.data.resolver.queued} resolver jobs at {new Date(syncTasks.data.syncedAt).toLocaleTimeString()}.
+        </div>
+      )}
 
       {query.isLoading && <StateBlock title="Loading Call Center" body="Reading live personnel tasks, calls, notes, messages, rule activity, and mail activity." />}
       {query.isError && (
@@ -258,6 +278,8 @@ function KanbanTab({
             </div>
             <div className="person-pill">{task.assignedMemberName} - {task.assignedMemberRole}</div>
             <div className="task-card-meta">
+              <span>Owner: {task.assignedMemberName}</span>
+              <span>Active: {task.activeMemberName}</span>
               <span>{task.axis ?? 'no axis'}</span>
               <span>{task.segment}</span>
               <span>{task.customerEmail ?? task.customerPhone ?? 'No customer contact'}</span>

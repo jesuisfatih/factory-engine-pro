@@ -77,6 +77,12 @@ export class PersonWorkspaceController {
     return this.workspace.archiveDailyCall(id);
   }
 
+  @Post('tasks/sync')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  syncTasks() {
+    return this.workspace.syncTasks();
+  }
+
   @Post('queue/:id/pin')
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   toggleQueuePin(
@@ -195,6 +201,12 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.supportRead)
   emails() {
     return this.workspace.emails();
+  }
+
+  @Get('emails/contacts')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  emailContacts() {
+    return this.workspace.emailContacts();
   }
 
   @Post('emails/drafts')

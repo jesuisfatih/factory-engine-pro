@@ -4,8 +4,8 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { ChevronDown, GripVertical, Phone, StickyNote, X } from 'lucide-react';
-import { archiveDailyCall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, toggleCustomerPin, togglePin } from '../api/live';
+import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } from 'lucide-react';
+import { archiveDailyCall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
@@ -90,6 +90,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       qc.invalidateQueries({ queryKey: ['person', 'customers'] });
     },
   });
+  const syncTasks = useMutation({
+    mutationFn: syncPersonTasks,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK_BASE });
+      qc.invalidateQueries({ queryKey: ['person', 'summary'] });
+    },
+  });
 
   useEffect(() => {
     setRange(initialRange);
@@ -137,7 +144,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
         {!archive && <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>}
         <div className="kpi"><div className="label">Axes</div><div className="val">{summary?.visibleAxes.length ?? 0}</div><div className="sub">{summary?.visibleAxes.join(', ') || 'none'}</div></div>
+        <button type="button" className="kpi queue-sync-card" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
+          <div className="label">Sync</div>
+          <div className="val">{syncTasks.isPending ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</div>
+          <div className="sub">{syncTasks.data ? `${syncTasks.data.backfill.ingested} calls updated` : 'pull latest calls'}</div>
+        </button>
       </div>
+      {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
 
       <QueryState
         isLoading={isLoading}
