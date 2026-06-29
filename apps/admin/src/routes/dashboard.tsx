@@ -183,36 +183,41 @@ function DashboardView() {
         {callCenter.isSuccess && (
           <div className="call-center-preview-grid">
             <DashboardCallCenterCard
-              title="Daily call list"
-              value={callCenter.data.kanban.dailyCallList.length}
-              rows={callCenter.data.kanban.dailyCallList.slice(0, 3).map((task) => `${task.assignedMemberName}: ${task.title}`)}
+              title="Latest messages"
+              value={callCenter.data.preview.latestMessages.length}
+              rows={callCenter.data.preview.latestMessages.slice(0, 3).map((message) => `${message.fromName} to ${message.toName ?? 'team'}: ${relative(message.createdAt)}`)}
             />
             <DashboardCallCenterCard
-              title="Priority customers"
-              value={callCenter.data.kanban.priorityGroups.reduce((sum, group) => sum + group.customers.length, 0)}
-              rows={callCenter.data.kanban.priorityGroups.slice(0, 3).map((group) => `${group.ownerName}: ${group.segmentName} (${group.customers.length})`)}
+              title="Sent mail"
+              value={callCenter.data.preview.sentMail.today}
+              rows={[
+                `This week ${callCenter.data.preview.sentMail.week}`,
+                `Last ${callCenter.data.preview.sentMail.lastSentAt ? relative(callCenter.data.preview.sentMail.lastSentAt) : 'none'}`,
+              ]}
             />
             <DashboardCallCenterCard
-              title="Pinned"
-              value={callCenter.data.kanban.pinBoard.length}
-              rows={callCenter.data.kanban.pinBoard.slice(0, 3).map((pin) => `${pin.ownerName}: ${pin.customerName ?? pin.title}`)}
+              title="Recent calls"
+              value={callCenter.data.preview.recentCalls.length}
+              rows={callCenter.data.preview.recentCalls.slice(0, 3).map((call) => `${call.customer} - ${call.memberName}`)}
             />
             <DashboardCallCenterCard
-              title="Notes"
-              value={callCenter.data.notes.length}
-              rows={callCenter.data.notes.slice(0, 3).map((note) => `${note.authorName}: ${note.customerName ?? 'No customer'}`)}
+              title="Call stats"
+              value={callCenter.data.preview.callStats.todayTotal}
+              rows={[
+                `Answered ${callCenter.data.preview.callStats.answeredRate}%`,
+                ...callCenter.data.preview.callStats.byMember.slice(0, 2).map((item) => `${item.memberName}: ${item.count}`),
+              ]}
             />
             <DashboardCallCenterCard
-              title="Messages"
-              value={callCenter.data.messages.length}
-              rows={callCenter.data.messages.slice(0, 3).map((message) => `${message.fromName} to ${message.toName ?? 'team'}`)}
+              title="Task activity"
+              value={callCenter.data.preview.taskActivity.length}
+              rows={callCenter.data.preview.taskActivity.slice(0, 3).map((task) => `${task.memberName}: ${task.status} - ${task.title}`)}
             />
-            <div className="call-center-preview-card">
-              <div className="preview-card-head"><span>Open module</span></div>
-              <strong>{callCenter.data.members.length}</strong>
-              <p>active staff in overview</p>
-              <a className="btn primary" href="/call-center" style={{ marginTop: 10 }}>Open Call Center</a>
-            </div>
+            <DashboardCallCenterCard
+              title="Rule activity"
+              value={callCenter.data.preview.activeRuleFire.reduce((sum, rule) => sum + rule.fires, 0)}
+              rows={callCenter.data.preview.activeRuleFire.slice(0, 3).map((rule) => `${rule.ruleName}: ${rule.fires}/${rule.matches}`)}
+            />
           </div>
         )}
       </div>
@@ -420,6 +425,16 @@ function DashboardCallCenterCard({ title, value, rows }: { title: string; value:
       {rows.length ? rows.map((row) => <p key={row}>{row}</p>) : <p>No live records yet.</p>}
     </div>
   );
+}
+
+function relative(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60_000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function formatMoney(value: number) {

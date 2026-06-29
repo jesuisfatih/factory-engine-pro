@@ -41,7 +41,11 @@ export function NotesView() {
     return [
       note.title,
       note.body,
+      note.authorName,
+      note.authorEmail,
+      note.authorRole,
       note.linkedCustomer,
+      note.linkedCustomerName,
       note.linkedQueueId,
       ...(note.replies ?? []).flatMap((item) => [item.body, item.authorName]),
     ].some((value) => String(value ?? '').toLowerCase().includes(query));
@@ -134,9 +138,14 @@ export function NotesView() {
               className={`note-row${selectedId === note.id ? ' active' : ''}`}
               onClick={() => setSelectedId(note.id)}>
               <div className="title">{note.title}</div>
+              <div className="note-row-context">
+                <span>{note.authorName ?? 'Team member'}</span>
+                <span>{note.linkedCustomer ? `Customer ${note.linkedCustomerName ?? note.linkedCustomer}` : 'No customer link'}</span>
+              </div>
               <div className="meta">
                 <span className={`kind-pill ${note.kind}`}>{note.kind}</span>
                 <span>{note.updatedAt}</span>
+                <span>{note.replies?.length ?? 0} replies</span>
               </div>
             </button>
           ))}
@@ -152,9 +161,13 @@ export function NotesView() {
               <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Note title" />
               {selected.linkedCustomer && (
                 <div className="linked">
-                  Linked to <strong>{selected.linkedCustomer}</strong> - queue item <strong>{selected.linkedQueueId}</strong>
+                  Linked to <strong>{selected.linkedCustomerName ?? selected.linkedCustomer}</strong> - queue item <strong>{selected.linkedQueueId ?? 'none'}</strong>
                 </div>
               )}
+              <div className="linked">
+                Written by <strong>{selected.authorName ?? 'Team member'}</strong>
+                {selected.authorEmail ? <> - {selected.authorEmail}</> : null}
+              </div>
               <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." />
               <div className="note-replies">
                 <div className="note-replies-head">

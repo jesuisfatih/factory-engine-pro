@@ -1531,11 +1531,23 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const rows = await this.prisma.db.serviceRequest.findMany({
       where: { createdByActorId: member.id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-      include: { comments: { orderBy: { createdAt: 'asc' }, take: 50 } },
+      include: { customer: true, comments: { orderBy: { createdAt: 'asc' }, take: 50 } },
       orderBy: [{ updatedAt: 'desc' }],
       take: 100,
     });
-    return rows.map((row) => this.note(row));
+    const actorIds = uniqueStrings(rows.flatMap((row) => [
+      row.createdByActorId,
+      ...(row.comments ?? []).map((comment) => comment.actorId),
+    ]).filter((id): id is string => Boolean(id)));
+    const actors = actorIds.length
+      ? await this.prisma.db.member.findMany({
+          where: { id: { in: actorIds } },
+          include: { roleAssignments: { include: { role: true } } },
+          take: 200,
+        })
+      : [];
+    const memberById = new Map(actors.map((actor) => [actor.id, actor] as const));
+    return rows.map((row) => this.note(row, memberById, member.id));
   }
 
   async saveNote(input: SavePersonNoteInput) {
@@ -1555,12 +1567,15 @@ export class PersonWorkspaceService {
             noteKind: input.kind,
             linkedCustomer: input.linkedCustomer ?? null,
             linkedQueueId: input.linkedQueueId ?? null,
+            updatedByMemberId: member.id,
+            updatedByMemberEmail: member.email,
+            updatedByMemberName: memberDisplayName(member),
           } as Prisma.InputJsonValue,
         },
       });
       this.logger.log('person_workspace', 'note.update', 'Person note updated', { note_id: input.id, member_id: member.id });
       this.emitCallCenterInvalidate('person.note.update');
-      return this.note(await this.requireServiceRequest(input.id));
+      return this.note(await this.requireServiceRequest(input.id), new Map([[member.id, member]]), member.id);
     }
 
     const created = await this.prisma.db.serviceRequest.create({
@@ -1580,12 +1595,15 @@ export class PersonWorkspaceService {
           linkedCustomer: input.linkedCustomer ?? null,
           linkedQueueId: input.linkedQueueId ?? null,
           category: 'person_note',
+          createdByMemberId: member.id,
+          createdByMemberEmail: member.email,
+          createdByMemberName: memberDisplayName(member),
         } as Prisma.InputJsonValue,
       },
     });
     this.logger.log('person_workspace', 'note.create', 'Person note created', { note_id: created.id, member_id: member.id });
     this.emitCallCenterInvalidate('person.note.create');
-    return this.note(created);
+    return this.note(created, new Map([[member.id, member]]), member.id);
   }
 
   async replyNote(id: string, input: ReplyPersonNoteInput) {
@@ -1619,7 +1637,7 @@ export class PersonWorkspaceService {
     await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
     this.logger.log('person_workspace', 'note.reply', 'Person note reply saved', { note_id: id, member_id: member.id });
     this.emitCallCenterInvalidate('person.note.reply');
-    return this.note(await this.requireServiceRequest(id));
+    return this.note(await this.requireServiceRequest(id), new Map([[member.id, member]]), member.id);
   }
 
   async emails() {
@@ -2671,23 +2689,38 @@ export class PersonWorkspaceService {
     createdAt: Date;
     updatedAt: Date;
     createdByActorId?: string | null;
+    customer?: { id: string; companyName: string | null; firstName?: string | null; lastName?: string | null; email: string | null } | null;
     comments?: Array<{ id: string; body: string; actorId: string | null; actorType: string | null; attachmentsJson: Prisma.JsonValue; createdAt: Date }>;
-  }) {
+  }, memberById: Map<string, { id: string; firstName: string; lastName: string; email: string; roleAssignments?: Array<{ role: { name: string } }> }> = new Map(), currentMemberId?: string | null) {
     const metadata = this.record(row.metadata);
+    const author = row.createdByActorId ? memberById.get(row.createdByActorId) : null;
+    const authorName = author
+      ? memberDisplayName(author)
+      : stringOrNull(metadata.createdByMemberName) ?? (row.createdByActorId === currentMemberId ? 'You' : 'Team member');
+    const authorEmail = author?.email ?? stringOrNull(metadata.createdByMemberEmail) ?? undefined;
+    const authorRole = author?.roleAssignments?.[0]?.role.name ?? 'Member';
     return {
       id: row.id,
       kind: metadata.noteKind === 'queue' ? 'queue' : 'scratch',
       title: row.title,
       body: row.description ?? '',
+      authorName,
+      authorEmail,
+      authorRole,
       linkedCustomer: typeof metadata.linkedCustomer === 'string' ? metadata.linkedCustomer : undefined,
+      linkedCustomerName: row.customer ? customerDisplayName(row.customer) : undefined,
       linkedQueueId: typeof metadata.linkedQueueId === 'string' ? metadata.linkedQueueId : undefined,
       createdAt: relative(row.createdAt),
       updatedAt: relative(row.updatedAt),
       replies: (row.comments ?? []).filter(isNoteReplyComment).map((comment) => ({
         id: comment.id,
         body: comment.body,
-        authorName: comment.actorId === row.createdByActorId ? 'You' : 'Team member',
-        authorRole: comment.actorType ?? 'member',
+        authorName: comment.actorId && memberById.has(comment.actorId)
+          ? memberDisplayName(memberById.get(comment.actorId)!)
+          : comment.actorId === currentMemberId ? 'You' : 'Team member',
+        authorRole: comment.actorId && memberById.has(comment.actorId)
+          ? memberById.get(comment.actorId)?.roleAssignments?.[0]?.role.name ?? 'Member'
+          : comment.actorType ?? 'member',
         createdAt: relative(comment.createdAt),
       })),
     };
