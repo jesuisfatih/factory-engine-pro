@@ -75,22 +75,27 @@ export class RulesRepository {
     ruleId: string;
     trigger: WorkflowTrigger;
   }) {
-    try {
-      return await this.prisma.db.workflowRuleExecution.create({
-        data: {
-          id: prefixedId('wrex'),
-          tenantId: this.tenantId(),
-          eventId: input.eventId,
-          ruleId: input.ruleId,
-          trigger: input.trigger,
-          status: 'started',
-          result: {},
-        },
-      });
-    } catch (error) {
-      if (isUniqueConstraintError(error)) return null;
-      throw error;
-    }
+    const tenantId = this.tenantId();
+    const created = await this.prisma.db.workflowRuleExecution.createMany({
+      data: [{
+        id: prefixedId('wrex'),
+        tenantId,
+        eventId: input.eventId,
+        ruleId: input.ruleId,
+        trigger: input.trigger,
+        status: 'started',
+        result: {},
+      }],
+      skipDuplicates: true,
+    });
+    if (created.count === 0) return null;
+    return this.prisma.db.workflowRuleExecution.findFirst({
+      where: {
+        tenantId,
+        eventId: input.eventId,
+        ruleId: input.ruleId,
+      },
+    });
   }
 
   findExecution(input: {
@@ -325,8 +330,4 @@ function inputFromSnapshot(snapshot: Prisma.JsonValue): SaveWorkflowRuleInput {
     name: String(value.name ?? 'Restored workflow rule'),
     definition: value.definition as SaveWorkflowRuleInput['definition'],
   };
-}
-
-function isUniqueConstraintError(error: unknown) {
-  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
 }
