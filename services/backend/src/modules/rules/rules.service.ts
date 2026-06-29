@@ -2281,16 +2281,16 @@ export class RulesService {
     } catch (error) {
       issues.push(error instanceof Error ? error.message : String(error));
     }
+    const sourceGoal = stringValue(asRecord(parsed.data.definition.metadata).sourceGoal);
+    if (sourceGoal) issues.push(...unsupportedMcpRequests(normalizeHumanText(sourceGoal)));
     for (const action of parsed.data.definition.actions) {
       if (!MCP_ALLOWED_ACTIONS.includes(action.action)) {
         issues.push(`Action ${action.action} is not allowed for MCP-authored rules.`);
       }
       const actionText = normalizeHumanText(`${action.action} ${action.value}`);
-      if (actionText.includes('support case') || actionText.includes('customer request') || actionText.includes('ticket')) {
-        issues.push('MCP-authored rules cannot automate support cases, customer requests, or tickets.');
-      }
+      issues.push(...unsupportedMcpRequests(actionText).map((issue) => `MCP-authored rule action is not allowed: ${issue}`));
     }
-    return issues;
+    return [...new Set(issues)];
   }
 
   private async resolveMentionedMember(goal: string) {
@@ -2765,18 +2765,58 @@ function noteValueForGoal(goal: string) {
   return `Workflow note: ${goal.trim().replace(/\s+/g, ' ').slice(0, 220)}`;
 }
 
+const MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS = [
+  'support case',
+  'customer request',
+  'ticket',
+  'open ticket',
+  'create ticket',
+  'destek talebi',
+  'musteri talebi',
+  'talep ac',
+  'talep olustur',
+  'ticket ac',
+  'destek case',
+  'servis kaydi',
+] as const;
+
+const MCP_UNSUPPORTED_MAIL_KEYWORDS = [
+  'send email',
+  'send mail',
+  'direct email',
+  'mail gonder',
+  'email gonder',
+  'e posta gonder',
+  'eposta gonder',
+] as const;
+
+const MCP_UNSUPPORTED_DESTRUCTIVE_KEYWORDS = [
+  'delete',
+  'delete customer',
+  'remove segment',
+  'segment remove',
+  'segmentten cikar',
+  'segmentten kaldir',
+  'sil',
+  'kaldir',
+] as const;
+
 function unsupportedMcpRequests(text: string) {
   const unsupported: string[] = [];
-  if (text.includes('support case') || text.includes('ticket') || text.includes('customer request')) {
+  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS)) {
     unsupported.push('Automatic support case/ticket/customer request creation is not supported.');
   }
-  if (text.includes('send email') || text.includes('mail gönder') || text.includes('email gönder')) {
+  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_MAIL_KEYWORDS)) {
     unsupported.push('Sending mail directly from MCP-authored rules is not enabled in this MVP.');
   }
-  if (text.includes('delete') || text.includes('remove segment') || text.includes('sil')) {
+  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_DESTRUCTIVE_KEYWORDS)) {
     unsupported.push('Destructive actions are not supported for MCP-authored rules.');
   }
-  return unsupported;
+  return [...new Set(unsupported)];
+}
+
+function hasAnyHumanKeyword(text: string, keywords: readonly string[]) {
+  return keywords.some((keyword) => text.includes(normalizeHumanText(keyword)));
 }
 
 function confidenceForDraft(
