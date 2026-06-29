@@ -237,14 +237,6 @@ export interface CommissionProfile {
 
 export type CommissionRequest = CommissionRequestDto;
 
-export interface SelleruserOption {
-  id: string;
-  email: string;
-  name: string;
-}
-
-export const SELLERUSERS: SelleruserOption[] = [];
-
 export async function fetchCallCenterOverview(): Promise<CallCenterOverview> {
   return adminApi.callCenterOverview();
 }
