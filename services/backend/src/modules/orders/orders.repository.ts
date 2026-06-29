@@ -11,6 +11,14 @@ export const orderInclude = {
 } satisfies Prisma.CommerceOrderInclude;
 
 export type CommerceOrderWithRelations = Prisma.CommerceOrderGetPayload<{ include: typeof orderInclude }>;
+export type CommerceOrderOrderBy = Prisma.CommerceOrderOrderByWithRelationInput[];
+
+export const defaultOrderOrderBy: CommerceOrderOrderBy = [
+  { updatedAt: 'desc' },
+  { syncedAt: 'desc' },
+  { processedAt: 'desc' },
+  { createdAt: 'desc' },
+];
 
 @Injectable()
 export class OrdersRepository {
@@ -19,11 +27,11 @@ export class OrdersRepository {
     private readonly tenantContext: TenantContextService,
   ) {}
 
-  list(where: Prisma.CommerceOrderWhereInput, take: number) {
+  list(where: Prisma.CommerceOrderWhereInput, take: number, orderBy: CommerceOrderOrderBy = defaultOrderOrderBy) {
     return this.prisma.db.commerceOrder.findMany({
       where,
       include: orderInclude,
-      orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+      orderBy,
       take,
     });
   }

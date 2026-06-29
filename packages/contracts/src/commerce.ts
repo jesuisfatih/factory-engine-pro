@@ -8,6 +8,17 @@ export type FulfillmentMode = z.infer<typeof fulfillmentModeSchema>;
 export const orderSurfaceSchema = z.enum(['all', 'pickup', 'design_files']);
 export type OrderSurface = z.infer<typeof orderSurfaceSchema>;
 
+export const orderSortBySchema = z.enum([
+  'shopify_updated',
+  'order_date',
+  'order_number',
+  'customer_name',
+  'total',
+  'payment',
+  'fulfillment',
+]);
+export type OrderSortBy = z.infer<typeof orderSortBySchema>;
+
 export const orderListQuerySchema = pageQuerySchema.extend({
   surface: orderSurfaceSchema.default('all'),
   status: z.string().trim().optional(),
@@ -15,6 +26,12 @@ export const orderListQuerySchema = pageQuerySchema.extend({
   fulfillmentStatus: z.string().trim().optional(),
   fulfillmentMode: fulfillmentModeSchema.optional(),
   customerId: z.string().trim().optional(),
+  orderSearch: z.string().trim().optional(),
+  customerSearch: z.string().trim().optional(),
+  dateFrom: z.string().trim().optional(),
+  dateTo: z.string().trim().optional(),
+  sortBy: orderSortBySchema.default('shopify_updated'),
+  sortDir: z.enum(['asc', 'desc']).default('desc'),
   pickupOnly: z.coerce.boolean().optional(),
   hasDesignFiles: z.coerce.boolean().optional(),
 });

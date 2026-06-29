@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import {
   type CreateDirectOrderInput,
   type OrderListQuery,
+  type OrderSortBy,
   type ResolveReorderInput,
   type TransferOrderToMemberInput,
 } from '@factory-engine-pro/contracts';
@@ -11,7 +12,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { classifyFulfillment } from './order-fulfillment-classifier.js';
-import { type CommerceOrderWithRelations, OrdersRepository } from './orders.repository.js';
+import { defaultOrderOrderBy, type CommerceOrderOrderBy, type CommerceOrderWithRelations, OrdersRepository } from './orders.repository.js';
 
 @Injectable()
 export class OrdersService {
@@ -25,7 +26,7 @@ export class OrdersService {
   async list(query: OrderListQuery) {
     const where = this.whereFromQuery(query);
     const take = query.surface === 'design_files' || query.hasDesignFiles ? Math.max(query.limit * 4, 100) : query.limit;
-    const orders = await this.repository.list(where, take);
+    const orders = await this.repository.list(where, take, this.orderByFromQuery(query));
     const filtered = (query.surface === 'design_files' || query.hasDesignFiles)
       ? orders.filter((order) => jsonArray(order.designFiles).length > 0)
       : orders;
@@ -380,18 +381,111 @@ export class OrdersService {
     if (query.surface === 'design_files' || query.hasDesignFiles) {
       and.push({ NOT: [{ designFiles: { equals: [] as Prisma.JsonArray } }] } as Prisma.CommerceOrderWhereInput);
     }
-    if (query.search) {
+    const dateRange = this.dateRangeFromQuery(query.dateFrom, query.dateTo);
+    if (dateRange) {
       and.push({
         OR: [
-          { shopifyOrderNumber: { contains: query.search, mode: 'insensitive' } },
-          { email: { contains: query.search, mode: 'insensitive' } },
-          { phone: { contains: query.search, mode: 'insensitive' } },
-          { customer: { companyName: { contains: query.search, mode: 'insensitive' } } },
-          { customer: { email: { contains: query.search, mode: 'insensitive' } } },
+          { processedAt: dateRange },
+          { AND: [{ processedAt: null }, { createdAt: dateRange }] },
         ],
       });
     }
+    if (query.search?.trim()) and.push(this.searchWhere(query.search));
+    if (query.orderSearch?.trim()) and.push(this.orderSearchWhere(query.orderSearch));
+    if (query.customerSearch?.trim()) and.push(this.customerSearchWhere(query.customerSearch));
     return and.length > 0 ? { AND: and } : {};
+  }
+
+  private orderByFromQuery(query: Partial<OrderListQuery>): CommerceOrderOrderBy {
+    const direction: Prisma.SortOrder = query.sortDir === 'asc' ? 'asc' : 'desc';
+    const sortBy: OrderSortBy = query.sortBy ?? 'shopify_updated';
+    switch (sortBy) {
+      case 'shopify_updated':
+        return [
+          { updatedAt: direction },
+          { syncedAt: direction },
+          { processedAt: direction },
+          { createdAt: direction },
+        ];
+      case 'order_date':
+        return [{ processedAt: direction }, { createdAt: direction }, { updatedAt: direction }];
+      case 'order_number':
+        return [{ shopifyOrderNumber: direction }, ...defaultOrderOrderBy];
+      case 'customer_name':
+        return [{ customer: { companyName: direction } }, { email: direction }, ...defaultOrderOrderBy];
+      case 'total':
+        return [{ totalPrice: direction }, ...defaultOrderOrderBy];
+      case 'payment':
+        return [{ financialStatus: direction }, ...defaultOrderOrderBy];
+      case 'fulfillment':
+        return [{ fulfillmentStatus: direction }, { fulfillmentMode: direction }, ...defaultOrderOrderBy];
+      default:
+        return assertNever(sortBy);
+    }
+  }
+
+  private searchWhere(value: string): Prisma.CommerceOrderWhereInput {
+    const search = value.trim();
+    return {
+      OR: [
+        ...this.orderSearchConditions(search),
+        ...this.customerSearchConditions(search),
+      ],
+    };
+  }
+
+  private orderSearchWhere(value: string): Prisma.CommerceOrderWhereInput {
+    return { OR: this.orderSearchConditions(value.trim()) };
+  }
+
+  private customerSearchWhere(value: string): Prisma.CommerceOrderWhereInput {
+    return { OR: this.customerSearchConditions(value.trim()) };
+  }
+
+  private orderSearchConditions(search: string): Prisma.CommerceOrderWhereInput[] {
+    return [
+      { id: { contains: search, mode: 'insensitive' } },
+      { shopifyOrderId: { contains: search, mode: 'insensitive' } },
+      { shopifyOrderNumber: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  private customerSearchConditions(search: string): Prisma.CommerceOrderWhereInput[] {
+    return [
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+      { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+      { customer: { companyName: { contains: search, mode: 'insensitive' } } },
+      { customer: { legalName: { contains: search, mode: 'insensitive' } } },
+      { customer: { firstName: { contains: search, mode: 'insensitive' } } },
+      { customer: { lastName: { contains: search, mode: 'insensitive' } } },
+      { customer: { email: { contains: search, mode: 'insensitive' } } },
+      { customer: { phone: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
+
+  private dateRangeFromQuery(dateFrom?: string, dateTo?: string): Prisma.DateTimeFilter<'CommerceOrder'> | null {
+    const from = this.parseOrderDateFilter(dateFrom, false);
+    const to = this.parseOrderDateFilter(dateTo, true);
+    if (!from && !to) return null;
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new BadRequestException('Order date range start must be before the end date');
+    }
+    return {
+      ...(from ? { gte: from } : {}),
+      ...(to ? { lte: to } : {}),
+    };
+  }
+
+  private parseOrderDateFilter(value: string | undefined, endOfDay: boolean) {
+    const trimmed = value?.trim();
+    if (!trimmed) return null;
+    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+      ? `${trimmed}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`
+      : trimmed;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) throw new BadRequestException('Invalid order date filter');
+    return date;
   }
 
   private mapOrder(order: CommerceOrderWithRelations, detailed = false) {
@@ -556,4 +650,8 @@ function stringValue(value: unknown) {
 
 function memberDisplayName(member: { firstName: string; lastName: string; email: string }) {
   return `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim() || member.email;
+}
+
+function assertNever(value: never): never {
+  throw new BadRequestException(`Unsupported order sort field: ${String(value)}`);
 }

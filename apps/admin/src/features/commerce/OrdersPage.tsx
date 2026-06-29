@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowUpDown,
   ArrowRightLeft,
+  CalendarDays,
   CreditCard,
   Download,
   ExternalLink,
   FileText,
+  FilterX,
   Loader2,
   MapPin,
   Package,
@@ -18,7 +21,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { OrderSurface, TransferOrderToMemberInput } from '@factory-engine-pro/contracts';
+import type { OrderSortBy, OrderSurface, TransferOrderToMemberInput } from '@factory-engine-pro/contracts';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
@@ -115,16 +118,69 @@ const SURFACES: { id: OrderSurface; key: string }[] = [
   { id: 'design_files', key: 'orders.tab_design_files' },
 ];
 
+type SortDir = 'asc' | 'desc';
+
+interface OrderFilters {
+  orderSearch: string;
+  customerSearch: string;
+  dateFrom: string;
+  dateTo: string;
+  financialStatus: string;
+  fulfillmentStatus: string;
+  sortBy: OrderSortBy;
+  sortDir: SortDir;
+}
+
+const DEFAULT_ORDER_FILTERS: OrderFilters = {
+  orderSearch: '',
+  customerSearch: '',
+  dateFrom: '',
+  dateTo: '',
+  financialStatus: '',
+  fulfillmentStatus: '',
+  sortBy: 'shopify_updated',
+  sortDir: 'desc',
+};
+
+const PAYMENT_STATUS_OPTIONS = ['paid', 'pending', 'authorized', 'partially_paid', 'refunded', 'partially_refunded', 'voided', 'failed'];
+const FULFILLMENT_STATUS_OPTIONS = ['fulfilled', 'partial', 'unfulfilled', 'complete', 'completed', 'cancelled'];
+
 export function OrdersPage() {
   const { t } = useTranslation();
   const [surface, setSurface] = useState<OrderSurface>('all');
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<OrderFilters>(DEFAULT_ORDER_FILTERS);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const query = useMemo(() => orderQuery(surface, search), [surface, search]);
-  const orders = useQuery({ queryKey: ['commerce', 'orders', surface, search], queryFn: () => fetchOrders(query) });
-  const stats = useQuery({ queryKey: ['commerce', 'orders', 'stats', surface], queryFn: () => fetchStats(orderQuery(surface, '')) });
+  const query = useMemo(() => orderQuery(surface, search, filters), [surface, search, filters]);
+  const orders = useQuery({ queryKey: ['commerce', 'orders', query], queryFn: () => fetchOrders(query) });
+  const stats = useQuery({ queryKey: ['commerce', 'orders', 'stats', query], queryFn: () => fetchStats(query) });
   const rows = orders.data?.data ?? [];
   const shopifyStore = import.meta.env.VITE_SHOPIFY_ADMIN_STORE as string | undefined;
+  const hasActiveFilters = Boolean(
+    search.trim()
+    || filters.orderSearch
+    || filters.customerSearch
+    || filters.dateFrom
+    || filters.dateTo
+    || filters.financialStatus
+    || filters.fulfillmentStatus
+    || filters.sortBy !== DEFAULT_ORDER_FILTERS.sortBy
+    || filters.sortDir !== DEFAULT_ORDER_FILTERS.sortDir,
+  );
+  const updateFilter = <K extends keyof OrderFilters>(key: K, value: OrderFilters[K]) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+  const cycleSort = (sortBy: OrderSortBy) => {
+    setFilters((current) => ({
+      ...current,
+      sortBy,
+      sortDir: current.sortBy === sortBy && current.sortDir === 'desc' ? 'asc' : 'desc',
+    }));
+  };
+  const resetFilters = () => {
+    setSearch('');
+    setFilters(DEFAULT_ORDER_FILTERS);
+  };
 
   return (
     <>
@@ -170,6 +226,37 @@ export function OrdersPage() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <div className="orders-date-range" aria-label={t('orders.date_range', { defaultValue: 'Order date range' })}>
+          <CalendarDays size={14} />
+          <input
+            id="orders-filter-date-from"
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) => updateFilter('dateFrom', event.target.value)}
+            aria-label={t('orders.date_from', { defaultValue: 'Date from' })}
+          />
+          <span className="muted">to</span>
+          <input
+            id="orders-filter-date-to"
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) => updateFilter('dateTo', event.target.value)}
+            aria-label={t('orders.date_to', { defaultValue: 'Date to' })}
+          />
+        </div>
+        <button
+          type="button"
+          id="orders-sort-shopify-updated"
+          className={`btn ghost${filters.sortBy === 'shopify_updated' ? ' active' : ''}`}
+          onClick={() => cycleSort('shopify_updated')}
+        >
+          <ArrowUpDown size={14} /> {t('orders.sort_shopify_updated', { defaultValue: 'Shopify updated' })} {filters.sortBy === 'shopify_updated' ? filters.sortDir : ''}
+        </button>
+        {hasActiveFilters && (
+          <button type="button" className="btn ghost" id="orders-clear-filters" onClick={resetFilters}>
+            <FilterX size={14} /> {t('common.clear', { defaultValue: 'Clear' })}
+          </button>
+        )}
         <button type="button" className="btn ghost" onClick={() => { orders.refetch(); stats.refetch(); }}>
           <RefreshCw size={14} /> {t('common.refresh')}
         </button>
@@ -189,12 +276,58 @@ export function OrdersPage() {
           <table className="data-table" id="table-orders">
             <thead>
               <tr>
-                <th>{t('orders.columns.order')}</th>
-                <th>{t('orders.columns.customer')}</th>
-                <th>{t('orders.columns.date')}</th>
-                <th>{t('orders.columns.total')}</th>
-                <th>{t('orders.columns.payment')}</th>
-                <th>{t('orders.columns.fulfillment')}</th>
+                <th>
+                  <SortHeader label={t('orders.columns.order')} sortBy="order_number" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                  <input
+                    id="orders-filter-order"
+                    className="table-filter-input"
+                    value={filters.orderSearch}
+                    onChange={(event) => updateFilter('orderSearch', event.target.value)}
+                    placeholder={t('orders.filter_order_placeholder', { defaultValue: 'Order #' })}
+                  />
+                </th>
+                <th>
+                  <SortHeader label={t('orders.columns.customer')} sortBy="customer_name" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                  <input
+                    id="orders-filter-customer"
+                    className="table-filter-input"
+                    value={filters.customerSearch}
+                    onChange={(event) => updateFilter('customerSearch', event.target.value)}
+                    placeholder={t('orders.filter_customer_placeholder', { defaultValue: 'Customer name' })}
+                  />
+                </th>
+                <th>
+                  <SortHeader label={t('orders.columns.date')} sortBy="order_date" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                </th>
+                <th>
+                  <SortHeader label={t('orders.columns.total')} sortBy="total" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                </th>
+                <th>
+                  <SortHeader label={t('orders.columns.payment')} sortBy="payment" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                  <select
+                    id="orders-filter-payment"
+                    className="table-filter-select"
+                    value={filters.financialStatus}
+                    onChange={(event) => updateFilter('financialStatus', event.target.value)}
+                    aria-label={t('orders.filter_payment', { defaultValue: 'Payment status' })}
+                  >
+                    <option value="">{t('common.all', { defaultValue: 'All' })}</option>
+                    {PAYMENT_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{labelStatus(status)}</option>)}
+                  </select>
+                </th>
+                <th>
+                  <SortHeader label={t('orders.columns.fulfillment')} sortBy="fulfillment" activeSortBy={filters.sortBy} sortDir={filters.sortDir} onSort={cycleSort} />
+                  <select
+                    id="orders-filter-fulfillment"
+                    className="table-filter-select"
+                    value={filters.fulfillmentStatus}
+                    onChange={(event) => updateFilter('fulfillmentStatus', event.target.value)}
+                    aria-label={t('orders.filter_fulfillment', { defaultValue: 'Fulfillment status' })}
+                  >
+                    <option value="">{t('common.all', { defaultValue: 'All' })}</option>
+                    {FULFILLMENT_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{labelStatus(status)}</option>)}
+                  </select>
+                </th>
                 <th />
               </tr>
             </thead>
@@ -226,7 +359,14 @@ export function OrdersPage() {
                     <div className="muted">{order.customerEmail ?? '-'}</div>
                     {order.companyName && <div className="muted">{order.companyName}</div>}
                   </td>
-                  <td className="muted">{fmtDate(order.processedAt)}</td>
+                  <td>
+                    <div className="muted">{fmtDate(order.processedAt ?? order.createdAt ?? null)}</div>
+                    {order.updatedAt && (
+                      <div className="order-updated-line">
+                        {t('orders.updated_label', { defaultValue: 'Updated' })} {fmtDateTime(order.updatedAt)}
+                      </div>
+                    )}
+                  </td>
                   <td><strong>{fmtMoney(order.totalPrice, order.currency)}</strong></td>
                   <td><span className={`pill ${paymentTone(order.financialStatus)}`}>{labelStatus(order.financialStatus)}</span></td>
                   <td>
@@ -496,9 +636,20 @@ function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
 }
 
-function orderQuery(surface: OrderSurface, search: string) {
-  const params = new URLSearchParams({ surface, limit: '50' });
+function orderQuery(surface: OrderSurface, search: string, filters: OrderFilters) {
+  const params = new URLSearchParams({
+    surface,
+    limit: '50',
+    sortBy: filters.sortBy,
+    sortDir: filters.sortDir,
+  });
   if (search.trim()) params.set('search', search.trim());
+  if (filters.orderSearch.trim()) params.set('orderSearch', filters.orderSearch.trim());
+  if (filters.customerSearch.trim()) params.set('customerSearch', filters.customerSearch.trim());
+  if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+  if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (filters.financialStatus) params.set('financialStatus', filters.financialStatus);
+  if (filters.fulfillmentStatus) params.set('fulfillmentStatus', filters.fulfillmentStatus);
   return `?${params.toString()}`;
 }
 
@@ -519,6 +670,29 @@ function StateBlock({ title, body, action }: { title: string; body: string; acti
       <div className="muted" style={{ marginBottom: action ? 14 : 0 }}>{body}</div>
       {action}
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  sortBy,
+  activeSortBy,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  sortBy: OrderSortBy;
+  activeSortBy: OrderSortBy;
+  sortDir: SortDir;
+  onSort: (sortBy: OrderSortBy) => void;
+}) {
+  const active = activeSortBy === sortBy;
+  return (
+    <button type="button" className={`table-sort-btn${active ? ' active' : ''}`} onClick={() => onSort(sortBy)}>
+      <span>{label}</span>
+      <ArrowUpDown size={12} />
+      {active && <span className="table-sort-dir">{sortDir}</span>}
+    </button>
   );
 }
 
