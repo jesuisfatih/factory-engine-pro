@@ -26,6 +26,7 @@ type ResolverJobData = {
   callEventId?: string;
   externalCallId?: string;
   forceReprocess?: boolean;
+  forceWorkflowEvaluationRepair?: boolean;
   targetVersion?: number;
 };
 
@@ -109,7 +110,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
       const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
         where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
       });
-      if (evaluationCount > 0) {
+      if (evaluationCount > 0 && !job.data?.forceWorkflowEvaluationRepair) {
         return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion, evaluationCount };
       }
 
@@ -126,7 +127,9 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           evaluations_created_or_updated: repairedEvaluationCount,
         });
         return {
-          status: 'repaired_missing_workflow_evaluations',
+          status: job.data?.forceWorkflowEvaluationRepair
+            ? 'repaired_workflow_evaluations'
+            : 'repaired_missing_workflow_evaluations',
           resolvedWithVersion: callEvent.resolvedWithVersion,
           evaluationCount: repairedEvaluationCount,
         };

@@ -278,6 +278,7 @@ export interface AircallWorkflowRepairResponse {
   skipped: number;
   alreadyEvaluated: number;
   missingEvaluations: number;
+  failedOrUnmatchedEvaluations: number;
   staleResolverVersion: number;
   unresolved: number;
   callEvents: Array<{
@@ -286,6 +287,7 @@ export interface AircallWorkflowRepairResponse {
     resolvedWithVersion: number | null;
     resolverStatus: string | null;
     evaluationCount: number;
+    evaluationProblemCount: number;
     repairMode: 'already_evaluated' | 'replay_stored_output' | 'rerun_resolver' | 'wait_for_resolver' | 'resolver_failed';
     queued: boolean;
     skippedReason: string | null;

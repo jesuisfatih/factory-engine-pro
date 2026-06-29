@@ -27,6 +27,7 @@ export interface ReceiveAircallWebhookResult {
 
 export interface EnqueueTranscriptResolverOptions {
   forceReprocess?: boolean;
+  forceWorkflowEvaluationRepair?: boolean;
   targetVersion?: number;
   source?: 'ingest' | 'manual_reprocess' | 'rolling_backfill' | 'workflow_repair';
 }
@@ -483,7 +484,7 @@ export class AircallIngestService {
         const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
           where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
         });
-        if (evaluationCount > 0) {
+        if (evaluationCount > 0 && !options.forceWorkflowEvaluationRepair) {
           return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
         }
         needsWorkflowEvaluationRepair = true;
@@ -534,6 +535,7 @@ export class AircallIngestService {
         callEventId: callEvent.id,
         externalCallId: callEvent.externalCallId,
         forceReprocess: Boolean(options.forceReprocess),
+        forceWorkflowEvaluationRepair: Boolean(options.forceWorkflowEvaluationRepair),
         targetVersion,
       },
       {
@@ -555,6 +557,7 @@ export class AircallIngestService {
       target_version: targetVersion,
       force_reprocess: Boolean(options.forceReprocess),
       workflow_evaluation_repair: needsWorkflowEvaluationRepair,
+      force_workflow_evaluation_repair: Boolean(options.forceWorkflowEvaluationRepair),
       resolver_version_repair: needsResolverVersionRepair,
       source: options.source ?? 'ingest',
     });
@@ -768,5 +771,6 @@ function successfulResolverJobStatus(value: unknown) {
   return value === 'succeeded'
     || value === 'succeeded_with_local_fallback'
     || value === 'skipped_already_resolved'
-    || value === 'repaired_missing_workflow_evaluations';
+    || value === 'repaired_missing_workflow_evaluations'
+    || value === 'repaired_workflow_evaluations';
 }

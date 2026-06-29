@@ -677,26 +677,33 @@ export class AircallService {
       ? []
       : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
           where: { tenantId, callEventId: { in: rows.map((row) => row.id) } },
-          select: { callEventId: true },
+          select: { callEventId: true, status: true },
         });
     const evaluationCounts = new Map<string, number>();
+    const evaluationProblemCounts = new Map<string, number>();
     for (const evaluation of evaluations) {
       evaluationCounts.set(evaluation.callEventId, (evaluationCounts.get(evaluation.callEventId) ?? 0) + 1);
+      if (evaluation.status === 'failed' || isUnmatchedWorkflowEvaluationStatus(evaluation.status)) {
+        evaluationProblemCounts.set(evaluation.callEventId, (evaluationProblemCounts.get(evaluation.callEventId) ?? 0) + 1);
+      }
     }
 
     let queued = 0;
     let skipped = 0;
     let alreadyEvaluated = 0;
     let missingEvaluations = 0;
+    let failedOrUnmatchedEvaluations = 0;
     let staleResolverVersion = 0;
     let unresolved = 0;
     const callEvents: AircallWorkflowRepairResponse['callEvents'] = [];
 
     for (const row of rows) {
       const evaluationCount = evaluationCounts.get(row.id) ?? 0;
+      const evaluationProblemCount = evaluationProblemCounts.get(row.id) ?? 0;
       const stale = (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion;
-      const hasCurrentEvaluation = evaluationCount > 0 && !stale;
+      const hasCurrentEvaluation = evaluationCount > 0 && evaluationProblemCount === 0 && !stale;
       if (evaluationCount === 0) missingEvaluations++;
+      if (evaluationProblemCount > 0) failedOrUnmatchedEvaluations += evaluationProblemCount;
       if (stale) staleResolverVersion++;
       if (!row.resolvedAt && row.resolverStatus !== 'succeeded') unresolved++;
 
@@ -709,6 +716,7 @@ export class AircallService {
           resolvedWithVersion: row.resolvedWithVersion,
           resolverStatus: row.resolverStatus,
           evaluationCount,
+          evaluationProblemCount,
           repairMode: 'already_evaluated',
           queued: false,
           skippedReason: 'already_evaluated',
@@ -718,6 +726,7 @@ export class AircallService {
 
       const result = await this.ingest.enqueueTranscriptResolver(row.id, row.transcriptRaw, {
         targetVersion,
+        forceWorkflowEvaluationRepair: evaluationProblemCount > 0,
         source: 'workflow_repair',
       });
       if (result.queued) queued++;
@@ -728,6 +737,7 @@ export class AircallService {
         resolvedWithVersion: row.resolvedWithVersion,
         resolverStatus: row.resolverStatus,
         evaluationCount,
+        evaluationProblemCount,
         repairMode: workflowActionRepairMode(row, targetVersion),
         queued: result.queued,
         skippedReason: result.skippedReason,
@@ -751,6 +761,7 @@ export class AircallService {
         skipped,
         alreadyEvaluated,
         missingEvaluations,
+        failedOrUnmatchedEvaluations,
         staleResolverVersion,
         unresolved,
       },
@@ -765,6 +776,7 @@ export class AircallService {
       skipped,
       alreadyEvaluated,
       missingEvaluations,
+      failedOrUnmatchedEvaluations,
       staleResolverVersion,
       unresolved,
       callEvents,
