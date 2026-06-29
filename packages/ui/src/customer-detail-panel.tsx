@@ -63,6 +63,11 @@ export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, o
               <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span>
             </div>
           </div>
+          {detail?.customer.phone ? (
+            <a className="btn ghost" href={`tel:${cleanPhone(detail.customer.phone)}`} aria-label={`Call ${detail.customer.phone}`}>
+              <Phone size={14} /> Call
+            </a>
+          ) : null}
           <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
             <X size={18} />
           </button>
@@ -419,6 +424,10 @@ function duration(seconds: number | null) {
   if (!seconds) return '0m';
   const minutes = Math.max(1, Math.round(seconds / 60));
   return `${minutes}m`;
+}
+
+function cleanPhone(value: string) {
+  return value.replace(/[^\d+]/g, '');
 }
 
 function label(value: string) {

@@ -214,7 +214,7 @@ export class CallCenterService {
     const target = await this.requireActiveMember(input.targetMemberId);
     const rawAxis = input.targetAxis ?? row.axis ?? 'sales';
     if (rawAxis === 'support') {
-      throw new BadRequestException('Call Center task transfers can only target sales or account. Open customer requests from the Support case flow.');
+      throw new BadRequestException('Call Center task transfers can only target sales or account. Customer requests must be opened manually from the customer request flow.');
     }
     const toAxis = rawAxis === 'account' ? 'account' : 'sales';
     const tenantId = this.tenantId();
@@ -313,7 +313,7 @@ export class CallCenterService {
   async createCustomerTask(id: string, input: CallCenterCreateCustomerTaskInput): Promise<CallCenterActionResult> {
     const actor = await this.currentMember();
     if (String(input.targetAxis) === 'support') {
-      throw new BadRequestException('Customer follow-up tasks can only target sales or account. Open support cases from the Support case flow.');
+      throw new BadRequestException('Customer follow-up tasks can only target sales or account. Customer requests must be opened manually from the customer request flow.');
     }
     const [customer, target] = await Promise.all([
       this.prisma.db.customer.findFirst({ where: { id } }),
@@ -534,6 +534,9 @@ export class CallCenterService {
           totalSpent: Number(membership.customer.totalSpent ?? 0),
           lastOrderAt: membership.customer.lastOrderAt?.toISOString() ?? null,
           urgencyScore,
+          activeMemberId: context.activeMember?.id ?? member.id,
+          activeMemberName: context.activeMember?.name ?? member.name,
+          activeMemberRole: context.activeMember?.role ?? member.role,
           notesCount: context.notesCount,
           openTasksCount: context.openTasksCount,
           openRequestsCount: context.openRequestsCount,
@@ -636,6 +639,7 @@ export class CallCenterService {
       if (!CLOSED.has(row.status)) {
         context.openTasksCount += isInternalWorkspaceRow(row.metadata) ? 0 : 1;
         if (isCustomerRequest(row)) context.openRequestsCount += 1;
+        setActivePriorityMember(context, memberById.get(row.assignedMemberId ?? '') ?? null, row.updatedAt);
       }
     }
     for (const row of noteRows) {
@@ -643,6 +647,7 @@ export class CallCenterService {
       const context = result.get(row.customerId);
       if (!context) continue;
       context.notesCount += 1;
+      setActivePriorityMember(context, memberById.get(row.createdByActorId ?? '') ?? null, row.updatedAt);
       const note = {
         id: row.id,
         body: row.description || row.title,
@@ -658,6 +663,7 @@ export class CallCenterService {
       const context = result.get(customerId);
       if (!context) continue;
       context.notesCount += 1;
+      setActivePriorityMember(context, memberById.get(row.actorId ?? '') ?? null, row.createdAt);
       const note = {
         id: row.id,
         body: row.body,
@@ -980,6 +986,8 @@ type ServiceRequestWithRelations = Prisma.ServiceRequestGetPayload<{
 }>;
 
 interface PriorityCustomerContext {
+  activeMember: CallCenterMember | null;
+  activeAt: string | null;
   notesCount: number;
   openTasksCount: number;
   openRequestsCount: number;
@@ -1110,6 +1118,8 @@ function uniqueStrings(values: Array<string | null | undefined>) {
 
 function emptyPriorityCustomerContext(): PriorityCustomerContext {
   return {
+    activeMember: null,
+    activeAt: null,
     notesCount: 0,
     openTasksCount: 0,
     openRequestsCount: 0,
@@ -1118,6 +1128,14 @@ function emptyPriorityCustomerContext(): PriorityCustomerContext {
     latestOrder: null,
     latestCall: null,
   };
+}
+
+function setActivePriorityMember(context: PriorityCustomerContext, member: CallCenterMember | null, at: Date) {
+  if (!member) return;
+  const nextAt = at.toISOString();
+  if (context.activeAt && context.activeAt >= nextAt) return;
+  context.activeMember = member;
+  context.activeAt = nextAt;
 }
 
 function isInternalWorkspaceRow(value: unknown) {

@@ -6,6 +6,8 @@ import { Topbar } from '@/components/Topbar';
 import { handOffToPerson, readPersonSession, readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
+  { test: /^\/rules\/shadow-telemetry/, key: 'nav.shadow_telemetry' },
+  { test: /^\/rules\/stats/, key: 'nav.rule_stats' },
   { test: /^\/rules/, key: 'nav.rules' },
   { test: /^\/orders/, key: 'nav.orders' },
   { test: /^\/customers/, key: 'nav.customers' },
@@ -37,6 +39,8 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> 
   { test: /^\/support/, permission: MEMBER_PERMISSIONS.supportRead },
   { test: /^\/b2b-requests/, permission: MEMBER_PERMISSIONS.b2bAccessRead },
   { test: /^\/tasks/, permission: MEMBER_PERMISSIONS.taskAssign },
+  { test: /^\/rules\/shadow-telemetry/, permission: MEMBER_PERMISSIONS.settingsRead },
+  { test: /^\/rules\/stats/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsWrite },
   { test: /^\/mail-marketing/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },

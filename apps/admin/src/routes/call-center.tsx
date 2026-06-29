@@ -162,7 +162,7 @@ function CallCenterView() {
                   {item.label}
                 </button>
               ))}
-              <span className="call-center-live">WebSocket push, 30s fallback refresh</span>
+              <span className="call-center-live">Live push, 30s fallback refresh</span>
             </div>
             {tab === 'kanban' && (
               <KanbanTab
@@ -400,7 +400,7 @@ function KanbanTab({
               <span className="segment-dot" style={{ background: group.segmentColor }} />
               <strong>{group.segmentName}</strong>
               <em>Owner: {group.ownerName} - {group.ownerRole}</em>
-              <em>Active: {group.ownerName}</em>
+              <em>Active: {groupActiveLabel(group)}</em>
               <span>{group.customerCount}</span>
             </summary>
             <div className="segment-customer-list">
@@ -411,7 +411,7 @@ function KanbanTab({
                     <span>{customer.phone ?? 'No phone on file'}{customer.email ? ` - ${customer.email}` : ''}</span>
                   </div>
                   <div className="segment-customer-signals">
-                    <span>Owner: {group.ownerName} - Active: {group.ownerName}</span>
+                    <span>Owner: {group.ownerName} - Active: {customer.activeMemberName}</span>
                     <span>{customer.ordersCount} orders - {formatMoney(customer.totalSpent)}</span>
                     <span>{customer.latestOrder ? `Last order ${customer.latestOrder.orderNumber ?? customer.latestOrder.id} - ${formatMoney(customer.latestOrder.totalPrice)}` : 'No linked Shopify order'}</span>
                     <span>{customer.latestCall ? `Last call ${relative(customer.latestCall.at)}` : 'No matched call yet'}</span>
@@ -456,7 +456,7 @@ function KanbanTab({
                         onTransfer({ mode: 'customer', customer, ownerMemberId: group.ownerMemberId, ownerName: group.ownerName });
                       }}
                     >
-                      <ArrowRightLeft size={13} /> Send task
+                      <ArrowRightLeft size={13} /> Send follow-up
                     </button>
                   </div>
                 </article>
@@ -725,7 +725,7 @@ function TransferModal({
       <section className="modal-card" onMouseDown={(event) => event.stopPropagation()}>
         <header className="modal-header">
           <div>
-            <h2 id="call-center-transfer-title">{target.mode === 'customer' ? 'Send customer task' : 'Transfer task'}</h2>
+            <h2 id="call-center-transfer-title">{target.mode === 'customer' ? 'Send customer follow-up' : 'Transfer task'}</h2>
             <p>{label}</p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose}>x</button>
@@ -765,7 +765,7 @@ function TransferModal({
             })}
           >
             {isSaving ? <Loader2 size={13} className="spin" /> : <ArrowRightLeft size={13} />}
-            {target.mode === 'customer' ? 'Create task' : 'Transfer'}
+            {target.mode === 'customer' ? 'Send to staff' : 'Transfer'}
           </button>
         </footer>
       </section>
@@ -855,6 +855,8 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
         customer.customerName,
         customer.email,
         customer.phone,
+        customer.activeMemberName,
+        customer.activeMemberRole,
         customer.reason,
         customer.latestNote?.body,
         customer.latestNote?.authorName,
@@ -878,6 +880,13 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
   ));
 
   return { dailyCallList, priorityGroups, pinBoard };
+}
+
+function groupActiveLabel(group: CallCenterOverview['kanban']['priorityGroups'][number]) {
+  const names = [...new Set(group.customers.map((customer) => customer.activeMemberName).filter(Boolean))];
+  if (names.length === 0) return group.ownerName;
+  if (names.length === 1) return names[0]!;
+  return `${names[0]} +${names.length - 1}`;
 }
 
 function matchesText(query: string, values: Array<string | number | null | undefined>) {

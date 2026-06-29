@@ -40,6 +40,8 @@ import { Route as SettingsWorkspaceRouteImport } from './routes/settings/workspa
 import { Route as SettingsShopifyRouteImport } from './routes/settings/shopify'
 import { Route as SettingsInitialSetupRouteImport } from './routes/settings/initial-setup'
 import { Route as SettingsAircallRouteImport } from './routes/settings/aircall'
+import { Route as RulesStatsRouteImport } from './routes/rules/stats'
+import { Route as RulesShadowTelemetryRouteImport } from './routes/rules/shadow-telemetry'
 import { Route as TeamUsersIndexRouteImport } from './routes/team/users.index'
 import { Route as TeamUsersAddRouteImport } from './routes/team/users.add'
 import { Route as SettingsAircallWebhooksRouteImport } from './routes/settings/aircall/webhooks'
@@ -203,6 +205,16 @@ const SettingsAircallRoute = SettingsAircallRouteImport.update({
   path: '/aircall',
   getParentRoute: () => SettingsRoute,
 } as any)
+const RulesStatsRoute = RulesStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => RulesRoute,
+} as any)
+const RulesShadowTelemetryRoute = RulesShadowTelemetryRouteImport.update({
+  id: '/shadow-telemetry',
+  path: '/shadow-telemetry',
+  getParentRoute: () => RulesRoute,
+} as any)
 const TeamUsersIndexRoute = TeamUsersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -252,12 +264,14 @@ export interface FileRoutesByFullPath {
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/rules': typeof RulesRoute
+  '/rules': typeof RulesRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/support': typeof SupportRouteWithChildren
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
+  '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
+  '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -292,11 +306,13 @@ export interface FileRoutesByTo {
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/rules': typeof RulesRoute
+  '/rules': typeof RulesRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
+  '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
+  '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -331,12 +347,14 @@ export interface FileRoutesById {
   '/orders': typeof OrdersRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/rules': typeof RulesRoute
+  '/rules': typeof RulesRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/support': typeof SupportRouteWithChildren
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
+  '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
+  '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -379,6 +397,8 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
+    | '/rules/shadow-telemetry'
+    | '/rules/stats'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -418,6 +438,8 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
+    | '/rules/shadow-telemetry'
+    | '/rules/stats'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -457,6 +479,8 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
+    | '/rules/shadow-telemetry'
+    | '/rules/stats'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -492,7 +516,7 @@ export interface RootRouteChildren {
   OrdersRoute: typeof OrdersRoute
   PricingRoute: typeof PricingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  RulesRoute: typeof RulesRoute
+  RulesRoute: typeof RulesRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
   SupportRoute: typeof SupportRouteWithChildren
   SystemMailRoute: typeof SystemMailRoute
@@ -720,6 +744,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAircallRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/rules/stats': {
+      id: '/rules/stats'
+      path: '/stats'
+      fullPath: '/rules/stats'
+      preLoaderRoute: typeof RulesStatsRouteImport
+      parentRoute: typeof RulesRoute
+    }
+    '/rules/shadow-telemetry': {
+      id: '/rules/shadow-telemetry'
+      path: '/shadow-telemetry'
+      fullPath: '/rules/shadow-telemetry'
+      preLoaderRoute: typeof RulesShadowTelemetryRouteImport
+      parentRoute: typeof RulesRoute
+    }
     '/team/users/': {
       id: '/team/users/'
       path: '/'
@@ -771,6 +809,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface RulesRouteChildren {
+  RulesShadowTelemetryRoute: typeof RulesShadowTelemetryRoute
+  RulesStatsRoute: typeof RulesStatsRoute
+}
+
+const RulesRouteChildren: RulesRouteChildren = {
+  RulesShadowTelemetryRoute: RulesShadowTelemetryRoute,
+  RulesStatsRoute: RulesStatsRoute,
+}
+
+const RulesRouteWithChildren = RulesRoute._addFileChildren(RulesRouteChildren)
 
 interface SettingsAircallRouteChildren {
   SettingsAircallConnectionRoute: typeof SettingsAircallConnectionRoute
@@ -879,7 +929,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersRoute: OrdersRoute,
   PricingRoute: PricingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  RulesRoute: RulesRoute,
+  RulesRoute: RulesRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
   SupportRoute: SupportRouteWithChildren,
   SystemMailRoute: SystemMailRoute,

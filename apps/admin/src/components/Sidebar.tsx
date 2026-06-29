@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
   ShoppingCart, UserSquare2, Workflow, Cable, KeyRound, Store, FileCheck2,
-  Mail, Rocket,
+  Mail, Rocket, BarChart3, Radar,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { adminApi, clearSurfaceSessions } from '@/lib/api';
@@ -17,6 +17,7 @@ interface NavLeaf {
   id: string;
   icon: typeof LayoutDashboard;
   permission?: string | string[];
+  exact?: boolean;
 }
 
 const NAV: { groupKey: string; children: NavLeaf[] }[] = [
@@ -46,7 +47,9 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_automation',
     children: [
-      { to: '/rules', matchPrefix: '/rules', i18nKey: 'nav.rules', id: 'nav-rules', icon: Workflow, permission: 'settings.write' },
+      { to: '/rules', matchPrefix: '/rules', i18nKey: 'nav.rules', id: 'nav-rules', icon: Workflow, permission: 'settings.write', exact: true },
+      { to: '/rules/shadow-telemetry', matchPrefix: '/rules/shadow-telemetry', i18nKey: 'nav.shadow_telemetry', id: 'nav-shadow-telemetry', icon: Radar, permission: 'settings.read' },
+      { to: '/rules/stats', matchPrefix: '/rules/stats', i18nKey: 'nav.rule_stats', id: 'nav-rule-stats', icon: BarChart3, permission: 'settings.read' },
     ],
   },
   {
@@ -128,7 +131,7 @@ export function Sidebar({ collapsed }: Props) {
             <div className="group-label">{t(section.groupKey)}</div>
             {section.children.map((leaf) => {
               const Icon = leaf.icon;
-              const active = router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
+              const active = leaf.exact ? router === leaf.matchPrefix : router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
               return (
                 <Link
                   key={leaf.to}
