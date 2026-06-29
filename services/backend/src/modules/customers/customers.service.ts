@@ -130,9 +130,12 @@ export class CustomersService {
     const email = customer.email?.trim() ?? null;
     const phone = customer.phone?.trim() ?? null;
     const aircallWhere = aircallWhereFor(email, phone);
+    const orderWhere: Prisma.CommerceOrderWhereInput = customer.shopifyCustomerId
+      ? { OR: [{ customerId: id }, { shopifyCustomerId: customer.shopifyCustomerId }] }
+      : { customerId: id };
     const [orders, aircallCalls, serviceRequests, mailDeliveries, linkedNotes, linkedMessages] = await Promise.all([
       this.prisma.db.commerceOrder.findMany({
-        where: { customerId: id },
+        where: orderWhere,
         orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
         take: 50,
       }),
