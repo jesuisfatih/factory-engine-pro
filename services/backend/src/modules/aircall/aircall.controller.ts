@@ -64,6 +64,12 @@ export class AircallController {
     return this.aircall.callEvents();
   }
 
+  @Get('calls/workflow-coverage')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  workflowCoverage() {
+    return this.aircall.workflowCoverage();
+  }
+
   @Post('calls/backfill-recent')
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
   backfillRecentCalls(

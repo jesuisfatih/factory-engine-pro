@@ -14,6 +14,7 @@ import type {
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
+  AircallWorkflowCoverageResponse,
 } from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { prefixedId } from '../../shared/id.js';
@@ -272,6 +273,67 @@ export class AircallService {
     };
   }
 
+  async workflowCoverage(): Promise<AircallWorkflowCoverageResponse> {
+    const tenantId = this.tenantId();
+    const recentDays = 7;
+    const targetVersion = TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
+    const to = new Date();
+    const from = new Date(to.getTime() - recentDays * 86_400_000);
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      where: {
+        tenantId,
+        eventTimestamp: { gte: from, lte: to },
+        transcriptRaw: { not: null },
+      },
+      orderBy: { eventTimestamp: 'desc' },
+      select: {
+        id: true,
+        externalCallId: true,
+        eventTimestamp: true,
+        transcriptRaw: true,
+        resolverStatus: true,
+        resolverOutput: true,
+        resolvedAt: true,
+        resolvedWithVersion: true,
+      },
+    });
+    const transcriptRows = rows.filter((row) => Boolean(row.transcriptRaw?.trim()));
+    const callEventIds = transcriptRows.map((row) => row.id);
+    const evaluations = callEventIds.length === 0
+      ? []
+      : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
+          where: { tenantId, callEventId: { in: callEventIds } },
+          select: { callEventId: true },
+        });
+    const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
+    const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
+
+    return {
+      targetVersion,
+      recentDays,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      transcriptEvents: transcriptRows.length,
+      resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
+      evaluatedEvents: evaluatedIds.size,
+      missingEvaluations: missingRows.length,
+      staleResolverVersion: transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length,
+      resolverQueuedOrProcessing: transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length,
+      resolverFailed: transcriptRows.filter((row) => row.resolverStatus === 'failed').length,
+      missing: missingRows.slice(0, 50).map((row) => ({
+        id: row.id,
+        externalCallId: row.externalCallId,
+        eventTimestamp: row.eventTimestamp.toISOString(),
+        resolverStatus: row.resolverStatus,
+        resolvedAt: row.resolvedAt?.toISOString() ?? null,
+        resolvedWithVersion: row.resolvedWithVersion,
+        resolverOutputPresent: Boolean(row.resolverOutput),
+        transcriptLength: row.transcriptRaw?.trim().length ?? 0,
+        repairMode: workflowRepairMode(row, targetVersion),
+      })),
+    };
+  }
+
   async backfillRecentCalls(input: AircallBackfillRecentInput): Promise<AircallBackfillRecentResponse> {
     const startedAt = new Date();
     const tenant = await this.currentTenant();
@@ -317,10 +379,15 @@ export class AircallService {
           }
 
           const existing = await this.prisma.db.aircallCallEvent.findFirst({
-            where: { externalCallId, eventType: 'call.ended' },
+            where: { tenantId: tenant.id, externalCallId, eventType: 'call.ended' },
             select: { id: true, transcriptRaw: true, resolverQueuedAt: true, resolverStatus: true },
           });
           if (existing?.transcriptRaw && existing.resolverQueuedAt && existing.resolverStatus !== 'failed') {
+            const repair = await this.ingest.enqueueTranscriptResolver(existing.id, existing.transcriptRaw, {
+              targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+              source: 'rolling_backfill',
+            });
+            if (repair.queued) resolverQueued++;
             skipped++;
             continue;
           }
@@ -1007,6 +1074,18 @@ export class AircallService {
 
 function displayName(member: { firstName: string; lastName: string; email: string }) {
   return [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
+}
+
+function workflowRepairMode(row: {
+  resolverStatus: string | null;
+  resolverOutput: unknown;
+  resolvedAt: Date | null;
+  resolvedWithVersion: number | null;
+}, targetVersion: number): AircallWorkflowCoverageResponse['missing'][number]['repairMode'] {
+  if (row.resolverStatus === 'failed') return 'resolver_failed';
+  if (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') return 'wait_for_resolver';
+  if ((row.resolvedWithVersion ?? 0) >= targetVersion && row.resolverOutput && row.resolvedAt) return 'replay_stored_output';
+  return 'rerun_resolver';
 }
 
 function messageOf(error: unknown) {

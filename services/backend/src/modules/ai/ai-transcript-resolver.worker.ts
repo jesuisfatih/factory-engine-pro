@@ -2,6 +2,7 @@ import { HttpException, Inject, Injectable, OnModuleDestroy, OnModuleInit } from
 import {
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   transcriptOperationalSignalSchema,
+  transcriptResolverOutputSchema,
   type TranscriptOperationalSignal,
   type TranscriptResolverOutput,
   type WorkflowTriggerFireResponse,
@@ -82,6 +83,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
       where: { id: callEventId },
       select: {
         id: true,
+        tenantId: true,
         externalCallId: true,
         eventType: true,
         eventTimestamp: true,
@@ -94,14 +96,48 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         transcriptRaw: true,
         transcriptSource: true,
         transcriptPulledAt: true,
+        resolverOutput: true,
+        resolverModel: true,
+        resolverStatus: true,
         resolvedAt: true,
         resolvedWithVersion: true,
       },
     });
     if (!callEvent) throw new Error(`Aircall call event was not found for resolver job: ${callEventId}`);
     const targetVersion = normalizeTargetVersion(job.data?.targetVersion);
-    if (!job.data?.forceReprocess && callEvent.resolvedAt) {
-      return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion };
+    if (!job.data?.forceReprocess && callEvent.resolvedAt && (callEvent.resolvedWithVersion ?? 0) >= targetVersion) {
+      const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+        where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+      });
+      if (evaluationCount > 0) {
+        return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion, evaluationCount };
+      }
+
+      const storedOutput = transcriptResolverOutputSchema.safeParse(callEvent.resolverOutput);
+      if (storedOutput.success) {
+        await this.fireDerivedWorkflowTriggers(callEvent, storedOutput.data, callEvent.resolverModel ?? 'stored-resolver-output');
+        const repairedEvaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+          where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+        });
+        this.logger.log('ai', 'transcript_workflow_evaluation_repaired', 'Resolved transcript was replayed through workflow flow because evaluations were missing', {
+          call_event_id: callEvent.id,
+          external_call_id: callEvent.externalCallId,
+          resolved_with_version: callEvent.resolvedWithVersion,
+          evaluations_created_or_updated: repairedEvaluationCount,
+        });
+        return {
+          status: 'repaired_missing_workflow_evaluations',
+          resolvedWithVersion: callEvent.resolvedWithVersion,
+          evaluationCount: repairedEvaluationCount,
+        };
+      }
+
+      this.logger.warn('ai', 'resolved_transcript_output_missing', 'Resolved transcript had no valid resolver output; resolver will run again to produce workflow evaluations', {
+        call_event_id: callEvent.id,
+        external_call_id: callEvent.externalCallId,
+        resolver_status: callEvent.resolverStatus,
+        resolved_with_version: callEvent.resolvedWithVersion,
+      });
     }
 
     const transcript = callEvent.transcriptRaw?.trim();

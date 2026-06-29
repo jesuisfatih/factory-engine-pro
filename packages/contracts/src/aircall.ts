@@ -175,6 +175,31 @@ export interface AircallCallEventsResponse {
   calls: AircallCallEventDto[];
 }
 
+export interface AircallWorkflowCoverageResponse {
+  targetVersion: number;
+  recentDays: number;
+  from: string;
+  to: string;
+  transcriptEvents: number;
+  resolvedEvents: number;
+  evaluatedEvents: number;
+  missingEvaluations: number;
+  staleResolverVersion: number;
+  resolverQueuedOrProcessing: number;
+  resolverFailed: number;
+  missing: Array<{
+    id: string;
+    externalCallId: string;
+    eventTimestamp: string;
+    resolverStatus: string | null;
+    resolvedAt: string | null;
+    resolvedWithVersion: number | null;
+    resolverOutputPresent: boolean;
+    transcriptLength: number;
+    repairMode: 'replay_stored_output' | 'rerun_resolver' | 'wait_for_resolver' | 'resolver_failed';
+  }>;
+}
+
 export interface AircallBackfillRecentResponse {
   recentDays: number;
   from: string;

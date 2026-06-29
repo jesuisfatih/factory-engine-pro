@@ -16,6 +16,7 @@ import type {
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
+  AircallWorkflowCoverageResponse,
   AssignDefaultCustomerAxisInput,
   AssignDefaultCustomerAxisResponse,
   AuthSession,
@@ -958,6 +959,10 @@ export class ApiClient {
 
   aircallCallEvents() {
     return this.get<AircallCallEventsResponse>('/aircall/calls');
+  }
+
+  aircallWorkflowCoverage() {
+    return this.get<AircallWorkflowCoverageResponse>('/aircall/calls/workflow-coverage');
   }
 
   backfillRecentAircallCalls(input: AircallBackfillRecentInput = { recentDays: 3, maxPages: 20 }) {

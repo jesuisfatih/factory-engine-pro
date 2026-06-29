@@ -474,9 +474,19 @@ export class AircallIngestService {
     if (!transcript) return { queued: false, jobId: null, skippedReason: 'transcript_empty' };
 
     const targetVersion = normalizeTargetVersion(options.targetVersion);
+    let needsWorkflowEvaluationRepair = false;
     if (!options.forceReprocess && (callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt)) {
+      const currentVersion = callEvent.resolvedWithVersion ?? 0;
       const versionLabel = callEvent.resolvedWithVersion ? `v${callEvent.resolvedWithVersion}` : 'legacy';
-      return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
+      if (currentVersion >= targetVersion) {
+        const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+          where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+        });
+        if (evaluationCount > 0) {
+          return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
+        }
+        needsWorkflowEvaluationRepair = true;
+      }
     }
 
     const jobId = ['aircall-transcript', callEvent.tenantId, callEvent.externalCallId, callEvent.id]
@@ -495,8 +505,8 @@ export class AircallIngestService {
     if (existingJob) {
       const state = await existingJob.getState();
       const returnValue = existingJob.returnvalue as { status?: unknown } | null;
-      const completedWithoutSuccess = state === 'completed' && returnValue?.status !== 'succeeded';
-      if (options.forceReprocess && state !== 'active') {
+      const completedWithoutSuccess = state === 'completed' && !successfulResolverJobStatus(returnValue?.status);
+      if ((options.forceReprocess || needsWorkflowEvaluationRepair) && state !== 'active') {
         await existingJob.remove();
       } else if (state === 'failed' || completedWithoutSuccess) {
         await existingJob.remove();
@@ -541,6 +551,7 @@ export class AircallIngestService {
       external_call_id: callEvent.externalCallId,
       target_version: targetVersion,
       force_reprocess: Boolean(options.forceReprocess),
+      workflow_evaluation_repair: needsWorkflowEvaluationRepair,
       source: options.source ?? 'ingest',
     });
     return { queued: true, jobId, skippedReason: null };
@@ -747,4 +758,10 @@ function messageOf(error: unknown) {
 function normalizeTargetVersion(value: unknown) {
   const parsed = Number(value ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
+}
+
+function successfulResolverJobStatus(value: unknown) {
+  return value === 'succeeded'
+    || value === 'skipped_already_resolved'
+    || value === 'repaired_missing_workflow_evaluations';
 }
