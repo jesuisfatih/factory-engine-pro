@@ -109,7 +109,21 @@
   ],
   "lindaPriority": {
     "status": 200,
-    "priorityCount": 0,
+    "endpoint": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+    "summary": {
+      "dailyCount": 91,
+      "priorityCount": 91,
+      "pinnedCount": 4,
+      "highUrgencyCount": 91,
+      "visibleAxes": [
+        "support"
+      ],
+      "segmentGroupCount": 5
+    },
+    "priorityCount": 91,
+    "prioritySourceCounts": {
+      "ai_segment": 91
+    },
     "supportLeakCount": 0,
     "supportLeakSamples": []
   },
