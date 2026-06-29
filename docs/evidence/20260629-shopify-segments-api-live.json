@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-06-29T02:13:30+03:00",
+  "environment": "dtfbank-live",
+  "baseUrl": "https://api.dtfbank.com/api/v1",
+  "health": {
+    "ok": true,
+    "service": "factory-engine-pro-backend"
+  },
+  "syncShopifySegments": {
+    "method": "POST",
+    "path": "/segments/sync-shopify",
+    "tenantId": "ten_dtfbank",
+    "actor": {
+      "id": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "roles": ["owner"]
+    },
+    "responseStatus": 201,
+    "response": {
+      "scanned": 28,
+      "created": 0,
+      "updated": 28,
+      "evaluated": 0,
+      "skippedEvaluation": 28,
+      "failed": 0
+    }
+  },
+  "targetedSegmentEvaluationAfterCustomerParityFix": [
+    {
+      "name": "Customers not added to companies",
+      "status": 201,
+      "customerCount": 5958
+    },
+    {
+      "name": "Promo-eligible customers (Discount Audience)",
+      "status": 201,
+      "customerCount": 5928
+    },
+    {
+      "name": "Customers who haven't purchased",
+      "status": 201,
+      "customerCount": 4107
+    },
+    {
+      "name": "Email subscribers",
+      "status": 201,
+      "customerCount": 4323
+    },
+    {
+      "name": "Promo-eligible customers who haven't purchased yet",
+      "status": 201,
+      "customerCount": 4106
+    }
+  ]
+}

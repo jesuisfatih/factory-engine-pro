@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-06-29T02:13:30+03:00",
+  "environment": "dtfbank-live",
+  "tenantId": "ten_dtfbank",
+  "managedDatabase": "Vultr Postgres via factoryengine-dtfbank-app env",
+  "customerParity": {
+    "customers": 5958,
+    "customersWithShopifyId": 5958,
+    "customersWithoutShopifyId": 0,
+    "suspiciousCustomers": []
+  },
+  "shopifySegmentParity": {
+    "shopifySegments": 28,
+    "canonicalShopifySegments": 28,
+    "missingCanonicalShopifySegments": [],
+    "segmentMemberships": 32763,
+    "shopifyMemberships": 32763,
+    "unlinkedSnapshotCustomerIds": [],
+    "suspiciousSegments": []
+  },
+  "cleanup": {
+    "removedNonProductionCustomers": [
+      {
+        "shopifyCustomerId": "9695801606420",
+        "email": "patricia.smith764@example.com",
+        "reason": "reserved example.com address, disabled Shopify customer, zero orders, zero spend"
+      }
+    ],
+    "restoredRealShopifyCustomer": {
+      "shopifyCustomerId": "9416107393300",
+      "email": "skrivera5@gmail.com",
+      "reason": "live enabled Shopify customer present in segment snapshots but missing from canonical customer table"
+    }
+  },
+  "taskHistoryProof": {
+    "samples": [
+      {
+        "id": "sr_irctsy8eswd9dggjlfxj7lcq",
+        "source": "ai_transcript",
+        "sourceCallId": "acev_dltdv904c9v7afn9p8yl9ov5",
+        "matchedRuleId": "wrule_cmx85amzl2vxoxiuqf7zq439",
+        "title": "support: Shipping issue follow-up"
+      },
+      {
+        "id": "sr_q4u8c97mr5ufn0pjstb2w1ck",
+        "source": "ai_transcript",
+        "sourceCallId": "acev_legacy_371ca3bf-7bcc-48cc-a5b9-3f036bc0c176",
+        "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "title": "support: Refund intent follow-up"
+      }
+    ]
+  }
+}

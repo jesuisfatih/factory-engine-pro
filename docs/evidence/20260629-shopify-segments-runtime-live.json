@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-06-29T02:13:30+03:00",
+  "environment": "dtfbank-live",
+  "deployedBuildSha": "501272614261796ca191b81c66b673e48f277033",
+  "commits": [
+    {
+      "sha": "bb79dd54ad9f602c5fc7ea25e67552fe118e6712",
+      "message": "Sync operations segments from Shopify"
+    },
+    {
+      "sha": "5c359b9e8648bb38e58a2962077c0d45aebe9e95",
+      "message": "Harden Shopify segment sync"
+    },
+    {
+      "sha": "0f243a5bdc374f98e411ed3e4645cefadc3cb4e2",
+      "message": "Exclude non-production Shopify customers"
+    },
+    {
+      "sha": "501272614261796ca191b81c66b673e48f277033",
+      "message": "Filter segment snapshots to canonical customers"
+    }
+  ],
+  "verification": {
+    "local": [
+      "pnpm --filter @factory-engine-pro/contracts build",
+      "pnpm --filter @factory-engine-pro/backend typecheck",
+      "pnpm --filter @factory-engine-pro/backend build",
+      "pnpm --filter @factory-engine-pro/admin build"
+    ],
+    "live": [
+      "curl https://api.dtfbank.com/api/v1/health -> ok",
+      "prisma migrate deploy -> No pending migrations to apply",
+      "Nest application successfully started",
+      "POST /segments/sync-shopify -> scanned 28, failed 0"
+    ]
+  },
+  "containerScope": {
+    "restarted": "factoryengine-dtfbank-app",
+    "untouchedStillUp": [
+      "factoryengine-dtfprint-app",
+      "factoryengine-eagledtfsupply-app",
+      "factoryengine-fastdtfsupply-app",
+      "factoryengine-fastdtftransfer-app",
+      "factoryengine-dtfprintdepot-app"
+    ]
+  },
+  "uiEvidence": {
+    "url": "https://app.dtfbank.com/segments",
+    "screenshot": "docs/evidence/20260629-shopify-segments-ui-live.png",
+    "json": "docs/evidence/20260629-shopify-segments-ui-live.json",
+    "consoleErrors": 0,
+    "failedResponses": 0
+  }
+}
