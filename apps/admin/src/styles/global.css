@@ -974,6 +974,37 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 .customers-toolbar select:focus { border-color: var(--accent); }
 
+.customer-routing-copy {
+  display: grid; gap: 4px; max-width: min(680px, 100%);
+}
+.customer-routing-heading {
+  display: inline-flex; align-items: center; gap: 8px; position: relative;
+}
+.customer-routing-help {
+  position: relative; display: inline-flex;
+}
+.customer-routing-help summary {
+  width: 24px; height: 24px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); display: inline-flex;
+  align-items: center; justify-content: center; cursor: pointer;
+  list-style: none;
+}
+.customer-routing-help summary::-webkit-details-marker { display: none; }
+.customer-routing-help summary:hover,
+.customer-routing-help[open] summary {
+  border-color: var(--accent); color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.customer-routing-tooltip {
+  position: absolute; z-index: 20; top: 30px; left: 0;
+  width: min(320px, calc(100vw - 48px));
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 10px 12px; box-shadow: var(--shadow);
+  font-size: 12px; line-height: 1.45; font-weight: 500;
+}
+
 .customers-bulk-bar {
   background: var(--accent-soft); color: var(--accent);
   border: 1px solid var(--accent); border-radius: var(--radius);

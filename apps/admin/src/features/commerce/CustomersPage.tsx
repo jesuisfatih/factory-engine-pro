@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Download, ExternalLink, Phone, RefreshCw, Search, ShieldCheck, UserCheck, X } from 'lucide-react';
+import { Activity, AlertTriangle, CircleHelp, Download, ExternalLink, Phone, RefreshCw, Search, ShieldCheck, UserCheck, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -407,10 +407,21 @@ function CustomerOwnershipPanel({
   return (
     <div className="data-card" style={{ marginBottom: 14 }} id="customer-axis-ownership-panel">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div>
-          <div className="name" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <ShieldCheck size={16} /> {t('customers.assignment_title')}
+        <div className="customer-routing-copy">
+          <div className="customer-routing-heading">
+            <div className="name" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <ShieldCheck size={16} /> {t('customers.assignment_title')}
+            </div>
+            <details className="customer-routing-help">
+              <summary aria-label={t('customers.assignment_help_label')}>
+                <CircleHelp size={15} />
+              </summary>
+              <div className="customer-routing-tooltip">
+                {t('customers.assignment_help_body')}
+              </div>
+            </details>
           </div>
+          <div className="muted">{t('customers.assignment_summary')}</div>
           <div className="muted">{selectedCustomer ? selectedCustomer.name ?? selectedCustomer.companyName : t('customers.assignment_select_customer')}</div>
         </div>
         <select value={selectedCustomerId} onChange={(event) => onSelectCustomer(event.target.value)} aria-label={t('customers.assignment_customer_label')} style={{ minWidth: 260 }}>
