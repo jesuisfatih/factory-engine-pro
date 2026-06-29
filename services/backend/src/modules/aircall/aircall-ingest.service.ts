@@ -251,6 +251,7 @@ export class AircallIngestService {
       });
       await this.fireWorkflowTrigger({
         eventType,
+        transcriptRaw,
         callEvent,
         call,
       });
@@ -328,6 +329,7 @@ export class AircallIngestService {
 
   private async fireWorkflowTrigger(input: {
     eventType: string;
+    transcriptRaw?: string | null;
     callEvent: {
       id: string;
       externalCallId: string;
@@ -346,49 +348,51 @@ export class AircallIngestService {
       currentOperatorId: string | null;
     };
   }) {
-    const trigger = aircallWorkflowTrigger(input.eventType);
-    if (!trigger) return;
-
-    const eventId = `aircall:${input.callEvent.id}:${trigger}`;
-    await this.recordNoAutoReassignFromOperator(input, eventId);
-    try {
-      const result = await this.rules.fireTrigger({
-        trigger,
-        eventId,
-        source: 'aircall-webhook',
-        occurredAt: input.callEvent.eventTimestamp.toISOString(),
-        params: {
-          callId: input.call.id,
-          callEventId: input.callEvent.id,
-          aircallCallEventId: input.callEvent.id,
-          externalCallId: input.callEvent.externalCallId,
-          eventType: input.eventType,
-          direction: input.callEvent.direction,
-          status: input.callEvent.status,
-          aircallUserId: input.callEvent.aircallUserId,
-          contactPhone: input.callEvent.contactPhone,
-          contactPhoneE164: input.callEvent.contactPhoneE164,
-          contactEmail: input.callEvent.contactEmail,
-          customerId: input.call.customerId,
-          customerUserId: input.call.customerUserId,
-          assignedMemberId: input.call.currentOperatorId,
-        },
-      });
-      this.logger.log('aircall', 'workflow_trigger_dispatched', 'Aircall webhook dispatched workflow trigger', {
-        event_id: eventId,
-        trigger,
-        call_event_id: input.callEvent.id,
-        external_call_id: input.callEvent.externalCallId,
-        tasks_created: result.tasksCreated,
-      });
-    } catch (error) {
-      this.logger.warn('aircall', 'workflow_trigger_failed', 'Aircall webhook workflow trigger failed', {
-        event_id: eventId,
-        trigger,
-        call_event_id: input.callEvent.id,
-        external_call_id: input.callEvent.externalCallId,
-        error: messageOf(error),
-      });
+    const triggers = aircallWorkflowTriggers(input.eventType, input.transcriptRaw);
+    for (const trigger of triggers) {
+      const eventId = `aircall:${input.callEvent.id}:${trigger}`;
+      await this.recordNoAutoReassignFromOperator(input, eventId);
+      try {
+        const result = await this.rules.fireTrigger({
+          trigger,
+          eventId,
+          source: 'aircall-webhook',
+          occurredAt: input.callEvent.eventTimestamp.toISOString(),
+          params: {
+            callId: input.call.id,
+            callEventId: input.callEvent.id,
+            aircallCallEventId: input.callEvent.id,
+            externalCallId: input.callEvent.externalCallId,
+            eventType: input.eventType,
+            direction: input.callEvent.direction,
+            status: input.callEvent.status,
+            aircallUserId: input.callEvent.aircallUserId,
+            contactPhone: input.callEvent.contactPhone,
+            contactPhoneE164: input.callEvent.contactPhoneE164,
+            contactEmail: input.callEvent.contactEmail,
+            customerId: input.call.customerId,
+            customerUserId: input.call.customerUserId,
+            assignedMemberId: input.call.currentOperatorId,
+            transcriptPresent: Boolean(input.transcriptRaw?.trim()),
+            transcriptLength: input.transcriptRaw?.trim().length ?? 0,
+          },
+        });
+        this.logger.log('aircall', 'workflow_trigger_dispatched', 'Aircall webhook dispatched workflow trigger', {
+          event_id: eventId,
+          trigger,
+          call_event_id: input.callEvent.id,
+          external_call_id: input.callEvent.externalCallId,
+          tasks_created: result.tasksCreated,
+        });
+      } catch (error) {
+        this.logger.warn('aircall', 'workflow_trigger_failed', 'Aircall webhook workflow trigger failed', {
+          event_id: eventId,
+          trigger,
+          call_event_id: input.callEvent.id,
+          external_call_id: input.callEvent.externalCallId,
+          error: messageOf(error),
+        });
+      }
     }
   }
 
@@ -632,12 +636,14 @@ function extractEventTimestamp(payload: Record<string, unknown>) {
   return dateFromUnknown(payload.timestamp) ?? new Date();
 }
 
-function aircallWorkflowTrigger(eventType: string): WorkflowTrigger | null {
+function aircallWorkflowTriggers(eventType: string, transcriptRaw?: string | null): WorkflowTrigger[] {
+  const triggers: WorkflowTrigger[] = [];
   const normalized = eventType.trim().toLowerCase().replace(/^aircall\./, '');
-  if (normalized === 'call.created') return 'aircall.call.created';
-  if (normalized === 'call.ended' || normalized === 'call.hungup') return 'aircall.call.ended';
-  if (normalized === 'call.missed') return 'aircall.call.missed';
-  return null;
+  if (normalized === 'call.created') triggers.push('aircall.call.created');
+  if (normalized === 'call.ended' || normalized === 'call.hungup') triggers.push('aircall.call.ended');
+  if (normalized === 'call.missed') triggers.push('aircall.call.missed');
+  if (transcriptRaw?.trim()) triggers.push('aircall.transcript.received');
+  return triggers;
 }
 
 function payloadData(payload: Record<string, unknown>) {
