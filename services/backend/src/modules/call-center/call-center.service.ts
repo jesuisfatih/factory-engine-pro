@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
+  CallCenterActionResult,
+  CallCenterCreateCustomerTaskInput,
   CallCenterCalendarEvent,
   CallCenterMember,
   CallCenterMessage,
@@ -8,9 +10,16 @@ import type {
   CallCenterOverview,
   CallCenterPin,
   CallCenterPriorityGroup,
+  CallCenterSaveCustomerNoteInput,
   CallCenterTask,
+  CallCenterTransferTaskInput,
+  CustomerDetailPanelDto,
 } from '@factory-engine-pro/contracts';
+import { prefixedId } from '../../shared/id.js';
+import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { TenantContextService } from '../../shared/tenant-context.js';
+import { CustomersService } from '../customers/customers.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'cancelled']);
 const DAILY_AXES = ['sales', 'account'];
@@ -19,7 +28,12 @@ const NOTE_KIND = 'note';
 
 @Injectable()
 export class CallCenterService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+    private readonly customers: CustomersService,
+    private readonly logger: AppLogger,
+  ) {}
 
   async overview(): Promise<CallCenterOverview> {
     const now = new Date();
@@ -77,6 +91,226 @@ export class CallCenterService {
     };
   }
 
+  async customerDetail(id: string): Promise<CustomerDetailPanelDto> {
+    return this.customers.detail(id);
+  }
+
+  async saveCustomerNote(id: string, input: CallCenterSaveCustomerNoteInput): Promise<CustomerDetailPanelDto> {
+    const actor = await this.currentMember();
+    const customer = await this.prisma.db.customer.findFirst({ where: { id }, select: { id: true } });
+    if (!customer) throw new NotFoundException('Customer not found');
+    await this.prisma.db.serviceRequest.create({
+      data: {
+        id: prefixedId('sr'),
+        tenantId: this.tenantId(),
+        customerId: id,
+        source: 'manual',
+        surface: 'internal',
+        title: `Admin note - ${memberName(actor)}`,
+        description: input.body,
+        status: 'closed',
+        priority: 'low',
+        createdByActorId: actor.id,
+        metadata: {
+          personWorkspaceKind: 'note',
+          noteKind: 'customer',
+          linkedCustomer: id,
+          category: 'admin_customer_note',
+          createdByMemberId: actor.id,
+          createdByMemberEmail: actor.email,
+          createdByMemberName: memberName(actor),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('call_center', 'customer.note.create', 'Admin Call Center customer note saved', {
+      customer_id: id,
+      member_id: actor.id,
+    });
+    return this.customers.detail(id);
+  }
+
+  async transferTask(id: string, input: CallCenterTransferTaskInput): Promise<CallCenterActionResult> {
+    const actor = await this.currentMember();
+    const row = await this.prisma.db.serviceRequest.findFirst({
+      where: { id },
+      include: { assignedMember: true, customer: true },
+    });
+    if (!row) throw new NotFoundException('Task not found');
+    if (CLOSED.has(row.status)) throw new BadRequestException('Closed or resolved tasks cannot be transferred');
+    const target = await this.requireActiveMember(input.targetMemberId);
+    const toAxis = input.targetAxis ?? row.axis ?? 'sales';
+    const tenantId = this.tenantId();
+    const transferredAt = new Date();
+    const metadata = record(row.metadata);
+    const history = Array.isArray(metadata.transferHistory) ? metadata.transferHistory : [];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.serviceRequest.updateMany({
+        where: { id: row.id, tenantId },
+        data: {
+          assignedMemberId: target.id,
+          axis: toAxis,
+          metadata: {
+            ...metadata,
+            adminTransferredAt: transferredAt.toISOString(),
+            adminTransferredByMemberId: actor.id,
+            previousAssignedMemberId: row.assignedMemberId,
+            previousAxis: row.axis,
+            transferReason: input.reason,
+            transferHistory: [
+              ...history,
+              {
+                at: transferredAt.toISOString(),
+                actorMemberId: actor.id,
+                fromMemberId: row.assignedMemberId,
+                toMemberId: target.id,
+                fromAxis: row.axis,
+                toAxis,
+                reason: input.reason,
+                source: 'admin_call_center',
+              },
+            ].slice(-25),
+          } as Prisma.InputJsonValue,
+        },
+      });
+      await tx.serviceRequestComment.create({
+        data: {
+          id: prefixedId('srcm'),
+          tenantId,
+          serviceRequestId: row.id,
+          actorId: actor.id,
+          actorType: 'member',
+          body: `Admin transferred task to ${memberName(target)} (${row.axis ?? 'unassigned'} -> ${toAxis}). Reason: ${input.reason}`,
+          internal: true,
+          attachmentsJson: [{
+            kind: 'admin_call_center_task_transfer',
+            fromMemberId: row.assignedMemberId,
+            toMemberId: target.id,
+            fromAxis: row.axis,
+            toAxis,
+          }] as Prisma.InputJsonValue,
+        },
+      });
+      if (row.assignedMemberId && row.assignedMemberId !== target.id) {
+        await tx.taskParticipant.upsert({
+          where: {
+            tenantId_serviceRequestId_memberId_role: {
+              tenantId,
+              serviceRequestId: row.id,
+              memberId: row.assignedMemberId,
+              role: 'watcher',
+            },
+          },
+          create: {
+            id: prefixedId('tpar'),
+            tenantId,
+            serviceRequestId: row.id,
+            memberId: row.assignedMemberId,
+            role: 'watcher',
+            source: 'admin_call_center_transfer',
+          },
+          update: { source: 'admin_call_center_transfer' },
+        });
+      }
+    });
+
+    this.logger.log('call_center', 'task.transfer', 'Admin Call Center task transferred', {
+      service_request_id: row.id,
+      customer_id: row.customerId,
+      target_member_id: target.id,
+      axis: toAxis,
+    });
+
+    return {
+      ok: true,
+      serviceRequestId: row.id,
+      customerId: row.customerId,
+      assignedMemberId: target.id,
+      assignedMemberName: memberName(target),
+      axis: toAxis,
+    };
+  }
+
+  async createCustomerTask(id: string, input: CallCenterCreateCustomerTaskInput): Promise<CallCenterActionResult> {
+    const actor = await this.currentMember();
+    const [customer, target] = await Promise.all([
+      this.prisma.db.customer.findFirst({ where: { id } }),
+      this.requireActiveMember(input.targetMemberId),
+    ]);
+    if (!customer) throw new NotFoundException('Customer not found');
+    const tenantId = this.tenantId();
+    const customerLabel = customerName(customer);
+    const created = await this.prisma.db.serviceRequest.create({
+      data: {
+        id: prefixedId('sr'),
+        tenantId,
+        customerId: customer.id,
+        assignedMemberId: target.id,
+        axis: input.targetAxis,
+        source: 'admin_created',
+        surface: 'internal',
+        title: `${customerLabel} follow-up`,
+        description: input.note,
+        status: 'open',
+        priority: input.priority,
+        dueAt: input.dueAt ? new Date(input.dueAt) : null,
+        createdByActorId: actor.id,
+        metadata: {
+          category: 'admin_customer_transfer',
+          personQueueVisible: true,
+          customerName: customerLabel,
+          customerEmail: customer.email,
+          customerPhone: customer.phone,
+          transferredByMemberId: actor.id,
+          transferredAt: new Date().toISOString(),
+          adminNote: input.note,
+        } as Prisma.InputJsonValue,
+        conditionTrace: [] as Prisma.InputJsonValue,
+        taskStateSnapshot: {
+          customer: {
+            id: customer.id,
+            name: customerLabel,
+            email: customer.email,
+            phone: customer.phone,
+            ordersCount: customer.ordersCount,
+            totalSpent: Number(customer.totalSpent ?? 0),
+          },
+        } as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId,
+        serviceRequestId: created.id,
+        actorId: actor.id,
+        actorType: 'member',
+        body: `Admin created customer follow-up for ${memberName(target)}: ${input.note}`,
+        internal: true,
+        attachmentsJson: [{
+          kind: 'admin_call_center_customer_task',
+          customerId: customer.id,
+          targetMemberId: target.id,
+          targetAxis: input.targetAxis,
+        }] as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('call_center', 'customer.task.create', 'Admin Call Center customer task created', {
+      service_request_id: created.id,
+      customer_id: customer.id,
+      target_member_id: target.id,
+      axis: input.targetAxis,
+    });
+    return {
+      ok: true,
+      serviceRequestId: created.id,
+      customerId: customer.id,
+      assignedMemberId: target.id,
+      assignedMemberName: memberName(target),
+      axis: input.targetAxis,
+    };
+  }
+
   private async members(): Promise<CallCenterMember[]> {
     const rows = await this.prisma.db.member.findMany({
       where: { status: 'active' },
@@ -91,6 +325,28 @@ export class CallCenterService {
       role: member.roleAssignments[0]?.role.name ?? 'Member',
       status: member.status,
     }));
+  }
+
+  private async currentMember() {
+    const context = this.tenantContext.require();
+    if (context.principalType !== 'member' || !context.principalId) {
+      throw new BadRequestException('Admin Call Center requires a member session');
+    }
+    const member = await this.prisma.db.member.findFirst({ where: { id: context.principalId, status: 'active' } });
+    if (!member) throw new BadRequestException('Member session is no longer active');
+    return member;
+  }
+
+  private async requireActiveMember(id: string) {
+    const member = await this.prisma.db.member.findFirst({ where: { id, status: 'active' } });
+    if (!member) throw new NotFoundException('Target member not found');
+    return member;
+  }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new BadRequestException('Tenant context is required');
+    return tenantId;
   }
 
   private async memberAircallMap(memberById: Map<string, CallCenterMember>) {
@@ -204,6 +460,8 @@ export class CallCenterService {
         const owner = memberById.get(memberId) ?? anonymousMember(memberId);
         pins.push({
           id: `${row.id}:${memberId}`,
+          serviceRequestId: row.id,
+          customerId: row.customerId,
           title: row.title,
           ownerMemberId: owner.id,
           ownerName: owner.name,

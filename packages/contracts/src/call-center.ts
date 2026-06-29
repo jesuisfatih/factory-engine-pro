@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { serviceRequestPrioritySchema, taskAxisSchema } from './operations.js';
 
 export const callCenterMemberSchema = z.object({
   id: z.string(),
@@ -57,6 +58,8 @@ export type CallCenterPriorityGroup = z.infer<typeof callCenterPriorityGroupSche
 
 export const callCenterPinSchema = z.object({
   id: z.string(),
+  serviceRequestId: z.string().nullable(),
+  customerId: z.string().nullable(),
   title: z.string(),
   ownerMemberId: z.string(),
   ownerName: z.string(),
@@ -162,3 +165,34 @@ export const callCenterOverviewSchema = z.object({
   messages: z.array(callCenterMessageSchema),
 });
 export type CallCenterOverview = z.infer<typeof callCenterOverviewSchema>;
+
+export const callCenterSaveCustomerNoteSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+export type CallCenterSaveCustomerNoteInput = z.infer<typeof callCenterSaveCustomerNoteSchema>;
+
+export const callCenterTransferTaskSchema = z.object({
+  targetMemberId: z.string().min(1),
+  targetAxis: taskAxisSchema.optional(),
+  reason: z.string().trim().min(1).max(1000),
+});
+export type CallCenterTransferTaskInput = z.infer<typeof callCenterTransferTaskSchema>;
+
+export const callCenterCreateCustomerTaskSchema = z.object({
+  targetMemberId: z.string().min(1),
+  targetAxis: taskAxisSchema.default('sales'),
+  note: z.string().trim().min(1).max(1000),
+  priority: serviceRequestPrioritySchema.default('medium'),
+  dueAt: z.string().datetime().optional(),
+});
+export type CallCenterCreateCustomerTaskInput = z.infer<typeof callCenterCreateCustomerTaskSchema>;
+
+export const callCenterActionResultSchema = z.object({
+  ok: z.boolean(),
+  serviceRequestId: z.string().nullable(),
+  customerId: z.string().nullable(),
+  assignedMemberId: z.string().nullable(),
+  assignedMemberName: z.string().nullable(),
+  axis: z.string().nullable(),
+});
+export type CallCenterActionResult = z.infer<typeof callCenterActionResultSchema>;

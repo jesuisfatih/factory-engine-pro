@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowRightLeft,
   CalendarDays,
+  Loader2,
   Mail,
   MessageSquareText,
   Phone,
@@ -11,12 +13,24 @@ import {
   StickyNote,
   Activity,
 } from 'lucide-react';
-import type { CallCenterOverview } from '@factory-engine-pro/contracts';
+import type { CallCenterMember, CallCenterOverview, CallCenterPriorityCustomer } from '@factory-engine-pro/contracts';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { apiErrorMessage } from '@/lib/api';
-import { fetchCallCenterOverview } from '@/lib/live-data';
+import {
+  createCallCenterCustomerTask,
+  fetchCallCenterCustomerDetail,
+  fetchCallCenterOverview,
+  saveCallCenterCustomerNote,
+  transferCallCenterTask,
+} from '@/lib/live-data';
 
 type TabId = 'kanban' | 'calendar' | 'notes' | 'messages';
+type NoteTarget = { customerId: string; customerName: string };
+type TaskTransferTarget = { id: string; title: string; customerId: string | null; assignedMemberName?: string; axis?: string | null };
+type TransferTarget =
+  | { mode: 'task'; task: TaskTransferTarget }
+  | { mode: 'customer'; customer: CallCenterPriorityCustomer; ownerName: string };
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'kanban', label: 'Kanban' },
@@ -27,10 +41,50 @@ const TABS: Array<{ id: TabId; label: string }> = [
 
 function CallCenterView() {
   const [tab, setTab] = useState<TabId>('kanban');
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
+  const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null);
+  const [transferTarget, setTransferTarget] = useState<TransferTarget | null>(null);
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['call-center', 'overview'],
     queryFn: fetchCallCenterOverview,
     refetchInterval: 30_000,
+  });
+  const detail = useQuery({
+    queryKey: ['call-center', 'customer-detail', detailCustomerId],
+    queryFn: () => fetchCallCenterCustomerDetail(detailCustomerId ?? ''),
+    enabled: Boolean(detailCustomerId),
+  });
+  const saveNote = useMutation({
+    mutationFn: (input: { customerId: string; body: string }) => saveCallCenterCustomerNote(input.customerId, { body: input.body }),
+    onSuccess: (_detail, input) => {
+      setNoteTarget(null);
+      void query.refetch();
+      void queryClient.invalidateQueries({ queryKey: ['call-center', 'customer-detail', input.customerId] });
+    },
+  });
+  const transferWork = useMutation({
+    mutationFn: (input: { target: TransferTarget; targetMemberId: string; targetAxis: 'sales' | 'support' | 'account'; reason: string }) => {
+      if (input.target.mode === 'task') {
+        return transferCallCenterTask(input.target.task.id, {
+          targetMemberId: input.targetMemberId,
+          targetAxis: input.targetAxis,
+          reason: input.reason,
+        });
+      }
+      return createCallCenterCustomerTask(input.target.customer.customerId, {
+        targetMemberId: input.targetMemberId,
+        targetAxis: input.targetAxis,
+        note: input.reason,
+        priority: 'medium',
+      });
+    },
+    onSuccess: (_result, input) => {
+      setTransferTarget(null);
+      void query.refetch();
+      const customerId = input.target.mode === 'task' ? input.target.task.customerId : input.target.customer.customerId;
+      if (customerId) void queryClient.invalidateQueries({ queryKey: ['call-center', 'customer-detail', customerId] });
+    },
   });
   const data = query.data;
 
@@ -72,11 +126,45 @@ function CallCenterView() {
               ))}
               <span className="call-center-live">Live data, 30s fallback refresh</span>
             </div>
-            {tab === 'kanban' && <KanbanTab data={data} />}
+            {tab === 'kanban' && (
+              <KanbanTab
+                data={data}
+                onOpenCustomer={(customerId) => setDetailCustomerId(customerId)}
+                onNoteCustomer={(target) => setNoteTarget(target)}
+                onTransfer={(target) => setTransferTarget(target)}
+              />
+            )}
             {tab === 'calendar' && <CalendarTab data={data} />}
             {tab === 'notes' && <NotesTab data={data} />}
             {tab === 'messages' && <MessagesTab data={data} />}
           </div>
+          <CustomerDetailPanel
+            open={Boolean(detailCustomerId)}
+            detail={detail.data}
+            isLoading={detail.isLoading}
+            error={detail.error ? apiErrorMessage(detail.error) : null}
+            onRetry={() => detail.refetch()}
+            onClose={() => setDetailCustomerId(null)}
+          />
+          {noteTarget && (
+            <NoteModal
+              target={noteTarget}
+              isSaving={saveNote.isPending}
+              error={saveNote.error ? apiErrorMessage(saveNote.error) : null}
+              onClose={() => setNoteTarget(null)}
+              onSubmit={(body) => saveNote.mutate({ customerId: noteTarget.customerId, body })}
+            />
+          )}
+          {transferTarget && (
+            <TransferModal
+              target={transferTarget}
+              members={data.members}
+              isSaving={transferWork.isPending}
+              error={transferWork.error ? apiErrorMessage(transferWork.error) : null}
+              onClose={() => setTransferTarget(null)}
+              onSubmit={(payload) => transferWork.mutate({ target: transferTarget, ...payload })}
+            />
+          )}
         </>
       )}
     </>
@@ -141,7 +229,17 @@ function PreviewGrid({ data }: { data: CallCenterOverview }) {
   );
 }
 
-function KanbanTab({ data }: { data: CallCenterOverview }) {
+function KanbanTab({
+  data,
+  onOpenCustomer,
+  onNoteCustomer,
+  onTransfer,
+}: {
+  data: CallCenterOverview;
+  onOpenCustomer: (customerId: string) => void;
+  onNoteCustomer: (target: NoteTarget) => void;
+  onTransfer: (target: TransferTarget) => void;
+}) {
   return (
     <div className="call-center-kanban">
       <section className="call-center-panel">
@@ -149,7 +247,11 @@ function KanbanTab({ data }: { data: CallCenterOverview }) {
         {data.kanban.dailyCallList.length === 0 ? (
           <EmptyLine>No daily call tasks in the last 7 days.</EmptyLine>
         ) : data.kanban.dailyCallList.map((task) => (
-          <article key={task.id} className="call-center-task-card">
+          <article
+            key={task.id}
+            className="call-center-task-card"
+            onClick={() => task.customerId && onOpenCustomer(task.customerId)}
+          >
             <div>
               <strong>{task.title}</strong>
               <span>{task.summary}</span>
@@ -159,6 +261,30 @@ function KanbanTab({ data }: { data: CallCenterOverview }) {
               <span>{task.axis ?? 'no axis'}</span>
               <span>{task.segment}</span>
               <span>{task.customerEmail ?? task.customerPhone ?? 'No customer contact'}</span>
+            </div>
+            <div className="task-card-actions">
+              {task.customerId && (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onNoteCustomer({ customerId: task.customerId!, customerName: task.customerName ?? task.title });
+                  }}
+                >
+                  <StickyNote size={13} /> Note
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTransfer({ mode: 'task', task });
+                }}
+              >
+                <ArrowRightLeft size={13} /> Transfer
+              </button>
             </div>
           </article>
         ))}
@@ -178,11 +304,42 @@ function KanbanTab({ data }: { data: CallCenterOverview }) {
             </summary>
             <div className="segment-customer-list">
               {group.customers.map((customer) => (
-                <div key={customer.id} className="segment-customer-row">
+                <div key={customer.id} className="segment-customer-row" onClick={() => onOpenCustomer(customer.customerId)}>
                   <strong>{customer.customerName}</strong>
                   <span>{customer.phone ?? 'No phone on file'}</span>
                   <span>{customer.email ?? 'No email on file'}</span>
                   <span>{customer.ordersCount} orders - {formatMoney(customer.totalSpent)}</span>
+                  <span className="segment-customer-actions">
+                    {customer.phone && (
+                      <a
+                        className="btn ghost"
+                        href={`tel:${customer.phone.replace(/\s/g, '')}`}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Phone size={13} /> Call
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onNoteCustomer({ customerId: customer.customerId, customerName: customer.customerName });
+                      }}
+                    >
+                      <StickyNote size={13} /> Note
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onTransfer({ mode: 'customer', customer, ownerName: group.ownerName });
+                      }}
+                    >
+                      <ArrowRightLeft size={13} /> Send task
+                    </button>
+                  </span>
                 </div>
               ))}
             </div>
@@ -195,10 +352,30 @@ function KanbanTab({ data }: { data: CallCenterOverview }) {
         {data.kanban.pinBoard.length === 0 ? (
           <EmptyLine>No pinned tasks or customers.</EmptyLine>
         ) : data.kanban.pinBoard.map((pin) => (
-          <div key={pin.id} className="pin-line">
+          <div key={pin.id} className="pin-line" onClick={() => pin.customerId && onOpenCustomer(pin.customerId)}>
             <span>{pin.ownerName} to</span>
             <strong>{pin.customerName ?? pin.title}</strong>
             <em>{pin.kind}</em>
+            {pin.serviceRequestId && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTransfer({
+                    mode: 'task',
+                    task: {
+                      id: pin.serviceRequestId!,
+                      title: pin.title,
+                      customerId: pin.customerId,
+                      assignedMemberName: pin.ownerName,
+                    },
+                  });
+                }}
+              >
+                <ArrowRightLeft size={13} /> Transfer
+              </button>
+            )}
           </div>
         ))}
       </section>
@@ -270,6 +447,124 @@ function MessagesTab({ data }: { data: CallCenterOverview }) {
   );
 }
 
+function NoteModal({
+  target,
+  isSaving,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  target: NoteTarget;
+  isSaving: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSubmit: (body: string) => void;
+}) {
+  const [body, setBody] = useState('');
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="call-center-note-title" onMouseDown={onClose}>
+      <section className="modal-card" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="modal-header">
+          <div>
+            <h2 id="call-center-note-title">Customer note</h2>
+            <p>{target.customerName}</p>
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose}>x</button>
+        </header>
+        <div className="modal-body">
+          <label className="field-label" htmlFor="call-center-note-body">Note</label>
+          <textarea
+            id="call-center-note-body"
+            className="textarea"
+            rows={6}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="Write the customer-specific note"
+          />
+          {error ? <p className="form-error">{error}</p> : null}
+        </div>
+        <footer className="modal-actions">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn primary" disabled={!body.trim() || isSaving} onClick={() => onSubmit(body.trim())}>
+            {isSaving ? <Loader2 size={13} className="spin" /> : <StickyNote size={13} />} Save note
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function TransferModal({
+  target,
+  members,
+  isSaving,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  target: TransferTarget;
+  members: CallCenterMember[];
+  isSaving: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSubmit: (payload: { targetMemberId: string; targetAxis: 'sales' | 'support' | 'account'; reason: string }) => void;
+}) {
+  const [targetMemberId, setTargetMemberId] = useState(members[0]?.id ?? '');
+  const [targetAxis, setTargetAxis] = useState<'sales' | 'support' | 'account'>(target.mode === 'task' && isAxis(target.task.axis) ? target.task.axis : 'sales');
+  const [reason, setReason] = useState(target.mode === 'customer'
+    ? `Follow up with ${target.customer.customerName} from ${target.ownerName}'s assigned segment.`
+    : `Admin reassigned ${target.task.title}.`);
+  const label = target.mode === 'customer' ? target.customer.customerName : target.task.title;
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="call-center-transfer-title" onMouseDown={onClose}>
+      <section className="modal-card" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="modal-header">
+          <div>
+            <h2 id="call-center-transfer-title">{target.mode === 'customer' ? 'Send customer task' : 'Transfer task'}</h2>
+            <p>{label}</p>
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose}>x</button>
+        </header>
+        <div className="modal-body">
+          <label className="field-label" htmlFor="call-center-transfer-member">Target staff member</label>
+          <select id="call-center-transfer-member" value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}>{member.name} - {member.role}</option>
+            ))}
+          </select>
+          <label className="field-label" htmlFor="call-center-transfer-axis">Axis</label>
+          <select id="call-center-transfer-axis" value={targetAxis} onChange={(event) => setTargetAxis(event.target.value as 'sales' | 'support' | 'account')}>
+            <option value="sales">Sales</option>
+            <option value="account">Account</option>
+            <option value="support">Support</option>
+          </select>
+          <label className="field-label" htmlFor="call-center-transfer-reason">Reason</label>
+          <textarea
+            id="call-center-transfer-reason"
+            className="textarea"
+            rows={5}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          {error ? <p className="form-error">{error}</p> : null}
+        </div>
+        <footer className="modal-actions">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!targetMemberId || !reason.trim() || isSaving}
+            onClick={() => onSubmit({ targetMemberId, targetAxis, reason: reason.trim() })}
+          >
+            {isSaving ? <Loader2 size={13} className="spin" /> : <ArrowRightLeft size={13} />}
+            {target.mode === 'customer' ? 'Create task' : 'Transfer'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function PanelHead({ title, meta }: { title: string; meta: string }) {
   return (
     <header className="call-center-panel-head">
@@ -291,6 +586,10 @@ function StateBlock({ title, body, action }: { title: string; body: string; acti
       {action}
     </div>
   );
+}
+
+function isAxis(value: unknown): value is 'sales' | 'support' | 'account' {
+  return value === 'sales' || value === 'support' || value === 'account';
 }
 
 function formatMoney(value: number) {

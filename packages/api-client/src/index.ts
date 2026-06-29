@@ -22,7 +22,11 @@ import type {
   BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
   CalculatePricesInput,
+  CallCenterActionResult,
+  CallCenterCreateCustomerTaskInput,
   CallCenterOverview,
+  CallCenterSaveCustomerNoteInput,
+  CallCenterTransferTaskInput,
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
@@ -511,6 +515,22 @@ export class ApiClient {
 
   callCenterOverview() {
     return this.get<CallCenterOverview>('/call-center/overview');
+  }
+
+  callCenterCustomerDetail(customerId: string) {
+    return this.get<CustomerDetailPanelDto>(`/call-center/customers/${encodeURIComponent(customerId)}/detail`);
+  }
+
+  callCenterSaveCustomerNote(customerId: string, input: CallCenterSaveCustomerNoteInput) {
+    return this.post<CustomerDetailPanelDto>(`/call-center/customers/${encodeURIComponent(customerId)}/notes`, input);
+  }
+
+  callCenterTransferTask(id: string, input: CallCenterTransferTaskInput) {
+    return this.post<CallCenterActionResult>(`/call-center/tasks/${encodeURIComponent(id)}/transfer`, input);
+  }
+
+  callCenterCreateCustomerTask(customerId: string, input: CallCenterCreateCustomerTaskInput) {
+    return this.post<CallCenterActionResult>(`/call-center/customers/${encodeURIComponent(customerId)}/tasks`, input);
   }
 
   personWorkspaceSummary() {

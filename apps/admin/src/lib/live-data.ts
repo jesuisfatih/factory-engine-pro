@@ -1,5 +1,9 @@
 import type {
+  CallCenterCreateCustomerTaskInput,
   CallCenterOverview,
+  CallCenterSaveCustomerNoteInput,
+  CallCenterTransferTaskInput,
+  CustomerDetailPanelDto,
   CreatePricingRuleInput,
   CreateSegmentInput,
   DiscountType,
@@ -235,6 +239,22 @@ export const SELLERUSERS: SelleruserOption[] = [];
 
 export async function fetchCallCenterOverview(): Promise<CallCenterOverview> {
   return adminApi.callCenterOverview();
+}
+
+export async function fetchCallCenterCustomerDetail(customerId: string): Promise<CustomerDetailPanelDto> {
+  return adminApi.callCenterCustomerDetail(customerId);
+}
+
+export async function saveCallCenterCustomerNote(customerId: string, input: CallCenterSaveCustomerNoteInput): Promise<CustomerDetailPanelDto> {
+  return adminApi.callCenterSaveCustomerNote(customerId, input);
+}
+
+export async function transferCallCenterTask(id: string, input: CallCenterTransferTaskInput) {
+  return adminApi.callCenterTransferTask(id, input);
+}
+
+export async function createCallCenterCustomerTask(customerId: string, input: CallCenterCreateCustomerTaskInput) {
+  return adminApi.callCenterCreateCustomerTask(customerId, input);
 }
 
 export async function fetchTasks(surface: TaskSurface): Promise<TaskRow[]> {
