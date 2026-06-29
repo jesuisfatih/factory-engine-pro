@@ -244,11 +244,15 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     output: TranscriptResolverOutput,
     resolverModel: string,
   ) {
+    const matchedCustomer = await this.resolveCustomerForCall(callEvent, output);
     const baseParams = {
       callEventId: callEvent.id,
       externalCallId: callEvent.externalCallId,
       contactPhoneE164: callEvent.contactPhoneE164 ?? null,
       contactEmail: callEvent.contactEmail ?? null,
+      customerId: matchedCustomer?.id ?? output.customer_match.customer_id ?? null,
+      customerPhone: callEvent.contactPhoneE164 ?? output.customer_match.phone ?? null,
+      customerEmail: callEvent.contactEmail ?? null,
     };
     try {
       await this.rules.fireTrigger({
@@ -273,12 +277,13 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           params: { ...baseParams, sku: mention.sku, nameHint: mention.name_hint, confidence: mention.confidence },
         });
       }
-      if (output.customer_match.customer_id) {
+      const customerId = output.customer_match.customer_id ?? matchedCustomer?.id ?? null;
+      if (customerId) {
         await this.rules.fireTrigger({
           trigger: 'customer.matched_from_transcript',
-          eventId: `${callEvent.id}:customer:${output.customer_match.customer_id}`,
+          eventId: `${callEvent.id}:customer:${customerId}`,
           source: 'ai-transcript-resolver',
-          params: { ...baseParams, customerId: output.customer_match.customer_id, confidence: output.customer_match.confidence },
+          params: { ...baseParams, customerId, confidence: output.customer_match.customer_id ? output.customer_match.confidence : 0.65 },
         });
       }
       await this.rules.fireTrigger({
@@ -300,7 +305,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         error: error instanceof Error ? error.message : String(error),
       });
     }
-    await this.fireOperationalSignalFlow(callEvent, output, baseParams, resolverModel);
+    await this.fireOperationalSignalFlow(callEvent, output, baseParams, resolverModel, Boolean(matchedCustomer?.id ?? output.customer_match.customer_id));
   }
 
   private async fireOperationalSignalFlow(
@@ -308,8 +313,9 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     output: TranscriptResolverOutput,
     baseParams: Record<string, unknown>,
     resolverModel: string,
+    customerMatched: boolean,
   ) {
-    const signals = transcriptOperationalSignals(output);
+    const signals = transcriptOperationalSignals(output, { customerMatched });
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new Error('Tenant context is required for transcript workflow evaluation');
     for (const signal of signals) {
@@ -409,6 +415,42 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         },
       });
     }
+  }
+
+  private async resolveCustomerForCall(
+    callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
+    output: TranscriptResolverOutput,
+  ) {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (output.customer_match.customer_id) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, id: output.customer_match.customer_id },
+        select: { id: true },
+      });
+      if (customer) return customer;
+    }
+
+    const email = (callEvent.contactEmail ?? '').trim();
+    if (email) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (customer) return customer;
+    }
+
+    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
+    for (const needle of phoneNeedles) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, phone: { contains: needle } },
+        select: { id: true },
+      });
+      if (customer) return customer;
+    }
+    return null;
   }
 
   private async recoverDuplicateWorkflowResponse(
@@ -781,13 +823,11 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
   };
 }
 
-function transcriptOperationalSignals(output: TranscriptResolverOutput): TranscriptOperationalSignal[] {
+function transcriptOperationalSignals(output: TranscriptResolverOutput, options: { customerMatched: boolean }): TranscriptOperationalSignal[] {
   const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
     const parsed = transcriptOperationalSignalSchema.safeParse(signal);
     return parsed.success ? [parsed.data] : [];
   }));
-  const actionableProvided = provided.filter((signal) => signal.intent !== 'no_action');
-  if (actionableProvided.length > 0) return actionableProvided;
 
   const derived = new Map<string, TranscriptOperationalSignal>();
   const text = normalizedText([
@@ -849,7 +889,7 @@ function transcriptOperationalSignals(output: TranscriptResolverOutput): Transcr
   if (hasPurchaseSignal && (hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent) || hasProduct(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent) || productText.includes('press'))) {
     action('heat_press_purchase_intent', 0.88, 'sales', 'Heat press purchase follow-up', 'Customer showed purchase intent for heat press or related machine.');
   }
-  if (output.customer_match.customer_id && (hasPurchaseSignal || hasAny(OPERATIONAL_INTENT_KEYWORDS.existing_customer_expansion_signal))) {
+  if ((options.customerMatched || output.customer_match.customer_id) && (hasPurchaseSignal || hasAny(OPERATIONAL_INTENT_KEYWORDS.existing_customer_expansion_signal))) {
     action('existing_customer_expansion_signal', 0.74, 'sales', 'Existing customer expansion follow-up', 'Matched customer showed expansion, upsell, or additional purchase signal.');
   }
   if (derived.size === 0 && output.product_mentions.length > 0 && (hasTag('info_request') || output.call_intent === 'inquiry')) {
@@ -858,9 +898,7 @@ function transcriptOperationalSignals(output: TranscriptResolverOutput): Transcr
   if (derived.size === 0) {
     action('no_action', 1, null, '', 'No sales or personnel follow-up signal was detected.');
   }
-  const derivedSignals = dedupeSignals(Array.from(derived.values()));
-  if (derivedSignals.some((signal) => signal.intent !== 'no_action')) return derivedSignals;
-  return provided.length > 0 ? provided : derivedSignals;
+  return dedupeSignals([...provided, ...Array.from(derived.values())]);
 }
 
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
