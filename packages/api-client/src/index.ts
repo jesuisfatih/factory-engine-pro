@@ -1,3 +1,4 @@
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type {
   AcceptInvitationInput,
   AccountAddressInput,
@@ -17,6 +18,8 @@ import type {
   AircallUsersResponse,
   AircallWebhookStatusResponse,
   AircallWorkflowCoverageResponse,
+  AircallWorkflowRepairInput,
+  AircallWorkflowRepairResponse,
   AssignDefaultCustomerAxisInput,
   AssignDefaultCustomerAxisResponse,
   AuthSession,
@@ -963,6 +966,10 @@ export class ApiClient {
 
   aircallWorkflowCoverage() {
     return this.get<AircallWorkflowCoverageResponse>('/aircall/calls/workflow-coverage');
+  }
+
+  repairAircallWorkflowEvaluations(input: AircallWorkflowRepairInput = { targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 }) {
+    return this.post<AircallWorkflowRepairResponse>('/aircall/calls/workflow-repair', input);
   }
 
   backfillRecentAircallCalls(input: AircallBackfillRecentInput = { recentDays: 3, maxPages: 20 }) {

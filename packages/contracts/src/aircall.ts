@@ -20,6 +20,14 @@ export const aircallResolverReprocessSchema = z.object({
 });
 export type AircallResolverReprocessInput = z.infer<typeof aircallResolverReprocessSchema>;
 
+export const aircallWorkflowRepairSchema = z.object({
+  targetVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+  limit: z.coerce.number().int().min(1).max(10000).default(1000),
+  recentDays: z.coerce.number().int().min(1).max(30).default(7),
+  callEventId: z.string().trim().min(1).optional(),
+});
+export type AircallWorkflowRepairInput = z.infer<typeof aircallWorkflowRepairSchema>;
+
 export interface AircallUserDto {
   id: string;
   aircallUserId: string;
@@ -232,4 +240,28 @@ export interface AircallResolverReprocessResponse {
     skippedReason: string | null;
   }>;
   stats: AircallCallEventsResponse['stats'];
+}
+
+export interface AircallWorkflowRepairResponse {
+  targetVersion: number;
+  recentDays: number | null;
+  from: string | null;
+  scanned: number;
+  queued: number;
+  skipped: number;
+  alreadyEvaluated: number;
+  missingEvaluations: number;
+  staleResolverVersion: number;
+  unresolved: number;
+  callEvents: Array<{
+    id: string;
+    externalCallId: string;
+    resolvedWithVersion: number | null;
+    resolverStatus: string | null;
+    evaluationCount: number;
+    repairMode: 'already_evaluated' | 'replay_stored_output' | 'rerun_resolver' | 'wait_for_resolver' | 'resolver_failed';
+    queued: boolean;
+    skippedReason: string | null;
+  }>;
+  coverage: AircallWorkflowCoverageResponse;
 }

@@ -15,6 +15,8 @@ import type {
   AircallUsersResponse,
   AircallWebhookStatusResponse,
   AircallWorkflowCoverageResponse,
+  AircallWorkflowRepairInput,
+  AircallWorkflowRepairResponse,
 } from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { prefixedId } from '../../shared/id.js';
@@ -593,6 +595,139 @@ export class AircallService {
     };
   }
 
+  async repairWorkflowEvaluations(input: AircallWorkflowRepairInput): Promise<AircallWorkflowRepairResponse> {
+    const startedAt = new Date();
+    const tenantId = this.tenantId();
+    const targetVersion = input.targetVersion ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
+    if (targetVersion !== TRANSCRIPT_RESOLVER_SCHEMA_VERSION) {
+      throw new BadRequestException({
+        message: `Only current resolver schema version ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION} can be queued for workflow repair.`,
+        code: 'workflow_repair_version_mismatch',
+      });
+    }
+
+    const recentDays = input.recentDays ?? 7;
+    const from = input.callEventId ? null : new Date(Date.now() - recentDays * 86_400_000);
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      where: input.callEventId
+        ? { tenantId, id: input.callEventId, transcriptRaw: { not: null } }
+        : { tenantId, eventTimestamp: { gte: from! }, transcriptRaw: { not: null } },
+      orderBy: { eventTimestamp: 'desc' },
+      take: input.limit,
+      select: {
+        id: true,
+        externalCallId: true,
+        eventTimestamp: true,
+        transcriptRaw: true,
+        resolverStatus: true,
+        resolverOutput: true,
+        resolvedAt: true,
+        resolvedWithVersion: true,
+      },
+    });
+    if (input.callEventId && rows.length === 0) {
+      throw new NotFoundException('Aircall call event with transcript was not found for workflow repair.');
+    }
+
+    const evaluations = rows.length === 0
+      ? []
+      : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
+          where: { tenantId, callEventId: { in: rows.map((row) => row.id) } },
+          select: { callEventId: true },
+        });
+    const evaluationCounts = new Map<string, number>();
+    for (const evaluation of evaluations) {
+      evaluationCounts.set(evaluation.callEventId, (evaluationCounts.get(evaluation.callEventId) ?? 0) + 1);
+    }
+
+    let queued = 0;
+    let skipped = 0;
+    let alreadyEvaluated = 0;
+    let missingEvaluations = 0;
+    let staleResolverVersion = 0;
+    let unresolved = 0;
+    const callEvents: AircallWorkflowRepairResponse['callEvents'] = [];
+
+    for (const row of rows) {
+      const evaluationCount = evaluationCounts.get(row.id) ?? 0;
+      const stale = (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion;
+      const hasCurrentEvaluation = evaluationCount > 0 && !stale;
+      if (evaluationCount === 0) missingEvaluations++;
+      if (stale) staleResolverVersion++;
+      if (!row.resolvedAt && row.resolverStatus !== 'succeeded') unresolved++;
+
+      if (hasCurrentEvaluation) {
+        alreadyEvaluated++;
+        skipped++;
+        callEvents.push({
+          id: row.id,
+          externalCallId: row.externalCallId,
+          resolvedWithVersion: row.resolvedWithVersion,
+          resolverStatus: row.resolverStatus,
+          evaluationCount,
+          repairMode: 'already_evaluated',
+          queued: false,
+          skippedReason: 'already_evaluated',
+        });
+        continue;
+      }
+
+      const result = await this.ingest.enqueueTranscriptResolver(row.id, row.transcriptRaw, {
+        targetVersion,
+        source: 'workflow_repair',
+      });
+      if (result.queued) queued++;
+      else skipped++;
+      callEvents.push({
+        id: row.id,
+        externalCallId: row.externalCallId,
+        resolvedWithVersion: row.resolvedWithVersion,
+        resolverStatus: row.resolverStatus,
+        evaluationCount,
+        repairMode: workflowActionRepairMode(row, targetVersion),
+        queued: result.queued,
+        skippedReason: result.skippedReason,
+      });
+    }
+
+    await this.repository.createSyncLog({
+      action: 'calls.workflow_repair',
+      status: queued > 0 ? 'success' : 'skipped',
+      message: `Queued ${queued}/${rows.length} Aircall transcript workflow repair job(s).`,
+      startedAt,
+      finishedAt: new Date(),
+      metadata: {
+        targetVersion,
+        limit: input.limit,
+        recentDays,
+        from: from?.toISOString() ?? null,
+        callEventId: input.callEventId ?? null,
+        scanned: rows.length,
+        queued,
+        skipped,
+        alreadyEvaluated,
+        missingEvaluations,
+        staleResolverVersion,
+        unresolved,
+      },
+    });
+
+    return {
+      targetVersion,
+      recentDays: input.callEventId ? null : recentDays,
+      from: from?.toISOString() ?? null,
+      scanned: rows.length,
+      queued,
+      skipped,
+      alreadyEvaluated,
+      missingEvaluations,
+      staleResolverVersion,
+      unresolved,
+      callEvents,
+      coverage: await this.workflowCoverage(),
+    };
+  }
+
   async webhookStatus(): Promise<AircallWebhookStatusResponse> {
     const tenant = await this.currentTenant();
     const credentials = await this.credentialState();
@@ -1083,6 +1218,17 @@ function workflowRepairMode(row: {
   resolvedWithVersion: number | null;
 }, targetVersion: number): AircallWorkflowCoverageResponse['missing'][number]['repairMode'] {
   if (row.resolverStatus === 'failed') return 'resolver_failed';
+  if (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') return 'wait_for_resolver';
+  if ((row.resolvedWithVersion ?? 0) >= targetVersion && row.resolverOutput && row.resolvedAt) return 'replay_stored_output';
+  return 'rerun_resolver';
+}
+
+function workflowActionRepairMode(row: {
+  resolverStatus: string | null;
+  resolverOutput: unknown;
+  resolvedAt: Date | null;
+  resolvedWithVersion: number | null;
+}, targetVersion: number): Exclude<AircallWorkflowRepairResponse['callEvents'][number]['repairMode'], 'already_evaluated'> {
   if (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') return 'wait_for_resolver';
   if ((row.resolvedWithVersion ?? 0) >= targetVersion && row.resolverOutput && row.resolvedAt) return 'replay_stored_output';
   return 'rerun_resolver';

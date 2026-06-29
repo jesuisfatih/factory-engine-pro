@@ -3,10 +3,12 @@ import {
   aircallBackfillRecentSchema,
   aircallLinkUserSchema,
   aircallResolverReprocessSchema,
+  aircallWorkflowRepairSchema,
   MEMBER_PERMISSIONS,
   type AircallBackfillRecentInput,
   type AircallLinkUserInput,
   type AircallResolverReprocessInput,
+  type AircallWorkflowRepairInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -84,6 +86,14 @@ export class AircallController {
     @Body(new ZodValidationPipe(aircallResolverReprocessSchema)) body: AircallResolverReprocessInput,
   ) {
     return this.aircall.reprocessResolver(body);
+  }
+
+  @Post('calls/workflow-repair')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersWrite)
+  repairWorkflowEvaluations(
+    @Body(new ZodValidationPipe(aircallWorkflowRepairSchema)) body: AircallWorkflowRepairInput,
+  ) {
+    return this.aircall.repairWorkflowEvaluations(body);
   }
 
   @Post('reprocess-resolved')

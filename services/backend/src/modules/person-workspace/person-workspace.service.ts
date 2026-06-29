@@ -697,15 +697,14 @@ export class PersonWorkspaceService {
   }
 
   async syncTasks(): Promise<PersonTaskSyncResult> {
-    const [backfill, resolver] = await Promise.all([
-      this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 }),
-      this.aircall.reprocessResolver({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 500 }),
-    ]);
+    const backfill = await this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 });
+    const resolver = await this.aircall.repairWorkflowEvaluations({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 });
     const syncedAt = new Date().toISOString();
     this.logger.log('person_workspace', 'tasks.sync', 'Person workspace task sync requested', {
       fetched: backfill.fetched,
       ingested: backfill.ingested,
-      resolver_queued: resolver.queued,
+      workflow_repair_queued: resolver.queued,
+      workflow_missing_evaluations: resolver.missingEvaluations,
     });
     this.emitCallCenterInvalidate('person.tasks.sync');
     return {

@@ -196,12 +196,12 @@ export class RollingBackfillService {
       return success(`Backfilled ${result.ingested}/${result.fetched} Aircall call(s) from the last ${input.recentDays} day(s).`, result);
     }));
     steps.push(await this.captureStep('aircall_resolver', async () => {
-      const result = await this.aircall.reprocessResolver({
+      const result = await this.aircall.repairWorkflowEvaluations({
         targetVersion: input.targetResolverVersion ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
         limit: input.resolverLimit,
         recentDays: input.recentDays,
       });
-      return success(`Queued ${result.queued}/${result.scanned} transcript resolver job(s).`, result);
+      return success(`Queued ${result.queued}/${result.scanned} transcript workflow repair job(s).`, result);
     }));
     steps.push(await this.captureStep('customer_axis', async () => {
       const result = await this.customers.assignDefaultAxis({

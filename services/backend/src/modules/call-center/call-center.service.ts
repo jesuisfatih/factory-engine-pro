@@ -104,15 +104,14 @@ export class CallCenterService {
   }
 
   async syncTasks(): Promise<CallCenterSyncResult> {
-    const [backfill, resolver] = await Promise.all([
-      this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 }),
-      this.aircall.reprocessResolver({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 500 }),
-    ]);
+    const backfill = await this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 });
+    const resolver = await this.aircall.repairWorkflowEvaluations({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 });
     const syncedAt = new Date().toISOString();
     this.logger.log('call_center', 'tasks.sync', 'Call Center task sync requested from admin surface', {
       fetched: backfill.fetched,
       ingested: backfill.ingested,
-      resolver_queued: resolver.queued,
+      workflow_repair_queued: resolver.queued,
+      workflow_missing_evaluations: resolver.missingEvaluations,
     });
     this.emitRealtimeInvalidate('tasks.sync');
     return {
