@@ -1,7 +1,7 @@
 {
   "item": 2,
   "title": "Session expire/timeout YOK",
-  "checkedAt": "2026-06-28T23:43:52.524Z",
+  "checkedAt": "2026-06-29T03:41:07.032Z",
   "scope": {
     "app": "https://app.dtfbank.com",
     "staffUrl": "https://app.dtfbank.com/staff/queue",
@@ -11,29 +11,16 @@
     "remote": "root@144.202.125.169"
   },
   "git": {
-    "codeCommit": "e778e033db17839cf47ba08f5ebc33828ef49f5c",
-    "deployedBuildSha": "e778e033db17839cf47ba08f5ebc33828ef49f5c",
+    "codeCommit": "e4dc8d99ab158762ca1b73282fe12897b45647b8",
+    "deployedBuildSha": "e4dc8d99ab158762ca1b73282fe12897b45647b8",
     "branch": "main"
   },
   "implementation": {
     "accessTokenTtlDays": 365,
     "refreshTokenTtlDays": 365,
     "clientBehavior": "On authenticated 401, shared ApiClient calls /auth/refresh once, stores the new session, and retries the original request.",
-    "expiredTokenError": "Guard now returns 401 Session token is invalid instead of leaking jwt expired as a 500.",
     "tokenValuesPersistedInEvidence": false
   },
-  "validation": [
-    {
-      "command": "pnpm typecheck",
-      "status": "passed",
-      "note": "api-client and backend cache misses compiled cleanly"
-    },
-    {
-      "command": "pnpm build",
-      "status": "passed",
-      "note": "9 workspace packages, exit 0; existing Vite chunk-size warnings only"
-    }
-  ],
   "runtime": {
     "health": {
       "url": "https://api.dtfbank.com/api/v1/health",
@@ -44,36 +31,41 @@
       }
     },
     "logEvidence": [
-      "No pending migrations to apply.",
-      "Mapped {/api/v1/auth/refresh, POST} route",
-      "Mapped {/api/v1/auth/logout, POST} route",
-      "Nest application successfully started"
-    ],
-    "pm2": {
-      "api": "factory-engine-pro-api online",
-      "admin": "factory-engine-pro-admin online",
-      "person": "factory-engine-pro-person online",
-      "accounts": "factory-engine-pro-accounts online"
-    }
+      "[Nest] 1226  - 06/29/2026, 3:27:27 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/refresh, POST} route +0ms",
+      "[Nest] 1226  - 06/29/2026, 3:27:27 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/logout, POST} route +0ms",
+      "[Nest] 1226  - 06/29/2026, 3:27:27 AM     LOG [NestApplication] Nest application successfully started +1ms"
+    ]
   },
   "api": {
-    "login": {
+    "generatedSession": {
       "account": "dtfbanktx@gmail.com",
-      "status": 201,
-      "requestId": "2ad23531-6d66-437b-85ac-7ad908cf7c6a",
       "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-      "accessTtlDays": 365
+      "roles": [
+        "customer_service"
+      ],
+      "accessTtlDays": 365,
+      "expiredAccessWasExpired": true
     },
     "silentRefreshWithExpiredAccess": {
       "startedWithExpiredAccess": true,
-      "setSessionCount": 1,
-      "clearCount": 0,
       "fetchTrace": [
         {
           "method": "GET",
           "path": "/person/workspace/summary",
           "status": 401,
           "ok": false
+        },
+        {
+          "method": "GET",
+          "path": "/person/workspace/daily-operations",
+          "status": 401,
+          "ok": false
+        },
+        {
+          "method": "GET",
+          "path": "/identity/workspace-brand",
+          "status": 200,
+          "ok": true
         },
         {
           "method": "POST",
@@ -86,104 +78,95 @@
           "path": "/person/workspace/summary",
           "status": 200,
           "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/person/workspace/daily-operations",
+          "status": 200,
+          "ok": true
         }
       ],
-      "resultStatus": "resolved",
-      "refreshedAccessTtlDays": 365
+      "refreshedAccessTtlDays": 365,
+      "storageTokenChanged": true
     }
   },
   "db": {
-    "query": "Latest refresh auth_tokens for Linda in managed Postgres via dtfbank container Prisma client",
-    "checkedAt": "2026-06-28T23:42:44.776Z",
+    "query": "Latest refresh auth_tokens for Linda in managed Vultr Postgres via dtfbank container Prisma client",
+    "checkedAt": "2026-06-29T03:41:07.033Z",
     "rows": [
       {
         "tenantId": "ten_dtfbank",
         "kind": "refresh",
         "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-        "expiresAt": "2027-06-28T23:42:32.439Z",
-        "createdAt": "2026-06-28T23:42:32.444Z",
+        "expiresAt": "2027-06-29T03:40:50.990Z",
+        "createdAt": "2026-06-29T03:40:50.992Z",
         "revokedAt": null,
+        "usedAt": null,
         "ttlDaysFromNow": 365
       },
       {
         "tenantId": "ten_dtfbank",
         "kind": "refresh",
         "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-        "expiresAt": "2027-06-28T23:42:28.699Z",
-        "createdAt": "2026-06-28T23:42:28.702Z",
+        "expiresAt": "2027-06-29T03:40:47.964Z",
+        "createdAt": "2026-06-29T03:40:47.968Z",
         "revokedAt": null,
+        "usedAt": "2026-06-29T03:40:50.971Z",
+        "ttlDaysFromNow": 365,
+        "source": "roadmap02_live_session_proof"
+      },
+      {
+        "tenantId": "ten_dtfbank",
+        "kind": "refresh",
+        "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+        "expiresAt": "2027-06-29T03:40:08.196Z",
+        "createdAt": "2026-06-29T03:40:08.198Z",
+        "revokedAt": null,
+        "usedAt": null,
         "ttlDaysFromNow": 365
       },
       {
         "tenantId": "ten_dtfbank",
         "kind": "refresh",
         "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-        "expiresAt": "2027-06-28T23:41:48.568Z",
-        "createdAt": "2026-06-28T23:41:48.570Z",
+        "expiresAt": "2027-06-29T03:40:05.336Z",
+        "createdAt": "2026-06-29T03:40:05.339Z",
         "revokedAt": null,
-        "ttlDaysFromNow": 365
+        "usedAt": "2026-06-29T03:40:08.179Z",
+        "ttlDaysFromNow": 365,
+        "source": "roadmap02_live_session_proof"
       },
       {
         "tenantId": "ten_dtfbank",
         "kind": "refresh",
         "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-        "expiresAt": "2026-07-28T23:32:57.224Z",
-        "createdAt": "2026-06-28T23:32:57.226Z",
-        "revokedAt": "2026-06-28T23:32:59.992Z",
-        "ttlDaysFromNow": 30,
-        "note": "pre-fix token, revoked by logout evidence flow"
+        "expiresAt": "2027-06-29T03:16:19.500Z",
+        "createdAt": "2026-06-29T03:16:19.502Z",
+        "revokedAt": null,
+        "usedAt": null,
+        "ttlDaysFromNow": 365
       }
     ],
     "tokenHashRedacted": true
   },
   "ui": {
     "account": "dtfbanktx@gmail.com",
-    "setup": "Browser localStorage started with intentionally expired access token and a valid real refresh token.",
-    "finalUrl": "https://app.dtfbank.com/staff/queue",
+    "setup": "Browser localStorage started with intentionally expired access token and a valid real refresh token, then a fresh browser context reopened with persisted storage state.",
+    "firstFinalUrl": "https://app.dtfbank.com/staff/queue",
     "loginVisible": false,
     "logoutVisible": true,
     "queueVisible": true,
     "storageTokenChanged": true,
-    "trace": [
-      {
-        "method": "GET",
-        "path": "/person/workspace/summary",
-        "status": 401,
-        "ok": false
-      },
-      {
-        "method": "GET",
-        "path": "/person/workspace/daily-operations",
-        "status": 401,
-        "ok": false
-      },
-      {
-        "method": "POST",
-        "path": "/auth/refresh",
-        "status": 201,
-        "ok": true
-      },
-      {
-        "method": "GET",
-        "path": "/person/workspace/daily-operations",
-        "status": 200,
-        "ok": true
-      },
-      {
-        "method": "GET",
-        "path": "/person/workspace/summary",
-        "status": 200,
-        "ok": true
-      }
-    ],
-    "expectedConsole401Count": 2,
-    "unexpectedConsoleErrors": [],
+    "reopenedFinalUrl": "https://app.dtfbank.com/staff/queue",
+    "reopenedLoginVisible": false,
+    "reopenedLogoutVisible": true,
+    "reopenedQueueVisible": true,
     "screenshot": {
       "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m02-person-silent-refresh-ui-live.png",
-      "bytes": 107657,
-      "sha256": "9263f9e87e6678b19e99e90e1dfa431af9a341509cc62a719cce43a58677f3d1"
+      "bytes": 89234,
+      "sha256": "079de569f0bb7b3e6f4a4ce36a7f89f1d124d71013663ea516c9568368377e4e"
     }
   },
-  "nextRoadmapItem": 3,
-  "seedMockPolicy": "No seed/mock data was added. Segment and seed cleanup remain queued under their numbered ROADMAP items; no jump was made before completing auth/session sequence."
-}
+  "pass": true,
+  "nextRoadmapItem": 3
+}\n
