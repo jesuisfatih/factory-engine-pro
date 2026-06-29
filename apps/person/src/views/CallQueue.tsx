@@ -254,7 +254,7 @@ function SortableDailyCustomerCard({
   disabled: boolean;
   dragDisabled: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: dragDisabled });
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: dragDisabled });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -268,6 +268,7 @@ function SortableDailyCustomerCard({
       onTogglePin={onTogglePin}
       disabled={disabled}
       dragDisabled={dragDisabled}
+      dragHandleRef={setActivatorNodeRef}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
   );
@@ -281,6 +282,7 @@ function DailyCustomerCard({
   onTogglePin,
   disabled,
   dragDisabled,
+  dragHandleRef,
   dragHandleProps,
 }: {
   nodeRef?: Ref<HTMLElement>;
@@ -290,15 +292,17 @@ function DailyCustomerCard({
   onTogglePin: () => void;
   disabled: boolean;
   dragDisabled: boolean;
+  dragHandleRef?: Ref<HTMLButtonElement>;
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }) {
   const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
 
   return (
-    <article ref={nodeRef} style={style} className={`daily-card${dragging ? ' dragging' : ''}`}>
+    <article ref={nodeRef} style={style} className={`daily-card${dragging ? ' dragging' : ''}`} data-daily-card-id={item.id}>
       <div className="daily-card-row">
         <div className="daily-title-wrap">
           <button
+            ref={dragHandleRef}
             type="button"
             className="daily-drag-handle"
             aria-label={`Reorder ${item.customerName}`}

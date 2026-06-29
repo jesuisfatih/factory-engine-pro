@@ -204,7 +204,7 @@ button { font-family: inherit; }
 .daily-card.dragging { opacity: .55; border-color: var(--accent); box-shadow: 0 8px 24px rgba(15,23,42,.18); }
 .daily-card-row { display: flex; align-items: center; justify-content: space-between; gap: 7px; min-width: 0; }
 .daily-title-wrap { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
-.daily-drag-handle { width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--text-faint); display: inline-flex; align-items: center; justify-content: center; cursor: grab; flex: 0 0 auto; }
+.daily-drag-handle { width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--text-faint); display: inline-flex; align-items: center; justify-content: center; cursor: grab; flex: 0 0 auto; touch-action: none; }
 .daily-drag-handle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .daily-drag-handle:disabled { cursor: not-allowed; opacity: .5; }
 .daily-drag-handle:active { cursor: grabbing; }
