@@ -830,30 +830,110 @@ export class CustomersService {
     const shopifyCustomerId = numericShopifyCustomerId(customer.shopifyCustomerId);
     if (!shopifyCustomerId) return [];
 
-    try {
-      const page = await this.shopify.customerOrders(credentials, shopifyCustomerId, null, { status: 'any' });
-      const liveOrders = page.items
-        .map(mapLiveShopifyOrder)
-        .sort((left, right) => (dateFromIso(right.processedAt ?? right.createdAt)?.getTime() ?? 0) - (dateFromIso(left.processedAt ?? left.createdAt)?.getTime() ?? 0))
-        .slice(0, 50);
-      if (liveOrders.length === 0) {
-        const graphqlOrders = await this.detailShopifyOrdersGraphql(credentials, customer, shopifyCustomerId);
-        if (graphqlOrders.length > 0) return graphqlOrders;
+    const email = customer.email?.trim();
+    const attempts: Array<{ source: string; load: () => Promise<CustomerDetailShopifyOrderDto[]> }> = [
+      {
+        source: 'customer_orders_endpoint',
+        load: async () => {
+          const page = await this.shopify.customerOrders(credentials, shopifyCustomerId, null, { status: 'any' });
+          return sortDetailOrders(page.items.map(mapLiveShopifyOrder));
+        },
+      },
+      {
+        source: 'orders_search_customer_id',
+        load: async () => this.detailShopifyOrdersRestSearch(credentials, { customer_id: shopifyCustomerId }),
+      },
+      ...(email
+        ? [{
+            source: 'orders_search_email',
+            load: async () => this.detailShopifyOrdersRestSearch(credentials, { email }),
+          }]
+        : []),
+      {
+        source: 'customer_graphql_orders',
+        load: async () => this.detailShopifyCustomerGraphqlOrders(credentials, customer, shopifyCustomerId),
+      },
+      {
+        source: 'orders_graphql_query',
+        load: async () => this.detailShopifyOrdersGraphql(credentials, customer, shopifyCustomerId),
+      },
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        const orders = await attempt.load();
+        this.logger.log('customers', 'customer_detail.shopify_order_lookup', 'Customer detail Shopify order lookup completed', {
+          customer_id: customer.id,
+          shopify_customer_id: shopifyCustomerId,
+          source: attempt.source,
+          orders: orders.length,
+        });
+        if (orders.length > 0) return orders;
+      } catch (error) {
+        this.logger.warn('customers', 'customer_detail.shopify_order_lookup_failed', 'Customer detail Shopify order lookup failed', {
+          customer_id: customer.id,
+          shopify_customer_id: shopifyCustomerId,
+          source: attempt.source,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-      this.logger.log('customers', 'customer_detail.shopify_live_orders', 'Customer detail loaded live Shopify orders', {
-        customer_id: customer.id,
-        shopify_customer_id: shopifyCustomerId,
-        orders: liveOrders.length,
-      });
-      return liveOrders;
-    } catch (error) {
-      this.logger.warn('customers', 'customer_detail.shopify_live_orders_failed', 'Customer detail could not load live Shopify orders', {
-        customer_id: customer.id,
-        shopify_customer_id: shopifyCustomerId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return [];
     }
+
+    return [];
+  }
+
+  private async detailShopifyOrdersRestSearch(credentials: ShopifyCredentials, query: Record<string, string>): Promise<CustomerDetailShopifyOrderDto[]> {
+    const page = await this.shopify.orders(credentials, null, query);
+    return sortDetailOrders(page.items.map(mapLiveShopifyOrder));
+  }
+
+  private async detailShopifyCustomerGraphqlOrders(
+    credentials: ShopifyCredentials,
+    customer: { id: string; shopifyCustomerId: string | null },
+    shopifyCustomerId: string,
+  ): Promise<CustomerDetailShopifyOrderDto[]> {
+    const customerGid = customer.shopifyCustomerId?.startsWith('gid://shopify/Customer/')
+      ? customer.shopifyCustomerId
+      : `gid://shopify/Customer/${shopifyCustomerId}`;
+    const data = await this.shopify.graphql<{
+      customer?: {
+        orders?: {
+          nodes?: Array<Record<string, unknown>>;
+        };
+      } | null;
+    }>(credentials, `
+      query CustomerDetailCustomerOrders($id: ID!) {
+        customer(id: $id) {
+          orders(first: 50, sortKey: PROCESSED_AT, reverse: true) {
+            nodes {
+              id
+              legacyResourceId
+              name
+              tags
+              processedAt
+              createdAt
+              displayFinancialStatus
+              displayFulfillmentStatus
+              currentSubtotalPriceSet { shopMoney { amount currencyCode } }
+              currentTotalDiscountsSet { shopMoney { amount currencyCode } }
+              currentTotalTaxSet { shopMoney { amount currencyCode } }
+              totalShippingPriceSet { shopMoney { amount currencyCode } }
+              currentTotalPriceSet { shopMoney { amount currencyCode } }
+              lineItems(first: 20) {
+                nodes {
+                  title
+                  quantity
+                  sku
+                  variant { id legacyResourceId sku title product { id legacyResourceId title } }
+                }
+              }
+            }
+          }
+        }
+      }
+    `, { id: customerGid });
+    const orders = Array.isArray(data.customer?.orders?.nodes) ? data.customer.orders.nodes : [];
+    return sortDetailOrders(orders.map(mapGraphqlShopifyOrder));
   }
 
   private async detailShopifyOrdersGraphql(
@@ -1262,6 +1342,19 @@ function mapGraphqlShopifyOrder(raw: Record<string, unknown>): CustomerDetailSho
     tags: tags(raw.tags),
     lineItems: graphqlLineItems(raw.lineItems),
   };
+}
+
+function sortDetailOrders(orders: CustomerDetailShopifyOrderDto[]) {
+  const seen = new Set<string>();
+  return orders
+    .filter((order) => {
+      const key = order.shopifyOrderId ?? order.orderNumber ?? order.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => (dateFromIso(right.processedAt ?? right.createdAt)?.getTime() ?? 0) - (dateFromIso(left.processedAt ?? left.createdAt)?.getTime() ?? 0))
+    .slice(0, 50);
 }
 
 function numericShopifyCustomerId(value: string) {
