@@ -18,7 +18,7 @@ import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { RulesService } from './rules.service.js';
 
-@Controller('rules')
+@Controller(['rules', 'workflow/rules'])
 export class RulesController {
   constructor(private readonly rules: RulesService) {}
 
