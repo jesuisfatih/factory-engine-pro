@@ -172,10 +172,32 @@ export class ApiClient {
     return this.get<AuthSession['principal']>('/auth/me');
   }
 
-  logout(input: LogoutInput = {}) {
-    return this.post<{ ok: true }>('/auth/logout', {
-      refreshToken: input.refreshToken ?? this.options.tokenStore?.getRefreshToken() ?? undefined,
-    });
+  async logout(input: LogoutInput = {}) {
+    const tokenStore = this.options.tokenStore;
+    const accessToken = tokenStore?.getAccessToken();
+    const refreshToken = input.refreshToken ?? tokenStore?.getRefreshToken() ?? undefined;
+    tokenStore?.clear();
+
+    const headers = this.buildHeaders(false, {}, 'application/json');
+    if (accessToken) headers.authorization = `Bearer ${accessToken}`;
+    const parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}/auth/logout`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ refreshToken }),
+      keepalive: true,
+    }));
+
+    if (!parsed.ok) {
+      throw new ApiClientError(
+        parsed.payload?.message ?? `Request failed with ${parsed.status}`,
+        parsed.status,
+        parsed.payload?.request_id ?? parsed.requestId,
+        parsed.payload?.code ?? 'api_error',
+        parsed.payload?.details,
+      );
+    }
+
+    return parsed.payload as { ok: true };
   }
 
   members(query = '') {
