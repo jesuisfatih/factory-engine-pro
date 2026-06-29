@@ -1,0 +1,33 @@
+﻿{
+    "generatedAt":  "2026-06-29T01:32:34.5953304Z",
+    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "buildSha":  "e2127f50dec157097f23a37c169e4c5beb80a41c",
+    "touchedContainer":  "factoryengine-dtfbank-app",
+    "factoryengineContainers":  [
+                                    "factoryengine-dtfbank-app|Up 5 minutes",
+                                    "factoryengine-dtfprint-app|Up 6 days",
+                                    "factoryengine-eagledtfsupply-app|Up 6 days",
+                                    "factoryengine-fastdtfsupply-app|Up 6 days",
+                                    "factoryengine-fastdtftransfer-app|Up 6 days",
+                                    "factoryengine-dtfprintdepot-app|Up 6 days"
+                                ],
+    "logExcerpt":  [
+                       "\u001b[32m[Nest] 1234  - \u001b[39m06/29/2026, 1:22:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                       "\u001b[32m[Nest] 1234  - \u001b[39m06/29/2026, 1:22:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                       "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
+                       "No pending migrations to apply.",
+                       "\u001b[32m[Nest] 1222  - \u001b[39m06/29/2026, 1:28:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                       "\u001b[32m[Nest] 1222  - \u001b[39m06/29/2026, 1:28:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                   ],
+    "assertions":  {
+                       "healthOk":  true,
+                       "buildMatchesHead":  true,
+                       "onlyDtfbankRestarted":  true,
+                       "noRuntimeErrorsInExcerpt":  true,
+                       "noLocalhost":  true
+                   }
+}
