@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-06-29T07:49:08.256Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "deployedSha": "95fcbd827144ae53472ddc95d68cf7207c35e388",
+  "admin": {
+    "label": "admin-owner-api",
+    "principalEmail": "info@dtfbank.com",
+    "meBefore": {
+      "ok": true,
+      "status": 200,
+      "email": "info@dtfbank.com"
+    },
+    "logout": {
+      "ok": true,
+      "status": 201,
+      "requestId": "dcb36e59-b901-4e4d-adce-645ec831ecb8",
+      "payload": {
+        "ok": true
+      }
+    },
+    "meAfter": {
+      "ok": false,
+      "status": 401,
+      "message": "Session was revoked",
+      "requestId": "941ca684-1601-42c6-9cc8-f0d95b52fc69"
+    },
+    "refreshAfter": {
+      "ok": false,
+      "status": 401,
+      "message": "Token is invalid or already used",
+      "requestId": "67fc0f7a-d76a-450d-9fd2-572788770c15"
+    }
+  },
+  "person": {
+    "label": "person-linda-api",
+    "principalEmail": "dtfbanktx@gmail.com",
+    "meBefore": {
+      "ok": true,
+      "status": 200,
+      "email": "dtfbanktx@gmail.com"
+    },
+    "logout": {
+      "ok": true,
+      "status": 201,
+      "requestId": "354ec2c4-1096-4206-850f-5c6738bc6464",
+      "payload": {
+        "ok": true
+      }
+    },
+    "meAfter": {
+      "ok": false,
+      "status": 401,
+      "message": "Session was revoked",
+      "requestId": "94061ffd-17fa-4c93-8bd4-6b81c685f79c"
+    },
+    "refreshAfter": {
+      "ok": false,
+      "status": 401,
+      "message": "Token is invalid or already used",
+      "requestId": "fc39dcbb-fd42-4833-8065-78f41b2664ed"
+    }
+  },
+  "pass": true
+}

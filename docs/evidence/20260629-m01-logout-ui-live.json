@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-06-29T07:53:12.165Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "deployedSha": "95fcbd827144ae53472ddc95d68cf7207c35e388",
+  "admin": {
+    "label": "admin-owner-ui",
+    "loginUrl": "https://app.dtfbank.com/login",
+    "expectedAfterLoginUrl": "https://app.dtfbank.com/dashboard",
+    "afterLogoutUrl": "https://app.dtfbank.com/login",
+    "principalEmail": "info@dtfbank.com",
+    "logoutRequestSeen": true,
+    "logoutRequest": {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/auth/logout",
+      "hasAuthorization": true,
+      "tenantId": "ten_dtfbank",
+      "hasRefreshBody": true
+    },
+    "storageHadSessionBeforeLogout": true,
+    "storageClearedAfterLogout": true,
+    "otherSurfaceStorageClearedAfterLogout": true,
+    "meBefore": {
+      "status": 200,
+      "ok": true,
+      "email": "info@dtfbank.com"
+    },
+    "meAfter": {
+      "status": 401,
+      "ok": false,
+      "message": "Session was revoked",
+      "requestId": "30d5b78a-42a4-4a00-a65c-fc270952cdc7"
+    },
+    "refreshAfter": {
+      "status": 401,
+      "ok": false,
+      "message": "Token is invalid or already used",
+      "requestId": "3520fa50-65d3-4f38-94e0-3ac36abff57d"
+    },
+    "screenshot": "docs/evidence/20260629-m01-admin-logout-ui-live.png",
+    "pass": true
+  },
+  "person": {
+    "label": "person-linda-ui",
+    "loginUrl": "https://app.dtfbank.com/staff/login",
+    "expectedAfterLoginUrl": "https://app.dtfbank.com/staff/queue",
+    "afterLogoutUrl": "https://app.dtfbank.com/staff/login",
+    "principalEmail": "dtfbanktx@gmail.com",
+    "logoutRequestSeen": true,
+    "logoutRequest": {
+      "method": "POST",
+      "url": "https://api.dtfbank.com/api/v1/auth/logout",
+      "hasAuthorization": true,
+      "tenantId": "ten_dtfbank",
+      "hasRefreshBody": true
+    },
+    "storageHadSessionBeforeLogout": true,
+    "storageClearedAfterLogout": true,
+    "otherSurfaceStorageClearedAfterLogout": true,
+    "meBefore": {
+      "status": 200,
+      "ok": true,
+      "email": "dtfbanktx@gmail.com"
+    },
+    "meAfter": {
+      "status": 401,
+      "ok": false,
+      "message": "Session was revoked",
+      "requestId": "69cf47c2-51a5-47d5-b326-9f3daea502d3"
+    },
+    "refreshAfter": {
+      "status": 401,
+      "ok": false,
+      "message": "Token is invalid or already used",
+      "requestId": "928697a4-fb21-4df0-8d80-164d7cb7fe17"
+    },
+    "screenshot": "docs/evidence/20260629-m01-person-logout-ui-live.png",
+    "pass": true
+  },
+  "pass": true
+}

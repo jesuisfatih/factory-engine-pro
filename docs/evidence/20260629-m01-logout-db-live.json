@@ -1,0 +1,41 @@
+﻿{
+  "checkedAt": "2026-06-29T07:53:43.306Z",
+  "tenantId": "ten_dtfbank",
+  "window": "last 25 minutes",
+  "rows": [
+    {
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "kind": "refresh",
+      "count": 10,
+      "lastCreatedAt": "2026-06-29T07:53:08.454Z",
+      "lastRevokedAt": "2026-06-29T07:53:09.073Z"
+    },
+    {
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "kind": "access_revocation",
+      "count": 7,
+      "lastCreatedAt": "2026-06-29T07:53:09.076Z",
+      "lastRevokedAt": null
+    },
+    {
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "kind": "refresh",
+      "count": 11,
+      "lastCreatedAt": "2026-06-29T07:53:02.971Z",
+      "lastRevokedAt": "2026-06-29T07:53:04.683Z"
+    },
+    {
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "kind": "access_revocation",
+      "count": 9,
+      "lastCreatedAt": "2026-06-29T07:53:04.687Z",
+      "lastRevokedAt": null
+    }
+  ],
+  "tokenHashesIncluded": false,
+  "pass": true
+}

@@ -1,0 +1,16 @@
+﻿{
+    "checkedAt":  "2026-06-29T07:54:06.9051097Z",
+    "container":  "factoryengine-dtfbank-app",
+    "deployedSha":  "95fcbd827144ae53472ddc95d68cf7207c35e388",
+    "dockerStatus":  "factoryengine-dtfbank-app Up 7 minutes",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "startupLogExcerpt":  [
+                              "[Nest] 1122  - 06/29/2026, 7:48:29 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/logout, POST} route +0ms",
+                              "[Nest] 1122  - 06/29/2026, 7:48:29 AM     LOG [AppLogger] {\"module\":\"backfill\",\"action\":\"rolling_7d_schedulers_ready\",\"message\":\"Rolling 7d backfill schedulers are ready\",\"scheduler_count\":2}",
+                              "[Nest] 1122  - 06/29/2026, 7:48:29 AM     LOG [NestApplication] Nest application successfully started +0ms"
+                          ],
+    "pass":  true
+}
