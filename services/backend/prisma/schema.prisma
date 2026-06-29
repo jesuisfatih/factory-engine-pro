@@ -112,6 +112,7 @@ model Tenant {
   personDailyCallOrders   PersonDailyCallOrder[]
   personDailyTaskOrders   PersonDailyTaskOrder[]
   commissionProfiles      CommissionProfile[]
+  commissionRequests      CommissionRequest[]
 
   @@map("tenants")
 }
@@ -171,6 +172,8 @@ model Member {
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   dailyCallOrders PersonDailyCallOrder[]
   dailyTaskOrders PersonDailyTaskOrder[]
+  commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
+  reviewedCommissionRequests CommissionRequest[] @relation("CommissionRequestReviewer")
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -255,6 +258,7 @@ model Customer {
   serviceRequests ServiceRequest[]
   workflowRuleCooldowns WorkflowRuleCooldown[]
   dailyCallOrders PersonDailyCallOrder[]
+  commissionRequests CommissionRequest[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -567,6 +571,7 @@ model CommerceOrder {
   customer     Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerUser CustomerUser?          @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
   pickupOrder  CommercePickupOrder?
+  commissionRequests CommissionRequest[]
 
   @@unique([tenantId, shopifyOrderId])
   @@unique([tenantId, idempotencyKey])
@@ -892,6 +897,36 @@ model CommissionProfile {
   @@index([tenantId, active])
   @@index([tenantId, assigneeId])
   @@map("commission_profiles")
+}
+
+model CommissionRequest {
+  id                 String   @id
+  tenantId           String   @map("tenant_id")
+  requesterMemberId  String   @map("requester_member_id")
+  customerId         String   @map("customer_id")
+  orderId            String?  @map("order_id")
+  productReference   String   @map("product_reference")
+  saleReference      String   @map("sale_reference")
+  percent            Decimal  @db.Decimal(5, 2)
+  note               String?
+  status             String   @default("pending_admin_approval")
+  reviewedByMemberId String?  @map("reviewed_by_member_id")
+  reviewedAt         DateTime? @map("reviewed_at")
+  reviewNote         String?  @map("review_note")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester Member         @relation("CommissionRequestRequester", fields: [requesterMemberId], references: [id], onDelete: Restrict)
+  customer  Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order     CommerceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  reviewer  Member?        @relation("CommissionRequestReviewer", fields: [reviewedByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, requesterMemberId, createdAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, orderId])
+  @@map("commission_requests")
 }
 
 model ShopifyCustomerSegment {

@@ -3,19 +3,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, Plus, Save, Trash2, Users as UsersIcon, User } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Plus, Save, Trash2, Users as UsersIcon, User, XCircle } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
 import {
-  fetchCommissionProfiles, saveCommissionProfile, deleteCommissionProfile,
-  type CommissionProfile, type CommissionRule, type CommissionAssignType,
+  fetchCommissionProfiles, fetchCommissionRequests, reviewCommissionRequest, saveCommissionProfile, deleteCommissionProfile,
+  type CommissionProfile, type CommissionRequest, type CommissionRule, type CommissionAssignType,
   type CommissionRuleType, type CommissionPeriod,
 } from '@/lib/live-data';
 import { adminApi } from '@/lib/api';
 import { ROLES, useCan } from '@/lib/permissions';
 
 const QK = ['team', 'commission-profiles'] as const;
+const REQUESTS_QK = ['team', 'commission-requests'] as const;
 type MemberOption = { id: string; email: string; firstName: string; lastName: string };
 
 function emptyRule(): CommissionRule {
@@ -277,12 +278,74 @@ function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, ca
   );
 }
 
+function CommissionRequestsPanel({
+  requests,
+  canWrite,
+  isSaving,
+  onReview,
+}: {
+  requests: CommissionRequest[];
+  canWrite: boolean;
+  isSaving: boolean;
+  onReview: (id: string, status: 'approved' | 'rejected') => void;
+}) {
+  const pending = requests.filter((request) => request.status === 'pending_admin_approval');
+  const reviewed = requests.filter((request) => request.status !== 'pending_admin_approval').slice(0, 8);
+  const rows = [...pending, ...reviewed];
+  return (
+    <section className="section commission-requests">
+      <div className="section-head">
+        <div>
+          <h3>Commission Requests</h3>
+          <p className="subtitle">{pending.length} pending admin approval - {requests.length} total</p>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <div className="state-block empty">
+          <h3>No commission requests</h3>
+          <p>Sales staff requests will appear here after they submit a customer and sale reference.</p>
+        </div>
+      ) : (
+        <div className="commission-request-list">
+          {rows.map((request) => (
+            <article key={request.id} className={`commission-request-card ${request.status}`}>
+              <div>
+                <strong>{request.customerName}</strong>
+                <span>{request.requesterName} - {request.productReference} - {request.saleReference}</span>
+                <small>{request.orderNumber ?? request.orderId ?? 'No linked order'}{request.orderTotal !== null ? ` - ${money(request.orderTotal)}` : ''}</small>
+                {request.note ? <p>{request.note}</p> : null}
+                {request.reviewNote ? <p>Review: {request.reviewNote}</p> : null}
+              </div>
+              <div className="commission-request-side">
+                <span className="stat-pill">{request.percent}%</span>
+                <span className={`status-pill ${request.status}`}>{request.status.replace(/_/g, ' ')}</span>
+                {request.reviewerName ? <small>{request.reviewerName}</small> : null}
+              </div>
+              {canWrite && request.status === 'pending_admin_approval' ? (
+                <div className="commission-request-actions">
+                  <button type="button" className="btn small primary" disabled={isSaving} onClick={() => onReview(request.id, 'approved')}>
+                    <CheckCircle2 size={13} /> Approve
+                  </button>
+                  <button type="button" className="btn small danger" disabled={isSaving} onClick={() => onReview(request.id, 'rejected')}>
+                    <XCircle size={13} /> Reject
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CommissionsView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
 
   const { data: profiles = [] } = useQuery({ queryKey: QK, queryFn: fetchCommissionProfiles });
+  const { data: requests = [] } = useQuery({ queryKey: REQUESTS_QK, queryFn: fetchCommissionRequests });
   const { data: members = [] } = useQuery({
     queryKey: ['identity', 'members', 'commission-assignees'],
     queryFn: () => adminApi.members() as Promise<MemberOption[]>,
@@ -324,6 +387,15 @@ function CommissionsView() {
       });
     },
     onError: (error) => toast.error('Delete failed', { description: (error as Error).message }),
+  });
+
+  const review = useMutation({
+    mutationFn: (input: { id: string; status: 'approved' | 'rejected' }) => reviewCommissionRequest(input.id, { status: input.status }),
+    onSuccess: (request) => {
+      toast.success('Commission request updated', { description: `${request.customerName} marked ${request.status.replace(/_/g, ' ')}.` });
+      qc.invalidateQueries({ queryKey: REQUESTS_QK });
+    },
+    onError: (error) => toast.error('Review failed', { description: (error as Error).message }),
   });
 
   const allProfiles: { profile: CommissionProfile; isDraft: boolean }[] = [
@@ -377,6 +449,13 @@ function CommissionsView() {
         </div>
       </div>
 
+      <CommissionRequestsPanel
+        requests={requests}
+        canWrite={canWrite}
+        isSaving={review.isPending}
+        onReview={(id, status) => review.mutate({ id, status })}
+      />
+
       {allProfiles.length === 0 && (
         <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
           {t('team.commissions.empty_state')}
@@ -400,6 +479,10 @@ function CommissionsView() {
       </div>
     </>
   );
+}
+
+function money(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 }
 
 export const Route = createFileRoute('/team/commissions')({ component: CommissionsView });

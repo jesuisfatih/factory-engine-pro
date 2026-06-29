@@ -691,6 +691,31 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   padding-top: 12px;
   border-top: 1px dashed var(--border);
 }
+.commission-requests { margin-bottom: 16px; }
+.commission-request-list { display: grid; gap: 8px; }
+.commission-request-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: var(--surface);
+}
+.commission-request-card strong,
+.commission-request-card span,
+.commission-request-card small,
+.commission-request-card p { display: block; min-width: 0; overflow-wrap: anywhere; }
+.commission-request-card span { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.commission-request-card small { color: var(--text-faint); font-size: 11px; margin-top: 3px; }
+.commission-request-card p { margin: 6px 0 0; color: var(--text); font-size: 12px; line-height: 1.45; }
+.commission-request-side,
+.commission-request-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.status-pill.pending_admin_approval { background: var(--warn-soft); color: var(--warn); }
+.status-pill.approved { background: var(--success-soft); color: var(--success); }
+.status-pill.rejected { background: var(--danger-soft); color: var(--danger); }
+.commission-request-actions .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 
 /* ─── Roles inline editor (expandable form) ────────────── */
 .role-create-card {
@@ -1386,6 +1411,34 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   text-transform: uppercase;
 }
 .rules-banner-body { font-size: 12px; margin-top: 2px; line-height: 1.5; max-width: 900px; }
+.rules-health-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.rules-health-strip div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+}
+.rules-health-strip span {
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.rules-health-strip strong {
+  color: var(--text);
+  font-size: 18px;
+}
+.rules-health-strip small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
 
 .rules-shell {
   display: grid; grid-template-columns: 320px 1fr;

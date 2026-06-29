@@ -30,6 +30,7 @@ import type {
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
   CommissionProfileDto,
+  CommissionRequestDto,
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
@@ -52,6 +53,7 @@ import type {
   MemberLoginInput,
   ResolveReorderInput,
   ResetPasswordInput,
+  ReviewCommissionRequestInput,
   RollbackWorkflowRuleInput,
   RollingBackfillRunResponse,
   RollingBackfillStatusResponse,
@@ -113,6 +115,7 @@ import type {
   SaveMailAudienceInput,
   SaveMailFlowInput,
   SavePersonEmailDraftInput,
+  SubmitCommissionRequestInput,
   SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
   SweepOverdueServiceRequestsResponse,
@@ -550,6 +553,22 @@ export class ApiClient {
 
   commissionProfiles() {
     return this.get<CommissionProfileDto[]>('/commissions/profiles');
+  }
+
+  commissionRequests() {
+    return this.get<CommissionRequestDto[]>('/commissions/requests');
+  }
+
+  myCommissionRequests() {
+    return this.get<CommissionRequestDto[]>('/commissions/requests/mine');
+  }
+
+  submitCommissionRequest(input: SubmitCommissionRequestInput) {
+    return this.post<CommissionRequestDto>('/commissions/requests', input);
+  }
+
+  reviewCommissionRequest(id: string, input: ReviewCommissionRequestInput) {
+    return this.post<CommissionRequestDto>(`/commissions/requests/${encodeURIComponent(id)}/review`, input);
   }
 
   upsertCommissionProfile(id: string, input: UpsertCommissionProfileInput) {

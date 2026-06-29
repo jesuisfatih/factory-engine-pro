@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -29,10 +29,10 @@ import {
 
 type TabId = 'kanban' | 'calendar' | 'notes' | 'messages';
 type NoteTarget = { customerId: string; customerName: string };
-type TaskTransferTarget = { id: string; title: string; customerId: string | null; assignedMemberName?: string; axis?: string | null };
+type TaskTransferTarget = { id: string; title: string; customerId: string | null; assignedMemberId?: string | null; assignedMemberName?: string; axis?: string | null };
 type TransferTarget =
   | { mode: 'task'; task: TaskTransferTarget }
-  | { mode: 'customer'; customer: CallCenterPriorityCustomer; ownerName: string };
+  | { mode: 'customer'; customer: CallCenterPriorityCustomer; ownerMemberId: string; ownerName: string };
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'kanban', label: 'Kanban' },
@@ -46,6 +46,8 @@ function CallCenterView() {
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null);
   const [transferTarget, setTransferTarget] = useState<TransferTarget | null>(null);
+  const [kanbanSearch, setKanbanSearch] = useState('');
+  const [memberFilter, setMemberFilter] = useState('all');
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['call-center', 'overview'],
@@ -102,6 +104,10 @@ function CallCenterView() {
     },
   });
   const data = query.data;
+  const filteredKanban = useMemo(
+    () => data ? filterCallCenterKanban(data, memberFilter, kanbanSearch) : null,
+    [data, memberFilter, kanbanSearch],
+  );
 
   return (
     <>
@@ -156,6 +162,11 @@ function CallCenterView() {
             {tab === 'kanban' && (
               <KanbanTab
                 data={data}
+                kanban={filteredKanban ?? data.kanban}
+                search={kanbanSearch}
+                memberFilter={memberFilter}
+                onSearchChange={setKanbanSearch}
+                onMemberFilterChange={setMemberFilter}
                 onOpenCustomer={(customerId) => setDetailCustomerId(customerId)}
                 onNoteCustomer={(target) => setNoteTarget(target)}
                 onTransfer={(target) => setTransferTarget(target)}
@@ -267,22 +278,53 @@ function PreviewGrid({ data }: { data: CallCenterOverview }) {
 
 function KanbanTab({
   data,
+  kanban,
+  search,
+  memberFilter,
+  onSearchChange,
+  onMemberFilterChange,
   onOpenCustomer,
   onNoteCustomer,
   onTransfer,
 }: {
   data: CallCenterOverview;
+  kanban: CallCenterOverview['kanban'];
+  search: string;
+  memberFilter: string;
+  onSearchChange: (value: string) => void;
+  onMemberFilterChange: (value: string) => void;
   onOpenCustomer: (customerId: string) => void;
   onNoteCustomer: (target: NoteTarget) => void;
   onTransfer: (target: TransferTarget) => void;
 }) {
   return (
-    <div className="call-center-kanban">
+    <>
+      <div className="orders-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+        <div className="orders-search" style={{ minWidth: 260, flex: 1 }}>
+          <input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search customer, phone, staff, segment, source"
+            aria-label="Search Call Center kanban"
+          />
+        </div>
+        <select
+          value={memberFilter}
+          onChange={(event) => onMemberFilterChange(event.target.value)}
+          aria-label="Filter Call Center kanban by staff member"
+        >
+          <option value="all">All staff</option>
+          {data.members.map((member) => (
+            <option key={member.id} value={member.id}>{member.name} - {member.role}</option>
+          ))}
+        </select>
+      </div>
+      <div className="call-center-kanban">
       <section className="call-center-panel">
-        <PanelHead title="Daily call list" meta={`${data.kanban.dailyCallList.length} tasks`} />
-        {data.kanban.dailyCallList.length === 0 ? (
+        <PanelHead title="Daily call list" meta={`${kanban.dailyCallList.length}/${data.kanban.dailyCallList.length} tasks`} />
+        {kanban.dailyCallList.length === 0 ? (
           <EmptyLine>No daily call tasks in the last 7 days.</EmptyLine>
-        ) : data.kanban.dailyCallList.map((task) => (
+        ) : kanban.dailyCallList.map((task) => (
           <article
             key={task.id}
             className="call-center-task-card"
@@ -344,10 +386,10 @@ function KanbanTab({
       </section>
 
       <section className="call-center-panel">
-        <PanelHead title="Priority kanban" meta={`${data.kanban.priorityGroups.length} segments`} />
-        {data.kanban.priorityGroups.length === 0 ? (
+        <PanelHead title="Priority kanban" meta={`${kanban.priorityGroups.length}/${data.kanban.priorityGroups.length} segments`} />
+        {kanban.priorityGroups.length === 0 ? (
           <EmptyLine>No assigned segment customers.</EmptyLine>
-        ) : data.kanban.priorityGroups.map((group) => (
+        ) : kanban.priorityGroups.map((group) => (
           <details key={`${group.segmentId}-${group.ownerMemberId}`} className="call-center-segment" open>
             <summary>
               <span className="segment-dot" style={{ background: group.segmentColor }} />
@@ -404,7 +446,7 @@ function KanbanTab({
                       className="btn ghost"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onTransfer({ mode: 'customer', customer, ownerName: group.ownerName });
+                        onTransfer({ mode: 'customer', customer, ownerMemberId: group.ownerMemberId, ownerName: group.ownerName });
                       }}
                     >
                       <ArrowRightLeft size={13} /> Send task
@@ -418,10 +460,10 @@ function KanbanTab({
       </section>
 
       <section className="call-center-panel">
-        <PanelHead title="Pin board" meta={`${data.kanban.pinBoard.length} pins`} />
-        {data.kanban.pinBoard.length === 0 ? (
+        <PanelHead title="Pin board" meta={`${kanban.pinBoard.length}/${data.kanban.pinBoard.length} pins`} />
+        {kanban.pinBoard.length === 0 ? (
           <EmptyLine>No pinned tasks or customers.</EmptyLine>
-        ) : data.kanban.pinBoard.map((pin) => (
+        ) : kanban.pinBoard.map((pin) => (
           <div key={pin.id} className="pin-line" onClick={() => pin.customerId && onOpenCustomer(pin.customerId)}>
             <span>{pin.ownerName} to</span>
             <strong>{pin.customerName ?? pin.title}</strong>
@@ -450,6 +492,7 @@ function KanbanTab({
         ))}
       </section>
     </div>
+    </>
   );
 }
 
@@ -660,7 +703,10 @@ function TransferModal({
   onClose: () => void;
   onSubmit: (payload: { targetMemberId: string; targetAxis: 'sales' | 'account'; reason: string }) => void;
 }) {
-  const [targetMemberId, setTargetMemberId] = useState(members[0]?.id ?? '');
+  const defaultMemberId = target.mode === 'customer'
+    ? target.ownerMemberId
+    : target.task.assignedMemberId ?? members[0]?.id ?? '';
+  const [targetMemberId, setTargetMemberId] = useState(defaultMemberId);
   const [targetAxis, setTargetAxis] = useState<'sales' | 'account'>(target.mode === 'task' && isFollowUpAxis(target.task.axis) ? target.task.axis : 'sales');
   const [reason, setReason] = useState(target.mode === 'customer'
     ? `Follow up with ${target.customer.customerName} from ${target.ownerName}'s assigned segment.`
@@ -761,6 +807,74 @@ function relative(value: string) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function filterCallCenterKanban(data: CallCenterOverview, memberId: string, query: string): CallCenterOverview['kanban'] {
+  const normalized = query.trim().toLowerCase();
+  const hasMemberFilter = memberId !== 'all';
+  if (!hasMemberFilter && !normalized) return data.kanban;
+
+  const dailyCallList = data.kanban.dailyCallList.filter((task) => (
+    (!hasMemberFilter || task.assignedMemberId === memberId || task.activeMemberId === memberId)
+    && matchesText(normalized, [
+      task.title,
+      task.summary,
+      task.customerName,
+      task.customerEmail,
+      task.customerPhone,
+      task.assignedMemberName,
+      task.assignedMemberRole,
+      task.activeMemberName,
+      task.activeMemberRole,
+      task.axis,
+      task.status,
+      task.priority,
+      task.source,
+      task.segment,
+      task.callIntent,
+      ...(task.psychTags ?? []),
+    ])
+  ));
+
+  const priorityGroups = data.kanban.priorityGroups
+    .filter((group) => !hasMemberFilter || group.ownerMemberId === memberId)
+    .map((group) => ({
+      ...group,
+      customers: group.customers.filter((customer) => matchesText(normalized, [
+        group.segmentName,
+        group.ownerName,
+        group.ownerRole,
+        customer.customerName,
+        customer.email,
+        customer.phone,
+        customer.reason,
+        customer.latestNote?.body,
+        customer.latestNote?.authorName,
+        customer.latestOrder?.orderNumber,
+        customer.latestCall?.phone,
+        customer.latestCall?.email,
+        customer.latestCall?.summary,
+      ])),
+    }))
+    .filter((group) => group.customers.length > 0 || !normalized);
+
+  const pinBoard = data.kanban.pinBoard.filter((pin) => (
+    (!hasMemberFilter || pin.ownerMemberId === memberId)
+    && matchesText(normalized, [
+      pin.title,
+      pin.ownerName,
+      pin.ownerRole,
+      pin.customerName,
+      pin.kind,
+    ])
+  ));
+
+  return { dailyCallList, priorityGroups, pinBoard };
+}
+
+function matchesText(query: string, values: Array<string | number | null | undefined>) {
+  if (!query) return true;
+  return values.some((value) => String(value ?? '').toLowerCase().includes(query));
 }
 
 export const Route = createFileRoute('/call-center')({ component: CallCenterView });

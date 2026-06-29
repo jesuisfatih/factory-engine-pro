@@ -398,9 +398,9 @@ export class CustomersService {
               lifetimeRevenue: money(customer.totalSpent),
               revenue30d,
               orders30d: orders.filter((order) => (order.processedAt ?? order.createdAt).getTime() >= recentCutoff.getTime()).length,
-              projectedCommission: 0,
-              note: 'Commission submit flow is a later roadmap item; this panel exposes the live order basis only.',
-            }
+            projectedCommission: 0,
+            note: 'Commission requests are submitted by sales staff and require admin approval before payout.',
+          }
           : null,
       },
       generatedAt: new Date().toISOString(),

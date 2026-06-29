@@ -5,6 +5,8 @@ import type {
   CallCenterSaveCustomerNoteInput,
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
+  CommissionRequestDto,
+  ReviewCommissionRequestInput,
   CustomerDetailPanelDto,
   CreatePricingRuleInput,
   CreateSegmentInput,
@@ -231,6 +233,8 @@ export interface CommissionProfile {
   updatedAt: string;
 }
 
+export type CommissionRequest = CommissionRequestDto;
+
 export interface SelleruserOption {
   id: string;
   email: string;
@@ -385,6 +389,14 @@ export async function savePricingRule(input: PricingRule) {
 
 export async function fetchCommissionProfiles(): Promise<CommissionProfile[]> {
   return adminApi.commissionProfiles() as Promise<CommissionProfile[]>;
+}
+
+export async function fetchCommissionRequests(): Promise<CommissionRequest[]> {
+  return adminApi.commissionRequests();
+}
+
+export async function reviewCommissionRequest(id: string, input: ReviewCommissionRequestInput): Promise<CommissionRequest> {
+  return adminApi.reviewCommissionRequest(id, input);
 }
 
 export async function saveCommissionProfile(input: CommissionProfile): Promise<CommissionProfile> {

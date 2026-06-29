@@ -35,6 +35,8 @@ import {
   Zap,
 } from 'lucide-react';
 import type {
+  ActiveWorkflowRuleStatsResponse,
+  WorkflowRuleBackfillReportDto,
   WorkflowAction,
   WorkflowCondition,
   WorkflowEnumCatalogResponse,
@@ -683,6 +685,14 @@ function RulesView() {
             </div>
           </div>
 
+          <RuleHealthStrip
+            rules={rules}
+            stats={ruleStatsQuery.data}
+            latestBackfill={latestBackfill}
+            versionsCount={versionsQuery.data?.versions.length ?? 0}
+            executionsCount={executionsQuery.data?.executions.length ?? 0}
+          />
+
           <div className="rules-shell">
             <aside className="rules-list">
               <div className="rules-section-head">
@@ -1071,6 +1081,49 @@ function RulesView() {
         </>
       )}
     </>
+  );
+}
+
+function RuleHealthStrip({
+  rules,
+  stats,
+  latestBackfill,
+  versionsCount,
+  executionsCount,
+}: {
+  rules: WorkflowRuleDto[];
+  stats?: ActiveWorkflowRuleStatsResponse;
+  latestBackfill?: WorkflowRuleBackfillReportDto;
+  versionsCount: number;
+  executionsCount: number;
+}) {
+  const activeCount = rules.filter((rule) => rule.status === 'active').length;
+  const shadowCount = rules.filter((rule) => rule.status === 'shadow').length;
+  const wouldCreate = latestBackfill?.wouldCreateTasks ?? 0;
+  const realCreated = latestBackfill?.actualTasksCreated ?? 0;
+  return (
+    <section className="rules-health-strip">
+      <div>
+        <span>Active vs shadow</span>
+        <strong>{activeCount}/{shadowCount}</strong>
+        <small>{rules.length} total rules</small>
+      </div>
+      <div>
+        <span>Rule stats</span>
+        <strong>{stats?.totals.fireCount ?? 0} fires</strong>
+        <small>{stats?.totals.matchCount ?? 0} matches - {stats?.totals.taskCreatedCount ?? 0} tasks</small>
+      </div>
+      <div>
+        <span>Shadow telemetry</span>
+        <strong>{wouldCreate} virtual tasks</strong>
+        <small>{realCreated === 0 ? 'no mutation' : `${realCreated} real tasks created`}</small>
+      </div>
+      <div>
+        <span>Audit trail</span>
+        <strong>{versionsCount} versions</strong>
+        <small>{executionsCount} live executions</small>
+      </div>
+    </section>
   );
 }
 
