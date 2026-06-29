@@ -18,9 +18,9 @@ function priorityClass(priority: number) {
 }
 
 const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: LucideIcon }> = {
-  ai_transcript: { label: 'Transcript', icon: Sparkles },
-  ai_segment: { label: 'Segment', icon: Tags },
-  ai_stale: { label: 'Stale follow-up', icon: AlarmClockOff },
+  call_analysis: { label: 'Transcript', icon: Sparkles },
+  segment_priority: { label: 'Segment', icon: Tags },
+  stale_follow_up: { label: 'Stale follow-up', icon: AlarmClockOff },
   admin_transfer: { label: 'Admin transfer', icon: ArrowRightLeft },
 };
 

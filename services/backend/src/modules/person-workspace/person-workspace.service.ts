@@ -378,7 +378,7 @@ export class PersonWorkspaceService {
     const trigger = String(workflow.trigger ?? '');
     if (!row.matchedRuleId && !workflow.matchedRuleId && !workflow.ruleId) return false;
     if (!DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''))) return false;
-    return DAILY_WORKFLOW_TRIGGERS.has(trigger) && taskSource(row) === 'ai_transcript';
+    return DAILY_WORKFLOW_TRIGGERS.has(trigger) && taskSource(row) === 'call_analysis';
   }
 
   private applyDailyTaskOrder(
@@ -1303,7 +1303,7 @@ export class PersonWorkspaceService {
         startHour: hour(row.eventTimestamp),
         durationMinutes: Math.max(15, Math.ceil((row.durationSeconds ?? 900) / 60)),
         kind: 'call',
-        source: row.transcriptRaw ? 'ai_transcript' : 'manual',
+        source: row.transcriptRaw ? 'call_analysis' : 'manual',
         aiBrief: row.transcriptRaw ? {
           whyCalling: row.transcriptRaw.slice(0, 500),
           painPoints: ['Recent Aircall transcript is available'],
@@ -1754,9 +1754,9 @@ export class PersonWorkspaceService {
     return row.axis ? axes.has(row.axis) : true;
   }
 
-  private isAiOrSegmentPriorityTask(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
+  private isGeneratedOrSegmentPriorityTask(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
     const source = taskSource(row);
-    return source === 'ai_transcript' || source === 'ai_segment' || source === 'ai_stale';
+    return hasGeneratedBrief(source);
   }
 
   private isPriorityKanbanTask(
@@ -1766,7 +1766,7 @@ export class PersonWorkspaceService {
     ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
   ) {
     if (taskSource(row) === 'admin_transfer') return row.assignedMemberId === memberId;
-    return this.isAiOrSegmentPriorityTask(row) && this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer);
+    return this.isGeneratedOrSegmentPriorityTask(row) && this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer);
   }
 
   private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
@@ -1943,7 +1943,7 @@ export class PersonWorkspaceService {
       columnId: 'unassigned',
       pinned: item.pinned,
       pinnedAt: null,
-      source: 'ai_segment',
+      source: 'segment_priority',
       phone: item.phone ?? undefined,
       email: item.email ?? undefined,
       ordersCount: item.ordersCount,
@@ -2075,7 +2075,7 @@ export class PersonWorkspaceService {
       segmentName: ownedSegment?.segmentName ?? row.customer?.segmentMemberships[0]?.segment.name ?? null,
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
-      aiBrief: source.startsWith('ai_') ? this.brief(row) : undefined,
+      aiBrief: hasGeneratedBrief(source) ? this.brief(row) : undefined,
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
       matchedRuleId,
@@ -2208,7 +2208,7 @@ export class PersonWorkspaceService {
       durationMinutes: row.priority === 'critical' || row.priority === 'urgent' ? 30 : 20,
       kind: row.source === 'call' ? 'callback' : 'task',
       source,
-      aiBrief: source.startsWith('ai_') ? this.brief(row) : undefined,
+      aiBrief: hasGeneratedBrief(source) ? this.brief(row) : undefined,
     };
   }
 
@@ -2336,7 +2336,7 @@ export class PersonWorkspaceService {
     const action = normalizeText(workflow.action);
     const title = normalizeText(row.title);
     const source = normalizeText(row.source);
-    return action === 'create_task' || title.startsWith('support:') || source === 'ai_transcript' || source === 'workflow';
+    return action === 'create_task' || title.startsWith('support:') || source === 'call' || source === 'workflow';
   }
 
   private tenantId() {
@@ -2771,7 +2771,7 @@ function taskTimeline(
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
-      title: `${source === 'ai_transcript' ? 'Transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
+      title: `${source === 'call_analysis' ? 'Transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
       summary: [
         `${titleize(request.status)} - ${titleize(request.priority)}`,
         ruleName ? `Rule: ${ruleName}` : matchedRuleId ? `Rule: ${matchedRuleId}` : null,
@@ -2946,14 +2946,14 @@ function shopifySegmentRefsFromConditions(value: Prisma.JsonValue) {
   })).filter((segmentId) => segmentId.startsWith('gid://shopify/Segment/'));
 }
 
-function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' | 'admin_transfer' {
+function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'call_analysis' | 'segment_priority' | 'stale_follow_up' | 'admin_transfer' {
   const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
   const workflow = asRecord(metadata.workflow);
   const workflowTrigger = String(workflow.trigger ?? '');
   const workflowSource = String(workflow.source ?? '');
   if (metadata.category === 'admin_order_transfer') return 'admin_transfer';
-  if (metadata.aiSource === 'segment') return 'ai_segment';
-  if (metadata.aiSource === 'stale') return 'ai_stale';
+  if (metadata.aiSource === 'segment') return 'segment_priority';
+  if (metadata.aiSource === 'stale') return 'stale_follow_up';
   if (metadata.aiSource === 'transcript'
     || row.source === 'call'
     || row.sourceCallId
@@ -2970,8 +2970,12 @@ function taskSource(row: { source: string; sourceCallId?: string | null; sourceE
       'psych.analysis.completed',
       'customer.repeat_call.detected',
       'customer.first_call.detected',
-    ].includes(workflowTrigger)) return 'ai_transcript';
+    ].includes(workflowTrigger)) return 'call_analysis';
   return 'manual';
+}
+
+function hasGeneratedBrief(source: ReturnType<typeof taskSource>) {
+  return source === 'call_analysis' || source === 'segment_priority' || source === 'stale_follow_up';
 }
 
 function ticketNumber(row: { id: string; metadata: Prisma.JsonValue }) {

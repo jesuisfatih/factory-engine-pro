@@ -42,7 +42,7 @@ export interface ChatMessage {
   text: string;
   at: string;
 }
-export type EventSource = 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' | 'admin_transfer';
+export type EventSource = 'manual' | 'call_analysis' | 'segment_priority' | 'stale_follow_up' | 'admin_transfer';
 export type EventKind = 'call' | 'callback' | 'meeting' | 'reminder' | 'task';
 export interface CalEvent {
   id: string;

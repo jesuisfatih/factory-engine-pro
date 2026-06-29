@@ -15,9 +15,9 @@ interface Props {
 
 const SOURCE_LABEL: Record<TaskSource, string> = {
   manual: 'Manual',
-  ai_transcript: 'Transcript',
-  ai_segment: 'Segment',
-  ai_stale: 'Stale follow-up',
+  call_analysis: 'Transcript',
+  segment_priority: 'Segment',
+  stale_follow_up: 'Stale follow-up',
   admin_transfer: 'Admin transfer',
 };
 

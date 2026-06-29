@@ -16,7 +16,7 @@ import type {
 
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
-export type TaskSource = 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' | 'admin_transfer';
+export type TaskSource = 'manual' | 'call_analysis' | 'segment_priority' | 'stale_follow_up' | 'admin_transfer';
 export interface TaskBrief {
   whyCalling: string;
   upsetAbout: string;
