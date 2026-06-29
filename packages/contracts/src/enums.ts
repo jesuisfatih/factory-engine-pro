@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-29.3';
+export const WORKFLOW_ENUM_VERSION = '2026-06-30.1';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -26,6 +26,23 @@ export const URGENCY_LEVELS = [
   'medium',
   'high',
   'critical',
+] as const;
+
+export const OPERATIONAL_INTENTS = [
+  'heat_press_purchase_intent',
+  'dtf_supply_reorder_signal',
+  'quote_request',
+  'callback_requested',
+  'refund_requested',
+  'shipping_status_question',
+  'financing_question',
+  'price_objection',
+  'product_fit_question',
+  'sample_request',
+  'machine_upgrade_interest',
+  'training_installation_need',
+  'existing_customer_expansion_signal',
+  'no_action',
 ] as const;
 
 export const CREATE_TASK_AXIS = [
@@ -59,6 +76,7 @@ export const WORKFLOW_TRIGGERS = [
   'customer.matched_from_transcript',
   'call_intent.classified',
   'psych.analysis.completed',
+  'call.operational_signal.detected',
   'customer.repeat_call.detected',
   'customer.first_call.detected',
   'customer.ltv.crossed_threshold',
@@ -85,6 +103,7 @@ export const WORKFLOW_CONDITIONS = [
   'axis_primary_is',
   'time_of_day_in_range',
   'day_of_week',
+  'operational_intent',
 ] as const;
 
 export const WORKFLOW_ACTIONS = [
@@ -103,6 +122,7 @@ export const WORKFLOW_ACTIONS = [
 export const psychTagSchema = z.enum(PSYCH_TAGS);
 export const callIntentSchema = z.enum(CALL_INTENTS);
 export const urgencyLevelSchema = z.enum(URGENCY_LEVELS);
+export const operationalIntentSchema = z.enum(OPERATIONAL_INTENTS);
 export const createTaskAxisSchema = z.enum(CREATE_TASK_AXIS);
 export const serviceRequestSourceSchema = z.enum(SERVICE_REQUEST_SOURCES);
 export const workflowTriggerSchema = z.enum(WORKFLOW_TRIGGERS);
@@ -112,6 +132,7 @@ export const workflowActionSchema = z.enum(WORKFLOW_ACTIONS);
 export type PsychTag = z.infer<typeof psychTagSchema>;
 export type CallIntent = z.infer<typeof callIntentSchema>;
 export type UrgencyLevel = z.infer<typeof urgencyLevelSchema>;
+export type OperationalIntent = z.infer<typeof operationalIntentSchema>;
 export type CreateTaskAxis = z.infer<typeof createTaskAxisSchema>;
 export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
 export type WorkflowCondition = z.infer<typeof workflowConditionSchema>;
@@ -156,7 +177,7 @@ export interface WorkflowConditionOption extends WorkflowEnumOption<WorkflowCond
   category: WorkflowConditionCategory;
   valueType: WorkflowValueType;
   aiDerived: boolean;
-  optionSource: 'call_intents' | 'psych_tags' | 'segments' | 'products' | 'members' | 'none';
+  optionSource: 'call_intents' | 'psych_tags' | 'operational_intents' | 'segments' | 'products' | 'members' | 'none';
 }
 
 export interface WorkflowActionOption extends WorkflowEnumOption<WorkflowAction> {
@@ -188,6 +209,7 @@ export const WORKFLOW_TRIGGER_GROUPS: Record<WorkflowTriggerFamily, readonly Wor
     'customer.matched_from_transcript',
     'call_intent.classified',
     'psych.analysis.completed',
+    'call.operational_signal.detected',
   ],
   aggregate: [
     'customer.repeat_call.detected',
@@ -217,6 +239,7 @@ export const WORKFLOW_TRIGGER_OPTIONS: readonly WorkflowTriggerOption[] = Object
 export const WORKFLOW_CONDITION_OPTIONS: readonly WorkflowConditionOption[] = [
   { value: 'call_intent', label: 'Call intent', category: 'ai', valueType: 'enum', aiDerived: true, optionSource: 'call_intents' },
   { value: 'psych_tag_includes', label: 'Psych tag includes', category: 'ai', valueType: 'enum', aiDerived: true, optionSource: 'psych_tags' },
+  { value: 'operational_intent', label: 'Operational intent', category: 'ai', valueType: 'enum', aiDerived: true, optionSource: 'operational_intents' },
   { value: 'product_mentioned', label: 'Product mentioned', category: 'ai', valueType: 'string', aiDerived: true, optionSource: 'products' },
   { value: 'previous_purchase_includes', label: 'Previous purchase includes', category: 'commerce', valueType: 'string', aiDerived: false, optionSource: 'products' },
   { value: 'segment_member', label: 'Segment member', category: 'segment', valueType: 'string', aiDerived: false, optionSource: 'segments' },
@@ -247,6 +270,7 @@ export const WORKFLOW_ACTION_OPTIONS: readonly WorkflowActionOption[] = [
 export const WORKFLOW_ENUM_COUNTS = {
   psychTags: PSYCH_TAGS.length,
   callIntents: CALL_INTENTS.length,
+  operationalIntents: OPERATIONAL_INTENTS.length,
   urgencyLevels: URGENCY_LEVELS.length,
   createTaskAxes: CREATE_TASK_AXIS.length,
   serviceRequestSources: SERVICE_REQUEST_SOURCES.length,
@@ -259,6 +283,7 @@ export const WORKFLOW_ENUM_CATALOG = {
   version: WORKFLOW_ENUM_VERSION,
   psychTags: PSYCH_TAGS.map(option),
   callIntents: CALL_INTENTS.map(option),
+  operationalIntents: OPERATIONAL_INTENTS.map(option),
   urgencyLevels: URGENCY_LEVELS.map(option),
   createTaskAxes: CREATE_TASK_AXIS.map(option),
   serviceRequestSources: SERVICE_REQUEST_SOURCES.map(option),
@@ -274,6 +299,7 @@ export const workflowEnumCatalogResponseSchema = z.object({
   generatedAt: z.string(),
   psychTags: z.array(z.object({ value: psychTagSchema, label: z.string() })),
   callIntents: z.array(z.object({ value: callIntentSchema, label: z.string() })),
+  operationalIntents: z.array(z.object({ value: operationalIntentSchema, label: z.string() })),
   urgencyLevels: z.array(z.object({ value: urgencyLevelSchema, label: z.string() })),
   createTaskAxes: z.array(z.object({ value: createTaskAxisSchema, label: z.string() })),
   serviceRequestSources: z.array(z.object({ value: serviceRequestSourceSchema, label: z.string() })),
@@ -290,7 +316,7 @@ export const workflowEnumCatalogResponseSchema = z.object({
     category: z.enum(['ai', 'commerce', 'segment', 'call_history', 'task_state', 'ownership', 'time']),
     valueType: z.enum(['string', 'number', 'boolean', 'enum', 'range', 'window']),
     aiDerived: z.boolean(),
-    optionSource: z.enum(['call_intents', 'psych_tags', 'segments', 'products', 'members', 'none']),
+    optionSource: z.enum(['call_intents', 'psych_tags', 'operational_intents', 'segments', 'products', 'members', 'none']),
   })),
   actions: z.array(z.object({
     value: workflowActionSchema,
@@ -302,6 +328,7 @@ export const workflowEnumCatalogResponseSchema = z.object({
   counts: z.object({
     psychTags: z.number(),
     callIntents: z.number(),
+    operationalIntents: z.number(),
     urgencyLevels: z.number(),
     createTaskAxes: z.number(),
     serviceRequestSources: z.number(),
@@ -322,6 +349,7 @@ export const workflowEnumChainProbeResponseSchema = z.object({
     promptVersion: z.string(),
     includesAllPsychTags: z.boolean(),
     includesAllCallIntents: z.boolean(),
+    includesAllOperationalIntents: z.boolean(),
     includesAllUrgencyLevels: z.boolean(),
     includesAllConditions: z.boolean(),
   }),
@@ -342,6 +370,7 @@ export const workflowEnumChainProbeResponseSchema = z.object({
     action: workflowActionSchema,
     psychTag: psychTagSchema,
     callIntent: callIntentSchema,
+    operationalIntent: operationalIntentSchema,
     urgencyLevel: urgencyLevelSchema,
   }),
 });
@@ -352,6 +381,7 @@ export function buildTranscriptResolverPromptFromEnums() {
     'You are FactoryEngine transcript resolver.',
     `Use only these psych_tags: ${PSYCH_TAGS.join(', ')}`,
     `Use only these call_intents: ${CALL_INTENTS.join(', ')}`,
+    `Use only these operational_intents: ${OPERATIONAL_INTENTS.join(', ')}`,
     `Use only these urgency_levels: ${URGENCY_LEVELS.join(', ')}`,
     `Resolver-backed conditions: ${WORKFLOW_CONDITIONS.join(', ')}`,
     'Return JSON only. Do not invent enum values.',
@@ -365,6 +395,7 @@ export function workflowEnumProbeValues() {
     action: WORKFLOW_ACTIONS[WORKFLOW_ACTIONS.length - 1],
     psychTag: PSYCH_TAGS[PSYCH_TAGS.length - 1],
     callIntent: CALL_INTENTS[CALL_INTENTS.length - 1],
+    operationalIntent: OPERATIONAL_INTENTS[OPERATIONAL_INTENTS.length - 1],
     urgencyLevel: URGENCY_LEVELS[URGENCY_LEVELS.length - 1],
   };
 }

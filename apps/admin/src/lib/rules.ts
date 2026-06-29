@@ -183,6 +183,7 @@ export function defaultValue(
 ) {
   if (optionSource === 'call_intents') return catalog.callIntents[0]?.value ?? '';
   if (optionSource === 'psych_tags') return catalog.psychTags[0]?.value ?? '';
+  if (optionSource === 'operational_intents') return catalog.operationalIntents[0]?.value ?? '';
   return '';
 }
 

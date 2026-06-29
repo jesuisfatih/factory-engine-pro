@@ -339,11 +339,21 @@ Return STRICT JSON only. The JSON must exactly match this schema:
   "shipping_signals": {"address_mentioned": boolean, "tracking_asked": boolean, "complaint": boolean},
   "payment_signals": {"method_mentioned": boolean, "refund_asked": boolean, "complaint": boolean},
   "urgency_signal": one allowed urgency_levels enum value,
+  "operational_signals": [{
+    "intent": one allowed operational_intents enum value,
+    "confidence": number,
+    "action_required": boolean,
+    "recommended_axis": "sales"|"account"|null,
+    "reason": string,
+    "suggested_task_title": string|null
+  }],
   "competitor_mentioned": string[],
   "summary": string under 200 tokens,
   "language_detected": ISO-like language name or code,
   "resolved_with_version": ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION}
 }
+Classify operational_signals for DTF Supply / Heat Press sales operations, not customer-request automation.
+Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, or installation opportunity.
 Use null or empty arrays when unknown. Confidence values must be 0..1.`;
 }
 

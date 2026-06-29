@@ -105,6 +105,7 @@ model Tenant {
   syncLogs                SyncLog[]
   workflowRules           WorkflowRule[]
   workflowRuleExecutions  WorkflowRuleExecution[]
+  transcriptWorkflowEvaluations TranscriptWorkflowEvaluation[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
   workflowRuleVersions    WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
@@ -1696,6 +1697,39 @@ model WorkflowRuleExecution {
   @@index([tenantId, eventId])
   @@index([tenantId, ruleId])
   @@map("workflow_rule_executions")
+}
+
+model TranscriptWorkflowEvaluation {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  callEventId       String   @map("call_event_id")
+  externalCallId    String?  @map("external_call_id")
+  eventId           String   @map("event_id")
+  trigger           String
+  signal            String
+  actionRequired    Boolean  @default(false) @map("action_required")
+  recommendedAxis   String?  @map("recommended_axis")
+  status            String
+  reason            String?
+  evaluatedRules    Int      @default(0) @map("evaluated_rules")
+  matchedRules      Int      @default(0) @map("matched_rules")
+  tasksCreated      Int      @default(0) @map("tasks_created")
+  taskIds           String[] @default([]) @map("task_ids")
+  source            String   @default("transcript-operational-signal")
+  resolverVersion   Int?     @map("resolver_version")
+  resolverModel     String?  @map("resolver_model")
+  result            Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, callEventId, signal])
+  @@index([tenantId, callEventId])
+  @@index([tenantId, signal])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("transcript_workflow_evaluations")
 }
 
 model WorkflowRuleCooldown {

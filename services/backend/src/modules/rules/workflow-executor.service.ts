@@ -76,6 +76,7 @@ export class WorkflowExecutorService {
       case 'customer.matched_from_transcript':
       case 'call_intent.classified':
       case 'psych.analysis.completed':
+      case 'call.operational_signal.detected':
       case 'customer.repeat_call.detected':
       case 'customer.first_call.detected':
       case 'customer.ltv.crossed_threshold':
@@ -107,6 +108,7 @@ export class WorkflowExecutorService {
       case 'axis_primary_is':
       case 'time_of_day_in_range':
       case 'day_of_week':
+      case 'operational_intent':
         return { condition, accepted: true };
       default:
         return exhaustive(condition);

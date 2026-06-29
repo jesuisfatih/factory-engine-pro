@@ -56,7 +56,7 @@ const CUSTOMER_PIN_SOURCE = 'manual';
 const LEGACY_CUSTOMER_PIN_SOURCE = 'manual_pin';
 const CUSTOMER_PIN_SURFACE = 'person_pin';
 const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request', CUSTOMER_PIN_KIND]);
-const DAILY_WORKFLOW_TRIGGERS = new Set(['aircall.transcript.received', 'call_intent.classified', 'psych.tag.detected']);
+const DAILY_WORKFLOW_TRIGGERS = new Set(['aircall.transcript.received', 'call_intent.classified', 'psych.tag.detected', 'call.operational_signal.detected']);
 const DAILY_WORKFLOW_AXES = new Set(['sales', 'account']);
 const ARCHIVE_ORDER_DATE = new Date('1970-01-01T00:00:00.000Z');
 const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
@@ -3519,6 +3519,7 @@ function taskSource(row: { source: string; sourceCallId?: string | null; sourceE
       'product.detected_in_transcript',
       'customer.matched_from_transcript',
       'psych.analysis.completed',
+      'call.operational_signal.detected',
       'customer.repeat_call.detected',
       'customer.first_call.detected',
     ].includes(workflowTrigger)) return 'call_analysis';

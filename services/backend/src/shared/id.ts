@@ -58,6 +58,7 @@ export type IdPrefix =
   | 'slog'
   | 'wrule'
   | 'wrex'
+  | 'wfev'
   | 'wrcd'
   | 'wrv'
   | 'wrbf';

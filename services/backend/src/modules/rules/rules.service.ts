@@ -55,39 +55,116 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
 
 const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
   defaultRule(
-    'psych_angry_support_task',
-    'Default: Angry customer support follow-up',
-    'psych.tag.detected',
-    [defaultCondition('tag_angry', 'psych_tag_includes', '=', 'angry')],
-    [defaultAction('customer_request_manual_only', 'no-op', 'Customer request intent detected; customer service opens the request manually.')],
+    'operational_heat_press_purchase_sales_task',
+    'Default: Heat press purchase follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_heat_press_purchase', 'operational_intent', '=', 'heat_press_purchase_intent')],
+    [defaultAction('create_heat_press_sales_task', 'create_task', 'Heat press purchase follow-up', 'sales')],
     70,
   ),
   defaultRule(
-    'psych_purchase_intent_sales_task',
-    'Default: Purchase intent sales follow-up',
-    'psych.tag.detected',
-    [defaultCondition('tag_purchase_intent', 'psych_tag_includes', '=', 'purchase_intent')],
-    [defaultAction('create_sales_task', 'create_task', 'sales: Purchase intent follow-up')],
+    'operational_dtf_supply_reorder_sales_task',
+    'Default: DTF supply reorder follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_dtf_supply_reorder', 'operational_intent', '=', 'dtf_supply_reorder_signal')],
+    [defaultAction('create_dtf_supply_reorder_task', 'create_task', 'DTF supply reorder follow-up', 'sales')],
+    65,
   ),
   defaultRule(
-    'psych_shipping_issue_support_escalation',
-    'Default: Shipping issue escalation',
-    'psych.tag.detected',
-    [defaultCondition('tag_shipping_issue', 'psych_tag_includes', '=', 'shipping_issue')],
-    [
-      defaultAction('customer_request_manual_only', 'no-op', 'Shipping request intent detected; customer service opens the request manually.'),
-    ],
+    'operational_quote_request_sales_task',
+    'Default: Quote request follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_quote_request', 'operational_intent', '=', 'quote_request')],
+    [defaultAction('create_quote_request_task', 'create_task', 'Quote request follow-up', 'sales')],
     70,
   ),
   defaultRule(
-    'psych_refund_intent_support_account_watcher',
-    'Default: Refund intent support task',
-    'psych.tag.detected',
-    [defaultCondition('tag_refund_intent', 'psych_tag_includes', '=', 'refund_intent')],
-    [
-      defaultAction('add_account_watcher', 'add_watcher', 'account'),
-    ],
+    'operational_callback_requested_sales_task',
+    'Default: Callback requested follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_callback_requested', 'operational_intent', '=', 'callback_requested')],
+    [defaultAction('create_callback_task', 'create_task', 'Callback requested follow-up', 'sales')],
     70,
+  ),
+  defaultRule(
+    'operational_refund_requested_account_task',
+    'Default: Refund review follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_refund_requested', 'operational_intent', '=', 'refund_requested')],
+    [defaultAction('create_refund_review_task', 'create_task', 'Refund review follow-up', 'account')],
+    70,
+  ),
+  defaultRule(
+    'operational_shipping_status_account_task',
+    'Default: Shipping status follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_shipping_status', 'operational_intent', '=', 'shipping_status_question')],
+    [defaultAction('create_shipping_status_task', 'create_task', 'Shipping status follow-up', 'account')],
+    60,
+  ),
+  defaultRule(
+    'operational_financing_question_account_task',
+    'Default: Financing question follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_financing_question', 'operational_intent', '=', 'financing_question')],
+    [defaultAction('create_financing_follow_up_task', 'create_task', 'Financing question follow-up', 'account')],
+    65,
+  ),
+  defaultRule(
+    'operational_price_objection_sales_task',
+    'Default: Price objection follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_price_objection', 'operational_intent', '=', 'price_objection')],
+    [defaultAction('create_price_objection_task', 'create_task', 'Price objection follow-up', 'sales')],
+    60,
+  ),
+  defaultRule(
+    'operational_product_fit_sales_task',
+    'Default: Product fit consultation',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_product_fit', 'operational_intent', '=', 'product_fit_question')],
+    [defaultAction('create_product_fit_task', 'create_task', 'Product fit consultation follow-up', 'sales')],
+    60,
+  ),
+  defaultRule(
+    'operational_sample_request_sales_task',
+    'Default: Sample request follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_sample_request', 'operational_intent', '=', 'sample_request')],
+    [defaultAction('create_sample_request_task', 'create_task', 'Sample request follow-up', 'sales')],
+    60,
+  ),
+  defaultRule(
+    'operational_machine_upgrade_sales_task',
+    'Default: Machine upgrade follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_machine_upgrade', 'operational_intent', '=', 'machine_upgrade_interest')],
+    [defaultAction('create_machine_upgrade_task', 'create_task', 'Machine upgrade follow-up', 'sales')],
+    65,
+  ),
+  defaultRule(
+    'operational_training_installation_account_task',
+    'Default: Training and installation follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_training_installation', 'operational_intent', '=', 'training_installation_need')],
+    [defaultAction('create_training_installation_task', 'create_task', 'Training or installation follow-up', 'account')],
+    60,
+  ),
+  defaultRule(
+    'operational_existing_customer_expansion_sales_task',
+    'Default: Existing customer expansion follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_existing_expansion', 'operational_intent', '=', 'existing_customer_expansion_signal')],
+    [defaultAction('create_existing_expansion_task', 'create_task', 'Existing customer expansion follow-up', 'sales')],
+    65,
+  ),
+  defaultRule(
+    'operational_no_action_audit',
+    'Default: No actionable sales task',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_no_action', 'operational_intent', '=', 'no_action')],
+    [defaultAction('audit_no_action', 'no-op', 'Transcript has no actionable sales or personnel follow-up.')],
+    10,
   ),
   defaultRule(
     'customer_first_call_account_onboarding',
@@ -136,11 +213,11 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     70,
   ),
   defaultRule(
-    'aircall_missed_call_support_callback',
+    'aircall_missed_call_callback_review',
     'Default: Missed call callback',
     'aircall.call.missed',
     [],
-    [defaultAction('missed_call_manual_review', 'no-op', 'Missed support callback requires manual staff review.')],
+    [defaultAction('missed_call_manual_review', 'no-op', 'Missed call requires staff callback review.')],
     70,
   ),
 ];
@@ -810,6 +887,21 @@ export class RulesService {
       if (eventTag) return { value: [eventTag], source: 'event_param' };
       return { value: uniqueStrings([...(arrayParam(params, 'psychTags')), ...(arrayParam(state.resolverOutput, 'psych_tags'))]), source: 'event_or_resolver' };
     }
+    if (condition === 'operational_intent') {
+      const eventIntent = stringParam(params, 'operationalIntent') ?? stringParam(params, 'intent');
+      if (eventIntent) return { value: eventIntent, source: 'event_param' };
+      const resolverSignals = Array.isArray(state.resolverOutput.operational_signals)
+        ? state.resolverOutput.operational_signals
+        : [];
+      return {
+        value: uniqueStrings(resolverSignals.flatMap((signal) => {
+          const row = asRecord(signal);
+          const value = stringValue(row.intent);
+          return value ? [value] : [];
+        })),
+        source: 'resolver_output',
+      };
+    }
     if (condition === 'product_mentioned') {
       return { value: productValues(params, state.resolverOutput), source: 'event_or_resolver' };
     }
@@ -930,6 +1022,9 @@ export class RulesService {
     windowEnd: Date,
     limit: number,
   ): Promise<BackfillCandidate[]> {
+    if (trigger === 'call.operational_signal.detected') {
+      return this.operationalSignalBackfillCandidates(windowStart, windowEnd, limit);
+    }
     if (trigger.includes('order')) {
       return this.orderBackfillCandidates(trigger, windowStart, windowEnd, limit);
     }
@@ -1024,6 +1119,42 @@ export class RulesService {
           productMentions: valueArray(resolver.product_mentions),
           urgencyLevel: stringValue(resolver.urgency_level),
           durationSeconds: event.durationSeconds,
+        },
+      };
+    });
+  }
+
+  private async operationalSignalBackfillCandidates(
+    windowStart: Date,
+    windowEnd: Date,
+    limit: number,
+  ): Promise<BackfillCandidate[]> {
+    const rows = await this.prisma.db.transcriptWorkflowEvaluation.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        createdAt: { gte: windowStart, lte: windowEnd },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+    return rows.map((row) => {
+      const result = asRecord(row.result);
+      const signal = asRecord(result.signal);
+      return {
+        eventId: `backfill:call.operational_signal.detected:${row.callEventId}:${row.signal}:${row.createdAt.getTime()}`,
+        sourceType: 'transcript_workflow_evaluation',
+        sourceId: row.id,
+        occurredAt: row.createdAt,
+        params: {
+          callEventId: row.callEventId,
+          aircallCallEventId: row.callEventId,
+          externalCallId: row.externalCallId,
+          operationalIntent: row.signal,
+          operationalConfidence: numberValue(signal.confidence),
+          actionRequired: row.actionRequired,
+          recommendedAxis: row.recommendedAxis,
+          suggestedTaskTitle: stringValue(signal.suggested_task_title),
+          reason: row.reason,
         },
       };
     });
@@ -1707,6 +1838,7 @@ export class RulesService {
         'product.detected_in_transcript',
         'customer.matched_from_transcript',
         'psych.analysis.completed',
+        'call.operational_signal.detected',
         'customer.repeat_call.detected',
         'customer.first_call.detected',
       ].includes(trigger)) {
@@ -1830,6 +1962,7 @@ export class RulesService {
       generatedAt: new Date().toISOString(),
       psychTags: [...WORKFLOW_ENUM_CATALOG.psychTags],
       callIntents: [...WORKFLOW_ENUM_CATALOG.callIntents],
+      operationalIntents: [...WORKFLOW_ENUM_CATALOG.operationalIntents],
       urgencyLevels: [...WORKFLOW_ENUM_CATALOG.urgencyLevels],
       createTaskAxes: [...WORKFLOW_ENUM_CATALOG.createTaskAxes],
       serviceRequestSources: [...WORKFLOW_ENUM_CATALOG.serviceRequestSources],
@@ -1865,6 +1998,7 @@ export class RulesService {
     const response: WorkflowEnumChainProbeResponse = {
       ok: prompt.includesAllPsychTags
         && prompt.includesAllCallIntents
+        && prompt.includesAllOperationalIntents
         && prompt.includesAllUrgencyLevels
         && prompt.includesAllConditions,
       version: WORKFLOW_ENUM_VERSION,
@@ -1875,6 +2009,7 @@ export class RulesService {
         promptVersion: prompt.promptVersion,
         includesAllPsychTags: prompt.includesAllPsychTags,
         includesAllCallIntents: prompt.includesAllCallIntents,
+        includesAllOperationalIntents: prompt.includesAllOperationalIntents,
         includesAllUrgencyLevels: prompt.includesAllUrgencyLevels,
         includesAllConditions: prompt.includesAllConditions,
       },
@@ -2023,7 +2158,7 @@ function fireTimeStateSnapshot(state: WorkflowActionContext['state']) {
 
 function pickResolverOutput(output: Record<string, unknown>) {
   return Object.fromEntries(
-    ['call_intent', 'psych_tags', 'product_mentions', 'urgency_level', 'summary']
+    ['call_intent', 'psych_tags', 'product_mentions', 'operational_signals', 'urgency_signal', 'urgency_level', 'summary']
       .filter((key) => output[key] !== undefined)
       .map((key) => [key, output[key]]),
   );
@@ -2206,8 +2341,9 @@ function defaultAction(
   id: string,
   action: WorkflowRuleAction['action'],
   value: string,
+  axis?: WorkflowRuleAction['axis'],
 ): WorkflowRuleAction {
-  return { id, action, value };
+  return axis ? { id, action, value, axis } : { id, action, value };
 }
 
 function defaultRuleKeyFromInput(input: SaveWorkflowRuleInput) {

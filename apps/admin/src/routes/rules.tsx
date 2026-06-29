@@ -219,6 +219,13 @@ function ConditionValueInput({
       </select>
     );
   }
+  if (field?.optionSource === 'operational_intents') {
+    return (
+      <select value={condition.value} onChange={(event) => onEdit({ ...condition, value: event.target.value })}>
+        {catalog.operationalIntents.map((intent) => <option key={intent.value} value={intent.value}>{intent.label}</option>)}
+      </select>
+    );
+  }
   if (field?.valueType === 'boolean') {
     return (
       <select value={condition.value || 'true'} onChange={(event) => onEdit({ ...condition, value: event.target.value })}>
@@ -680,7 +687,7 @@ function RulesView() {
             <div>
               <div className="rules-banner-title">Master enum catalog v{catalog.version}</div>
               <div className="rules-banner-body">
-                {catalog.counts.psychTags} psych tags · {catalog.counts.callIntents} call intents · {catalog.counts.urgencyLevels} urgency levels · {catalog.counts.triggers} triggers · {catalog.counts.conditions} conditions · {catalog.counts.actions} actions · {catalog.counts.createTaskAxes} create-task axes
+                {catalog.counts.psychTags} psych tags · {catalog.counts.callIntents} call intents · {catalog.counts.operationalIntents} operational intents · {catalog.counts.urgencyLevels} urgency levels · {catalog.counts.triggers} triggers · {catalog.counts.conditions} conditions · {catalog.counts.actions} actions · {catalog.counts.createTaskAxes} create-task axes
               </div>
             </div>
           </div>
@@ -914,6 +921,7 @@ function RulesView() {
               <CatalogCard title="ServiceRequest sources" count={catalog.counts.serviceRequestSources} values={catalog.serviceRequestSources.map((entry) => entry.value)} />
               <CatalogCard title="Psych tags" count={catalog.counts.psychTags} values={catalog.psychTags.map((entry) => entry.value)} />
               <CatalogCard title="Call intents" count={catalog.counts.callIntents} values={catalog.callIntents.map((entry) => entry.value)} />
+              <CatalogCard title="Operational intents" count={catalog.counts.operationalIntents} values={catalog.operationalIntents.map((entry) => entry.value)} />
               <CatalogCard title="Urgency" count={catalog.counts.urgencyLevels} values={catalog.urgencyLevels.map((entry) => entry.value)} />
             </aside>
 
