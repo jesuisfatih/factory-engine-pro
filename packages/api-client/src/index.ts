@@ -22,6 +22,7 @@ import type {
   BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
   CalculatePricesInput,
+  CallCenterOverview,
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
@@ -506,6 +507,10 @@ export class ApiClient {
 
   supportStats(query = '') {
     return this.get(`/support/stats/overview${query}`);
+  }
+
+  callCenterOverview() {
+    return this.get<CallCenterOverview>('/call-center/overview');
   }
 
   personWorkspaceSummary() {

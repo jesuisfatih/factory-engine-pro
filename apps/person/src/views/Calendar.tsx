@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Sparkles, X, Phone, ExternalLink,
+  ChevronLeft, ChevronRight, FileText, X, Phone, ExternalLink,
   Clock, AlarmClockOff, RefreshCw, CheckCircle2,
 } from 'lucide-react';
 import { fetchCalEvents, friendlyError, type EventSource, type CalEvent } from '../api/live';
@@ -58,7 +58,7 @@ export function CalendarView() {
     <>
       <div className="page-head">
         <h2>Calendar</h2>
-        <div className="sub">Your week - call-analysis items open their brief on click</div>
+        <div className="sub">Your week - call context items open their brief on click</div>
       </div>
 
       <div className="cal-shell">
@@ -74,7 +74,7 @@ export function CalendarView() {
           </button>
           <h3>{weekLabel}</h3>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {assistedCount} call-analysis
+            <FileText size={12} style={{ color: '#1d4ed8' }} /> {assistedCount} call context
           </span>
         </div>
 
@@ -83,7 +83,7 @@ export function CalendarView() {
           error={error ? new Error(friendlyError(error)) : null}
           empty={events.length === 0}
           emptyTitle="No calendar items"
-          emptyBody="Open service requests, Aircall activity and failed delivery tasks will appear here."
+          emptyBody="Open customer tasks, Aircall activity and failed delivery tasks will appear here."
         >
         <div className="cal-grid">
           <div className="cal-col-head" />
@@ -130,9 +130,9 @@ export function CalendarView() {
               <div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4 }}>Event details</div>
                 <h2 style={{ marginTop: 4 }}>{selected.title}</h2>
-                <div className="sub">
+                  <div className="sub">
                   <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
-                    <Sparkles size={10} style={{ verticalAlign: 'text-top', marginRight: 4 }} /> {SOURCE_LABEL[selected.source]}
+                    <FileText size={10} style={{ verticalAlign: 'text-top', marginRight: 4 }} /> {SOURCE_LABEL[selected.source]}
                   </span>
                   <span style={{ background: 'var(--surface-3)', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, color: 'var(--text)' }}>{selected.kind}</span>
                   <span><Clock size={10} style={{ verticalAlign: 'text-top', marginRight: 3 }} />
@@ -172,9 +172,9 @@ export function CalendarView() {
               {selected.aiBrief ? (
                 <div className="generated-brief">
                   <div className="head">
-                    <Sparkles size={14} style={{ color: '#7c3aed' }} />
+                    <FileText size={14} style={{ color: '#1d4ed8' }} />
                     <h4>Task Brief</h4>
-                    <span className="badge">{selected.aiBrief.modelUsed}</span>
+                    <span className="badge">live</span>
                   </div>
                   <div className="row">
                     <div className="lbl">Why calling</div>
@@ -199,8 +199,7 @@ export function CalendarView() {
                     <ul>{selected.aiBrief.suggestedActions.map((action) => <li key={action}>{action}</li>)}</ul>
                   </div>
                   <div className="footer-meta">
-                    <span>Prompt: {selected.aiBrief.promptKey} v{selected.aiBrief.promptVersion}</span>
-                    <span>Model: {selected.aiBrief.modelUsed}</span>
+                    <span>Source: call context v{selected.aiBrief.promptVersion}</span>
                     <span>Confidence: {Math.round(selected.aiBrief.confidence * 100)}%</span>
                   </div>
                 </div>

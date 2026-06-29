@@ -180,7 +180,7 @@ button { font-family: inherit; }
 
 /* ─── Kanban ─────────────────────────────────────────────── */
 .queue-wrap { display: block; min-height: 0; }
-.ops-grid { display: grid; grid-template-columns: minmax(420px, 0.95fr) minmax(520px, 1.15fr) minmax(240px, 0.42fr); align-items: start; gap: 10px; min-height: 0; }
+.ops-grid { display: grid; grid-template-columns: minmax(360px, 0.95fr) minmax(380px, 1.12fr) minmax(200px, .42fr); align-items: start; gap: 10px; min-height: 0; }
 .ops-grid.archive { grid-template-columns: minmax(320px, 720px); align-content: start; }
 .ops-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 190px); }
 .ops-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 2px 9px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
@@ -229,13 +229,17 @@ button { font-family: inherit; }
 .segment-customer-card { cursor: pointer; transition: border-color .12s, box-shadow .12s, transform .12s; }
 .segment-customer-card:hover,
 .segment-customer-card:focus-visible { border-color: var(--border-strong); box-shadow: 0 4px 14px rgba(15, 23, 42, .08); outline: none; }
-.segment-customer-top { align-items: flex-start; }
-.segment-customer-title { display: grid; gap: 2px; }
-.segment-customer-contact { display: grid; gap: 1px; color: var(--text-muted); font-size: 10px; line-height: 1.25; min-width: 0; }
+.segment-customer-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }
+.segment-customer-open { min-width: 0; border: 0; padding: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; display: grid; gap: 4px; }
+.segment-customer-open:hover .daily-title,
+.segment-customer-open:focus-visible .daily-title { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.segment-customer-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 5px; }
+.segment-customer-contact { display: grid; gap: 2px; color: var(--text-muted); font-size: 10px; line-height: 1.25; min-width: 0; }
 .segment-customer-contact span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.segment-customer-contact strong { color: var(--text-faint); font-weight: 800; margin-right: 5px; text-transform: uppercase; font-size: 9px; letter-spacing: .25px; }
 .segment-customer-foot { display: grid; grid-template-columns: auto minmax(120px, 1fr); align-items: center; gap: 8px; margin-top: 9px; color: var(--text-muted); font-size: 10px; }
 .segment-customer-orders { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; justify-self: end; }
-.segment-customer-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+.segment-customer-actions { display: flex; align-items: center; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
 .quick-action {
   display: inline-flex;
   align-items: center;
@@ -1008,9 +1012,17 @@ button { font-family: inherit; }
   .request-grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 1500px) {
+  .ops-grid { grid-template-columns: minmax(360px, 1fr) minmax(380px, 1.05fr); }
+  .pin-board-panel { grid-column: 1 / -1; }
+}
+
 @media (max-width: 1100px) {
   .ops-grid { grid-template-columns: 1fr; overflow-y: auto; }
   .ops-panel { min-height: 280px; }
+  .segment-customer-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .segment-customer-head > .priority { grid-column: 2; grid-row: 2; justify-self: end; }
+  .segment-customer-actions { justify-content: flex-start; grid-column: 1 / -1; }
 }
 
 .customer-detail-backdrop {
@@ -1040,6 +1052,8 @@ button { font-family: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .customer-detail-title h2 { margin: 2px 0 4px; font-size: 22px; line-height: 1.2; }
+.customer-detail-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.customer-detail-sub span { display: inline-flex; min-width: 0; overflow-wrap: anywhere; }
 .customer-detail-kicker, .customer-detail-sub, .customer-detail-muted, .customer-detail-card small { color: var(--muted, var(--text-muted)); font-size: 12px; }
 .customer-detail-icon-btn {
   width: 36px;

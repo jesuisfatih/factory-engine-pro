@@ -26,7 +26,7 @@ export function RequestsView() {
     <>
       <div className="page-head">
         <h2>Submit Request</h2>
-        <div className="sub">PTO, equipment, access and exception requests create internal service requests.</div>
+        <div className="sub">PTO, equipment, access and exception requests create internal staff requests.</div>
       </div>
 
       <div className="request-grid">

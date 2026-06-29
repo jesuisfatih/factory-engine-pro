@@ -1,4 +1,4 @@
-import { Activity, AlarmClockOff, Archive, ArrowRightLeft, ShoppingBag, Sparkles, Tags } from 'lucide-react';
+import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, ShoppingBag, Tags } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
@@ -18,7 +18,7 @@ function priorityClass(priority: number) {
 }
 
 const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: LucideIcon }> = {
-  call_analysis: { label: 'Transcript', icon: Sparkles },
+  call_analysis: { label: 'Transcript', icon: FileText },
   segment_priority: { label: 'Segment', icon: Tags },
   stale_follow_up: { label: 'Stale follow-up', icon: AlarmClockOff },
   admin_transfer: { label: 'Admin transfer', icon: ArrowRightLeft },

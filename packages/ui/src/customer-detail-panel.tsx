@@ -29,7 +29,7 @@ const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>
   profile: { label: 'Profile', Icon: UserRound },
   shopify_orders: { label: 'Shopify Orders', Icon: ShoppingBag },
   aircall_calls: { label: 'Aircall Calls', Icon: Phone },
-  support: { label: 'Support', Icon: Headphones },
+  support: { label: 'Customer Requests', Icon: Headphones },
   email: { label: 'Email', Icon: Mail },
   messages: { label: 'Messages', Icon: MessageSquare },
   notes: { label: 'Notes', Icon: NotebookText },
@@ -59,7 +59,8 @@ export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, o
             <span className="customer-detail-kicker">Customer 360</span>
             <h2>{detail?.customer.name ?? 'Customer detail'}</h2>
             <div className="customer-detail-sub">
-              {detail?.customer.email ?? 'No email'} {detail?.customer.phone ? ` - ${detail.customer.phone}` : ''}
+              <span>{detail?.customer.email ?? 'No email'}</span>
+              <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span>
             </div>
           </div>
           <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
@@ -67,7 +68,7 @@ export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, o
           </button>
         </header>
 
-        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, support, mail, and task records." />}
+        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and task records." />}
         {!isLoading && error && (
           <PanelState
             title="Customer detail failed"
@@ -88,7 +89,7 @@ export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, o
               <Metric label="Revenue" value={money(detail.customer.metrics.lifetimeRevenue)} />
               <Metric label="Orders" value={String(detail.customer.metrics.ordersCount)} />
               <Metric label="Calls" value={String(detail.customer.metrics.callsCount)} />
-              <Metric label="Open support" value={String(detail.customer.metrics.openSupportCount)} />
+              <Metric label="Open requests" value={String(detail.customer.metrics.openSupportCount)} />
               <Metric label="Open tasks" value={String(detail.customer.metrics.openTaskCount)} />
             </div>
 
@@ -233,7 +234,7 @@ function AircallTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRet
 
 function SupportTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
   const rows = detail.tabs.support;
-  if (rows.length === 0) return <EmptyTab title="No support history" body="No live support request is linked to this customer." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No customer request history" body="No customer-request record is linked to this customer." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((request) => (
@@ -322,7 +323,7 @@ function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
 
 function TasksTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
   const rows = detail.tabs.tasks;
-  if (rows.length === 0) return <EmptyTab title="No tasks" body="No call-analysis or manual task is linked to this customer." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No tasks" body="No call or manual task is linked to this customer." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((task) => (

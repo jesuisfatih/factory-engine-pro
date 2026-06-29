@@ -471,7 +471,7 @@ export class PersonWorkspaceService {
       const operations = await this.dailyOperationsFor(member, input.range ?? 'last7d');
       const currentById = new Map(operations.dailyCallList.map((item) => [item.id, item] as const));
       const requested = uniqueStrings(input.orderedItemIds).filter((id) => currentById.has(id));
-      if (requested.length === 0) throw new BadRequestException('No valid daily workflow task cards were provided');
+      if (requested.length === 0) throw new BadRequestException('No valid daily call task cards were provided');
       const orderedItemIds = [
         ...requested,
         ...operations.dailyCallList.map((item) => item.id).filter((id) => !requested.includes(id)),
@@ -1313,7 +1313,7 @@ export class PersonWorkspaceService {
           modelUsed: 'not-generated',
           confidence: 1,
           transcriptSnippet: row.transcriptRaw.slice(0, 240),
-          suggestedActions: ['Open related service request', 'Add call notes', 'Schedule follow-up if needed'],
+          suggestedActions: ['Open related customer record', 'Add call notes', 'Schedule follow-up if needed'],
         } : undefined,
       })),
       ...mail.map((row) => ({
@@ -2215,9 +2215,9 @@ export class PersonWorkspaceService {
   private brief(row: ServiceRequestRow) {
     return {
       whyCalling: row.description ?? row.title,
-      upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority service request needs a human response.' : 'No explicit complaint captured.',
+      upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority customer task needs a human response.' : 'No explicit complaint captured.',
       painPoints: [titleize(row.priority), titleize(row.status), String(this.record(row.metadata).category ?? row.source)],
-      callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the service request to the next accountable status.',
+      callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the customer task to the next accountable status.',
       suggestedActions: ['Review customer context', 'Add an internal note', 'Update status before leaving the screen'],
       promptKey: 'person.workspace.live-context',
       promptVersion: 'live',
@@ -2771,7 +2771,7 @@ function taskTimeline(
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
-      title: `${source === 'call_analysis' ? 'Transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
+      title: `${source === 'call_analysis' ? 'Transcript task' : request.source === 'workflow' ? 'Automation task' : 'Task'}: ${request.title}`,
       summary: [
         `${titleize(request.status)} - ${titleize(request.priority)}`,
         ruleName ? `Rule: ${ruleName}` : matchedRuleId ? `Rule: ${matchedRuleId}` : null,

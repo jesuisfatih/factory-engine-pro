@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  X, Phone, Mail, ExternalLink, Sparkles, AlarmClockOff, CheckCircle2,
+  X, Phone, Mail, ExternalLink, FileText, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
   GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
@@ -77,6 +77,12 @@ function fmtDate(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
+}
+
+function briefSourceLabel(promptKey: string, promptVersion: string) {
+  if (promptKey.includes('transcript')) return `Transcript resolver v${promptVersion}`;
+  if (promptKey.includes('segment')) return `Segment context v${promptVersion}`;
+  return `Live context v${promptVersion}`;
 }
 
 function dateTimeLocal(value: Date) {
@@ -241,7 +247,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
           <div>
             <div className="brief-eyebrow">
               <span className={`brief-source brief-source-${liveCard.source}`}>
-                {liveCard.source === 'manual' ? null : liveCard.source === 'admin_transfer' ? <Activity size={10} /> : <Sparkles size={10} />} {SOURCE_LABEL[liveCard.source]}
+                {liveCard.source === 'manual' ? null : liveCard.source === 'admin_transfer' ? <Activity size={10} /> : <FileText size={10} />} {SOURCE_LABEL[liveCard.source]}
               </span>
               <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{liveCard.priority}</span>
               <span className="chip" style={{ background: liveCard.segmentColor }}>{liveCard.segment}</span>
@@ -418,7 +424,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                         onChange={(event) => setNote(event.target.value)}
                       />
                       <div className="brief-form-actions">
-                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted as a service request comment.'}</span>
+                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer task thread.'}</span>
                         <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
                           <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
                         </button>
@@ -494,9 +500,8 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
             {hasBrief && liveCard.aiBrief && (
               <div className="brief-card brief-card-meta">
-                <div className="brief-card-head"><Sparkles size={12} /> Resolver metadata</div>
-                <div className="brief-card-row"><span className="lbl">Prompt</span><span className="val">{liveCard.aiBrief.promptKey} - {liveCard.aiBrief.promptVersion}</span></div>
-                <div className="brief-card-row"><span className="lbl">Model</span><span className="val">{liveCard.aiBrief.modelUsed}</span></div>
+                <div className="brief-card-head"><FileText size={12} /> Brief metadata</div>
+                <div className="brief-card-row"><span className="lbl">Source</span><span className="val">{briefSourceLabel(liveCard.aiBrief.promptKey, liveCard.aiBrief.promptVersion)}</span></div>
                 <div className="brief-card-row"><span className="lbl">Confidence</span><span className="val">{Math.round(liveCard.aiBrief.confidence * 100)}%</span></div>
               </div>
             )}

@@ -132,7 +132,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       <div className="kpis">
-        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days call analysis'}</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days calls'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
         {!archive && <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>}
@@ -144,14 +144,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={error ? new Error(friendlyError(error)) : null}
         empty={empty}
         emptyTitle={archive ? 'No archived daily calls' : 'No call work assigned yet'}
-        emptyBody={archive ? 'Call-analysis tasks older than 7 days, or tasks you archived manually, will appear here.' : 'Recent call tasks and assigned Shopify segment customers will appear here.'}
+        emptyBody={archive ? 'Call tasks older than 7 days, or tasks you archived manually, will appear here.' : 'Recent call tasks and assigned Shopify segment customers will appear here.'}
       >
         <div className={`ops-grid${archive ? ' archive' : ''}`}>
           <section className="ops-panel">
             <div className="ops-head">
               <div>
                 <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
-                <p>{archive ? 'Archived call-analysis tasks for this staff member.' : 'Live call-analysis tasks grouped by day.'}</p>
+                <p>{archive ? 'Archived call tasks for this staff member.' : 'Live call tasks grouped by day.'}</p>
               </div>
               <div className="ops-head-actions">
                 {!archive && (
@@ -167,7 +167,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
             <DailyWorkflowList
               cards={daily}
-              emptyLabel={archive ? 'No archived call-analysis tasks.' : range === 'today' ? 'No call-analysis tasks from today.' : 'No call-analysis tasks from the last 7 days.'}
+              emptyLabel={archive ? 'No archived call tasks.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
               reorderDisabled={reorderDaily.isPending}
               onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
               onTogglePin={(card) => taskPin.mutate(card)}
@@ -434,21 +434,24 @@ function SegmentCustomerCard({
       onClick={onOpen}
       onKeyDown={handleKeyDown}
     >
-      <div className="daily-card-row segment-customer-top">
-        <div className="daily-title-wrap segment-customer-title">
-          <div className="daily-title">{item.customerName}</div>
-          <div className="segment-customer-contact">
-            <span>{item.phone ? item.phone : 'No phone on file'}</span>
-            {item.email ? <span>{item.email}</span> : null}
-          </div>
-        </div>
-        <span className="priority p7">U{item.urgencyScore}</span>
-      </div>
-      <div className="daily-meta">{item.reason}</div>
-      <div className="segment-customer-foot">
-        <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
-        <span className="segment-customer-orders">{orderSummary}</span>
-        <div className="segment-customer-actions">
+      <div className="segment-customer-head">
+        <button
+          type="button"
+          className="segment-customer-open"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          title="Open customer history"
+        >
+          <span className="daily-title">{item.customerName}</span>
+          <span className="segment-customer-contact">
+            <span><strong>Phone</strong>{item.phone ? item.phone : 'No phone on file'}</span>
+            {item.email ? <span><strong>Email</strong>{item.email}</span> : null}
+          </span>
+        </button>
+        <div className="segment-customer-actions" aria-label={`${item.customerName} actions`}>
           <a
             className={`quick-action${item.phone ? '' : ' disabled'}`}
             href={item.phone ? `tel:${item.phone}` : undefined}
@@ -466,6 +469,7 @@ function SegmentCustomerCard({
           <button
             type="button"
             className="quick-action"
+            title="Add customer note"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -478,6 +482,7 @@ function SegmentCustomerCard({
           <button
             type="button"
             className={`pin-btn${item.pinned ? ' pinned' : ''}`}
+            title={item.pinned ? 'Customer is pinned' : 'Pin customer'}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -488,6 +493,12 @@ function SegmentCustomerCard({
             {item.pinned ? 'Pinned' : 'Pin'}
           </button>
         </div>
+        <span className="priority p7">U{item.urgencyScore}</span>
+      </div>
+      <div className="daily-meta">{item.reason}</div>
+      <div className="segment-customer-foot">
+        <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
+        <span className="segment-customer-orders">{orderSummary}</span>
       </div>
     </article>
   );

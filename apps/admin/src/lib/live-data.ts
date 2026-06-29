@@ -1,4 +1,5 @@
 import type {
+  CallCenterOverview,
   CreatePricingRuleInput,
   CreateSegmentInput,
   DiscountType,
@@ -231,6 +232,10 @@ export interface SelleruserOption {
 }
 
 export const SELLERUSERS: SelleruserOption[] = [];
+
+export async function fetchCallCenterOverview(): Promise<CallCenterOverview> {
+  return adminApi.callCenterOverview();
+}
 
 export async function fetchTasks(surface: TaskSurface): Promise<TaskRow[]> {
   const response = await adminApi.supportRequests('?limit=100&surface=all') as { items?: unknown[] };

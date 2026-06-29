@@ -8,6 +8,7 @@ import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BackfillModule } from './modules/backfill/backfill.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
+import { CallCenterModule } from './modules/call-center/call-center.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { MailModule } from './modules/mail/mail.module.js';
@@ -46,6 +47,7 @@ import { HealthController } from './health.controller.js';
     SegmentsModule,
     SupportModule,
     B2BAccessModule,
+    CallCenterModule,
     SyncModule,
     BackfillModule,
   ],

@@ -18,7 +18,8 @@
     "segments": "Segments",
     "support": "Support",
     "b2b_applications": "B2B Applications",
-    "tasks": "Task Management",
+    "tasks": "Call Center",
+    "call_center": "Call Center",
     "rules": "Rule engine",
     "team_members": "Members",
     "team_roles": "Roles",
@@ -27,7 +28,7 @@
     "mail_marketing": "Mail Marketing",
     "workspace_settings": "Workspace",
     "aircall_settings": "Aircall",
-    "ai_settings_legacy": "Resolver keys",
+    "resolver_settings_legacy": "Resolver keys",
     "shopify_settings": "Shopify",
     "initial_setup": "Initial setup"
   },
@@ -563,7 +564,7 @@
       "step_segments_title": "Segment evaluate-all",
       "step_segments_body": "Evaluates saved live segment definitions against synced Shopify customers.",
       "step_aircall_title": "Aircall resolved transcript reprocess",
-      "step_aircall_body": "Queues existing transcript records through the resolver and workflow trigger path.",
+      "step_aircall_body": "Queues existing transcript records through the resolver and rule trigger path.",
       "step_axis_title": "Default customer axis assignment",
       "step_axis_body": "Assigns sales, support, and account primary owners to customers missing an owner.",
       "shopify_summary": "Queued={{queued}} resources={{resources}} batch={{batchId}}",
@@ -1169,8 +1170,12 @@
       }
     }
   },
+  "call_center": {
+    "title": "Call Center",
+    "subtitle": "Unified live view of personnel call work, segment ownership, notes, messages, and rule activity."
+  },
   "tasks": {
-    "title": "Task Management",
+    "title": "Call Center",
     "subtitle": "All work items across customer, sales, comms, calendar, and email surfaces",
     "tabs": {
       "customer": "Customer",
@@ -1228,7 +1233,7 @@
     "no_customer": "No customer",
     "no_description": "No description",
     "no_selection_title": "Select a service request",
-    "no_selection_body": "Choose a row to see SLA, comments, and workflow actions.",
+    "no_selection_body": "Choose a row to see SLA, comments, and allowed actions.",
     "detail_customer": "Customer",
     "detail_surface": "Surface",
     "detail_axis": "Axis",
@@ -1237,7 +1242,7 @@
     "detail_watchers": "Watchers",
     "detail_created": "Created",
     "detail_sla": "Resolution target",
-    "detail_actions": "Workflow",
+    "detail_actions": "Actions",
     "sla_breached": "SLA breached",
     "field_status": "Status",
     "field_assignee": "Assignee",

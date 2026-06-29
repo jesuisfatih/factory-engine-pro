@@ -1773,6 +1773,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .customer-detail-title h2 { margin: 2px 0 4px; font-size: 22px; line-height: 1.2; }
+.customer-detail-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.customer-detail-sub span { display: inline-flex; min-width: 0; overflow-wrap: anywhere; }
 .customer-detail-kicker, .customer-detail-sub, .customer-detail-muted, .customer-detail-card small { color: var(--muted, var(--text-muted)); font-size: 12px; }
 .customer-detail-icon-btn {
   width: 36px;
@@ -1844,4 +1846,217 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 @media (max-width: 820px) {
   .customer-detail-panel { width: 100vw; }
   .customer-detail-summary, .customer-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Call Center */
+.call-center-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.call-center-preview-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+}
+.preview-card-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted, var(--text-muted));
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .35px;
+}
+.call-center-preview-card strong {
+  display: block;
+  margin: 8px 0 6px;
+  font-size: 24px;
+  line-height: 1;
+}
+.call-center-preview-card p {
+  margin: 3px 0 0;
+  color: var(--muted, var(--text-muted));
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.call-center-shell {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.call-center-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.call-center-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 7px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.call-center-tab.active {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+.call-center-live {
+  margin-left: auto;
+  color: var(--muted, var(--text-muted));
+  font-size: 12px;
+}
+.call-center-kanban {
+  display: grid;
+  grid-template-columns: minmax(320px, .95fr) minmax(360px, 1.15fr) minmax(220px, .45fr);
+  gap: 10px;
+  padding: 10px;
+}
+.call-center-panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+.call-center-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.call-center-panel-head h3 { margin: 0; font-size: 13px; }
+.call-center-panel-head span { color: var(--muted, var(--text-muted)); font-size: 12px; }
+.call-center-task-card,
+.segment-customer-row,
+.pin-line,
+.call-center-list-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px;
+}
+.call-center-task-card + .call-center-task-card,
+.pin-line + .pin-line,
+.call-center-list-row + .call-center-list-row { margin-top: 7px; }
+.call-center-task-card strong,
+.segment-customer-row strong,
+.pin-line strong,
+.call-center-list-row strong { display: block; overflow-wrap: anywhere; }
+.call-center-task-card span,
+.segment-customer-row span,
+.pin-line span,
+.pin-line em,
+.call-center-list-row span,
+.call-center-list-row em {
+  color: var(--muted, var(--text-muted));
+  font-size: 12px;
+  font-style: normal;
+}
+.person-pill {
+  display: inline-flex;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #0f766e;
+  background: color-mix(in srgb, #0f766e 10%, transparent);
+}
+.task-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.task-card-meta span {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+.call-center-segment {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.call-center-segment + .call-center-segment { margin-top: 8px; }
+.call-center-segment summary {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+  background: var(--surface-2);
+}
+.call-center-segment summary strong,
+.call-center-segment summary em { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-center-segment summary em {
+  color: var(--muted, var(--text-muted));
+  font-size: 12px;
+  font-style: normal;
+}
+.segment-dot { width: 8px; height: 8px; border-radius: 999px; }
+.segment-customer-list { display: grid; gap: 7px; padding: 8px; }
+.segment-customer-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.3fr) minmax(120px, 1fr) minmax(140px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.pin-line {
+  display: grid;
+  grid-template-columns: minmax(80px, .7fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.call-center-list { display: grid; gap: 8px; }
+.call-center-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+.call-center-empty {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted, var(--text-muted));
+  padding: 22px;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 1500px) {
+  .call-center-preview-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+  .call-center-kanban { grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.05fr); }
+  .call-center-kanban .call-center-panel:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 980px) {
+  .call-center-preview-grid,
+  .call-center-kanban { grid-template-columns: 1fr; }
+  .call-center-kanban .call-center-panel:last-child { grid-column: auto; }
+  .segment-customer-row { grid-template-columns: 1fr; }
+  .call-center-tabs { flex-wrap: wrap; }
+  .call-center-live { margin-left: 0; width: 100%; }
 }
