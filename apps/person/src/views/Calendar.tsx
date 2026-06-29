@@ -12,6 +12,7 @@ const SOURCE_LABEL: Record<EventSource, string> = {
   ai_transcript: 'AI - Transcript',
   ai_segment: 'AI - Segment',
   ai_stale: 'AI - Stale follow-up',
+  admin_transfer: 'Admin transfer',
 };
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];

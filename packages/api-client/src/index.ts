@@ -26,6 +26,7 @@ import type {
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
   CreateDirectOrderInput,
+  TransferOrderToMemberInput,
   CreateMemberInput,
   CreateMemberRoleInput,
   CreateB2BAccessRequestInput,
@@ -343,6 +344,14 @@ export class ApiClient {
 
   order(id: string) {
     return this.get(`/orders/${id}`);
+  }
+
+  orderDetail(id: string) {
+    return this.get(`/orders/${encodeURIComponent(id)}/detail`);
+  }
+
+  transferOrder(id: string, input: TransferOrderToMemberInput) {
+    return this.post(`/orders/${encodeURIComponent(id)}/transfer`, input);
   }
 
   createDirectOrder(input: CreateDirectOrderInput) {

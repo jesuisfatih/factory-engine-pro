@@ -18,6 +18,7 @@ const SOURCE_LABEL: Record<TaskSource, string> = {
   ai_transcript: 'AI - Transcript',
   ai_segment: 'AI - Segment',
   ai_stale: 'AI - Stale follow-up',
+  admin_transfer: 'Admin transfer',
 };
 
 function riskTier(priority: number) {
@@ -264,7 +265,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
           <div>
             <div className="brief-eyebrow">
               <span className={`brief-source brief-source-${liveCard.source}`}>
-                {liveCard.source === 'manual' ? null : <Sparkles size={10} />} {SOURCE_LABEL[liveCard.source]}
+                {liveCard.source === 'manual' ? null : liveCard.source === 'admin_transfer' ? <Activity size={10} /> : <Sparkles size={10} />} {SOURCE_LABEL[liveCard.source]}
               </span>
               <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{liveCard.priority}</span>
               <span className="chip" style={{ background: liveCard.segmentColor }}>{liveCard.segment}</span>

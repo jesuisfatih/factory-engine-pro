@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
   type CreateDirectOrderInput,
   type OrderListQuery,
   type ResolveReorderInput,
+  type TransferOrderToMemberInput,
 } from '@factory-engine-pro/contracts';
+import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -62,6 +64,166 @@ export class OrdersService {
 
   async get(id: string) {
     return this.mapOrder(await this.repository.getRequired(id), true);
+  }
+
+  async detail(id: string) {
+    const order = await this.repository.getRequired(id);
+    const historyWhere: Prisma.CommerceOrderWhereInput | null = order.customerId
+      ? { customerId: order.customerId }
+      : order.shopifyCustomerId
+        ? { shopifyCustomerId: order.shopifyCustomerId }
+        : null;
+    const [history, activities] = await Promise.all([
+      historyWhere
+        ? this.prisma.db.commerceOrder.findMany({
+            where: historyWhere,
+            include: { customer: true, customerUser: true, pickupOrder: true },
+            orderBy: [{ processedAt: 'asc' }, { createdAt: 'asc' }],
+            take: 100,
+          })
+        : [],
+      order.shopifyCustomerId
+        ? this.prisma.db.commerceActivityLog.findMany({
+            where: { shopifyCustomerId: order.shopifyCustomerId },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+          })
+        : [],
+    ]);
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const recentOrders = history.filter((item) => {
+      const timestamp = (item.processedAt ?? item.createdAt).getTime();
+      return timestamp >= thirtyDaysAgo;
+    });
+    const totalSpent = history.reduce((sum, item) => sum + money(item.totalPrice), 0);
+    return {
+      order: this.mapOrder(order, true),
+      customerHistory: {
+        orders: history.map((item) => this.mapOrder(item)),
+        activities,
+        summary: {
+          orderCount: history.length,
+          totalSpent,
+          averageOrderValue: history.length === 0 ? 0 : totalSpent / history.length,
+          lastOrderAt: history.length > 0
+            ? (history[history.length - 1].processedAt ?? history[history.length - 1].createdAt).toISOString()
+            : null,
+          last30Days: {
+            orderCount: recentOrders.length,
+            totalSpent: recentOrders.reduce((sum, item) => sum + money(item.totalPrice), 0),
+          },
+        },
+      },
+    };
+  }
+
+  async transferToMember(id: string, input: TransferOrderToMemberInput) {
+    const order = await this.repository.getRequired(id);
+    const target = await this.prisma.db.member.findFirst({ where: { id: input.targetMemberId, status: 'active' } });
+    if (!target) throw new NotFoundException('Transfer target member not found');
+    const note = input.note.trim();
+    if (!note) throw new BadRequestException('Transfer note is required');
+
+    const context = this.tenantContext.require();
+    const tenantId = context.tenantId;
+    if (!tenantId) throw new BadRequestException('Tenant context is required');
+    const orderNumber = order.shopifyOrderNumber ?? order.id;
+    const personName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ').trim();
+    const customerName = order.customer?.companyName
+      ?? (personName || null)
+      ?? order.email
+      ?? order.phone
+      ?? 'Unknown customer';
+    const created = await this.prisma.db.serviceRequest.create({
+      data: {
+        id: prefixedId('sr'),
+        tenantId,
+        customerId: order.customerId,
+        customerUserId: order.customerUserId,
+        assignedMemberId: target.id,
+        axis: input.axis,
+        source: 'admin_created',
+        surface: 'internal',
+        title: `Order ${orderNumber} follow-up`,
+        description: note,
+        status: 'open',
+        priority: input.priority,
+        dueAt: input.dueAt ? new Date(input.dueAt) : null,
+        createdByActorId: context.principalId,
+        metadata: {
+          category: 'admin_order_transfer',
+          personQueueVisible: true,
+          orderId: order.id,
+          orderNumber,
+          shopifyOrderId: order.shopifyOrderId,
+          shopifyCustomerId: order.shopifyCustomerId,
+          customerName,
+          customerEmail: order.email ?? order.customer?.email ?? null,
+          customerPhone: order.phone ?? order.customer?.phone ?? null,
+          adminNote: note,
+          transferredByMemberId: context.principalId,
+          transferredAt: new Date().toISOString(),
+        } as Prisma.InputJsonValue,
+        conditionTrace: [] as Prisma.InputJsonValue,
+        taskStateSnapshot: {
+          order: {
+            id: order.id,
+            orderNumber,
+            shopifyOrderId: order.shopifyOrderId,
+            totalPrice: money(order.totalPrice),
+            currency: order.currency,
+            financialStatus: order.financialStatus,
+            fulfillmentStatus: order.fulfillmentStatus,
+            fulfillmentMode: order.fulfillmentMode,
+            processedAt: order.processedAt?.toISOString() ?? null,
+          },
+          customer: {
+            id: order.customerId,
+            name: customerName,
+            email: order.email ?? order.customer?.email ?? null,
+            phone: order.phone ?? order.customer?.phone ?? null,
+          },
+        } as Prisma.InputJsonValue,
+      },
+      include: { assignedMember: true, customer: true },
+    });
+
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId,
+        serviceRequestId: created.id,
+        actorId: context.principalId,
+        actorType: context.principalType,
+        body: `Admin order transfer for ${orderNumber}: ${note}`,
+        internal: true,
+        attachmentsJson: [{
+          kind: 'admin_order_transfer',
+          orderId: order.id,
+          orderNumber,
+          shopifyOrderId: order.shopifyOrderId,
+        }] as Prisma.InputJsonValue,
+      },
+    });
+
+    this.logger.log('orders', 'transfer_to_member', 'Order transferred to staff queue', {
+      order_id: order.id,
+      service_request_id: created.id,
+      target_member_id: target.id,
+      axis: input.axis,
+    });
+
+    return {
+      ok: true,
+      orderId: order.id,
+      serviceRequestId: created.id,
+      assignedMemberId: target.id,
+      assignedMemberName: memberDisplayName(target),
+      axis: input.axis,
+      source: 'admin_created',
+      queueSource: 'admin_transfer',
+    };
   }
 
   async createDirectOrder(input: CreateDirectOrderInput) {
@@ -234,11 +396,13 @@ export class OrdersService {
 
   private mapOrder(order: CommerceOrderWithRelations, detailed = false) {
     const lineItems = jsonArray(order.lineItems);
-    const designFiles = jsonArray(order.designFiles);
+    const storedDesignFiles = jsonArray(order.designFiles);
+    const designFiles = storedDesignFiles.length > 0 ? storedDesignFiles : extractDesignFiles(lineItems);
     const personName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ');
     return {
       id: order.id,
       shopifyOrderId: order.shopifyOrderId,
+      shopifyCustomerId: order.shopifyCustomerId,
       orderNumber: order.shopifyOrderNumber ?? order.id,
       customerId: order.customerId,
       customerUserId: order.customerUserId,
@@ -260,7 +424,11 @@ export class OrdersService {
       pickupStatus: order.pickupOrder?.status ?? null,
       tags: order.tags,
       processedAt: order.processedAt?.toISOString() ?? null,
+      cancelledAt: detailed ? order.cancelledAt?.toISOString() ?? null : undefined,
+      closedAt: detailed ? order.closedAt?.toISOString() ?? null : undefined,
       createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      syncedAt: detailed ? order.syncedAt.toISOString() : undefined,
       hasDesignFiles: designFiles.length > 0,
       designFiles,
       lineItems: detailed ? lineItems : lineItems.slice(0, 5),
@@ -301,20 +469,74 @@ export class OrdersService {
 function extractDesignFiles(lineItems: Array<Record<string, unknown>>) {
   const files: Array<Record<string, unknown>> = [];
   for (const item of lineItems) {
-    const properties = item.properties;
-    if (!properties || typeof properties !== 'object') continue;
-    for (const [name, value] of Object.entries(properties as Record<string, unknown>)) {
+    const properties = normalizeProperties(item.properties);
+    if (properties.length === 0) continue;
+    const fileInfo: Record<string, unknown> = {
+      lineItemTitle: item.title ?? item.name,
+      variantTitle: item.variant_title ?? item.variantTitle,
+      quantity: item.quantity,
+      price: item.price ?? item.unitPrice,
+      imageUrl: item.image_url ?? item.imageUrl ?? null,
+    };
+    for (const [name, value] of properties) {
       const lower = name.toLowerCase();
-      if (!['design', 'artwork', 'file', 'upload', 'gang sheet', 'proof'].some((token) => lower.includes(token))) continue;
       if (!value) continue;
-      files.push({
-        lineItemTitle: item.title,
-        name,
-        value,
-      });
+      const stringValue = String(value);
+      if (lower.startsWith('_')
+        && !['preview', 'upload', 'thumbnail', 'dpi', 'width', 'height', 'print'].some((token) => lower.includes(token))) {
+        continue;
+      }
+      if (lower.includes('preview') || lower === '_preview') fileInfo.previewUrl = stringValue;
+      if (lower.includes('print') && lower.includes('ready')) fileInfo.printReadyUrl = stringValue;
+      if ((lower.includes('uploaded') || lower.includes('file_url') || lower.includes('file url')) && isUrl(stringValue)) {
+        fileInfo.uploadedFileUrl = stringValue;
+      }
+      if (lower.includes('upload_id') || lower === '_ul_upload_id') fileInfo.uploadId = stringValue;
+      if (lower.includes('thumbnail') || lower === '_ul_thumbnail') fileInfo.thumbnailUrl = stringValue;
+      if (lower.includes('design_type') || lower === 'design type') fileInfo.designType = stringValue;
+      if (lower.includes('file_name') || lower === 'file name' || lower === 'filename') fileInfo.fileName = stringValue;
+      if (lower.includes('edit') && !lower.includes('admin') && isUrl(stringValue)) fileInfo.editUrl = stringValue;
+      if (lower.includes('admin') && lower.includes('edit') && isUrl(stringValue)) fileInfo.adminEditUrl = stringValue;
+      if (lower === 'dpi' || lower === '_dpi') fileInfo.dpi = Number.parseInt(stringValue, 10) || 300;
+      if (lower.includes('width') && !lower.includes('screen')) fileInfo.rawWidth = stringValue;
+      if (lower.includes('height') && !lower.includes('screen')) fileInfo.rawHeight = stringValue;
+      if (!fileInfo.uploadedFileUrl && isUrl(stringValue)
+        && ['image', 'file', 'artwork', 'design', 'photo', 'logo', 'graphic', 'attachment', 'gang sheet', 'proof'].some((token) => lower.includes(token))) {
+        fileInfo.uploadedFileUrl = stringValue;
+      }
+    }
+    if (!fileInfo.rawWidth && typeof item.variant_title === 'string') {
+      const sizeMatch = item.variant_title.match(/(\d+\.?\d*)\s*[xXx]\s*(\d+\.?\d*)/);
+      if (sizeMatch) {
+        fileInfo.rawWidth = sizeMatch[1];
+        fileInfo.rawHeight = sizeMatch[2];
+      }
+    }
+    if (!fileInfo.dpi) fileInfo.dpi = 300;
+    fileInfo.allProperties = properties.map(([name, value]) => ({ name, value }));
+    if (fileInfo.previewUrl || fileInfo.printReadyUrl || fileInfo.uploadedFileUrl || fileInfo.editUrl || fileInfo.thumbnailUrl) {
+      files.push(fileInfo);
     }
   }
   return files;
+}
+
+function normalizeProperties(value: unknown): Array<[string, unknown]> {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      if (!entry || typeof entry !== 'object') return [];
+      const record = entry as Record<string, unknown>;
+      const name = String(record.name ?? record.key ?? '').trim();
+      if (!name) return [];
+      return [[name, record.value ?? record.val ?? ''] as [string, unknown]];
+    });
+  }
+  if (value && typeof value === 'object') return Object.entries(value as Record<string, unknown>);
+  return [];
+}
+
+function isUrl(value: string) {
+  return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//');
 }
 
 function money(value: unknown) {
@@ -330,4 +552,8 @@ function stringValue(value: unknown) {
   if (value === null || value === undefined) return null;
   const stringified = String(value).trim();
   return stringified || null;
+}
+
+function memberDisplayName(member: { firstName: string; lastName: string; email: string }) {
+  return `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim() || member.email;
 }

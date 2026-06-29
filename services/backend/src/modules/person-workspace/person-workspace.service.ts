@@ -285,7 +285,7 @@ export class PersonWorkspaceService {
     const priorityTaskCards = scopedRows
       .filter((row) => !CLOSED.has(row.status))
       .filter((row) => this.isAiOrSegmentPriorityTask(row))
-      .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
+      .filter((row) => this.isAdminOrderTransferTask(row) || this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
       .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext));
     const priorityTaskCustomerIds = new Set(priorityTaskCards.map((card) => card.customerId).filter((id): id is string => Boolean(id)));
     const segmentPriorityCards = dailyCallList
@@ -1624,6 +1624,11 @@ export class PersonWorkspaceService {
     return taskSource(row) !== 'manual';
   }
 
+  private isAdminOrderTransferTask(row: { metadata: Prisma.JsonValue }) {
+    const metadata = this.record(row.metadata);
+    return normalizeText(metadata.category) === 'admin_order_transfer';
+  }
+
   private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
     const pinnedBy = this.record(this.record(row.metadata).personPinnedBy);
     return typeof pinnedBy[memberId] === 'number';
@@ -1926,7 +1931,7 @@ export class PersonWorkspaceService {
       segmentName: ownedSegment?.segmentName ?? row.customer?.segmentMemberships[0]?.segment.name ?? null,
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
-      aiBrief: source === 'manual' ? undefined : this.brief(row),
+      aiBrief: source.startsWith('ai_') ? this.brief(row) : undefined,
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
       matchedRuleId,
@@ -2047,6 +2052,7 @@ export class PersonWorkspaceService {
 
   private calendarFromRequest(row: ServiceRequestRow) {
     const date = row.dueAt ?? (row.assignedMemberId ? row.updatedAt : row.createdAt);
+    const source = taskSource(row);
     return {
       id: `sr-${row.id}`,
       title: row.title,
@@ -2057,8 +2063,8 @@ export class PersonWorkspaceService {
       startHour: hour(date),
       durationMinutes: row.priority === 'critical' || row.priority === 'urgent' ? 30 : 20,
       kind: row.source === 'call' ? 'callback' : 'task',
-      source: taskSource(row),
-      aiBrief: taskSource(row) === 'manual' ? undefined : this.brief(row),
+      source,
+      aiBrief: source.startsWith('ai_') ? this.brief(row) : undefined,
     };
   }
 
@@ -2710,11 +2716,12 @@ function shopifySegmentRefsFromConditions(value: Prisma.JsonValue) {
   })).filter((segmentId) => segmentId.startsWith('gid://shopify/Segment/'));
 }
 
-function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' {
+function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' | 'admin_transfer' {
   const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
   const workflow = asRecord(metadata.workflow);
   const workflowTrigger = String(workflow.trigger ?? '');
   const workflowSource = String(workflow.source ?? '');
+  if (metadata.category === 'admin_order_transfer') return 'admin_transfer';
   if (metadata.aiSource === 'segment') return 'ai_segment';
   if (metadata.aiSource === 'stale') return 'ai_stale';
   if (metadata.aiSource === 'transcript'

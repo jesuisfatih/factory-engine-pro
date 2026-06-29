@@ -53,6 +53,15 @@ export const resolveReorderSchema = z.object({
 });
 export type ResolveReorderInput = z.infer<typeof resolveReorderSchema>;
 
+export const transferOrderToMemberSchema = z.object({
+  targetMemberId: z.string().trim().min(1),
+  note: z.string().trim().min(1).max(2000),
+  axis: taskAxisSchema.default('support'),
+  priority: z.enum(['critical', 'urgent', 'high', 'medium', 'low']).default('high'),
+  dueAt: z.string().datetime().nullable().optional(),
+});
+export type TransferOrderToMemberInput = z.infer<typeof transferOrderToMemberSchema>;
+
 export const customerCommerceQuerySchema = pageQuerySchema.extend({
   status: z.string().trim().optional(),
   segment: z.string().trim().optional(),

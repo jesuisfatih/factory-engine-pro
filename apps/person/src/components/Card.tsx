@@ -1,4 +1,5 @@
 import { Activity, AlarmClockOff, ArrowRightLeft, ShoppingBag, Sparkles, Tags } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
 interface Props {
@@ -15,10 +16,11 @@ function priorityClass(priority: number) {
   return 'priority p3';
 }
 
-const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: typeof Sparkles }> = {
+const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: LucideIcon }> = {
   ai_transcript: { label: 'AI - Transcript', icon: Sparkles },
   ai_segment: { label: 'AI - Segment', icon: Tags },
   ai_stale: { label: 'AI - Stale', icon: AlarmClockOff },
+  admin_transfer: { label: 'Admin transfer', icon: ArrowRightLeft },
 };
 
 function fmtMoney(value: number, currency = 'USD') {

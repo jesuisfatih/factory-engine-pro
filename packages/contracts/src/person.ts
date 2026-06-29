@@ -7,7 +7,7 @@ import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './ru
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
 export type PersonQueueColumn = z.infer<typeof personQueueColumnSchema>;
 
-export const personTaskSourceSchema = z.enum(['manual', 'ai_transcript', 'ai_segment', 'ai_stale']);
+export const personTaskSourceSchema = z.enum(['manual', 'ai_transcript', 'ai_segment', 'ai_stale', 'admin_transfer']);
 export type PersonTaskSource = z.infer<typeof personTaskSourceSchema>;
 
 export const personOperationItemKindSchema = z.enum(['task', 'customer']);

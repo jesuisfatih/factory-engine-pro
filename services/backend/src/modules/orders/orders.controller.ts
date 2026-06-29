@@ -4,9 +4,11 @@ import {
   MEMBER_PERMISSIONS,
   orderListQuerySchema,
   resolveReorderSchema,
+  transferOrderToMemberSchema,
   type CreateDirectOrderInput,
   type OrderListQuery,
   type ResolveReorderInput,
+  type TransferOrderToMemberInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -44,6 +46,21 @@ export class OrdersController {
   @RequirePermission(MEMBER_PERMISSIONS.ordersRead)
   customerJourney(@Param('shopifyCustomerId') shopifyCustomerId: string) {
     return this.orders.customerJourney(shopifyCustomerId);
+  }
+
+  @Get(':id/detail')
+  @RequirePermission(MEMBER_PERMISSIONS.ordersRead)
+  detail(@Param('id') id: string) {
+    return this.orders.detail(id);
+  }
+
+  @Post(':id/transfer')
+  @RequirePermission(MEMBER_PERMISSIONS.ordersWrite)
+  transferToMember(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(transferOrderToMemberSchema)) body: TransferOrderToMemberInput,
+  ) {
+    return this.orders.transferToMember(id, body);
   }
 
   @Post('reorder/resolve')

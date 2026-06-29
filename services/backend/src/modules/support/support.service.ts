@@ -316,6 +316,7 @@ export class SupportService {
     const where: Prisma.ServiceRequestWhereInput = {
       NOT: [
         { metadata: { path: ['category'], equals: 'workflow_rule' } },
+        { metadata: { path: ['category'], equals: 'admin_order_transfer' } },
       ],
     };
     if (query.surface && query.surface !== 'all') where.surface = query.surface;
