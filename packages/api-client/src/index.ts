@@ -79,6 +79,8 @@ import type {
   PatchMailAudienceInput,
   PatchMailFlowInput,
   MovePersonQueueCardInput,
+  ReorderPersonDailyCallInput,
+  ReorderPersonDailyCallResult,
   SendPersonMessageInput,
   SendTestMailInput,
   ShopifyConnectionTestResponse,
@@ -469,6 +471,10 @@ export class ApiClient {
 
   movePersonQueueCard(id: string, input: MovePersonQueueCardInput) {
     return this.patch(`/person/workspace/queue/${encodeURIComponent(id)}/move`, input);
+  }
+
+  reorderPersonDailyCalls(input: ReorderPersonDailyCallInput) {
+    return this.patch<ReorderPersonDailyCallResult>('/person/workspace/daily-call-order', input);
   }
 
   togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {

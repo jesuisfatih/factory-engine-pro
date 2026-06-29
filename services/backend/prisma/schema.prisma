@@ -108,6 +108,7 @@ model Tenant {
   workflowRuleVersions    WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   taskParticipants        TaskParticipant[]
+  personDailyCallOrders   PersonDailyCallOrder[]
 
   @@map("tenants")
 }
@@ -165,6 +166,7 @@ model Member {
   aircallMemberMaps AircallMemberMap[]
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
+  dailyCallOrders PersonDailyCallOrder[]
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -248,6 +250,7 @@ model Customer {
   segmentAssignments SegmentCustomerAssignment[]
   serviceRequests ServiceRequest[]
   workflowRuleCooldowns WorkflowRuleCooldown[]
+  dailyCallOrders PersonDailyCallOrder[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -771,6 +774,7 @@ model Segment {
   memberships SegmentCustomerMembership[]
   ownerships  SegmentOwnership[]
   customerAssignments SegmentCustomerAssignment[]
+  dailyCallOrders PersonDailyCallOrder[]
 
   @@index([tenantId, isActive])
   @@index([tenantId, priority])
@@ -825,6 +829,27 @@ model SegmentCustomerMembership {
   @@index([tenantId, source])
   @@index([tenantId, shopifySegmentRef])
   @@map("segment_customer_memberships")
+}
+
+model PersonDailyCallOrder {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  memberId   String   @map("member_id")
+  segmentId  String   @map("segment_id")
+  customerId String   @map("customer_id")
+  position   Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  segment  Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, memberId, segmentId, customerId])
+  @@index([tenantId, memberId, segmentId, position])
+  @@index([tenantId, customerId])
+  @@map("person_daily_call_orders")
 }
 
 model ShopifyCustomerSegment {

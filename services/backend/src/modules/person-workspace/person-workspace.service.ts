@@ -5,6 +5,7 @@ import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
+  PersonDailyCallItem,
   PersonTaskTransferResult,
   PersonMiniOrder,
   PersonPerformance30d,
@@ -14,6 +15,8 @@ import type {
   PersonTaskTimelineEntry,
   PersonTaskWorkflowTrace,
   PersonTransferTarget,
+  ReorderPersonDailyCallInput,
+  ReorderPersonDailyCallResult,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
@@ -87,6 +90,12 @@ type SegmentMembershipRow = Prisma.SegmentCustomerMembershipGetPayload<{
     };
   };
 }>;
+
+interface PersonDailyCallOrderRow {
+  segmentId: string;
+  customerId: string;
+  position: number;
+}
 
 type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
   include: {
@@ -178,24 +187,38 @@ export class PersonWorkspaceService {
     ]);
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
 
-    const memberships: SegmentMembershipRow[] = ownedSegmentIds.length > 0
-      ? await this.prisma.db.segmentCustomerMembership.findMany({
-        where: {
-          segmentId: { in: ownedSegmentIds },
-        },
-        include: {
-          segment: true,
-          customer: {
-            include: {
-              insight: true,
-              segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+    const [memberships, dailyOrderRows]: [SegmentMembershipRow[], PersonDailyCallOrderRow[]] = ownedSegmentIds.length > 0
+      ? await Promise.all([
+        this.prisma.db.segmentCustomerMembership.findMany({
+          where: {
+            segmentId: { in: ownedSegmentIds },
+          },
+          include: {
+            segment: true,
+            customer: {
+              include: {
+                insight: true,
+                segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+              },
             },
           },
-        },
-        orderBy: [{ matchedAt: 'desc' }],
-        take: 10000,
-      })
-      : [];
+          orderBy: [{ matchedAt: 'desc' }],
+          take: 10000,
+        }),
+        this.prisma.db.personDailyCallOrder.findMany({
+          where: {
+            memberId: member.id,
+            segmentId: { in: ownedSegmentIds },
+          },
+          select: {
+            segmentId: true,
+            customerId: true,
+            position: true,
+          },
+          orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
+        }),
+      ])
+      : [[], []];
 
     const requestRows = await this.prisma.db.serviceRequest.findMany({
       where: {
@@ -223,16 +246,18 @@ export class PersonWorkspaceService {
     ]);
     const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
-    const dailyByCustomer = new Map<string, ReturnType<PersonWorkspaceService['dailyCallItem']>>();
+    const dailyOrderBySegment = groupBy(dailyOrderRows, (row) => row.segmentId);
+    const dailyByCustomer = new Map<string, PersonDailyCallItem>();
 
     const segmentGroups = segmentOwnerships.map((ownership) => {
       const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
       const items = segmentMemberships
         .map((membership) => this.dailyCallItem(membership, ownership, assignments, config, repeatCounts.get(membership.customerId) ?? 0, customerPinsByCustomer.get(membership.customerId) ?? null))
-        .sort(sortDaily)
+        .sort(sortDaily);
+      const orderedItems = this.applyDailyCustomOrder(items, dailyOrderBySegment.get(ownership.segmentId) ?? [])
         .slice(0, ownership.dailyCap ?? 100);
 
-      for (const item of items) {
+      for (const item of orderedItems) {
         const existing = dailyByCustomer.get(item.customerId);
         if (!existing || item.urgencyScore > existing.urgencyScore) dailyByCustomer.set(item.customerId, item);
       }
@@ -244,7 +269,7 @@ export class PersonWorkspaceService {
         priority: ownership.priority,
         dailyCap: ownership.dailyCap,
         totalCustomers: segmentMemberships.length,
-        items,
+        items: orderedItems,
       };
     });
 
@@ -329,6 +354,76 @@ export class PersonWorkspaceService {
       null,
       await this.cardCallContext([updated]),
     );
+  }
+
+  async reorderDailyCalls(input: ReorderPersonDailyCallInput): Promise<ReorderPersonDailyCallResult> {
+    const member = await this.currentMember();
+    const tenantId = this.tenantId();
+    const ownership = await this.prisma.db.segmentOwnership.findFirst({
+      where: {
+        segmentId: input.segmentId,
+        memberId: member.id,
+      },
+      select: { segmentId: true },
+    });
+    if (!ownership) throw new ForbiddenException('Daily segment group is outside your workspace');
+
+    const operations = await this.dailyOperationsFor(member);
+    const group = operations.segmentGroups.find((segmentGroup) => segmentGroup.segmentId === input.segmentId);
+    if (!group) throw new NotFoundException('Daily segment group not found');
+    if (group.items.length === 0) throw new BadRequestException('Daily segment group has no customers to reorder');
+
+    const currentById = new Map(group.items.map((item) => [item.id, item] as const));
+    const requested = uniqueStrings(input.orderedItemIds).filter((id) => currentById.has(id));
+    if (requested.length === 0) throw new BadRequestException('No valid daily call cards were provided');
+    const orderedItemIds = [
+      ...requested,
+      ...group.items.map((item) => item.id).filter((id) => !requested.includes(id)),
+    ];
+    const orderedCustomerIds = orderedItemIds.map((id) => currentById.get(id)?.customerId).filter((id): id is string => Boolean(id));
+
+    await this.prisma.db.$transaction([
+      this.prisma.db.personDailyCallOrder.deleteMany({
+        where: {
+          tenantId,
+          memberId: member.id,
+          segmentId: input.segmentId,
+          customerId: { notIn: orderedCustomerIds },
+        },
+      }),
+      ...orderedItemIds.map((id, index) => {
+        const item = currentById.get(id);
+        if (!item) throw new BadRequestException('Daily call card is no longer available');
+        return this.prisma.db.personDailyCallOrder.upsert({
+          where: {
+            tenantId_memberId_segmentId_customerId: {
+              tenantId,
+              memberId: member.id,
+              segmentId: input.segmentId,
+              customerId: item.customerId,
+            },
+          },
+          create: {
+            id: prefixedId('pdco'),
+            tenantId,
+            memberId: member.id,
+            segmentId: input.segmentId,
+            customerId: item.customerId,
+            position: index,
+          },
+          update: {
+            position: index,
+          },
+        });
+      }),
+    ]);
+
+    this.logger.log('person_workspace', 'daily.reorder', 'Person daily call order saved', {
+      member_id: member.id,
+      segment_id: input.segmentId,
+      item_count: orderedItemIds.length,
+    });
+    return { ok: true, segmentId: input.segmentId, orderedItemIds };
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
@@ -1376,7 +1471,7 @@ export class PersonWorkspaceService {
     config = this.scoring.configFrom({}),
     repeatCount = 0,
     pin: CustomerPinRow | null = null,
-  ) {
+  ): PersonDailyCallItem {
     const customer = membership.customer;
     const axes = assignments.get(customer.id) ?? new Set<string>();
     const assignedAxis = Array.from(axes).sort().join(', ') || 'unassigned';
@@ -1401,7 +1496,7 @@ export class PersonWorkspaceService {
     }, config);
     return {
       kind: 'customer' as const,
-      id: `daily-${membership.segmentId}-${customer.id}`,
+      id: dailyItemId(membership.segmentId, customer.id),
       customerId: customer.id,
       customerName: customerDisplayName(customer),
       email: customer.email,
@@ -1420,10 +1515,29 @@ export class PersonWorkspaceService {
       urgencyScore: urgencyBreakdown.score,
       urgencyBreakdown,
       repeatCount,
+      customOrder: null,
       pinned: Boolean(pin),
       pinId: pin?.id ?? null,
       reason: `${membership.segment.name} segment - ${repeatCount} recent requests - ${assignedAxis} axis`,
     };
+  }
+
+  private applyDailyCustomOrder(
+    items: PersonDailyCallItem[],
+    orderRows: PersonDailyCallOrderRow[],
+  ) {
+    if (orderRows.length === 0) return items;
+    const orderByItemId = new Map(orderRows.map((row) => [dailyItemId(row.segmentId, row.customerId), row.position] as const));
+    return items
+      .map((item) => ({ ...item, customOrder: orderByItemId.get(item.id) ?? null }))
+      .sort((left, right) => {
+        if (left.customOrder !== null && right.customOrder !== null) {
+          return left.customOrder - right.customOrder || sortDaily(left, right);
+        }
+        if (left.customOrder !== null) return -1;
+        if (right.customOrder !== null) return 1;
+        return sortDaily(left, right);
+      });
   }
 
   private customerPinCard(row: CustomerPinRow, assignments: AxisAssignments, config = this.scoring.configFrom({}), repeatCount = 0) {
@@ -1857,6 +1971,10 @@ function sortDaily(
   return right.urgencyScore - left.urgencyScore
     || right.repeatCount - left.repeatCount
     || left.customerName.localeCompare(right.customerName);
+}
+
+function dailyItemId(segmentId: string, customerId: string) {
+  return `daily-${segmentId}-${customerId}`;
 }
 
 function uniqueHighUrgencyCount(

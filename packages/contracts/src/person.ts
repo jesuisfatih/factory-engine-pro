@@ -231,6 +231,7 @@ export const personDailyCallItemSchema = z.object({
   urgencyScore: z.number(),
   urgencyBreakdown: personUrgencyBreakdownSchema,
   repeatCount: z.number(),
+  customOrder: z.number().nullable(),
   pinned: z.boolean(),
   pinId: z.string().nullable(),
   reason: z.string(),
@@ -269,6 +270,19 @@ export const movePersonQueueCardSchema = z.object({
   index: z.coerce.number().int().min(0).default(0),
 });
 export type MovePersonQueueCardInput = z.infer<typeof movePersonQueueCardSchema>;
+
+export const reorderPersonDailyCallSchema = z.object({
+  segmentId: z.string().trim().min(1),
+  orderedItemIds: z.array(z.string().trim().min(1)).min(1).max(500),
+});
+export type ReorderPersonDailyCallInput = z.infer<typeof reorderPersonDailyCallSchema>;
+
+export const reorderPersonDailyCallResultSchema = z.object({
+  ok: z.literal(true),
+  segmentId: z.string(),
+  orderedItemIds: z.array(z.string()),
+});
+export type ReorderPersonDailyCallResult = z.infer<typeof reorderPersonDailyCallResultSchema>;
 
 export const togglePersonQueuePinSchema = z.object({
   pinned: z.boolean().optional(),

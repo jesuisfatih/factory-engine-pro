@@ -3,6 +3,7 @@ import {
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
+  reorderPersonDailyCallSchema,
   savePersonNoteSchema,
   savePersonTaskNoteSchema,
   schedulePersonTaskFollowUpSchema,
@@ -11,6 +12,7 @@ import {
   transferPersonTaskSchema,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
+  type ReorderPersonDailyCallInput,
   type SavePersonNoteInput,
   type SavePersonTaskNoteInput,
   type SchedulePersonTaskFollowUpInput,
@@ -51,6 +53,14 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(movePersonQueueCardSchema)) body: MovePersonQueueCardInput,
   ) {
     return this.workspace.moveQueueCard(id, body);
+  }
+
+  @Patch('daily-call-order')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  reorderDailyCalls(
+    @Body(new ZodValidationPipe(reorderPersonDailyCallSchema)) body: ReorderPersonDailyCallInput,
+  ) {
+    return this.workspace.reorderDailyCalls(body);
   }
 
   @Post('queue/:id/pin')
