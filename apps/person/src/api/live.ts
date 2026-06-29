@@ -53,6 +53,8 @@ export type EventSource = 'manual' | 'call_analysis' | 'segment_priority' | 'sta
 export type EventKind = 'call' | 'callback' | 'meeting' | 'reminder' | 'task';
 export interface CalEvent {
   id: string;
+  serviceRequestId: string | null;
+  customerId: string | null;
   title: string;
   customer: string | null;
   customerEmail: string | null;

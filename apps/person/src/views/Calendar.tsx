@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft, ChevronRight, FileText, X, Phone, ExternalLink,
-  Clock, AlarmClockOff, RefreshCw, CheckCircle2,
+  Clock, AlarmClockOff, Loader2, StickyNote,
 } from 'lucide-react';
-import { fetchCalEvents, friendlyError, type EventSource, type CalEvent } from '../api/live';
+import { fetchCalEvents, friendlyError, saveTaskNote, scheduleTaskFollowUp, type EventSource, type CalEvent } from '../api/live';
 import { QueryState } from '../components/QueryState';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
@@ -34,8 +34,12 @@ function weekDaysFrom(startMs: number) {
 }
 
 export function CalendarView() {
+  const qc = useQueryClient();
   const [weekStart, setWeekStart] = useState<number>(() => startOfWeek(new Date()).getTime());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  const [scheduleAt, setScheduleAt] = useState(() => dateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+  const [scheduleNote, setScheduleNote] = useState('');
 
   const { data: events = [], isLoading, error } = useQuery({ queryKey: ['person', 'cal', 'events'], queryFn: fetchCalEvents });
 
@@ -53,6 +57,52 @@ export function CalendarView() {
 
   const assistedCount = events.filter((event) => event.source !== 'manual').length;
   const selected: CalEvent | null = events.find((event) => event.id === selectedId) ?? null;
+  const selectedTaskId = selected ? taskIdFromEvent(selected) : null;
+  const selectedCustomerUrl = selected?.customerId ? `/staff/customers?customerId=${encodeURIComponent(selected.customerId)}` : null;
+  const selectedTaskUrl = selectedTaskId ? `/staff/queue?taskId=${encodeURIComponent(selectedTaskId)}` : null;
+  const noteMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedTaskId) throw new Error('This calendar event is not linked to a task.');
+      return saveTaskNote(selectedTaskId, { body: note.trim() });
+    },
+    onSuccess: () => {
+      setNote('');
+      void qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+      void qc.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+    },
+  });
+  const scheduleMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedTaskId) throw new Error('This calendar event is not linked to a task.');
+      return scheduleTaskFollowUp(selectedTaskId, {
+        scheduledAt: new Date(scheduleAt).toISOString(),
+        note: scheduleNote.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      setScheduleNote('');
+      void qc.invalidateQueries({ queryKey: ['person', 'cal', 'events'] });
+      void qc.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+    },
+  });
+
+  useEffect(() => {
+    setNote('');
+    setScheduleNote('');
+    setScheduleAt(dateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+  }, [selectedId]);
+
+  const submitNote = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedTaskId || !note.trim()) return;
+    noteMutation.mutate();
+  };
+
+  const submitSchedule = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedTaskId || !scheduleAt) return;
+    scheduleMutation.mutate();
+  };
 
   return (
     <>
@@ -154,19 +204,48 @@ export function CalendarView() {
                         <Phone size={10} style={{ verticalAlign: 'text-top', marginRight: 3 }} /> {selected.customerPhone}
                       </span>
                     )}
-                    <button type="button" className="btn"><Phone size={12} /> Dial</button>
-                    <button type="button" className="btn"><ExternalLink size={12} /> View customer</button>
+                    {selected.customerPhone ? (
+                      <a className="btn" href={`tel:${cleanPhone(selected.customerPhone)}`}><Phone size={12} /> Dial</a>
+                    ) : null}
+                    {selectedCustomerUrl ? <a className="btn" href={selectedCustomerUrl}><ExternalLink size={12} /> View customer</a> : null}
+                    {selectedTaskUrl ? <a className="btn" href={selectedTaskUrl}><FileText size={12} /> Open task</a> : null}
                   </div>
                 </section>
-                <div style={{ marginTop: 12 }}>
-                  <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4, display: 'block', marginBottom: 6 }}>
-                    Dial notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Notes during the call (saved to customer history)..."
-                    style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 12, resize: 'none', fontFamily: 'inherit' }} />
-                </div>
+                {selectedTaskId ? (
+                  <>
+                    <form style={{ marginTop: 12 }} onSubmit={submitNote}>
+                      <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4, display: 'block', marginBottom: 6 }}>
+                        Task note
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        placeholder="Save notes to this task history..."
+                        style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 12, resize: 'none', fontFamily: 'inherit' }}
+                      />
+                      {noteMutation.isError ? <div className="danger-text">{friendlyError(noteMutation.error)}</div> : null}
+                      <button type="submit" className="btn primary" style={{ marginTop: 8 }} disabled={!note.trim() || noteMutation.isPending}>
+                        {noteMutation.isPending ? <Loader2 size={12} className="spin" /> : <StickyNote size={12} />} Save note
+                      </button>
+                    </form>
+                    <form style={{ marginTop: 12 }} onSubmit={submitSchedule}>
+                      <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4, display: 'block', marginBottom: 6 }}>
+                        Follow-up
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(160px, 1fr)', gap: 8 }}>
+                        <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                        <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
+                      </div>
+                      {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
+                      <button type="submit" className="btn" style={{ marginTop: 8 }} disabled={!scheduleAt || scheduleMutation.isPending}>
+                        {scheduleMutation.isPending ? <Loader2 size={12} className="spin" /> : <AlarmClockOff size={12} />} Schedule follow-up
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <div className="meta" style={{ marginTop: 12 }}>This event is not linked to a task, so notes and follow-up changes are read-only here.</div>
+                )}
               </div>
 
               {selected.aiBrief ? (
@@ -210,14 +289,6 @@ export function CalendarView() {
                 </section>
               )}
             </div>
-
-            <footer className="modal-foot">
-              <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-              <button type="button" className="btn"><RefreshCw size={13} /> Reassign</button>
-              <button type="button" className="btn primary" onClick={() => setSelectedId(null)}>
-                <CheckCircle2 size={13} /> Complete
-              </button>
-            </footer>
           </div>
         </div>
       )}
@@ -232,4 +303,18 @@ function startOfWeek(date: Date) {
   copy.setDate(diff);
   copy.setHours(0, 0, 0, 0);
   return copy;
+}
+
+function taskIdFromEvent(event: CalEvent) {
+  if (event.serviceRequestId) return event.serviceRequestId;
+  return event.id.startsWith('sr-') ? event.id.slice(3) : null;
+}
+
+function cleanPhone(value: string) {
+  return value.replace(/[^\d+]/g, '');
+}
+
+function dateTimeLocal(value: Date) {
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }

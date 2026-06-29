@@ -1410,6 +1410,8 @@ export class PersonWorkspaceService {
       ...requests.filter((row) => this.isQueueVisible(row)).slice(0, 50).map((row) => this.calendarFromRequest(row)),
       ...calls.map((row) => ({
         id: `call-${row.id}`,
+        serviceRequestId: null,
+        customerId: null,
         title: `${titleize(row.eventType)} call ${row.contactPhoneE164 ?? row.contactPhone ?? ''}`.trim(),
         customer: row.contactEmail ?? row.contactPhoneE164 ?? row.contactPhone ?? null,
         customerEmail: row.contactEmail,
@@ -1433,6 +1435,8 @@ export class PersonWorkspaceService {
       })),
       ...mail.map((row) => ({
         id: `mail-${row.id}`,
+        serviceRequestId: null,
+        customerId: null,
         title: `Mail delivery failed: ${row.subject}`,
         customer: row.recipientEmail,
         customerEmail: row.recipientEmail,
@@ -2592,6 +2596,8 @@ export class PersonWorkspaceService {
     const source = taskSource(row);
     return {
       id: `sr-${row.id}`,
+      serviceRequestId: row.id,
+      customerId: row.customerId,
       title: row.title,
       customer: row.customer?.companyName ?? row.customerUser?.email ?? null,
       customerEmail: row.customer?.email ?? row.customerUser?.email ?? null,
