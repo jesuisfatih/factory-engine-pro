@@ -1,6 +1,6 @@
 {
   "proof": "roadmap_m06_runtime_live",
-  "checkedAt": "2026-06-29T04:02:10.463Z",
+  "checkedAt": "2026-06-29T08:44:27.524Z",
   "pass": true,
   "scope": {
     "container": "factoryengine-dtfbank-app",
@@ -8,8 +8,9 @@
     "tenantId": "ten_dtfbank"
   },
   "git": {
-    "codeCommit": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
-    "deployedBuildSha": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
+    "localEvidenceCommit": "a471da8e530395c1c85aa518b6e52c4a9283dafa",
+    "deployedCodeCommit": "958866daa2ac632ca0d262be4558dc905645fa1f",
+    "deployedBuildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
     "branch": "main"
   },
   "health": {
@@ -20,24 +21,18 @@
       "service": "factory-engine-pro-backend"
     }
   },
-  "logEvidence": [
-    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
-  ],
   "containerStatus": [
-    "factoryengine-dtfbank-app Up 36 minutes",
+    "factoryengine-dtfbank-app Up 22 minutes",
     "factoryengine-dtfprint-app Up 6 days",
     "factoryengine-eagledtfsupply-app Up 6 days",
     "factoryengine-fastdtfsupply-app Up 6 days",
     "factoryengine-fastdtftransfer-app Up 6 days",
     "factoryengine-dtfprintdepot-app Up 6 days"
+  ],
+  "logEvidence": [
+    "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
   ],
   "seedMockPolicy": "No seed/mock data was added. Segment groups are sourced from live Shopify native segment memberships.",
   "nextRoadmapItem": 7

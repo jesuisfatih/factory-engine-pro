@@ -1,18 +1,20 @@
 {
   "proof": "roadmap_m06_daily_segment_groups_api_live",
-  "checkedAt": "2026-06-29T04:02:10.462Z",
+  "checkedAt": "2026-06-29T08:44:27.524Z",
   "pass": true,
   "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
   "git": {
-    "codeCommit": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
-    "deployedBuildSha": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
+    "localEvidenceCommit": "a471da8e530395c1c85aa518b6e52c4a9283dafa",
+    "deployedCodeCommit": "958866daa2ac632ca0d262be4558dc905645fa1f",
+    "deployedBuildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
     "branch": "main"
   },
   "status": 200,
+  "requestId": "14684887-4f29-42b7-a7f7-6ed873da995a",
   "summary": {
     "dailyCount": 91,
-    "priorityCount": 0,
-    "pinnedCount": 0,
+    "priorityCount": 93,
+    "pinnedCount": 4,
     "highUrgencyCount": 91,
     "visibleAxes": [
       "support"
@@ -28,22 +30,25 @@
       "dailyCap": 25,
       "firstCustomers": [
         {
-          "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
-          "customerName": "OWNER",
-          "segment": "Min 2 max 5 purchase",
-          "urgencyScore": 152.1
-        },
-        {
           "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
           "customerName": "#gregsvinyl",
+          "assignedAxis": "support",
           "segment": "Min 2 max 5 purchase",
-          "urgencyScore": 151.1
+          "urgencyScore": 151.2
         },
         {
-          "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
-          "customerName": "1st Place Awards & Embroidery",
+          "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+          "customerName": "4 FORTY SCREENS AND STITCHES",
+          "assignedAxis": "support",
           "segment": "Min 2 max 5 purchase",
-          "urgencyScore": 151.1
+          "urgencyScore": 151.2
+        },
+        {
+          "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+          "customerName": "404 Cafe and Creamery",
+          "assignedAxis": "support",
+          "segment": "Min 2 max 5 purchase",
+          "urgencyScore": 151.2
         }
       ]
     },
@@ -57,20 +62,23 @@
         {
           "customerId": "cust_dejnli6ghj1lqx3lm5w8mwlg",
           "customerName": "AA FASHION EXPRESS PRESS",
+          "assignedAxis": "support",
           "segment": "Customers over 20 orders",
-          "urgencyScore": 143.6
-        },
-        {
-          "customerId": "cust_xtces1c98kuzt7tkfrjhffr5",
-          "customerName": "Ashley Fairchild",
-          "segment": "Customers over 20 orders",
-          "urgencyScore": 143.6
+          "urgencyScore": 144.7
         },
         {
           "customerId": "cust_uuqib7l3yh7k825cxxwx60z7",
           "customerName": "Beary Creative",
+          "assignedAxis": "support",
           "segment": "Customers over 20 orders",
-          "urgencyScore": 143.6
+          "urgencyScore": 144.7
+        },
+        {
+          "customerId": "cust_xtces1c98kuzt7tkfrjhffr5",
+          "customerName": "Ashley Fairchild",
+          "assignedAxis": "support",
+          "segment": "Customers over 20 orders",
+          "urgencyScore": 143.7
         }
       ]
     },
@@ -84,20 +92,23 @@
         {
           "customerId": "cust_qqpanovsy8vudlaanh0mbhjv",
           "customerName": "2G Nitrile LLC",
+          "assignedAxis": "support",
           "segment": "Wholesale Customers",
-          "urgencyScore": 136.1
+          "urgencyScore": 136.2
         },
         {
           "customerId": "cust_r7qbxl63zhiq3fhuq7h98p7d",
           "customerName": "Atolye LLC",
+          "assignedAxis": "support",
           "segment": "Wholesale Customers",
-          "urgencyScore": 136.1
+          "urgencyScore": 136.2
         },
         {
           "customerId": "cust_ph5li3pmsk7vy1133gq31jjj",
           "customerName": "Bella Vision MA LLC",
+          "assignedAxis": "support",
           "segment": "Wholesale Customers",
-          "urgencyScore": 136.1
+          "urgencyScore": 136.2
         }
       ]
     },
@@ -111,20 +122,23 @@
         {
           "customerId": "cust_wji7h8ljaus28jktwf3wzloe",
           "customerName": "Alpha DTF Print",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF or UV DTF Printer",
-          "urgencyScore": 128.6
+          "urgencyScore": 128.7
         },
         {
           "customerId": "cust_cp0z4yv5syurtbvwpcusbb9c",
           "customerName": "Alpha Print LLC",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF or UV DTF Printer",
-          "urgencyScore": 128.6
+          "urgencyScore": 128.7
         },
         {
           "customerId": "cust_tthaz3zrppxel7mz62ksnu4b",
           "customerName": "Emma Collins",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF or UV DTF Printer",
-          "urgencyScore": 128.6
+          "urgencyScore": 128.7
         }
       ]
     },
@@ -136,26 +150,203 @@
       "dailyCap": 25,
       "firstCustomers": [
         {
-          "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
-          "customerName": "OWNER",
+          "customerId": "cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerName": "AA FASHION EXPRESS PRESS",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
-          "urgencyScore": 122.1
+          "urgencyScore": 122.2
         },
         {
-          "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
-          "customerName": "#gregsvinyl",
+          "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+          "customerName": "Akil Kurji",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
-          "urgencyScore": 121.1
+          "urgencyScore": 122.2
         },
         {
-          "customerId": "cust_qqpanovsy8vudlaanh0mbhjv",
-          "customerName": "2G Nitrile LLC",
+          "customerId": "cust_jp5l8tb6waye3825shaygnar",
+          "customerName": "Americraft Sign Co. LLC",
+          "assignedAxis": "support",
           "segment": "Customers who have purchased DTF inks, DTF films, or DTF powders",
-          "urgencyScore": 121.1
+          "urgencyScore": 122.2
         }
       ]
     }
   ],
-  "priorityTasks": [],
-  "tokenValuesPersistedInEvidence": false
+  "priorityTasks": [
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "1st Place Awards & Embroidery",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "Akil Kurji",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "Americraft Sign Co. LLC",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "Apliiq, Inc",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "#gregsvinyl",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "4 FORTY SCREENS AND STITCHES",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "404 Cafe and Creamery",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "802 Print",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "904 Vinyls & More",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "axis": "support",
+      "title": "A3-USA",
+      "segmentName": "Min 2 max 5 purchase",
+      "assignedMemberName": "Linda Marroquin"
+    }
+  ],
+  "dailyItemSample": [
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+      "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "customerName": "1st Place Awards & Embroidery",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
+      "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+      "customerName": "Akil Kurji",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
+      "customerId": "cust_jp5l8tb6waye3825shaygnar",
+      "customerName": "Americraft Sign Co. LLC",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
+      "customerId": "cust_vmkcu1nnag0yqngvv72jwpgs",
+      "customerName": "Apliiq, Inc",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerName": "#gregsvinyl",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "customerName": "4 FORTY SCREENS AND STITCHES",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
+      "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+      "customerName": "404 Cafe and Creamery",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
+      "customerId": "cust_xamz9bo142cf7xdxhff4hx5l",
+      "customerName": "802 Print",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "customerId": "cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "customerName": "904 Vinyls & More",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
+      "customerId": "cust_dmfmmg54upzdo2i1iy6hyih8",
+      "customerName": "A3-USA",
+      "assignedAxis": "support",
+      "segment": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    }
+  ],
+  "tokenValuesPersistedInEvidence": false,
+  "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
 }

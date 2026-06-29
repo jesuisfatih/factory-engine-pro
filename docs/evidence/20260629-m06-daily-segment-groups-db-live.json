@@ -1,21 +1,20 @@
 {
   "proof": "roadmap_m06_daily_segment_groups_db_live",
-  "checkedAt": "2026-06-29T04:02:10.463Z",
+  "checkedAt": "2026-06-29T08:44:27.524Z",
   "pass": true,
   "tenantId": "ten_dtfbank",
   "account": "dtfbanktx@gmail.com",
   "git": {
-    "codeCommit": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
-    "deployedBuildSha": "ac59d8688bc1330a9b41b77e84cf0f21f22a7db2",
+    "localEvidenceCommit": "a471da8e530395c1c85aa518b6e52c4a9283dafa",
+    "deployedCodeCommit": "958866daa2ac632ca0d262be4558dc905645fa1f",
+    "deployedBuildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
     "branch": "main"
   },
   "tokenRow": {
-    "id": "tok_o0aVXOcnD84rAh-IJ9URs9R5",
-    "kind": "refresh",
     "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-    "expiresAt": "2027-06-29T04:01:55.554Z",
-    "createdAt": "2026-06-29T04:01:55.556Z",
-    "tokenHashRedacted": true
+    "expiresAtDays": 365,
+    "tokenHashRedacted": true,
+    "metadataSource": "roadmap_m06_live_proof"
   },
   "tokenValuesPersistedInEvidence": false,
   "memberId": "tmbr_ten_dtfbank_linda_marroquin",
@@ -31,16 +30,14 @@
         "gid://shopify/Segment/656941777172"
       ],
       "membershipCount": 355,
-      "activeShopifyCustomerMemberships": 355,
       "customOrderCount": 25,
       "shopifySegments": [
         {
           "shopifySegmentId": "gid://shopify/Segment/656941777172",
           "name": "Min 2 max 5 purchase",
-          "query": "number_of_orders BETWEEN 2 AND 5",
           "customerCount": 355,
-          "lastSyncedAt": "2026-06-29T01:48:32.979Z",
-          "syncStatus": "ready"
+          "syncStatus": "ready",
+          "lastSyncedAt": "2026-06-29T05:54:13.827Z"
         }
       ]
     },
@@ -53,16 +50,14 @@
         "gid://shopify/Segment/656206889236"
       ],
       "membershipCount": 17,
-      "activeShopifyCustomerMemberships": 17,
       "customOrderCount": 0,
       "shopifySegments": [
         {
           "shopifySegmentId": "gid://shopify/Segment/656206889236",
           "name": "Customers over 20 orders",
-          "query": "number_of_orders > 20",
           "customerCount": 17,
-          "lastSyncedAt": "2026-06-29T02:16:15.255Z",
-          "syncStatus": "ready"
+          "syncStatus": "ready",
+          "lastSyncedAt": "2026-06-29T06:09:06.367Z"
         }
       ]
     },
@@ -75,16 +70,14 @@
         "gid://shopify/Segment/615174504724"
       ],
       "membershipCount": 30,
-      "activeShopifyCustomerMemberships": 30,
       "customOrderCount": 0,
       "shopifySegments": [
         {
           "shopifySegmentId": "gid://shopify/Segment/615174504724",
           "name": "Wholesale Customers",
-          "query": "customer_tags CONTAINS 'wholesale30'",
           "customerCount": 30,
-          "lastSyncedAt": "2026-06-29T01:51:14.724Z",
-          "syncStatus": "ready"
+          "syncStatus": "ready",
+          "lastSyncedAt": "2026-06-29T06:09:07.426Z"
         }
       ]
     },
@@ -97,16 +90,14 @@
         "gid://shopify/Segment/627391267092"
       ],
       "membershipCount": 12,
-      "activeShopifyCustomerMemberships": 12,
       "customOrderCount": 0,
       "shopifySegments": [
         {
           "shopifySegmentId": "gid://shopify/Segment/627391267092",
           "name": "Customers who have purchased DTF or UV DTF Printer",
-          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9616199614740, 9570503786772, 9570505687316, 9570509848852 )\n)",
           "customerCount": 12,
-          "lastSyncedAt": "2026-06-29T01:51:10.488Z",
-          "syncStatus": "ready"
+          "syncStatus": "ready",
+          "lastSyncedAt": "2026-06-29T06:09:08.336Z"
         }
       ]
     },
@@ -119,18 +110,18 @@
         "gid://shopify/Segment/627391987988"
       ],
       "membershipCount": 563,
-      "activeShopifyCustomerMemberships": 563,
       "customOrderCount": 0,
       "shopifySegments": [
         {
           "shopifySegmentId": "gid://shopify/Segment/627391987988",
           "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
-          "query": "number_of_orders >= 1\nAND products_purchased MATCHES (\n  id IN ( 9570521973012, 9570523283732, 9570524791060, 9570525610260, 9570526626068, 9679549432084, 9838284636436, 9838318387476, 9838317273364, 9840919347476, 9800007385364, 9686896050452, 9659226423572, 9838320025876, 9838321074452, 9736372945172, 9736374550804, 9736377041172, 9736369275156, 9570516500756, 9838319632660, 9838319010068, 9616207184148, 9839332000020, 9659244249364 )\n)",
           "customerCount": 563,
-          "lastSyncedAt": "2026-06-29T01:50:52.292Z",
-          "syncStatus": "ready"
+          "syncStatus": "error",
+          "lastSyncedAt": "2026-06-29T05:54:09.366Z"
         }
       ]
     }
-  ]
+  ],
+  "forbiddenDailyMemberships": 0,
+  "supportWorkflowRows": 0
 }
