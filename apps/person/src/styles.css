@@ -185,9 +185,20 @@ button { font-family: inherit; }
 .ops-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 2px 9px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
 .ops-head h2 { margin: 0; font-size: 12px; font-weight: 700; color: var(--text); }
 .ops-head p { margin: 3px 0 0; font-size: 10px; line-height: 1.35; color: var(--text-faint); }
-.ops-head select { max-width: 190px; min-width: 150px; height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 11px; padding: 0 8px; }
+.ops-count { flex: 0 0 auto; min-width: 64px; text-align: right; font-size: 11px; color: var(--text-muted); }
 .ops-list { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; min-height: 0; padding: 2px; }
 .ops-empty { display: grid; place-items: center; min-height: 110px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-faint); font-size: 11px; text-align: center; padding: 16px; }
+.segment-groups { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; padding: 2px; }
+.segment-group { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.segment-group-toggle { width: 100%; height: 36px; border: 0; background: var(--surface-2); color: var(--text); display: grid; grid-template-columns: 16px 8px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 0 10px; cursor: pointer; text-align: left; }
+.segment-group-toggle:hover { background: var(--surface-3); }
+.segment-group-toggle .chevron { color: var(--text-muted); transition: transform .16s ease; }
+.segment-group-toggle.collapsed .chevron { transform: rotate(-90deg); }
+.segment-group-dot { width: 8px; height: 8px; border-radius: 999px; }
+.segment-group-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+.segment-group-meta { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.segment-group-items { display: flex; flex-direction: column; gap: 7px; padding: 8px; }
+.segment-group-empty { border: 1px dashed var(--border); border-radius: 7px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-faint); }
 .daily-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; box-shadow: var(--shadow); }
 .daily-card-row { display: flex; align-items: center; justify-content: space-between; gap: 7px; min-width: 0; }
 .daily-title { font-size: 12px; font-weight: 700; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

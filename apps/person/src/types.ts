@@ -1,6 +1,7 @@
 import type {
   PersonDailyCallItem,
   PersonDailyOperationsDto,
+  PersonSegmentDailyGroup,
   PersonMiniOrder,
   PersonPerformance30d,
   PersonTaskTransferResult,
@@ -65,6 +66,7 @@ export interface Card {
 }
 
 export type DailyCallItem = PersonDailyCallItem;
+export type SegmentDailyGroup = PersonSegmentDailyGroup;
 export type DailyOperations = PersonDailyOperationsDto;
 export type TaskBriefDetail = PersonTaskBriefDetail;
 export type TransferTarget = PersonTransferTarget;

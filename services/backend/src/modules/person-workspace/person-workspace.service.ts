@@ -142,19 +142,22 @@ export class PersonWorkspaceService {
     const assignments = await this.axisAssignments(member.id);
     const visibleCustomerIds = Array.from(assignments.keys());
     const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
-    const config = await this.urgencyConfig();
 
-    const [segmentOwnerships, memberships, requestRows, customerPinRows] = await Promise.all([
+    const [config, segmentOwnerships] = await Promise.all([
+      this.urgencyConfig(),
       this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
         include: { segment: true },
         orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
         take: 100,
       }),
-      this.prisma.db.segmentCustomerMembership.findMany({
+    ]);
+    const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
+
+    const memberships: SegmentMembershipRow[] = ownedSegmentIds.length > 0
+      ? await this.prisma.db.segmentCustomerMembership.findMany({
         where: {
-          customerId: { in: visibleCustomerIds },
-          segment: { ownerships: { some: { memberId: member.id } } },
+          segmentId: { in: ownedSegmentIds },
         },
         include: {
           segment: true,
@@ -166,28 +169,30 @@ export class PersonWorkspaceService {
           },
         },
         orderBy: [{ matchedAt: 'desc' }],
-        take: 5000,
-      }),
-      this.prisma.db.serviceRequest.findMany({
-        where: {
-          OR: [
-            ...(visibleCustomerIds.length > 0 ? [{ customerId: { in: visibleCustomerIds } }] : []),
-            { assignedMemberId: member.id },
-            { participants: { some: { memberId: member.id } } },
-          ],
-        },
-        include: serviceRequestInclude,
-        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-        take: 500,
-      }),
-      this.customerPins(member.id, visibleCustomerIds),
-    ]);
+        take: 10000,
+      })
+      : [];
+
+    const requestRows = await this.prisma.db.serviceRequest.findMany({
+      where: {
+        OR: [
+          ...(visibleCustomerIds.length > 0 ? [{ customerId: { in: visibleCustomerIds } }] : []),
+          { assignedMemberId: member.id },
+          { participants: { some: { memberId: member.id } } },
+        ],
+      },
+      include: serviceRequestInclude,
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+    });
 
     const contextCustomerIds = uniqueStrings([
       ...visibleCustomerIds,
+      ...memberships.map((membership) => membership.customerId),
       ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [repeatCounts, cardContext] = await Promise.all([
+    const [customerPinRows, repeatCounts, cardContext] = await Promise.all([
+      this.customerPins(member.id, contextCustomerIds),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
     ]);

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { fetchDailyOperations, friendlyError, toggleCustomerPin, togglePin } from '../api/live';
-import type { Card as CardData, DailyCallItem } from '../types';
+import type { Card as CardData, DailyCallItem, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
@@ -14,18 +15,13 @@ export function CallQueueView() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transferCard, setTransferCard] = useState<CardData | null>(null);
-  const [segmentFilter, setSegmentFilter] = useState('all');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const { data, isLoading, error } = useQuery({ queryKey: QK, queryFn: fetchDailyOperations });
 
   const daily = data?.dailyCallList ?? [];
   const priority = data?.priorityKanban ?? [];
   const pinned = data?.pinBoard ?? [];
   const groups = data?.segmentGroups ?? [];
-
-  const filteredDaily = useMemo(() => {
-    if (segmentFilter === 'all') return daily;
-    return groups.find((group) => group.segmentId === segmentFilter)?.items ?? [];
-  }, [daily, groups, segmentFilter]);
 
   const customerPin = useMutation<unknown, Error, string>({
     mutationFn: (customerId: string) => toggleCustomerPin(customerId),
@@ -51,7 +47,7 @@ export function CallQueueView() {
   return (
     <div className="queue-wrap">
       <div className="kpis">
-        <div className="kpi"><div className="label">Daily calls</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">axis-scoped customers</div></div>
+        <div className="kpi"><div className="label">Daily calls</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">segment customers</div></div>
         <div className="kpi"><div className="label">Priority tasks</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">urgency desc</div></div>
         <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>
         <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>
@@ -62,8 +58,8 @@ export function CallQueueView() {
         isLoading={isLoading}
         error={error ? new Error(friendlyError(error)) : null}
         empty={empty}
-        emptyTitle="No axis-owned work yet"
-        emptyBody="Assign a segment and customer axis ownership to make the daily operation list appear here."
+        emptyTitle="No segment-owned work yet"
+        emptyBody="Assign live Shopify-backed segment ownership to make the daily call groups appear here."
       >
         <div className="ops-grid">
           <section className="ops-panel">
@@ -72,24 +68,19 @@ export function CallQueueView() {
                 <h2>Daily call list</h2>
                 <p>Segment-driven customers, sorted by the urgency formula.</p>
               </div>
-              <select value={segmentFilter} onChange={(event) => setSegmentFilter(event.target.value)}>
-                <option value="all">All assigned segments</option>
-                {groups.map((group) => (
-                  <option key={group.segmentId} value={group.segmentId}>
-                    {group.segmentName} ({group.items.length}/{group.dailyCap ?? group.totalCustomers})
-                  </option>
-                ))}
-              </select>
+              <span className="ops-count">{groups.length} groups</span>
             </div>
-            <div className="ops-list">
-              {filteredDaily.length === 0 ? (
-                <div className="ops-empty">No customers in this segment group.</div>
-              ) : filteredDaily.map((item) => (
-                <DailyCustomerCard
-                  key={item.id}
-                  item={item}
-                  onTogglePin={() => customerPin.mutate(item.customerId)}
-                  disabled={customerPin.isPending}
+            <div className="segment-groups">
+              {groups.length === 0 ? (
+                <div className="ops-empty">No segment groups assigned to this workspace.</div>
+              ) : groups.map((group) => (
+                <SegmentGroup
+                  key={group.segmentId}
+                  group={group}
+                  collapsed={Boolean(collapsedGroups[group.segmentId])}
+                  onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
+                  onTogglePin={(item) => customerPin.mutate(item.customerId)}
+                  pinDisabled={customerPin.isPending}
                 />
               ))}
             </div>
@@ -139,7 +130,49 @@ export function CallQueueView() {
   );
 }
 
+function SegmentGroup({
+  group,
+  collapsed,
+  onToggle,
+  onTogglePin,
+  pinDisabled,
+}: {
+  group: SegmentDailyGroup;
+  collapsed: boolean;
+  onToggle: () => void;
+  onTogglePin: (item: DailyCallItem) => void;
+  pinDisabled: boolean;
+}) {
+  const cap = group.dailyCap ?? group.totalCustomers;
+  return (
+    <section className="segment-group" aria-label={group.segmentName}>
+      <button type="button" className={`segment-group-toggle${collapsed ? ' collapsed' : ''}`} onClick={onToggle} aria-expanded={!collapsed}>
+        <ChevronDown size={14} className="chevron" />
+        <span className="segment-group-dot" style={{ background: group.segmentColor }} />
+        <span className="segment-group-title">{group.segmentName}</span>
+        <span className="segment-group-meta">{group.items.length}/{cap}</span>
+      </button>
+      {!collapsed && (
+        <div className="segment-group-items">
+          {group.items.length === 0 ? (
+            <div className="segment-group-empty">No customers in this segment group.</div>
+          ) : group.items.map((item) => (
+            <DailyCustomerCard
+              key={item.id}
+              item={item}
+              onTogglePin={() => onTogglePin(item)}
+              disabled={pinDisabled}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function DailyCustomerCard({ item, onTogglePin, disabled }: { item: DailyCallItem; onTogglePin: () => void; disabled: boolean }) {
+  const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
+
   return (
     <article className="daily-card">
       <div className="daily-card-row">
@@ -149,7 +182,7 @@ function DailyCustomerCard({ item, onTogglePin, disabled }: { item: DailyCallIte
       <div className="daily-meta">{item.reason}</div>
       <div className="daily-card-row daily-foot">
         <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
-        <span>{item.ordersCount} orders · ${Math.round(item.totalSpent).toLocaleString()}</span>
+        <span>{orderSummary}</span>
         <button type="button" className={`pin-btn${item.pinned ? ' pinned' : ''}`} onClick={onTogglePin} disabled={disabled}>
           {item.pinned ? 'Pinned' : 'Pin'}
         </button>
