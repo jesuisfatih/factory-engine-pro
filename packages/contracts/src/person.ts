@@ -239,6 +239,30 @@ export const personDailyCallItemSchema = z.object({
   customOrder: z.number().nullable(),
   pinned: z.boolean(),
   pinId: z.string().nullable(),
+  notesCount: z.number().default(0),
+  openTasksCount: z.number().default(0),
+  openRequestsCount: z.number().default(0),
+  callsCount: z.number().default(0),
+  latestNote: z.object({
+    id: z.string(),
+    body: z.string(),
+    authorName: z.string(),
+    createdAt: z.string(),
+  }).nullable().default(null),
+  latestOrder: z.object({
+    id: z.string(),
+    orderNumber: z.string().nullable(),
+    totalPrice: z.number(),
+    currency: z.string(),
+    processedAt: z.string().nullable(),
+  }).nullable().default(null),
+  latestCall: z.object({
+    id: z.string(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    summary: z.string().nullable(),
+    at: z.string(),
+  }).nullable().default(null),
   reason: z.string(),
 });
 export type PersonDailyCallItem = z.infer<typeof personDailyCallItemSchema>;

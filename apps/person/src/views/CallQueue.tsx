@@ -431,6 +431,12 @@ function SegmentCustomerCard({
   disabled: boolean;
 }) {
   const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
+  const latestOrder = item.latestOrder
+    ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
+    : 'No linked Shopify order';
+  const latestCall = item.latestCall
+    ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'matched call'}`
+    : 'No matched call yet';
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -509,6 +515,19 @@ function SegmentCustomerCard({
         <span className="priority p7">U{item.urgencyScore}</span>
       </div>
       <div className="daily-meta">{item.reason}</div>
+      <div className="segment-customer-insights">
+        <span><strong>Latest order</strong>{latestOrder}</span>
+        <span><strong>Latest call</strong>{latestCall}</span>
+        <span><strong>Open work</strong>{item.openTasksCount} tasks | {item.openRequestsCount} requests | {item.notesCount} notes</span>
+        {item.latestNote ? (
+          <span className="segment-customer-latest-note">
+            <strong>{item.latestNote.authorName}</strong>
+            {item.latestNote.body}
+          </span>
+        ) : (
+          <span><strong>Latest note</strong>No personnel note yet</span>
+        )}
+      </div>
       <div className="segment-customer-foot">
         <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
         <span className="segment-customer-orders">{orderSummary}</span>
@@ -625,6 +644,19 @@ function dailyDateLabel(value: string | undefined, key: string) {
     month: 'short',
     day: 'numeric',
   }).format(date);
+}
+
+function formatCurrency(value: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function relativeTime(value: string) {
+  const ms = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(ms / 60_000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function reorderDailyData(data: DailyOperations, segmentId: string | undefined, orderedItemIds: string[]): DailyOperations {

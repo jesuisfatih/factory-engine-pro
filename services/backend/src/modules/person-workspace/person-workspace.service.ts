@@ -152,6 +152,33 @@ interface OwnedSegmentContext {
   matchedAt: Date;
 }
 
+interface PersonPriorityCustomerContext {
+  notesCount: number;
+  openTasksCount: number;
+  openRequestsCount: number;
+  callsCount: number;
+  latestNote: {
+    id: string;
+    body: string;
+    authorName: string;
+    createdAt: string;
+  } | null;
+  latestOrder: {
+    id: string;
+    orderNumber: string | null;
+    totalPrice: number;
+    currency: string;
+    processedAt: string | null;
+  } | null;
+  latestCall: {
+    id: string;
+    phone: string | null;
+    email: string | null;
+    summary: string | null;
+    at: string;
+  } | null;
+}
+
 @Injectable()
 export class PersonWorkspaceService {
   constructor(
@@ -259,11 +286,12 @@ export class PersonWorkspaceService {
       ...memberships.map((membership) => membership.customerId),
       ...allRequestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext] = await Promise.all([
+    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, priorityCustomerContext] = await Promise.all([
       this.customerPins(member.id, contextCustomerIds),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
       this.cardCallContext(allRequestRows),
+      this.priorityCustomerContext(memberships.map((membership) => membership.customer)),
     ]);
     const repeatCounts = initialRepeatCounts;
     const cardContext = initialCardContext;
@@ -274,7 +302,15 @@ export class PersonWorkspaceService {
     const segmentGroups = segmentOwnerships.map((ownership) => {
       const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
       const items = segmentMemberships
-        .map((membership) => this.dailyCallItem(membership, ownership, assignments, config, repeatCounts.get(membership.customerId) ?? 0, customerPinsByCustomer.get(membership.customerId) ?? null))
+        .map((membership) => this.dailyCallItem(
+          membership,
+          ownership,
+          assignments,
+          config,
+          repeatCounts.get(membership.customerId) ?? 0,
+          customerPinsByCustomer.get(membership.customerId) ?? null,
+          priorityCustomerContext.get(membership.customerId) ?? emptyPersonPriorityCustomerContext(),
+        ))
         .sort(sortDaily)
         .slice(0, ownership.dailyCap ?? 100);
 
@@ -1908,6 +1944,146 @@ export class PersonWorkspaceService {
     });
   }
 
+  private async priorityCustomerContext(
+    customers: Array<{ id: string; email: string | null; phone: string | null }>,
+  ): Promise<Map<string, PersonPriorityCustomerContext>> {
+    const ids = uniqueStrings(customers.map((customer) => customer.id));
+    const result = new Map(ids.map((id) => [id, emptyPersonPriorityCustomerContext()] as const));
+    if (ids.length === 0) return result;
+
+    const emailToCustomerId = new Map<string, string>();
+    const phoneToCustomerId = new Map<string, string>();
+    for (const customer of customers) {
+      const email = customer.email?.trim().toLowerCase();
+      if (email) emailToCustomerId.set(email, customer.id);
+      for (const phone of phoneVariants(customer.phone)) {
+        phoneToCustomerId.set(phone, customer.id);
+      }
+    }
+    const emails = [...emailToCustomerId.keys()];
+    const phones = [...phoneToCustomerId.keys()];
+
+    const [serviceRows, noteRows, commentRows, orderRows, callRows] = await Promise.all([
+      this.prisma.db.serviceRequest.findMany({
+        where: { customerId: { in: ids } },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 20, 200), 3000),
+      }),
+      this.prisma.db.serviceRequest.findMany({
+        where: {
+          customerId: { in: ids },
+          metadata: { path: ['personWorkspaceKind'], equals: 'note' },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 5, 100), 1000),
+      }),
+      this.prisma.db.serviceRequestComment.findMany({
+        where: {
+          internal: true,
+          serviceRequest: { customerId: { in: ids } },
+        },
+        include: { serviceRequest: { select: { customerId: true } } },
+        orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 8, 100), 1600),
+      }),
+      this.prisma.db.commerceOrder.findMany({
+        where: { customerId: { in: ids } },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 4, 100), 800),
+      }),
+      emails.length || phones.length
+        ? this.prisma.db.aircallCallEvent.findMany({
+          where: {
+            OR: [
+              ...(emails.length ? [{ contactEmail: { in: emails, mode: Prisma.QueryMode.insensitive } }] : []),
+              ...(phones.length ? [{ contactPhone: { in: phones } }, { contactPhoneE164: { in: phones } }] : []),
+            ],
+          },
+          orderBy: [{ eventTimestamp: 'desc' }],
+          take: Math.min(Math.max(ids.length * 6, 100), 1200),
+        })
+        : Promise.resolve([]),
+    ]);
+
+    const memberIds = uniqueStrings([
+      ...noteRows.map((row) => row.createdByActorId),
+      ...commentRows.map((row) => row.actorId),
+    ]);
+    const members = memberIds.length
+      ? await this.prisma.db.member.findMany({ where: { id: { in: memberIds } }, select: { id: true, firstName: true, lastName: true, email: true } })
+      : [];
+    const memberById = new Map(members.map((member) => [member.id, memberDisplayName(member)] as const));
+
+    for (const row of serviceRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context || CLOSED.has(row.status) || INTERNAL_WORKSPACE_KINDS.has(String(this.record(row.metadata).personWorkspaceKind))) continue;
+      context.openTasksCount += 1;
+      if (isCustomerRequestLike(row)) context.openRequestsCount += 1;
+    }
+
+    for (const row of noteRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context) continue;
+      const note = {
+        id: row.id,
+        body: row.description || row.title,
+        authorName: memberById.get(row.createdByActorId ?? '') ?? 'Staff member',
+        createdAt: row.updatedAt.toISOString(),
+      };
+      context.notesCount += 1;
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+
+    for (const row of commentRows) {
+      const customerId = row.serviceRequest.customerId;
+      if (!customerId) continue;
+      const context = result.get(customerId);
+      if (!context) continue;
+      const note = {
+        id: row.id,
+        body: row.body,
+        authorName: memberById.get(row.actorId ?? '') ?? 'Staff member',
+        createdAt: row.createdAt.toISOString(),
+      };
+      context.notesCount += 1;
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+
+    for (const row of orderRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context || context.latestOrder) continue;
+      context.latestOrder = {
+        id: row.id,
+        orderNumber: row.shopifyOrderNumber,
+        totalPrice: money(row.totalPrice),
+        currency: row.currency,
+        processedAt: (row.processedAt ?? row.createdAt).toISOString(),
+      };
+    }
+
+    for (const row of callRows) {
+      const customerId = customerIdForPriorityCall(row, emailToCustomerId, phoneToCustomerId);
+      if (!customerId) continue;
+      const context = result.get(customerId);
+      if (!context) continue;
+      const resolver = asRecord(row.resolverOutput);
+      const call = {
+        id: row.id,
+        phone: row.contactPhoneE164 ?? row.contactPhone,
+        email: row.contactEmail,
+        summary: stringOrNull(resolver.summary) ?? row.transcriptRaw?.slice(0, 180) ?? row.status,
+        at: row.eventTimestamp.toISOString(),
+      };
+      context.callsCount += 1;
+      if (!context.latestCall || call.at > context.latestCall.at) context.latestCall = call;
+    }
+
+    return result;
+  }
+
   private dailyCallItem(
     membership: SegmentMembershipRow,
     ownership: { priority: number; dailyCap: number | null; segment: { id: string; name: string; color: string; priority: number; priorityGlobal: number } },
@@ -1915,6 +2091,7 @@ export class PersonWorkspaceService {
     config = this.scoring.configFrom({}),
     repeatCount = 0,
     pin: CustomerPinRow | null = null,
+    context: PersonPriorityCustomerContext = emptyPersonPriorityCustomerContext(),
   ): PersonDailyCallItem {
     const customer = membership.customer;
     const axes = assignments.get(customer.id) ?? new Set<string>();
@@ -1962,7 +2139,14 @@ export class PersonWorkspaceService {
       customOrder: null,
       pinned: Boolean(pin),
       pinId: pin?.id ?? null,
-      reason: `${membership.segment.name} segment customer - ${repeatCount} recent request${repeatCount === 1 ? '' : 's'}`,
+      notesCount: context.notesCount,
+      openTasksCount: context.openTasksCount,
+      openRequestsCount: context.openRequestsCount,
+      callsCount: context.callsCount,
+      latestNote: context.latestNote,
+      latestOrder: context.latestOrder,
+      latestCall: context.latestCall,
+      reason: priorityCustomerReason(membership.segment.name, context, repeatCount),
     };
   }
 
@@ -2661,6 +2845,55 @@ function customerDisplayName(customer: { companyName: string | null; firstName?:
     || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()
     || customer.email
     || customer.id;
+}
+
+function emptyPersonPriorityCustomerContext(): PersonPriorityCustomerContext {
+  return {
+    notesCount: 0,
+    openTasksCount: 0,
+    openRequestsCount: 0,
+    callsCount: 0,
+    latestNote: null,
+    latestOrder: null,
+    latestCall: null,
+  };
+}
+
+function priorityCustomerReason(segmentName: string, context: PersonPriorityCustomerContext, repeatCount: number) {
+  const signals = [
+    `${segmentName} segment customer`,
+    context.latestCall ? `last call ${relative(new Date(context.latestCall.at))}` : null,
+    context.latestOrder ? `last order ${money(context.latestOrder.totalPrice).toLocaleString()} ${context.latestOrder.currency}` : null,
+    context.latestNote ? `last note by ${context.latestNote.authorName}` : null,
+    context.openRequestsCount ? `${context.openRequestsCount} customer request${context.openRequestsCount === 1 ? '' : 's'}` : null,
+    repeatCount ? `${repeatCount} task${repeatCount === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+  return signals.join(' - ');
+}
+
+function isCustomerRequestLike(row: { source: string; surface: string; axis: string | null; metadata: Prisma.JsonValue }) {
+  const metadata = asRecord(row.metadata);
+  const category = normalizeText(metadata.category);
+  return row.source === 'customer_self_service'
+    || row.source === 'admin_created'
+    || row.surface === 'customer_facing'
+    || row.axis === 'support'
+    || category.includes('support')
+    || category.includes('customer_request');
+}
+
+function customerIdForPriorityCall(
+  row: { contactEmail: string | null; contactPhone: string | null; contactPhoneE164: string | null },
+  emailToCustomerId: Map<string, string>,
+  phoneToCustomerId: Map<string, string>,
+) {
+  const email = row.contactEmail?.trim().toLowerCase();
+  if (email && emailToCustomerId.has(email)) return emailToCustomerId.get(email) ?? null;
+  for (const phone of [...phoneVariants(row.contactPhoneE164), ...phoneVariants(row.contactPhone)]) {
+    const customerId = phoneToCustomerId.get(phone);
+    if (customerId) return customerId;
+  }
+  return null;
 }
 
 function firstString(...values: unknown[]) {
