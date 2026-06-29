@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-06-29T04:41:23.760Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "appUrl": "https://app.dtfbank.com/staff/email",
+  "buildSha": "af035d891e11317cf3d10719957fa4b73c444146",
+  "tenantId": "ten_dtfbank",
+  "linda": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "firstName": "Linda",
+    "lastName": "Marroquin",
+    "permissionsCount": 10
+  },
+  "draftInput": {
+    "to": "ihsan@dtfbank.com",
+    "subject": "Linda follow-up draft 20260629T044058",
+    "body": "Ihsan, please review this customer follow-up before Mail Marketing send is enabled.\nSaved from the staff email draft flow at 2026-06-29T04:40:58.408Z."
+  },
+  "postStatus": 201,
+  "apiListStatus": 200,
+  "apiDraft": {
+    "id": "mail_m37cd91m7kmb3521pvljh0jm",
+    "from": "Draft",
+    "fromEmail": "ihsan@dtfbank.com",
+    "subject": "Linda follow-up draft 20260629T044058",
+    "preview": "Ihsan, please review this customer follow-up before Mail Marketing send is enabled.\nSaved from the staff email draft flow at 2026-06-29T04:40:58.408Z.",
+    "unread": false,
+    "at": "Now",
+    "status": "draft"
+  },
+  "dbDraft": {
+    "id": "mail_m37cd91m7kmb3521pvljh0jm",
+    "tenantId": "ten_dtfbank",
+    "eventKey": "person.email.draft",
+    "category": "person_draft",
+    "recipientEmail": "ihsan@dtfbank.com",
+    "subject": "Linda follow-up draft 20260629T044058",
+    "status": "draft",
+    "provider": "disabled",
+    "text": "Ihsan, please review this customer follow-up before Mail Marketing send is enabled.\nSaved from the staff email draft flow at 2026-06-29T04:40:58.408Z.",
+    "metadata": {
+      "source": "person_email_compose",
+      "surface": "staff",
+      "sendingEnabled": false,
+      "createdByMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "createdByMemberEmail": "dtfbanktx@gmail.com"
+    },
+    "createdAt": "2026-06-29T04:41:09.927Z"
+  },
+  "nonDraftRowsForSubject": [],
+  "enumValues": [
+    "queued",
+    "sending",
+    "sent",
+    "failed",
+    "skipped",
+    "queued_disabled",
+    "draft"
+  ],
+  "tokenCleanup": {
+    "refreshRevoked": 1,
+    "accessRevoked": true
+  },
+  "preCleanup": {
+    "deleted": 2
+  },
+  "assertions": {
+    "postSucceeded": true,
+    "apiListSucceeded": true,
+    "apiDraftVisible": true,
+    "dbDraftPersisted": true,
+    "dbStatusDraft": true,
+    "providerDisabled": true,
+    "noSendRowsCreated": true,
+    "enumHasDraft": true,
+    "tokenCleanupComplete": true,
+    "noLocalhost": true
+  }
+}

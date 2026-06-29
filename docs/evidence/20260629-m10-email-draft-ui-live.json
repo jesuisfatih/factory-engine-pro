@@ -1,0 +1,102 @@
+{
+  "generatedAt": "2026-06-29T04:41:26.234Z",
+  "scenario": "Linda opened staff email, composed a draft, saved it, then refreshed the live page and saw the draft row still listed.",
+  "appUrl": "https://app.dtfbank.com/staff/email",
+  "finalUrl": "https://app.dtfbank.com/staff/email",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m10-email-draft-ui-live.png",
+  "subject": "Linda follow-up draft 20260629T044058",
+  "bodyTextSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nE-mail\nD\nDTF Bank\nE-mail threads\n1 threads - 1 drafts - 0 unread\nCompose\nDraft\nihsan@dtfbank.com\nLinda follow-up draft 20260629T044058\nDraft\nIhsan, please review this customer follow-up before Mail Marketing send is enabled. Saved from the staff email draft flow at 2026-06-29T04:40:58.408Z.\nNow",
+  "network": [
+    {
+      "url": "https://app.dtfbank.com/staff/email",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/assets/index-C4i7-Jb1.css",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/assets/index-CsVhmefC.js",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/favicon.svg",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/emails",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/emails/drafts",
+      "status": 201,
+      "method": "POST"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/emails",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/email",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/assets/index-CsVhmefC.js",
+      "status": 304,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/assets/index-C4i7-Jb1.css",
+      "status": 304,
+      "method": "GET"
+    },
+    {
+      "url": "https://app.dtfbank.com/staff/favicon.svg",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/emails",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+      "status": 200,
+      "method": "GET"
+    }
+  ],
+  "consoleMessages": [],
+  "failedResponses": [],
+  "assertions": {
+    "urlIsLiveApp": true,
+    "composeOpened": true,
+    "savedDraftVisibleAfterRefresh": true,
+    "postCaptured": true,
+    "noConsoleErrors": true,
+    "noFailedResponses": true,
+    "noLocalhost": true
+  }
+}

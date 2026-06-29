@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-06-29T04:41:26.234Z",
+  "healthUrl": "https://api.dtfbank.com/api/v1/health",
+  "buildSha": "af035d891e11317cf3d10719957fa4b73c444146",
+  "raw": "BUILD_SHA=af035d891e11317cf3d10719957fa4b73c444146\nHEALTH={\"ok\":true,\"service\":\"factory-engine-pro-backend\"}\nCONTAINERS\nfactoryengine-dtfbank-app Up 3 minutes\nfactoryengine-dtfprint-app Up 6 days\nfactoryengine-eagledtfsupply-app Up 6 days\nfactoryengine-fastdtfsupply-app Up 6 days\nfactoryengine-fastdtftransfer-app Up 6 days\nfactoryengine-dtfprintdepot-app Up 6 days\n\nLOG_TAIL\n\u001b[32m[Nest] 1220  - \u001b[39m06/29/2026, 4:39:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/emails/drafts, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1220  - \u001b[39m06/29/2026, 4:39:44 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1220  - \u001b[39m06/29/2026, 4:40:08 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"e46157a5-d25c-4636-bdeb-455d750f490f\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"email.draft\",\"message\":\"Person email draft saved\",\"mail_delivery_id\":\"mail_bb1hfd2o2igl8ephxsok1pwc\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\"}\u001b[39m\n\u001b[32m[Nest] 1220  - \u001b[39m06/29/2026, 4:41:09 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"10583749-a384-47b6-bc95-8339054495a1\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"email.draft\",\"message\":\"Person email draft saved\",\"mail_delivery_id\":\"mail_m37cd91m7kmb3521pvljh0jm\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\"}\u001b[39m\n",
+  "assertions": {
+    "healthOk": true,
+    "buildMatchesHead": true,
+    "dtfbankContainerListed": true,
+    "otherContainersUntouched": true,
+    "draftLogPresent": true,
+    "noRuntimeErrorsInExcerpt": true
+  }
+}
