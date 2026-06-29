@@ -181,7 +181,16 @@ function ProfileTab({ detail }: { detail: CustomerDetailPanelDto }) {
 
 function OrdersTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
   const rows = detail.tabs.shopifyOrders;
-  if (rows.length === 0) return <EmptyTab title="No Shopify orders" body="Shopify sync has not attached orders to this customer yet." onRetry={onRetry} />;
+  if (rows.length === 0 && detail.customer.metrics.ordersCount > 0) {
+    return (
+      <EmptyTab
+        title="Historical Shopify orders unavailable"
+        body={`Shopify reports ${detail.customer.metrics.ordersCount} historical orders totaling ${money(detail.customer.metrics.lifetimeRevenue)}, but the current Admin token exposes no individual order rows.`}
+        onRetry={onRetry}
+      />
+    );
+  }
+  if (rows.length === 0) return <EmptyTab title="No Shopify orders" body="No Shopify order rows are linked to this customer yet." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((order) => (
