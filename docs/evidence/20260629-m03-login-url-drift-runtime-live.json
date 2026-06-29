@@ -1,0 +1,16 @@
+﻿{
+    "checkedAt":  "2026-06-29T08:00:49.4377285Z",
+    "container":  "factoryengine-dtfbank-app",
+    "deployedSha":  "7e9a4ad8a016bde8ff0d492498c74ec2a04dcd8a",
+    "dockerStatus":  "factoryengine-dtfbank-app Up 14 minutes",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "surfaceRoutingFiles":  [
+                                "apps/admin/src/features/auth/AuthPanels.tsx",
+                                "apps/person/src/views/auth/LoginView.tsx",
+                                "packages/contracts/src/permissions.ts"
+                            ],
+    "pass":  true
+}

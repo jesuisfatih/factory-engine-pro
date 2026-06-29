@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-06-29T07:59:22.336Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "deployedSha": "7e9a4ad8a016bde8ff0d492498c74ec2a04dcd8a",
+  "scenarios": [
+    {
+      "label": "linda-person-at-admin-login-url",
+      "loginUrl": "https://app.dtfbank.com/login",
+      "expectedUrl": "https://app.dtfbank.com/staff/queue",
+      "finalUrl": "https://app.dtfbank.com/staff/queue",
+      "expectedSurface": "person",
+      "storage": {
+        "admin": false,
+        "person": true,
+        "adminEmail": null,
+        "personEmail": "dtfbanktx@gmail.com"
+      },
+      "screenshot": "docs/evidence/20260629-m03-linda-admin-login-redirect-ui-live.png",
+      "pass": true
+    },
+    {
+      "label": "owner-admin-at-staff-login-url",
+      "loginUrl": "https://app.dtfbank.com/staff/login",
+      "expectedUrl": "https://app.dtfbank.com/dashboard",
+      "finalUrl": "https://app.dtfbank.com/dashboard",
+      "expectedSurface": "admin",
+      "storage": {
+        "admin": true,
+        "person": false,
+        "adminEmail": "info@dtfbank.com",
+        "personEmail": null
+      },
+      "screenshot": "docs/evidence/20260629-m03-owner-staff-login-redirect-ui-live.png",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

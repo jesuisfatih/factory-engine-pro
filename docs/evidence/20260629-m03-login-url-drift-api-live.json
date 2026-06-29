@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-06-29T08:00:09.997Z",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "surfaceRule": {
+    "adminIfAnyPermission": [
+      "settings.read",
+      "settings.write",
+      "members.read",
+      "members.write",
+      "roles.read",
+      "roles.write"
+    ]
+  },
+  "scenarios": [
+    {
+      "label": "linda-login-through-admin-member-endpoint",
+      "loginPath": "/auth/member/login",
+      "email": "dtfbanktx@gmail.com",
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "permissionCount": 10,
+      "adminSurfacePermissionHits": [],
+      "derivedSurface": "person",
+      "expectedSurface": "person",
+      "meStatus": 200,
+      "meEmail": "dtfbanktx@gmail.com",
+      "pass": true
+    },
+    {
+      "label": "owner-login-through-person-endpoint",
+      "loginPath": "/auth/person/login",
+      "email": "info@dtfbank.com",
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "permissionCount": 27,
+      "adminSurfacePermissionHits": [
+        "settings.read",
+        "settings.write",
+        "members.read",
+        "members.write",
+        "roles.read",
+        "roles.write"
+      ],
+      "derivedSurface": "admin",
+      "expectedSurface": "admin",
+      "meStatus": 200,
+      "meEmail": "info@dtfbank.com",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

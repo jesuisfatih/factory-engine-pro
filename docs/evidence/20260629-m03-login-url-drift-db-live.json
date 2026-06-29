@@ -1,0 +1,42 @@
+﻿{
+  "checkedAt": "2026-06-29T08:00:30.729Z",
+  "tenantId": "ten_dtfbank",
+  "adminSurfacePermissions": [
+    "settings.read",
+    "settings.write",
+    "members.read",
+    "members.write",
+    "roles.read",
+    "roles.write"
+  ],
+  "rows": [
+    {
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "roles": [
+        "customer_service"
+      ],
+      "permissionCount": 10,
+      "adminSurfacePermissionHits": [],
+      "derivedSurface": "person"
+    },
+    {
+      "memberId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "roles": [
+        "owner"
+      ],
+      "permissionCount": 27,
+      "adminSurfacePermissionHits": [
+        "settings.read",
+        "settings.write",
+        "members.read",
+        "members.write",
+        "roles.read",
+        "roles.write"
+      ],
+      "derivedSurface": "admin"
+    }
+  ],
+  "pass": true
+}
