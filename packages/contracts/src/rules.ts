@@ -182,6 +182,7 @@ export interface WorkflowRuleBackfillResult {
   noMutation: boolean;
   candidateSource: string;
   sampleLimit: number;
+  ruleDefinitionHash: string | null;
   samples: WorkflowRuleBackfillSample[];
 }
 

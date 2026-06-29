@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   activeWorkflowRuleStatsQuerySchema,
   backfillWorkflowRuleSchema,
@@ -515,6 +515,7 @@ export class RulesService {
         noMutation: actualTasksCreated === 0,
         candidateSource: backfillCandidateSource(rule.definition.trigger),
         sampleLimit: parsed.limit,
+        ruleDefinitionHash: ruleDefinitionHash(rule.definition),
         samples,
       } as unknown as Prisma.InputJsonValue,
       createdByMemberId: this.editedByMemberId(),
@@ -2217,6 +2218,10 @@ export class RulesService {
     const maxAgeMs = 24 * 60 * 60 * 1000;
     if (Date.now() - report.createdAt.getTime() > maxAgeMs) throw new BadRequestException('Simulation report is stale; run simulate_workflow_rule again.');
     if (report.actualTasksCreated !== 0) throw new BadRequestException('Simulation report is not publish-safe because it mutated live tasks.');
+    const reportResult = backfillResult(report.result);
+    if (!reportResult.ruleDefinitionHash || reportResult.ruleDefinitionHash !== ruleDefinitionHash(dto.definition)) {
+      throw new BadRequestException('Simulation report does not match the current rule definition; run simulate_workflow_rule again.');
+    }
     const updated = await this.repository.update(parsed.ruleId, {
       name: dto.name,
       definition: {
@@ -3253,8 +3258,26 @@ function backfillResult(value: Prisma.JsonValue) {
     noMutation: record.noMutation === true,
     candidateSource: String(record.candidateSource ?? 'unknown'),
     sampleLimit: typeof record.sampleLimit === 'number' ? record.sampleLimit : rawSamples.length,
+    ruleDefinitionHash: typeof record.ruleDefinitionHash === 'string' ? record.ruleDefinitionHash : null,
     samples: rawSamples.map((sample) => sample as WorkflowRuleBackfillSample),
   };
+}
+
+function ruleDefinitionHash(definition: WorkflowRuleDefinition) {
+  return createHash('sha256')
+    .update(stableJson(canonicalDefaultRuleDefinition(definition)))
+    .digest('hex');
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 function backfillCandidateSource(trigger: WorkflowTriggerFireInput['trigger']) {
