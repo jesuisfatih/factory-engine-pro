@@ -1,21 +1,23 @@
 {
   "item": 4,
   "title": "Linda Messages 403 fix - permission audit",
-  "checkedAt": "2026-06-28T23:58:48.730Z",
+  "checkedAt": "2026-06-29T03:53:36.445Z",
+  "pass": true,
   "scope": {
     "app": "https://app.dtfbank.com/staff",
     "api": "https://api.dtfbank.com/api/v1",
     "tenantId": "ten_dtfbank",
     "container": "factoryengine-dtfbank-app",
-    "remote": "root@144.202.125.169"
+    "remote": "root@144.202.125.169",
+    "localEvidenceOnly": false
   },
   "git": {
-    "codeCommit": "84382a6f4caf7424bf47d08fa60ebc0503e9546e",
-    "deployedBuildSha": "84382a6f4caf7424bf47d08fa60ebc0503e9546e",
+    "codeCommit": "c0e807438d0a19580ed80e52f7351cf866066bc2",
+    "deployedBuildSha": "c0e807438d0a19580ed80e52f7351cf866066bc2",
     "branch": "main"
   },
   "implementation": {
-    "newPermissions": [
+    "permissions": [
       "messaging.read",
       "messaging.write"
     ],
@@ -24,19 +26,16 @@
       "/person/workspace/messages/threads/:threadId": "messaging.read",
       "POST /person/workspace/messages": "messaging.write"
     },
-    "migration": "202606304_messaging_permissions updates owner/admin/agent/customer_service/sales_personel roles"
-  },
-  "validation": [
-    {
-      "command": "pnpm typecheck",
-      "status": "passed"
+    "proofTokenRow": {
+      "id": "tok_qjOTWtT9ZFnRLrOuf0Oi372H",
+      "kind": "refresh",
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "expiresAt": "2027-06-29T03:52:51.077Z",
+      "createdAt": "2026-06-29T03:52:51.081Z",
+      "tokenHashRedacted": true
     },
-    {
-      "command": "pnpm build",
-      "status": "passed",
-      "note": "9 workspace packages, exit 0; existing Vite chunk-size warnings only"
-    }
-  ],
+    "tokenValuesPersistedInEvidence": false
+  },
   "runtime": {
     "health": {
       "url": "https://api.dtfbank.com/api/v1/health",
@@ -46,16 +45,36 @@
         "service": "factory-engine-pro-backend"
       }
     },
-    "migrationLog": [
-      "Applying migration `202606304_messaging_permissions`",
-      "All migrations have been successfully applied."
+    "logEvidence": [
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/training, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages/teammates, GET} route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages/threads/:threadId, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/notifications, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/training, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages/teammates, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages/threads/:threadId, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/messages, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/notifications, GET} route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/training, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/requests, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+      "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
     ],
-    "pm2": {
-      "api": "factory-engine-pro-api online",
-      "admin": "factory-engine-pro-admin online",
-      "person": "factory-engine-pro-person online",
-      "accounts": "factory-engine-pro-accounts online"
-    }
+    "containerStatus": [
+      "factoryengine-dtfbank-app Up 28 minutes",
+      "factoryengine-dtfprint-app Up 6 days",
+      "factoryengine-eagledtfsupply-app Up 6 days",
+      "factoryengine-fastdtfsupply-app Up 6 days",
+      "factoryengine-fastdtftransfer-app Up 6 days",
+      "factoryengine-dtfprintdepot-app Up 6 days"
+    ]
   },
   "db": {
     "rolePermissionCheck": [
@@ -91,9 +110,8 @@
     ]
   },
   "api": {
-    "checkedAt": "2026-06-28T23:57:52.020Z",
+    "checkedAt": "2026-06-29T03:52:58.913Z",
     "account": "dtfbanktx@gmail.com",
-    "loginStatus": 201,
     "permission403Count": 0,
     "endpointResults": [
       {
@@ -119,12 +137,12 @@
       {
         "path": "/person/workspace/training",
         "status": 200,
-        "size": 2
+        "size": 12
       },
       {
         "path": "/person/workspace/calendar",
         "status": 200,
-        "size": 39
+        "size": 28
       },
       {
         "path": "/person/workspace/notes",
@@ -142,11 +160,6 @@
         "size": 3
       },
       {
-        "path": "/person/workspace/messages/threads/tmbr_ten_dtfbank_charlette_boatman",
-        "status": 200,
-        "size": 0
-      },
-      {
         "path": "/person/workspace/requests",
         "status": 200,
         "size": 0
@@ -155,11 +168,16 @@
         "path": "/person/workspace/notifications",
         "status": 200,
         "size": 11
+      },
+      {
+        "path": "/person/workspace/messages/threads/tmbr_ten_dtfbank_charlette_boatman",
+        "status": 200,
+        "size": 0
       }
     ]
   },
   "ui": {
-    "checkedAt": "2026-06-28T23:58:48.730Z",
+    "checkedAt": "2026-06-29T03:53:31.656Z",
     "account": "dtfbanktx@gmail.com",
     "permission403Count": 0,
     "visiblePermissionErrors": [],
@@ -169,103 +187,120 @@
         "finalUrl": "https://app.dtfbank.com/staff/queue",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-queue-live.png",
-          "bytes": 107572,
-          "sha256": "23affdf57ab89bc8669ec8bd1263e71f9aee9590f47050adf5742b9c9d9baaf1"
-        }
+          "bytes": 94848,
+          "sha256": "f3ed5c956f74fb88a29de4ceefb6e4c8257e983ab2d2e554d597fbfa61b23b5a"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nDAILY CALLS\n91\nsegment customers\nPRIORITY TASKS\n0\nurgency desc\nPINNED\n0\npersistent board\nU80+\n91\nsame formula\nAXES\n1\nsupport\nDaily call list\n\nSegment-driven customers, sorted by the urgency formula.\n\n5 groups\nMin 2 max 5 purchase\n25/25\nOWNER\nU152\nMin 2 max 5 purchase s"
       },
       {
         "id": "customers",
         "finalUrl": "https://app.dtfbank.com/staff/customers",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-customers-live.png",
-          "bytes": 131604,
-          "sha256": "a8c53bde2eacef699efa7f13d091241d360a52aa31c7f89a460b4b748bac923a"
-        }
+          "bytes": 166071,
+          "sha256": "805917aacc69a8f00cb4cd606cc574702b14865c861f31c8644d2d05b53097be"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCustomers\nD\nDTF Bank\nCUSTOMERS\n120\nin your segments\nTOTAL SPENT\n$83,888\nacross portfolio\nAT RISK\n0\nneeds outreach\nAVG ORDERS\n2\nper customer\nSEGMENTS\n2\nowned\nCUSTOMER\tSEGMENT\tLIFECYCLE\tURGENCY\tORDERS\tSPENT\tPHONE\tLAST CONTACT\t\n\nALEXANDRA PARDO\nalexandrapardo1968@gmail.com\n\tPromo-eligible cust"
       },
       {
         "id": "email",
         "finalUrl": "https://app.dtfbank.com/staff/email",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-email-live.png",
-          "bytes": 39457,
-          "sha256": "7f02417b29428feec1d487d2e5bc2320b9015b7c3dbfcdd36e683ccb6e56e97b"
-        }
+          "bytes": 39728,
+          "sha256": "ca8ac39cc593f6a375f7178f2982a1163ea41818a5ddfd161c4bc9f72584c407"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nE-mail\nD\nDTF Bank\nE-mail threads\n0 threads - 0 unread - syncs from connected mailbox\nNo mail delivery records\nTransactional delivery rows will appear here after the backend queues mail."
       },
       {
         "id": "training",
         "finalUrl": "https://app.dtfbank.com/staff/training",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-training-live.png",
-          "bytes": 64424,
-          "sha256": "0597083a2580b44ab32276489c95b1e0d8aa08812db7c920b32df527bc29244a"
-        }
+          "bytes": 99761,
+          "sha256": "6fbe2116cd42de3ae160df14f821ad9afcc5dce82de19e5fb5bc8ee5ad996ee4"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nTraining\nD\nDTF Bank\nTraining\n17 high-priority cases shaping today's coaching queue\nshopify_segment\n2h\nCustomers over 20 orders segment context\n\nShopify segment query: number_of_orders > 20\n\nshopify_segment\n2h\nWholesale Customers segment context\n\nShopify segment query: customer_tags CONTAINS"
       },
       {
         "id": "calendar",
         "finalUrl": "https://app.dtfbank.com/staff/calendar",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-calendar-live.png",
-          "bytes": 47553,
-          "sha256": "d917a732352f7cf9c05d88bd160b0c7f8475417f15cb8fd9ac350fe2db7551c9"
-        }
+          "bytes": 47865,
+          "sha256": "96a7df9f996002791e852d01c205c14776b7d773cfcfd979ccbae9954283ce8a"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCalendar\nD\nDTF Bank\nCalendar\nYour week - AI-tasked calls show their brief on click\nToday\nJun 29 - Jul 5 2026\n6 AI-tasked\nMON\n29\nTUE\n30\nWED\n1\nTHU\n2\nFRI\n3\nSAT\n4\nSUN\n5\n09:00\n10:00\n11:00\n12:00\n13:00\n14:00\n15:00\n16:00\n17:00\nAI - Transcript\nsales: Purchase intent follow-up\nYafreisy Roman\nAI - Tra"
       },
       {
         "id": "notes",
         "finalUrl": "https://app.dtfbank.com/staff/notes",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-notes-live.png",
-          "bytes": 44631,
-          "sha256": "0c25abb6612b05be346a01bc5b870d10f02cc0aa9b3eee7ccdf3deb3451de7fc"
-        }
+          "bytes": 44957,
+          "sha256": "4180b545a59e3620a2b3a27d515e96f6b75a78e465b539791f24776c3fcda288"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nNotes\nD\nDTF Bank\nNotes\nScratch (personal) + Queue notes (team-visible, linked to customer/queue item)\nAll\nScratch\nQueue\nScratch\nQueue\nNo notes yet\nCreate a scratch or queue note to start a persisted workspace record.\nSelect a note or create a new one."
       },
       {
         "id": "announcements",
         "finalUrl": "https://app.dtfbank.com/staff/announcements",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-announcements-live.png",
-          "bytes": 74515,
-          "sha256": "405d7bf1d139d8d38792e9aa598ca764e534d623a398e4358defdadcf4e017e5"
-        }
+          "bytes": 75468,
+          "sha256": "463120e91749736632d587e8398de3358f3bd2fccd026b2073daa7be6cf3095c"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nAnnouncements\nD\nDTF Bank\nAnnouncements\n0 unread - broadcasts from owner + engineering\nAircall integration\n5h\nAircall webhook active\n\n28 events configured. Last event 5h.\n\nShopify sync\n5h\nShopify products sync completed\n\n303 records synced total, 303 in last run.\n\nShopify sync\n5h\nShopify cus"
       },
       {
         "id": "messaging",
         "finalUrl": "https://app.dtfbank.com/staff/messaging",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-messaging-live.png",
-          "bytes": 56828,
-          "sha256": "a42fe1bda63fbda196aacd02aaeb0be02463f52cd51cc939a706666d9e406fae"
-        }
+          "bytes": 57050,
+          "sha256": "279a6be946975e720b175d94a0d1db21fe077987f23a8c30d9732b90c2138461"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nMessaging\nD\nDTF Bank\nMessages\nInternal chat with teammates - see who is online right now\nDirectory\n3 online - 3 total\nCB\nCharlette Boatman\n7h\nNo internal messages yet.\nDB\nDTF Bank Owner\n3h\nNo internal messages yet.\nIT\nIhsan Taskiran\n7h\nNo internal messages yet.\nCB\nCharlette Boatman\nOnline -"
       },
       {
         "id": "requests",
         "finalUrl": "https://app.dtfbank.com/staff/requests",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-requests-live.png",
-          "bytes": 50286,
-          "sha256": "5dc13b14f9d743a2931289b33009e4d624ffdfbcf69c95f15c2d4127595ecb29"
-        }
+          "bytes": 50574,
+          "sha256": "3d21c19b7c78fb26c99e55b9930e0cf5d81b3f6dac9d05ce8257cb7d0a3483bc"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nSubmit Request\nD\nDTF Bank\nSubmit Request\nPTO, equipment, access and exception requests create internal service requests.\nTITLE\nCATEGORY\nOther\nPTO\nEquipment\nException\nAccess\nPRIORITY\nLow\nMedium\nHigh\nUrgent\nCritical\nDESCRIPTION\nSubmit request\nNo submitted requests\nUse the form to create your "
       },
       {
         "id": "notifications",
         "finalUrl": "https://app.dtfbank.com/staff/notifications",
         "screenshot": {
           "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m04-staff-notifications-live.png",
-          "bytes": 105007,
-          "sha256": "cf4d5e0008242fd6fa515efdf84998223c7a6f4763074ec502b935fc4bb7e9fb"
-        }
+          "bytes": 105305,
+          "sha256": "3c2587867004c5e5b69b32c90f585057fc72e308f676c01d47d2f21319c951ae"
+        },
+        "textSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n0\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n11\nLM\ndtfbanktx@gmail.com\nCustomer Service\nNotifications\nD\nDTF Bank\nNotifications\n11 unread - mentions, assignments, SLA, pins and system events\nAssigned: support: Shipping issue follow-up\nCreated by workflow rule \"Default: Shipping issue escalation\" for trigger \"psych.tag.detected\".\n6h\nAssigned: support: Refund intent follow-up\nCre"
       }
     ],
     "messagingProof": {
       "finalUrl": "https://app.dtfbank.com/staff/messaging",
       "visible": [
         "Messages",
-        "Directory",
-        "Charlette Boatman"
+        "Directory"
       ],
       "forbiddenResponses": [],
-      "consoleErrors": []
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failedRequests": [
+        {
+          "method": "GET",
+          "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+          "failure": "net::ERR_ABORTED"
+        }
+      ]
     }
   },
   "nextRoadmapItem": 5,
-  "seedMockPolicy": "No seed/mock data was added in this item. Existing Training/Announcements/Messages seed cleanup is ROADMAP item 12 and was not skipped into here."
+  "seedMockPolicy": "No seed/mock data was added. Existing Training/Announcements/Messages seed cleanup remains ROADMAP item 12 by strict order."
 }
