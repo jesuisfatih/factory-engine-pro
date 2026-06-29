@@ -73,9 +73,11 @@ export type BootstrapWorkflowDefaultsInput = z.infer<typeof bootstrapWorkflowDef
 
 export interface BootstrapWorkflowDefaultsResponse {
   created: number;
+  updated: number;
   skipped: number;
   totalDefaults: number;
   rules: WorkflowRuleDto[];
+  updatedKeys: string[];
   skippedKeys: string[];
 }
 

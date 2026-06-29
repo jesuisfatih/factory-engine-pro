@@ -261,14 +261,31 @@ export class RulesService {
 
   async bootstrapDefaults(): Promise<BootstrapWorkflowDefaultsResponse> {
     const existing = await this.repository.list();
-    const existingKeys = new Set(existing.map((rule) => defaultRuleKeyFromDefinition(rule.definition)).filter(Boolean));
-    const existingNames = new Set(existing.map((rule) => rule.name.trim().toLowerCase()));
+    const existingByKey = new Map(existing.flatMap((rule) => {
+      const key = defaultRuleKeyFromDefinition(rule.definition);
+      return key ? [[key, rule] as const] : [];
+    }));
+    const existingByName = new Map(existing.map((rule) => [rule.name.trim().toLowerCase(), rule] as const));
     const created: WorkflowRuleDto[] = [];
+    const updated: WorkflowRuleDto[] = [];
+    const updatedKeys: string[] = [];
     const skippedKeys: string[] = [];
 
     for (const input of DEFAULT_WORKFLOW_RULES) {
       const key = defaultRuleKeyFromInput(input);
-      if (existingKeys.has(key) || existingNames.has(input.name.trim().toLowerCase())) {
+      const matchingRule = existingByKey.get(key) ?? existingByName.get(input.name.trim().toLowerCase());
+      if (matchingRule) {
+        if (defaultRuleNeedsRefresh(matchingRule.definition, input.definition)) {
+          const refreshed = await this.repository.update(matchingRule.id, {
+            ...input,
+            comment: 'Default workflow rule refreshed',
+          }, this.editedByMemberId());
+          if (refreshed) {
+            updated.push(toDto(refreshed));
+            updatedKeys.push(key);
+            continue;
+          }
+        }
         skippedKeys.push(key);
         continue;
       }
@@ -278,16 +295,20 @@ export class RulesService {
 
     this.logger.log('rules', 'default_rules_bootstrap', 'Default workflow rules bootstrap completed', {
       created: created.length,
+      updated: updated.length,
       skipped: skippedKeys.length,
       total_defaults: DEFAULT_WORKFLOW_RULES.length,
+      updated_keys: updatedKeys,
       skipped_keys: skippedKeys,
     });
 
     return {
       created: created.length,
+      updated: updated.length,
       skipped: skippedKeys.length,
       totalDefaults: DEFAULT_WORKFLOW_RULES.length,
-      rules: created,
+      rules: [...created, ...updated],
+      updatedKeys,
       skippedKeys,
     };
   }
@@ -3163,6 +3184,26 @@ function defaultRuleKeyFromDefinition(value: Prisma.JsonValue) {
   if (!parsed.success) return null;
   const key = parsed.data.metadata?.defaultRuleKey;
   return typeof key === 'string' && key.trim() ? key.trim() : null;
+}
+
+function defaultRuleNeedsRefresh(current: Prisma.JsonValue, desired: WorkflowRuleDefinition) {
+  const parsed = workflowRuleDefinitionSchema.safeParse(current);
+  if (!parsed.success) return true;
+  return JSON.stringify(canonicalDefaultRuleDefinition(parsed.data)) !== JSON.stringify(canonicalDefaultRuleDefinition(desired));
+}
+
+function canonicalDefaultRuleDefinition(definition: WorkflowRuleDefinition) {
+  return {
+    status: definition.status,
+    priority: definition.priority,
+    composable: definition.composable,
+    trigger: definition.trigger,
+    cooldown: definition.cooldown ?? null,
+    metadata: definition.metadata ?? {},
+    when: definition.when,
+    whenGroups: definition.whenGroups ?? [],
+    actions: definition.actions,
+  };
 }
 
 function toBackfillReportDto(report: {
