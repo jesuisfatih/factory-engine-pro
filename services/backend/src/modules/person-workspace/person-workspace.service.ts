@@ -1004,6 +1004,30 @@ export class PersonWorkspaceService {
         header.email ? `Email: ${header.email}` : null,
       ].filter(Boolean).join('\n');
 
+    const existingCase = await this.prisma.db.serviceRequest.findFirst({
+      where: {
+        status: { notIn: Array.from(CLOSED) },
+        metadata: { path: ['createdFromTaskId'], equals: row.id },
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+    if (existingCase) {
+      this.logger.log('person_workspace', 'task.support_case.reused', 'Existing support case returned for person task', {
+        task_id: row.id,
+        support_case_id: existingCase.id,
+        member_id: member.id,
+        customer_id: row.customerId,
+      });
+      return {
+        ok: true,
+        taskId: row.id,
+        supportCaseId: existingCase.id,
+        ticketNumber: ticketNumber(existingCase),
+        customerId: row.customerId,
+        supportUrl: `/support?caseId=${encodeURIComponent(existingCase.id)}`,
+      };
+    }
+
     const created = await this.support.create({
       title,
       description,
