@@ -133,6 +133,7 @@ export class ApiClientError extends Error {
 
 export class ApiClient {
   private refreshPromise?: Promise<boolean>;
+  private authEpoch = 0;
 
   constructor(private readonly options: ApiClientOptions) {}
 
@@ -176,28 +177,34 @@ export class ApiClient {
     const tokenStore = this.options.tokenStore;
     const accessToken = tokenStore?.getAccessToken();
     const refreshToken = input.refreshToken ?? tokenStore?.getRefreshToken() ?? undefined;
+    this.authEpoch += 1;
+    this.refreshPromise = undefined;
     tokenStore?.clear();
 
-    const headers = this.buildHeaders(false, {}, 'application/json');
-    if (accessToken) headers.authorization = `Bearer ${accessToken}`;
-    const parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}/auth/logout`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ refreshToken }),
-      keepalive: true,
-    }));
+    try {
+      const headers = this.buildHeaders(false, {}, 'application/json');
+      if (accessToken) headers.authorization = `Bearer ${accessToken}`;
+      const parsed = await this.parseJsonResponse(await fetch(`${this.options.baseUrl}/auth/logout`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ refreshToken }),
+        keepalive: true,
+      }));
 
-    if (!parsed.ok) {
-      throw new ApiClientError(
-        parsed.payload?.message ?? `Request failed with ${parsed.status}`,
-        parsed.status,
-        parsed.payload?.request_id ?? parsed.requestId,
-        parsed.payload?.code ?? 'api_error',
-        parsed.payload?.details,
-      );
+      if (!parsed.ok) {
+        throw new ApiClientError(
+          parsed.payload?.message ?? `Request failed with ${parsed.status}`,
+          parsed.status,
+          parsed.payload?.request_id ?? parsed.requestId,
+          parsed.payload?.code ?? 'api_error',
+          parsed.payload?.details,
+        );
+      }
+
+      return parsed.payload as { ok: true };
+    } finally {
+      tokenStore?.clear();
     }
-
-    return parsed.payload as { ok: true };
   }
 
   members(query = '') {
@@ -1040,13 +1047,14 @@ export class ApiClient {
     const tokenStore = this.options.tokenStore;
     const refreshToken = tokenStore?.getRefreshToken();
     if (!tokenStore || !refreshToken) return false;
-    this.refreshPromise ??= this.fetchRefreshSession(refreshToken).finally(() => {
+    const epoch = this.authEpoch;
+    this.refreshPromise ??= this.fetchRefreshSession(refreshToken, epoch).finally(() => {
       this.refreshPromise = undefined;
     });
     return this.refreshPromise;
   }
 
-  private async fetchRefreshSession(refreshToken: string) {
+  private async fetchRefreshSession(refreshToken: string, epoch: number) {
     const response = await fetch(`${this.options.baseUrl}/auth/refresh`, {
       method: 'POST',
       headers: this.buildHeaders(false, {}, 'application/json'),
@@ -1057,6 +1065,10 @@ export class ApiClient {
       return false;
     }
     const session = await response.json() as AuthSession;
+    if (epoch !== this.authEpoch) {
+      this.options.tokenStore?.clear();
+      return false;
+    }
     this.options.tokenStore?.setSession(session);
     return true;
   }
