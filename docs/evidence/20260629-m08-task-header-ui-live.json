@@ -1,0 +1,29 @@
+{
+  "proof": "roadmap_m08_task_header_ui_live",
+  "checkedAt": "2026-06-29T01:00:28Z",
+  "matched": {
+    "taskId": "sr_d6ihmleb8guaoj5o3mb9iixu",
+    "expectedHeader": "Yafreisy Roman",
+    "dialogTextSample": "AI - Transcript\nRoutine - P3\nworkflow_rule\nU2.1\nYafreisy Roman\n+16463633906\ninfo@onprinterstudios.com\nWHY YOU'RE CALLING\nCreated by workflow rule \"Default: Purchase intent sales follow-up\" for trigger \"psych.tag.detected\".\nWHAT THEY'RE UPSET ABOUT\nNo explicit complaint captured.\nYOUR GOAL\nMove the service request to the next accountable status.\nSUGGESTED ACTIONS\nReview customer context\nAdd an internal note\nUpdate status before leaving the screen\nTRANSCRIPT SNIPPET\nCreated by workflow rule \"Default: Purchase intent sales follow-up\" for trigger \"psych.tag.detected\".\nWHY THIS TASK\n1/1 matched\nDefault: Purchase intent sales follow-up\nPsych.Tag.Detected\nai-transcript-resolver\nOpen rule canvas\nPsych Tag Includes\n=\nExpected purchase_intent\nActual purchase_intent, info_request\nevent_or_resolver\nSHOPIFY DETAIL\nmatched\nCustomer id\ncust_rlgiilabdsdauqdvqnk14uy0\nShopify id\n10187754701076\nPhone match\nYes\nEmail match\nNo\nNo Shopify orders for this matched customer.\nAI PSYCH ANALYSIS\nINTENT\nSupport\nURGENCY\nMedium\nMOTIVATORS\ninfo_request, follow_up\nOBJECTIONS\nNone\n\nCustomer Jeffrey called regarding machine delivery logistics. Agent Linda from DTF Bank confirmed shipping address (431 Campbell Avenue",
+    "headerVisible": true,
+    "workflowTitleVisibleAsHeader": false,
+    "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m08-task-header-matched-ui-live.png",
+    "finalUrl": "https://app.dtfbank.com/staff/queue?taskId=sr_d6ihmleb8guaoj5o3mb9iixu"
+  },
+  "unmatched": {
+    "taskId": "sr_zr38glp4hkdgpjpa1pzrln5q",
+    "expectedHeader": "+14694492809",
+    "dialogTextSample": "AI - Transcript\nRoutine - P3\nworkflow_rule\nU1.1\n+14694492809\n+14694492809\nWHY YOU'RE CALLING\nCreated by workflow rule \"Default: Purchase intent sales follow-up\" for trigger \"psych.tag.detected\".\nWHAT THEY'RE UPSET ABOUT\nNo explicit complaint captured.\nYOUR GOAL\nMove the service request to the next accountable status.\nSUGGESTED ACTIONS\nReview customer context\nAdd an internal note\nUpdate status before leaving the screen\nTRANSCRIPT SNIPPET\nCreated by workflow rule \"Default: Purchase intent sales follow-up\" for trigger \"psych.tag.detected\".\nWHY THIS TASK\n1/1 matched\nDefault: Purchase intent sales follow-up\nPsych.Tag.Detected\nai-transcript-resolver\nOpen rule canvas\nPsych Tag Includes\n=\nExpected purchase_intent\nActual purchase_intent, info_request\nevent_or_resolver\nSHOPIFY DETAIL\nCustomer id\nNot matched\nShopify id\nNot synced\nPhone match\nNo\nEmail match\nNo\nNo Shopify orders for this matched customer.\nAI PSYCH ANALYSIS\nNo resolved Aircall psych analysis is attached to this customer yet.\nORDER AND CUSTOMER TIMELINE\n1\nTask\nsales: Purchase intent follow-up\n\nCreated by workflow rule \"Default: Purchase intent sales follow-up\" for trigger \"psych.tag.detected\".\n\n28.06.2026 23:34:25\nTASK NOTE\n0 sav",
+    "headerVisible": true,
+    "workflowTitleVisibleAsHeader": false,
+    "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m08-task-header-unmatched-ui-live.png",
+    "finalUrl": "https://app.dtfbank.com/staff/queue?taskId=sr_zr38glp4hkdgpjpa1pzrln5q"
+  },
+  "assertions": {
+    "matchedHeaderVisible": true,
+    "unmatchedPhoneHeaderVisible": true,
+    "matchedHeaderNotWorkflowTitle": true,
+    "unmatchedHeaderNotWorkflowTitle": true,
+    "bodyHasLocalhost": false
+  }
+}
