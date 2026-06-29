@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,6 +26,7 @@ import {
   syncCallCenterTasks,
   transferCallCenterTask,
 } from '@/lib/live-data';
+import { subscribeCallCenterRealtime } from '@/lib/realtime';
 
 type TabId = 'kanban' | 'calendar' | 'notes' | 'messages';
 type NoteTarget = { customerId: string; customerName: string };
@@ -54,6 +55,10 @@ function CallCenterView() {
     queryFn: fetchCallCenterOverview,
     refetchInterval: 30_000,
   });
+  useEffect(() => subscribeCallCenterRealtime(() => {
+    void queryClient.invalidateQueries({ queryKey: ['call-center'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard', 'call-center', 'overview'] });
+  }), [queryClient]);
   const detail = useQuery({
     queryKey: ['call-center', 'customer-detail', detailCustomerId],
     queryFn: () => fetchCallCenterCustomerDetail(detailCustomerId ?? ''),
@@ -157,7 +162,7 @@ function CallCenterView() {
                   {item.label}
                 </button>
               ))}
-              <span className="call-center-live">Live data, 30s fallback refresh</span>
+              <span className="call-center-live">WebSocket push, 30s fallback refresh</span>
             </div>
             {tab === 'kanban' && (
               <KanbanTab
@@ -395,6 +400,7 @@ function KanbanTab({
               <span className="segment-dot" style={{ background: group.segmentColor }} />
               <strong>{group.segmentName}</strong>
               <em>Owner: {group.ownerName} - {group.ownerRole}</em>
+              <em>Active: {group.ownerName}</em>
               <span>{group.customerCount}</span>
             </summary>
             <div className="segment-customer-list">
@@ -405,6 +411,7 @@ function KanbanTab({
                     <span>{customer.phone ?? 'No phone on file'}{customer.email ? ` - ${customer.email}` : ''}</span>
                   </div>
                   <div className="segment-customer-signals">
+                    <span>Owner: {group.ownerName} - Active: {group.ownerName}</span>
                     <span>{customer.ordersCount} orders - {formatMoney(customer.totalSpent)}</span>
                     <span>{customer.latestOrder ? `Last order ${customer.latestOrder.orderNumber ?? customer.latestOrder.id} - ${formatMoney(customer.latestOrder.totalPrice)}` : 'No linked Shopify order'}</span>
                     <span>{customer.latestCall ? `Last call ${relative(customer.latestCall.at)}` : 'No matched call yet'}</span>
@@ -465,7 +472,8 @@ function KanbanTab({
           <EmptyLine>No pinned tasks or customers.</EmptyLine>
         ) : kanban.pinBoard.map((pin) => (
           <div key={pin.id} className="pin-line" onClick={() => pin.customerId && onOpenCustomer(pin.customerId)}>
-            <span>{pin.ownerName} to</span>
+            <span>Owner: {pin.ownerName}</span>
+            <span>Active: {pin.ownerName}</span>
             <strong>{pin.customerName ?? pin.title}</strong>
             <em>{pin.kind}</em>
             {pin.serviceRequestId && (

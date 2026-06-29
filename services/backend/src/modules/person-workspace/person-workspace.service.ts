@@ -42,6 +42,7 @@ import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
@@ -197,6 +198,7 @@ export class PersonWorkspaceService {
     private readonly customersService: CustomersService,
     private readonly aircall: AircallService,
     private readonly logger: AppLogger,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async summary() {
@@ -507,6 +509,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       column_id: input.columnId,
     });
+    this.emitCallCenterInvalidate('person.queue.move');
     const updated = await this.requireServiceRequest(id);
     return this.queueCard(
       updated,
@@ -571,6 +574,7 @@ export class PersonWorkspaceService {
         range: input.range ?? 'last7d',
         item_count: orderedItemIds.length,
       });
+      this.emitCallCenterInvalidate('person.daily.workflow_reorder');
       return { ok: true, segmentId: null, orderedItemIds };
     }
 
@@ -639,6 +643,7 @@ export class PersonWorkspaceService {
       segment_id: segmentId,
       item_count: orderedItemIds.length,
     });
+    this.emitCallCenterInvalidate('person.daily.reorder');
     return { ok: true, segmentId, orderedItemIds };
   }
 
@@ -669,6 +674,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       archived_at: archivedAt,
     });
+    this.emitCallCenterInvalidate('person.daily.archive');
 
     return { ok: true, taskId: row.id, archived: true, archivedAt };
   }
@@ -684,6 +690,7 @@ export class PersonWorkspaceService {
       ingested: backfill.ingested,
       resolver_queued: resolver.queued,
     });
+    this.emitCallCenterInvalidate('person.tasks.sync');
     return {
       ok: true,
       backfill: {
@@ -723,6 +730,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       pinned: nextPinned,
     });
+    this.emitCallCenterInvalidate('person.queue.pin');
     const updated = await this.requireServiceRequest(id);
     return this.queueCard(
       updated,
@@ -826,6 +834,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       pinned: nextPinned,
     });
+    this.emitCallCenterInvalidate('person.customer.pin');
     return { ok: true, pinned: nextPinned };
   }
 
@@ -1066,6 +1075,7 @@ export class PersonWorkspaceService {
       from_axis: fromAxis,
       to_axis: toAxis,
     });
+    this.emitCallCenterInvalidate('person.task.transfer');
 
     return {
       ok: true,
@@ -1209,6 +1219,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       customer_id: row.customerId,
     });
+    this.emitCallCenterInvalidate('person.task.note');
     return this.taskBrief(id);
   }
 
@@ -1257,6 +1268,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       scheduled_at: scheduledAt.toISOString(),
     });
+    this.emitCallCenterInvalidate('person.task.calendar');
     return this.taskBrief(id);
   }
 
@@ -1346,6 +1358,7 @@ export class PersonWorkspaceService {
       customer_id: id,
       member_id: member.id,
     });
+    this.emitCallCenterInvalidate('person.customer.note.create');
     return this.customersService.detail(id);
   }
 
@@ -1489,6 +1502,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       recipient_member_id: other.id,
     });
+    this.emitCallCenterInvalidate('person.message.send');
     return { id: created.id, threadId: other.id, fromMe: true, author: 'You', text: created.body, at: 'Now' };
   }
 
@@ -1524,6 +1538,7 @@ export class PersonWorkspaceService {
         },
       });
       this.logger.log('person_workspace', 'note.update', 'Person note updated', { note_id: input.id, member_id: member.id });
+      this.emitCallCenterInvalidate('person.note.update');
       return this.note(await this.requireServiceRequest(input.id));
     }
 
@@ -1548,6 +1563,7 @@ export class PersonWorkspaceService {
       },
     });
     this.logger.log('person_workspace', 'note.create', 'Person note created', { note_id: created.id, member_id: member.id });
+    this.emitCallCenterInvalidate('person.note.create');
     return this.note(created);
   }
 
@@ -1581,6 +1597,7 @@ export class PersonWorkspaceService {
     });
     await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
     this.logger.log('person_workspace', 'note.reply', 'Person note reply saved', { note_id: id, member_id: member.id });
+    this.emitCallCenterInvalidate('person.note.reply');
     return this.note(await this.requireServiceRequest(id));
   }
 
@@ -1856,6 +1873,7 @@ export class PersonWorkspaceService {
       member_id: member.id,
       category: input.category,
     });
+    this.emitCallCenterInvalidate('person.request.create');
     return this.requests();
   }
 
@@ -2731,6 +2749,14 @@ export class PersonWorkspaceService {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new ForbiddenException('Tenant context is required');
     return tenantId;
+  }
+
+  private emitCallCenterInvalidate(reason: string) {
+    this.realtime.emitTenantInvalidate(this.tenantId(), {
+      module: 'call_center',
+      reason,
+      at: new Date().toISOString(),
+    });
   }
 }
 

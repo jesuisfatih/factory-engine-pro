@@ -76,8 +76,8 @@
       "orders_sub": "in tenant",
       "open_tasks": "Open support",
       "open_tasks_sub": "service requests",
-      "ai_tasks": "Urgent support",
-      "ai_tasks_sub": "high priority",
+      "urgent_tasks": "Urgent support",
+      "urgent_tasks_sub": "high priority",
       "calls": "Mail failures",
       "calls_sub": "recent deliveries"
     },

@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import type { ActiveWorkflowRuleStatsResponse, CallCenterOverview } from '@factory-engine-pro/contracts';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/PageHeader';
 import { Kpi } from '@/components/Kpi';
 import { adminApi, apiErrorMessage } from '@/lib/api';
+import { subscribeCallCenterRealtime } from '@/lib/realtime';
 
 interface OrderStats {
   count: number;
@@ -84,6 +85,7 @@ interface TrendPoint {
 
 function DashboardView() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const orderStats = useQuery<OrderStats>({
     queryKey: ['dashboard', 'orders', 'stats'],
     queryFn: () => adminApi.orderStats() as Promise<OrderStats>,
@@ -115,7 +117,13 @@ function DashboardView() {
   const callCenter = useQuery<CallCenterOverview>({
     queryKey: ['dashboard', 'call-center', 'overview'],
     queryFn: () => adminApi.callCenterOverview(),
+    refetchInterval: 30_000,
   });
+
+  useEffect(() => subscribeCallCenterRealtime(() => {
+    void queryClient.invalidateQueries({ queryKey: ['dashboard', 'call-center', 'overview'] });
+    void queryClient.invalidateQueries({ queryKey: ['call-center'] });
+  }), [queryClient]);
 
   const statsQueries = [orderStats, customerStats, supportStats, mail];
   const failedMailCount = (mail.data ?? []).filter((delivery) => delivery.status === 'failed').length;
@@ -154,7 +162,7 @@ function DashboardView() {
           <Kpi id="kpi-sales-24h" labelI18nKey="dashboard.kpi.sales_24h" value={formatMoney(orderStats.data?.totalRevenue ?? 0)} subI18nKey="dashboard.kpi.sales_24h_sub" />
           <Kpi id="kpi-orders" labelI18nKey="dashboard.kpi.orders" value={orderStats.data?.count ?? 0} subI18nKey="dashboard.kpi.orders_sub" />
           <Kpi id="kpi-open-tasks" labelI18nKey="dashboard.kpi.open_tasks" value={supportStats.data?.open ?? 0} subI18nKey="dashboard.kpi.open_tasks_sub" />
-          <Kpi id="kpi-ai-tasks" labelI18nKey="dashboard.kpi.ai_tasks" value={supportStats.data?.urgent ?? 0} subI18nKey="dashboard.kpi.ai_tasks_sub" />
+          <Kpi id="kpi-urgent-tasks" labelI18nKey="dashboard.kpi.urgent_tasks" value={supportStats.data?.urgent ?? 0} subI18nKey="dashboard.kpi.urgent_tasks_sub" />
           <Kpi id="kpi-calls" labelI18nKey="dashboard.kpi.calls" value={failedMailCount} subI18nKey="dashboard.kpi.calls_sub" />
         </div>
       )}

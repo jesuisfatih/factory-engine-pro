@@ -21,6 +21,7 @@ import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contract
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
@@ -38,6 +39,7 @@ export class CallCenterService {
     private readonly customers: CustomersService,
     private readonly aircall: AircallService,
     private readonly logger: AppLogger,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async overview(): Promise<CallCenterOverview> {
@@ -111,6 +113,7 @@ export class CallCenterService {
       ingested: backfill.ingested,
       resolver_queued: resolver.queued,
     });
+    this.emitRealtimeInvalidate('tasks.sync');
     return {
       ok: true,
       backfill: {
@@ -162,6 +165,7 @@ export class CallCenterService {
       customer_id: id,
       member_id: actor.id,
     });
+    this.emitRealtimeInvalidate('customer.note.create');
     return this.customers.detail(id);
   }
 
@@ -195,6 +199,7 @@ export class CallCenterService {
       customer_id: row.customerId,
       member_id: actor.id,
     });
+    this.emitRealtimeInvalidate('note.reply');
     return { ok: true, taskId: row.id };
   }
 
@@ -293,6 +298,7 @@ export class CallCenterService {
       target_member_id: target.id,
       axis: toAxis,
     });
+    this.emitRealtimeInvalidate('task.transfer');
 
     return {
       ok: true,
@@ -377,6 +383,7 @@ export class CallCenterService {
       target_member_id: target.id,
       axis: input.targetAxis,
     });
+    this.emitRealtimeInvalidate('customer.task.create');
     return {
       ok: true,
       serviceRequestId: created.id,
@@ -423,6 +430,14 @@ export class CallCenterService {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new BadRequestException('Tenant context is required');
     return tenantId;
+  }
+
+  private emitRealtimeInvalidate(reason: string) {
+    this.realtime.emitTenantInvalidate(this.tenantId(), {
+      module: 'call_center',
+      reason,
+      at: new Date().toISOString(),
+    });
   }
 
   private async memberAircallMap(memberById: Map<string, CallCenterMember>) {
