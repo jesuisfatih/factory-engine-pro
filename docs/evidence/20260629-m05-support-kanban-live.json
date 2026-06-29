@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-06-29T00:09:31.710309+00:00",
+  "scope": "ROADMAP item 5 support workflow cases hidden from Linda priority kanban",
+  "appUrl": "https://app.dtfbank.com/staff/queue",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "account": "dtfbanktx@gmail.com",
+  "loginStatus": 201,
+  "dailyOperationsStatus": 200,
+  "summary": {
+    "dailyCount": 0,
+    "priorityCount": 3,
+    "pinnedCount": 0,
+    "highUrgencyCount": 0,
+    "visibleAxes": [
+      "support"
+    ],
+    "segmentGroupCount": 0
+  },
+  "apiPriorityCount": 3,
+  "apiSupportCardsInPriority": 0,
+  "apiPriorityCards": [
+    {
+      "id": "sr_d6ihmleb8guaoj5o3mb9iixu",
+      "title": "Yafreisy Roman",
+      "axis": "sales",
+      "segment": "workflow_rule",
+      "source": "ai_transcript",
+      "summary": "SR-MQY8YXMR - U1.9 - Open - 3h"
+    },
+    {
+      "id": "sr_zr38glp4hkdgpjpa1pzrln5q",
+      "title": "sales: Purchase intent follow-up",
+      "axis": "sales",
+      "segment": "workflow_rule",
+      "source": "ai_transcript",
+      "summary": "SR-MQY8YW60 - U0.9 - Open - 3h"
+    },
+    {
+      "id": "sr_cejjrh2us5rmequ02jlvx12p",
+      "title": "sales: Purchase intent follow-up",
+      "axis": "sales",
+      "segment": "workflow_rule",
+      "source": "ai_transcript",
+      "summary": "SR-MQY8YL5O - U0.9 - Open - 3h"
+    }
+  ],
+  "uiFinalUrl": "https://app.dtfbank.com/staff/queue",
+  "uiPriorityCardCount": 3,
+  "uiSupportCardsInPriority": [],
+  "uiPriorityTextSample": "Priority kanban\n\nRule-engine tasks, axis-scoped and urgency-desc.\n\nYafreisy Roman\nAI - Transcript\nU1.9\nSR-MQY8YXMR - U1.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n0 orders - $0 - 1 tasks\nworkflow_rule\nPin\nTransfer\nsales: Purchase intent follow-up\nAI - Transcript\nU0.9\nSR-MQY8YW60 - U0.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer\nsales: Purchase intent follow-up\nAI - Transcript\nU0.9\nSR-MQY8YL5O - U0.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-support-kanban-live.png",
+  "apiNetwork": [
+    {
+      "url": "https://api.dtfbank.com/api/v1/identity/workspace-brand",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/auth/person/login",
+      "status": 201
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
+      "status": 200
+    },
+    {
+      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
+      "status": 200
+    }
+  ],
+  "visibleTextHasPermissionError": false
+}

@@ -1,0 +1,122 @@
+﻿{
+    "generatedAt":  "2026-06-29T00:10:33.6772923Z",
+    "scope":  "ROADMAP item 5 - Support workflow cases are hidden from Linda priority kanban and retained as support cases",
+    "commit":  "80a46240ce3292c8ca4971d7c9a9e694908fa394",
+    "deploy":  {
+                   "buildSha":  "80a46240ce3292c8ca4971d7c9a9e694908fa394",
+                   "container":  "factoryengine-dtfbank-app",
+                   "migration":  "202606305_hide_support_cases_from_person_kanban",
+                   "logLines":  [
+                                    "Applying migration `202606305_hide_support_cases_from_person_kanban`",
+                                    "  └─ 202606305_hide_support_cases_from_person_kanban/",
+                                    "All migrations have been successfully applied.",
+                                    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 12:06:40 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                                ],
+                   "factoryContainers":  [
+                                             "factoryengine-dtfbank-app|Up 5 minutes",
+                                             "factoryengine-dtfprint-app|Up 6 days",
+                                             "factoryengine-eagledtfsupply-app|Up 6 days",
+                                             "factoryengine-fastdtfsupply-app|Up 6 days",
+                                             "factoryengine-fastdtftransfer-app|Up 6 days",
+                                             "factoryengine-dtfprintdepot-app|Up 6 days"
+                                         ]
+               },
+    "liveApi":  {
+                    "loginStatus":  201,
+                    "dailyStatus":  200,
+                    "supportListStatus":  200,
+                    "summary":  {
+                                    "dailyCount":  0,
+                                    "priorityCount":  3,
+                                    "pinnedCount":  0,
+                                    "highUrgencyCount":  0,
+                                    "visibleAxes":  [
+                                                        "support"
+                                                    ],
+                                    "segmentGroupCount":  0
+                                },
+                    "priorityCount":  3,
+                    "supportCardsInPriority":  0,
+                    "priorityCards":  [
+                                          {
+                                              "id":  "sr_d6ihmleb8guaoj5o3mb9iixu",
+                                              "title":  "Yafreisy Roman",
+                                              "axis":  "sales",
+                                              "segment":  "workflow_rule",
+                                              "source":  "ai_transcript",
+                                              "summary":  "SR-MQY8YXMR - U1.9 - Open - 3h"
+                                          },
+                                          {
+                                              "id":  "sr_zr38glp4hkdgpjpa1pzrln5q",
+                                              "title":  "sales: Purchase intent follow-up",
+                                              "axis":  "sales",
+                                              "segment":  "workflow_rule",
+                                              "source":  "ai_transcript",
+                                              "summary":  "SR-MQY8YW60 - U0.9 - Open - 3h"
+                                          },
+                                          {
+                                              "id":  "sr_cejjrh2us5rmequ02jlvx12p",
+                                              "title":  "sales: Purchase intent follow-up",
+                                              "axis":  "sales",
+                                              "segment":  "workflow_rule",
+                                              "source":  "ai_transcript",
+                                              "summary":  "SR-MQY8YL5O - U0.9 - Open - 3h"
+                                          }
+                                      ],
+                    "supportListTotal":  23,
+                    "supportCasesReturned":  15,
+                    "supportCaseSamples":  [
+                                               {
+                                                   "id":  "sr_irctsy8eswd9dggjlfxj7lcq",
+                                                   "title":  "support: Shipping issue follow-up",
+                                                   "axis":  "support",
+                                                   "status":  "open",
+                                                   "category":  "workflow_rule"
+                                               },
+                                               {
+                                                   "id":  "sr_q4u8c97mr5ufn0pjstb2w1ck",
+                                                   "title":  "support: Refund intent follow-up",
+                                                   "axis":  "support",
+                                                   "status":  "open",
+                                                   "category":  "workflow_rule"
+                                               },
+                                               {
+                                                   "id":  "sr_hn7oidh00z2f1tnpk9unr79y",
+                                                   "title":  "support: Refund intent follow-up",
+                                                   "axis":  "support",
+                                                   "status":  "open",
+                                                   "category":  "workflow_rule"
+                                               },
+                                               {
+                                                   "id":  "sr_s89e3806x011p6nh3juxwhxa",
+                                                   "title":  "support: Refund intent follow-up",
+                                                   "axis":  "support",
+                                                   "status":  "open",
+                                                   "category":  "workflow_rule"
+                                               },
+                                               {
+                                                   "id":  "sr_lena8yf9ssgvutd9fy06r2kh",
+                                                   "title":  "support: Refund intent follow-up",
+                                                   "axis":  "support",
+                                                   "status":  "open",
+                                                   "category":  "workflow_rule"
+                                               }
+                                           ]
+                },
+    "managedDb":  {
+                      "supportCases":  17,
+                      "hiddenSupportCases":  17,
+                      "openHidden":  11,
+                      "openVisible":  0
+                  },
+    "liveUi":  {
+                   "finalUrl":  "https://app.dtfbank.com/staff/queue",
+                   "screenshot":  "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-support-kanban-live.png",
+                   "uiPriorityCardCount":  3,
+                   "uiSupportCardsInPriority":  [
+
+                                                ],
+                   "visibleTextHasPermissionError":  false,
+                   "priorityTextSample":  "Priority kanban\n\nRule-engine tasks, axis-scoped and urgency-desc.\n\nYafreisy Roman\nAI - Transcript\nU1.9\nSR-MQY8YXMR - U1.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n0 orders - $0 - 1 tasks\nworkflow_rule\nPin\nTransfer\nsales: Purchase intent follow-up\nAI - Transcript\nU0.9\nSR-MQY8YW60 - U0.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer\nsales: Purchase intent follow-up\nAI - Transcript\nU0.9\nSR-MQY8YL5O - U0.9 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer"
+               }
+}
