@@ -385,22 +385,36 @@ export class PersonWorkspaceService {
   }
 
   private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
-    const ownerScope: Prisma.ServiceRequestWhereInput[] = [
-      { assignedMemberId: member.id },
-      ...(end === null ? [{ metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } }] : []),
-    ];
+    const ownerScope: Prisma.ServiceRequestWhereInput = end === null
+      ? {
+          OR: [
+            { assignedMemberId: member.id },
+            { metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } },
+          ],
+        }
+      : { assignedMemberId: member.id };
     const archiveDateScope: Prisma.ServiceRequestWhereInput[] = end === null
       ? [
           { createdAt: { lt: start } },
           { metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } },
         ]
       : [{ createdAt: { gte: start, lt: end } }];
+    const workflowScope: Prisma.ServiceRequestWhereInput = {
+      OR: [
+        { sourceCallId: { not: null } },
+        { sourceEmailId: { not: null } },
+        { matchedRuleId: { not: null } },
+        { metadata: { path: ['workflow'], not: Prisma.JsonNull } },
+      ],
+    };
     return this.prisma.db.serviceRequest.findMany({
       where: {
-        OR: ownerScope,
-        source: 'admin_created',
         axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
-        AND: [{ OR: archiveDateScope }],
+        AND: [
+          ownerScope,
+          workflowScope,
+          { OR: archiveDateScope },
+        ],
         status: { notIn: Array.from(CLOSED) },
       },
       include: serviceRequestInclude,
