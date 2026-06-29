@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION, type AircallWorkflowCoverageResponse } from '@factory-engine-pro/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, Key, RefreshCw, Save, XCircle } from 'lucide-react';
@@ -79,6 +79,11 @@ function ConnectionView() {
     queryFn: () => adminApi.aircallCallEvents(),
   });
 
+  const workflowCoverage = useQuery({
+    queryKey: ['aircall', 'workflow-coverage'],
+    queryFn: () => adminApi.aircallWorkflowCoverage() as Promise<AircallWorkflowCoverageResponse>,
+  });
+
   const refreshDirectory = useMutation({
     mutationFn: async () => {
       const [users, numbers] = await Promise.all([
@@ -91,6 +96,7 @@ function ConnectionView() {
       qc.invalidateQueries({ queryKey: ['aircall', 'users'] });
       qc.invalidateQueries({ queryKey: ['aircall', 'numbers'] });
       qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'workflow-coverage'] });
       toast.success(t('aircall_hub.connection.directory_refresh_ok'));
     },
     onError: (error) => toast.error(t('aircall_hub.connection.directory_refresh_failed'), { description: apiErrorMessage(error) }),
@@ -101,6 +107,7 @@ function ConnectionView() {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
       qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'workflow-coverage'] });
       toast.success(t('aircall_hub.connection.backfill_recent_ok'), {
         description: t('aircall_hub.connection.backfill_recent_ok_body', {
           ingested: result.ingested,
@@ -117,6 +124,7 @@ function ConnectionView() {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
       qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'workflow-coverage'] });
       toast.success(t('aircall_hub.connection.resolver_reprocess_ok'), {
         description: t('aircall_hub.connection.resolver_reprocess_ok_body', {
           queued: result.queued,
@@ -126,6 +134,27 @@ function ConnectionView() {
       });
     },
     onError: (error) => toast.error(t('aircall_hub.connection.resolver_reprocess_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const repairWorkflow = useMutation({
+    mutationFn: () => adminApi.repairAircallWorkflowEvaluations({
+      targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+      recentDays: 7,
+      limit: 1000,
+    }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'sync-logs'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'workflow-coverage'] });
+      toast.success(t('aircall_hub.connection.workflow_repair_ok'), {
+        description: t('aircall_hub.connection.workflow_repair_ok_body', {
+          queued: result.queued,
+          scanned: result.scanned,
+          missing: result.missingEvaluations,
+        }),
+      });
+    },
+    onError: (error) => toast.error(t('aircall_hub.connection.workflow_repair_failed'), { description: apiErrorMessage(error) }),
   });
 
   const setField = (field: keyof CredentialForm, value: string) => {
@@ -330,6 +359,18 @@ function ConnectionView() {
               ? t('aircall_hub.connection.resolver_reprocess_running')
               : t('aircall_hub.connection.resolver_reprocess', { version: TRANSCRIPT_RESOLVER_SCHEMA_VERSION })}
           </button>
+          <button
+            id="btn-repair-aircall-workflow"
+            type="button"
+            className="btn"
+            disabled={missingCredentials || !canSyncDirectory || repairWorkflow.isPending || config.isLoading}
+            onClick={() => repairWorkflow.mutate()}
+          >
+            <RefreshCw size={13} />
+            {repairWorkflow.isPending
+              ? t('aircall_hub.connection.workflow_repair_running')
+              : t('aircall_hub.connection.workflow_repair')}
+          </button>
         </div>
         {!canSyncDirectory && <div className="form-error" style={{ marginTop: 12 }}>{t('aircall_hub.connection.no_aircall_write_permission')}</div>}
         {backfillRecent.data && (
@@ -347,6 +388,85 @@ function ConnectionView() {
             <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_queued')} value={String(reprocessResolver.data.queued)} />
             <RuntimeCell label={t('aircall_hub.connection.resolver_reprocess_skipped')} value={String(reprocessResolver.data.skipped)} />
           </div>
+        )}
+        {repairWorkflow.data && (
+          <div className="webhook-grid" style={{ marginTop: 12 }}>
+            <RuntimeCell label={t('aircall_hub.connection.workflow_repair_scanned')} value={String(repairWorkflow.data.scanned)} />
+            <RuntimeCell label={t('aircall_hub.connection.workflow_repair_queued')} value={String(repairWorkflow.data.queued)} />
+            <RuntimeCell label={t('aircall_hub.connection.workflow_repair_skipped')} value={String(repairWorkflow.data.skipped)} />
+            <RuntimeCell label={t('aircall_hub.connection.workflow_repair_already')} value={String(repairWorkflow.data.alreadyEvaluated)} />
+          </div>
+        )}
+      </section>
+
+      <section className="config-card" id="aircall-workflow-coverage">
+        <div className="head">
+          <div>
+            <h3 data-i18n-key="aircall_hub.connection.workflow_coverage_title">{t('aircall_hub.connection.workflow_coverage_title')}</h3>
+            <div className="sub" data-i18n-key="aircall_hub.connection.workflow_coverage_sub">{t('aircall_hub.connection.workflow_coverage_sub')}</div>
+          </div>
+          <button type="button" className="btn" onClick={() => workflowCoverage.refetch()} disabled={workflowCoverage.isFetching}>
+            <RefreshCw size={13} /> {t('common.retry')}
+          </button>
+        </div>
+        {workflowCoverage.isLoading && (
+          <div className="empty-state small" data-i18n-key="aircall_hub.connection.workflow_coverage_loading">
+            {t('aircall_hub.connection.workflow_coverage_loading')}
+          </div>
+        )}
+        {workflowCoverage.isError && (
+          <div className="error-state">
+            <strong data-i18n-key="aircall_hub.connection.workflow_coverage_failed">{t('aircall_hub.connection.workflow_coverage_failed')}</strong>
+            <p>{apiErrorMessage(workflowCoverage.error)}</p>
+          </div>
+        )}
+        {workflowCoverage.data && (
+          <>
+            <div className={workflowCoverage.data.workflowInvariantOk ? 'webhook-warning' : 'form-error'} style={{ marginTop: 12 }}>
+              {workflowCoverage.data.workflowInvariantOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+              <span>
+                {workflowCoverage.data.workflowInvariantOk
+                  ? t('aircall_hub.connection.workflow_invariant_ok')
+                  : t('aircall_hub.connection.workflow_invariant_attention')}
+              </span>
+            </div>
+            <div className="webhook-grid" style={{ marginTop: 12 }}>
+              <RuntimeCell label={t('aircall_hub.connection.workflow_target_version')} value={`v${workflowCoverage.data.targetVersion}`} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_transcripts')} value={String(workflowCoverage.data.transcriptEvents)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_evaluated')} value={String(workflowCoverage.data.evaluatedEvents)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_evaluation_rows')} value={String(workflowCoverage.data.evaluationRows)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_actionable')} value={String(workflowCoverage.data.actionableEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_no_action')} value={String(workflowCoverage.data.noActionEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_task_created')} value={String(workflowCoverage.data.taskCreatedEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_matched_without_task')} value={String(workflowCoverage.data.matchedWithoutTaskEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_failed')} value={String(workflowCoverage.data.failedEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_missing')} value={String(workflowCoverage.data.missingEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_stale')} value={String(workflowCoverage.data.staleResolverVersion)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_local_fallback')} value={String(workflowCoverage.data.localFallbackResolvedEvents)} />
+            </div>
+            {workflowCoverage.data.missing.length > 0 && (
+              <table className="data-table" id="aircall-workflow-missing-table" style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th>{t('aircall_hub.connection.col_call')}</th>
+                    <th>{t('aircall_hub.connection.col_when')}</th>
+                    <th>{t('aircall_hub.connection.col_resolver')}</th>
+                    <th>{t('aircall_hub.connection.workflow_repair_mode')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workflowCoverage.data.missing.slice(0, 8).map((call) => (
+                    <tr key={call.id}>
+                      <td>{call.externalCallId}</td>
+                      <td>{formatDate(call.eventTimestamp)}</td>
+                      <td>{call.resolverStatus ?? '-'}</td>
+                      <td>{call.repairMode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
         )}
       </section>
 
