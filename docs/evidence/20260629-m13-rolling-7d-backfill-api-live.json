@@ -1,0 +1,2417 @@
+{
+  "proof": "roadmap_m13_rolling_7d_backfill_api_live",
+  "checkedAt": "2026-06-29T09:59:04.696Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "git": {
+    "localEvidenceCommit": "471ad9dc593a3c865ac35a432116c7f23bb4f4ef",
+    "deployedCodeCommit": "471ad9dc593a3c865ac35a432116c7f23bb4f4ef",
+    "deployedBuildSha": "471ad9dc593a3c865ac35a432116c7f23bb4f4ef",
+    "branch": "main"
+  },
+  "tokenValuesPersistedInEvidence": false,
+  "principals": {
+    "owner": {
+      "memberId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "permissionCount": 27,
+      "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+    },
+    "linda": {
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "permissionCount": 10,
+      "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+    }
+  },
+  "pass": true,
+  "triggerBody": {
+    "recentDays": 7,
+    "shopifyResources": [
+      "customers",
+      "orders"
+    ],
+    "shopifySegmentLimit": 100,
+    "aircallMaxPages": 40,
+    "resolverLimit": 1000,
+    "targetResolverVersion": 2
+  },
+  "statusBefore": {
+    "status": 200,
+    "queueConfigured": true,
+    "schedulerCount": 1,
+    "recentRunCount": 4
+  },
+  "trigger": {
+    "status": 201,
+    "requestId": "b690a7da-3f70-4092-a022-c75ea1584ee4",
+    "body": {
+      "syncLogId": "slog_hnzktv23fcvsfdacyh825zus",
+      "jobId": "rolling-7d:ten_dtfbank:slog_hnzktv23fcvsfdacyh825zus",
+      "queued": true,
+      "status": "queued",
+      "message": "Rolling 7d backfill queued.",
+      "source": "manual",
+      "recentDays": 7,
+      "startedAt": "2026-06-29T09:59:10.812Z",
+      "finishedAt": null,
+      "steps": []
+    }
+  },
+  "pollingSnapshots": [
+    {
+      "checkedAt": "2026-06-29T09:59:12.623Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T09:59:23.534Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T09:59:34.426Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T09:59:45.397Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T09:59:56.218Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:00:07.014Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:00:17.806Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:00:28.614Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:00:39.826Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:00:50.618Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:01.421Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:12.208Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:23.004Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:33.879Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:44.673Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:01:55.498Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:02:06.297Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:02:17.109Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:02:28.324Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:02:39.518Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:02:50.620Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:03:01.411Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:03:12.201Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:03:23.034Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:03:40.875Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:03:51.716Z",
+      "httpStatus": 200,
+      "runStatus": "running",
+      "message": "Rolling 7d backfill is running.",
+      "stepStatuses": []
+    },
+    {
+      "checkedAt": "2026-06-29T10:04:02.512Z",
+      "httpStatus": 200,
+      "runStatus": "success",
+      "message": "Rolling 7d backfill completed.",
+      "stepStatuses": [
+        {
+          "key": "shopify_sync",
+          "status": "success",
+          "message": "Queued Shopify 7d delta sync for customers, orders."
+        },
+        {
+          "key": "shopify_segments",
+          "status": "success",
+          "message": "Synced 28 Shopify-native segment(s)."
+        },
+        {
+          "key": "segment_evaluation",
+          "status": "success",
+          "message": "Evaluated 28 canonical segment(s)."
+        },
+        {
+          "key": "aircall_recent_calls",
+          "status": "success",
+          "message": "Backfilled 51/178 Aircall call(s) from the last 7 day(s)."
+        },
+        {
+          "key": "aircall_resolver",
+          "status": "success",
+          "message": "Queued 171/171 transcript resolver job(s)."
+        },
+        {
+          "key": "customer_axis",
+          "status": "success",
+          "message": "Wrote 0 customer axis assignment(s)."
+        }
+      ]
+    }
+  ],
+  "finalRun": {
+    "syncLogId": "slog_hnzktv23fcvsfdacyh825zus",
+    "jobId": "rolling-7d:ten_dtfbank:slog_hnzktv23fcvsfdacyh825zus",
+    "queued": false,
+    "status": "success",
+    "message": "Rolling 7d backfill completed.",
+    "source": "manual",
+    "recentDays": 7,
+    "startedAt": "2026-06-29T09:59:10.857Z",
+    "finishedAt": "2026-06-29T10:03:53.570Z",
+    "steps": [
+      {
+        "key": "shopify_sync",
+        "detail": {
+          "queued": true,
+          "batchId": "de97a0f9-e8d4-41e8-919b-2f9a5afcb483",
+          "message": "Shopify rolling 7d sync queued.",
+          "resources": [
+            "customers",
+            "orders"
+          ],
+          "syncLogIds": [
+            "slog_enz8ptkwxjwemvgs4usg6itq",
+            "slog_iwthzrfepr223r2gbiknkqc0"
+          ]
+        },
+        "status": "success",
+        "message": "Queued Shopify 7d delta sync for customers, orders."
+      },
+      {
+        "key": "shopify_segments",
+        "detail": {
+          "failed": 0,
+          "created": 0,
+          "scanned": 28,
+          "updated": 28,
+          "segments": [
+            {
+              "id": "seg_nvub4wexu4wsllmoethd5ko0",
+              "name": "Abandoned checkouts in the last 30 days",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 105,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/596688339220"
+            },
+            {
+              "id": "seg_lyj3a5dp2byy9nhper69q4jp",
+              "name": "Amazon",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 0,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/655056601364"
+            },
+            {
+              "id": "seg_i5q4jel1b80p689n908mm2ch",
+              "name": "Customers added to companies",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 0,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/648705376532"
+            },
+            {
+              "id": "seg_n0wbfw9d00psq7rapeburze6",
+              "name": "Customers not added to companies",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 5958,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/648705343764"
+            },
+            {
+              "id": "seg_i2igf1ynhxp1umg8relmg5aa",
+              "name": "Customers over 20 orders",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 17,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/656206889236"
+            },
+            {
+              "id": "seg_kn0gf2xmdk2dskrv8t8yuue4",
+              "name": "Customers who have not placed an order in the last 2 months",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 1445,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/613008408852"
+            },
+            {
+              "id": "seg_fl279wl4jy0i2womqgx3iof2",
+              "name": "Customers who have purchased a heat press",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 700,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/627391627540"
+            },
+            {
+              "id": "seg_nhj9lu0oa384liwqepxizum9",
+              "name": "Customers who have purchased at least once",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 1852,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/596688404756"
+            },
+            {
+              "id": "seg_eftzjgf9bcyvnjz09d66b6h6",
+              "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 563,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/627391987988"
+            },
+            {
+              "id": "seg_rz3xkyzxykilcj4pswvdixtd",
+              "name": "Customers who have purchased DTF or UV DTF Printer",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 12,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/627391267092"
+            },
+            {
+              "id": "seg_e275g4nzgg1duyroh44xa4po",
+              "name": "Customers who have purchased more than once",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 445,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/596688306452"
+            },
+            {
+              "id": "seg_sj7n6jq8t57h590xweotlyiu",
+              "name": "Customers who have purchased UV DTF inks, or UV DTF Films",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 89,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/627392348436"
+            },
+            {
+              "id": "seg_xoeuylceqvrpgwr0rxzfzksu",
+              "name": "Customers who haven't purchased",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 4106,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/596688273684"
+            },
+            {
+              "id": "seg_cbwd2qqrrtcpe8yh3df8npro",
+              "name": "Devamlı Sipariş",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 696,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/646727958804"
+            },
+            {
+              "id": "seg_br4pkd8uylm0jn34dk7v6i7t",
+              "name": "eBay",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 2,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/655056634132"
+            },
+            {
+              "id": "seg_mekkf42ophx9pzfhpkzmpqox",
+              "name": "Email subscribers",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 4323,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/596688371988"
+            },
+            {
+              "id": "seg_ublte8a8akpg5ro6npi95d7l",
+              "name": "HP1",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 111,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/637971530004"
+            },
+            {
+              "id": "seg_v5j0eg8wdwz9hl01x1u1nibo",
+              "name": "HP2",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 41,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/637974348052"
+            },
+            {
+              "id": "seg_cmebwvbuw4cpm5hehmcvj9kf",
+              "name": "HP3",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 465,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/637974380820"
+            },
+            {
+              "id": "seg_izn4cv1flmudcsrmq8bcg5m6",
+              "name": "HYDRO1620 sayfasıyla ilgilenmiş satın almamış müşteriler",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 944,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/655138324756"
+            },
+            {
+              "id": "seg_b33fn1t9zzh95ae7q61c94dw",
+              "name": "mart 2. siparis",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 17,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/646727598356"
+            },
+            {
+              "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+              "name": "Min 2 max 5 purchase",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 355,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/656941777172"
+            },
+            {
+              "id": "seg_gq9r4bdz8ezboaby5l71ra6e",
+              "name": "Promo-eligible customers (Discount Audience)",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 5928,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/606944559380"
+            },
+            {
+              "id": "seg_lsnbcihpgtkw1j7ffwjaolbg",
+              "name": "Promo-eligible customers who haven't purchased yet",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 4105,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/606950162708"
+            },
+            {
+              "id": "seg_qepjwuo8lu6hiv48t4fq2wcg",
+              "name": "rwr",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 307,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/637271146772"
+            },
+            {
+              "id": "seg_n8z8bo5yhygyrwql3b9o0j0r",
+              "name": "Sales Team 1",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 90,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/647401832724"
+            },
+            {
+              "id": "seg_nejpv47d3l86hjfwnxuc829c",
+              "name": "Tax-exempt customers",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 66,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/613008048404"
+            },
+            {
+              "id": "seg_ui2gyn7udvfekebsyyuyn0mo",
+              "name": "Wholesale Customers",
+              "error": null,
+              "action": "updated",
+              "syncStatus": "ready",
+              "customerCount": 30,
+              "evaluationStatus": "skipped",
+              "shopifySegmentId": "gid://shopify/Segment/615174504724"
+            }
+          ],
+          "evaluated": 0,
+          "skippedEvaluation": 28
+        },
+        "status": "success",
+        "message": "Synced 28 Shopify-native segment(s)."
+      },
+      {
+        "key": "segment_evaluation",
+        "detail": {
+          "failed": 0,
+          "failures": [],
+          "evaluated": 28
+        },
+        "status": "success",
+        "message": "Evaluated 28 canonical segment(s)."
+      },
+      {
+        "key": "aircall_recent_calls",
+        "detail": {
+          "to": "2026-06-29T10:03:33.788Z",
+          "from": "2026-06-22T10:03:33.788Z",
+          "pages": 4,
+          "stats": {
+            "total": 181,
+            "last3d": 73,
+            "lastReceivedAt": "2026-06-29T05:58:39.621Z",
+            "resolverFailed": 0,
+            "resolverQueued": 171,
+            "withTranscript": 171,
+            "resolverSucceeded": 169
+          },
+          "errors": 0,
+          "fetched": 178,
+          "skipped": 127,
+          "ingested": 51,
+          "recentDays": 7,
+          "resolverQueued": 2,
+          "transcriptErrors": 0,
+          "transcriptsEmpty": 49,
+          "transcriptsFound": 2
+        },
+        "status": "success",
+        "message": "Backfilled 51/178 Aircall call(s) from the last 7 day(s)."
+      },
+      {
+        "key": "aircall_resolver",
+        "detail": {
+          "from": "2026-06-22T10:03:48.767Z",
+          "stats": {
+            "total": 181,
+            "last3d": 73,
+            "lastReceivedAt": "2026-06-29T05:58:39.621Z",
+            "resolverFailed": 0,
+            "resolverQueued": 171,
+            "withTranscript": 171,
+            "resolverSucceeded": 0
+          },
+          "queued": 171,
+          "scanned": 171,
+          "skipped": 0,
+          "callEvents": [
+            {
+              "id": "acev_kyqsww7gqvl23lzrjd13b0xc",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906652817",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_brimlfg4ttnbojeilihdzlbo",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906587992",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_bg3nnltaqyrq5yvuzo1wxdih",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906571528",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_tsqja63f79ln2vxg7g6naqt1",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906496212",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_up5dvp6zzlnv3o6ew2z3tru3",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906460157",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_dltdv904c9v7afn9p8yl9ov5",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906457381",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_o74bjguswsflx1vlaa92akk8",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906451258",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_p08x9ddhxt0vlnqpj5g91prc",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906447922",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_nasgsxiqib6xj15raozqj05o",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906444846",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_dx8dy3di5t88lr8pr2v59gwk",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906439733",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_qwpjrp5u2u9vct3ixy016f2h",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906419650",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_znuhrg3okkebmi19qvvxyw0p",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906416065",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_dds7xj7gftpm5126n8it1cu1",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906412777",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_vqy6om6qldnawotrgruwnv56",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906375791",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_puey4e742iv0o7dcxoz7d213",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906369996",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_alor4f4lq1zlyb5v3n995c5d",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906353155",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_h2k5ne0ta99jb3t7ixyrgevo",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906345108",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_e6abvzdh6m28xfdbkahajwus",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906325476",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_lsv86yes03atykc4l5tccrbb",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906322646",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_mx5d5obcj3ygd4dxyasd5yop",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906315873",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_afpyrqxjyoiqulg7cizrkhue",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906314224",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_cmtwku3gsop53sj87fp0zovo",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906312193",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_nkbzqkxeetnxsph6ndu3xzp2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906307734",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_aqc25862jco2iqg6obxsrh4p",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906300999",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_n99ltrpkxxxu5bdrnbciyv2b",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906297242",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_bt2knn64bpujldc9574hh4kq",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906281158",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_pevdsbjiev2ixms80u70mm3v",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906282338",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_s7l30y5sqv8w0snsb715xrdc",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906275993",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_q3wotskuc4vb7g69ufisav42",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906270378",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_g9heo9eo4uhjtv01jay171wh",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906258701",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_x720zmn9h4croc3o0kko623a",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906213545",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_zj9nosuev6a2vqd4yyh60ci7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906129519",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_hvkzrwa2t5rkeub94ucxmce7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906125680",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_lhcdbomr8prj1d4mm37510jc",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906117785",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_l02yg6syu1va9ijnhmwz7r8o",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906121218",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_abd08e8j8smlk3njzgh5sx29",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906115582",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_vxxbthqe3nlopswd37y3xrxb",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906108763",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_xf6p0hz7bezj0k2rx3p29u5b",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906092600",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_ue0fd7yeriopjuuq8rcljl3o",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906089893",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_vasvkqmydephm7t96jg1bb48",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906082898",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_sc8l8mwgf24jt2il9l5jedez",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3906051893",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_tyvvwp6tsqhby5pwqhrk1a9p",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905951507",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_baoob1msjmudw2921g2cq7df",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905901016",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_nskvaa377m98m34mk0vgyuk0",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905905504",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_lfujo12zhh02njhzmwldgy35",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905826836",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_e6ivgpr2hg3x8h7bg44eo0rh",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905635653",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_caexb5bc3nl0te500j8xsvgn",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905617248",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_pb3u4okoj394z6rtjm706y5m",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905595917",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_gdqvmzl8r0475vrn2mfsx15i",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905591110",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_rjhthabsey3a5a6sqfwy7ws7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905233115",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_tt4pa9uew5aera7doke02vz1",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905215258",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_kj85entfl1enqodaf8512ubz",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3905198166",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_443ac57e-eab8-4790-a08e-fc0fbdf59cbc",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_7fe7195b-ed1d-4eed-965b-0d6f5a6785d0",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_4668c100-4dc7-4a53-a350-3209a8831527",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_285753a6-d988-40e4-9bb0-1dad4891d29b",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_isz54sp4an8mlh8lzq4a10o3",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_371a98b7-77fc-4846-be4d-6e86e567e4fd",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_3cee5a30-c622-4a0a-aadb-e144f3daa114",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902737099",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_7f41cdee-c742-4cc3-9ead-c9aa3f24fe42",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_a6afca1c-877b-4b52-b160-12256ee4a68a",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_ae31aa1d-a9fe-4ea0-a5a2-c421e08c1eb8",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_f7425d58-799c-4fd4-9303-0370092df9ed",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_didvrznj85jfmhhijkbbunwu",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_6a52ec43-bbdb-4565-ad14-bef6240f77a7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_eb486195-1ad1-4ae1-82d4-968437f66057",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_272e783b-a4fb-4d25-a70b-4320f3d65999",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_13d7b35c-b664-4cff-b2bd-3ecf85a131f8",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902717533",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_e5250bbc-7d3e-417f-b61f-523ba97da1bf",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_f5990e76-25cd-420a-a97c-54f5cd3f37ec",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_9ae1020c-9664-4b85-a4bb-f2e3b57b278d",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_ec216786-4355-45e5-9680-3ba15de0135f",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_e7eby0t1ar88tqo7ffdqea7c",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_ae1e00c6-cf2f-4d1b-8ec9-05128a9288f5",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_77fb2f36-320f-47c1-a987-4f728a80e005",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_3136fa11-02ce-486f-914c-1e5cf93bf358",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902712713",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_7e70c2a1-3262-43b1-bd7d-4e9ad00a24c2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_75ac8d5c-e222-49fe-9131-f24d922e1b1c",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_dni3u52ai8wzhc4sdks24pfu",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_69a64371-ee45-42bf-93e1-5b747a316438",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_371ca3bf-7bcc-48cc-a5b9-3f036bc0c176",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_821ba698-1a92-4b15-a2ec-66b73a603c0a",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_99c2cba5-d681-41a6-bb83-3ef378c08968",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902466195",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_d81a2d26-7c03-4ecf-b791-91b1e7151011",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_2a7cdfd2-1dde-4f75-bac9-ca1de8323ec2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_6a63ce44-ab30-4933-b4a0-0d2e2b76923c",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_69db308e-9974-4304-84ea-86eafaf2921c",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_v852x673hrcqjdnso5imy3n4",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_7315cefc-df6e-496d-829b-264c98f39e41",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_77da702b-aa3e-49a6-981b-7e6d0b6d775b",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_cbbfeec2-de01-4f2b-abdd-dbe2ba834351",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902457897",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_6120e93a-19d3-46d0-88ce-144235a952fe",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_c3714b6b-efb4-46e6-a2e2-4b52f5484e4c",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_b11a3112-b182-4693-a796-d0f146abdb96",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_f8663716-d0ef-44ff-92d6-0c26457f92ea",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_tk3auhvr32iqwtkw5yqu5ttp",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_ab6b6616-62a2-4cdb-9119-34b8dfa420b7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_98887c6c-d035-4aff-88ff-cb2543dc937a",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_legacy_e473fd41-04a1-4df0-b5c7-f52b8e8b23bf",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902415705",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_eh807ryhxuhqbug71guqf07k",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902187876",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_hdjs5889c2jtilmpmg0dqysw",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902105079",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_asz7djtohx7zt2tod6d4ai1u",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902096783",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_xeqdilgria5nicdhyia3a82t",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3902051936",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_x6wzf8cfhdtst417e6w8ou7k",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901988888",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_unx9bmxaijcio93fml2rpr5q",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901931995",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_vvcihq9w0yei3y0hc6slhvwx",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901981385",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_rqkjs749t2z8yspj5td16pes",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901966326",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_yx3yscveib3a73jgnyobvhjv",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901536637",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_rboc7elume7hwcydsm8rmv71",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901514701",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_z94u7bn4cs1epphc9kbxs6ty",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901352870",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_n4i2ejm58cirmzahwo5jekqh",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901347492",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_yizxtwiry7a9xugyjpmvqyjy",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3901171330",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_nkc3pl9y5dgy26d293ecn4bh",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898604426",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_gt2l95u8cn7dk0chwttdy12v",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898472770",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_q50f2tlu6syu7l6m0z76cvpm",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898408266",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_fe5ic2ta4jgv8u4cjwxl7az3",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898392765",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_dmylo7pj3zpicbhp0yhjmr74",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898240107",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_ioh1y3ctsvlhjhlt8uw345mn",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898227986",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_n3ok5665552j81vbvzdtn2mj",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898209714",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_z0iaiuhoda7k0f80hkh2dl5m",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898040437",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_riuniuc4j09r07ndmub5rqt8",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898031082",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_kahk693ruwq4q4hpi0xnhi2l",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898027610",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_yne7kce7xxyw0dvp6otfd7tm",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3898010605",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_wk8pmvuhds7y6e6wohjpuxi0",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897987737",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_g60dpj4cqro55c4y0f1gws2i",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897969578",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_s07ffud6284c1n8b5bbb0s4u",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897949046",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_v8g8uuafqps6alh8be84ynd2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897850694",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_mwlvng3mba104p4tis63q7f7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897531457",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_xzj55ji81w23kdnkfc9judvs",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897308495",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_s6rq9xwrp58woanicx21yqel",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3897093212",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_j1z0q006t3kxzachk0ew9pvt",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3896975269",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_x2386ru1o4ggyi00og81d2cu",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3894385237",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_avy80u32rugaqw8k3gkk38w5",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3894271125",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_y25osjpt3wlrn7y3b271hdkk",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3894173576",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_p0sbdd0iz3uwe7uhswtn7dhz",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3893666207",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_agf3yg7ocgha2a06omnornqk",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3893648950",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_t5upactnu1jt56ps1g9fglvg",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3893625706",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_om1hfcuqeybwg7987yvx1ncv",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3893561218",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_lcj72rx0o1fcuws66pem9ruw",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3893082432",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_jwa42uzrowhbhwmcgtqilf0l",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3892976663",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_v2atxh7tka2jbktabqg0lgkx",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3892970823",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_prtroli9kknd9cnt2hcnc4ed",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3892696732",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_cuf5wv01mw4pinnecsyrxeza",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3892694970",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_k8cscdhhxt3v89wm8q03kogp",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889999219",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_rfyxwjpt5n8biemhr61bp47t",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889993239",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_ywv7zsacxcxgzwbvuxhsiac3",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889951389",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_f6s24yz61syeg7lggkd6tqxd",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889719957",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_xyx727inen0gc0tw9bxypf04",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889585473",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_g1fwtoymg2ulmuoc7f2jhwcq",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889528073",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_nwaiyxd70zy0iql7zqmyx085",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889426159",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_x4ofnf9fgwbdjws6wnty5ae9",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889404113",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_u2pi2ir1njd897f6w0jtmm3h",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3889243144",
+              "previousStatus": "queued",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_bpiv1ov262s0teiueqxtybjg",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888995876",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_p7fj4hgw9qx6wapnfs8a0gsb",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888986172",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_szn2jargv0z5ja6j1whtpvay",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888945417",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_q5zd5ip5idhkxv5qpsslmv04",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888935304",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_oe5wobk6mvta0ayvih64irie",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888928576",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_l7h7acwhjg2hpqldsgefsz0k",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888922036",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_chuhg4rbs118msbka464ltvr",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888774112",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_shc0kv5a49j4rqkxpfrevus7",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888724626",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_bhtgphz3pa5xt7csbxtd3daf",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888681068",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_fzlesvy16qtw4xg892uia2d4",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888618602",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_zgd5z90b1a9xltpp0su6xqx1",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888632457",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_ilbxxbn3qbjsi5dxvcoj4qnw",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888626433",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_x6ysmgg3uhkubneuomm4wcq2",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888576563",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_z8u6kijy9d7pksrxae2ohqs8",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888464313",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_iruwi15svmqb2mwfgjkxj8a4",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888440353",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_s3du8ouu19aafk4z47mzc104",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888359645",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_j9zvjylcw0kgfubg3rbjx1ma",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888316034",
+              "previousStatus": "succeeded",
+              "previousVersion": 2
+            },
+            {
+              "id": "acev_jzjsv2bnu9h7fe04mfkqxr33",
+              "queued": true,
+              "skippedReason": null,
+              "externalCallId": "3888269970",
+              "previousStatus": "queued",
+              "previousVersion": 2
+            }
+          ],
+          "recentDays": 7,
+          "targetVersion": 2
+        },
+        "status": "success",
+        "message": "Queued 171/171 transcript resolver job(s)."
+      },
+      {
+        "key": "customer_axis",
+        "detail": {
+          "axes": [
+            "sales",
+            "support",
+            "account"
+          ],
+          "owners": {
+            "sales": {
+              "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+              "name": "Ihsan Taskiran",
+              "email": "ihsan@dtfbank.com"
+            },
+            "account": {
+              "id": "tmbr_ten_dtfbank_info_owner",
+              "name": "DTF Bank Owner",
+              "email": "info@dtfbank.com"
+            },
+            "support": {
+              "id": "tmbr_ten_dtfbank_linda_marroquin",
+              "name": "Linda Marroquin",
+              "email": "dtfbanktx@gmail.com"
+            }
+          },
+          "scanned": 5958,
+          "assigned": 0,
+          "skippedNoOwner": 0,
+          "skippedExisting": 17874,
+          "missingOwnerAxes": []
+        },
+        "status": "success",
+        "message": "Wrote 0 customer axis assignment(s)."
+      }
+    ]
+  },
+  "statusAfter": {
+    "status": 200,
+    "queueConfigured": true,
+    "schedulerCount": 1,
+    "schedulers": [
+      {
+        "id": "rolling-7d:ten_dtfbank:daily",
+        "name": "rolling_7d_backfill_job",
+        "pattern": "0 3 * * *",
+        "nextRunAt": "2026-06-30T03:00:00.000Z"
+      }
+    ]
+  },
+  "stepStatuses": [
+    {
+      "key": "shopify_sync",
+      "status": "success",
+      "message": "Queued Shopify 7d delta sync for customers, orders."
+    },
+    {
+      "key": "shopify_segments",
+      "status": "success",
+      "message": "Synced 28 Shopify-native segment(s)."
+    },
+    {
+      "key": "segment_evaluation",
+      "status": "success",
+      "message": "Evaluated 28 canonical segment(s)."
+    },
+    {
+      "key": "aircall_recent_calls",
+      "status": "success",
+      "message": "Backfilled 51/178 Aircall call(s) from the last 7 day(s)."
+    },
+    {
+      "key": "aircall_resolver",
+      "status": "success",
+      "message": "Queued 171/171 transcript resolver job(s)."
+    },
+    {
+      "key": "customer_axis",
+      "status": "success",
+      "message": "Wrote 0 customer axis assignment(s)."
+    }
+  ],
+  "shopifyStatus": {
+    "status": 200,
+    "configured": true,
+    "isAnySyncing": false,
+    "entities": {
+      "customers": {
+        "resource": "customers",
+        "status": "completed",
+        "isRunning": false,
+        "lastCompletedAt": "2026-06-29T09:59:13.697Z",
+        "lastFailedAt": null,
+        "lastError": null,
+        "totalRecordsSynced": 6678,
+        "lastRunRecords": 120,
+        "snapshotRecords": 5958,
+        "consecutiveFailures": 0,
+        "lastCursor": null,
+        "heartbeatAt": "2026-06-29T09:59:13.697Z"
+      },
+      "orders": {
+        "resource": "orders",
+        "status": "completed",
+        "isRunning": false,
+        "lastCompletedAt": "2026-06-29T09:59:19.285Z",
+        "lastFailedAt": null,
+        "lastError": null,
+        "totalRecordsSynced": 1293,
+        "lastRunRecords": 111,
+        "snapshotRecords": 634,
+        "consecutiveFailures": 0,
+        "lastCursor": null,
+        "heartbeatAt": "2026-06-29T09:59:19.285Z"
+      },
+      "products": {
+        "resource": "products",
+        "status": "completed",
+        "isRunning": false,
+        "lastCompletedAt": "2026-06-28T21:44:18.646Z",
+        "lastFailedAt": null,
+        "lastError": null,
+        "totalRecordsSynced": 303,
+        "lastRunRecords": 303,
+        "snapshotRecords": 303,
+        "consecutiveFailures": 0,
+        "lastCursor": null,
+        "heartbeatAt": "2026-06-28T21:44:18.646Z"
+      }
+    },
+    "recentRollingLogs": [
+      {
+        "id": "slog_enz8ptkwxjwemvgs4usg6itq",
+        "action": "rolling_7d.customers",
+        "status": "completed",
+        "message": "customers rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:59:10.873Z",
+        "finishedAt": "2026-06-29T09:59:13.702Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:59:10.862Z",
+          "source": "tenant_config",
+          "batchId": "de97a0f9-e8d4-41e8-919b-2f9a5afcb483",
+          "resource": "customers",
+          "recordsProcessed": 120
+        }
+      },
+      {
+        "id": "slog_iwthzrfepr223r2gbiknkqc0",
+        "action": "rolling_7d.orders",
+        "status": "completed",
+        "message": "orders rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:59:10.873Z",
+        "finishedAt": "2026-06-29T09:59:19.291Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:59:10.862Z",
+          "source": "tenant_config",
+          "batchId": "de97a0f9-e8d4-41e8-919b-2f9a5afcb483",
+          "resource": "orders",
+          "recordsProcessed": 111
+        }
+      },
+      {
+        "id": "slog_zbz5osd31og108371weer62v",
+        "action": "rolling_7d.orders",
+        "status": "completed",
+        "message": "orders rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:37:38.579Z",
+        "finishedAt": "2026-06-29T09:37:56.260Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:37:38.566Z",
+          "source": "tenant_config",
+          "batchId": "66a694e9-12ce-485e-ab95-1597e4ada36d",
+          "resource": "orders",
+          "recordsProcessed": 111
+        }
+      },
+      {
+        "id": "slog_ni2zn3v69e11yha1sqmz63vb",
+        "action": "rolling_7d.customers",
+        "status": "completed",
+        "message": "customers rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:37:38.579Z",
+        "finishedAt": "2026-06-29T09:37:41.481Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:37:38.566Z",
+          "source": "tenant_config",
+          "batchId": "66a694e9-12ce-485e-ab95-1597e4ada36d",
+          "resource": "customers",
+          "recordsProcessed": 120
+        }
+      },
+      {
+        "id": "slog_jua8jncqtbawjfgg304rk8x0",
+        "action": "rolling_7d.orders",
+        "status": "completed",
+        "message": "orders rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:27:51.698Z",
+        "finishedAt": "2026-06-29T09:28:06.163Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:27:51.645Z",
+          "source": "tenant_config",
+          "batchId": "cd515fb2-1150-4d05-9203-f9e0d48a91a7",
+          "resource": "orders",
+          "recordsProcessed": 111
+        }
+      },
+      {
+        "id": "slog_fnwjzftiarr2x4o25gbtj1p8",
+        "action": "rolling_7d.customers",
+        "status": "completed",
+        "message": "customers rolling 7d sync completed.",
+        "startedAt": "2026-06-29T09:27:51.698Z",
+        "finishedAt": "2026-06-29T09:27:55.078Z",
+        "metadata": {
+          "mode": "rolling_7d",
+          "pages": 1,
+          "since": "2026-06-22T09:27:51.645Z",
+          "source": "tenant_config",
+          "batchId": "cd515fb2-1150-4d05-9203-f9e0d48a91a7",
+          "resource": "customers",
+          "recordsProcessed": 120
+        }
+      }
+    ]
+  },
+  "aircallRecentLogs": [
+    {
+      "id": "slog_p7gqi94l9oby9b3l7f3v5hj8",
+      "service": "aircall",
+      "action": "calls.resolver_reprocess",
+      "status": "success",
+      "message": "Queued 171/171 Aircall transcript resolver job(s) for schema v2.",
+      "startedAt": "2026-06-29T10:03:48.767Z",
+      "finishedAt": "2026-06-29T10:03:51.217Z"
+    },
+    {
+      "id": "slog_wwzaogzy9elyrqp4et2unfzr",
+      "service": "aircall",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 51/178 Aircall calls from the last 7 day(s).",
+      "startedAt": "2026-06-29T10:03:33.778Z",
+      "finishedAt": "2026-06-29T10:03:48.761Z"
+    },
+    {
+      "id": "slog_ew28apay7k7gjiz5s4zv8ed2",
+      "service": "aircall",
+      "action": "calls.resolver_reprocess",
+      "status": "success",
+      "message": "Queued 171/171 Aircall transcript resolver job(s) for schema v2.",
+      "startedAt": "2026-06-29T09:49:14.796Z",
+      "finishedAt": "2026-06-29T09:49:16.978Z"
+    },
+    {
+      "id": "slog_cru6zs81d99qd9ats8m69q10",
+      "service": "aircall",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 51/178 Aircall calls from the last 7 day(s).",
+      "startedAt": "2026-06-29T09:48:59.370Z",
+      "finishedAt": "2026-06-29T09:49:14.791Z"
+    },
+    {
+      "id": "slog_zc0rjvsghuze20uyu4cq15hx",
+      "service": "aircall",
+      "action": "calls.resolver_reprocess",
+      "status": "success",
+      "message": "Queued 171/171 Aircall transcript resolver job(s) for schema v2.",
+      "startedAt": "2026-06-29T09:31:56.914Z",
+      "finishedAt": "2026-06-29T09:31:59.261Z"
+    },
+    {
+      "id": "slog_kr2ezksssley5bs0z9v17mqb",
+      "service": "aircall",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 51/178 Aircall calls from the last 7 day(s).",
+      "startedAt": "2026-06-29T09:31:42.485Z",
+      "finishedAt": "2026-06-29T09:31:56.905Z"
+    },
+    {
+      "id": "slog_m3bm2mhisiiwak4ul9q35n99",
+      "service": "aircall",
+      "action": "calls.resolver_reprocess",
+      "status": "success",
+      "message": "Queued 171/171 Aircall transcript resolver job(s) for schema v2.",
+      "startedAt": "2026-06-29T06:09:08.866Z",
+      "finishedAt": "2026-06-29T06:09:11.215Z"
+    },
+    {
+      "id": "slog_s7fhifq7z2fl30ew12olop4l",
+      "service": "aircall",
+      "action": "calls.backfill_recent",
+      "status": "success",
+      "message": "Backfilled 51/178 Aircall calls from the last 7 day(s).",
+      "startedAt": "2026-06-29T06:08:55.172Z",
+      "finishedAt": "2026-06-29T06:09:08.857Z"
+    }
+  ],
+  "lindaOperations": {
+    "status": 200,
+    "summary": {
+      "dailyCount": 91,
+      "priorityCount": 91,
+      "pinnedCount": 4,
+      "highUrgencyCount": 91,
+      "visibleAxes": [
+        "support"
+      ],
+      "segmentGroupCount": 5
+    },
+    "prioritySourceCounts": {
+      "ai_segment": 91
+    }
+  },
+  "runtime": {
+    "health": {
+      "status": 200,
+      "ok": true,
+      "requestId": "7b2e7680-2365-41c1-a577-4a75b7a5391d",
+      "body": {
+        "ok": true,
+        "service": "factory-engine-pro-backend"
+      }
+    },
+    "pm2": [
+      {
+        "name": "factory-engine-pro-api",
+        "status": "online",
+        "restarts": 497,
+        "pid": 34960
+      },
+      {
+        "name": "factory-engine-pro-admin",
+        "status": "online",
+        "restarts": 56,
+        "pid": 12671
+      },
+      {
+        "name": "factory-engine-pro-person",
+        "status": "online",
+        "restarts": 0,
+        "pid": 1491
+      },
+      {
+        "name": "factory-engine-pro-accounts",
+        "status": "online",
+        "restarts": 0,
+        "pid": 1505
+      }
+    ],
+    "containerStatus": [
+      "factoryengine-dtfbank-app Up 2 hours"
+    ],
+    "logEvidence": []
+  },
+  "assertions": {
+    "triggerAccepted": true,
+    "finalRunSuccess": true,
+    "allStepsSuccess": true,
+    "schedulerConfigured": true,
+    "shopifyDeltaStatusOk": true,
+    "aircallLogsOk": true,
+    "lindaKanbanFilled": true,
+    "adminUiShowsRollingPanel": true,
+    "staffUiShowsPriorityCards": true,
+    "noAdminConsoleErrors": true,
+    "noStaffConsoleErrors": true,
+    "noAdminFailedResponses": true,
+    "noStaffFailedResponses": true
+  }
+}
