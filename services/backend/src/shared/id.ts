@@ -29,6 +29,7 @@ export type IdPrefix =
   | 'shsmem'
   | 'sasg'
   | 'pdco'
+  | 'pdto'
   | 'sr'
   | 'srcm'
   | 'tpar'

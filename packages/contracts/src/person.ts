@@ -259,7 +259,7 @@ export const personDailyOperationsSchema = z.object({
     visibleAxes: z.array(z.string()),
     segmentGroupCount: z.number(),
   }),
-  dailyCallList: z.array(personDailyCallItemSchema),
+  dailyCallList: z.array(personQueueCardSchema),
   priorityKanban: z.array(personQueueCardSchema),
   pinBoard: z.array(personQueueCardSchema),
   segmentGroups: z.array(personSegmentDailyGroupSchema),
@@ -273,14 +273,14 @@ export const movePersonQueueCardSchema = z.object({
 export type MovePersonQueueCardInput = z.infer<typeof movePersonQueueCardSchema>;
 
 export const reorderPersonDailyCallSchema = z.object({
-  segmentId: z.string().trim().min(1),
+  segmentId: z.string().trim().min(1).optional(),
   orderedItemIds: z.array(z.string().trim().min(1)).min(1).max(500),
 });
 export type ReorderPersonDailyCallInput = z.infer<typeof reorderPersonDailyCallSchema>;
 
 export const reorderPersonDailyCallResultSchema = z.object({
   ok: z.literal(true),
-  segmentId: z.string(),
+  segmentId: z.string().nullable(),
   orderedItemIds: z.array(z.string()),
 });
 export type ReorderPersonDailyCallResult = z.infer<typeof reorderPersonDailyCallResultSchema>;

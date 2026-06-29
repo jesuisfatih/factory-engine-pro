@@ -110,6 +110,7 @@ model Tenant {
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   taskParticipants        TaskParticipant[]
   personDailyCallOrders   PersonDailyCallOrder[]
+  personDailyTaskOrders   PersonDailyTaskOrder[]
 
   @@map("tenants")
 }
@@ -168,6 +169,7 @@ model Member {
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   dailyCallOrders PersonDailyCallOrder[]
+  dailyTaskOrders PersonDailyTaskOrder[]
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -853,6 +855,26 @@ model PersonDailyCallOrder {
   @@map("person_daily_call_orders")
 }
 
+model PersonDailyTaskOrder {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  memberId         String   @map("member_id")
+  serviceRequestId String   @map("service_request_id")
+  workDate         DateTime @map("work_date") @db.Date
+  position         Int
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, memberId, workDate, serviceRequestId])
+  @@index([tenantId, memberId, workDate, position])
+  @@index([tenantId, serviceRequestId])
+  @@map("person_daily_task_orders")
+}
+
 model ShopifyCustomerSegment {
   id               String    @id
   tenantId         String    @map("tenant_id")
@@ -958,6 +980,7 @@ model ServiceRequest {
   assignedMember Member?               @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
   comments     ServiceRequestComment[]
   participants TaskParticipant[]
+  dailyTaskOrders PersonDailyTaskOrder[]
 
   @@index([tenantId, customerId])
   @@index([tenantId, customerUserId])
