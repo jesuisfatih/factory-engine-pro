@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CheckCircle2, ChevronDown, ChevronUp, Plus, Save, Trash2, Users as UsersIcon, User, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Plus, RefreshCw, Save, Trash2, Users as UsersIcon, User, XCircle } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
@@ -12,7 +12,7 @@ import {
   type CommissionProfile, type CommissionRequest, type CommissionRule, type CommissionAssignType,
   type CommissionRuleType, type CommissionPeriod,
 } from '@/lib/live-data';
-import { adminApi } from '@/lib/api';
+import { adminApi, apiErrorMessage } from '@/lib/api';
 import { ROLES, useCan } from '@/lib/permissions';
 
 const QK = ['team', 'commission-profiles'] as const;
@@ -344,12 +344,17 @@ function CommissionsView() {
   const qc = useQueryClient();
   const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
 
-  const { data: profiles = [] } = useQuery({ queryKey: QK, queryFn: fetchCommissionProfiles });
-  const { data: requests = [] } = useQuery({ queryKey: REQUESTS_QK, queryFn: fetchCommissionRequests });
-  const { data: members = [] } = useQuery({
+  const profilesQuery = useQuery({ queryKey: QK, queryFn: fetchCommissionProfiles });
+  const requestsQuery = useQuery({ queryKey: REQUESTS_QK, queryFn: fetchCommissionRequests });
+  const membersQuery = useQuery({
     queryKey: ['identity', 'members', 'commission-assignees'],
     queryFn: () => adminApi.members() as Promise<MemberOption[]>,
   });
+  const profiles = profilesQuery.data ?? [];
+  const requests = requestsQuery.data ?? [];
+  const members = membersQuery.data ?? [];
+  const isLoading = profilesQuery.isLoading || requestsQuery.isLoading || membersQuery.isLoading;
+  const loadError = profilesQuery.error ?? requestsQuery.error ?? membersQuery.error;
   const sellerUsers = members.map((member) => ({
     id: member.id,
     email: member.email,
@@ -437,46 +442,79 @@ function CommissionsView() {
         ]}
       />
 
-      <div className="section" style={{ marginBottom: 16 }}>
-        <h3>
-          <span data-i18n-key="team.commissions.title">{t('team.commissions.title')}</span>
-        </h3>
-        <p className="subtitle" data-i18n-key="team.commissions.subtitle" style={{ marginTop: -4, marginBottom: 12 }}>
-          {t('team.commissions.subtitle')}
-        </p>
-        <div className="pill accent" data-i18n-key="team.commissions.sales_only_note" style={{ display: 'inline-block' }}>
-          {t('team.commissions.sales_only_note')}
-        </div>
-      </div>
-
-      <CommissionRequestsPanel
-        requests={requests}
-        canWrite={canWrite}
-        isSaving={review.isPending}
-        onReview={(id, status) => review.mutate({ id, status })}
-      />
-
-      {allProfiles.length === 0 && (
-        <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
-          {t('team.commissions.empty_state')}
+      {isLoading && (
+        <div className="section state-block">
+          <RefreshCw className="spin" size={18} />
+          <div>
+            <h3>Loading commission workspace</h3>
+            <p>Reading live profiles, pending approvals, and assignee members.</p>
+          </div>
         </div>
       )}
+      {loadError && (
+        <div className="section state-block error">
+          <AlertTriangle size={18} />
+          <div>
+            <h3>Commission workspace could not be loaded</h3>
+            <p>{apiErrorMessage(loadError)}</p>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                void profilesQuery.refetch();
+                void requestsQuery.refetch();
+                void membersQuery.refetch();
+              }}
+            >
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
+        </div>
+      )}
+      {!isLoading && !loadError && (
+        <>
+          <div className="section" style={{ marginBottom: 16 }}>
+            <h3>
+              <span data-i18n-key="team.commissions.title">{t('team.commissions.title')}</span>
+            </h3>
+            <p className="subtitle" data-i18n-key="team.commissions.subtitle" style={{ marginTop: -4, marginBottom: 12 }}>
+              {t('team.commissions.subtitle')}
+            </p>
+            <div className="pill accent" data-i18n-key="team.commissions.sales_only_note" style={{ display: 'inline-block' }}>
+              {t('team.commissions.sales_only_note')}
+            </div>
+          </div>
 
-      <div className="commission-profile-list">
-        {allProfiles.map(({ profile, isDraft }) => (
-          <ProfileRow
-            key={profile.id}
-            profile={profile}
-            isDraft={isDraft}
-            expanded={expandedIds.has(profile.id)}
-            onToggle={() => toggleExpand(profile.id)}
-            onSave={(next) => save.mutate(next)}
-            onDelete={() => remove.mutate(profile.id)}
+          <CommissionRequestsPanel
+            requests={requests}
             canWrite={canWrite}
-            sellerUsers={sellerUsers}
+            isSaving={review.isPending}
+            onReview={(id, status) => review.mutate({ id, status })}
           />
-        ))}
-      </div>
+
+          {allProfiles.length === 0 && (
+            <div className="section" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
+              {t('team.commissions.empty_state')}
+            </div>
+          )}
+
+          <div className="commission-profile-list">
+            {allProfiles.map(({ profile, isDraft }) => (
+              <ProfileRow
+                key={profile.id}
+                profile={profile}
+                isDraft={isDraft}
+                expanded={expandedIds.has(profile.id)}
+                onToggle={() => toggleExpand(profile.id)}
+                onSave={(next) => save.mutate(next)}
+                onDelete={() => remove.mutate(profile.id)}
+                canWrite={canWrite}
+                sellerUsers={sellerUsers}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }
