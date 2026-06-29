@@ -1,0 +1,56 @@
+{
+  "proof": "roadmap_m16_customers_no_codex_live",
+  "generatedAt": "2026-06-29T10:40:16.787Z",
+  "url": "https://app.dtfbank.com/customers",
+  "appUrl": "https://app.dtfbank.com/customers",
+  "apiHealthUrl": "https://api.dtfbank.com/api/v1/health",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "d84a4e4c76651b85efdeb90c3e71e7143919aaee",
+  "tokenValuesPersistedInEvidence": false,
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted",
+    "permissionSource": "contracts MEMBER_PERMISSIONS closed list",
+    "permissionCount": 27
+  },
+  "sourceGrep": {
+    "command": "rg -n -i codex apps/admin/src",
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "",
+    "matchCount": 0
+  },
+  "ui": {
+    "visibleTextContainsCodex": false,
+    "visibleCodexMatchCount": 0,
+    "rowCount": 100,
+    "stateBlockCount": 0,
+    "authMeStatus": 200,
+    "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nCustomers\nD\nDTF Bank\nOwner\nShopify customers\nCustomer records, order value, lifecycle signals and risk\nExport CSV\nRecalculate insights\nGenerate alarms\nCUSTOMERS\n5958\ntenant records\nREVENUE\n$3,414,205\nlifetime value\nORDERS\n3811\nsynced orders\nAT RISK\n0\nhigh risk\nVIP\n0\nhigh value\nAny segment\nvip\nloyal\nactive\ndormant\nnew\nAny risk\nlow\nmedium\nhigh\ncritical\nunknown\nAny tag\nAll customers\nInbox online store chat\nLogin with Shop\nShop\nShop Cash offers acquired\nShop Cash offers: Satışları büyütün - 02\nWrote Judge.me email review\nWrote Judge.me web review\nnewsletter\nprospect\ntaxexempt\nwholesale30\nRecent order\nTotal spent\nOrders\nHealth score\nName A–Z\nRefresh\nAxis ownership\nSarah Mae Specially Made For You\nSarah Mae Specially Made For You\nJM Digital Media\navmedacan@gmail.com\nTina Salazar\nBeary Creative\nreachable rentals\nSP101. INC\nCleo Harris\nCorry Bailey\nPnutzgang Apparel\nTEAM THREADS & THINGS, LLC\nAshley Fairchild\nHeather Lee\nTrend Monkey\nKelly Smith\nGabriel Sanchez\nTeal Threads LLC\nErica Washington\nSock Religious\nFast Dog Print Co.\nTMANIA\nMiranda Fulps\nDavid Jaramillo\nOWNER\nStitchin 'N Bitchin\nCBT Screen Printing & Embroidery, LLC\nTina Hamilton\nWanda Richardson\nRed River Printing Co\nCitlalli Mundo\nFable and Whimsy\nAllan Wade\nCali Custom\nKelly Roe\nMelvin Giles\njared elsen\nValerie Lopez\nBrandon Saucier\nKatie Kratzer\nAbdel Ali\nZac Carrigan\nBecca Vaughn\nMichael A Gonzales\nBoardwalk Retail Inc.\nNSTI\nElisabeth Ortiz-Ruiz\nSS Shirts N More\nCustom Conceptions\nManases Gauna\nWahoo Screen Graphix\nDon Sylvia\nCadillac Lake Lures Company\n7Bros Apparel\nAnthony Caraballo\nAna Teresita Uz Santos\ngabriel rodriguez656 Rodríguez\nDavid Gram\njames anderson\njomalone2024@gmail.com\nViking ESP\nSarah Wilson\nCustom Stuff USA LLC\njames anderson\nWill Johnson\nWilliam Bruno\nJs Designs\nBlue Hydrangea Market\nPaul Garner\nMalcolm May\nGinger Knight\nBristol Plymouth Regional Tech School\nYafreisy Roman\nGreg Ross\nLuis Ramirez\nedgar.signworks@gmail.com\nManuel Salazar\nTriple Elevation Custom Creations LLC\nNOE ORTIZ\nMr Embroidery\nShane Davis\nRyan Peters\nJessica Hansen\nraquel Zapata Villanueva\nKerry Bowen\nCorrina Carney\nMonarch Designs\ngustavoalicea1@gmail.com\nBora ozyigi"
+  },
+  "runtime": {
+    "buildSha": "d84a4e4c76651b85efdeb90c3e71e7143919aaee",
+    "pm2": [
+      {
+        "name": "factory-engine-pro-api",
+        "pid": 49102,
+        "status": "online",
+        "restarts": 552,
+        "uptimeMs": 878757
+      },
+      {
+        "name": "factory-engine-pro-admin",
+        "pid": 49150,
+        "status": "online",
+        "restarts": 146,
+        "uptimeMs": 878052
+      }
+    ],
+    "publicHealth": "{\"ok\":true,\"service\":\"factory-engine-pro-backend\"}"
+  },
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m16-customers-no-codex-ui-live.png",
+  "consoleErrors": [],
+  "failedResponses": [],
+  "pass": true
+}
