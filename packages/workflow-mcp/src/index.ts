@@ -125,6 +125,8 @@ server.registerPrompt(
             'Never create support cases, tickets, customer requests, raw SQL, or unsupported actions.',
             'Rules must stay in the deterministic workflow DSL and target sales/account/personnel operations.',
             'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role.',
+            'Treat DTF supplies, heat press pricing, quote, callback, financing, product-fit, sample, upgrade, and training/install requests as operational workflow signals.',
+            'When the goal asks for a staff decision, draft a task/note/pin workflow and leave any support case creation to the staff member.',
           ].join('\n'),
         },
       },

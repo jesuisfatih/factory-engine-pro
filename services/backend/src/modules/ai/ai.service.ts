@@ -353,7 +353,9 @@ Return STRICT JSON only. The JSON must exactly match this schema:
   "resolved_with_version": ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION}
 }
 Classify operational_signals for DTF Supply / Heat Press sales operations, not customer-request automation.
-Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, or installation opportunity.
+Map calls to concrete operational intent: heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, or no_action.
+Do not create or imply an automatic support case, ticket, or customer request. Staff may later open a case manually if the customer explicitly asks.
+Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, installation, refund/account, or shipping/account follow-up opportunity.
 Use null or empty arrays when unknown. Confidence values must be 0..1.`;
 }
 
