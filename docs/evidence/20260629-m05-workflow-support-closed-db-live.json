@@ -1,0 +1,21 @@
+﻿{
+  "generatedAt": "2026-06-29T06:45:08.302Z",
+  "database": "managed Vultr Postgres via container DATABASE_URL",
+  "buildSha": "dae8c11d472a092c76242af819eb7c476a581331",
+  "deletedWorkflowSourcesQuery": "SELECT count(*) FROM service_requests WHERE source IN ('workflow','ai_workflow','ai_transcript','ai_segment')",
+  "deletedWorkflowSourcesCount": 0,
+  "serviceRequestSources": [
+    {
+      "source": "manual",
+      "count": 9
+    }
+  ],
+  "seedOrSyntheticServiceRequestCount": 0,
+  "supportCreateTaskRuleCount": 0,
+  "workflowCategoryRows": [],
+  "migration": {
+    "migration_name": "202606309_close_workflow_support_path",
+    "finished_at": "2026-06-29T06:31:15.263Z"
+  },
+  "pass": true
+}

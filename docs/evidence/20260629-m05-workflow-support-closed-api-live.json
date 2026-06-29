@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-06-29T06:44:42.184Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "dae8c11d472a092c76242af819eb7c476a581331",
+  "principal": {
+    "email": "info@dtfbank.com",
+    "type": "member",
+    "permissionCount": 27
+  },
+  "catalog": {
+    "endpoint": "GET /api/v1/workflow/rules/catalog",
+    "status": 200,
+    "version": "2026-06-29.2",
+    "counts": {
+      "psychTags": 8,
+      "callIntents": 5,
+      "urgencyLevels": 4,
+      "createTaskAxes": 2,
+      "serviceRequestSources": 3,
+      "triggers": 29,
+      "conditions": 14,
+      "actions": 10
+    },
+    "createTaskAxes": [
+      "sales",
+      "account"
+    ],
+    "serviceRequestSources": [
+      "manual",
+      "customer_self_service",
+      "admin_created"
+    ],
+    "supportAxisVisible": false,
+    "workflowSourcesVisible": [],
+    "supportCaseTriggerVisible": false
+  },
+  "legacyRulesCatalogCompatibility": {
+    "endpoint": "GET /api/v1/rules/catalog",
+    "status": 200,
+    "version": "2026-06-29.2",
+    "createTaskAxes": [
+      "sales",
+      "account"
+    ]
+  },
+  "invalidSupportCreateTask": {
+    "endpoint": "POST /api/v1/workflow/rules",
+    "status": 400,
+    "ok": false,
+    "expectedStatus": 400,
+    "response": {
+      "message": "Validation failed",
+      "code": "validation_failed",
+      "request_id": "9b6cbae5-7572-4025-9ac0-b361a3901785",
+      "details": [
+        {
+          "path": "definition.actions.0.axis",
+          "message": "Invalid option: expected one of \"sales\"|\"account\""
+        }
+      ]
+    },
+    "payloadSummary": {
+      "trigger": "manual.trigger",
+      "action": "create_task",
+      "axis": "support"
+    }
+  },
+  "pass": true
+}
