@@ -446,7 +446,7 @@ export class CallCenterService {
       take: 80,
     });
     const groups: CallCenterPriorityGroup[] = [];
-    for (const ownership of ownerships) {
+    for (const ownership of ownerships.filter((row) => isShopifyNativeSegment(row.segment))) {
       const member = memberById.get(ownership.memberId) ?? {
         id: ownership.memberId,
         name: memberName(ownership.member),
@@ -454,10 +454,18 @@ export class CallCenterService {
         role: ownership.member.roleAssignments[0]?.role.name ?? 'Member',
         status: ownership.member.status,
       };
+      const membershipWhere = {
+        segmentId: ownership.segmentId,
+        shopifySegmentRef: { not: null },
+        customer: {
+          shopifyCustomerId: { not: null },
+          status: 'active',
+        },
+      } satisfies Prisma.SegmentCustomerMembershipWhereInput;
       const [count, memberships] = await Promise.all([
-        this.prisma.db.segmentCustomerMembership.count({ where: { segmentId: ownership.segmentId } }),
+        this.prisma.db.segmentCustomerMembership.count({ where: membershipWhere }),
         this.prisma.db.segmentCustomerMembership.findMany({
-          where: { segmentId: ownership.segmentId },
+          where: membershipWhere,
           include: { customer: true },
           orderBy: [{ matchedAt: 'desc' }],
           take: ownership.dailyCap ?? 25,
@@ -875,6 +883,7 @@ export class CallCenterService {
   private task(row: ServiceRequestWithRelations, memberById: Map<string, CallCenterMember>): CallCenterTask {
     const metadata = record(row.metadata);
     const member = row.assignedMemberId ? memberById.get(row.assignedMemberId) : null;
+    const badges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
     return {
       id: row.id,
       title: taskTitle(row),
@@ -894,6 +903,8 @@ export class CallCenterService {
       priority: row.priority,
       source: taskSourceLabel(row),
       segment: taskCategoryLabel(metadata.category ?? row.surface),
+      callIntent: badges.callIntent,
+      psychTags: badges.psychTags,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -967,6 +978,47 @@ function taskCategoryLabel(value: unknown) {
   if (key === 'call' || key === 'aircall') return 'Call';
   if (key === 'support') return 'Customer request';
   return value ? titleize(String(value)) : 'Customer request';
+}
+
+function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskStateSnapshot: unknown) {
+  const workflow = record(metadata.workflow);
+  const params = record(workflow.params);
+  const snapshot = record(taskStateSnapshot);
+  const workflowSnapshot = record(workflow.stateSnapshot ?? workflow.state_snapshot);
+  const resolverOutput = record(
+    snapshot.resolverOutput
+    ?? snapshot.resolver_output
+    ?? workflowSnapshot.resolverOutput
+    ?? workflowSnapshot.resolver_output,
+  );
+  const callIntent = stringOrNull(params.intent)
+    ?? stringOrNull(params.callIntent)
+    ?? stringOrNull(params.call_intent)
+    ?? stringOrNull(resolverOutput.call_intent)
+    ?? stringOrNull(resolverOutput.callIntent);
+  const psychTags = uniqueStrings([
+    ...stringArray(params.psychTags),
+    ...stringArray(params.psych_tags),
+    ...stringArray(resolverOutput.psych_tags),
+    ...stringArray(resolverOutput.psychTags),
+    stringOrNull(params.tag),
+    stringOrNull(params.psychTag),
+    stringOrNull(params.psych_tag),
+  ]);
+  return { callIntent, psychTags };
+}
+
+function isShopifyNativeSegment(segment: { conditions: Prisma.JsonValue }) {
+  return shopifySegmentRefsFromConditions(segment.conditions).length > 0;
+}
+
+function shopifySegmentRefsFromConditions(value: Prisma.JsonValue) {
+  if (!Array.isArray(value)) return [];
+  return uniqueStrings(value.flatMap((condition) => {
+    const row = record(condition);
+    if (row.field !== 'shopifyCustomerSegmentIds') return [];
+    return Array.isArray(row.value) ? row.value.map((item) => String(item)) : [String(row.value ?? '')];
+  })).filter((segmentId) => segmentId.startsWith('gid://shopify/Segment/'));
 }
 
 function record(value: unknown): Record<string, unknown> {

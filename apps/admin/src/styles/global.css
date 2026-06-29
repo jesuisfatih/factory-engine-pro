@@ -1994,6 +1994,21 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-size: 12px;
   font-style: normal;
 }
+.call-center-task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.call-center-task-badges span {
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+}
 .person-pill {
   display: inline-flex;
   margin-top: 8px;

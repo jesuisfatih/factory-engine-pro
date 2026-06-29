@@ -272,6 +272,12 @@ function KanbanTab({
             className="call-center-task-card"
             onClick={() => task.customerId && onOpenCustomer(task.customerId)}
           >
+            {(task.callIntent || task.psychTags?.length) ? (
+              <div className="call-center-task-badges" aria-label="Call context">
+                {task.callIntent ? <span>intent: {task.callIntent}</span> : null}
+                {(task.psychTags ?? []).slice(0, 3).map((tag) => <span key={tag}>tag: {tag}</span>)}
+              </div>
+            ) : null}
             <div>
               <strong>{task.title}</strong>
               <span>{task.summary}</span>

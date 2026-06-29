@@ -30,6 +30,8 @@ export const callCenterTaskSchema = z.object({
   priority: z.string(),
   source: z.string(),
   segment: z.string(),
+  callIntent: z.string().nullable().optional(),
+  psychTags: z.array(z.string()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
