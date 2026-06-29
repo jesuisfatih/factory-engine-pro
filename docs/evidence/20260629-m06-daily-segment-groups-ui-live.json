@@ -1,0 +1,26 @@
+{
+  "proof": "roadmap_m06_daily_segment_groups_ui_live",
+  "checkedAt": "2026-06-29T00:27:06.516338Z",
+  "url": "https://app.dtfbank.com/staff/queue",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-daily-segment-groups-ui-live.png",
+  "groupCount": 5,
+  "groupTexts": [
+    "Min 2 max 5 purchase\n25/25",
+    "Customers over 20 orders\n17/17",
+    "Wholesale Customers\n25/25",
+    "Customers who have purchased DTF or UV DTF Printer\n12/12",
+    "Customers who have purchased DTF inks, DTF films, or DTF powders\n25/25"
+  ],
+  "firstExpandedGroup": "Min 2 max 5 purchase",
+  "firstGroupItems": [
+    "OWNER\nU151.5\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $3.920\nPin",
+    "#gregsvinyl\nU150.5\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $300\nPin",
+    "1st Place Awards & Embroidery\nU150.5\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $3.229\nPin"
+  ],
+  "priorityCards": [
+    "Yafreisy Roman\nAI - Transcript\nU2\nSR-MQY8YXMR - U2 - Open - 3h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n0 orders - $0 - 1 tasks\nworkflow_rule\nPin\nTransfer",
+    "sales: Purchase intent follow-up\nAI - Transcript\nU1\nSR-MQY8YW60 - U1 - Open - 4h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer",
+    "sales: Purchase intent follow-up\nAI - Transcript\nU1\nSR-MQY8YL5O - U1 - Open - 4h\nOwner: Ihsan Taskiran\nAxis: sales\nNo Shopify order\n30d performance pending\nworkflow_rule\nPin\nTransfer"
+  ],
+  "containsSeedWords": false
+}

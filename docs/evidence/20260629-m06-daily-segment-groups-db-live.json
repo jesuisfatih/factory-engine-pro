@@ -1,0 +1,290 @@
+﻿{
+  "proof": "roadmap_m06_daily_segment_groups_db_live",
+  "checkedAt": "2026-06-29T00:26:10.633Z",
+  "seedAudit": {
+    "roadmapCustomers": 0,
+    "roadmapSegments": 0,
+    "roadmapRequests": 0,
+    "seedRules": 0
+  },
+  "segments": [
+    {
+      "id": "seg_i2igf1ynhxp1umg8relmg5aa",
+      "name": "Customers over 20 orders",
+      "customerCount": 17,
+      "conditions": [
+        {
+          "field": "shopifyCustomerSegmentIds",
+          "value": [
+            "gid://shopify/Segment/656206889236"
+          ],
+          "operator": "in",
+          "scopeType": "all",
+          "scopeValues": []
+        }
+      ],
+      "membershipCount": 17
+    },
+    {
+      "id": "seg_ui2gyn7udvfekebsyyuyn0mo",
+      "name": "Wholesale Customers",
+      "customerCount": 30,
+      "conditions": [
+        {
+          "field": "shopifyCustomerSegmentIds",
+          "value": [
+            "gid://shopify/Segment/615174504724"
+          ],
+          "operator": "in",
+          "scopeType": "all",
+          "scopeValues": []
+        }
+      ],
+      "membershipCount": 30
+    },
+    {
+      "id": "seg_rz3xkyzxykilcj4pswvdixtd",
+      "name": "Customers who have purchased DTF or UV DTF Printer",
+      "customerCount": 12,
+      "conditions": [
+        {
+          "field": "shopifyCustomerSegmentIds",
+          "value": [
+            "gid://shopify/Segment/627391267092"
+          ],
+          "operator": "in",
+          "scopeType": "all",
+          "scopeValues": []
+        }
+      ],
+      "membershipCount": 12
+    },
+    {
+      "id": "seg_eftzjgf9bcyvnjz09d66b6h6",
+      "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+      "customerCount": 563,
+      "conditions": [
+        {
+          "field": "shopifyCustomerSegmentIds",
+          "value": [
+            "gid://shopify/Segment/627391987988"
+          ],
+          "operator": "in",
+          "scopeType": "all",
+          "scopeValues": []
+        }
+      ],
+      "membershipCount": 563
+    },
+    {
+      "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "name": "Min 2 max 5 purchase",
+      "customerCount": 356,
+      "conditions": [
+        {
+          "field": "shopifyCustomerSegmentIds",
+          "value": [
+            "gid://shopify/Segment/656941777172"
+          ],
+          "operator": "in",
+          "scopeType": "all",
+          "scopeValues": []
+        }
+      ],
+      "membershipCount": 356
+    }
+  ],
+  "lindaOwnerships": [
+    {
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "dailyCap": 25,
+      "autoAssignNew": false,
+      "priority": 95
+    },
+    {
+      "segmentId": "seg_i2igf1ynhxp1umg8relmg5aa",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "dailyCap": 17,
+      "autoAssignNew": false,
+      "priority": 90
+    },
+    {
+      "segmentId": "seg_ui2gyn7udvfekebsyyuyn0mo",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "dailyCap": 25,
+      "autoAssignNew": false,
+      "priority": 85
+    },
+    {
+      "segmentId": "seg_rz3xkyzxykilcj4pswvdixtd",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "dailyCap": 12,
+      "autoAssignNew": false,
+      "priority": 80
+    },
+    {
+      "segmentId": "seg_eftzjgf9bcyvnjz09d66b6h6",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "dailyCap": 25,
+      "autoAssignNew": false,
+      "priority": 75
+    }
+  ],
+  "shopifyReady": [
+    {
+      "shopifySegmentId": "gid://shopify/Segment/627391627540",
+      "name": "Customers who have purchased a heat press",
+      "customerCount": 699,
+      "lastSyncedAt": "2026-06-29T00:14:12.396Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/627391987988",
+      "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+      "customerCount": 563,
+      "lastSyncedAt": "2026-06-29T00:21:35.169Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/596688306452",
+      "name": "Customers who have purchased more than once",
+      "customerCount": 445,
+      "lastSyncedAt": "2026-06-29T00:14:17.035Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/656941777172",
+      "name": "Min 2 max 5 purchase",
+      "customerCount": 356,
+      "lastSyncedAt": "2026-06-29T00:21:03.618Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/615174504724",
+      "name": "Wholesale Customers",
+      "customerCount": 30,
+      "lastSyncedAt": "2026-06-29T00:21:18.421Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/656206889236",
+      "name": "Customers over 20 orders",
+      "customerCount": 17,
+      "lastSyncedAt": "2026-06-29T00:21:10.617Z"
+    },
+    {
+      "shopifySegmentId": "gid://shopify/Segment/627391267092",
+      "name": "Customers who have purchased DTF or UV DTF Printer",
+      "customerCount": 12,
+      "lastSyncedAt": "2026-06-29T00:21:26.891Z"
+    }
+  ],
+  "transcriptTasks": [
+    {
+      "id": "sr_irctsy8eswd9dggjlfxj7lcq",
+      "title": "support: Shipping issue follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_dltdv904c9v7afn9p8yl9ov5",
+      "matchedRuleId": "wrule_cmx85amzl2vxoxiuqf7zq439",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T21:38:20.091Z"
+    },
+    {
+      "id": "sr_q4u8c97mr5ufn0pjstb2w1ck",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_371ca3bf-7bcc-48cc-a5b9-3f036bc0c176",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:38:07.537Z"
+    },
+    {
+      "id": "sr_hn7oidh00z2f1tnpk9unr79y",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_69a64371-ee45-42bf-93e1-5b747a316438",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:38:07.409Z"
+    },
+    {
+      "id": "sr_s89e3806x011p6nh3juxwhxa",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_821ba698-1a92-4b15-a2ec-66b73a603c0a",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:37:37.161Z"
+    },
+    {
+      "id": "sr_lena8yf9ssgvutd9fy06r2kh",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_99c2cba5-d681-41a6-bb83-3ef378c08968",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:37:36.950Z"
+    },
+    {
+      "id": "sr_wqjzahkdpj7gembxq3zyyzjf",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_dni3u52ai8wzhc4sdks24pfu",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "closed",
+      "assignedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:35:33.280Z"
+    },
+    {
+      "id": "sr_hb10at9vm5wz5n3q4kcldm9c",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_dni3u52ai8wzhc4sdks24pfu",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:35:33.178Z"
+    },
+    {
+      "id": "sr_r253k9stpdqyiqjx6vv4ezfw",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "closed",
+      "assignedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:35:32.045Z"
+    },
+    {
+      "id": "sr_cbb2f7e5m3vqc3skxayfrnqu",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "open",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:35:31.928Z"
+    },
+    {
+      "id": "sr_ap6aou087600ui78usp4kqsk",
+      "title": "support: Refund intent follow-up",
+      "source": "ai_transcript",
+      "sourceCallId": "acev_legacy_75ac8d5c-e222-49fe-9131-f24d922e1b1c",
+      "matchedRuleId": "wrule_k5pk06wyebtratqu3kbmz101",
+      "status": "closed",
+      "assignedMemberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "axis": "support",
+      "createdAt": "2026-06-28T20:35:27.798Z"
+    }
+  ]
+}

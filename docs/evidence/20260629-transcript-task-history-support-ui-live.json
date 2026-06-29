@@ -1,0 +1,12 @@
+{
+  "proof": "transcript_task_history_support_ui_live",
+  "checkedAt": "2026-06-29T00:33:46.530970+00:00",
+  "url": "https://app.dtfbank.com/support",
+  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-transcript-task-history-support-ui-live.png",
+  "rowCountAfterAiTranscriptFilter": 23,
+  "toolbarText": "All\nInternal\nCustomer-facing\nAll sources\nAi Transcript\nWorkflow\nCall\nManual\nEmail\nForm",
+  "firstRowText": "SR-MQYB92RA\t\nsupport: Shipping issue follow-up\nWorkflow Rule / Ai Transcript / Support\n\tNo customer\tOPEN\tCritical\tLinda Marroquin\t29.06.2026 00:38:20",
+  "detailHasMatchedRule": true,
+  "detailHasTraceRows": true,
+  "detailTextSample": "SR-MQYB92RA\nCritical\nsupport: Shipping issue follow-up\n\nCreated by workflow rule \"Default: Shipping issue escalation\" for trigger \"psych.tag.detected\".\n\nCustomer\nNo customer\nSurface\nInternal\nAxis\nSupport\nMatched rule\nwrule_cmx85amzl2vxoxiuqf7zq439\nCondition trace\n1 condition(s)\nWatchers\nCharlette Boatman, Ihsan Taskiran, DTF Bank Owner\nCreated\n29.06.2026 00:38:20\nResolution target\n30.06.2026 00:38:20\nMatched\nPsych Tag Includes\n\nexpected shipping_issue / actual shipping_issue / source event_param\n\nWORKFLOW\nSTATUS\nOpen\nIn Progress\nWaiting\nWaiting On Customer\nPending Resolve\nResolved\nClosed\nReopened\nSave status\nASSIGNEE\nUnassigned\nIhsan Taskiran (ihsan@dtfbank.com)\nCharlette Boatman (charlette@dtfbank.com)\nLinda Marroquin (dtfbanktx@gmail.com)\nDTF Bank Owner (info@dtfbank.com)\nSave assignee\nCOMMENTS\nNo comments yet.\nCOMMENT\nAdd internal note\nAdd comment\nClose request"
+}

@@ -1,0 +1,109 @@
+﻿{
+    "proof":  "transcript_task_history_support_api_live",
+    "checkedAt":  "2026-06-29T00:33:19.5936870Z",
+    "url":  "https://api.dtfbank.com/api/v1/support?limit=50\u0026page=1\u0026surface=all\u0026source=ai_transcript",
+    "total":  23,
+    "count":  23,
+    "items":  [
+                  {
+                      "id":  "sr_irctsy8eswd9dggjlfxj7lcq",
+                      "title":  "support: Shipping issue follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_cmx85amzl2vxoxiuqf7zq439",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_d6ihmleb8guaoj5o3mb9iixu",
+                      "title":  "sales: Purchase intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_t87wvlbk0281ezjscshujq27",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "sales",
+                      "assignedTo":  "Ihsan Taskiran"
+                  },
+                  {
+                      "id":  "sr_q4u8c97mr5ufn0pjstb2w1ck",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_hn7oidh00z2f1tnpk9unr79y",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_s89e3806x011p6nh3juxwhxa",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_lena8yf9ssgvutd9fy06r2kh",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_hb10at9vm5wz5n3q4kcldm9c",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_cbb2f7e5m3vqc3skxayfrnqu",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_lng8fk4c85n9umd02tp16avo",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  },
+                  {
+                      "id":  "sr_etquawwlcso2966lr5cw1gpi",
+                      "title":  "support: Refund intent follow-up",
+                      "source":  "ai_transcript",
+                      "matchedRuleId":  "wrule_k5pk06wyebtratqu3kbmz101",
+                      "conditionTraceCount":  1,
+                      "status":  "open",
+                      "axis":  "support",
+                      "assignedTo":  "Linda Marroquin"
+                  }
+              ]
+}
