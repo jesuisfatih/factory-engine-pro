@@ -1481,8 +1481,14 @@ export class RulesService {
   ) {
     const aiSource = this.workflowAiSource(context);
     const sourceCallId = this.workflowSourceCallId(context);
+    const supportCaseOnly = assignment.axis === 'support';
     return {
       category: 'workflow_rule',
+      ...(supportCaseOnly ? {
+        personQueueVisible: false,
+        supportCaseOnly: true,
+        personQueueHiddenReason: 'support_case',
+      } : {}),
       ...(aiSource ? { aiSource } : {}),
       workflow: {
         eventId: context.eventId,

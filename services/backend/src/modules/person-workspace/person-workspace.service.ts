@@ -1657,9 +1657,27 @@ export class PersonWorkspaceService {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
   }
 
-  private isQueueVisible(row: { metadata: Prisma.JsonValue }) {
-    const kind = this.record(row.metadata).personWorkspaceKind;
+  private isQueueVisible(row: { metadata: Prisma.JsonValue; axis?: string | null; title?: string | null; source?: string | null }) {
+    const metadata = this.record(row.metadata);
+    if (metadata.personQueueVisible === false) return false;
+    if (this.isSupportWorkflowCase(row, metadata)) return false;
+    const kind = metadata.personWorkspaceKind;
     return typeof kind !== 'string' || !INTERNAL_WORKSPACE_KINDS.has(kind);
+  }
+
+  private isSupportWorkflowCase(
+    row: { axis?: string | null; title?: string | null; source?: string | null },
+    metadata: Record<string, unknown>,
+  ) {
+    const workflow = this.record(metadata.workflow);
+    const axis = normalizeText(row.axis ?? workflow.axis);
+    if (axis !== 'support') return false;
+    const category = normalizeText(metadata.category);
+    if (category !== 'workflow_rule') return false;
+    const action = normalizeText(workflow.action);
+    const title = normalizeText(row.title);
+    const source = normalizeText(row.source);
+    return action === 'create_task' || title.startsWith('support:') || source === 'ai_transcript' || source === 'workflow';
   }
 
   private tenantId() {
@@ -1678,6 +1696,10 @@ function participants(thread: { metadata: Prisma.JsonValue }) {
 
 function memberDisplayName(member: { firstName: string; lastName: string; email: string }) {
   return `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim() || member.email;
+}
+
+function normalizeText(value: unknown) {
+  return String(value ?? '').trim().toLowerCase();
 }
 
 function axisOrNull(value: string | null | undefined): CustomerAssignmentAxis | null {
