@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-29T02:47:54.532Z",
+  "generatedAt": "2026-06-29T03:00:39.933Z",
   "tenantId": "ten_dtfbank",
   "live": {
     "apiBase": "https://api.dtfbank.com/api/v1",
     "appBase": "https://app.dtfbank.com",
-    "buildShaExpected": "d977ee7d46a620173de6b4826bbaae0cfe734257"
+    "buildShaExpected": "85813976cc98f9ffbc5101335186b0669d6f2de9"
   },
   "chosen": {
     "adminEmail": "info@dtfbank.com",
@@ -97,11 +97,13 @@
       "status": 200,
       "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
       "executionCount": 15,
-      "firstExecution": {
+      "firstTranscriptExecution": {
         "id": "wrex_bqz6uyuvh4w049t3fhky9viz",
         "status": "task_created",
+        "source": "ai_transcript",
         "taskCount": 1,
-        "hasTranscript": false,
+        "hasTranscript": true,
+        "transcriptSnippet": "Agent: DTF Frank. This is Linda. Customer: Yes. I was trying to email you guys, and it said I was blocked. But I wanna see about exchanging something that I ordered. Agent: You placed an order with us already? Customer: Yeah. I ordered on May 14, I ordered a a",
         "taskTitles": [
           "support: Refund intent follow-up"
         ]
@@ -145,7 +147,8 @@
       "screenshot": "docs/evidence/20260629-rule-live-task-history-ui-live.png",
       "containsLiveTaskHistory": true,
       "containsTaskTitle": true,
-      "preview": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nRule engine\nD\nDTF Bank\nOwner\nRule engine\nVisual editor for task-generation rules. Author here, the engine consumes the JSON.\nVerify chain\nMASTER ENUM CATALOG V2026-06-28.2\n8 psych tags · 5 call intents · 4 urgency levels · 29 triggers · 14 conditions · 10 actions\nSAVED RULES\n10\nactive\np50\nDefault: First order customer note\nshopify.order.created -> add_note\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: VIP customer pin\ncustomer.ltv.crossed_threshold -> segment_add + pin_customer\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: First call account onboarding\ncustomer.first_call.detected -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: Purchase intent sales follow-up\npsych.tag.detected -> create_task\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Missed call callback\naircall.call.missed -> create_task\n0 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Overdue task escalation\ntask.overdue -> escalate + add_watcher\n0 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Repeat call account escalation\ncustomer.repeat_call.detected -> escalate + add_watcher\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Refund intent support task\npsych.tag.detected -> create_task + add_watcher\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Shipping issue escalation\npsych.tag.detected -> create_task + escalate\n1 conditions\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Angry customer support follow-up\npsych.tag.detected -> create_task\n1 conditions\nsingle fire\n1/24h cooldown\nRULE AUDIT\n1\nv1\n28.06.2026 23:29:25\nDefault: Refund intent support task\nDefault workflow rule bootstrap\nactive\npsych.tag.detected\nRollback\nSHADOW REPORTS\n0\nNo shadow backfill reports yet.\nRun 7d\nLIVE TASK HISTORY\n15\n1 task\n28.06.2026 23:38:07\npsych.tag.detected\nacev_legacy_371ca3bf-7bcc-48cc-a5b9-3f036bc0c176:psych_tag:refund_intent\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:38:07\npsych.tag.detected\nacev_legacy_69a64371-ee45-42bf-93e1-5b747a316438:psych_tag:refund_intent\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:37:37\npsych.tag.detected\nacev_legacy_821ba698-1a92-4b15-a2ec-66b73a603c0a:psych_tag:refund_intent\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:37:36\npsych.tag.detected\nacev_legacy_99c2cba5-d681-41a6-bb83-3ef378c08968:psych_tag:refund_intent\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:35:33\npsych.tag.detected\nacev_dni3u52ai8wzhc4sdks24pfu:psych_tag:complaint\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · closed · Charlette Boatman\n1 task\n28.06.2026 23:35:33\npsych.tag.detected\nacev_dni3u52ai8wzhc4sdks24pfu:psych_tag:refund_intent\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:35:32\npsych.tag.detected\nacev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2:psych_tag:complaint\nactive\n1/1 conditions\nsupport: Refund intent follow-up\nNo customer · closed · Charlette Boatman\n1 task\n28.06.2026 23:35:31\npsych.tag.detected\nacev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2:psych_t"
+      "containsTranscriptSnippet": true,
+      "preview": "-> create_task\n1 conditions\nsingle fire\n1/24h cooldown\nRULE AUDIT\n1\nv1\n28.06.2026 23:29:25\nDefault: Refund intent support task\nDefault workflow rule bootstrap\nactive\npsych.tag.detected\nRollback\nSHADOW REPORTS\n0\nNo shadow backfill reports yet.\nRun 7d\nLIVE TASK HISTORY\n15\n1 task\n28.06.2026 23:38:07\npsych.tag.detected\nAgent: DTF Frank. This is Linda. Customer: Yes. I was trying to email you guys, and it said I was blocked. But I wanna see about exchanging something that I ordered. Agent: You placed an order with us already? Customer: Yeah. I ordered on May 14, I ordered a a\nai_transcript\n1/1 conditions\nAircall 3902466195\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:38:07\npsych.tag.detected\nAgent: DTF Frank. This is Linda. Customer: Yes. I was trying to email you guys, and it said I was blocked. But I wanna see about exchanging something that I ordered. Agent: You placed an order with us already? Customer: Yeah. I ordered on May 14, I ordered a a\nai_transcript\n1/1 conditions\nAircall 3902466195\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:37:37\npsych.tag.detected\nAgent: DTF Frank. This is Linda. Customer: Yes. I was trying to email you guys, and it said I was blocked. But I wanna see about exchanging something that I ordered. Agent: You placed an order with us already? Customer: Yeah. I ordered on May 14, I ordered a a\nai_transcript\n1/1 conditions\nAircall 3902466195\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:37:36\npsych.tag.detected\nAgent: DTF Frank. This is Linda. Customer: Yes. I was trying to email you guys, and it said I was blocked. But I wanna see about exchanging something that I ordered. Agent: You placed an order with us already? Customer: Yeah. I ordered on May 14, I ordered a a\nai_transcript\n1/1 conditions\nAircall 3902466195\nsupport: Refund intent follow-up\nNo customer · open · Linda Marroquin\n1 task\n28.06.2026 23:35:33\npsych.tag.detected\nAgent: DT"
     },
     "personQueue": {
       "screenshot": "docs/evidence/20260629-person-shopify-segment-groups-ui-live.png",
@@ -162,6 +165,10 @@
   },
   "browserSignals": {
     "consoleEvents": [],
-    "networkFailures": []
+    "networkFailures": [],
+    "adminTranscriptRefresh": {
+      "consoleEvents": [],
+      "networkFailures": []
+    }
   }
 }
