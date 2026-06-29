@@ -1,66 +1,16 @@
-{
-  "proof": "roadmap_m06_daily_segment_groups_runtime_live",
-  "checkedAt": "2026-06-29T09:22:45.475Z",
-  "pass": true,
-  "scope": {
-    "container": "factoryengine-dtfbank-app",
-    "remote": "root@144.202.125.169",
-    "tenantId": "ten_dtfbank"
-  },
-  "git": {
-    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
-    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
-    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
-    "branch": "main"
-  },
-  "health": {
-    "url": "https://api.dtfbank.com/api/v1/health",
-    "status": 200,
-    "body": {
-      "ok": true,
-      "service": "factory-engine-pro-backend"
+﻿{
+  "checkedAt": "2026-06-29T12:13:29.642Z",
+  "buildSha": "a58cc452be2fb672918f5930a5bfb049ba166cd3",
+  "listeners": [
+    {
+      "pid": 80212,
+      "port": 4000,
+      "cmd": "/usr/local/bin/node dist/services/backend/src/main.js"
+    },
+    {
+      "pid": 80260,
+      "port": 3002,
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002"
     }
-  },
-  "tokenValuesPersistedInEvidence": false,
-  "principal": {
-    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
-    "email": "dtfbanktx@gmail.com",
-    "permissionCount": 10,
-    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
-  },
-  "pm2": [
-    {
-      "name": "factory-engine-pro-api",
-      "status": "online",
-      "restarts": 53,
-      "pid": 12622
-    },
-    {
-      "name": "factory-engine-pro-admin",
-      "status": "online",
-      "restarts": 56,
-      "pid": 12671
-    },
-    {
-      "name": "factory-engine-pro-person",
-      "status": "online",
-      "restarts": 0,
-      "pid": 1491
-    },
-    {
-      "name": "factory-engine-pro-accounts",
-      "status": "online",
-      "restarts": 0,
-      "pid": 1505
-    }
-  ],
-  "containerStatus": [
-    "factoryengine-dtfbank-app Up About an hour"
-  ],
-  "logEvidence": [
-    "0|factory- | \u001b[32m[Nest] 12622  - \u001b[39m06/29/2026, 9:09:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "0|factory- | \u001b[32m[Nest] 12622  - \u001b[39m06/29/2026, 9:09:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
-  ],
-  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, managed Postgres, and staff UI.",
-  "nextRoadmapItem": 7
+  ]
 }

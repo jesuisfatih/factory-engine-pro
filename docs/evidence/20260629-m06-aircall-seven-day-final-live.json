@@ -1,0 +1,18 @@
+﻿{
+  "checkedAt": "2026-06-29T12:13:03.969Z",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "a58cc452be2fb672918f5930a5bfb049ba166cd3",
+  "endpoint": "/aircall/calls",
+  "status": 200,
+  "ok": true,
+  "finalStats": {
+    "total": 181,
+    "last3d": 73,
+    "withTranscript": 171,
+    "resolverQueued": 171,
+    "resolverSucceeded": 171,
+    "resolverFailed": 0,
+    "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+  },
+  "resolverComplete": true
+}

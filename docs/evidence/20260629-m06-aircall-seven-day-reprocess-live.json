@@ -1,0 +1,270 @@
+﻿{
+  "checkedAt": "2026-06-29T12:01:43.870Z",
+  "baseUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "a58cc452be2fb672918f5930a5bfb049ba166cd3",
+  "steps": {
+    "login": {
+      "status": 201,
+      "ok": true,
+      "principal": {
+        "id": "tmbr_ten_dtfbank_info_owner",
+        "email": "info@dtfbank.com",
+        "permissions": 27
+      },
+      "message": null
+    },
+    "callsBefore": {
+      "status": 200,
+      "ok": true,
+      "stats": {
+        "total": 181,
+        "last3d": 73,
+        "withTranscript": 171,
+        "resolverQueued": 171,
+        "resolverSucceeded": 171,
+        "resolverFailed": 0,
+        "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+      },
+      "sampleCount": 80
+    },
+    "backfillRecent7d": {
+      "status": 201,
+      "ok": true,
+      "body": {
+        "recentDays": 7,
+        "from": "2026-06-22T12:01:44.550Z",
+        "to": "2026-06-29T12:01:44.550Z",
+        "fetched": 178,
+        "ingested": 51,
+        "skipped": 127,
+        "errors": 0,
+        "pages": 4,
+        "transcriptsFound": 2,
+        "transcriptsEmpty": 49,
+        "transcriptErrors": 0,
+        "resolverQueued": 2,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 171,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        }
+      }
+    },
+    "resolverReprocess7d": {
+      "status": 201,
+      "ok": true,
+      "body": {
+        "targetVersion": 2,
+        "recentDays": 7,
+        "from": "2026-06-22T12:01:58.449Z",
+        "scanned": 171,
+        "queued": 171,
+        "skipped": 0,
+        "callEvents": [
+          {
+            "id": "acev_kyqsww7gqvl23lzrjd13b0xc",
+            "externalCallId": "3906652817",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_brimlfg4ttnbojeilihdzlbo",
+            "externalCallId": "3906587992",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_bg3nnltaqyrq5yvuzo1wxdih",
+            "externalCallId": "3906571528",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_tsqja63f79ln2vxg7g6naqt1",
+            "externalCallId": "3906496212",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_up5dvp6zzlnv3o6ew2z3tru3",
+            "externalCallId": "3906460157",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_dltdv904c9v7afn9p8yl9ov5",
+            "externalCallId": "3906457381",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_o74bjguswsflx1vlaa92akk8",
+            "externalCallId": "3906451258",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_p08x9ddhxt0vlnqpj5g91prc",
+            "externalCallId": "3906447922",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_nasgsxiqib6xj15raozqj05o",
+            "externalCallId": "3906444846",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_dx8dy3di5t88lr8pr2v59gwk",
+            "externalCallId": "3906439733",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_qwpjrp5u2u9vct3ixy016f2h",
+            "externalCallId": "3906419650",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          },
+          {
+            "id": "acev_znuhrg3okkebmi19qvvxyw0p",
+            "externalCallId": "3906416065",
+            "previousVersion": 2,
+            "previousStatus": "succeeded",
+            "queued": true,
+            "skippedReason": null
+          }
+        ],
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 1,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        }
+      }
+    },
+    "polls": [
+      {
+        "index": 0,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 4,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      },
+      {
+        "index": 1,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 6,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      },
+      {
+        "index": 2,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 10,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      },
+      {
+        "index": 3,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 14,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      },
+      {
+        "index": 4,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 19,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      },
+      {
+        "index": 5,
+        "status": 200,
+        "ok": true,
+        "stats": {
+          "total": 181,
+          "last3d": 73,
+          "withTranscript": 171,
+          "resolverQueued": 171,
+          "resolverSucceeded": 22,
+          "resolverFailed": 0,
+          "lastReceivedAt": "2026-06-29T05:58:39.621Z"
+        },
+        "sampleCount": 80
+      }
+    ]
+  }
+}

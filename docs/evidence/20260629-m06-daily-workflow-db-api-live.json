@@ -1,0 +1,555 @@
+﻿{
+  "checkedAt": "2026-06-29T12:08:34.414Z",
+  "buildSha": "a58cc452be2fb672918f5930a5bfb049ba166cd3",
+  "tenantId": "ten_dtfbank",
+  "rangeContract": {
+    "todayStart": "2026-06-28T21:00:00.000Z",
+    "todayEnd": "2026-06-29T21:00:00.000Z",
+    "sevenDayStart": "2026-06-22T21:00:00.000Z",
+    "archivePredicate": "created_at < sevenDayStart",
+    "sourcePhysical": "admin_created",
+    "workflowTriggers": [
+      "aircall.transcript.received",
+      "call_intent.classified",
+      "psych.tag.detected"
+    ],
+    "axis": [
+      "sales",
+      "account"
+    ]
+  },
+  "db": {
+    "assigneeSummary": [
+      {
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "email": "ihsan@dtfbank.com",
+        "last7dCount": 11,
+        "todayCount": 11,
+        "archiveCount": 0,
+        "oldestLast7d": "2026-06-29T12:02:55.998Z",
+        "newestLast7d": "2026-06-29T12:06:35.056Z"
+      }
+    ],
+    "last7dSamples": [
+      {
+        "id": "sr_btqb22s9n9cjb9j1r8806qwx",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:06:35.056Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_fzlesvy16qtw4xg892uia2d4"
+      },
+      {
+        "id": "sr_p360udwqsjrmf530dd5mng82",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:06:29.702Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_chuhg4rbs118msbka464ltvr"
+      },
+      {
+        "id": "sr_ozfrz5h5h3oeiflxdkpvgz40",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:06:01.016Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_jwa42uzrowhbhwmcgtqilf0l"
+      },
+      {
+        "id": "sr_s0e6lbgir4bzty730iy89un0",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:05:59.165Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_lcj72rx0o1fcuws66pem9ruw"
+      },
+      {
+        "id": "sr_a1614zuyt0eoop8o3anounjh",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:05:30.351Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_riuniuc4j09r07ndmub5rqt8"
+      },
+      {
+        "id": "sr_rryy9ym5shv5pbd8pe3e0a1t",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:05:24.457Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_ioh1y3ctsvlhjhlt8uw345mn"
+      },
+      {
+        "id": "sr_qpq337unmfzp5xvpy6y11rx9",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:05:06.830Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_rqkjs749t2z8yspj5td16pes"
+      },
+      {
+        "id": "sr_melyt9c9h3c0yzkpmj3l1xfx",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:04:58.893Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_xeqdilgria5nicdhyia3a82t"
+      },
+      {
+        "id": "sr_y4j4ebnzxj4wk0ec1f1ln9n7",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:03:12.480Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_nskvaa377m98m34mk0vgyuk0"
+      },
+      {
+        "id": "sr_zc82u1txzn2q76amlrlpdh7a",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:03:09.199Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_baoob1msjmudw2921g2cq7df"
+      },
+      {
+        "id": "sr_yywix1u1usnwugw46flkmzx5",
+        "axis": "sales",
+        "title": "sales: Purchase intent follow-up",
+        "createdAt": "2026-06-29T12:02:55.998Z",
+        "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "memberName": "Ihsan Taskiran",
+        "trigger": "psych.tag.detected",
+        "ruleName": "Default: Purchase intent sales follow-up",
+        "intent": null,
+        "tag": "purchase_intent",
+        "sourceCallId": "acev_lhcdbomr8prj1d4mm37510jc"
+      }
+    ],
+    "archiveSamples": []
+  },
+  "api": [
+    {
+      "email": "dtfbanktx@gmail.com",
+      "login": {
+        "status": 201,
+        "ok": true,
+        "message": null,
+        "principalId": "tmbr_ten_dtfbank_linda_marroquin"
+      },
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 104,
+          "pinnedCount": 4,
+          "highUrgencyCount": 90,
+          "visibleAxes": [
+            "support"
+          ],
+          "segmentGroupCount": 5
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 5
+      },
+      "today": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 104,
+          "pinnedCount": 4,
+          "highUrgencyCount": 90,
+          "visibleAxes": [
+            "support"
+          ],
+          "segmentGroupCount": 5
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 5
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 104,
+          "pinnedCount": 4,
+          "highUrgencyCount": 90,
+          "visibleAxes": [
+            "support"
+          ],
+          "segmentGroupCount": 5
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 5
+      }
+    },
+    {
+      "email": "ihsan@dtfbank.com",
+      "login": {
+        "status": 201,
+        "ok": true,
+        "message": null,
+        "principalId": "tmbr_ten_dtfbank_ihsan_taskiran"
+      },
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 11,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [
+          {
+            "id": "sr_btqb22s9n9cjb9j1r8806qwx",
+            "title": "+16087514012",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:35.056Z",
+            "callIntent": "inquiry",
+            "psychTags": [
+              "purchase_intent",
+              "info_request",
+              "follow_up"
+            ]
+          },
+          {
+            "id": "sr_p360udwqsjrmf530dd5mng82",
+            "title": "+19144974674",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:29.702Z",
+            "callIntent": "sale",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_ozfrz5h5h3oeiflxdkpvgz40",
+            "title": "+17122428580",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:01.016Z",
+            "callIntent": "inquiry",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_s0e6lbgir4bzty730iy89un0",
+            "title": "James Ervin",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:59.165Z",
+            "callIntent": "sale",
+            "psychTags": [
+              "purchase_intent",
+              "satisfied"
+            ]
+          },
+          {
+            "id": "sr_a1614zuyt0eoop8o3anounjh",
+            "title": "+19252268511",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:30.351Z",
+            "callIntent": "follow_up",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_rryy9ym5shv5pbd8pe3e0a1t",
+            "title": "+19102974827",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:24.457Z",
+            "callIntent": "support",
+            "psychTags": [
+              "complaint",
+              "purchase_intent",
+              "info_request"
+            ]
+          }
+        ],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "today": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 11,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [
+          {
+            "id": "sr_btqb22s9n9cjb9j1r8806qwx",
+            "title": "+16087514012",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:35.056Z",
+            "callIntent": "inquiry",
+            "psychTags": [
+              "purchase_intent",
+              "info_request",
+              "follow_up"
+            ]
+          },
+          {
+            "id": "sr_p360udwqsjrmf530dd5mng82",
+            "title": "+19144974674",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:29.702Z",
+            "callIntent": "sale",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_ozfrz5h5h3oeiflxdkpvgz40",
+            "title": "+17122428580",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:06:01.016Z",
+            "callIntent": "inquiry",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_s0e6lbgir4bzty730iy89un0",
+            "title": "James Ervin",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:59.165Z",
+            "callIntent": "sale",
+            "psychTags": [
+              "purchase_intent",
+              "satisfied"
+            ]
+          },
+          {
+            "id": "sr_a1614zuyt0eoop8o3anounjh",
+            "title": "+19252268511",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:30.351Z",
+            "callIntent": "follow_up",
+            "psychTags": [
+              "purchase_intent",
+              "info_request"
+            ]
+          },
+          {
+            "id": "sr_rryy9ym5shv5pbd8pe3e0a1t",
+            "title": "+19102974827",
+            "axis": "sales",
+            "createdAt": "2026-06-29T12:05:24.457Z",
+            "callIntent": "support",
+            "psychTags": [
+              "complaint",
+              "purchase_intent",
+              "info_request"
+            ]
+          }
+        ],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      }
+    },
+    {
+      "email": "charlette@dtfbank.com",
+      "login": {
+        "status": 201,
+        "ok": true,
+        "message": null,
+        "principalId": "tmbr_ten_dtfbank_charlette_boatman"
+      },
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "today": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      }
+    },
+    {
+      "email": "info@dtfbank.com",
+      "login": {
+        "status": 201,
+        "ok": true,
+        "message": null,
+        "principalId": "tmbr_ten_dtfbank_info_owner"
+      },
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "account"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "today": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "account"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "account"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyIds": [],
+        "hasSegmentHeadersInDaily": false,
+        "segmentGroupCount": 0
+      }
+    }
+  ]
+}
