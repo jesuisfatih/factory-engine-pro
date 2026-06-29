@@ -1,0 +1,25 @@
+﻿{
+    "proof":  "roadmap_m07_priority_owned_segments_runtime_live",
+    "checkedAt":  "2026-06-29T00:48:46.6675674Z",
+    "deployedBuildSha":  "cf11b539eac69f70f927a55c9355cd049dec0ee8",
+    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "containerScope":  "factoryengine-dtfbank-app only",
+    "containers":  [
+                       "factoryengine-dtfbank-app|Up 7 minutes",
+                       "factoryengine-dtfprint-app|Up 6 days",
+                       "factoryengine-eagledtfsupply-app|Up 6 days",
+                       "factoryengine-fastdtfsupply-app|Up 6 days",
+                       "factoryengine-fastdtftransfer-app|Up 6 days",
+                       "factoryengine-dtfprintdepot-app|Up 6 days"
+                   ],
+    "startupLogSample":  [
+                             "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
+                             "33 migrations found in prisma/migrations",
+                             "No pending migrations to apply.",
+                             "\u001b[32m[Nest] 1221  - \u001b[39m06/29/2026, 12:43:14 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+                         ]
+}
