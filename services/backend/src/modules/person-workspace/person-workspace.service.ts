@@ -194,7 +194,7 @@ export class PersonWorkspaceService {
   ) {
     const assignments = await this.axisAssignments(member.id);
     const visibleCustomerIds = Array.from(assignments.keys());
-    const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
+    const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
     const today = istanbulDayRange();
     const dailyWindow = dailyWorkflowRange(range, today);
 
@@ -234,7 +234,7 @@ export class PersonWorkspaceService {
           take: 10000,
         })
         : Promise.resolve([]),
-      this.dailyWorkflowRows(member.id, dailyWindow.start, dailyWindow.end),
+      this.dailyWorkflowRows(member, dailyWindow.start, dailyWindow.end),
       this.prisma.db.personDailyTaskOrder.findMany({
         where: {
           memberId: member.id,
@@ -299,6 +299,10 @@ export class PersonWorkspaceService {
       .flatMap((group) => group.items.map((item) => this.segmentPriorityCard(item, member, cardContext)))
       .sort(sortByUrgency)
       .slice(0, 120);
+    const visibleAxes = Array.from(new Set([
+      ...assignmentAxes,
+      ...dailyTaskRows.map((row) => row.axis).filter((axis): axis is string => Boolean(axis)),
+    ])).sort();
 
     const scopedRows = requestRows
       .filter((row) => this.isQueueVisible(row))
@@ -327,10 +331,15 @@ export class PersonWorkspaceService {
     };
   }
 
-  private dailyWorkflowRows(memberId: string, start: Date, end: Date | null) {
+  private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
+    const sourceCallIds = await this.dailyWorkflowSourceCallIdsForMember(member, start, end);
+    const ownerOrOperatorScope: Prisma.ServiceRequestWhereInput[] = [
+      { assignedMemberId: member.id },
+      ...(sourceCallIds.length > 0 ? [{ sourceCallId: { in: sourceCallIds } }] : []),
+    ];
     return this.prisma.db.serviceRequest.findMany({
       where: {
-        assignedMemberId: memberId,
+        OR: ownerOrOperatorScope,
         source: 'admin_created',
         axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
         createdAt: end ? { gte: start, lt: end } : { lt: start },
@@ -340,6 +349,21 @@ export class PersonWorkspaceService {
       orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
       take: 500,
     });
+  }
+
+  private async dailyWorkflowSourceCallIdsForMember(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
+    const aircallUserIds = await this.memberAircallUserIds(member.id, member.aircallUserId ?? null);
+    if (aircallUserIds.length === 0) return [];
+    const calls = await this.prisma.db.aircallCallEvent.findMany({
+      where: {
+        aircallUserId: { in: aircallUserIds },
+        eventTimestamp: end ? { gte: start, lt: end } : { lt: start },
+      },
+      select: { id: true },
+      orderBy: [{ eventTimestamp: 'desc' }],
+      take: 5000,
+    });
+    return calls.map((call) => call.id);
   }
 
   private isDailyWorkflowTask(row: ServiceRequestRow) {
@@ -1701,11 +1725,44 @@ export class PersonWorkspaceService {
     return map;
   }
 
+  private async memberAircallUserIds(memberId: string, primaryAircallUserId?: string | null) {
+    const [member, mappings] = await Promise.all([
+      primaryAircallUserId === undefined
+        ? this.prisma.db.member.findFirst({ where: { id: memberId }, select: { aircallUserId: true } })
+        : Promise.resolve(null),
+      this.prisma.db.aircallMemberMap.findMany({
+        where: { memberId },
+        select: { aircallUserId: true },
+      }),
+    ]);
+    return uniqueStrings([
+      primaryAircallUserId ?? null,
+      member?.aircallUserId ?? null,
+      ...mappings.map((mapping) => mapping.aircallUserId),
+    ]);
+  }
+
   private async assertServiceRequestScoped(row: ServiceRequestRow, memberId: string) {
     const assignments = await this.axisAssignments(memberId);
-    if (!this.isServiceRequestScoped(row, assignments, memberId)) {
+    if (
+      !this.isServiceRequestScoped(row, assignments, memberId)
+      && !(await this.isDailyWorkflowOperatorScoped(row, memberId))
+    ) {
       throw new ForbiddenException('Customer is outside your axis scope');
     }
+  }
+
+  private async isDailyWorkflowOperatorScoped(row: ServiceRequestRow, memberId: string) {
+    if (!this.isDailyWorkflowTask(row) || !row.sourceCallId) return false;
+    const aircallUserIds = await this.memberAircallUserIds(memberId);
+    if (aircallUserIds.length === 0) return false;
+    const count = await this.prisma.db.aircallCallEvent.count({
+      where: {
+        id: row.sourceCallId,
+        aircallUserId: { in: aircallUserIds },
+      },
+    });
+    return count > 0;
   }
 
   private isServiceRequestScoped(
