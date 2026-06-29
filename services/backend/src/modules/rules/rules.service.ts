@@ -1338,14 +1338,19 @@ export class RulesService {
       ?? stringParam(context.params, 'assigneeMemberId')
       ?? stringParam(context.params, 'memberId');
     const explicitAssignee = explicitAssigneeId ? await this.findMember(explicitAssigneeId) : null;
-    const customerPrimary = !explicitAssignee
+    const aircallOperator = !explicitAssignee
+      ? await this.resolveAircallOperatorMember(context)
+      : null;
+    const customerPrimary = !explicitAssignee && !aircallOperator
       ? await this.customers.resolveAxisPrimaryMember(context.state.customer?.id, axis)
       : null;
     const candidates = await this.findAxisPrimaryMembers(axis);
-    const candidateMembers = customerPrimary
+    const candidateMembers = aircallOperator
+      ? [aircallOperator, ...candidates.filter((member) => member.id !== aircallOperator.id)]
+      : customerPrimary
       ? [customerPrimary.member, ...candidates.filter((member) => member.id !== customerPrimary.member.id)]
       : candidates;
-    const assignee = explicitAssignee ?? customerPrimary?.member ?? candidateMembers[0] ?? null;
+    const assignee = explicitAssignee ?? aircallOperator ?? customerPrimary?.member ?? candidateMembers[0] ?? null;
     const watcherMemberIds = uniqueStrings(candidateMembers.map((member) => member.id))
       .filter((memberId) => memberId !== assignee?.id);
     const assignment: TaskAssignment = {
@@ -1354,7 +1359,7 @@ export class RulesService {
       watcherMemberIds,
       candidateMemberIds: candidateMembers.map((member) => member.id),
       customerAssignmentId: customerPrimary?.assignmentId ?? null,
-      resolutionSource: explicitAssignee ? 'explicit_param' : customerPrimary ? 'customer_axis_primary' : 'axis_primary_role',
+      resolutionSource: explicitAssignee ? 'explicit_param' : aircallOperator ? 'aircall_operator' : customerPrimary ? 'customer_axis_primary' : 'axis_primary_role',
     };
     this.logger.log('rules', 'task_assignment_resolved', 'Workflow task assignment resolved', {
       event_id: context.eventId,
@@ -1368,6 +1373,25 @@ export class RulesService {
       resolution_source: assignment.resolutionSource,
     });
     return assignment;
+  }
+
+  private async resolveAircallOperatorMember(context: WorkflowActionContext) {
+    const sourceCallId = this.workflowSourceCallId(context);
+    if (!sourceCallId) return null;
+    const call = await this.prisma.db.aircallCallEvent.findFirst({
+      where: { id: sourceCallId },
+      select: { aircallUserId: true },
+    });
+    if (!call?.aircallUserId) return null;
+    const tenantId = this.tenantId();
+    const mapped = await this.prisma.db.aircallMemberMap.findFirst({
+      where: { tenantId, aircallUserId: call.aircallUserId },
+      include: { member: true },
+    });
+    if (mapped?.member?.status === 'active') return mapped.member;
+    return this.prisma.db.member.findFirst({
+      where: { tenantId, aircallUserId: call.aircallUserId, status: 'active' },
+    });
   }
 
   private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): CreateTaskAxis {
@@ -1901,7 +1925,7 @@ type TaskAssignment = {
   watcherMemberIds: string[];
   candidateMemberIds: string[];
   customerAssignmentId: string | null;
-  resolutionSource: 'explicit_param' | 'customer_axis_primary' | 'axis_primary_role';
+  resolutionSource: 'explicit_param' | 'aircall_operator' | 'customer_axis_primary' | 'axis_primary_role';
 };
 
 type BackfillCandidate = {
