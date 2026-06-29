@@ -86,21 +86,21 @@ export class ShopifyClientService {
     };
   }
 
-  customers(credentials: ShopifyCredentials, cursor?: string | null) {
-    return this.getPage<Record<string, unknown>>(credentials, '/customers.json', 'customers', cursor);
+  customers(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
+    return this.getPage<Record<string, unknown>>(credentials, '/customers.json', 'customers', cursor, query);
   }
 
-  products(credentials: ShopifyCredentials, cursor?: string | null) {
-    return this.getPage<Record<string, unknown>>(credentials, '/products.json', 'products', cursor);
+  products(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
+    return this.getPage<Record<string, unknown>>(credentials, '/products.json', 'products', cursor, query);
   }
 
-  orders(credentials: ShopifyCredentials, cursor?: string | null) {
+  orders(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
     return this.getPage<Record<string, unknown>>(
       credentials,
       '/orders.json',
       'orders',
       cursor,
-      cursor ? {} : { status: 'any' },
+      cursor ? {} : { status: 'any', ...query },
     );
   }
 

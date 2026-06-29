@@ -28,7 +28,7 @@ export interface ReceiveAircallWebhookResult {
 export interface EnqueueTranscriptResolverOptions {
   forceReprocess?: boolean;
   targetVersion?: number;
-  source?: 'ingest' | 'manual_reprocess';
+  source?: 'ingest' | 'manual_reprocess' | 'rolling_backfill';
 }
 
 export interface EnqueueTranscriptResolverResult {

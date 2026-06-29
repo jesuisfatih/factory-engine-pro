@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from './ai.js';
 
 export const shopifySyncResourceSchema = z.enum(['customers', 'products', 'orders']);
 export type ShopifySyncResource = z.infer<typeof shopifySyncResourceSchema>;
@@ -51,6 +52,52 @@ export const shopifyInitialSyncResponseSchema = z.object({
   syncLogIds: z.array(z.string()),
 });
 export type ShopifyInitialSyncResponse = z.infer<typeof shopifyInitialSyncResponseSchema>;
+
+export const rollingBackfillTriggerSchema = z.object({
+  recentDays: z.coerce.number().int().min(1).max(7).default(7),
+  shopifyResources: z.array(shopifySyncResourceSchema).min(1).default(['customers', 'orders']),
+  shopifySegmentLimit: z.coerce.number().int().min(1).max(100).default(100),
+  aircallMaxPages: z.coerce.number().int().min(1).max(40).default(40),
+  resolverLimit: z.coerce.number().int().min(1).max(10000).default(1000),
+  targetResolverVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+});
+export type RollingBackfillTriggerInput = z.infer<typeof rollingBackfillTriggerSchema>;
+
+export type RollingBackfillSource = 'manual' | 'scheduled';
+export type RollingBackfillStatus = 'queued' | 'running' | 'success' | 'partial_success' | 'failed' | 'skipped';
+export type RollingBackfillStepStatus = 'success' | 'failed' | 'skipped';
+
+export interface RollingBackfillStepDto {
+  key: 'shopify_sync' | 'shopify_segments' | 'segment_evaluation' | 'aircall_recent_calls' | 'aircall_resolver' | 'customer_axis';
+  status: RollingBackfillStepStatus;
+  message: string;
+  detail: unknown;
+}
+
+export interface RollingBackfillRunResponse {
+  syncLogId: string;
+  jobId: string | null;
+  queued: boolean;
+  status: RollingBackfillStatus;
+  message: string;
+  source: RollingBackfillSource;
+  recentDays: number;
+  startedAt: string;
+  finishedAt: string | null;
+  steps: RollingBackfillStepDto[];
+}
+
+export interface RollingBackfillStatusResponse {
+  queueConfigured: boolean;
+  schedulerCount: number;
+  schedulers: Array<{
+    id: string;
+    name: string;
+    pattern: string | null;
+    nextRunAt: string | null;
+  }>;
+  recentRuns: RollingBackfillRunResponse[];
+}
 
 export interface ShopifyConnectionTestResponse {
   ok: boolean;

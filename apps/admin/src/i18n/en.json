@@ -567,7 +567,21 @@
       "aircall_summary": "{{queued}}/{{scanned}} transcript(s) queued for resolver v{{version}}; skipped {{skipped}}.",
       "axis_summary": "{{assigned}} assignment(s) written across {{scanned}} customer(s); existing {{skipped}}, no owner {{noOwner}}.",
       "completed_toast": "Initial setup completed",
-      "failed_toast": "Initial setup failed"
+      "failed_toast": "Initial setup failed",
+      "rolling_title": "Rolling 7d backfill",
+      "rolling_sub": "Daily Shopify delta, native Shopify segment sync, Aircall transcript resolver, and customer axis backfill",
+      "rolling_run": "Run 7d backfill",
+      "rolling_running": "Running 7d backfill",
+      "rolling_loading": "Loading rolling backfill status from the API.",
+      "rolling_error_title": "Rolling backfill status unavailable",
+      "rolling_empty_title": "No rolling backfill run recorded yet",
+      "rolling_empty_body": "Run the 7d backfill to queue live Shopify deltas, sync Shopify-native segments, process recent Aircall transcripts, and fill missing customer owners.",
+      "rolling_scheduler_title": "Daily scheduler",
+      "rolling_scheduler_body": "{{count}} active scheduler(s) registered in managed Redis.",
+      "scheduled": "Scheduled",
+      "not_scheduled": "Not scheduled",
+      "rolling_toast": "Rolling 7d backfill queued",
+      "rolling_failed_toast": "Rolling 7d backfill failed"
     },
     "workspace": {
       "loading_title": "Loading workspace settings",

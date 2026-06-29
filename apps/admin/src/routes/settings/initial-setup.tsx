@@ -2,15 +2,17 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
-import type { ShopifySyncResource } from '@factory-engine-pro/contracts';
-import { AlertTriangle, CheckCircle2, Database, GitBranch, PhoneCall, RefreshCw, UsersRound, XCircle } from 'lucide-react';
+import type { RollingBackfillRunResponse, ShopifySyncResource } from '@factory-engine-pro/contracts';
+import { AlertTriangle, CalendarClock, CheckCircle2, Database, GitBranch, PhoneCall, RefreshCw, UsersRound, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
 
 const SHOPIFY_SYNC_QUERY_KEY = ['shopify', 'sync-status'] as const;
+const ROLLING_BACKFILL_QUERY_KEY = ['backfill', 'rolling-7d'] as const;
 const RESOURCES = ['customers', 'products', 'orders'] as const satisfies readonly ShopifySyncResource[];
+const ROLLING_RESOURCES = ['customers', 'orders'] as const satisfies readonly ShopifySyncResource[];
 const AXES = ['sales', 'support', 'account'] as const;
 
 type StepKey = 'shopifySync' | 'segments' | 'aircall' | 'axis';
@@ -48,6 +50,7 @@ function InitialSetupView() {
   const canWriteSegments = useCan('segments.write');
   const canWriteCustomers = useCan('customers.write');
   const canReadMembers = useCan('members.read');
+  const canWriteAircall = useCan('aircall.users.write');
   const [steps, setSteps] = useState<Record<StepKey, StepState>>(EMPTY_STEPS);
   const [hasRun, setHasRun] = useState(false);
 
@@ -56,12 +59,18 @@ function InitialSetupView() {
     canWriteSegments ? null : 'segments.write',
     canWriteCustomers ? null : 'customers.write',
     canReadMembers ? null : 'members.read',
-  ].filter(Boolean) as string[], [canReadMembers, canTriggerSync, canWriteCustomers, canWriteSegments]);
+    canWriteAircall ? null : 'aircall.users.write',
+  ].filter(Boolean) as string[], [canReadMembers, canTriggerSync, canWriteAircall, canWriteCustomers, canWriteSegments]);
 
   const syncStatus = useQuery({
     queryKey: SHOPIFY_SYNC_QUERY_KEY,
     queryFn: () => adminApi.shopifySyncStatus(),
     refetchInterval: (query) => query.state.data?.isAnySyncing ? 5000 : false,
+  });
+  const rollingStatus = useQuery({
+    queryKey: ROLLING_BACKFILL_QUERY_KEY,
+    queryFn: () => adminApi.rollingBackfillStatus(),
+    refetchInterval: (query) => query.state.data?.recentRuns.some((run) => run.status === 'queued' || run.status === 'running') ? 5000 : false,
   });
 
   const setStep = (key: StepKey, state: StepState) => {
@@ -119,6 +128,27 @@ function InitialSetupView() {
       toast.success(t('settings.initial_setup.completed_toast'));
     },
     onError: (error) => toast.error(t('settings.initial_setup.failed_toast'), { description: apiErrorMessage(error) }),
+  });
+
+  const rollingBackfill = useMutation({
+    mutationFn: () => adminApi.triggerRollingBackfill({
+      recentDays: 7,
+      shopifyResources: [...ROLLING_RESOURCES],
+      shopifySegmentLimit: 100,
+      aircallMaxPages: 40,
+      resolverLimit: 1000,
+      targetResolverVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+    }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ROLLING_BACKFILL_QUERY_KEY });
+      qc.invalidateQueries({ queryKey: SHOPIFY_SYNC_QUERY_KEY });
+      qc.invalidateQueries({ queryKey: ['segments'] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['aircall', 'calls'] });
+      qc.invalidateQueries({ queryKey: ['support'] });
+      toast.success(t('settings.initial_setup.rolling_toast'), { description: result.message });
+    },
+    onError: (error) => toast.error(t('settings.initial_setup.rolling_failed_toast'), { description: apiErrorMessage(error) }),
   });
 
   const statusRows = syncStatus.data
@@ -236,6 +266,61 @@ function InitialSetupView() {
           ))}
         </div>
       </section>
+
+      <section className="config-card" id="initial-setup-rolling-backfill">
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
+          <div>
+            <h3 data-i18n-key="settings.initial_setup.rolling_title">{t('settings.initial_setup.rolling_title')}</h3>
+            <div className="sub" data-i18n-key="settings.initial_setup.rolling_sub">{t('settings.initial_setup.rolling_sub')}</div>
+          </div>
+          <button
+            id="btn-run-rolling-7d-backfill"
+            type="button"
+            className="btn primary"
+            onClick={() => rollingBackfill.mutate()}
+            disabled={!canRun || rollingBackfill.isPending || syncStatus.isLoading}
+          >
+            <CalendarClock size={13} /> {rollingBackfill.isPending ? t('settings.initial_setup.rolling_running') : t('settings.initial_setup.rolling_run')}
+          </button>
+        </div>
+        {rollingStatus.isLoading && <StateBlock title={t('common.loading')} body={t('settings.initial_setup.rolling_loading')} />}
+        {rollingStatus.isError && (
+          <StateBlock
+            title={t('settings.initial_setup.rolling_error_title')}
+            body={apiErrorMessage(rollingStatus.error)}
+            icon={<XCircle size={18} color="var(--danger)" />}
+          />
+        )}
+        {rollingStatus.isSuccess && rollingStatus.data.recentRuns.length === 0 && (
+          <StateBlock
+            title={t('settings.initial_setup.rolling_empty_title')}
+            body={t('settings.initial_setup.rolling_empty_body')}
+            action={canRun ? (
+              <button type="button" className="btn primary" onClick={() => rollingBackfill.mutate()} disabled={rollingBackfill.isPending}>
+                <CalendarClock size={13} /> {t('settings.initial_setup.rolling_run')}
+              </button>
+            ) : undefined}
+          />
+        )}
+        {rollingStatus.isSuccess && rollingStatus.data.recentRuns.length > 0 && (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div className="webhook-warning" style={{ justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <strong>{t('settings.initial_setup.rolling_scheduler_title')}</strong>
+                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+                  {t('settings.initial_setup.rolling_scheduler_body', { count: rollingStatus.data.schedulerCount })}
+                </p>
+              </div>
+              <span className={`pill ${rollingStatus.data.queueConfigured && rollingStatus.data.schedulerCount > 0 ? 'success' : 'warn'}`}>
+                {rollingStatus.data.queueConfigured && rollingStatus.data.schedulerCount > 0 ? t('settings.initial_setup.scheduled') : t('settings.initial_setup.not_scheduled')}
+              </span>
+            </div>
+            {rollingStatus.data.recentRuns.map((run) => (
+              <RollingRun key={run.syncLogId} run={run} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -292,6 +377,30 @@ function StateBlock({ title, body, action, icon }: { title: string; body: string
   );
 }
 
+function RollingRun({ run }: { run: RollingBackfillRunResponse }) {
+  return (
+    <div className="webhook-warning" style={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ minWidth: 0 }}>
+        <strong>{run.message}</strong>
+        <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+          {run.source} / {run.recentDays}d / {formatDate(run.startedAt)} / {run.finishedAt ? formatDate(run.finishedAt) : '-'}
+        </p>
+        {run.steps.length > 0 && (
+          <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+            {run.steps.map((step) => (
+              <div key={`${run.syncLogId}-${step.key}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)', fontSize: 12 }}>{step.key.replace(/_/g, ' ')}: {step.message}</span>
+                <span className={`pill ${statusPill(step.status)}`}>{step.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <span className={`pill ${statusPill(run.status)}`}>{run.status}</span>
+    </div>
+  );
+}
+
 function summarizeUnknown(value: unknown) {
   if (value && typeof value === 'object') {
     const evaluated = 'evaluated' in value ? Number((value as { evaluated?: unknown }).evaluated) : null;
@@ -305,6 +414,13 @@ function summarizeUnknown(value: unknown) {
 function formatDate(value: string | null) {
   if (!value) return '-';
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+}
+
+function statusPill(status: string) {
+  if (status === 'success') return 'success';
+  if (status === 'failed') return 'danger';
+  if (status === 'partial_success' || status === 'queued' || status === 'running' || status === 'skipped') return 'warn';
+  return '';
 }
 
 export const Route = createFileRoute('/settings/initial-setup')({ component: InitialSetupView });

@@ -44,6 +44,9 @@ import type {
   ResolveReorderInput,
   ResetPasswordInput,
   RollbackWorkflowRuleInput,
+  RollingBackfillRunResponse,
+  RollingBackfillStatusResponse,
+  RollingBackfillTriggerInput,
   SaveWorkflowRuleInput,
   TenantConfigInput,
   UpdateAccountPasswordInput,
@@ -920,6 +923,14 @@ export class ApiClient {
 
   triggerShopifyInitialSync(input: ShopifyInitialSyncInput = {}) {
     return this.post<ShopifyInitialSyncResponse>('/sync/initial', input);
+  }
+
+  rollingBackfillStatus() {
+    return this.get<RollingBackfillStatusResponse>('/backfill/rolling-7d/status');
+  }
+
+  triggerRollingBackfill(input: Partial<RollingBackfillTriggerInput> = {}) {
+    return this.post<RollingBackfillRunResponse>('/backfill/rolling-7d', input);
   }
 
   private get<T>(path: string, auth = true) {

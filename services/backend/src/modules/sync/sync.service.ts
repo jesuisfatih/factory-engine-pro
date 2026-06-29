@@ -25,6 +25,8 @@ interface InitialSyncJob {
   batchId: string;
   resources: ShopifySyncResource[];
   syncLogIds: Record<ShopifySyncResource, string>;
+  mode?: 'initial' | 'rolling_7d';
+  since?: string | null;
 }
 
 @Injectable()
@@ -141,8 +143,8 @@ export class SyncService {
 
     await this.state.reset(resources);
     const batchId = randomUUID();
-    const syncLogIds = await this.createQueuedLogs(resources, batchId);
-    const job: InitialSyncJob = { tenantId, batchId, resources, syncLogIds };
+    const syncLogIds = await this.createQueuedLogs(resources, batchId, 'initial', null);
+    const job: InitialSyncJob = { tenantId, batchId, resources, syncLogIds, mode: 'initial', since: null };
 
     if (!this.syncQueue) {
       await this.processInitialSync(job);
@@ -170,6 +172,52 @@ export class SyncService {
     };
   }
 
+  async triggerRollingSync(input: { resources: ShopifySyncResource[]; since: Date }): Promise<ShopifyInitialSyncResponse> {
+    const tenantId = this.tenantId();
+    const resources = uniqueResources(input.resources);
+    const running = await Promise.all(resources.map(async (resource) => ({
+      resource,
+      running: await this.state.isRunning(resource),
+    })));
+    const runningResources = running.filter((entry) => entry.running).map((entry) => entry.resource);
+    if (runningResources.length > 0) {
+      throw new ConflictException({
+        message: `Shopify sync is already running for: ${runningResources.join(', ')}`,
+        code: 'shopify_sync_already_running',
+      });
+    }
+
+    const batchId = randomUUID();
+    const since = input.since.toISOString();
+    const syncLogIds = await this.createQueuedLogs(resources, batchId, 'rolling_7d', since);
+    const job: InitialSyncJob = { tenantId, batchId, resources, syncLogIds, mode: 'rolling_7d', since };
+
+    if (!this.syncQueue) {
+      await this.processInitialSync(job);
+      return {
+        message: 'Shopify rolling 7d sync completed inline because REDIS_URL is not configured.',
+        batchId,
+        queued: false,
+        resources,
+        syncLogIds: resources.map((resource) => syncLogIds[resource]),
+      };
+    }
+
+    await this.syncQueue.add(SHOPIFY_INITIAL_SYNC_JOB, job, {
+      attempts: 1,
+      removeOnComplete: { age: 7 * 24 * 60 * 60, count: 100 },
+      removeOnFail: { age: 14 * 24 * 60 * 60, count: 100 },
+    });
+
+    return {
+      message: 'Shopify rolling 7d sync queued.',
+      batchId,
+      queued: true,
+      resources,
+      syncLogIds: resources.map((resource) => syncLogIds[resource]),
+    };
+  }
+
   async processInitialSync(job: InitialSyncJob) {
     const credentials = await this.shopify.resolveCredentials();
     if (!credentials) {
@@ -183,12 +231,17 @@ export class SyncService {
 
     const results: Record<string, unknown> = {};
     for (const resource of job.resources) {
-      results[resource] = await this.processResource(resource, job.syncLogIds[resource], credentials);
+      results[resource] = await this.processResource(resource, job.syncLogIds[resource], credentials, job);
     }
     return results;
   }
 
-  private async processResource(resource: ShopifySyncResource, syncLogId: string, credentials: ShopifyCredentials) {
+  private async processResource(
+    resource: ShopifySyncResource,
+    syncLogId: string,
+    credentials: ShopifyCredentials,
+    job: InitialSyncJob,
+  ) {
     if (await this.state.shouldSkip(resource)) {
       await this.finishLog(syncLogId, 'skipped', `${resource} sync disabled after repeated failures.`, { resource });
       return { skipped: true, reason: 'too_many_failures' };
@@ -202,8 +255,8 @@ export class SyncService {
 
     await this.updateLog(syncLogId, {
       status: 'running',
-      message: `${resource} initial sync is running.`,
-      metadata: { resource, source: credentials.source },
+      message: `${resource} ${syncModeLabel(job.mode)} sync is running.`,
+      metadata: { resource, source: credentials.source, mode: job.mode ?? 'initial', since: job.since ?? null, batchId: job.batchId },
     });
 
     try {
@@ -211,7 +264,7 @@ export class SyncService {
       let processed = 0;
       let pages = 0;
       do {
-        const page = await this.fetchPage(resource, credentials, cursor);
+        const page = await this.fetchPage(resource, credentials, cursor, job.since ?? null);
         await this.persistPage(resource, page.items);
         processed += page.items.length;
         pages += 1;
@@ -230,15 +283,19 @@ export class SyncService {
       } while (cursor);
 
       await this.state.complete(resource, processed);
-      await this.finishLog(syncLogId, 'completed', `${resource} initial sync completed.`, {
+      await this.finishLog(syncLogId, 'completed', `${resource} ${syncModeLabel(job.mode)} sync completed.`, {
         resource,
         recordsProcessed: processed,
         pages,
         source: credentials.source,
+        mode: job.mode ?? 'initial',
+        since: job.since ?? null,
+        batchId: job.batchId,
       });
       this.logger.log('shopify', 'sync_completed', 'Shopify sync resource completed', {
         resource,
         records_processed: processed,
+        mode: job.mode ?? 'initial',
       });
       return { processed, pages };
     } catch (error) {
@@ -254,10 +311,11 @@ export class SyncService {
     }
   }
 
-  private fetchPage(resource: ShopifySyncResource, credentials: ShopifyCredentials, cursor: string | null) {
-    if (resource === 'customers') return this.shopify.customers(credentials, cursor);
-    if (resource === 'products') return this.shopify.products(credentials, cursor);
-    return this.shopify.orders(credentials, cursor);
+  private fetchPage(resource: ShopifySyncResource, credentials: ShopifyCredentials, cursor: string | null, since: string | null) {
+    const query: Record<string, string> = since ? { updated_at_min: since } : {};
+    if (resource === 'customers') return this.shopify.customers(credentials, cursor, query);
+    if (resource === 'products') return this.shopify.products(credentials, cursor, query);
+    return this.shopify.orders(credentials, cursor, query);
   }
 
   private async persistPage(resource: ShopifySyncResource, records: Record<string, unknown>[]) {
@@ -574,17 +632,17 @@ export class SyncService {
     }
   }
 
-  private async createQueuedLogs(resources: ShopifySyncResource[], batchId: string) {
+  private async createQueuedLogs(resources: ShopifySyncResource[], batchId: string, mode: 'initial' | 'rolling_7d', since: string | null) {
     const entries = await Promise.all(resources.map(async (resource) => {
       const log = await this.prisma.db.syncLog.create({
         data: {
           id: prefixedId('slog'),
           tenantId: this.tenantId(),
           service: 'shopify',
-          action: `initial.${resource}`,
+          action: `${mode}.${resource}`,
           status: 'queued',
-          message: `${resource} initial sync queued.`,
-          metadata: { resource, batchId, mode: 'initial' },
+          message: `${resource} ${syncModeLabel(mode)} sync queued.`,
+          metadata: { resource, batchId, mode, since },
         },
       });
       return [resource, log.id] as const;
@@ -626,6 +684,10 @@ function uniqueResources(resources: ShopifySyncResource[]) {
     throw new BadRequestException('Invalid Shopify sync resource.');
   }
   return unique;
+}
+
+function syncModeLabel(mode: InitialSyncJob['mode']) {
+  return mode === 'rolling_7d' ? 'rolling 7d' : 'initial';
 }
 
 function providerSafeMessage(error: unknown) {

@@ -10,10 +10,13 @@ export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE');
 export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
+export const ROLLING_BACKFILL_QUEUE = Symbol('ROLLING_BACKFILL_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
 export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
 export const SEGMENT_EVALUATION_QUEUE_NAME = 'segment-evaluation';
 export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
+export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
+export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
 
 @Global()
 @Module({
@@ -83,6 +86,14 @@ export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
         return new Queue(SEGMENT_EVALUATION_QUEUE_NAME, { connection });
       },
     },
+    {
+      provide: ROLLING_BACKFILL_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(ROLLING_BACKFILL_QUEUE_NAME, { connection });
+      },
+    },
   ],
   exports: [
     REDIS_CONNECTION,
@@ -93,6 +104,7 @@ export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
     AI_TRANSCRIPT_RESOLVER_QUEUE,
     SHOPIFY_SYNC_QUEUE,
     SEGMENT_EVALUATION_QUEUE,
+    ROLLING_BACKFILL_QUEUE,
   ],
 })
 export class QueueModule {}

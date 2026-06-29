@@ -452,9 +452,13 @@ export class AircallService {
       });
     }
 
+    const from = input.recentDays ? new Date(Date.now() - input.recentDays * 86_400_000) : null;
     const where: Prisma.AircallCallEventWhereInput = input.callEventId
       ? { id: input.callEventId }
-      : { transcriptRaw: { not: null } };
+      : {
+          transcriptRaw: { not: null },
+          ...(from ? { eventTimestamp: { gte: from } } : {}),
+        };
     const rows = await this.prisma.db.aircallCallEvent.findMany({
       where,
       orderBy: { eventTimestamp: 'desc' },
@@ -478,7 +482,7 @@ export class AircallService {
       const result = await this.ingest.enqueueTranscriptResolver(row.id, row.transcriptRaw, {
         forceReprocess: true,
         targetVersion,
-        source: 'manual_reprocess',
+        source: input.recentDays ? 'rolling_backfill' : 'manual_reprocess',
       });
       if (result.queued) queued++;
       else skipped++;
@@ -501,6 +505,8 @@ export class AircallService {
       metadata: {
         targetVersion,
         limit: input.limit,
+        recentDays: input.recentDays ?? null,
+        from: from?.toISOString() ?? null,
         callEventId: input.callEventId ?? null,
         scanned: rows.length,
         queued,
@@ -510,6 +516,8 @@ export class AircallService {
 
     return {
       targetVersion,
+      recentDays: input.recentDays ?? null,
+      from: from?.toISOString() ?? null,
       scanned: rows.length,
       queued,
       skipped,

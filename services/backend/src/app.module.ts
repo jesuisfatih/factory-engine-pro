@@ -6,6 +6,7 @@ import { AircallModule } from './modules/aircall/aircall.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { BackfillModule } from './modules/backfill/backfill.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
@@ -46,6 +47,7 @@ import { HealthController } from './health.controller.js';
     SupportModule,
     B2BAccessModule,
     SyncModule,
+    BackfillModule,
   ],
   controllers: [HealthController],
   providers: [
