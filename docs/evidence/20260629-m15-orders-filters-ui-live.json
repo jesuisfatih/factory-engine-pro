@@ -1,0 +1,56 @@
+{
+  "proof": "roadmap_m15_orders_filters_ui_live",
+  "generatedAt": "2026-06-29T10:30:32.760Z",
+  "url": "https://app.dtfbank.com/orders",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "d84a4e4c76651b85efdeb90c3e71e7143919aaee",
+  "tokenValuesPersistedInEvidence": false,
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "firstDate": "2026-05-22",
+  "defaultState": {
+    "href": "https://app.dtfbank.com/orders",
+    "rowCount": 50,
+    "hasShopifySortButton": true,
+    "hasCustomerFilter": true,
+    "hasDateFrom": true,
+    "hasDateTo": true,
+    "text": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nDB\ninfo@dtfbank.com\nMember\nWorkspace settings\nOrders\nD\nDTF Bank\nMember\nOrders\nShopify orders, pickup signals, and design files\nExport CSV\nAll orders\nPickup\nWith files\nORDERS\n634\nin view\nREVENUE\n$646,944.30\ngross\nPICKUP\n0\npickup mode\nDESIGN FILES\n0\nfile-attached\nFULFILLED\n97%\ncompletion rate\nto\nShopify updated desc\nRefresh\nORDER\n\t\nCUSTOMER\n\t\nDATE\n\t\nTOTAL\n\t\nPAYMENT\nAll\npaid\npending\nauthorized\npartially paid\nrefunded\npartially refunded\nvoided\nfailed\n\t\nFULFILLMENT\nAll\nfulfilled\npartial\nunfulfilled\ncomplete\ncompleted\ncancelled\n\t\n\n4433\n\t\nMain Street Emporium\nmainstemp37055@gmail.com\nMain Street Emporium\n\t\nMay 22, 2026\nUpdated Jun 29, 12:59 PM\n\t$284.38\tpaid\tfulfilled\t\n\n4673\n\t\nGrand Slam Graphics, LLC\nmegarepoman@comcast.net\nGrand Slam Graphics, LLC\n\t\nJun 16, 2026\nUpdated Jun 29, 12:59 PM\n\t$420.26\tpaid\tfulfilled\t\n\n4688\n\t\nDon Sylvia\ndsylvia42@aol.com\nDon Sylvia\n\t\nJun 17, 2026\nUpdated Jun 29, 12:59 PM\n\t$241.93\trefunded\tfulfilled\t\n\n4690\n\t\nHOUSE OF DURASILK\ndebbie@detailsdiversified.com\nHOUSE OF DURASILK\n\t\nJun 17, 2026\nUpdated Jun 29, 12:59 PM\n\t$81.05\tpaid\tfulfilled\t\n\n4695\n\t\nGary Bryan\nfivebryans@hotmail.com\nGary Bryan\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$75.29\tpaid\tfulfilled\t\n\n4700\n\t\nMandy Palmer\njaxxalan@gmail.com\nMandy Palmer\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$87.50\tpaid\tfulfilled\t\n\n4701\n\t\nSkye Thomas (skyelynn1015)\nbounce-c3-jwnbye@mail.codisto.com\nSkye Thomas (skyelynn1015)\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$3.98\tpaid\tfulfilled\t\n\n4702\n\t\nSTAHLS\nsusan.elliott@stahlsid.com\nSTAHLS\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$336.56\tpaid\tfulfilled\t\n\n4709\n\t\nSarah Mae Specially Made For You\nsarahmaemade@gmail.com\nSarah Mae Specially Made For You\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$135.16\tpaid\tfulfilled\t\n\n4710\n\t\nKelly Smith\nsscustomdesignsu272@gmail.com\nKelly Smith\n\t\nJun 18, 2026\nUpdated Jun 29, 12:59 PM\n\t$213.02\tpaid\tfulfilled\t\n\n4711\n\t\nCrown Awards\nkclarke@crownawards.com\nCrown Awards\n\t\nJun 19, 2026\nUpdated Jun 29, 12:59 PM\n\t$1,288.01\tpaid\tfulfilled\t\n\n4712\n\t\nMelody Melloy-Chailland\nmmelloy74@gmail.com\nMelody Melloy-Chailland\n\t\nJun 19, 2026\nUpdated Jun 29, 12:59 PM\n\t$213.57\tpaid\tfulfilled\t\n\n4714\n\t\nChris Edge\nchrisedge48@hotmail.com\nChris Edge\n\t\nJun 19, 2026\nUpdated Jun 29, 12:59 PM\n\t$163.36\tpaid\tfulfilled\t\n\n4717\n\t\nCynthia Melson\nsindeesboutique@gmail.com\nCynthia Melson\n\t\nJun 19, 2026\nUpdated Jun 29"
+  },
+  "garyState": {
+    "href": "https://app.dtfbank.com/orders",
+    "rowCount": 1,
+    "rowsText": [
+      "4695Gary Bryanfivebryans@hotmail.comGary BryanJun 18, 2026Updated Jun 29, 12:59 PM$75.29paidfulfilled"
+    ]
+  },
+  "dateSortState": {
+    "href": "https://app.dtfbank.com/orders",
+    "dateFrom": "2026-05-22",
+    "dateTo": "2026-05-22",
+    "rowCount": 7,
+    "activeSortText": [
+      "Totalasc"
+    ],
+    "rowsText": [
+      "4430kanisha hallkyvettehall1990@gmail.comkanisha hallMay 22, 2026Updated Jun 29, 12:44 AM$72.34paidfulfilled",
+      "4434Ashley Fairchildorders.dtfdiva409@gmail.comAshley FairchildMay 22, 2026Updated Jun 29, 12:44 AM$77.86paidfulfilled",
+      "4432American Revolution Outfittersscott@globalteeco.comAmerican Revolution OutfittersMay 22, 2026Updated Jun 29, 12:44 AM$121.05paidfulfilled",
+      "4431Matthew nothnaglepmxbranding@yahoo.comMatthew nothnagleMay 22, 2026Updated Jun 29, 12:44 AM$164.42paidfulfilled",
+      "4435Sarah Mae Specially Made For Yousarahmaemade@gmail.comSarah Mae Specially Made For YouMay 22, 2026Updated Jun 29, 12:44 AM$238.67paidfulfilled",
+      "4433Main Street Emporiummainstemp37055@gmail.comMain Street EmporiumMay 22, 2026Updated Jun 29, 12:59 PM$284.38paidfulfilled",
+      "4436TAERRAH BADTENTAERRAH@GMAIL.COMTAERRAH BADTENMay 23, 2026Updated Jun 29, 12:44 AM$3,868.99paidfulfilled"
+    ]
+  },
+  "screenshots": {
+    "defaultShot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m15-orders-default-ui-live.png",
+    "garyShot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m15-orders-gary-filter-ui-live.png",
+    "dateSortShot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m15-orders-date-sort-ui-live.png"
+  },
+  "consoleErrors": [],
+  "failedResponses": [],
+  "pass": true
+}

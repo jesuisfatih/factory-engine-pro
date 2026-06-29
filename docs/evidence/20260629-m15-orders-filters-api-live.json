@@ -1,0 +1,119 @@
+{
+  "proof": "roadmap_m15_orders_filters_api_live",
+  "generatedAt": "2026-06-29T10:29:35.366Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "appBase": "https://app.dtfbank.com",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "d84a4e4c76651b85efdeb90c3e71e7143919aaee",
+  "tokenValuesPersistedInEvidence": false,
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "checks": {
+    "defaultShopifyUpdatedDesc": {
+      "pass": true,
+      "endpoint": "GET /orders?surface=all&limit=10&sortBy=shopify_updated&sortDir=desc",
+      "first": [
+        {
+          "id": "ord_y5nx09vjgxr3rpd1plresuxn",
+          "orderNumber": "4433",
+          "updatedAt": "2026-06-29T09:59:19.218Z",
+          "customerName": "Main Street Emporium"
+        },
+        {
+          "id": "ord_pxzotjly5ck9u3sn11kz2a66",
+          "orderNumber": "4673",
+          "updatedAt": "2026-06-29T09:59:19.188Z",
+          "customerName": "Grand Slam Graphics, LLC"
+        },
+        {
+          "id": "ord_yz3bwe3zhogk0uchsou5u9vm",
+          "orderNumber": "4688",
+          "updatedAt": "2026-06-29T09:59:19.152Z",
+          "customerName": "Don Sylvia"
+        },
+        {
+          "id": "ord_dk7ligxngqf4nan3vvvbvzve",
+          "orderNumber": "4690",
+          "updatedAt": "2026-06-29T09:59:19.113Z",
+          "customerName": "HOUSE OF DURASILK"
+        },
+        {
+          "id": "ord_agw9ru4tnsdb7jsbiqhhk8w8",
+          "orderNumber": "4695",
+          "updatedAt": "2026-06-29T09:59:19.082Z",
+          "customerName": "Gary Bryan"
+        }
+      ]
+    },
+    "customerColumnSearchGary": {
+      "pass": true,
+      "endpoint": "GET /orders?surface=all&limit=50&customerSearch=Gary&sortBy=customer_name&sortDir=asc",
+      "count": 1,
+      "rows": [
+        {
+          "id": "ord_agw9ru4tnsdb7jsbiqhhk8w8",
+          "orderNumber": "4695",
+          "customerName": "Gary Bryan",
+          "companyName": "Gary Bryan",
+          "customerEmail": "fivebryans@hotmail.com"
+        }
+      ]
+    },
+    "dateRange": {
+      "pass": true,
+      "endpoint": "GET /orders?surface=all&limit=100&dateFrom=2026-05-22&dateTo=2026-05-22&sortBy=order_date&sortDir=desc",
+      "date": "2026-05-22",
+      "firstOrderId": "ord_y5nx09vjgxr3rpd1plresuxn",
+      "count": 7
+    },
+    "totalSortAscending": {
+      "pass": true,
+      "endpoint": "GET /orders?surface=all&limit=10&sortBy=total&sortDir=asc",
+      "totals": [
+        {
+          "orderNumber": "4701",
+          "totalPrice": 3.98
+        },
+        {
+          "orderNumber": "4421",
+          "totalPrice": 4.5
+        },
+        {
+          "orderNumber": "4579",
+          "totalPrice": 4.5
+        },
+        {
+          "orderNumber": "4729",
+          "totalPrice": 9.8
+        },
+        {
+          "orderNumber": "4447",
+          "totalPrice": 15.99
+        },
+        {
+          "orderNumber": "4645",
+          "totalPrice": 19.99
+        },
+        {
+          "orderNumber": "4415",
+          "totalPrice": 21.78
+        },
+        {
+          "orderNumber": "4619",
+          "totalPrice": 22.16
+        },
+        {
+          "orderNumber": "4271",
+          "totalPrice": 22.34
+        },
+        {
+          "orderNumber": "4455",
+          "totalPrice": 23.11
+        }
+      ]
+    }
+  }
+}
