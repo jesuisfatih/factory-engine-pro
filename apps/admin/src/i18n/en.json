@@ -1276,7 +1276,11 @@
     "no_axis": "No axis",
     "no_matched_rule": "No matched rule",
     "no_watchers": "No watchers",
+    "no_condition_trace": "No saved rule trace for this request.",
     "condition_trace_count": "{{count}} condition(s)",
+    "sources": {
+      "all": "All sources"
+    },
     "no_sla": "—",
     "close": "Close"
   },

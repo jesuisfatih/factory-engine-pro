@@ -97,9 +97,11 @@ interface SupportDraft {
 }
 
 type SurfaceFilter = 'all' | ServiceRequestSurface;
+type SourceFilter = 'all' | 'ai_transcript' | 'workflow' | 'call' | 'manual' | 'email' | 'form';
 
 const PRIORITIES: ServiceRequestPriority[] = ['critical', 'urgent', 'high', 'medium', 'low'];
 const STATUSES: ServiceRequestStatus[] = ['open', 'in_progress', 'waiting', 'waiting_on_customer', 'pending_resolve', 'resolved', 'closed', 'reopened'];
+const SOURCE_FILTERS: SourceFilter[] = ['all', 'ai_transcript', 'workflow', 'call', 'manual', 'email', 'form'];
 const QK = ['operations', 'support'] as const;
 
 export function SupportPage() {
@@ -107,6 +109,7 @@ export function SupportPage() {
   const qc = useQueryClient();
   const canWrite = useCan('support.write');
   const [surface, setSurface] = useState<SurfaceFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -114,10 +117,10 @@ export function SupportPage() {
   const [internalComment, setInternalComment] = useState(false);
   const [status, setStatus] = useState<ServiceRequestStatus>('open');
   const [assignee, setAssignee] = useState('');
-  const queryString = useMemo(() => supportQuery(surface, search), [surface, search]);
+  const queryString = useMemo(() => supportQuery(surface, sourceFilter, search), [surface, sourceFilter, search]);
 
   const support = useQuery({ queryKey: [...QK, queryString], queryFn: () => fetchSupport(queryString) });
-  const stats = useQuery({ queryKey: [...QK, 'stats', surface], queryFn: () => fetchStats(surface) });
+  const stats = useQuery({ queryKey: [...QK, 'stats', surface, sourceFilter], queryFn: () => fetchStats(surface, sourceFilter) });
   const detail = useQuery({
     queryKey: [...QK, 'detail', selectedId],
     queryFn: () => adminApi.supportRequest(selectedId!) as Promise<SupportRow>,
@@ -220,6 +223,18 @@ export function SupportPage() {
         <button type="button" className={`btn ${surface === 'all' ? 'primary' : ''}`} onClick={() => setSurface('all')}>{t('support.tabs.all')}</button>
         <button type="button" className={`btn ${surface === 'internal' ? 'primary' : ''}`} onClick={() => setSurface('internal')}>{t('support.tabs.internal')}</button>
         <button type="button" className={`btn ${surface === 'customer_facing' ? 'primary' : ''}`} onClick={() => setSurface('customer_facing')}>{t('support.tabs.customer_facing')}</button>
+        <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+          {SOURCE_FILTERS.map((source) => (
+            <button
+              key={source}
+              type="button"
+              className={`btn ${sourceFilter === source ? 'primary' : ''}`}
+              onClick={() => setSourceFilter(source)}
+            >
+              {source === 'all' ? t('support.sources.all') : label(source)}
+            </button>
+          ))}
+        </div>
         <div className="orders-search" style={{ flex: 1, minWidth: 240 }}>
           <Search size={14} />
           <input id="support-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('support.search_placeholder')} />
@@ -286,6 +301,7 @@ export function SupportPage() {
                   <DetailLine label={t('support.detail_created')} value={fmtDate(selected.createdAt)} />
                   <DetailLine label={t('support.detail_sla')} value={selected.sla?.resolutionBreached ? t('support.sla_breached') : fmtDate(selected.sla?.resolutionTargetAt)} danger={selected.sla?.resolutionBreached} />
                 </div>
+                <TraceList rows={selected.conditionTrace} emptyLabel={t('support.no_condition_trace')} />
 
                 {canWrite && (
                   <div className="modal-section" style={{ marginTop: 14 }}>
@@ -455,9 +471,10 @@ function fetchSupport(query: string) {
   return adminApi.supportRequests(query) as Promise<SupportListResponse>;
 }
 
-function fetchStats(surface: SurfaceFilter) {
+function fetchStats(surface: SurfaceFilter, sourceFilter: SourceFilter) {
   const params = new URLSearchParams();
   if (surface !== 'all') params.set('surface', surface);
+  if (sourceFilter !== 'all') params.set('source', sourceFilter);
   return adminApi.supportStats(params.size ? `?${params.toString()}` : '') as Promise<SupportStats>;
 }
 
@@ -465,8 +482,9 @@ function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
 }
 
-function supportQuery(surface: SurfaceFilter, search: string) {
+function supportQuery(surface: SurfaceFilter, sourceFilter: SourceFilter, search: string) {
   const params = new URLSearchParams({ limit: '50', page: '1', surface });
+  if (sourceFilter !== 'all') params.set('source', sourceFilter);
   if (search.trim()) params.set('q', search.trim());
   return `?${params.toString()}`;
 }
@@ -500,6 +518,26 @@ function DetailLine({ label: lineLabel, value, danger = false }: { label: string
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
       <span className="muted">{lineLabel}</span>
       <strong style={{ color: danger ? 'var(--danger)' : 'var(--text)', textAlign: 'right' }}>{value}</strong>
+    </div>
+  );
+}
+
+function TraceList({ rows, emptyLabel }: { rows: unknown[]; emptyLabel: string }) {
+  if (!rows?.length) return <div className="support-trace-empty">{emptyLabel}</div>;
+  return (
+    <div className="support-trace-list" aria-label="Rule trace">
+      {rows.map((row, index) => {
+        const item = traceItem(row);
+        return (
+          <div key={`${item.name}-${index}`} className={`support-trace-row ${item.matched ? 'matched' : 'missed'}`}>
+            <span className="support-trace-state">{item.matched ? 'Matched' : 'Missed'}</span>
+            <div>
+              <strong>{item.name}</strong>
+              <p>{item.detail}</p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -538,4 +576,29 @@ function watcherNames(watchers: TaskParticipant[] | undefined, empty: string) {
 
 function label(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function traceItem(row: unknown): { name: string; matched: boolean; detail: string } {
+  const record = isRecord(row) ? row : {};
+  const name = String(record.condition ?? record.field ?? record.id ?? 'condition');
+  const expected = stringOrEmpty(record.expected ?? record.value);
+  const actual = stringOrEmpty(record.actual);
+  const source = stringOrEmpty(record.source);
+  const detail = [
+    expected ? `expected ${expected}` : '',
+    actual ? `actual ${actual}` : '',
+    source ? `source ${source}` : '',
+  ].filter(Boolean).join(' / ') || 'No trace payload';
+  return { name: label(name), matched: record.matched === true, detail };
+}
+
+function stringOrEmpty(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.map(stringOrEmpty).filter(Boolean).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

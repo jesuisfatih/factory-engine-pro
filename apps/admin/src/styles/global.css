@@ -1059,6 +1059,14 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .sr-status-pill.waiting_customer { background: var(--surface-3); color: var(--text-muted); }
 .sr-status-pill.resolved { background: var(--success-soft); color: var(--success); }
 .sr-status-pill.closed { background: var(--surface-3); color: var(--text-faint); }
+.support-trace-empty { margin-top: 12px; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text-faint); font-size: 11px; }
+.support-trace-list { margin-top: 12px; display: grid; gap: 7px; }
+.support-trace-row { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; align-items: start; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); padding: 8px 10px; }
+.support-trace-row strong { display: block; color: var(--text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.support-trace-row p { margin: 2px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.support-trace-state { justify-self: start; border-radius: 999px; padding: 2px 7px; font-size: 9px; font-weight: 800; background: var(--surface-3); color: var(--text-muted); }
+.support-trace-row.matched .support-trace-state { background: var(--success-soft); color: var(--success); }
+.support-trace-row.missed .support-trace-state { background: var(--danger-soft); color: var(--danger); }
 
 /* SR detail modal */
 .sr-modal-card { max-width: 760px; max-height: 88vh; display: grid; grid-template-rows: auto 1fr auto; }
