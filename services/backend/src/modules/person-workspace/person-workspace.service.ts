@@ -333,10 +333,8 @@ export class PersonWorkspaceService {
   }
 
   private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
-    const sourceCallIds = await this.dailyWorkflowSourceCallIdsForMember(member, start, end);
-    const ownerOrOperatorScope: Prisma.ServiceRequestWhereInput[] = [
+    const ownerScope: Prisma.ServiceRequestWhereInput[] = [
       { assignedMemberId: member.id },
-      ...(sourceCallIds.length > 0 ? [{ sourceCallId: { in: sourceCallIds } }] : []),
       ...(end === null ? [{ metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } }] : []),
     ];
     const archiveDateScope: Prisma.ServiceRequestWhereInput[] = end === null
@@ -347,7 +345,7 @@ export class PersonWorkspaceService {
       : [{ createdAt: { gte: start, lt: end } }];
     return this.prisma.db.serviceRequest.findMany({
       where: {
-        OR: ownerOrOperatorScope,
+        OR: ownerScope,
         source: 'admin_created',
         axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
         AND: [{ OR: archiveDateScope }],
