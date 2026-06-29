@@ -1243,6 +1243,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .rule-version-card .btn { margin-top: 4px; align-self: flex-start; }
 .rule-backfill-card { cursor: default; }
 .rule-backfill-card .rule-card-desc { -webkit-line-clamp: 3; line-clamp: 3; }
+.rule-live-task-list { display: grid; gap: 6px; margin-top: 8px; }
+.rule-live-task { display: grid; gap: 2px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 12px; }
 
 .rules-canvas-wrap {
   background: var(--surface); border: 1px solid var(--border);

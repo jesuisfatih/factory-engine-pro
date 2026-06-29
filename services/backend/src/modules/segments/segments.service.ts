@@ -1005,7 +1005,7 @@ export class SegmentsService {
     if (!candidate) return { source: 'auto', shopifySegmentRef: null, score: 1 };
     const requested = new Set(requestedShopifySegmentIds);
     const shopifySegmentRef = candidate.shopifySegmentIds.find((segmentId) => requested.has(segmentId)) ?? null;
-    return { source: 'auto', shopifySegmentRef, score: 1 };
+    return { source: shopifySegmentRef ? 'shopify_native' : 'auto', shopifySegmentRef, score: 1 };
   }
 
   private presentSegment(segment: Awaited<ReturnType<SegmentsRepository['findById']>>) {

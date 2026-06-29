@@ -85,6 +85,12 @@ export class RulesController {
     return this.rules.listBackfillReports(id);
   }
 
+  @Get(':id/executions')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  executions(@Param('id') id: string) {
+    return this.rules.listExecutions(id);
+  }
+
   @Post(':id/backfill')
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   backfill(

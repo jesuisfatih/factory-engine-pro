@@ -176,7 +176,7 @@ export class PersonWorkspaceService {
     const visibleCustomerIds = Array.from(assignments.keys());
     const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
 
-    const [config, segmentOwnerships] = await Promise.all([
+    const [config, rawSegmentOwnerships] = await Promise.all([
       this.urgencyConfig(),
       this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
@@ -185,6 +185,7 @@ export class PersonWorkspaceService {
         take: 100,
       }),
     ]);
+    const segmentOwnerships = rawSegmentOwnerships.filter((ownership) => isShopifyNativeSegment(ownership.segment));
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
 
     const [memberships, dailyOrderRows]: [SegmentMembershipRow[], PersonDailyCallOrderRow[]] = ownedSegmentIds.length > 0
@@ -192,6 +193,11 @@ export class PersonWorkspaceService {
         this.prisma.db.segmentCustomerMembership.findMany({
           where: {
             segmentId: { in: ownedSegmentIds },
+            shopifySegmentRef: { not: null },
+            customer: {
+              shopifyCustomerId: { not: null },
+              status: 'active',
+            },
           },
           include: {
             segment: true,
@@ -1308,9 +1314,9 @@ export class PersonWorkspaceService {
   }
 
   async training() {
-    const [stats, segments, requests] = await Promise.all([
+    const [stats, rawSegments, requests] = await Promise.all([
       this.prisma.db.serviceRequest.groupBy({ by: ['priority'], _count: { _all: true } }),
-      this.prisma.db.segment.findMany({ where: { isActive: true }, orderBy: [{ priority: 'desc' }], take: 8 }),
+      this.prisma.db.segment.findMany({ where: { isActive: true }, orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }], take: 30 }),
       this.prisma.db.serviceRequest.findMany({
         where: { priority: { in: ['critical', 'urgent', 'high'] } },
         orderBy: [{ updatedAt: 'desc' }],
@@ -1318,14 +1324,15 @@ export class PersonWorkspaceService {
       }),
     ]);
     const highCount = stats.filter((row) => ['critical', 'urgent', 'high'].includes(row.priority)).reduce((sum, row) => sum + row._count._all, 0);
+    const segments = rawSegments.filter(isShopifyNativeSegment).slice(0, 8);
     return {
       highPriorityCount: highCount,
       cards: [
         ...segments.map((segment) => ({
           id: `segment-${segment.id}`,
-          title: `${segment.name} outreach script`,
-          description: segment.description ?? `Use this segment context for ${segment.name} customer conversations.`,
-          source: 'segment',
+          title: `${segment.name} segment context`,
+          description: segment.description ?? `Live Shopify segment with ${segment.customerCount} customer(s). Review customer history before calling.`,
+          source: 'shopify_segment',
           updatedAt: relative(segment.updatedAt),
         })),
         ...requests.map((request) => ({
@@ -2412,6 +2419,19 @@ function personColumn(status: string, raw: unknown): PersonQueueColumn {
   if (status === 'pending_resolve' || status === 'waiting_on_customer') return 'positive';
   if (status === 'in_progress' || status === 'reopened' || status === 'pending_transfer') return 'in_progress';
   return 'unassigned';
+}
+
+function isShopifyNativeSegment(segment: { conditions: Prisma.JsonValue }) {
+  return shopifySegmentRefsFromConditions(segment.conditions).length > 0;
+}
+
+function shopifySegmentRefsFromConditions(value: Prisma.JsonValue) {
+  if (!Array.isArray(value)) return [];
+  return uniqueStrings(value.flatMap((condition) => {
+    const row = asRecord(condition);
+    if (row.field !== 'shopifyCustomerSegmentIds') return [];
+    return Array.isArray(row.value) ? row.value.map((item) => String(item)) : [String(row.value ?? '')];
+  })).filter((segmentId) => segmentId.startsWith('gid://shopify/Segment/'));
 }
 
 function taskSource(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }): 'manual' | 'ai_transcript' | 'ai_segment' | 'ai_stale' {

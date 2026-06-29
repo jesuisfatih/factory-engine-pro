@@ -52,6 +52,7 @@ import {
   fireWorkflowTrigger,
   fetchWorkflowCatalog,
   fetchWorkflowRuleBackfills,
+  fetchWorkflowRuleExecutions,
   fetchWorkflowRuleVersions,
   fetchWorkflowRules,
   LIFECYCLE_TONE,
@@ -73,6 +74,7 @@ const CATALOG_QK = ['rules', 'catalog'] as const;
 const RULES_QK = ['rules', 'saved'] as const;
 const versionsQk = (ruleId: string | null) => ['rules', 'versions', ruleId ?? 'none'] as const;
 const backfillsQk = (ruleId: string | null) => ['rules', 'backfills', ruleId ?? 'none'] as const;
+const executionsQk = (ruleId: string | null) => ['rules', 'executions', ruleId ?? 'none'] as const;
 
 const OPERATORS_BY_TYPE: Record<string, ConditionOperator[]> = {
   string: ['=', '!=', 'contains'],
@@ -454,6 +456,11 @@ function RulesView() {
     queryFn: () => fetchWorkflowRuleBackfills(selectedRuleId!),
     enabled: Boolean(selectedRuleId),
   });
+  const executionsQuery = useQuery({
+    queryKey: executionsQk(selectedRuleId),
+    queryFn: () => fetchWorkflowRuleExecutions(selectedRuleId!),
+    enabled: Boolean(selectedRuleId),
+  });
 
   useEffect(() => {
     if (catalogQuery.data && !draft) setDraft(makeRuleDraft(catalogQuery.data));
@@ -497,6 +504,7 @@ function RulesView() {
       await queryClient.invalidateQueries({ queryKey: RULES_QK });
       await queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) });
       await queryClient.invalidateQueries({ queryKey: backfillsQk(rule.id) });
+      await queryClient.invalidateQueries({ queryKey: executionsQk(rule.id) });
       toast.success('Rule saved', { description: `${rule.name} is now persisted as workflow JSON.` });
     },
     onError: (error) => toast.error('Rule save failed', { description: apiErrorMessage(error) }),
@@ -513,6 +521,7 @@ function RulesView() {
         queryClient.invalidateQueries({ queryKey: RULES_QK }),
         queryClient.invalidateQueries({ queryKey: versionsQk(rule.id) }),
         queryClient.invalidateQueries({ queryKey: backfillsQk(rule.id) }),
+        queryClient.invalidateQueries({ queryKey: executionsQk(rule.id) }),
       ]);
       toast.success('Rule rolled back', { description: `${rule.name} restored and audited as a new version.` });
     },
@@ -527,9 +536,12 @@ function RulesView() {
         params: defaultTriggerParams(draft.trigger),
       });
     },
-    onSuccess: (result) => toast.success('Event fired', {
-      description: `${result.tasksCreated} task(s) created from ${result.matchedRules} active rule(s).`,
-    }),
+    onSuccess: async (result) => {
+      if (selectedRuleId) await queryClient.invalidateQueries({ queryKey: executionsQk(selectedRuleId) });
+      toast.success('Event fired', {
+        description: `${result.tasksCreated} task(s) created from ${result.matchedRules} active rule(s).`,
+      });
+    },
     onError: (error) => toast.error('Event fire failed', { description: apiErrorMessage(error) }),
   });
   const backfillMutation = useMutation({
@@ -539,6 +551,7 @@ function RulesView() {
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: backfillsQk(result.report.ruleId) });
+      await queryClient.invalidateQueries({ queryKey: executionsQk(result.report.ruleId) });
       toast.success('Shadow backfill completed', {
         description: `${result.report.matchedEvents}/${result.report.evaluatedEvents} event(s), ${result.report.actualTasksCreated} task(s) created.`,
       });
@@ -750,6 +763,63 @@ function RulesView() {
                     <span>{report.result.candidateSource}</span>
                     <span>{report.actualTasksCreated} real task(s)</span>
                   </div>
+                </div>
+              ))}
+
+              <div className="rules-section-head">
+                <span><Activity size={12} /> Live task history</span>
+                <span className="muted">{executionsQuery.data?.executions.length ?? 0}</span>
+              </div>
+              {!selectedRuleId && (
+                <div className="rules-empty">
+                  <Activity size={16} /> Select a saved rule to inspect live transcript/task executions.
+                </div>
+              )}
+              {selectedRuleId && executionsQuery.isLoading && (
+                <div className="rules-empty">
+                  <RefreshCw size={16} /> Loading live task history...
+                </div>
+              )}
+              {selectedRuleId && executionsQuery.isError && (
+                <div className="rules-empty danger-text">
+                  <AlertTriangle size={16} /> {apiErrorMessage(executionsQuery.error)}
+                </div>
+              )}
+              {selectedRuleId && executionsQuery.isSuccess && executionsQuery.data.executions.length === 0 && (
+                <div className="rules-empty">
+                  <Activity size={16} />
+                  <div>No live executions recorded for this rule yet.</div>
+                </div>
+              )}
+              {selectedRuleId && executionsQuery.isSuccess && executionsQuery.data.executions.map((execution) => (
+                <div className="rule-card rule-backfill-card" key={execution.id}>
+                  <div className="rule-card-head">
+                    <span className={`pill ${execution.tasks.length > 0 ? 'success' : execution.status === 'skipped' ? '' : 'warning'}`}>
+                      {execution.tasks.length > 0 ? `${execution.tasks.length} task` : execution.status}
+                    </span>
+                    <span className="muted">{new Date(execution.firstSeenAt).toLocaleString()}</span>
+                  </div>
+                  <div className="rule-card-name">{execution.trigger}</div>
+                  <div className="rule-card-desc">
+                    {execution.transcript?.transcriptSnippet ?? execution.eventId}
+                  </div>
+                  <div className="rule-card-meta">
+                    <span>{execution.source ?? execution.executionMode}</span>
+                    <span>{execution.conditionTrace.filter((trace) => trace.matched).length}/{execution.conditionTrace.length} conditions</span>
+                    {execution.transcript && <span>Aircall {execution.transcript.externalCallId}</span>}
+                  </div>
+                  {execution.tasks.length > 0 ? (
+                    <div className="rule-live-task-list">
+                      {execution.tasks.map((task) => (
+                        <div className="rule-live-task" key={task.id}>
+                          <span>{task.title}</span>
+                          <span className="muted">{task.customerName ?? 'No customer'} · {task.status} · {task.assignedMemberName ?? 'Unassigned'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rule-card-meta"><span>No task rows created.</span></div>
+                  )}
                 </div>
               ))}
 

@@ -168,6 +168,53 @@ export interface WorkflowRuleBackfillReportsResponse {
   reports: WorkflowRuleBackfillReportDto[];
 }
 
+export interface WorkflowRuleExecutionTaskDto {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  source: string;
+  axis: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  assignedMemberName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowRuleExecutionTranscriptDto {
+  callEventId: string;
+  externalCallId: string;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  resolvedAt: string | null;
+  resolverStatus: string | null;
+  transcriptSnippet: string | null;
+}
+
+export interface WorkflowRuleExecutionDto {
+  id: string;
+  ruleId: string;
+  eventId: string;
+  trigger: WorkflowTrigger;
+  status: string;
+  executionMode: 'active' | 'shadow' | 'unknown';
+  source: string | null;
+  taskIds: string[];
+  tasks: WorkflowRuleExecutionTaskDto[];
+  conditionTrace: WorkflowConditionTrace[];
+  whenTrace: WorkflowWhenGroupTrace[];
+  actionTrace: WorkflowActionTrace[];
+  transcript: WorkflowRuleExecutionTranscriptDto | null;
+  firstSeenAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowRuleExecutionsResponse {
+  ruleId: string;
+  executions: WorkflowRuleExecutionDto[];
+}
+
 export interface ActiveWorkflowRuleStatsRow {
   ruleId: string;
   ruleName: string;

@@ -5,6 +5,7 @@ import type {
   WorkflowEnumChainProbeResponse,
   WorkflowRuleDto,
   WorkflowRuleBackfillReportsResponse,
+  WorkflowRuleExecutionsResponse,
   WorkflowRuleVersionsResponse,
   WorkflowTrigger,
   SaveWorkflowRuleInput,
@@ -105,6 +106,10 @@ export function runOverdueTaskSweep(): Promise<SweepOverdueServiceRequestsRespon
 
 export function fetchWorkflowRuleBackfills(id: string): Promise<WorkflowRuleBackfillReportsResponse> {
   return adminApi.workflowRuleBackfills(id);
+}
+
+export function fetchWorkflowRuleExecutions(id: string): Promise<WorkflowRuleExecutionsResponse> {
+  return adminApi.workflowRuleExecutions(id);
 }
 
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {

@@ -36,8 +36,10 @@ import {
   type WorkflowRuleBackfillReportsResponse,
   type WorkflowRuleBackfillRunResponse,
   type WorkflowRuleBackfillSample,
+  type WorkflowRuleExecutionsResponse,
   type WorkflowRuleVersionsResponse,
   type WorkflowRulesResponse,
+  type WorkflowTrigger,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -214,6 +216,86 @@ export class RulesService {
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     const reports = await this.repository.listBackfillReports(id);
     return { ruleId: id, reports: reports.map(toBackfillReportDto) };
+  }
+
+  async listExecutions(id: string): Promise<WorkflowRuleExecutionsResponse> {
+    const rule = await this.repository.findById(id);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    const tenantId = this.tenantContext.require().tenantId;
+    const executions = await this.prisma.db.workflowRuleExecution.findMany({
+      where: { tenantId, ruleId: id },
+      orderBy: { firstSeenAt: 'desc' },
+      take: 50,
+    });
+    const taskIds = uniqueStrings(executions.flatMap((execution) => execution.taskIds));
+    const callEventIds = uniqueStrings(executions.map((execution) => callEventIdFromExecutionEvent(execution.eventId)));
+    const [tasks, callEvents] = await Promise.all([
+      taskIds.length === 0
+        ? []
+        : this.prisma.db.serviceRequest.findMany({
+            where: { tenantId, id: { in: taskIds } },
+            include: {
+              customer: true,
+              assignedMember: true,
+            },
+          }),
+      callEventIds.length === 0
+        ? []
+        : this.prisma.db.aircallCallEvent.findMany({
+            where: { tenantId, id: { in: callEventIds } },
+            select: {
+              id: true,
+              externalCallId: true,
+              contactPhone: true,
+              contactPhoneE164: true,
+              contactEmail: true,
+              transcriptRaw: true,
+              resolverStatus: true,
+              resolvedAt: true,
+            },
+          }),
+    ]);
+    const tasksById = new Map(tasks.map((task) => [task.id, task]));
+    const callEventsById = new Map(callEvents.map((event) => [event.id, event]));
+
+    return {
+      ruleId: id,
+      executions: executions.map((execution) => {
+        const result = asRecord(execution.result);
+        const eventCallId = callEventIdFromExecutionEvent(execution.eventId);
+        const callEvent = eventCallId ? callEventsById.get(eventCallId) ?? null : null;
+        return {
+          id: execution.id,
+          ruleId: execution.ruleId,
+          eventId: execution.eventId,
+          trigger: execution.trigger as WorkflowTrigger,
+          status: execution.status,
+          executionMode: executionMode(result),
+          source: sourceFromExecution(execution.eventId, result),
+          taskIds: execution.taskIds,
+          tasks: execution.taskIds.flatMap((taskId) => {
+            const task = tasksById.get(taskId);
+            return task ? [toExecutionTaskDto(task)] : [];
+          }),
+          conditionTrace: traceArray<WorkflowConditionTrace>(result.conditionTrace),
+          whenTrace: traceArray<WorkflowWhenGroupTrace>(result.whenTrace),
+          actionTrace: traceArray<WorkflowActionTrace>(result.actionTrace),
+          transcript: callEvent
+            ? {
+                callEventId: callEvent.id,
+                externalCallId: callEvent.externalCallId,
+                contactPhone: callEvent.contactPhoneE164 ?? callEvent.contactPhone,
+                contactEmail: callEvent.contactEmail,
+                resolvedAt: callEvent.resolvedAt?.toISOString() ?? null,
+                resolverStatus: callEvent.resolverStatus,
+                transcriptSnippet: snippet(callEvent.transcriptRaw),
+              }
+            : null,
+          firstSeenAt: execution.firstSeenAt.toISOString(),
+          updatedAt: execution.updatedAt.toISOString(),
+        };
+      }),
+    };
   }
 
   async activeStats(input: ActiveWorkflowRuleStatsQuery): Promise<ActiveWorkflowRuleStatsResponse> {
@@ -1923,6 +2005,71 @@ function toVersionDto(version: {
     editedAt: version.editedAt.toISOString(),
     comment: version.comment,
   };
+}
+
+function toExecutionTaskDto(task: {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  source: string;
+  axis: string | null;
+  customerId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  customer: { companyName: string | null; firstName: string | null; lastName: string | null; email: string | null } | null;
+  assignedMember: { firstName: string; lastName: string; email: string } | null;
+}) {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    source: task.source,
+    axis: task.axis,
+    customerId: task.customerId,
+    customerName: task.customer ? customerName(task.customer) : null,
+    assignedMemberName: task.assignedMember ? memberName(task.assignedMember) : null,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+  };
+}
+
+function callEventIdFromExecutionEvent(eventId: string) {
+  const match = eventId.match(/^aircall:([^:]+):/);
+  return match?.[1] ?? null;
+}
+
+function sourceFromExecution(eventId: string, result: Record<string, unknown>) {
+  const explicit = stringValue(result.source);
+  if (explicit) return explicit;
+  if (eventId.startsWith('aircall:')) return 'aircall';
+  if (eventId.startsWith('segment-')) return 'segments';
+  if (eventId.startsWith('backfill:')) return 'backfill';
+  return null;
+}
+
+function executionMode(result: Record<string, unknown>): 'active' | 'shadow' | 'unknown' {
+  if (result.executionMode === 'active' || result.executionMode === 'shadow') return result.executionMode;
+  return 'unknown';
+}
+
+function traceArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
+}
+
+function snippet(value: string | null) {
+  const normalized = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return normalized ? normalized.slice(0, 260) : null;
+}
+
+function memberName(member: { firstName: string; lastName: string; email: string }) {
+  return [member.firstName, member.lastName].filter(Boolean).join(' ').trim() || member.email;
+}
+
+function customerName(customer: { companyName: string | null; firstName: string | null; lastName: string | null; email: string | null }) {
+  const person = [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim();
+  return customer.companyName || person || customer.email || null;
 }
 
 function defaultRule(

@@ -61,6 +61,7 @@ import type {
   WorkflowRuleDto,
   WorkflowRuleBackfillReportsResponse,
   WorkflowRuleBackfillRunResponse,
+  WorkflowRuleExecutionsResponse,
   WorkflowRuleVersionsResponse,
   WorkflowRulesResponse,
   AssignServiceRequestInput,
@@ -855,6 +856,10 @@ export class ApiClient {
 
   workflowRuleBackfills(id: string) {
     return this.get<WorkflowRuleBackfillReportsResponse>(`/rules/${encodeURIComponent(id)}/backfills`);
+  }
+
+  workflowRuleExecutions(id: string) {
+    return this.get<WorkflowRuleExecutionsResponse>(`/rules/${encodeURIComponent(id)}/executions`);
   }
 
   workflowRuleActiveStats(query = '?days=7') {
