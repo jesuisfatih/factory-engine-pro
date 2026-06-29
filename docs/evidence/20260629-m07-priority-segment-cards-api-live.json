@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-29T07:00:14.099Z",
+  "generatedAt": "2026-06-29T09:00:26.577Z",
   "apiBase": "https://api.dtfbank.com/api/v1",
   "tenantId": "ten_dtfbank",
-  "buildSha": "62e1eb7fa9b3b86bb2346d3e79d10815a98d972d",
+  "buildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
   "principal": {
     "email": "dtfbanktx@gmail.com",
     "type": "member",
@@ -11,7 +11,7 @@
   "summary": {
     "dailyCount": 91,
     "priorityCount": 91,
-    "pinnedCount": 0,
+    "pinnedCount": 4,
     "highUrgencyCount": 91,
     "visibleAxes": [
       "support"
@@ -28,27 +28,16 @@
   "supportWorkflowTaskCount": 0,
   "serviceRequestBackedCount": 0,
   "segmentCustomerBackedCount": 91,
+  "assertions": {
+    "endpointOk": true,
+    "priorityKanbanNotEmpty": true,
+    "allPriorityCardsHaveOwnedSegment": true,
+    "allPriorityCardsAreAxisPrimaryForLinda": true,
+    "noPriorityCardsFromOtherMembers": true,
+    "noSupportWorkflowCards": true,
+    "noSeedOrMockRows": true
+  },
   "sample": [
-    {
-      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "#gregsvinyl",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
-      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
-      "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 150.7,
-      "hasAiBrief": true,
-      "hasMiniOrder": false,
-      "performance30d": {
-        "orders": 0,
-        "revenue": 0,
-        "calls": 0,
-        "callMinutes": 0,
-        "serviceRequests": 0
-      }
-    },
     {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
       "kind": "customer",
@@ -57,17 +46,57 @@
       "axis": "support",
       "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 150.7,
-      "hasAiBrief": true,
-      "hasMiniOrder": false,
-      "performance30d": {
-        "orders": 0,
-        "revenue": 0,
-        "calls": 0,
-        "callMinutes": 0,
-        "serviceRequests": 0
-      }
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Akil Kurji",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Americraft Sign Co. LLC",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_jp5l8tb6waye3825shaygnar",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Apliiq, Inc",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_vmkcu1nnag0yqngvv72jwpgs",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "#gregsvinyl",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
     },
     {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
@@ -77,17 +106,9 @@
       "axis": "support",
       "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 150.7,
-      "hasAiBrief": true,
-      "hasMiniOrder": false,
-      "performance30d": {
-        "orders": 1,
-        "revenue": 3518.99,
-        "calls": 0,
-        "callMinutes": 0,
-        "serviceRequests": 0
-      }
+      "urgencyScore": 151.2
     },
     {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
@@ -97,17 +118,9 @@
       "axis": "support",
       "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 150.7,
-      "hasAiBrief": true,
-      "hasMiniOrder": false,
-      "performance30d": {
-        "orders": 0,
-        "revenue": 0,
-        "calls": 0,
-        "callMinutes": 0,
-        "serviceRequests": 0
-      }
+      "urgencyScore": 151.2
     },
     {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
@@ -117,17 +130,33 @@
       "axis": "support",
       "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_xamz9bo142cf7xdxhff4hx5l",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 150.7,
-      "hasAiBrief": true,
-      "hasMiniOrder": false,
-      "performance30d": {
-        "orders": 0,
-        "revenue": 0,
-        "calls": 0,
-        "callMinutes": 0,
-        "serviceRequests": 0
-      }
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "904 Vinyls & More",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "A3-USA",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_dmfmmg54upzdo2i1iy6hyih8",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
     }
   ],
   "pass": true

@@ -1,6 +1,6 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_runtime_live",
-  "checkedAt": "2026-06-29T04:05:46.851Z",
+  "checkedAt": "2026-06-29T09:00:26.577Z",
   "pass": true,
   "scope": {
     "container": "factoryengine-dtfbank-app",
@@ -8,8 +8,9 @@
     "tenantId": "ten_dtfbank"
   },
   "git": {
-    "codeCommit": "099191c59913ce0040c060181d027be790a436a7",
-    "deployedBuildSha": "099191c59913ce0040c060181d027be790a436a7",
+    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
     "branch": "main"
   },
   "health": {
@@ -21,30 +22,24 @@
     }
   },
   "tokenRow": {
-    "id": "tok_ye5awGU9whI6Flu7SHj80G4Q",
-    "kind": "refresh",
     "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-    "expiresAt": "2027-06-29T04:05:30.810Z",
-    "createdAt": "2026-06-29T04:05:30.813Z",
-    "tokenHashRedacted": true
+    "expiresAtDays": 365,
+    "tokenHashRedacted": true,
+    "metadataSource": "roadmap_m07_live_proof"
   },
   "tokenValuesPersistedInEvidence": false,
   "logEvidence": [
-    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
+    "\u001b[32m[Nest] 5677  - \u001b[39m06/29/2026, 8:58:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 5677  - \u001b[39m06/29/2026, 8:58:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
   ],
   "containerStatus": [
-    "factoryengine-dtfbank-app Up 40 minutes",
+    "factoryengine-dtfbank-app Up 38 minutes",
     "factoryengine-dtfprint-app Up 6 days",
     "factoryengine-eagledtfsupply-app Up 6 days",
     "factoryengine-fastdtfsupply-app Up 6 days",
     "factoryengine-fastdtftransfer-app Up 6 days",
     "factoryengine-dtfprintdepot-app Up 6 days"
   ],
-  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, and live workflow records.",
+  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, and priority kanban API/UI.",
   "nextRoadmapItem": 8
 }

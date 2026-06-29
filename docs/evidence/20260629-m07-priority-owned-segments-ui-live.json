@@ -1,18 +1,43 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_ui_live",
-  "checkedAt": "2026-06-29T04:05:46.851Z",
+  "checkedAt": "2026-06-29T09:00:26.577Z",
   "pass": true,
   "url": "https://app.dtfbank.com/staff/queue",
   "finalUrl": "https://app.dtfbank.com/staff/queue",
+  "browserAutomation": "standalone_playwright_after_in_app_browser_transport_closed",
+  "git": {
+    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "branch": "main"
+  },
   "screenshot": {
     "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-owned-segments-ui-live.png",
-    "bytes": 95026,
-    "sha256": "a61b3e230d94babe55e91868c17ac9b2909d5f43a19a69da59281016b13f25ba"
+    "bytes": 164863,
+    "sha256": "52a0535e9d7e48e5b24eb6e8cb2749e6636798ecf9c3e53b8fb28c62dcd3fa7c"
   },
-  "priorityPanelText": "Priority kanban\n\nRule-engine tasks, axis-scoped and urgency-desc.\n\nNo priority tasks in your axis scope.",
-  "priorityCardTexts": [],
+  "priorityPanelText": "Priority kanbanRule-engine tasks, axis-scoped and urgency-desc.1st Place Awards & EmbroideryAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinAkil KurjiAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4396 $87 2 orders - $411 - 1 tasksMin 2 max 5 purchasePinnedAmericraft Sign Co. LLCAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinApliiq, IncAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinned#gregsvinylAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin4 FORTY SCREENS AND STITCHESAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 1 orders - $3,519 - 0 tasksMin 2 max 5 purchasePin404 Cafe and CreameryAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin802 PrintAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin904 Vinyls & MoreAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4512 $108 1 orders - $108 - 0 tasksMin 2 max 5 purchasePinA3-USAAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 t",
+  "priorityCardCount": 91,
+  "priorityCardTexts": [
+    "1st Place Awards & EmbroideryAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
+    "Akil KurjiAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4396 $87 2 orders - $411 - 1 tasksMin 2 max 5 purchasePinned",
+    "Americraft Sign Co. LLCAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
+    "Apliiq, IncAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinned",
+    "#gregsvinylAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
+    "4 FORTY SCREENS AND STITCHESAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 1 orders - $3,519 - 0 tasksMin 2 max 5 purchasePin",
+    "404 Cafe and CreameryAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
+    "802 PrintAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin"
+  ],
+  "kpiText": [
+    "Daily calls91segment customers",
+    "Priority tasks91urgency desc",
+    "Pinned4persistent board",
+    "U80+91same formula",
+    "Axes1support"
+  ],
+  "containsLocalhost": false,
   "visibleTextHasPermissionError": false,
-  "forbiddenResponses": [],
+  "failedResponses": [],
   "consoleErrors": [],
   "pageErrors": []
 }

@@ -1,11 +1,12 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_api_live",
-  "checkedAt": "2026-06-29T04:05:46.851Z",
+  "checkedAt": "2026-06-29T09:00:26.577Z",
   "pass": true,
   "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
   "git": {
-    "codeCommit": "099191c59913ce0040c060181d027be790a436a7",
-    "deployedBuildSha": "099191c59913ce0040c060181d027be790a436a7",
+    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
     "branch": "main"
   },
   "principal": {
@@ -13,64 +14,49 @@
     "email": "dtfbanktx@gmail.com"
   },
   "status": 200,
+  "requestId": "bb7c2358-420e-4091-9f68-1cd5da9b675e",
   "summary": {
     "dailyCount": 91,
-    "priorityCount": 0,
-    "pinnedCount": 0,
+    "priorityCount": 91,
+    "pinnedCount": 4,
     "highUrgencyCount": 91,
     "visibleAxes": [
       "support"
     ],
     "segmentGroupCount": 5
   },
-  "priorityCount": 0,
-  "cards": [],
+  "priorityCount": 91,
+  "priorityKindCounts": {
+    "customer": 91
+  },
+  "prioritySourceCounts": {
+    "ai_segment": 91
+  },
+  "serviceRequestBackedCount": 0,
+  "segmentCustomerBackedCount": 91,
+  "supportWorkflowTaskCount": 0,
   "assertions": {
     "endpointOk": true,
+    "priorityKanbanNotEmpty": true,
     "allPriorityCardsHaveOwnedSegment": true,
     "allPriorityCardsAreAxisPrimaryForLinda": true,
     "noPriorityCardsFromOtherMembers": true,
+    "noSupportWorkflowCards": true,
     "noSeedOrMockRows": true
   },
   "dbAudit": {
-    "aiOpenServiceRequests": 1,
-    "eligibleForLinda": 0,
-    "otherMemberOwnedAiRows": 1,
-    "eligibleSamples": [],
-    "otherMemberSamples": [
-      {
-        "id": "sr_d6ihmleb8guaoj5o3mb9iixu",
-        "title": "sales: Purchase intent follow-up",
-        "axis": "sales",
-        "customerId": "cust_rlgiilabdsdauqdvqnk14uy0",
-        "customerName": "Yafreisy Roman",
-        "assignedMemberEmail": "ihsan@dtfbank.com",
-        "customerAssignments": [
-          {
-            "axis": "support",
-            "memberId": "tmbr_ten_dtfbank_linda_marroquin",
-            "memberEmail": "dtfbanktx@gmail.com"
-          },
-          {
-            "axis": "sales",
-            "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
-            "memberEmail": "ihsan@dtfbank.com"
-          },
-          {
-            "axis": "account",
-            "memberId": "tmbr_ten_dtfbank_info_owner",
-            "memberEmail": "info@dtfbank.com"
-          }
-        ]
-      }
-    ]
+    "ownedSegmentCount": 5,
+    "membershipRowsFound": 91,
+    "assignmentRowsFound": 91,
+    "violationCount": 0,
+    "violations": []
   },
   "ownedSegments": [
     {
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
       "priority": 95,
-      "customerCount": 355,
+      "dailyCap": 25,
       "shopifySegmentRefs": [
         "gid://shopify/Segment/656941777172"
       ]
@@ -79,7 +65,7 @@
       "segmentId": "seg_i2igf1ynhxp1umg8relmg5aa",
       "segmentName": "Customers over 20 orders",
       "priority": 90,
-      "customerCount": 17,
+      "dailyCap": 17,
       "shopifySegmentRefs": [
         "gid://shopify/Segment/656206889236"
       ]
@@ -88,7 +74,7 @@
       "segmentId": "seg_ui2gyn7udvfekebsyyuyn0mo",
       "segmentName": "Wholesale Customers",
       "priority": 85,
-      "customerCount": 30,
+      "dailyCap": 25,
       "shopifySegmentRefs": [
         "gid://shopify/Segment/615174504724"
       ]
@@ -97,7 +83,7 @@
       "segmentId": "seg_rz3xkyzxykilcj4pswvdixtd",
       "segmentName": "Customers who have purchased DTF or UV DTF Printer",
       "priority": 80,
-      "customerCount": 12,
+      "dailyCap": 12,
       "shopifySegmentRefs": [
         "gid://shopify/Segment/627391267092"
       ]
@@ -106,11 +92,134 @@
       "segmentId": "seg_eftzjgf9bcyvnjz09d66b6h6",
       "segmentName": "Customers who have purchased DTF inks, DTF films, or DTF powders",
       "priority": 75,
-      "customerCount": 563,
+      "dailyCap": 25,
       "shopifySegmentRefs": [
         "gid://shopify/Segment/627391987988"
       ]
     }
   ],
-  "tokenValuesPersistedInEvidence": false
+  "sample": [
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "1st Place Awards & Embroidery",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Akil Kurji",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Americraft Sign Co. LLC",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_jp5l8tb6waye3825shaygnar",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "Apliiq, Inc",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_vmkcu1nnag0yqngvv72jwpgs",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 152.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "#gregsvinyl",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "4 FORTY SCREENS AND STITCHES",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "404 Cafe and Creamery",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "802 Print",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_xamz9bo142cf7xdxhff4hx5l",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "904 Vinyls & More",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "A3-USA",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_dmfmmg54upzdo2i1iy6hyih8",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 151.2
+    }
+  ],
+  "tokenValuesPersistedInEvidence": false,
+  "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
 }
