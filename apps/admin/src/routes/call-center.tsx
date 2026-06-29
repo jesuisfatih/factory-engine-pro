@@ -263,6 +263,15 @@ function KanbanTab({
               <span>{task.customerEmail ?? task.customerPhone ?? 'No customer contact'}</span>
             </div>
             <div className="task-card-actions">
+              {task.customerPhone && (
+                <a
+                  className="btn ghost"
+                  href={`tel:${cleanPhone(task.customerPhone)}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Phone size={13} /> Call
+                </a>
+              )}
               {task.customerId && (
                 <button
                   type="button"
@@ -304,16 +313,33 @@ function KanbanTab({
             </summary>
             <div className="segment-customer-list">
               {group.customers.map((customer) => (
-                <div key={customer.id} className="segment-customer-row" onClick={() => onOpenCustomer(customer.customerId)}>
-                  <strong>{customer.customerName}</strong>
-                  <span>{customer.phone ?? 'No phone on file'}</span>
-                  <span>{customer.email ?? 'No email on file'}</span>
-                  <span>{customer.ordersCount} orders - {formatMoney(customer.totalSpent)}</span>
-                  <span className="segment-customer-actions">
+                <article key={customer.id} className="segment-customer-row" onClick={() => onOpenCustomer(customer.customerId)}>
+                  <div className="segment-customer-main">
+                    <strong>{customer.customerName}</strong>
+                    <span>{customer.phone ?? 'No phone on file'}{customer.email ? ` - ${customer.email}` : ''}</span>
+                  </div>
+                  <div className="segment-customer-signals">
+                    <span>{customer.ordersCount} orders - {formatMoney(customer.totalSpent)}</span>
+                    <span>{customer.latestOrder ? `Last order ${customer.latestOrder.orderNumber ?? customer.latestOrder.id} - ${formatMoney(customer.latestOrder.totalPrice)}` : 'No linked Shopify order'}</span>
+                    <span>{customer.latestCall ? `Last call ${relative(customer.latestCall.at)}` : 'No matched call yet'}</span>
+                    <span>{customer.openTasksCount} open tasks - {customer.openRequestsCount} customer requests - {customer.notesCount} notes</span>
+                  </div>
+                  <div className="segment-customer-note">
+                    {customer.latestNote ? (
+                      <>
+                        <strong>{customer.latestNote.authorName}</strong>
+                        <span>{customer.latestNote.body}</span>
+                      </>
+                    ) : (
+                      <span>No personnel note yet</span>
+                    )}
+                  </div>
+                  <div className="segment-customer-actions">
+                    <span className="priority-pill">U{customer.urgencyScore}</span>
                     {customer.phone && (
                       <a
                         className="btn ghost"
-                        href={`tel:${customer.phone.replace(/\s/g, '')}`}
+                        href={`tel:${cleanPhone(customer.phone)}`}
                         onClick={(event) => event.stopPropagation()}
                       >
                         <Phone size={13} /> Call
@@ -339,8 +365,8 @@ function KanbanTab({
                     >
                       <ArrowRightLeft size={13} /> Send task
                     </button>
-                  </span>
-                </div>
+                  </div>
+                </article>
               ))}
             </div>
           </details>
@@ -536,7 +562,7 @@ function TransferModal({
           <select id="call-center-transfer-axis" value={targetAxis} onChange={(event) => setTargetAxis(event.target.value as 'sales' | 'support' | 'account')}>
             <option value="sales">Sales</option>
             <option value="account">Account</option>
-            <option value="support">Support</option>
+            {target.mode === 'task' ? <option value="support">Support</option> : null}
           </select>
           <label className="field-label" htmlFor="call-center-transfer-reason">Reason</label>
           <textarea
@@ -554,7 +580,11 @@ function TransferModal({
             type="button"
             className="btn primary"
             disabled={!targetMemberId || !reason.trim() || isSaving}
-            onClick={() => onSubmit({ targetMemberId, targetAxis, reason: reason.trim() })}
+            onClick={() => onSubmit({
+              targetMemberId,
+              targetAxis: target.mode === 'customer' && targetAxis === 'support' ? 'sales' : targetAxis,
+              reason: reason.trim(),
+            })}
           >
             {isSaving ? <Loader2 size={13} className="spin" /> : <ArrowRightLeft size={13} />}
             {target.mode === 'customer' ? 'Create task' : 'Transfer'}
@@ -594,6 +624,10 @@ function isAxis(value: unknown): value is 'sales' | 'support' | 'account' {
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+}
+
+function cleanPhone(value: string) {
+  return value.replace(/[^\d+]/g, '');
 }
 
 function relative(value: string) {

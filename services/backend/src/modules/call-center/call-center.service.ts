@@ -233,6 +233,9 @@ export class CallCenterService {
 
   async createCustomerTask(id: string, input: CallCenterCreateCustomerTaskInput): Promise<CallCenterActionResult> {
     const actor = await this.currentMember();
+    if (input.targetAxis === 'support') {
+      throw new BadRequestException('Customer follow-up tasks can only target sales or account. Open support cases from the Support case flow.');
+    }
     const [customer, target] = await Promise.all([
       this.prisma.db.customer.findFirst({ where: { id } }),
       this.requireActiveMember(input.targetMemberId),
@@ -421,15 +424,11 @@ export class CallCenterService {
           take: ownership.dailyCap ?? 25,
         }),
       ]);
-      groups.push({
-        segmentId: ownership.segmentId,
-        segmentName: ownership.segment.name,
-        segmentColor: ownership.segment.color,
-        ownerMemberId: member.id,
-        ownerName: member.name,
-        ownerRole: member.role,
-        customerCount: count,
-        customers: memberships.map((membership) => ({
+      const contextByCustomerId = await this.priorityCustomerContext(memberships.map((membership) => membership.customer), memberById);
+      const customers = memberships.map((membership) => {
+        const context = contextByCustomerId.get(membership.customerId) ?? emptyPriorityCustomerContext();
+        const urgencyScore = priorityScore(ownership, membership, context);
+        return {
           id: membership.id,
           customerId: membership.customerId,
           customerName: customerName(membership.customer),
@@ -438,11 +437,167 @@ export class CallCenterService {
           ordersCount: membership.customer.ordersCount,
           totalSpent: Number(membership.customer.totalSpent ?? 0),
           lastOrderAt: membership.customer.lastOrderAt?.toISOString() ?? null,
-          reason: `${ownership.segment.name} customer assigned to ${member.name}`,
-        })),
+          urgencyScore,
+          notesCount: context.notesCount,
+          openTasksCount: context.openTasksCount,
+          openRequestsCount: context.openRequestsCount,
+          callsCount: context.callsCount,
+          latestNote: context.latestNote,
+          latestOrder: context.latestOrder,
+          latestCall: context.latestCall,
+          reason: priorityReason(ownership.segment.name, member.name, context, urgencyScore),
+        };
+      }).sort((left, right) => (
+        right.urgencyScore - left.urgencyScore
+        || String(right.latestCall?.at ?? right.lastOrderAt ?? '').localeCompare(String(left.latestCall?.at ?? left.lastOrderAt ?? ''))
+        || left.customerName.localeCompare(right.customerName)
+      ));
+      groups.push({
+        segmentId: ownership.segmentId,
+        segmentName: ownership.segment.name,
+        segmentColor: ownership.segment.color,
+        ownerMemberId: member.id,
+        ownerName: member.name,
+        ownerRole: member.role,
+        customerCount: count,
+        customers,
       });
     }
     return groups;
+  }
+
+  private async priorityCustomerContext(
+    customers: Array<{ id: string; email: string | null; phone: string | null }>,
+    memberById: Map<string, CallCenterMember>,
+  ): Promise<Map<string, PriorityCustomerContext>> {
+    const ids = uniqueStrings(customers.map((customer) => customer.id));
+    if (ids.length === 0) return new Map();
+    const emailToCustomerId = new Map<string, string>();
+    const phoneToCustomerId = new Map<string, string>();
+    for (const customer of customers) {
+      const email = customer.email?.trim().toLowerCase();
+      if (email) emailToCustomerId.set(email, customer.id);
+      for (const phone of phoneKeys(customer.phone)) {
+        phoneToCustomerId.set(phone, customer.id);
+      }
+    }
+    const emails = [...emailToCustomerId.keys()];
+    const phones = [...phoneToCustomerId.keys()];
+
+    const [
+      serviceRows,
+      noteRows,
+      commentRows,
+      orderRows,
+      callRows,
+    ] = await Promise.all([
+      this.prisma.db.serviceRequest.findMany({
+        where: { customerId: { in: ids } },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 20, 200), 3000),
+      }),
+      this.prisma.db.serviceRequest.findMany({
+        where: {
+          customerId: { in: ids },
+          metadata: { path: ['personWorkspaceKind'], equals: NOTE_KIND },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 5, 100), 1000),
+      }),
+      this.prisma.db.serviceRequestComment.findMany({
+        where: {
+          internal: true,
+          serviceRequest: { customerId: { in: ids } },
+        },
+        include: { serviceRequest: { select: { customerId: true } } },
+        orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 8, 100), 1600),
+      }),
+      this.prisma.db.commerceOrder.findMany({
+        where: { customerId: { in: ids } },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 4, 100), 800),
+      }),
+      emails.length || phones.length
+        ? this.prisma.db.aircallCallEvent.findMany({
+            where: {
+              OR: [
+                ...(emails.length ? [{ contactEmail: { in: emails, mode: Prisma.QueryMode.insensitive } }] : []),
+                ...(phones.length ? [{ contactPhoneE164: { in: phones } }, { contactPhone: { in: phones } }] : []),
+              ],
+            },
+            orderBy: [{ eventTimestamp: 'desc' }],
+            take: Math.min(Math.max(ids.length * 6, 100), 1200),
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const result = new Map(ids.map((id) => [id, emptyPriorityCustomerContext()] as const));
+    for (const row of serviceRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context) continue;
+      if (!CLOSED.has(row.status)) {
+        context.openTasksCount += isInternalWorkspaceRow(row.metadata) ? 0 : 1;
+        if (isCustomerRequest(row)) context.openRequestsCount += 1;
+      }
+    }
+    for (const row of noteRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context) continue;
+      context.notesCount += 1;
+      const note = {
+        id: row.id,
+        body: row.description || row.title,
+        authorName: memberById.get(row.createdByActorId ?? '')?.name ?? 'Unknown member',
+        authorRole: memberById.get(row.createdByActorId ?? '')?.role ?? 'Member',
+        createdAt: row.updatedAt.toISOString(),
+      };
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+    for (const row of commentRows) {
+      const customerId = row.serviceRequest.customerId;
+      if (!customerId) continue;
+      const context = result.get(customerId);
+      if (!context) continue;
+      context.notesCount += 1;
+      const note = {
+        id: row.id,
+        body: row.body,
+        authorName: memberById.get(row.actorId ?? '')?.name ?? 'Unknown member',
+        authorRole: memberById.get(row.actorId ?? '')?.role ?? 'Member',
+        createdAt: row.createdAt.toISOString(),
+      };
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+    for (const row of orderRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context || context.latestOrder) continue;
+      context.latestOrder = {
+        id: row.id,
+        orderNumber: row.shopifyOrderNumber,
+        totalPrice: Number(row.totalPrice ?? 0),
+        processedAt: (row.processedAt ?? row.createdAt).toISOString(),
+      };
+    }
+    for (const row of callRows) {
+      const customerId = customerIdForCall(row, emailToCustomerId, phoneToCustomerId);
+      if (!customerId) continue;
+      const context = result.get(customerId);
+      if (!context) continue;
+      context.callsCount += 1;
+      const call = {
+        id: row.id,
+        phone: row.contactPhoneE164 ?? row.contactPhone,
+        email: row.contactEmail,
+        summary: (stringOrNull(record(row.resolverOutput).summary) ?? trimText(row.transcriptRaw ?? '', 120)) || null,
+        at: row.eventTimestamp.toISOString(),
+      };
+      if (!context.latestCall || call.at > context.latestCall.at) context.latestCall = call;
+    }
+    return result;
   }
 
   private async pinBoard(memberById: Map<string, CallCenterMember>): Promise<CallCenterPin[]> {
@@ -710,6 +865,33 @@ type ServiceRequestWithRelations = Prisma.ServiceRequestGetPayload<{
   };
 }>;
 
+interface PriorityCustomerContext {
+  notesCount: number;
+  openTasksCount: number;
+  openRequestsCount: number;
+  callsCount: number;
+  latestNote: {
+    id: string;
+    body: string;
+    authorName: string;
+    authorRole: string;
+    createdAt: string;
+  } | null;
+  latestOrder: {
+    id: string;
+    orderNumber: string | null;
+    totalPrice: number;
+    processedAt: string | null;
+  } | null;
+  latestCall: {
+    id: string;
+    phone: string | null;
+    email: string | null;
+    summary: string | null;
+    at: string;
+  } | null;
+}
+
 function memberName(member: { firstName: string; lastName: string; email: string }) {
   return `${member.firstName} ${member.lastName}`.trim() || member.email;
 }
@@ -757,9 +939,107 @@ function nullableString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value : null;
 }
 
+function stringOrNull(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function trimText(value: string, max: number) {
+  const text = value.trim();
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, Math.max(0, max - 3))}...` : text;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+}
+
+function emptyPriorityCustomerContext(): PriorityCustomerContext {
+  return {
+    notesCount: 0,
+    openTasksCount: 0,
+    openRequestsCount: 0,
+    callsCount: 0,
+    latestNote: null,
+    latestOrder: null,
+    latestCall: null,
+  };
+}
+
 function isInternalWorkspaceRow(value: unknown) {
   const kind = record(value).personWorkspaceKind;
   return kind === MESSAGE_THREAD_KIND || kind === NOTE_KIND;
+}
+
+function isCustomerRequest(row: { source: string; surface: string; axis?: string | null; metadata: Prisma.JsonValue }) {
+  if (isInternalWorkspaceRow(row.metadata)) return false;
+  const metadata = record(row.metadata);
+  return row.source === 'customer_self_service'
+    || row.surface === 'customer_facing'
+    || row.axis === 'support'
+    || normalize(metadata.category).includes('support')
+    || normalize(metadata.category).includes('customer_request');
+}
+
+function priorityScore(
+  ownership: { priority: number; importance: string; dailyCap: number | null },
+  membership: { score: Prisma.Decimal | null; matchedAt: Date; customer: { ordersCount: number; totalSpent: Prisma.Decimal | number | string | null; lastOrderAt: Date | null } },
+  context: PriorityCustomerContext,
+) {
+  const importance = { critical: 30, high: 22, normal: 14, low: 8 }[normalize(ownership.importance)] ?? 14;
+  const segmentScore = Number(membership.score ?? 0);
+  const revenue = Number(membership.customer.totalSpent ?? 0);
+  const orderBoost = Math.min(18, membership.customer.ordersCount * 2);
+  const revenueBoost = Math.min(18, Math.floor(revenue / 500));
+  const noteBoost = Math.min(14, context.notesCount * 2);
+  const requestBoost = Math.min(20, context.openRequestsCount * 8);
+  const taskBoost = Math.min(16, context.openTasksCount * 4);
+  const callBoost = context.latestCall ? 12 : 0;
+  const staleBoost = staleDays(membership.customer.lastOrderAt) >= 30 ? 8 : 0;
+  const raw = importance + ownership.priority + segmentScore + orderBoost + revenueBoost + noteBoost + requestBoost + taskBoost + callBoost + staleBoost;
+  return Math.max(1, Math.min(100, Math.round(raw)));
+}
+
+function priorityReason(segmentName: string, ownerName: string, context: PriorityCustomerContext, urgencyScore: number) {
+  const signals = [
+    `${segmentName} assigned to ${ownerName}`,
+    `U${urgencyScore}`,
+    context.latestCall ? `last call ${relative(new Date(context.latestCall.at))}` : null,
+    context.latestNote ? `last note by ${context.latestNote.authorName}` : null,
+    context.openRequestsCount ? `${context.openRequestsCount} open request` : null,
+    context.openTasksCount ? `${context.openTasksCount} open task` : null,
+  ].filter(Boolean);
+  return signals.join(' - ');
+}
+
+function staleDays(value: Date | null) {
+  if (!value) return 999;
+  return Math.floor((Date.now() - value.getTime()) / 86_400_000);
+}
+
+function phoneKeys(value: string | null | undefined) {
+  const text = value?.trim();
+  if (!text) return [];
+  const digits = text.replace(/\D/g, '');
+  return uniqueStrings([
+    text,
+    digits,
+    digits ? `+${digits}` : null,
+    digits.length === 10 ? `+1${digits}` : null,
+  ]);
+}
+
+function customerIdForCall(
+  row: { contactEmail: string | null; contactPhone: string | null; contactPhoneE164: string | null },
+  emailToCustomerId: Map<string, string>,
+  phoneToCustomerId: Map<string, string>,
+) {
+  const email = row.contactEmail?.trim().toLowerCase();
+  if (email && emailToCustomerId.has(email)) return emailToCustomerId.get(email) ?? null;
+  for (const phone of [...phoneKeys(row.contactPhoneE164), ...phoneKeys(row.contactPhone)]) {
+    const customerId = phoneToCustomerId.get(phone);
+    if (customerId) return customerId;
+  }
+  return null;
 }
 
 function anonymousMember(id: string): CallCenterMember {

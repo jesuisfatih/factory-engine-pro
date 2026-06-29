@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { ActiveWorkflowRuleStatsResponse } from '@factory-engine-pro/contracts';
+import type { ActiveWorkflowRuleStatsResponse, CallCenterOverview } from '@factory-engine-pro/contracts';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
@@ -112,6 +112,10 @@ function DashboardView() {
     queryKey: ['dashboard', 'rules', 'active-stats', 7],
     queryFn: () => adminApi.workflowRuleActiveStats('?days=7'),
   });
+  const callCenter = useQuery<CallCenterOverview>({
+    queryKey: ['dashboard', 'call-center', 'overview'],
+    queryFn: () => adminApi.callCenterOverview(),
+  });
 
   const statsQueries = [orderStats, customerStats, supportStats, mail];
   const failedMailCount = (mail.data ?? []).filter((delivery) => delivery.status === 'failed').length;
@@ -127,6 +131,7 @@ function DashboardView() {
     void support.refetch();
     void mail.refetch();
     void ruleStats.refetch();
+    void callCenter.refetch();
   };
 
   return (
@@ -153,6 +158,56 @@ function DashboardView() {
           <Kpi id="kpi-calls" labelI18nKey="dashboard.kpi.calls" value={failedMailCount} subI18nKey="dashboard.kpi.calls_sub" />
         </div>
       )}
+
+      <div className="section" id="section-call-center-preview" style={{ marginBottom: 16 }}>
+        <h3>
+          <span>Call Center preview</span>
+          <span className="meta">combined staff kanban</span>
+        </h3>
+        {callCenter.isLoading && <StateBlock title={t('common.loading')} body="Loading live Call Center kanban from the API." />}
+        {callCenter.isError && (
+          <StateBlock
+            title={t('common.error')}
+            body={apiErrorMessage(callCenter.error)}
+            action={<button type="button" className="btn" onClick={() => callCenter.refetch()}><RefreshCw size={14} /> {t('common.retry')}</button>}
+          />
+        )}
+        {callCenter.isSuccess && (
+          <div className="call-center-preview-grid">
+            <DashboardCallCenterCard
+              title="Daily call list"
+              value={callCenter.data.kanban.dailyCallList.length}
+              rows={callCenter.data.kanban.dailyCallList.slice(0, 3).map((task) => `${task.assignedMemberName}: ${task.title}`)}
+            />
+            <DashboardCallCenterCard
+              title="Priority customers"
+              value={callCenter.data.kanban.priorityGroups.reduce((sum, group) => sum + group.customers.length, 0)}
+              rows={callCenter.data.kanban.priorityGroups.slice(0, 3).map((group) => `${group.ownerName}: ${group.segmentName} (${group.customers.length})`)}
+            />
+            <DashboardCallCenterCard
+              title="Pinned"
+              value={callCenter.data.kanban.pinBoard.length}
+              rows={callCenter.data.kanban.pinBoard.slice(0, 3).map((pin) => `${pin.ownerName}: ${pin.customerName ?? pin.title}`)}
+            />
+            <DashboardCallCenterCard
+              title="Notes"
+              value={callCenter.data.notes.length}
+              rows={callCenter.data.notes.slice(0, 3).map((note) => `${note.authorName}: ${note.customerName ?? 'No customer'}`)}
+            />
+            <DashboardCallCenterCard
+              title="Messages"
+              value={callCenter.data.messages.length}
+              rows={callCenter.data.messages.slice(0, 3).map((message) => `${message.fromName} to ${message.toName ?? 'team'}`)}
+            />
+            <div className="call-center-preview-card">
+              <div className="preview-card-head"><span>Open module</span></div>
+              <strong>{callCenter.data.members.length}</strong>
+              <p>active staff in overview</p>
+              <a className="btn primary" href="/call-center" style={{ marginTop: 10 }}>Open Call Center</a>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="section" id="section-active-rule-stats" style={{ marginBottom: 16 }}>
         <h3>
@@ -347,6 +402,16 @@ function buildTrend(orders: OrderRow[]): TrendPoint[] {
     point.orders += 1;
   }
   return Array.from(byDate.values());
+}
+
+function DashboardCallCenterCard({ title, value, rows }: { title: string; value: number; rows: string[] }) {
+  return (
+    <div className="call-center-preview-card">
+      <div className="preview-card-head"><span>{title}</span></div>
+      <strong>{value}</strong>
+      {rows.length ? rows.map((row) => <p key={row}>{row}</p>) : <p>No live records yet.</p>}
+    </div>
+  );
 }
 
 function formatMoney(value: number) {

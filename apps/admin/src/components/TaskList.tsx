@@ -24,7 +24,17 @@ export function TaskList({ surface }: Props) {
   const priorityPill = (p: string) =>
     p === 'critical' ? 'pill danger' : p === 'high' ? 'pill warn' : p === 'normal' ? 'pill info' : 'pill';
   const sourcePill = (src: string) =>
-    src === 'ai' || src === 'transcript' ? 'pill accent' : src === 'segment' ? 'pill info' : 'pill';
+    src === 'ai' || src === 'transcript' || src === 'ai_workflow'
+      ? 'pill accent'
+      : src === 'segment' || src === 'ai_segment'
+        ? 'pill info'
+        : 'pill';
+  const sourceLabel = (src: string) => {
+    if (src === 'ai' || src === 'transcript') return 'Transcript';
+    if (src === 'ai_workflow' || src === 'workflow') return 'Rule engine';
+    if (src === 'ai_segment' || src === 'segment') return 'Segment';
+    return src;
+  };
 
   return (
     <>
@@ -76,7 +86,7 @@ export function TaskList({ surface }: Props) {
                 <td><span className="muted">{task.customer}</span></td>
                 <td>{task.assignee}</td>
                 <td><span className={priorityPill(task.priority)}>{task.priority}</span></td>
-                <td><span className={sourcePill(task.source)}>{task.source}</span></td>
+                <td><span className={sourcePill(task.source)}>{sourceLabel(task.source)}</span></td>
                 <td><span className="muted">{task.dueAt}</span></td>
                 <td>
                   <span className={`pill ${task.status === 'completed' ? 'success' : task.status === 'overdue' ? 'danger' : 'info'} dot`}>

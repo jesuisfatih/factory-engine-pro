@@ -40,6 +40,31 @@ export const callCenterPriorityCustomerSchema = z.object({
   ordersCount: z.number(),
   totalSpent: z.number(),
   lastOrderAt: z.string().nullable(),
+  urgencyScore: z.number(),
+  notesCount: z.number(),
+  openTasksCount: z.number(),
+  openRequestsCount: z.number(),
+  callsCount: z.number(),
+  latestNote: z.object({
+    id: z.string(),
+    body: z.string(),
+    authorName: z.string(),
+    authorRole: z.string(),
+    createdAt: z.string(),
+  }).nullable(),
+  latestOrder: z.object({
+    id: z.string(),
+    orderNumber: z.string().nullable(),
+    totalPrice: z.number(),
+    processedAt: z.string().nullable(),
+  }).nullable(),
+  latestCall: z.object({
+    id: z.string(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    summary: z.string().nullable(),
+    at: z.string(),
+  }).nullable(),
   reason: z.string(),
 });
 export type CallCenterPriorityCustomer = z.infer<typeof callCenterPriorityCustomerSchema>;
