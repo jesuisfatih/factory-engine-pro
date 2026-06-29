@@ -2055,7 +2055,7 @@ export class PersonWorkspaceService {
       axis: axisOrNull(row.axis),
       title: header.title,
       summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
-      segment: ownedSegment?.segmentName ?? String(metadata.category ?? row.surface ?? 'Support'),
+      segment: ownedSegment?.segmentName ?? taskCategoryLabel(metadata.category ?? row.surface),
       segmentColor: ownedSegment?.segmentColor ?? colorForUrgency(urgencyBreakdown.score),
       priority: priorityRankFromUrgency(urgencyBreakdown.score),
       urgencyScore: urgencyBreakdown.score,
@@ -2976,6 +2976,14 @@ function taskSource(row: { source: string; sourceCallId?: string | null; sourceE
 
 function hasGeneratedBrief(source: ReturnType<typeof taskSource>) {
   return source === 'call_analysis' || source === 'segment_priority' || source === 'stale_follow_up';
+}
+
+function taskCategoryLabel(value: unknown) {
+  const key = normalizeText(value);
+  if (key === 'workflow_rule' || key === 'workflow') return 'Call analysis';
+  if (key === 'call' || key === 'aircall') return 'Call';
+  if (key === 'support') return 'Customer request';
+  return value ? titleize(String(value)) : 'Customer request';
 }
 
 function ticketNumber(row: { id: string; metadata: Prisma.JsonValue }) {
