@@ -1,6 +1,6 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_runtime_live",
-  "checkedAt": "2026-06-29T09:00:26.577Z",
+  "checkedAt": "2026-06-29T09:22:45.475Z",
   "pass": true,
   "scope": {
     "container": "factoryengine-dtfbank-app",
@@ -8,9 +8,9 @@
     "tenantId": "ten_dtfbank"
   },
   "git": {
-    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
+    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
     "branch": "main"
   },
   "health": {
@@ -21,25 +21,46 @@
       "service": "factory-engine-pro-backend"
     }
   },
-  "tokenRow": {
-    "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-    "expiresAtDays": 365,
-    "tokenHashRedacted": true,
-    "metadataSource": "roadmap_m07_live_proof"
-  },
   "tokenValuesPersistedInEvidence": false,
-  "logEvidence": [
-    "\u001b[32m[Nest] 5677  - \u001b[39m06/29/2026, 8:58:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-    "\u001b[32m[Nest] 5677  - \u001b[39m06/29/2026, 8:58:56 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "permissionCount": 10,
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "pm2": [
+    {
+      "name": "factory-engine-pro-api",
+      "status": "online",
+      "restarts": 53,
+      "pid": 12622
+    },
+    {
+      "name": "factory-engine-pro-admin",
+      "status": "online",
+      "restarts": 56,
+      "pid": 12671
+    },
+    {
+      "name": "factory-engine-pro-person",
+      "status": "online",
+      "restarts": 0,
+      "pid": 1491
+    },
+    {
+      "name": "factory-engine-pro-accounts",
+      "status": "online",
+      "restarts": 0,
+      "pid": 1505
+    }
   ],
   "containerStatus": [
-    "factoryengine-dtfbank-app Up 38 minutes",
-    "factoryengine-dtfprint-app Up 6 days",
-    "factoryengine-eagledtfsupply-app Up 6 days",
-    "factoryengine-fastdtfsupply-app Up 6 days",
-    "factoryengine-fastdtftransfer-app Up 6 days",
-    "factoryengine-dtfprintdepot-app Up 6 days"
+    "factoryengine-dtfbank-app Up About an hour"
   ],
-  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, and priority kanban API/UI.",
+  "logEvidence": [
+    "0|factory- | \u001b[32m[Nest] 12622  - \u001b[39m06/29/2026, 9:09:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "0|factory- | \u001b[32m[Nest] 12622  - \u001b[39m06/29/2026, 9:09:49 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+  ],
+  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, managed Postgres, and staff UI.",
   "nextRoadmapItem": 8
 }

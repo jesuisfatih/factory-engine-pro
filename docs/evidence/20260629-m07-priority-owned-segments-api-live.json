@@ -1,12 +1,12 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_api_live",
-  "checkedAt": "2026-06-29T09:00:26.577Z",
+  "checkedAt": "2026-06-29T09:22:45.475Z",
   "pass": true,
   "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
   "git": {
-    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
+    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
     "branch": "main"
   },
   "principal": {
@@ -14,7 +14,7 @@
     "email": "dtfbanktx@gmail.com"
   },
   "status": 200,
-  "requestId": "bb7c2358-420e-4091-9f68-1cd5da9b675e",
+  "requestId": "3c452f0b-8ba6-420a-b15c-b0298cf8e60e",
   "summary": {
     "dailyCount": 91,
     "priorityCount": 91,
@@ -46,9 +46,12 @@
   },
   "dbAudit": {
     "ownedSegmentCount": 5,
-    "membershipRowsFound": 91,
-    "assignmentRowsFound": 91,
+    "membershipRowsFound": 161,
+    "assignmentRowsFound": 273,
     "violationCount": 0,
+    "cardAssignmentViolationCount": 0,
+    "otherMemberSameAxisViolationCount": 0,
+    "membershipViolationCount": 0,
     "violations": []
   },
   "ownedSegments": [
@@ -100,126 +103,1589 @@
   ],
   "sample": [
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "1st Place Awards & Embroidery",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "1st Place Awards & Embroidery",
+      "summary": "Min 2 max 5 purchase segment - U152.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 152.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 152.3,
+      "urgencyBreakdown": {
+        "score": 152.3,
+        "segmentScore": 95,
+        "repeatCount": 1,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "justin@1stplacebelton.com",
+      "ordersCount": 3,
+      "totalSpent": 3228.55,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 1 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 1
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "Akil Kurji",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Akil Kurji",
+      "summary": "Min 2 max 5 purchase segment - U152.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 152.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 152.3,
+      "urgencyBreakdown": {
+        "score": 152.3,
+        "segmentScore": 95,
+        "repeatCount": 1,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": true,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "purchasing@swagful.com",
+      "ordersCount": 2,
+      "totalSpent": 411.35,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 1 recent requests - support axis"
+      },
+      "miniOrder": {
+        "id": "ord_r2s9w9s9kdkxcir2ow2q268o",
+        "orderNumber": "4396",
+        "totalPrice": 86.6,
+        "currency": "USD",
+        "financialStatus": "paid",
+        "fulfillmentStatus": "fulfilled",
+        "processedAt": "2026-05-19T19:04:22.000Z",
+        "createdAt": "2026-06-28T18:34:02.149Z"
+      },
+      "performance30d": {
+        "orders": 2,
+        "revenue": 411.35,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 1
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "Americraft Sign Co. LLC",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_jp5l8tb6waye3825shaygnar",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Americraft Sign Co. LLC",
+      "summary": "Min 2 max 5 purchase segment - U152.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 152.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 152.3,
+      "urgencyBreakdown": {
+        "score": 152.3,
+        "segmentScore": 95,
+        "repeatCount": 1,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "americraft1@gmail.com",
+      "ordersCount": 5,
+      "totalSpent": 1510.99,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 1 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 1
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "Apliiq, Inc",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_vmkcu1nnag0yqngvv72jwpgs",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Apliiq, Inc",
+      "summary": "Min 2 max 5 purchase segment - U152.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 152.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 152.3,
+      "urgencyBreakdown": {
+        "score": 152.3,
+        "segmentScore": 95,
+        "repeatCount": 1,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": true,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "aaron@apliiq.com",
+      "ordersCount": 3,
+      "totalSpent": 412.53,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 1 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 1
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "#gregsvinyl",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "#gregsvinyl",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "gregsvinyl@yahoo.com",
+      "ordersCount": 2,
+      "totalSpent": 299.74,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "4 FORTY SCREENS AND STITCHES",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "4 FORTY SCREENS AND STITCHES",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "phone": "+13184476887",
+      "email": "440printshop@gmail.com",
+      "ordersCount": 5,
+      "totalSpent": 4592.61,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 1,
+        "revenue": 3518.99,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "404 Cafe and Creamery",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "404 Cafe and Creamery",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "rbloomer43@gmail.com",
+      "ordersCount": 2,
+      "totalSpent": 399.64,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "802 Print",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_xamz9bo142cf7xdxhff4hx5l",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "802 Print",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "phone": "+18025980967",
+      "email": "greg@print802.com",
+      "ordersCount": 2,
+      "totalSpent": 3297.19,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     },
     {
+      "kind": "customer",
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yt9po8vx09mhpl0bu6fjx2yd",
-      "kind": "customer",
-      "source": "ai_segment",
-      "title": "904 Vinyls & More",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
       "customerId": "cust_yt9po8vx09mhpl0bu6fjx2yd",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "904 Vinyls & More",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "dzapata198721@yahoo.com",
+      "ordersCount": 4,
+      "totalSpent": 2803.18,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "miniOrder": {
+        "id": "ord_o0ky86wptxx5bb71neqkwvjf",
+        "orderNumber": "4512",
+        "totalPrice": 108.04,
+        "currency": "USD",
+        "financialStatus": "paid",
+        "fulfillmentStatus": "fulfilled",
+        "processedAt": "2026-06-01T20:58:33.000Z",
+        "createdAt": "2026-06-28T18:33:58.784Z"
+      },
+      "performance30d": {
+        "orders": 1,
+        "revenue": 108.04,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     },
     {
-      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
       "kind": "customer",
-      "source": "ai_segment",
-      "title": "A3-USA",
-      "axis": "support",
-      "assignedMemberName": "Linda Marroquin",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dmfmmg54upzdo2i1iy6hyih8",
       "customerId": "cust_dmfmmg54upzdo2i1iy6hyih8",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "A3-USA",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase",
-      "urgencyScore": 151.2
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "lre@a3-usa.com",
+      "ordersCount": 2,
+      "totalSpent": 263.97,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_idl7gs53x8tp51wtlgxvplvk",
+      "customerId": "cust_idl7gs53x8tp51wtlgxvplvk",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Aaron Turpin",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "rivalbarberlounge@gmail.com",
+      "ordersCount": 2,
+      "totalSpent": 3102.12,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pfipf8ndu3vwjgdd75s42hmx",
+      "customerId": "cust_pfipf8ndu3vwjgdd75s42hmx",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Abdul Mallah",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "m204617@gmail.com",
+      "ordersCount": 2,
+      "totalSpent": 217.22,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 2,
+        "revenue": 217.22,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_v09m37m5moq83spj8rswjfgo",
+      "customerId": "cust_v09m37m5moq83spj8rswjfgo",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Abundant Design",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "team@abundantdesignabq.com",
+      "ordersCount": 2,
+      "totalSpent": 4192.77,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_lye1jay0hwk9g62ivkd7wijg",
+      "customerId": "cust_lye1jay0hwk9g62ivkd7wijg",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Akin Industries LLC",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "alperen@lonca.com",
+      "ordersCount": 3,
+      "totalSpent": 167.74,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_q82zburc3fc9vpqkjhpxla1k",
+      "customerId": "cust_q82zburc3fc9vpqkjhpxla1k",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Alabama Adult and Teen Challenge",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "atcgrafix@alatc.org",
+      "ordersCount": 2,
+      "totalSpent": 170.14,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_m8927qbwp35yad8w40r7ox50",
+      "customerId": "cust_m8927qbwp35yad8w40r7ox50",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "alfredos",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "perezrosalino72@gmail.com",
+      "ordersCount": 4,
+      "totalSpent": 348.81,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_dipyemjl0rsytnxolfzupawh",
+      "customerId": "cust_dipyemjl0rsytnxolfzupawh",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Alpha Supply Company",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "email": "dharris@alphasupply.com",
+      "ordersCount": 4,
+      "totalSpent": 1692.46,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pefrrno7hkxpbatv6pr6wpzq",
+      "customerId": "cust_pefrrno7hkxpbatv6pr6wpzq",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Americraft Sign Co. LLC",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "phone": "+14804529381",
+      "email": "tres@acsignco.com",
+      "ordersCount": 4,
+      "totalSpent": 688.31,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_lky4ijsbgji4w6urfiju2w53",
+      "customerId": "cust_lky4ijsbgji4w6urfiju2w53",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Angela Ocampo",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "phone": "+12709633863",
+      "email": "angelscott0822@gmail.com",
+      "ordersCount": 2,
+      "totalSpent": 103.36,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "kind": "customer",
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_sqzk6v3f7bixjnzu30dtpvd8",
+      "customerId": "cust_sqzk6v3f7bixjnzu30dtpvd8",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support",
+      "title": "Angie Swaney",
+      "summary": "Min 2 max 5 purchase segment - U151.3 - support axis",
+      "segment": "Min 2 max 5 purchase",
+      "segmentColor": "#2f80ed",
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase",
+      "segmentPriority": 95,
+      "segmentOwnershipPriority": 95,
+      "priority": 9,
+      "urgencyScore": 151.3,
+      "urgencyBreakdown": {
+        "score": 151.3,
+        "segmentScore": 95,
+        "repeatCount": 0,
+        "intent": "follow_up",
+        "intentScore": 8,
+        "aiUrgency": null,
+        "aiUrgencyScore": 0,
+        "waitingHours": 3.3,
+        "weights": {
+          "segmentWeight": 1.5,
+          "repeatCountWeight": 1,
+          "intentWeight": 1,
+          "aiUrgencyWeight": 2,
+          "waitingHoursWeight": 0.25,
+          "intentScores": {
+            "sales": 12,
+            "reorder": 14,
+            "support": 8,
+            "complaint": 20,
+            "follow_up": 8,
+            "escalation": 18
+          },
+          "aiUrgencyScores": {
+            "low": 3,
+            "high": 20,
+            "medium": 10,
+            "critical": 30
+          }
+        }
+      },
+      "columnId": "unassigned",
+      "pinned": false,
+      "pinnedAt": null,
+      "source": "ai_segment",
+      "phone": "+14024274460",
+      "email": "angballz1701@yahoo.com",
+      "ordersCount": 2,
+      "totalSpent": 3993.01,
+      "aiBrief": {
+        "whyCalling": "Customer is in Min 2 max 5 purchase, a Shopify segment assigned to this workspace.",
+        "upsetAbout": "No complaint captured from the segment signal.",
+        "callGoal": "Review recent Shopify activity and decide the next human outreach step.",
+        "suggestedActions": [
+          "Review latest order",
+          "Call or email the customer",
+          "Pin if follow-up is needed"
+        ],
+        "promptKey": "person.workspace.segment-priority",
+        "promptVersion": "live",
+        "modelUsed": "not-generated",
+        "confidence": 1,
+        "transcriptSnippet": "Min 2 max 5 purchase segment - 0 recent requests - support axis"
+      },
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
     }
-  ],
-  "tokenValuesPersistedInEvidence": false,
-  "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  ]
 }

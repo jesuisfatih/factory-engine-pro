@@ -1,43 +1,44 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_ui_live",
-  "checkedAt": "2026-06-29T09:00:26.577Z",
+  "checkedAt": "2026-06-29T09:22:45.475Z",
   "pass": true,
-  "url": "https://app.dtfbank.com/staff/queue",
-  "finalUrl": "https://app.dtfbank.com/staff/queue",
-  "browserAutomation": "standalone_playwright_after_in_app_browser_transport_closed",
+  "appUrl": "https://app.dtfbank.com/staff/queue",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
   "git": {
-    "localEvidenceCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedCodeCommit": "c8c78c4fc6902888e1d81045870564b22926f703",
-    "deployedBuildSha": "c8c78c4fc6902888e1d81045870564b22926f703",
+    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
+    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
     "branch": "main"
   },
-  "screenshot": {
-    "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-owned-segments-ui-live.png",
-    "bytes": 164863,
-    "sha256": "52a0535e9d7e48e5b24eb6e8cb2749e6636798ecf9c3e53b8fb28c62dcd3fa7c"
+  "principal": {
+    "email": "dtfbanktx@gmail.com",
+    "type": "member"
   },
-  "priorityPanelText": "Priority kanbanRule-engine tasks, axis-scoped and urgency-desc.1st Place Awards & EmbroideryAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinAkil KurjiAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4396 $87 2 orders - $411 - 1 tasksMin 2 max 5 purchasePinnedAmericraft Sign Co. LLCAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinApliiq, IncAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinned#gregsvinylAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin4 FORTY SCREENS AND STITCHESAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 1 orders - $3,519 - 0 tasksMin 2 max 5 purchasePin404 Cafe and CreameryAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin802 PrintAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin904 Vinyls & MoreAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4512 $108 1 orders - $108 - 0 tasksMin 2 max 5 purchasePinA3-USAAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 t",
-  "priorityCardCount": 91,
-  "priorityCardTexts": [
-    "1st Place Awards & EmbroideryAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
-    "Akil KurjiAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4396 $87 2 orders - $411 - 1 tasksMin 2 max 5 purchasePinned",
-    "Americraft Sign Co. LLCAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
-    "Apliiq, IncAI - SegmentU152.2Min 2 max 5 purchase segment - U152.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinned",
-    "#gregsvinylAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
-    "4 FORTY SCREENS AND STITCHESAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 1 orders - $3,519 - 0 tasksMin 2 max 5 purchasePin",
-    "404 Cafe and CreameryAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
-    "802 PrintAI - SegmentU151.2Min 2 max 5 purchase segment - U151.2 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin"
-  ],
-  "kpiText": [
-    "Daily calls91segment customers",
-    "Priority tasks91urgency desc",
-    "Pinned4persistent board",
-    "U80+91same formula",
-    "Axes1support"
-  ],
-  "containsLocalhost": false,
-  "visibleTextHasPermissionError": false,
-  "failedResponses": [],
-  "consoleErrors": [],
-  "pageErrors": []
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-owned-segments-ui-live.png",
+  "dom": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "priorityCardCount": 91,
+    "priorityEmptyVisible": false,
+    "kpis": [
+      "Daily calls91segment customers",
+      "Priority tasks91urgency desc",
+      "Pinned4persistent board",
+      "U80+91same formula",
+      "Axes1support"
+    ],
+    "firstCards": [
+      "1st Place Awards & EmbroideryAI - SegmentU152.3Min 2 max 5 purchase segment - U152.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
+      "Akil KurjiAI - SegmentU152.3Min 2 max 5 purchase segment - U152.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 4396 $87 2 orders - $411 - 1 tasksMin 2 max 5 purchasePinned",
+      "Americraft Sign Co. LLCAI - SegmentU152.3Min 2 max 5 purchase segment - U152.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePin",
+      "Apliiq, IncAI - SegmentU152.3Min 2 max 5 purchase segment - U152.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 1 tasksMin 2 max 5 purchasePinned",
+      "#gregsvinylAI - SegmentU151.3Min 2 max 5 purchase segment - U151.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
+      "4 FORTY SCREENS AND STITCHESAI - SegmentU151.3Min 2 max 5 purchase segment - U151.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 1 orders - $3,519 - 0 tasksMin 2 max 5 purchasePin",
+      "404 Cafe and CreameryAI - SegmentU151.3Min 2 max 5 purchase segment - U151.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin",
+      "802 PrintAI - SegmentU151.3Min 2 max 5 purchase segment - U151.3 - support axisOwner: Linda MarroquinAxis: supportSegment P95 No Shopify order 0 orders - $0 - 0 tasksMin 2 max 5 purchasePin"
+    ],
+    "consoleErrors": [],
+    "failedResponses": [],
+    "bodyTextSample": "DDTF BankCustomer ServiceWorkspaceCall Queue91Customers91E-mailCalendarNotesKnowledgeTrainingAnnouncementsMessagingAccountSubmit RequestNotifications6LMdtfbanktx@gmail.comCustomer ServiceCall QueueDDTF BankDaily calls91segment customersPriority tasks91urgency descPinned4persistent boardU80+91same formulaAxes1supportDaily call listSegment-driven customers, sorted by the urgency formula.5 groupsMin 2 max 5 purchase25/25#gregsvinylU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $300Pin4 FORTY SCREENS AND STITCHESU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase5 orders | $4.593Pin404 Cafe and CreameryU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $400PinOWNERU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $3.920Pin802 PrintU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $3.297Pin904 Vinyls & MoreU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $2.803PinA3-USAU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $264PinAaron TurpinU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $3.102PinAbdul MallahU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $217PinAbundant DesignU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $4.193PinAkil KurjiU152.3Min 2 max 5 purchase segment - 1 recent requests - support axisMin 2 max 5 purchase2 orders | $411PinnedAkin Industries LLCU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase3 orders | $168PinAlabama Adult and Teen ChallengeU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $170PinalfredosU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $349PinAlpha Supply CompanyU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $1.692PinAmericraft Sign Co. LLCU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $688PinAmericraft Sign Co. LLCU152.3Min 2 max 5 purchase segment - 1 recent requests - support axisMin 2 max 5 purchase5 orders | $1.511PinAngela OcampoU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $103PinAngie SwaneyU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $3.993PinAnn NguyenU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $41PinAntonio ZapataU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase5 orders | $613PinApliiq, IncU152.3Min 2 max 5 purchase segment - 1 recent requests - support axisMin 2 max 5 purchase3 orders | $413Pinnedarmando.franco.72@gmail.comU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $148PinARSENIO THUNSTROMU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $358Pin1st Place Awards & EmbroideryU152.3Min 2 max 5 purchase segment - 1 recent requests - support axisMin 2 max 5 purchase3 orders | $3.229Pin To pick up a draggable item, press the space bar. While dragging, use the arrow keys to move the item. Press space again to drop the item in its new position, or press escape to cancel. Customers over 20 orders17/17AA FASHION EXPRESS PRESSU144.8Customers over 20 orders segment - 1 recent requests - support axisCustomers over 20 orders50 orders | $13.217PinnedBeary CreativeU144.8Customers over 20 orders segment - 1 recent requests - support axisCustomers over 20 orders61"
+  }
 }

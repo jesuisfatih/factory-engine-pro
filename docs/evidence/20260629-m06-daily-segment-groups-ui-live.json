@@ -1,43 +1,89 @@
 {
   "proof": "roadmap_m06_daily_segment_groups_ui_live",
-  "checkedAt": "2026-06-29T08:44:27.524Z",
+  "checkedAt": "2026-06-29T09:22:45.475Z",
   "pass": true,
-  "url": "https://app.dtfbank.com/staff/queue",
-  "finalUrl": "https://app.dtfbank.com/staff/queue",
-  "browserAutomation": "standalone_playwright_after_in_app_browser_transport_closed",
+  "appUrl": "https://app.dtfbank.com/staff/queue",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
   "git": {
-    "localEvidenceCommit": "a471da8e530395c1c85aa518b6e52c4a9283dafa",
-    "deployedCodeCommit": "958866daa2ac632ca0d262be4558dc905645fa1f",
-    "deployedBuildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
+    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
+    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
     "branch": "main"
   },
-  "screenshot": {
-    "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-daily-segment-groups-ui-live.png",
-    "bytes": 165235,
-    "sha256": "e67db14f9ec6cdcf01ccc98c3065230b673bb21663b76939519eae83ca4431f8"
+  "principal": {
+    "email": "dtfbanktx@gmail.com",
+    "type": "member"
   },
-  "groupCount": 5,
-  "groupTexts": [
-    "Min 2 max 5 purchase25/25",
-    "Customers over 20 orders17/17",
-    "Wholesale Customers25/25",
-    "Customers who have purchased DTF or UV DTF Printer12/12",
-    "Customers who have purchased DTF inks, DTF films, or DTF powders25/25"
-  ],
-  "firstGroupInitialItemCount": 25,
-  "firstGroupCollapsedItemCount": 0,
-  "firstGroupExpandedItemCount": 25,
-  "firstGroupItems": [
-    "#gregsvinylU151.2Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $300Pin",
-    "4 FORTY SCREENS AND STITCHESU151.2Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase5 orders | $4.593Pin",
-    "404 Cafe and CreameryU151.2Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $400Pin",
-    "OWNERU151.2Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase4 orders | $3.920Pin",
-    "802 PrintU151.2Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $3.297Pin"
-  ],
-  "containsLocalhost": false,
-  "containsSeedWords": false,
-  "visibleTextHasPermissionError": false,
-  "failedResponses": [],
-  "consoleErrors": [],
-  "pageErrors": []
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-daily-segment-groups-ui-live.png",
+  "dom": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "kpis": [
+      "Daily calls91segment customers",
+      "Priority tasks91urgency desc",
+      "Pinned4persistent board",
+      "U80+91same formula",
+      "Axes1support"
+    ],
+    "segmentGroupCount": 5,
+    "groups": [
+      {
+        "label": "Min 2 max 5 purchase",
+        "meta": "25/25",
+        "expanded": true,
+        "itemCount": 25,
+        "firstItems": [
+          "#gregsvinylU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $300Pin",
+          "4 FORTY SCREENS AND STITCHESU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase5 orders | $4.593Pin",
+          "404 Cafe and CreameryU151.3Min 2 max 5 purchase segment - 0 recent requests - support axisMin 2 max 5 purchase2 orders | $400Pin"
+        ]
+      },
+      {
+        "label": "Customers over 20 orders",
+        "meta": "17/17",
+        "expanded": true,
+        "itemCount": 17,
+        "firstItems": [
+          "AA FASHION EXPRESS PRESSU144.8Customers over 20 orders segment - 1 recent requests - support axisCustomers over 20 orders50 orders | $13.217Pinned",
+          "Beary CreativeU144.8Customers over 20 orders segment - 1 recent requests - support axisCustomers over 20 orders61 orders | $13.346Pinned",
+          "Ashley FairchildU143.8Customers over 20 orders segment - 0 recent requests - support axisCustomers over 20 orders33 orders | $11.796Pin"
+        ]
+      },
+      {
+        "label": "Wholesale Customers",
+        "meta": "25/25",
+        "expanded": true,
+        "itemCount": 25,
+        "firstItems": [
+          "2G Nitrile LLCU136.3Wholesale Customers segment - 0 recent requests - support axisWholesale Customers8 orders | $13.881Pin",
+          "Atolye LLCU136.3Wholesale Customers segment - 0 recent requests - support axisWholesale Customers7 orders | $2.005Pin",
+          "Bella Vision MA LLCU136.3Wholesale Customers segment - 0 recent requests - support axisWholesale Customers3 orders | $634Pin"
+        ]
+      },
+      {
+        "label": "Customers who have purchased DTF or UV DTF Printer",
+        "meta": "12/12",
+        "expanded": true,
+        "itemCount": 12,
+        "firstItems": [
+          "Alpha DTF PrintU128.8Customers who have purchased DTF or UV DTF Printer segment - 0 recent requests - support axisCustomers who have purchased DTF or UV DTF Printer1 orders | $0Pin",
+          "Alpha Print LLCU128.8Customers who have purchased DTF or UV DTF Printer segment - 0 recent requests - support axisCustomers who have purchased DTF or UV DTF Printer1 orders | $0Pin",
+          "Emma CollinsU128.8Customers who have purchased DTF or UV DTF Printer segment - 0 recent requests - support axisCustomers who have purchased DTF or UV DTF Printer1 orders | $0Pin"
+        ]
+      },
+      {
+        "label": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+        "meta": "25/25",
+        "expanded": true,
+        "itemCount": 25,
+        "firstItems": [
+          "AA FASHION EXPRESS PRESSU122.3Customers who have purchased DTF inks, DTF films, or DTF powders segment - 1 recent requests - support axisCustomers who have purchased DTF inks, DTF films, or DTF powders50 orders | $13.217Pinned",
+          "Akil KurjiU122.3Customers who have purchased DTF inks, DTF films, or DTF powders segment - 1 recent requests - support axisCustomers who have purchased DTF inks, DTF films, or DTF powders2 orders | $411Pinned",
+          "Americraft Sign Co. LLCU122.3Customers who have purchased DTF inks, DTF films, or DTF powders segment - 1 recent requests - support axisCustomers who have purchased DTF inks, DTF films, or DTF powders5 orders | $1.511Pin"
+        ]
+      }
+    ],
+    "consoleErrors": [],
+    "failedResponses": []
+  }
 }

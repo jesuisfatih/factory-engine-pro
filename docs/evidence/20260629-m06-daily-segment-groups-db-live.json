@@ -1,20 +1,20 @@
 {
   "proof": "roadmap_m06_daily_segment_groups_db_live",
-  "checkedAt": "2026-06-29T08:44:27.524Z",
+  "checkedAt": "2026-06-29T09:22:45.475Z",
   "pass": true,
   "tenantId": "ten_dtfbank",
   "account": "dtfbanktx@gmail.com",
   "git": {
-    "localEvidenceCommit": "a471da8e530395c1c85aa518b6e52c4a9283dafa",
-    "deployedCodeCommit": "958866daa2ac632ca0d262be4558dc905645fa1f",
-    "deployedBuildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
+    "localEvidenceCommit": "ca3540d7d34168221e85c91e8150f509c844da2f",
+    "deployedCodeCommit": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+    "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
     "branch": "main"
   },
-  "tokenRow": {
-    "principalId": "tmbr_ten_dtfbank_linda_marroquin",
-    "expiresAtDays": 365,
-    "tokenHashRedacted": true,
-    "metadataSource": "roadmap_m06_live_proof"
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "permissionCount": 10,
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
   },
   "tokenValuesPersistedInEvidence": false,
   "memberId": "tmbr_ten_dtfbank_linda_marroquin",
