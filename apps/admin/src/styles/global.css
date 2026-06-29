@@ -353,9 +353,16 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-signal-head .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .customer-signal-head .right { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .customer-signal-head .right a { color: var(--accent); cursor: pointer; }
+.preview-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, 110px) 150px 150px auto; gap: 8px; margin-bottom: 12px; align-items: center; }
+.preview-toolbar input,
+.preview-toolbar select { min-width: 0; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 12px; padding: 0 10px; }
 .signal-cards { display: flex; flex-direction: column; gap: 8px; }
 .signal-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.signal-card.preview-customer-row { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.signal-card.preview-customer-row:disabled { cursor: default; opacity: .78; }
+.signal-card.preview-customer-row:not(:disabled):hover { border-color: var(--accent); background: var(--surface); }
 .signal-card .name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.signal-card .name { display: flex; align-items: center; gap: 8px; }
 .signal-card .meta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .signal-card .badge-unlinked { font-size: 10px; color: var(--warn); background: var(--warn-soft); padding: 2px 7px; border-radius: 4px; font-weight: 600; margin-top: 4px; display: inline-block; }
 

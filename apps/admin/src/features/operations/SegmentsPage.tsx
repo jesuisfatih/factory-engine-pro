@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Edit2, GitBranch, Layers, Plus, RefreshCw, Save, Search, Target, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Edit2, ExternalLink, GitBranch, Layers, Plus, RefreshCw, Save, Search, Target, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type {
   CreateSegmentInput,
   SegmentConditionInput,
@@ -58,10 +59,18 @@ interface SegmentPreview {
   };
   matches: Array<{
     id: string;
+    customerId?: string;
     companyName: string;
     email: string | null;
+    phone?: string | null;
+    tags?: string[];
+    status?: string;
+    shopifyCustomerId?: string | null;
+    customerUsers?: number;
     totalRevenue: number;
     totalOrders: number;
+    avgOrderValue?: number;
+    lastOrderAt?: string | null;
     healthScore: number;
     churnRisk: string;
     lifecycle: string;
@@ -151,6 +160,26 @@ interface ShopifySegmentOption {
   syncStatus: string | null;
 }
 
+type PreviewSort = 'revenue_desc' | 'orders_desc' | 'score_desc' | 'name_asc';
+
+interface PreviewCustomerRow {
+  id: string;
+  customerId: string | null;
+  source: 'customer' | 'company_user' | 'shopify_customer';
+  name: string;
+  email: string | null;
+  phone: string | null;
+  tags: string[];
+  orders: number;
+  revenue: number;
+  score: number | null;
+  lifecycle: string | null;
+  churnRisk: string | null;
+  shopifyCustomerId: string | null;
+  linkState: 'linked' | 'unlinked';
+  signals: string[];
+}
+
 const FIELDS: SegmentField[] = [
   'companyStatus',
   'companyGroup',
@@ -216,6 +245,13 @@ export function SegmentsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<SegmentDraft | null>(null);
   const [ownerForm, setOwnerForm] = useState({ memberId: '', importance: 'normal' as SegmentImportance, priority: 0, dailyCap: '' });
+  const [previewSearch, setPreviewSearch] = useState('');
+  const [previewLtvMin, setPreviewLtvMin] = useState('');
+  const [previewLtvMax, setPreviewLtvMax] = useState('');
+  const [previewScoreMin, setPreviewScoreMin] = useState('');
+  const [previewLinkFilter, setPreviewLinkFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
+  const [previewSort, setPreviewSort] = useState<PreviewSort>('revenue_desc');
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
 
   const segments = useQuery({ queryKey: QK, queryFn: fetchSegments });
   const stats = useQuery({ queryKey: [...QK, 'stats'], queryFn: fetchSegmentStats });
@@ -224,6 +260,11 @@ export function SegmentsPage() {
     queryKey: [...QK, 'detail', selectedId],
     queryFn: () => adminApi.segment(selectedId!) as Promise<SegmentRow>,
     enabled: Boolean(selectedId),
+  });
+  const customerDetail = useQuery({
+    queryKey: [...QK, 'customer-detail', detailCustomerId],
+    queryFn: () => adminApi.customerDetail(detailCustomerId!),
+    enabled: Boolean(detailCustomerId),
   });
 
   const rows = segments.data ?? [];
@@ -238,6 +279,16 @@ export function SegmentsPage() {
   }, [filtered, selectedId]);
 
   const selected = detail.data ?? rows.find((row) => row.id === selectedId) ?? filtered[0] ?? null;
+  const previewRows = useMemo(() => buildPreviewRows(selected?.preview), [selected?.preview]);
+  const visiblePreviewRows = useMemo(() => filterPreviewRows(previewRows, {
+    search: previewSearch,
+    ltvMin: previewLtvMin,
+    ltvMax: previewLtvMax,
+    scoreMin: previewScoreMin,
+    linkState: previewLinkFilter,
+    sort: previewSort,
+  }), [previewRows, previewSearch, previewLtvMin, previewLtvMax, previewScoreMin, previewLinkFilter, previewSort]);
+  const hasPreviewFilters = Boolean(previewSearch.trim() || previewLtvMin || previewLtvMax || previewScoreMin || previewLinkFilter !== 'all' || previewSort !== 'revenue_desc');
 
   const evaluate = useMutation({
     mutationFn: (id: string) => adminApi.evaluateSegment(id),
@@ -381,6 +432,7 @@ export function SegmentsPage() {
                   </div>
                   <div className="desc">{segment.description || t('segments.no_description')}</div>
                   <div className="chips">
+                    <span className={segment.ownerships.length ? 'pill success' : 'pill warn'}>{ownerSummary(segment.ownerships)}</span>
                     <span className="pill accent">{t('segments.matches_count', { count: segment.customerCount })}</span>
                     <span className="pill">{segment.matchMode.toUpperCase()}</span>
                   </div>
@@ -406,6 +458,7 @@ export function SegmentsPage() {
                       <span>{t('segments.last_evaluated')}: {fmtDate(selected.lastEvaluatedAt)}</span>
                       <span>{t('segments.priority')}: {selected.priority}</span>
                       <span>{t('segments.audience')}: {label(selected.audienceType)}</span>
+                      <span>{ownerSummary(selected.ownerships)}</span>
                     </div>
                   </div>
                   <div className="actions">
@@ -499,69 +552,77 @@ export function SegmentsPage() {
                 <section className="customer-signal">
                   <div className="customer-signal-head">
                     <div>
-                      <h3>{t('segments.preview_customers')}</h3>
-                      <div className="sub">{t('segments.preview_customers_sub')}</div>
+                      <h3>Preview</h3>
+                      <div className="sub">Matched customers from Customer, Customer User, and Shopify signals in one list.</div>
                     </div>
+                    <div className="right">{visiblePreviewRows.length}/{previewRows.length}</div>
                     {detail.isFetching && <span className="pill">{t('common.loading')}</span>}
                   </div>
-                  {(selected.preview?.matches ?? []).length === 0 && <div className="preview-empty"><div className="title">{t('segments.preview_empty_title')}</div><div className="note">{t('segments.preview_empty_body')}</div></div>}
+                  <div className="preview-toolbar">
+                    <div className="orders-search">
+                      <Search size={14} />
+                      <input value={previewSearch} onChange={(event) => setPreviewSearch(event.target.value)} placeholder="Search name, email, phone, Shopify id" />
+                    </div>
+                    <input type="number" min={0} value={previewLtvMin} onChange={(event) => setPreviewLtvMin(event.target.value)} placeholder="Min LTV" aria-label="Minimum LTV" />
+                    <input type="number" min={0} value={previewLtvMax} onChange={(event) => setPreviewLtvMax(event.target.value)} placeholder="Max LTV" aria-label="Maximum LTV" />
+                    <input type="number" min={0} max={100} value={previewScoreMin} onChange={(event) => setPreviewScoreMin(event.target.value)} placeholder="Min score" aria-label="Minimum match score" />
+                    <select value={previewLinkFilter} onChange={(event) => setPreviewLinkFilter(event.target.value as 'all' | 'linked' | 'unlinked')} aria-label="Preview link filter">
+                      <option value="all">All</option>
+                      <option value="linked">Linked customers</option>
+                      <option value="unlinked">Unlinked Shopify</option>
+                    </select>
+                    <select value={previewSort} onChange={(event) => setPreviewSort(event.target.value as PreviewSort)} aria-label="Preview sort">
+                      <option value="revenue_desc">LTV high to low</option>
+                      <option value="orders_desc">Orders high to low</option>
+                      <option value="score_desc">Score high to low</option>
+                      <option value="name_asc">Name A-Z</option>
+                    </select>
+                    {hasPreviewFilters && (
+                      <button type="button" className="btn ghost" onClick={() => {
+                        setPreviewSearch('');
+                        setPreviewLtvMin('');
+                        setPreviewLtvMax('');
+                        setPreviewScoreMin('');
+                        setPreviewLinkFilter('all');
+                        setPreviewSort('revenue_desc');
+                      }}>
+                        <X size={13} /> Clear
+                      </button>
+                    )}
+                  </div>
+                  {previewRows.length === 0 && <div className="preview-empty"><div className="title">{t('segments.preview_empty_title')}</div><div className="note">{t('segments.preview_empty_body')}</div></div>}
+                  {previewRows.length > 0 && visiblePreviewRows.length === 0 && <div className="preview-empty"><div className="title">No preview rows match filters</div><div className="note">Adjust search, LTV, score, or link-state filters.</div></div>}
                   <div className="signal-cards">
-                    {(selected.preview?.matches ?? []).slice(0, 12).map((customer) => (
-                      <div key={customer.id} className="signal-card">
-                        <div className="name">{customer.companyName}</div>
+                    {visiblePreviewRows.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        className="signal-card preview-customer-row"
+                        disabled={!customer.customerId}
+                        onClick={() => customer.customerId && setDetailCustomerId(customer.customerId)}
+                        title={customer.customerId ? 'Open customer history' : 'Unlinked Shopify customer'}
+                      >
+                        <div className="name">
+                          <span>{customer.name}</span>
+                          {customer.customerId && <ExternalLink size={13} />}
+                        </div>
                         <div className="meta">
                           <span>{customer.email ?? t('segments.no_email')}</span>
-                          <span>{customer.totalOrders} orders</span>
-                          <span>{fmtMoney(customer.totalRevenue)}</span>
-                          <span>{label(customer.churnRisk)}</span>
+                          <span>{customer.phone ?? 'No phone'}</span>
+                          <span>{customer.orders} orders</span>
+                          <span>{fmtMoney(customer.revenue)}</span>
+                          <span>Score {customer.score ?? '-'}</span>
+                          <span>{customer.lifecycle ? label(customer.lifecycle) : '-'}</span>
+                          <span>{customer.churnRisk ? label(customer.churnRisk) : '-'}</span>
+                          <span>{label(customer.linkState)}</span>
                         </div>
-                      </div>
+                        <div className="chips">
+                          {customer.signals.map((signal) => <span key={signal} className="pill accent">{signal}</span>)}
+                          {customer.tags.slice(0, 3).map((tag) => <span key={tag} className="pill">{tag}</span>)}
+                        </div>
+                      </button>
                     ))}
                   </div>
-                  {(selected.preview?.companyUserMatches ?? []).length > 0 && (
-                    <>
-                      <div className="customer-signal-head" style={{ marginTop: 18 }}>
-                        <div>
-                          <h3>{t('segments.preview_company_users')}</h3>
-                          <div className="sub">{t('segments.preview_company_users_sub')}</div>
-                        </div>
-                      </div>
-                      <div className="signal-cards">
-                        {(selected.preview?.companyUserMatches ?? []).slice(0, 8).map((user) => (
-                          <div key={user.id} className="signal-card">
-                            <div className="name">{user.email}</div>
-                            <div className="meta">
-                              <span>{user.companyName}</span>
-                              <span>{user.roleValues.join(', ') || '-'}</span>
-                              <span>{user.isActive ? t('common.active') : t('common.inactive')}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {(selected.preview?.shopifyCustomerMatches ?? []).length > 0 && (
-                    <>
-                      <div className="customer-signal-head" style={{ marginTop: 18 }}>
-                        <div>
-                          <h3>{t('segments.preview_shopify_customers')}</h3>
-                          <div className="sub">{t('segments.preview_shopify_customers_sub')}</div>
-                        </div>
-                      </div>
-                      <div className="signal-cards">
-                        {(selected.preview?.shopifyCustomerMatches ?? []).slice(0, 8).map((customer) => (
-                          <div key={customer.shopifyCustomerId} className="signal-card">
-                            <div className="name">{customer.name}</div>
-                            <div className="meta">
-                              <span>{customer.companyName ?? customer.email ?? customer.shopifyCustomerId}</span>
-                              <span>{fmtMoney(customer.totalSpent)}</span>
-                              <span>{label(customer.linkState)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
                 </section>
               </>
             )}
@@ -570,6 +631,14 @@ export function SegmentsPage() {
       )}
 
       {editing && <SegmentEditor draft={editing} onClose={() => setEditing(null)} />}
+      <CustomerDetailPanel
+        open={Boolean(detailCustomerId)}
+        detail={customerDetail.data}
+        isLoading={customerDetail.isLoading}
+        error={customerDetail.error ? apiErrorMessage(customerDetail.error) : null}
+        onRetry={() => customerDetail.refetch()}
+        onClose={() => setDetailCustomerId(null)}
+      />
     </>
   );
 }
@@ -771,6 +840,131 @@ function emptyDraft(): SegmentDraft {
     isActive: true,
     conditions: [emptyCondition()],
   };
+}
+
+function buildPreviewRows(preview: SegmentPreview | undefined): PreviewCustomerRow[] {
+  if (!preview) return [];
+  const rows = new Map<string, PreviewCustomerRow>();
+  for (const customer of preview.matches ?? []) {
+    rows.set(customer.id, {
+      id: `customer-${customer.id}`,
+      customerId: customer.customerId ?? customer.id,
+      source: 'customer',
+      name: customer.companyName,
+      email: customer.email,
+      phone: customer.phone ?? null,
+      tags: customer.tags ?? [],
+      orders: Number(customer.totalOrders || 0),
+      revenue: Number(customer.totalRevenue || 0),
+      score: Number.isFinite(customer.healthScore) ? customer.healthScore : null,
+      lifecycle: customer.lifecycle,
+      churnRisk: customer.churnRisk,
+      shopifyCustomerId: customer.shopifyCustomerId ?? null,
+      linkState: 'linked',
+      signals: ['Customer'],
+    });
+  }
+  for (const user of preview.companyUserMatches ?? []) {
+    const existing = rows.get(user.customerId);
+    if (existing) {
+      existing.signals = unique([...existing.signals, 'Customer user']);
+      if (!existing.email) existing.email = user.email;
+      continue;
+    }
+    rows.set(user.customerId, {
+      id: `customer-user-${user.id}`,
+      customerId: user.customerId,
+      source: 'company_user',
+      name: user.companyName || user.email,
+      email: user.email,
+      phone: null,
+      tags: user.roleValues,
+      orders: 0,
+      revenue: 0,
+      score: user.isActive ? 100 : 0,
+      lifecycle: user.isActive ? 'active' : 'inactive',
+      churnRisk: null,
+      shopifyCustomerId: null,
+      linkState: 'linked',
+      signals: ['Customer user'],
+    });
+  }
+  for (const shopify of preview.shopifyCustomerMatches ?? []) {
+    const linkedId = shopify.linkedCustomerId;
+    if (linkedId && rows.has(linkedId)) {
+      const existing = rows.get(linkedId)!;
+      existing.signals = unique([...existing.signals, 'Shopify']);
+      existing.shopifyCustomerId = shopify.shopifyCustomerId;
+      if (!existing.email) existing.email = shopify.email;
+      if (!existing.revenue) existing.revenue = Number(shopify.totalSpent || 0);
+      if (!existing.orders) existing.orders = Number(shopify.ordersCount || 0);
+      continue;
+    }
+    rows.set(`shopify-${shopify.shopifyCustomerId}`, {
+      id: `shopify-${shopify.shopifyCustomerId}`,
+      customerId: linkedId,
+      source: 'shopify_customer',
+      name: shopify.name || shopify.companyName || shopify.email || shopify.shopifyCustomerId,
+      email: shopify.email,
+      phone: null,
+      tags: shopify.segmentIds,
+      orders: Number(shopify.ordersCount || 0),
+      revenue: Number(shopify.totalSpent || 0),
+      score: shopify.linkState === 'linked' ? 100 : 0,
+      lifecycle: null,
+      churnRisk: null,
+      shopifyCustomerId: shopify.shopifyCustomerId,
+      linkState: shopify.linkState,
+      signals: ['Shopify'],
+    });
+  }
+  return Array.from(rows.values());
+}
+
+function filterPreviewRows(rows: PreviewCustomerRow[], input: {
+  search: string;
+  ltvMin: string;
+  ltvMax: string;
+  scoreMin: string;
+  linkState: 'all' | 'linked' | 'unlinked';
+  sort: PreviewSort;
+}) {
+  const q = input.search.trim().toLowerCase();
+  const min = input.ltvMin === '' ? null : Number(input.ltvMin);
+  const max = input.ltvMax === '' ? null : Number(input.ltvMax);
+  const scoreMin = input.scoreMin === '' ? null : Number(input.scoreMin);
+  const filtered = rows.filter((row) => {
+    if (input.linkState !== 'all' && row.linkState !== input.linkState) return false;
+    if (min !== null && row.revenue < min) return false;
+    if (max !== null && row.revenue > max) return false;
+    if (scoreMin !== null && (row.score ?? 0) < scoreMin) return false;
+    if (!q) return true;
+    const haystack = [
+      row.name,
+      row.email ?? '',
+      row.phone ?? '',
+      row.shopifyCustomerId ?? '',
+      row.tags.join(' '),
+      row.signals.join(' '),
+    ].join(' ').toLowerCase();
+    return haystack.includes(q);
+  });
+  return [...filtered].sort((a, b) => {
+    if (input.sort === 'orders_desc') return b.orders - a.orders || b.revenue - a.revenue || a.name.localeCompare(b.name);
+    if (input.sort === 'score_desc') return (b.score ?? -1) - (a.score ?? -1) || b.revenue - a.revenue || a.name.localeCompare(b.name);
+    if (input.sort === 'name_asc') return a.name.localeCompare(b.name);
+    return b.revenue - a.revenue || b.orders - a.orders || a.name.localeCompare(b.name);
+  });
+}
+
+function ownerSummary(ownerships: SegmentOwner[]) {
+  if (ownerships.length === 0) return 'Unassigned';
+  const names = ownerships.map((owner) => owner.memberName ?? owner.memberEmail ?? owner.memberId);
+  return `Owner: ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2}` : ''}`;
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 function draftFromSegment(segment: SegmentRow): SegmentDraft {

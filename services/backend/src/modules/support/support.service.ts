@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { assertServiceRequestSourceContract, serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
+import { assertServiceRequestSourceContract, SERVICE_REQUEST_SOURCES, serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
 import type {
   AddServiceRequestCommentInput,
   AssignServiceRequestInput,
@@ -316,6 +316,7 @@ export class SupportService {
 
   private buildWhere(query: SupportQuery): Prisma.ServiceRequestWhereInput {
     const where: Prisma.ServiceRequestWhereInput = {
+      source: { in: [...SERVICE_REQUEST_SOURCES] },
       NOT: [
         { metadata: { path: ['category'], equals: 'workflow_rule' } },
         { metadata: { path: ['category'], equals: 'admin_order_transfer' } },
@@ -324,7 +325,7 @@ export class SupportService {
     if (query.surface && query.surface !== 'all') where.surface = query.surface;
     const priority = splitCsv(query.priority);
     if (priority.length) where.priority = { in: priority };
-    const sources = splitCsv(query.source);
+    const sources = splitCsv(query.source).filter(isAllowedServiceRequestSource);
     if (sources.length) where.source = { in: sources };
     if (query.customerId) where.customerId = query.customerId;
     if (query.assigned === 'unassigned') where.assignedMemberId = null;
@@ -491,6 +492,10 @@ export class SupportService {
 
 function splitCsv(raw?: string) {
   return String(raw || '').split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function isAllowedServiceRequestSource(source: string) {
+  return (SERVICE_REQUEST_SOURCES as readonly string[]).includes(source);
 }
 
 function parseDate(value: unknown) {

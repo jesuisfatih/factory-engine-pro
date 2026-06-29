@@ -1070,6 +1070,7 @@ export class SegmentsService {
       customerId: customer.id,
       companyName: customer.companyName,
       email: customer.email,
+      phone: customer.phone,
       status: customer.status,
       tags: customer.tags,
       shopifyCustomerId: customer.shopifyCustomerId,
