@@ -50,3 +50,5 @@ Use tools in this order:
 7. `publish_workflow_rule` only after explicit user approval
 
 Unsupported actions such as automatic support case creation, raw SQL, destructive segment changes, and direct email sends are rejected by the backend.
+
+Create-task assignment is deterministic: explicit member, Aircall call owner, customer axis primary, then axis primary role. Omit an explicit member when the rule should follow the person who handled the call.

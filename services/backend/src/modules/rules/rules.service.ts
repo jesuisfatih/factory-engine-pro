@@ -2079,6 +2079,7 @@ export class RulesService {
       safeguards: [
         'Claude never executes workflow actions directly; it only drafts the deterministic workflow DSL.',
         'Rule-created tasks can target only sales or account axes.',
+        'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role in that order.',
         'Automatic customer request/support case creation is not a supported action.',
         'Publish requires a stored rule and a recent simulation/backfill report for that rule.',
         'Unsupported actions such as send_mail or segment removal are rejected for MCP-authored rules.',
@@ -2226,6 +2227,8 @@ export class RulesService {
     } else if (mentionsSegmentOwner(text)) {
       actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
       assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
+    } else if (mentionsCallOwner(text)) {
+      assumptions.push('Assignee will resolve to the Aircall call owner first, then customer axis primary, then axis primary role.');
     } else {
       assumptions.push('Assignee will default to call owner, customer axis primary, or axis primary role at runtime.');
     }
@@ -2520,6 +2523,16 @@ function mcpAction(
 
 function mentionsSegmentOwner(text: string) {
   return text.includes('segment owner') || text.includes('segment sahibi') || text.includes('segment sorumlusu');
+}
+
+function mentionsCallOwner(text: string) {
+  return text.includes('call owner')
+    || text.includes('aircall owner')
+    || text.includes('aircall operator')
+    || text.includes('agent who answered')
+    || text.includes('answered the call')
+    || text.includes('aramayi cevaplayan')
+    || text.includes('arama sahibi');
 }
 
 function mentionsNote(text: string) {

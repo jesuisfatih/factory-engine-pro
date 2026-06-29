@@ -124,6 +124,7 @@ server.registerPrompt(
             '',
             'Never create support cases, tickets, customer requests, raw SQL, or unsupported actions.',
             'Rules must stay in the deterministic workflow DSL and target sales/account/personnel operations.',
+            'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role.',
           ].join('\n'),
         },
       },
