@@ -291,7 +291,7 @@ export class PersonWorkspaceService {
     const segmentPriorityCards = dailyCallList
       .filter((item) => assignments.has(item.customerId))
       .filter((item) => !priorityTaskCustomerIds.has(item.customerId))
-      .map((item) => this.segmentPriorityCard(item, cardContext));
+      .map((item) => this.segmentPriorityCard(item, member, cardContext));
     const priorityKanban = [...priorityTaskCards, ...segmentPriorityCards]
       .sort(sortByUrgency)
       .slice(0, 120);
@@ -1771,14 +1771,18 @@ export class PersonWorkspaceService {
     };
   }
 
-  private segmentPriorityCard(item: PersonDailyCallItem, cardContext?: CardContext): PersonQueueCardDto {
+  private segmentPriorityCard(
+    item: PersonDailyCallItem,
+    member: { id: string; firstName: string; lastName: string; email: string },
+    cardContext?: CardContext,
+  ): PersonQueueCardDto {
     const urgencyScore = item.urgencyScore;
     return {
       kind: 'customer',
       id: item.id,
       customerId: item.customerId,
-      assignedMemberId: null,
-      assignedMemberName: null,
+      assignedMemberId: member.id,
+      assignedMemberName: memberDisplayName(member),
       axis: axisOrNull(item.assignedAxis),
       title: item.customerName,
       summary: `${item.segment.name} segment - U${urgencyScore} - ${item.assignedAxis} axis`,
