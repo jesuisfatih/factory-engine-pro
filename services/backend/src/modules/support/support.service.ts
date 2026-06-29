@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
 import type {
   AddServiceRequestCommentInput,
   AssignServiceRequestInput,
@@ -103,6 +104,7 @@ export class SupportService {
   }
 
   async create(input: CreateServiceRequestInput) {
+    const source = this.requireServiceRequestSource(input.source ?? 'manual');
     if (input.customerId) await this.ensureCustomer(input.customerId);
     if (input.customerUserId) await this.ensureCustomerUser(input.customerUserId);
     if (input.assignedMemberId) await this.ensureMember(input.assignedMemberId);
@@ -125,7 +127,7 @@ export class SupportService {
       assignedMemberId: input.assignedMemberId ?? null,
       axis: input.axis ?? null,
       matchedRuleId: matchedRuleId ?? null,
-      source: input.source ?? 'manual',
+      source,
       surface: input.surface ?? 'internal',
       sourceCallId: input.sourceCallId,
       sourceEmailId: input.sourceEmailId,
@@ -468,6 +470,14 @@ export class SupportService {
       firstResponseAt,
       sla: buildSla(row, firstResponseAt),
     };
+  }
+
+  private requireServiceRequestSource(value: unknown) {
+    const parsed = serviceRequestSourceSchema.safeParse(value);
+    if (!parsed.success) {
+      throw new BadRequestException('Support cases only accept manual, customer_self_service, or admin_created sources.');
+    }
+    return parsed.data;
   }
 
   private cleanMetadata(metadata: Record<string, unknown>) {

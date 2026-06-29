@@ -68,7 +68,6 @@ export class WorkflowExecutorService {
       case 'segment.member_added':
       case 'segment.member_removed':
       case 'b2b_access.request.created':
-      case 'support.request.created':
       case 'schedule.daily':
       case 'manual.trigger':
       case 'psych.tag.detected':

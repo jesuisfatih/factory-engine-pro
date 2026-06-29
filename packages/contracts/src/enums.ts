@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-29.2';
+export const WORKFLOW_ENUM_VERSION = '2026-06-29.3';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -52,7 +52,6 @@ export const WORKFLOW_TRIGGERS = [
   'segment.member_added',
   'segment.member_removed',
   'b2b_access.request.created',
-  'support.request.created',
   'schedule.daily',
   'manual.trigger',
   'psych.tag.detected',
@@ -159,7 +158,6 @@ export const WORKFLOW_TRIGGER_GROUPS: Record<WorkflowTriggerFamily, readonly Wor
     'segment.member_added',
     'segment.member_removed',
     'b2b_access.request.created',
-    'support.request.created',
     'schedule.daily',
     'manual.trigger',
   ],
