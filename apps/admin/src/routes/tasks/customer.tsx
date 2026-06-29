@@ -1,4 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { TaskList } from '@/components/TaskList';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/tasks/customer')({ component: () => <TaskList surface="customer" /> });
+export const Route = createFileRoute('/tasks/customer')({
+  beforeLoad: () => {
+    throw redirect({ to: '/call-center' });
+  },
+});
