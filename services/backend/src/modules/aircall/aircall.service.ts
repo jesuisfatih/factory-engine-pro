@@ -295,6 +295,7 @@ export class AircallService {
         transcriptRaw: true,
         resolverStatus: true,
         resolverOutput: true,
+        resolverModel: true,
         resolvedAt: true,
         resolvedWithVersion: true,
       },
@@ -314,6 +315,10 @@ export class AircallService {
         });
     const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
     const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
+    const staleResolverVersion = transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length;
+    const resolverQueuedOrProcessing = transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length;
+    const resolverFailed = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
+    const failedEvaluations = evaluations.filter((row) => row.status === 'failed').length;
 
     return {
       targetVersion,
@@ -323,16 +328,23 @@ export class AircallService {
       transcriptEvents: transcriptRows.length,
       resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
       evaluatedEvents: evaluatedIds.size,
+      workflowInvariantOk: transcriptRows.length === evaluatedIds.size
+        && missingRows.length === 0
+        && staleResolverVersion === 0
+        && resolverQueuedOrProcessing === 0
+        && resolverFailed === 0
+        && failedEvaluations === 0,
       evaluationRows: evaluations.length,
       actionableEvaluations: evaluations.filter((row) => row.actionRequired).length,
       noActionEvaluations: evaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
       taskCreatedEvaluations: evaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
       matchedWithoutTaskEvaluations: evaluations.filter((row) => row.status === 'matched_without_task').length,
-      failedEvaluations: evaluations.filter((row) => row.status === 'failed').length,
+      failedEvaluations,
+      localFallbackResolvedEvents: transcriptRows.filter((row) => row.resolverModel === 'local-rule-fallback').length,
       missingEvaluations: missingRows.length,
-      staleResolverVersion: transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length,
-      resolverQueuedOrProcessing: transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length,
-      resolverFailed: transcriptRows.filter((row) => row.resolverStatus === 'failed').length,
+      staleResolverVersion,
+      resolverQueuedOrProcessing,
+      resolverFailed,
       missing: missingRows.slice(0, 50).map((row) => ({
         id: row.id,
         externalCallId: row.externalCallId,

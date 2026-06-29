@@ -191,12 +191,14 @@ export interface AircallWorkflowCoverageResponse {
   transcriptEvents: number;
   resolvedEvents: number;
   evaluatedEvents: number;
+  workflowInvariantOk: boolean;
   evaluationRows: number;
   actionableEvaluations: number;
   noActionEvaluations: number;
   taskCreatedEvaluations: number;
   matchedWithoutTaskEvaluations: number;
   failedEvaluations: number;
+  localFallbackResolvedEvents: number;
   missingEvaluations: number;
   staleResolverVersion: number;
   resolverQueuedOrProcessing: number;
