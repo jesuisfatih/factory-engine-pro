@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-06-29T05:09:30.928Z",
+  "buildSha": "7f4f7e4d4968345a475fb4f1e64ead679f196cd6",
+  "scenario": "Linda opened a live staff kanban task, clicked Create Support Case, the modal closed, and the resulting support case was visible in the owner Support page.",
+  "appBase": "https://app.dtfbank.com",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "taskId": "sr_j4ed8taxxzhi0hf95xq43wd2",
+  "supportCaseId": "sr_h3hw6ktdzg084qz0w4vkjfap",
+  "existingCaseId": "sr_h3hw6ktdzg084qz0w4vkjfap",
+  "personUrl": "https://app.dtfbank.com/staff/queue?taskId=sr_j4ed8taxxzhi0hf95xq43wd2",
+  "supportUrl": "https://app.dtfbank.com/support?caseId=sr_h3hw6ktdzg084qz0w4vkjfap",
+  "actors": {
+    "owner": {
+      "id": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "roles": [
+        "owner"
+      ],
+      "permissionsCount": 27
+    },
+    "linda": {
+      "id": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "roles": [
+        "customer_service"
+      ],
+      "permissionsCount": 10
+    }
+  },
+  "lastSupportCase": {
+    "taskId": "sr_j4ed8taxxzhi0hf95xq43wd2",
+    "supportCaseId": "sr_h3hw6ktdzg084qz0w4vkjfap",
+    "ticketNumber": "SR-MQYQZC3P",
+    "supportUrl": "/support?caseId=sr_h3hw6ktdzg084qz0w4vkjfap",
+    "createdAt": "2026-06-29T05:09:25.842Z"
+  },
+  "modalTextSample": "Manual\nRoutine - P3\ncustomer_followup\nU11.1\nVictor Santiago-Santos\n+18313191837\nkazecustomdesign@yahoo.com\n4419 $1,225\nMANUAL TASK\nCreated by an operator. Add a task note or schedule a follow-up to enrich the customer history.\nWHY THIS TASK\nNo workflow rule trace is saved for this task.\nSHOPIFY DETAIL\nmatched\nCustomer id\ncust_yiq7m5fer8hsmabh621l87wd\nShopify id\n9641924362516\nPhone match\nYes\nEmail match\nNo\n4419\n$1,225\npaid\nAI PSYCH ANALYSIS\nINTENT\nInquiry\nURGENCY\nLow\nMOTIVATORS\ninfo_request, purchase_intent\nOBJECTIONS\nNone\n\nOutbound follow-up call regarding Hydro 1620 hydraulic heat press machine. Customer inquired about noise levels, requested videos of machine in operation, confirmed product is in stock with 7-10 day shipping to California. Customer interested in 10% discount pricing ($3,149). Agent provided social media links for additional videos and encouraged customer to reach out with further questions. Call ended positively with customer satisfied.\n\nORDER, CALL, AND TASK HISTORY\n6\nTask\nTask: Support case: Victor Santiago-Santos\n\nOpen - High - Latest note: Created from person task SR-MQYQYZLA by Linda Marroquin.\n\n29.06.2026 07:58:39\nNote\nTask note\n\nSupport case created: SR-MQYQZC3P\n\n29.06.2026 07:58:39\nTask\nCustomer follow-up: OWNER\n\nLive customer follow-up task created from the staff kanban flow for a real Shopify customer segment assignment.\n\n29.06.2026 07:58:23\nTask\nAI transcript task: sales: Purchase intent follow-up\n\nClosed - Medium - Rule: Default: Purchase intent sales follow-up\n\n28.06.2026 23:49:54\nAircall\nCall.Ended outbound\n\nOutbound follow-up call regarding",
+  "supportPageTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nSupport\nD\nDTF Bank\nOwner\nSupport\nService requests across customer-facing and internal surfaces\nRefresh\nNew request\nOPEN\n16\nIN PROGRESS\n0\nURGENT\n13\nRESOLVED\n9\nAll\nInternal\nCustomer-facing\nAll sources\nAi Transcript\nWorkflow\nCall\nManual\nEmail\nForm\nSR\tTITLE\tCUSTOMER\tSTATUS\tPRIORITY\tASSIGNEE\tLAST ACTIVITY\nSR-MQYQZC3P\t\nSupport case: Victor Santiago-Santos\nSupport Case / Manual / Support\n\tOWNER\tOPEN\tHigh\tLinda Marroquin\t29.06.2026 07:58:39\nSR-MQYQZC3P\nHigh\nSupport case: Victor Santiago-Santos\n\nCreated from person task SR-MQYQYZLA (sr_j4ed8taxxzhi0hf95xq43wd2). Original task: Customer follow-up: OWNER Task details: Live customer follow-up task created from the staff kanban flow for a real Shopify customer segment assignment. Phone: +18313191837 Email: kazecustomdesign@yahoo.com\n\nCustomer\nOWNER\nSurface\nInternal\nAxis\nSupport\nMatched rule\nNo matched rule\nCondition trace\n0 condition(s)\nWatchers\nNo watchers\nCreated\n29.06.2026 07:58:39\nResolution target\n30.06.2026 07:58:39\nNo saved rule trace for this request.\nWORKFLOW\nSTATUS\nOpen\nIn Progress\nWaiting\nWaiting On Customer\nPending Resolve\nResolved\nClosed\nReopened\nSave status\nASSIGNEE\nUnassigned\nIhsan Taskiran (ihsan@dtfbank.com)\nCharlette Boatman (charlette@dtfbank.com)\nLinda Marroquin (dtfbanktx@gm",
+  "supportDetailTextSample": "SR-MQYQZC3P\nHigh\nSupport case: Victor Santiago-Santos\n\nCreated from person task SR-MQYQYZLA (sr_j4ed8taxxzhi0hf95xq43wd2). Original task: Customer follow-up: OWNER Task details: Live customer follow-up task created from the staff kanban flow for a real Shopify customer segment assignment. Phone: +18313191837 Email: kazecustomdesign@yahoo.com\n\nCustomer\nOWNER\nSurface\nInternal\nAxis\nSupport\nMatched rule\nNo matched rule\nCondition trace\n0 condition(s)\nWatchers\nNo watchers\nCreated\n29.06.2026 07:58:39\nResolution target\n30.06.2026 07:58:39\nNo saved rule trace for this request.\nWORKFLOW\nSTATUS\nOpen\nIn Progress\nWaiting\nWaiting On Customer\nPending Resolve\nResolved\nClosed\nReopened\nSave status\nASSIGNEE\nUnassigned\nIhsan Taskiran (ihsan@dtfbank.com)\nCharlette Boatman (charlette@dtfbank.com)\nLinda Marroquin (dtfbanktx@gmail.com)\nDTF Bank Owner (info@dtfbank.com)\nSave assignee\nCOMMENTS\nmember\n29.06.2026 07:58:39\n\nCreated from person task SR-MQYQYZLA by Linda Marroquin.\n\nCOMMENT\nAdd internal note\nAdd comment\nClose request",
+  "supportApiStatus": 200,
+  "reuseApiStatus": 201,
+  "reuseResult": {
+    "ok": true,
+    "taskId": "sr_j4ed8taxxzhi0hf95xq43wd2",
+    "supportCaseId": "sr_h3hw6ktdzg084qz0w4vkjfap",
+    "ticketNumber": "SR-MQYQZC3P",
+    "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
+    "supportUrl": "/support?caseId=sr_h3hw6ktdzg084qz0w4vkjfap"
+  },
+  "supportCase": {
+    "id": "sr_h3hw6ktdzg084qz0w4vkjfap",
+    "ticketNumber": "SR-MQYQZC3P",
+    "title": "Support case: Victor Santiago-Santos",
+    "customer": {
+      "id": "cust_yiq7m5fer8hsmabh621l87wd",
+      "companyName": "OWNER",
+      "name": "OWNER",
+      "email": "kazecustomdesign@yahoo.com"
+    },
+    "assignedTo": {
+      "id": "tmbr_ten_dtfbank_linda_marroquin",
+      "name": "Linda Marroquin",
+      "email": "dtfbanktx@gmail.com"
+    },
+    "category": "support_case",
+    "source": "manual",
+    "surface": "internal",
+    "status": "open",
+    "priority": "high",
+    "axis": "support",
+    "metadata": {
+      "source": "person_task_modal",
+      "category": "support_case",
+      "workflow": {
+        "origin": "person_task_modal",
+        "originalTaskId": "sr_j4ed8taxxzhi0hf95xq43wd2"
+      },
+      "ticketNumber": "SR-MQYQZC3P",
+      "supportCaseOnly": true,
+      "createdByMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "createdFromTaskId": "sr_j4ed8taxxzhi0hf95xq43wd2",
+      "personQueueVisible": false,
+      "createdByMemberEmail": "dtfbanktx@gmail.com",
+      "createdFromTaskTitle": "Customer follow-up: OWNER",
+      "createdFromTaskSource": "manual",
+      "personQueueHiddenReason": "support_case",
+      "createdFromTaskTicketNumber": "SR-MQYQYZLA"
+    }
+  },
+  "screenshots": {
+    "personModal": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m11-support-case-person-modal-live.png",
+    "personAfterModalClosed": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m11-support-case-person-after-live.png",
+    "supportPage": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m11-support-case-admin-live.png"
+  },
+  "consoleErrors": [],
+  "failedResponses": [],
+  "tokenCleanup": {
+    "lindaStatus": 201,
+    "ownerStatus": 201
+  },
+  "assertions": {
+    "modalHadCreateSupportCaseButton": true,
+    "modalClosedAfterClick": true,
+    "localStorageResultMatchesTask": true,
+    "supportCaseVisibleInSupportPage": true,
+    "supportApiSucceeded": true,
+    "reuseReturnedSameCase": true,
+    "noConsoleErrors": true,
+    "noFailedResponses": true,
+    "tokenCleanupComplete": true,
+    "noLocalhost": true
+  }
+}

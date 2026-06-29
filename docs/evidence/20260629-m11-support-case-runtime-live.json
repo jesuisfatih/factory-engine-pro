@@ -1,0 +1,41 @@
+{
+    "generatedAt":  "2026-06-29T05:10:54.2297772Z",
+    "environment":  "dtfbank-live",
+    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
+    "raw":  [
+                "BUILD_SHA=7f4f7e4d4968345a475fb4f1e64ead679f196cd6",
+                "HEALTH={\"ok\":true,\"service\":\"factory-engine-pro-backend\"}",
+                "CONTAINERS",
+                "factoryengine-dtfbank-app Up 4 minutes",
+                "factoryengine-dtfprint-app Up 6 days",
+                "factoryengine-eagledtfsupply-app Up 6 days",
+                "factoryengine-fastdtfsupply-app Up 6 days",
+                "factoryengine-fastdtftransfer-app Up 6 days",
+                "factoryengine-dtfprintdepot-app Up 6 days",
+                "",
+                "LOG_TAIL",
+                "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 5:08:25 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/support-case, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 5:08:25 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+                "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 5:09:24 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"f1a337cc-e6bc-40dd-a826-cf344c4eecbc\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.support_case.reused\",\"message\":\"Existing support case returned for person task\",\"task_id\":\"sr_j4ed8taxxzhi0hf95xq43wd2\",\"support_case_id\":\"sr_h3hw6ktdzg084qz0w4vkjfap\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"customer_id\":\"cust_yiq7m5fer8hsmabh621l87wd\"}\u001b[39m",
+                "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 5:09:29 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"0215ad8a-003c-4347-af92-d4812ed85990\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.support_case.reused\",\"message\":\"Existing support case returned for person task\",\"task_id\":\"sr_j4ed8taxxzhi0hf95xq43wd2\",\"support_case_id\":\"sr_h3hw6ktdzg084qz0w4vkjfap\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"customer_id\":\"cust_yiq7m5fer8hsmabh621l87wd\"}\u001b[39m",
+                "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 5:10:38 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"2bb81863-ca58-4857-8d9e-e997785df5f4\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.support_case.reused\",\"message\":\"Existing support case returned for person task\",\"task_id\":\"sr_j4ed8taxxzhi0hf95xq43wd2\",\"support_case_id\":\"sr_h3hw6ktdzg084qz0w4vkjfap\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"customer_id\":\"cust_yiq7m5fer8hsmabh621l87wd\"}\u001b[39m",
+                "",
+                "FAVICON",
+                "HTTP/2 200 ",
+                "alt-svc: h3=\":443\"; ma=2592000",
+                "cache-control: no-cache",
+                "content-type: image/svg+xml",
+                "date: Mon, 29 Jun 2026 05:10:53 GMT",
+                "etag: W/\"358-1782709659574\""
+            ],
+    "assertions":  {
+                       "healthOk":  true,
+                       "buildShaMatchesHead":  true,
+                       "dtfbankContainerListed":  true,
+                       "otherContainersUntouched":  true,
+                       "supportCaseLogPresent":  true,
+                       "supportCaseRouteMapped":  true,
+                       "adminFaviconServed":  true,
+                       "noLocalhost":  true
+                   }
+}

@@ -1,0 +1,105 @@
+{
+    "generatedAt":  "2026-06-29T05:10:38.823Z",
+    "environment":  "dtfbank-live",
+    "apiBase":  "https://api.dtfbank.com/api/v1",
+    "tenantId":  "ten_dtfbank",
+    "actors":  {
+                   "owner":  {
+                                 "id":  "tmbr_ten_dtfbank_info_owner",
+                                 "email":  "info@dtfbank.com",
+                                 "roles":  [
+                                               "owner"
+                                           ],
+                                 "permissionsCount":  27
+                             },
+                   "linda":  {
+                                 "id":  "tmbr_ten_dtfbank_linda_marroquin",
+                                 "email":  "dtfbanktx@gmail.com",
+                                 "roles":  [
+                                               "customer_service"
+                                           ],
+                                 "permissionsCount":  10
+                             }
+               },
+    "endpoints":  {
+                      "dailyOperations":  {
+                                              "method":  "GET",
+                                              "path":  "/person/workspace/daily-operations",
+                                              "status":  200,
+                                              "priorityCount":  1,
+                                              "cardVisible":  true
+                                          },
+                      "taskBrief":  {
+                                        "method":  "GET",
+                                        "path":  "/person/workspace/tasks/sr_j4ed8taxxzhi0hf95xq43wd2/brief",
+                                        "status":  200,
+                                        "customerId":  "cust_yiq7m5fer8hsmabh621l87wd",
+                                        "shopifyCustomerId":  "9641924362516"
+                                    },
+                      "createSupportCase":  {
+                                                "method":  "POST",
+                                                "path":  "/person/workspace/tasks/sr_j4ed8taxxzhi0hf95xq43wd2/support-case",
+                                                "status":  201,
+                                                "result":  {
+                                                               "ok":  true,
+                                                               "taskId":  "sr_j4ed8taxxzhi0hf95xq43wd2",
+                                                               "supportCaseId":  "sr_h3hw6ktdzg084qz0w4vkjfap",
+                                                               "ticketNumber":  "SR-MQYQZC3P",
+                                                               "customerId":  "cust_yiq7m5fer8hsmabh621l87wd",
+                                                               "supportUrl":  "/support?caseId=sr_h3hw6ktdzg084qz0w4vkjfap"
+                                                           }
+                                            },
+                      "supportDetail":  {
+                                            "method":  "GET",
+                                            "path":  "/support/sr_h3hw6ktdzg084qz0w4vkjfap",
+                                            "status":  200,
+                                            "result":  {
+                                                           "id":  "sr_h3hw6ktdzg084qz0w4vkjfap",
+                                                           "ticketNumber":  "SR-MQYQZC3P",
+                                                           "title":  "Support case: Victor Santiago-Santos",
+                                                           "category":  "support_case",
+                                                           "customer":  {
+                                                                            "id":  "cust_yiq7m5fer8hsmabh621l87wd",
+                                                                            "companyName":  "OWNER",
+                                                                            "name":  "OWNER",
+                                                                            "email":  "kazecustomdesign@yahoo.com"
+                                                                        },
+                                                           "assignedTo":  {
+                                                                              "id":  "tmbr_ten_dtfbank_linda_marroquin",
+                                                                              "name":  "Linda Marroquin",
+                                                                              "email":  "dtfbanktx@gmail.com"
+                                                                          },
+                                                           "metadata":  {
+                                                                            "source":  "person_task_modal",
+                                                                            "category":  "support_case",
+                                                                            "workflow":  {
+                                                                                             "origin":  "person_task_modal",
+                                                                                             "originalTaskId":  "sr_j4ed8taxxzhi0hf95xq43wd2"
+                                                                                         },
+                                                                            "ticketNumber":  "SR-MQYQZC3P",
+                                                                            "supportCaseOnly":  true,
+                                                                            "createdByMemberId":  "tmbr_ten_dtfbank_linda_marroquin",
+                                                                            "createdFromTaskId":  "sr_j4ed8taxxzhi0hf95xq43wd2",
+                                                                            "personQueueVisible":  false,
+                                                                            "createdByMemberEmail":  "dtfbanktx@gmail.com",
+                                                                            "createdFromTaskTitle":  "Customer follow-up: OWNER",
+                                                                            "createdFromTaskSource":  "manual",
+                                                                            "personQueueHiddenReason":  "support_case",
+                                                                            "createdFromTaskTicketNumber":  "SR-MQYQYZLA"
+                                                                        }
+                                                       }
+                                        }
+                  },
+    "assertions":  {
+                       "dailyOperations200":  true,
+                       "taskVisibleInLindaKanban":  true,
+                       "brief200":  true,
+                       "briefHasRealShopifyCustomer":  true,
+                       "createEndpoint2xx":  true,
+                       "createReturnedSupportCase":  true,
+                       "supportDetail200":  true,
+                       "supportCaseLinkedToTask":  true,
+                       "cleanupAccessRevoked":  true,
+                       "noLocalhost":  true
+                   }
+}
