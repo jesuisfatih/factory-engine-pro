@@ -1,0 +1,3 @@
+﻿[Nest] 1126  - 06/29/2026, 7:27:18 AM     LOG [AppLogger] {"request_id":"4d286b9c-60c1-41b7-9a7e-0410a0210c4d","tenant_id":"ten_dtfbank","principal_id":"tmbr_ten_dtfbank_info_owner","principal_type":"member","module":"orders","action":"transfer_to_member","message":"Order transferred to staff queue","order_id":"ord_v82hxctskqfyfz7kk1168ogo","service_request_id":"sr_jy7wdfuvx24p0efvvtxiuijo","target_member_id":"tmbr_ten_dtfbank_linda_marroquin","axis":"support"}
+
+

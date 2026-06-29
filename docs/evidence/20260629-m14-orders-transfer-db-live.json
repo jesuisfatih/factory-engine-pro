@@ -1,0 +1,23 @@
+﻿{
+    "checkedAt": "2026-06-29T07:22:41.498Z",
+    "serviceRequestId": "sr_zqonyye72mgc1kxgl7r0bnue",
+    "row": {
+        "id": "sr_zqonyye72mgc1kxgl7r0bnue",
+        "tenantId": "ten_dtfbank",
+        "source": "admin_created",
+        "surface": "internal",
+        "axis": "support",
+        "title": "Order 4816 follow-up",
+        "priority": "high",
+        "status": "open",
+        "assignedMemberEmail": "dtfbanktx@gmail.com",
+        "assignedMemberName": "Linda Marroquin",
+        "metadataCategory": "admin_order_transfer",
+        "orderId": "ord_v82hxctskqfyfz7kk1168ogo",
+        "orderNumber": "4816",
+        "personQueueVisible": true,
+        "createdAt": "2026-06-29T07:20:20.908Z"
+    },
+    "supportWorkflowCategoryCountForTask": 0,
+    "pass": true
+}

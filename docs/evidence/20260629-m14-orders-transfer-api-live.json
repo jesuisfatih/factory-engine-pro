@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-06-29T07:20:25.355Z",
+  "baseUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "ownerLogin": {
+    "status": 201,
+    "principalEmail": "info@dtfbank.com"
+  },
+  "selectedOrder": {
+    "id": "ord_v82hxctskqfyfz7kk1168ogo",
+    "orderNumber": "4816",
+    "customerId": "cust_b63prax5ugnd5ev60uhtzz9h",
+    "customerName": "Teal Threads LLC",
+    "totalPrice": 3638.82,
+    "fulfillmentStatus": null
+  },
+  "detail": {
+    "status": 200,
+    "lineItemCount": 1,
+    "designFileCount": 0,
+    "historyCount": 1,
+    "ltv": 3638.82,
+    "aov": 3638.82,
+    "last30Days": {
+      "orderCount": 1,
+      "totalSpent": 3638.82
+    }
+  },
+  "transfer": {
+    "status": 201,
+    "ok": true,
+    "serviceRequestId": "sr_zqonyye72mgc1kxgl7r0bnue",
+    "assignedMemberName": "Linda Marroquin",
+    "axis": "support",
+    "source": "admin_created",
+    "queueSource": "admin_transfer"
+  },
+  "lindaQueue": {
+    "status": 200,
+    "cardFound": true,
+    "source": "admin_transfer",
+    "title": "Morgan Allen",
+    "assignedMemberName": "Linda Marroquin",
+    "axis": "support",
+    "summary": "SR-L7R0BNUE - U9 - Open - Now"
+  },
+  "pass": true
+}

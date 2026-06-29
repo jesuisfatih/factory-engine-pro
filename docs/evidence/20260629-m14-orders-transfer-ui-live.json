@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-06-29T07:35:11.379Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "orderId": "ord_v82hxctskqfyfz7kk1168ogo",
+  "orderNumber": "4816",
+  "uiCreatedServiceRequestId": "sr_jy7wdfuvx24p0efvvtxiuijo",
+  "apiOrderDetailHasHistory": true,
+  "apiOrderHistoryCount": 1,
+  "apiPriorityCardFound": true,
+  "apiPriorityCard": {
+    "id": "sr_jy7wdfuvx24p0efvvtxiuijo",
+    "title": "Morgan Allen",
+    "source": "admin_transfer",
+    "axis": "support",
+    "assignedMemberName": "Linda Marroquin",
+    "priority": 3,
+    "urgencyScore": 10,
+    "segment": "admin_order_transfer",
+    "miniOrder": {
+      "orderNumber": "4816",
+      "totalPrice": 3638.82,
+      "currency": "USD"
+    }
+  },
+  "modalHasOrderDetail": true,
+  "modalHasHistory": true,
+  "modalHasTransferButton": true,
+  "lindaQueueHasAdminTransfer": true,
+  "lindaQueueHasOrder": true,
+  "lindaCardVisibleInViewport": true,
+  "screenshots": [
+    "docs/evidence/20260629-m14-orders-modal-transfer-ui-live.png",
+    "docs/evidence/20260629-m14-orders-modal-history-ui-live.png",
+    "docs/evidence/20260629-m14-linda-admin-transfer-card-ui-live.png",
+    "docs/evidence/20260629-m14-linda-admin-transfer-card-crop-ui-live.png"
+  ],
+  "pass": true
+}
