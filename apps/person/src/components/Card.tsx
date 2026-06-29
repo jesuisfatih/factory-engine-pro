@@ -1,10 +1,11 @@
-import { Activity, AlarmClockOff, ArrowRightLeft, ShoppingBag, Sparkles, Tags } from 'lucide-react';
+import { Activity, AlarmClockOff, Archive, ArrowRightLeft, ShoppingBag, Sparkles, Tags } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
 
 interface Props {
   card: CardData;
   onTogglePin: (id: string) => void;
+  onArchive?: (card: CardData) => void;
   onOpen?: (id: string) => void;
   onTransfer?: (card: CardData) => void;
 }
@@ -27,7 +28,7 @@ function fmtMoney(value: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
-export function Card({ card, onTogglePin, onOpen, onTransfer }: Props) {
+export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
@@ -79,6 +80,22 @@ export function Card({ card, onTogglePin, onOpen, onTransfer }: Props) {
         >
           {card.pinned ? 'Pinned' : 'Pin'}
         </button>
+        {card.kind === 'task' && onArchive ? (
+          <button
+            type="button"
+            className="archive-btn"
+            title="Archive from my Daily list"
+            aria-label={`Archive ${card.title}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onArchive(card);
+            }}
+          >
+            <Archive size={12} />
+            <span>Archive</span>
+          </button>
+        ) : null}
         {card.kind === 'task' ? (
           <button
             type="button"

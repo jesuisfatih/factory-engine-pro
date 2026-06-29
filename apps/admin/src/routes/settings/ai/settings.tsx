@@ -100,14 +100,14 @@ function AiSettingsView() {
 
         {(config.isLoading || health.isLoading) && (
           <StateBlock
-            title="Loading AI configuration"
+            title="Loading resolver configuration"
             body="Reading the tenant credential marker and live Anthropic health state."
           />
         )}
 
         {credentialStatusError && (
           <StateBlock
-            title="AI configuration could not load"
+            title="Resolver configuration could not load"
             body={credentialStatusError}
             icon={<AlertTriangle size={18} color="var(--danger)" />}
             action={<button type="button" className="btn" onClick={() => { config.refetch(); health.refetch(); }}><RefreshCw size={14} /> Retry</button>}

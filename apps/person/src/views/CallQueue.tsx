@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { ChevronDown, GripVertical, Phone, StickyNote, X } from 'lucide-react';
-import { fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, toggleCustomerPin, togglePin } from '../api/live';
+import { archiveDailyCall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
@@ -72,6 +72,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     },
   });
 
+  const archiveTask = useMutation({
+    mutationFn: (card: CardData) => archiveDailyCall(card.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK_BASE });
+    },
+  });
+
   const customerNote = useMutation({
     mutationFn: (input: { customerId: string; body: string }) => saveCustomerNote(input.customerId, { body: input.body }),
     onSuccess: (detail, input) => {
@@ -125,7 +132,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       <div className="kpis">
-        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days' : range === 'today' ? 'today only' : 'last 7 days workflow'}</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days call analysis'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
         {!archive && <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>}
@@ -137,14 +144,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={error ? new Error(friendlyError(error)) : null}
         empty={empty}
         emptyTitle={archive ? 'No archived daily calls' : 'No call work assigned yet'}
-        emptyBody={archive ? 'Workflow tasks older than 7 days will appear here after they age out of the Daily call list.' : 'Workflow tasks from recent calls and assigned Shopify segment customers will appear here.'}
+        emptyBody={archive ? 'Call-analysis tasks older than 7 days, or tasks you archived manually, will appear here.' : 'Recent call tasks and assigned Shopify segment customers will appear here.'}
       >
         <div className={`ops-grid${archive ? ' archive' : ''}`}>
           <section className="ops-panel">
             <div className="ops-head">
               <div>
                 <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
-                <p>{archive ? 'Workflow tasks older than 7 days from live call analysis.' : 'Workflow tasks from live call analysis, grouped by day.'}</p>
+                <p>{archive ? 'Archived call-analysis tasks for this staff member.' : 'Live call-analysis tasks grouped by day.'}</p>
               </div>
               <div className="ops-head-actions">
                 {!archive && (
@@ -157,12 +164,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               </div>
             </div>
             {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
+            {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
             <DailyWorkflowList
               cards={daily}
-              emptyLabel={archive ? 'No workflow tasks older than 7 days.' : range === 'today' ? 'No workflow tasks from today.' : 'No workflow tasks from the last 7 days.'}
+              emptyLabel={archive ? 'No archived call-analysis tasks.' : range === 'today' ? 'No call-analysis tasks from today.' : 'No call-analysis tasks from the last 7 days.'}
               reorderDisabled={reorderDaily.isPending}
               onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
               onTogglePin={(card) => taskPin.mutate(card)}
+              onArchive={(card) => archiveTask.mutate(card)}
               onOpen={setSelectedId}
               onTransfer={setTransferCard}
             />
@@ -172,7 +181,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <div className="ops-head">
               <div>
                 <h2>Priority kanban</h2>
-                <p>Assigned Shopify segments grouped by segment owner scope.</p>
+                <p>Assigned Shopify segment customers grouped by owner scope.</p>
               </div>
               <span className="ops-count">{groups.length} segments</span>
             </div>
@@ -248,6 +257,7 @@ function DailyWorkflowList({
   reorderDisabled,
   onReorder,
   onTogglePin,
+  onArchive,
   onOpen,
   onTransfer,
 }: {
@@ -256,6 +266,7 @@ function DailyWorkflowList({
   reorderDisabled: boolean;
   onReorder: (orderedItemIds: string[]) => void;
   onTogglePin: (card: CardData) => void;
+  onArchive: (card: CardData) => void;
   onOpen: (id: string) => void;
   onTransfer: (card: CardData) => void;
 }) {
@@ -284,6 +295,7 @@ function DailyWorkflowList({
               card={row.card}
               disabled={reorderDisabled}
               onTogglePin={() => onTogglePin(row.card)}
+              onArchive={() => onArchive(row.card)}
               onOpen={onOpen}
               onTransfer={onTransfer}
             />
@@ -298,12 +310,14 @@ function SortableDailyTaskCard({
   card,
   disabled,
   onTogglePin,
+  onArchive,
   onOpen,
   onTransfer,
 }: {
   card: CardData;
   disabled: boolean;
   onTogglePin: () => void;
+  onArchive: () => void;
   onOpen: (id: string) => void;
   onTransfer: (card: CardData) => void;
 }) {
@@ -327,7 +341,7 @@ function SortableDailyTaskCard({
       </button>
       <div className="daily-task-main">
         <DailyTaskBadges card={card} />
-        <Card card={card} onTogglePin={onTogglePin} onOpen={onOpen} onTransfer={onTransfer} />
+        <Card card={card} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
       </div>
     </div>
   );

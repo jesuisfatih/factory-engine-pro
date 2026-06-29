@@ -34,7 +34,7 @@ function ServicesView() {
       <section className="section workspace-state">
         <RefreshCw className="spin" size={18} />
         <div>
-          <h3>Loading AI services</h3>
+          <h3>Loading resolver services</h3>
           <p>Checking the live Anthropic provider, resolver endpoint, and prompt registry.</p>
         </div>
       </section>
@@ -46,7 +46,7 @@ function ServicesView() {
       <section className="section workspace-state error-state">
         <AlertTriangle size={18} />
         <div>
-          <h3>AI services could not load</h3>
+          <h3>Resolver services could not load</h3>
           <p>{error}</p>
           <button
             type="button"
@@ -69,7 +69,7 @@ function ServicesView() {
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          Live AI service registry
+          Live resolver service registry
         </div>
         <button
           id="btn-ai-services-refresh"

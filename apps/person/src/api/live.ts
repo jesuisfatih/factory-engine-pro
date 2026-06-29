@@ -2,6 +2,7 @@ import type {
   CreatePersonRequestInput,
   CustomerDetailPanelDto,
   PersonDailyOperationRange,
+  ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SavePersonEmailDraftInput,
@@ -137,6 +138,8 @@ export const moveCard = (input: { id: string; columnId: ColumnId; index: number 
   personApi.movePersonQueueCard(input.id, { columnId: input.columnId, index: input.index }) as Promise<Card>;
 export const reorderDailyCalls = (input: ReorderPersonDailyCallInput) =>
   personApi.reorderPersonDailyCalls(input) as Promise<ReorderPersonDailyCallResult>;
+export const archiveDailyCall = (id: string) =>
+  personApi.archivePersonDailyCall(id) as Promise<ArchivePersonDailyCallResult>;
 export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
 export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
 export const fetchTransferTargets = () => personApi.personTransferTargets() as Promise<TransferTarget[]>;

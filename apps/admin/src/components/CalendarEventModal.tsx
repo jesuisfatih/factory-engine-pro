@@ -116,7 +116,7 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
             </form>
           </div>
 
-          {/* AI Brief (only for AI-sourced events) */}
+          {/* Resolver brief (only for generated events) */}
           {event.aiBrief ? (
             <div className="ai-brief" id={`ai-brief-${event.id}`}>
               <div className="head">
@@ -165,7 +165,7 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
           ) : (
             <section className="event-summary">
               <h4>Manual event</h4>
-              <div className="meta">No AI brief for manually-created events. Add notes during the call to feed future intelligence.</div>
+              <div className="meta">No generated brief for manually-created events. Add notes during the call to feed future context.</div>
             </section>
           )}
         </div>

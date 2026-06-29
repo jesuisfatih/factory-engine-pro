@@ -22,7 +22,7 @@ export function TrainingView() {
         error={error ? new Error(friendlyError(error)) : null}
         empty={cards.length === 0}
         emptyTitle="No live training cards"
-        emptyBody="Active segments and high-priority support cases will create coaching cards here."
+        emptyBody="Active segments and high-priority customer-request records will create coaching cards here."
       >
         <div className="announce-feed">
           {cards.map((card) => (

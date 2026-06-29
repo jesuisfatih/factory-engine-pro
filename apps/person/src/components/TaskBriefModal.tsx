@@ -546,7 +546,7 @@ function RuleTraceBlock({
           <div className="rule-trace-meta">
             <span><GitBranch size={11} /> {rule?.name ?? workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
             <span>{labelize(workflowTrace.trigger)}</span>
-            <span>{workflowTrace.source ?? 'workflow'}</span>
+            <span>{workflowTrace.source ?? 'automation'}</span>
             {rule ? (
               <a href={rule.canvasUrl} className="rule-canvas-link">
                 <ExternalLink size={11} /> Open rule canvas
@@ -579,7 +579,7 @@ function RuleTraceBlock({
           )}
         </>
       ) : (
-        <div className="brief-val brief-val-muted">No workflow rule trace is saved for this task.</div>
+        <div className="brief-val brief-val-muted">No rule trace is saved for this task.</div>
       )}
     </div>
   );

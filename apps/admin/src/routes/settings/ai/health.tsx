@@ -48,7 +48,7 @@ function HealthView() {
       <section className="section workspace-state">
         <RefreshCw className="spin" size={18} />
         <div>
-          <h3>Checking AI provider</h3>
+          <h3>Checking resolver provider</h3>
           <p>Loading tenant credentials, provider reachability, and resolver prompt metadata.</p>
         </div>
       </section>
@@ -61,7 +61,7 @@ function HealthView() {
       <section className="section workspace-state error-state">
         <AlertTriangle size={18} />
         <div>
-          <h3>AI health could not load</h3>
+          <h3>Resolver health could not load</h3>
           <p>{apiErrorMessage(error)}</p>
           <button
             type="button"

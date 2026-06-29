@@ -3,8 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 function TasksView() {
   return (
     <div className="stub">
-      <h3>AI Tasks</h3>
-      <p>Pending AI-proposed tasks awaiting operator approval. Same table shape as /tasks/ai-tasks; lives here as a quick AI Hub side-view.</p>
+      <h3>Resolver tasks</h3>
+      <p>Pending resolver-proposed tasks awaiting operator approval. Same table shape as /tasks/generated-tasks; lives here as a quick Resolver Hub side-view.</p>
     </div>
   );
 }

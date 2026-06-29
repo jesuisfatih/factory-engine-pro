@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
@@ -31,6 +31,7 @@ import type {
   WorkflowConditionTrace,
   WorkflowWhenGroupTrace,
   CustomerAssignmentAxis,
+  ArchivePersonDailyCallResult,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
@@ -288,6 +289,9 @@ export class PersonWorkspaceService {
       dailyTaskRows
         .filter((row) => this.isQueueVisible(row))
         .filter((row) => this.isDailyWorkflowTask(row))
+        .filter((row) => range === 'archive'
+          ? this.isDailyWorkflowArchived(row, member.id, dailyWindow.start)
+          : !this.isArchivedForMember(row, member.id))
         .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext)),
       dailyTaskOrderRows,
     ).slice(0, 150);
@@ -333,13 +337,20 @@ export class PersonWorkspaceService {
     const ownerOrOperatorScope: Prisma.ServiceRequestWhereInput[] = [
       { assignedMemberId: member.id },
       ...(sourceCallIds.length > 0 ? [{ sourceCallId: { in: sourceCallIds } }] : []),
+      ...(end === null ? [{ metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } }] : []),
     ];
+    const archiveDateScope: Prisma.ServiceRequestWhereInput[] = end === null
+      ? [
+          { createdAt: { lt: start } },
+          { metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } },
+        ]
+      : [{ createdAt: { gte: start, lt: end } }];
     return this.prisma.db.serviceRequest.findMany({
       where: {
         OR: ownerOrOperatorScope,
         source: 'admin_created',
         axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
-        createdAt: end ? { gte: start, lt: end } : { lt: start },
+        AND: [{ OR: archiveDateScope }],
         status: { notIn: Array.from(CLOSED) },
       },
       include: serviceRequestInclude,
@@ -575,6 +586,37 @@ export class PersonWorkspaceService {
       item_count: orderedItemIds.length,
     });
     return { ok: true, segmentId, orderedItemIds };
+  }
+
+  async archiveDailyCall(id: string): Promise<ArchivePersonDailyCallResult> {
+    const member = await this.currentMember();
+    const row = await this.requireServiceRequest(id);
+    await this.assertServiceRequestScoped(row, member.id);
+    if (!this.isDailyWorkflowTask(row)) {
+      throw new BadRequestException('Only call-analysis daily tasks can be archived from this list');
+    }
+
+    const archivedAt = new Date().toISOString();
+    const metadata = this.record(row.metadata);
+    const archivedBy = this.record(metadata.personArchivedBy);
+    archivedBy[member.id] = archivedAt;
+
+    await this.prisma.db.serviceRequest.updateMany({
+      where: { id: row.id },
+      data: {
+        metadata: {
+          ...metadata,
+          personArchivedBy: archivedBy,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('person_workspace', 'daily.archive', 'Person daily call task archived', {
+      service_request_id: row.id,
+      member_id: member.id,
+      archived_at: archivedAt,
+    });
+
+    return { ok: true, taskId: row.id, archived: true, archivedAt };
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
@@ -1812,7 +1854,7 @@ export class PersonWorkspaceService {
       customOrder: null,
       pinned: Boolean(pin),
       pinId: pin?.id ?? null,
-      reason: `${membership.segment.name} segment - ${repeatCount} recent requests - ${assignedAxis} axis`,
+      reason: `${membership.segment.name} segment customer - ${repeatCount} recent request${repeatCount === 1 ? '' : 's'}`,
     };
   }
 
@@ -1890,7 +1932,7 @@ export class PersonWorkspaceService {
       assignedMemberName: memberDisplayName(member),
       axis: axisOrNull(item.assignedAxis),
       title: item.customerName,
-      summary: `${item.segment.name} segment - U${urgencyScore} - ${item.assignedAxis} axis`,
+      summary: `${item.segment.name} segment customer - U${urgencyScore}`,
       segment: item.segment.name,
       segmentColor: item.segment.color,
       segmentId: item.segment.id,
@@ -2250,6 +2292,16 @@ export class PersonWorkspaceService {
     if (this.isSupportWorkflowCase(row, metadata)) return false;
     const kind = metadata.personWorkspaceKind;
     return typeof kind !== 'string' || !INTERNAL_WORKSPACE_KINDS.has(kind);
+  }
+
+  private isArchivedForMember(row: { metadata: Prisma.JsonValue }, memberId: string) {
+    const metadata = this.record(row.metadata);
+    const archivedBy = this.record(metadata.personArchivedBy);
+    return typeof archivedBy[memberId] === 'string' || typeof archivedBy[memberId] === 'number';
+  }
+
+  private isDailyWorkflowArchived(row: { metadata: Prisma.JsonValue; createdAt: Date }, memberId: string, archiveStart: Date) {
+    return row.createdAt.getTime() < archiveStart.getTime() || this.isArchivedForMember(row, memberId);
   }
 
   private isOperationalTrainingRequest(row: { status: string; priority: string; source: string; surface: string; title: string; metadata: Prisma.JsonValue }) {

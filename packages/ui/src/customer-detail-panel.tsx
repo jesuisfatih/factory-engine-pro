@@ -322,7 +322,7 @@ function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
 
 function TasksTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
   const rows = detail.tabs.tasks;
-  if (rows.length === 0) return <EmptyTab title="No tasks" body="No workflow, support, or manual task is linked to this customer." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No tasks" body="No call-analysis or manual task is linked to this customer." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((task) => (

@@ -180,7 +180,7 @@ button { font-family: inherit; }
 
 /* ─── Kanban ─────────────────────────────────────────────── */
 .queue-wrap { display: block; min-height: 0; }
-.ops-grid { display: grid; grid-template-columns: minmax(360px, .95fr) minmax(440px, 1.15fr) minmax(220px, .55fr); align-items: start; gap: 10px; min-height: 0; }
+.ops-grid { display: grid; grid-template-columns: minmax(420px, 0.95fr) minmax(520px, 1.15fr) minmax(240px, 0.42fr); align-items: start; gap: 10px; min-height: 0; }
 .ops-grid.archive { grid-template-columns: minmax(320px, 720px); align-content: start; }
 .ops-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 190px); }
 .ops-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 2px 9px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
@@ -232,9 +232,9 @@ button { font-family: inherit; }
 .segment-customer-top { align-items: flex-start; }
 .segment-customer-title { display: grid; gap: 2px; }
 .segment-customer-contact { color: var(--text-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.segment-customer-foot { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 9px; color: var(--text-muted); font-size: 10px; }
+.segment-customer-foot { display: grid; grid-template-columns: auto minmax(120px, 1fr); align-items: center; gap: 8px; margin-top: 9px; color: var(--text-muted); font-size: 10px; }
 .segment-customer-orders { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; justify-self: end; }
-.segment-customer-actions { display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
+.segment-customer-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
 .quick-action {
   display: inline-flex;
   align-items: center;
@@ -321,7 +321,8 @@ button { font-family: inherit; }
 .card-signals { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 7px; }
 .card-signals span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
 .card-signals svg { flex-shrink: 0; }
-.card .row2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; }
+.card .row2 { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+.card .row2 .chip { margin-right: auto; }
 .chip { font-size: 9px; color: #fff; padding: 2px 7px; border-radius: 999px; font-weight: 600; letter-spacing: .2px; }
 .pin-btn { background: transparent; border: 1px solid var(--border); color: var(--text-faint); cursor: pointer; padding: 2px 7px; border-radius: 6px; font-size: 10px; }
 .pin-btn:hover { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
@@ -329,6 +330,9 @@ button { font-family: inherit; }
 .transfer-btn { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 2px 7px; border-radius: 6px; font-size: 10px; }
 .transfer-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .transfer-btn svg { flex-shrink: 0; }
+.archive-btn { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 2px 7px; border-radius: 6px; font-size: 10px; }
+.archive-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.archive-btn svg { flex-shrink: 0; }
 
 /* ─── Right rail (pin board) ─────────────────────────────── */
 .with-rail { display: grid; grid-template-columns: 1fr 280px; gap: 12px; min-height: 0; }

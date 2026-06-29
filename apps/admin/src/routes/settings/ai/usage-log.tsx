@@ -103,7 +103,7 @@ function UsageLogView() {
             {(health.isLoading || prompt.isLoading) && (
               <tr>
                 <td colSpan={7} style={{ padding: 24, color: 'var(--text-muted)' }}>
-                  <RefreshCw className="spin" size={14} /> Loading live AI request state
+                  <RefreshCw className="spin" size={14} /> Loading live resolver request state
                 </td>
               </tr>
             )}
@@ -125,7 +125,7 @@ function UsageLogView() {
             {!health.isLoading && !prompt.isLoading && rows.length === 0 && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-faint)' }}>
-                  <FileText size={16} /> No live AI request state is available yet.
+                  <FileText size={16} /> No live resolver request state is available yet.
                 </td>
               </tr>
             )}

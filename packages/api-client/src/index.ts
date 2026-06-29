@@ -85,6 +85,7 @@ import type {
   PatchMailFlowInput,
   MovePersonQueueCardInput,
   PersonDailyOperationRange,
+  ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SendPersonMessageInput,
@@ -526,6 +527,10 @@ export class ApiClient {
 
   reorderPersonDailyCalls(input: ReorderPersonDailyCallInput) {
     return this.patch<ReorderPersonDailyCallResult>('/person/workspace/daily-call-order', input);
+  }
+
+  archivePersonDailyCall(id: string) {
+    return this.post<ArchivePersonDailyCallResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/archive`, {});
   }
 
   togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {

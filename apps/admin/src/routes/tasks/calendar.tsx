@@ -76,7 +76,7 @@ function CalendarView() {
           </button>
           <h3>{weekLabel}</h3>
           <span className="muted" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {events.filter((event) => event.source !== 'manual').length} AI-tasked
+            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {events.filter((event) => event.source !== 'manual').length} call-analysis
           </span>
         </div>
 

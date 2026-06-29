@@ -58,7 +58,7 @@ export function CalendarView() {
     <>
       <div className="page-head">
         <h2>Calendar</h2>
-        <div className="sub">Your week - workflow calls show their brief on click</div>
+        <div className="sub">Your week - call-analysis items open their brief on click</div>
       </div>
 
       <div className="cal-shell">
@@ -74,7 +74,7 @@ export function CalendarView() {
           </button>
           <h3>{weekLabel}</h3>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {assistedCount} workflow
+            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {assistedCount} call-analysis
           </span>
         </div>
 

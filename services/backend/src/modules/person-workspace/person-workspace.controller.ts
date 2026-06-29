@@ -71,6 +71,12 @@ export class PersonWorkspaceController {
     return this.workspace.reorderDailyCalls(body);
   }
 
+  @Post('tasks/:id/archive')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  archiveDailyCall(@Param('id') id: string) {
+    return this.workspace.archiveDailyCall(id);
+  }
+
   @Post('queue/:id/pin')
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   toggleQueuePin(

@@ -297,6 +297,14 @@ export const reorderPersonDailyCallResultSchema = z.object({
 });
 export type ReorderPersonDailyCallResult = z.infer<typeof reorderPersonDailyCallResultSchema>;
 
+export const archivePersonDailyCallResultSchema = z.object({
+  ok: z.literal(true),
+  taskId: z.string(),
+  archived: z.literal(true),
+  archivedAt: z.string(),
+});
+export type ArchivePersonDailyCallResult = z.infer<typeof archivePersonDailyCallResultSchema>;
+
 export const togglePersonQueuePinSchema = z.object({
   pinned: z.boolean().optional(),
 });

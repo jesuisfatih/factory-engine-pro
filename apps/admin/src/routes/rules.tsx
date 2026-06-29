@@ -176,7 +176,7 @@ function ConditionNode({ data }: NodeProps<Node<ConditionNodeData>>) {
 
       {field?.aiDerived && (
         <div className="rule-node-confidence">
-          <span className="muted">AI confidence &gt;=</span>
+          <span className="muted">Resolver confidence &gt;=</span>
           <input
             type="number"
             step="0.05"
