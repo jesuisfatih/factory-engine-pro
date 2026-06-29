@@ -277,7 +277,8 @@ export function CustomersPage() {
       )}
       {customers.isSuccess && rows.length > 0 && (
         <div className="data-card">
-          <table className="data-table customers-table" id="table-customers">
+          <div className="data-table-wrap customers-table-wrap">
+            <table className="data-table customers-table" id="table-customers">
             <thead>
               <tr>
                 <th><input type="checkbox" checked={rows.every((row) => selected.has(row.id))} onChange={() => toggleAll(rows, selected, setSelected)} aria-label={t('customers.select_all')} /></th>
@@ -329,7 +330,8 @@ export function CustomersPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
       <CustomerDetailPanel
