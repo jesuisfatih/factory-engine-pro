@@ -7,6 +7,8 @@ import type {
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
   PersonDailyCallItem,
+  PersonDailyOperationRange,
+  PersonDailyOperationsQuery,
   PersonTaskTransferResult,
   PersonTaskSupportCaseResult,
   PersonMiniOrder,
@@ -47,6 +49,8 @@ const LEGACY_CUSTOMER_PIN_SOURCE = 'manual_pin';
 const CUSTOMER_PIN_SURFACE = 'person_pin';
 const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request', CUSTOMER_PIN_KIND]);
 const DAILY_WORKFLOW_TRIGGERS = new Set(['aircall.transcript.received', 'call_intent.classified', 'psych.tag.detected']);
+const DAILY_WORKFLOW_AXES = new Set(['sales', 'account']);
+const ARCHIVE_ORDER_DATE = new Date('1970-01-01T00:00:00.000Z');
 const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
   unassigned: 'open',
   in_progress: 'in_progress',
@@ -179,16 +183,20 @@ export class PersonWorkspaceService {
     return (await this.dailyOperationsFor(member)).priorityKanban;
   }
 
-  async dailyOperations() {
+  async dailyOperations(query: PersonDailyOperationsQuery = { range: 'last7d' }) {
     const member = await this.currentMember();
-    return this.dailyOperationsFor(member);
+    return this.dailyOperationsFor(member, query.range);
   }
 
-  private async dailyOperationsFor(member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>) {
+  private async dailyOperationsFor(
+    member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>,
+    range: PersonDailyOperationRange = 'last7d',
+  ) {
     const assignments = await this.axisAssignments(member.id);
     const visibleCustomerIds = Array.from(assignments.keys());
     const visibleAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
     const today = istanbulDayRange();
+    const dailyWindow = dailyWorkflowRange(range, today);
 
     const [config, rawSegmentOwnerships] = await Promise.all([
       this.urgencyConfig(),
@@ -226,11 +234,11 @@ export class PersonWorkspaceService {
           take: 10000,
         })
         : Promise.resolve([]),
-      this.dailyWorkflowRows(member.id, today.start, today.end),
+      this.dailyWorkflowRows(member.id, dailyWindow.start, dailyWindow.end),
       this.prisma.db.personDailyTaskOrder.findMany({
         where: {
           memberId: member.id,
-          workDate: today.workDate,
+          workDate: dailyWindow.orderDate,
         },
         select: {
           serviceRequestId: true,
@@ -319,12 +327,13 @@ export class PersonWorkspaceService {
     };
   }
 
-  private dailyWorkflowRows(memberId: string, start: Date, end: Date) {
+  private dailyWorkflowRows(memberId: string, start: Date, end: Date | null) {
     return this.prisma.db.serviceRequest.findMany({
       where: {
         assignedMemberId: memberId,
         source: 'admin_created',
-        createdAt: { gte: start, lt: end },
+        axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
+        createdAt: end ? { gte: start, lt: end } : { lt: start },
         status: { notIn: Array.from(CLOSED) },
       },
       include: serviceRequestInclude,
@@ -338,6 +347,7 @@ export class PersonWorkspaceService {
     const workflow = this.record(metadata.workflow);
     const trigger = String(workflow.trigger ?? '');
     if (!row.matchedRuleId && !workflow.matchedRuleId && !workflow.ruleId) return false;
+    if (!DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''))) return false;
     return DAILY_WORKFLOW_TRIGGERS.has(trigger) && taskSource(row) === 'ai_transcript';
   }
 
@@ -345,17 +355,17 @@ export class PersonWorkspaceService {
     cards: PersonQueueCardDto[],
     orderRows: PersonDailyTaskOrderRow[],
   ) {
-    if (orderRows.length === 0) return [...cards].sort(sortByUrgency);
+    if (orderRows.length === 0) return [...cards].sort(sortByCreatedAtDesc);
     const orderByTaskId = new Map(orderRows.map((row) => [row.serviceRequestId, row.position] as const));
     return cards
       .map((card) => ({ card, position: orderByTaskId.get(card.id) ?? null }))
       .sort((left, right) => {
         if (left.position !== null && right.position !== null) {
-          return left.position - right.position || sortByUrgency(left.card, right.card);
+          return left.position - right.position || sortByCreatedAtDesc(left.card, right.card);
         }
         if (left.position !== null) return -1;
         if (right.position !== null) return 1;
-        return sortByUrgency(left.card, right.card);
+        return sortByCreatedAtDesc(left.card, right.card);
       })
       .map((entry) => entry.card);
   }
@@ -427,8 +437,8 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const tenantId = this.tenantId();
     if (!input.segmentId) {
-      const today = istanbulDayRange();
-      const operations = await this.dailyOperationsFor(member);
+      const dailyWindow = dailyWorkflowRange(input.range ?? 'last7d', istanbulDayRange());
+      const operations = await this.dailyOperationsFor(member, input.range ?? 'last7d');
       const currentById = new Map(operations.dailyCallList.map((item) => [item.id, item] as const));
       const requested = uniqueStrings(input.orderedItemIds).filter((id) => currentById.has(id));
       if (requested.length === 0) throw new BadRequestException('No valid daily workflow task cards were provided');
@@ -442,7 +452,7 @@ export class PersonWorkspaceService {
           where: {
             tenantId,
             memberId: member.id,
-            workDate: today.workDate,
+            workDate: dailyWindow.orderDate,
             serviceRequestId: { notIn: orderedItemIds },
           },
         }),
@@ -451,7 +461,7 @@ export class PersonWorkspaceService {
             tenantId_memberId_workDate_serviceRequestId: {
               tenantId,
               memberId: member.id,
-              workDate: today.workDate,
+              workDate: dailyWindow.orderDate,
               serviceRequestId: id,
             },
           },
@@ -459,7 +469,7 @@ export class PersonWorkspaceService {
             id: prefixedId('pdto'),
             tenantId,
             memberId: member.id,
-            workDate: today.workDate,
+            workDate: dailyWindow.orderDate,
             serviceRequestId: id,
             position: index,
           },
@@ -471,7 +481,8 @@ export class PersonWorkspaceService {
 
       this.logger.log('person_workspace', 'daily.workflow_reorder', 'Person daily workflow task order saved', {
         member_id: member.id,
-        work_date: today.workDate.toISOString().slice(0, 10),
+        work_date: dailyWindow.orderDate.toISOString().slice(0, 10),
+        range: input.range ?? 'last7d',
         item_count: orderedItemIds.length,
       });
       return { ok: true, segmentId: null, orderedItemIds };
@@ -2003,6 +2014,7 @@ export class PersonWorkspaceService {
     const header = taskHeader(row, metadata, callContext);
     const ticket = ticketNumber(row);
     const workflowTrace = workflowTraceFromMetadata(metadata);
+    const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
     const matchedRuleId = row.matchedRuleId ?? workflowTrace?.matchedRuleId ?? workflowTrace?.ruleId ?? null;
     const urgencyBreakdown = this.scoring.score({
       priority: row.priority,
@@ -2033,6 +2045,9 @@ export class PersonWorkspaceService {
       pinned: pinnedAt !== null,
       pinnedAt,
       source,
+      createdAt: row.createdAt.toISOString(),
+      callIntent: workflowBadges.callIntent,
+      psychTags: workflowBadges.psychTags,
       phone: header.phone ?? undefined,
       email: header.email ?? undefined,
       ordersCount: row.customer?.ordersCount ?? undefined,
@@ -2388,6 +2403,29 @@ function istanbulDayRange(now = new Date()) {
   };
 }
 
+function dailyWorkflowRange(range: PersonDailyOperationRange, today = istanbulDayRange()) {
+  const sevenDayStart = new Date(today.start.getTime() - 6 * 86_400_000);
+  if (range === 'today') {
+    return {
+      start: today.start,
+      end: today.end,
+      orderDate: today.workDate,
+    };
+  }
+  if (range === 'archive') {
+    return {
+      start: sevenDayStart,
+      end: null,
+      orderDate: ARCHIVE_ORDER_DATE,
+    };
+  }
+  return {
+    start: sevenDayStart,
+    end: today.end,
+    orderDate: today.workDate,
+  };
+}
+
 function sortDaily(
   left: { urgencyScore: number; customerName: string; repeatCount: number },
   right: { urgencyScore: number; customerName: string; repeatCount: number },
@@ -2525,6 +2563,28 @@ function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTas
   }
 
   return trace;
+}
+
+function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskStateSnapshot: unknown) {
+  const workflow = asRecord(metadata.workflow);
+  const params = asRecord(workflow.params);
+  const snapshot = asRecord(taskStateSnapshot);
+  const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
+  const callIntent = stringOrNull(params.intent)
+    ?? stringOrNull(params.callIntent)
+    ?? stringOrNull(params.call_intent)
+    ?? stringOrNull(resolverOutput.call_intent)
+    ?? stringOrNull(resolverOutput.callIntent);
+  const psychTags = uniqueStrings([
+    ...stringArray(params.psychTags),
+    ...stringArray(params.psych_tags),
+    ...stringArray(resolverOutput.psych_tags),
+    ...stringArray(resolverOutput.psychTags),
+    stringOrNull(params.tag),
+    stringOrNull(params.psychTag),
+    stringOrNull(params.psych_tag),
+  ].filter((value): value is string => Boolean(value)));
+  return { callIntent, psychTags };
 }
 
 function taskStateSnapshotFromJson(value: unknown): PersonTaskStateSnapshot | undefined {
@@ -2905,6 +2965,15 @@ function sortByUrgency(left: { urgencyScore: number; pinnedAt: number | null; ti
   return right.urgencyScore - left.urgencyScore
     || (right.pinnedAt ?? 0) - (left.pinnedAt ?? 0)
     || left.title.localeCompare(right.title);
+}
+
+function sortByCreatedAtDesc(
+  left: { createdAt?: string; urgencyScore: number; pinnedAt: number | null; title: string },
+  right: { createdAt?: string; urgencyScore: number; pinnedAt: number | null; title: string },
+) {
+  const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
+  const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
+  return rightTime - leftTime || sortByUrgency(left, right);
 }
 
 function colorForUrgency(score: number) {

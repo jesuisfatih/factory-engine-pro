@@ -13,6 +13,7 @@ interface Props {
 
 const NAV_ICONS: Record<NavId, Parameters<typeof Icon>[0]['name']> = {
   queue: 'queue',
+  'daily-archive': 'queue',
   customers: 'customers',
   email: 'mail',
   training: 'training',

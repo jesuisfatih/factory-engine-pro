@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   createPersonTaskSupportCaseSchema,
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
+  personDailyOperationsQuerySchema,
   reorderPersonDailyCallSchema,
   savePersonEmailDraftSchema,
   savePersonNoteSchema,
@@ -15,6 +16,7 @@ import {
   type CreatePersonRequestInput,
   type CreatePersonTaskSupportCaseInput,
   type MovePersonQueueCardInput,
+  type PersonDailyOperationsQuery,
   type ReorderPersonDailyCallInput,
   type SavePersonEmailDraftInput,
   type SavePersonNoteInput,
@@ -46,8 +48,10 @@ export class PersonWorkspaceController {
 
   @Get('daily-operations')
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
-  dailyOperations() {
-    return this.workspace.dailyOperations();
+  dailyOperations(
+    @Query(new ZodValidationPipe(personDailyOperationsQuerySchema)) query: PersonDailyOperationsQuery,
+  ) {
+    return this.workspace.dailyOperations(query);
   }
 
   @Patch('queue/:id/move')

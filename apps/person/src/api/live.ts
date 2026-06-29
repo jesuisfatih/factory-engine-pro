@@ -2,6 +2,7 @@ import type {
   CreatePersonRequestInput,
   CreatePersonTaskSupportCaseInput,
   CustomerDetailPanelDto,
+  PersonDailyOperationRange,
   PersonTaskSupportCaseResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -131,7 +132,8 @@ export function friendlyError(error: unknown) {
 
 export const fetchSummary = () => personApi.personWorkspaceSummary() as Promise<PersonSummary>;
 export const fetchCards = () => personApi.personQueueCards() as Promise<Card[]>;
-export const fetchDailyOperations = () => personApi.personDailyOperations() as Promise<DailyOperations>;
+export const fetchDailyOperations = (range: PersonDailyOperationRange = 'last7d') =>
+  personApi.personDailyOperations(range) as Promise<DailyOperations>;
 export const moveCard = (input: { id: string; columnId: ColumnId; index: number }) =>
   personApi.movePersonQueueCard(input.id, { columnId: input.columnId, index: input.index }) as Promise<Card>;
 export const reorderDailyCalls = (input: ReorderPersonDailyCallInput) =>

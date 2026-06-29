@@ -85,6 +85,7 @@ import type {
   PatchMailFlowInput,
   MovePersonQueueCardInput,
   CreatePersonTaskSupportCaseInput,
+  PersonDailyOperationRange,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SendPersonMessageInput,
@@ -515,8 +516,9 @@ export class ApiClient {
     return this.get('/person/workspace/queue');
   }
 
-  personDailyOperations() {
-    return this.get('/person/workspace/daily-operations');
+  personDailyOperations(range: PersonDailyOperationRange = 'last7d') {
+    const query = range === 'last7d' ? '' : `?range=${encodeURIComponent(range)}`;
+    return this.get(`/person/workspace/daily-operations${query}`);
   }
 
   movePersonQueueCard(id: string, input: MovePersonQueueCardInput) {

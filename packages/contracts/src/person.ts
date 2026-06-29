@@ -142,6 +142,9 @@ export const personQueueCardSchema = z.object({
   matchedRuleId: z.string().nullable().optional(),
   miniOrder: personMiniOrderSchema.optional(),
   performance30d: personPerformance30dSchema.optional(),
+  createdAt: z.string().optional(),
+  callIntent: z.string().nullable().optional(),
+  psychTags: z.array(z.string()).optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 
@@ -266,6 +269,14 @@ export const personDailyOperationsSchema = z.object({
 });
 export type PersonDailyOperationsDto = z.infer<typeof personDailyOperationsSchema>;
 
+export const personDailyOperationRangeSchema = z.enum(['last7d', 'today', 'archive']).default('last7d');
+export type PersonDailyOperationRange = z.infer<typeof personDailyOperationRangeSchema>;
+
+export const personDailyOperationsQuerySchema = z.object({
+  range: personDailyOperationRangeSchema.optional().default('last7d'),
+});
+export type PersonDailyOperationsQuery = z.infer<typeof personDailyOperationsQuerySchema>;
+
 export const movePersonQueueCardSchema = z.object({
   columnId: personQueueColumnSchema,
   index: z.coerce.number().int().min(0).default(0),
@@ -274,6 +285,7 @@ export type MovePersonQueueCardInput = z.infer<typeof movePersonQueueCardSchema>
 
 export const reorderPersonDailyCallSchema = z.object({
   segmentId: z.string().trim().min(1).optional(),
+  range: personDailyOperationRangeSchema.optional().default('last7d'),
   orderedItemIds: z.array(z.string().trim().min(1)).min(1).max(500),
 });
 export type ReorderPersonDailyCallInput = z.infer<typeof reorderPersonDailyCallSchema>;

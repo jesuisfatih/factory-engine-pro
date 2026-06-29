@@ -20,6 +20,7 @@ import { type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
   queue: 'Call Queue',
+  'daily-archive': 'Daily Archive',
   customers: 'Customers',
   email: 'E-mail',
   training: 'Training',
@@ -97,6 +98,7 @@ export default function App() {
   const renderView = () => {
     switch (current) {
       case 'queue': return <CallQueueView />;
+      case 'daily-archive': return <CallQueueView range="archive" archive />;
       case 'customers': return <CustomersView />;
       case 'messaging': return <MessagesView />;
       case 'calendar': return <CalendarView />;
@@ -133,7 +135,7 @@ function isStaffAuthPath(pathname: string) {
 
 function initialNav(): NavId {
   const segment = window.location.pathname.replace(/^\/staff\/?/, '').split('/')[0];
-  const allowed: NavId[] = ['queue', 'customers', 'email', 'training', 'calendar', 'notes', 'announcements', 'messaging', 'requests', 'notifications'];
+  const allowed: NavId[] = ['queue', 'daily-archive', 'customers', 'email', 'training', 'calendar', 'notes', 'announcements', 'messaging', 'requests', 'notifications'];
   return allowed.includes(segment as NavId) ? segment as NavId : 'queue';
 }
 

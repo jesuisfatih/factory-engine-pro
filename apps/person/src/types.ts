@@ -1,5 +1,6 @@
 import type {
   PersonDailyCallItem,
+  PersonDailyOperationRange,
   PersonDailyOperationsDto,
   PersonSegmentDailyGroup,
   PersonMiniOrder,
@@ -50,6 +51,12 @@ export interface Card {
   pinnedAt: number | null;
   /** Where the task came from. AI sources get a small badge + open the AI brief modal. */
   source: TaskSource;
+  /** Created timestamp used for Daily call list date grouping. */
+  createdAt?: string;
+  /** AI resolver call intent badge shown on Daily call list cards. */
+  callIntent?: string | null;
+  /** AI resolver psych tag badges shown on Daily call list cards. */
+  psychTags?: string[];
   /** Phone + email surface for the customer card panel. */
   phone?: string;
   email?: string;
@@ -72,6 +79,7 @@ export interface Card {
 export type DailyCallItem = PersonDailyCallItem;
 export type SegmentDailyGroup = PersonSegmentDailyGroup;
 export type DailyOperations = PersonDailyOperationsDto;
+export type DailyOperationRange = PersonDailyOperationRange;
 export type TaskBriefDetail = PersonTaskBriefDetail;
 export type TransferTarget = PersonTransferTarget;
 export type TransferTaskInput = TransferPersonTaskInput;
@@ -105,6 +113,7 @@ export interface CustomerRow {
 
 export type NavId =
   | 'queue'
+  | 'daily-archive'
   | 'customers'
   | 'email'
   | 'training'
@@ -124,6 +133,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { id: 'queue', label: 'Call Queue', group: 'Workspace' },
+  { id: 'daily-archive', label: 'Daily Archive', group: 'Workspace' },
   { id: 'customers', label: 'Customers', group: 'Workspace' },
   { id: 'email', label: 'E-mail', group: 'Workspace' },
   { id: 'calendar', label: 'Calendar', group: 'Workspace' },
