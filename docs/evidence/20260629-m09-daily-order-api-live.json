@@ -1,17 +1,24 @@
-﻿{
-  "generatedAt": "2026-06-29T01:31:24.787Z",
+{
+  "generatedAt": "2026-06-29T04:19:24.931Z",
   "apiBase": "https://api.dtfbank.com/api/v1",
-  "buildSha": "e2127f50dec157097f23a37c169e4c5beb80a41c",
+  "buildSha": "6b8cc165f093770208b2428fcac82d71a7a18d56",
   "tenantId": "ten_dtfbank",
   "linda": {
     "id": "tmbr_ten_dtfbank_linda_marroquin",
     "email": "dtfbanktx@gmail.com",
-    "name": "Linda Marroquin"
+    "firstName": "Linda",
+    "lastName": "Marroquin",
+    "permissionsCount": 10
   },
   "charlette": {
     "id": "tmbr_ten_dtfbank_charlette_boatman",
     "email": "charlette@dtfbank.com",
-    "name": "Charlette Boatman"
+    "firstName": "Charlette",
+    "lastName": "Boatman",
+    "permissionsCount": 10
+  },
+  "tokenCleanup": {
+    "revoked": 2
   },
   "targetSegment": {
     "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
@@ -21,18 +28,10 @@
   },
   "beforeFirst5": [
     {
-      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
-      "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
-      "customerName": "1st Place Awards & Embroidery",
-      "customOrder": 0,
-      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-      "segmentName": "Min 2 max 5 purchase"
-    },
-    {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
       "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
       "customerName": "OWNER",
-      "customOrder": 1,
+      "customOrder": 0,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
     },
@@ -40,6 +39,14 @@
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
       "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
       "customerName": "#gregsvinyl",
+      "customOrder": 1,
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+      "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "customerName": "1st Place Awards & Embroidery",
       "customOrder": 2,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
@@ -62,34 +69,16 @@
     }
   ],
   "requestedFirst3": [
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd"
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8"
   ],
-  "patchResult": {
-    "ok": true,
-    "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-    "first3": [
-      "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-      "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
-      "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd"
-    ],
-    "count": 25
-  },
   "afterFirst5": [
-    {
-      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
-      "customerName": "#gregsvinyl",
-      "customOrder": 0,
-      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-      "segmentName": "Min 2 max 5 purchase"
-    },
     {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
       "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
       "customerName": "1st Place Awards & Embroidery",
-      "customOrder": 1,
+      "customOrder": 0,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
     },
@@ -97,6 +86,14 @@
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
       "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
       "customerName": "OWNER",
+      "customOrder": 1,
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerName": "#gregsvinyl",
       "customOrder": 2,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
@@ -120,18 +117,10 @@
   ],
   "refreshFirst5": [
     {
-      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
-      "customerName": "#gregsvinyl",
-      "customOrder": 0,
-      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-      "segmentName": "Min 2 max 5 purchase"
-    },
-    {
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
       "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
       "customerName": "1st Place Awards & Embroidery",
-      "customOrder": 1,
+      "customOrder": 0,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
     },
@@ -139,6 +128,14 @@
       "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
       "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
       "customerName": "OWNER",
+      "customOrder": 1,
+      "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "segmentName": "Min 2 max 5 purchase"
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "customerName": "#gregsvinyl",
       "customOrder": 2,
       "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
       "segmentName": "Min 2 max 5 purchase"
@@ -171,23 +168,23 @@
     "groupIds": []
   },
   "dbOrderRows": {
-    "lindaFirst8": [
+    "lindaFirst12": [
       {
         "memberId": "tmbr_ten_dtfbank_linda_marroquin",
         "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-        "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+        "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
         "position": 0
       },
       {
         "memberId": "tmbr_ten_dtfbank_linda_marroquin",
         "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-        "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+        "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
         "position": 1
       },
       {
         "memberId": "tmbr_ten_dtfbank_linda_marroquin",
         "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
-        "customerId": "cust_yiq7m5fer8hsmabh621l87wd",
+        "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
         "position": 2
       },
       {
@@ -219,17 +216,45 @@
         "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
         "customerId": "cust_dmfmmg54upzdo2i1iy6hyih8",
         "position": 7
+      },
+      {
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "customerId": "cust_idl7gs53x8tp51wtlgxvplvk",
+        "position": 8
+      },
+      {
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "customerId": "cust_pfipf8ndu3vwjgdd75s42hmx",
+        "position": 9
+      },
+      {
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "customerId": "cust_v09m37m5moq83spj8rswjfgo",
+        "position": 10
+      },
+      {
+        "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+        "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+        "position": 11
       }
     ],
-    "charletteCountForSegment": 0
+    "charletteRowsForSegment": []
   },
   "assertions": {
     "lindaHadAtLeastThreeCards": true,
-    "patchSucceeded": true,
-    "afterMatchesRequestedFirst3": true,
-    "refreshMatchesRequestedFirst3": true,
+    "uiPatchSucceeded": true,
+    "apiAfterMatchesRequestedFirst3": true,
+    "apiRefreshMatchesRequestedFirst3": true,
+    "uiAfterDragMatchesRequestedFirst3": true,
+    "uiAfterRefreshMatchesRequestedFirst3": true,
+    "dbLindaRowsPersisted": true,
     "charletteUnchanged": true,
     "charletteHasNoOrderRowsForLindaSegment": true,
-    "noLocalhost": true
+    "noLocalhost": true,
+    "proofTokensRevoked": true
   }
 }

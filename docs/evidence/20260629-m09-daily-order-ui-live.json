@@ -1,59 +1,58 @@
 {
-  "generatedAt": "2026-06-29T01:32:12.996889+00:00",
+  "generatedAt": "2026-06-29T04:19:24.932Z",
+  "buildSha": "6b8cc165f093770208b2428fcac82d71a7a18d56",
+  "scenario": "Linda dragged the third card to the first position in the Min 2 max 5 purchase daily call group, then refreshed the page.",
   "appUrl": "https://app.dtfbank.com/staff/queue",
   "finalUrl": "https://app.dtfbank.com/staff/queue",
   "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m09-daily-order-ui-live.png",
-  "scenario": "Linda dragged the third card to the first position in the Min 2 max 5 purchase daily call group, then refreshed the page.",
-  "elementAtDragSource": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" str",
-  "beforeFirst5": [
+  "targetSegment": {
+    "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+    "name": "Min 2 max 5 purchase"
+  },
+  "beforeFirst5Names": [
+    "OWNER",
     "#gregsvinyl",
     "1st Place Awards & Embroidery",
-    "OWNER",
     "4 FORTY SCREENS AND STITCHES",
     "404 Cafe and Creamery"
   ],
   "beforeFirst5Ids": [
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn"
   ],
-  "expectedFirst3AfterDrag": [
-    "OWNER",
-    "#gregsvinyl",
-    "1st Place Awards & Embroidery"
-  ],
   "expectedFirst3AfterDragIds": [
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l"
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8"
   ],
-  "afterDragFirst5": [
+  "afterDragFirst5Names": [
+    "1st Place Awards & Embroidery",
     "OWNER",
     "#gregsvinyl",
-    "1st Place Awards & Embroidery",
     "4 FORTY SCREENS AND STITCHES",
     "404 Cafe and Creamery"
   ],
   "afterDragFirst5Ids": [
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn"
   ],
-  "afterRefreshFirst5": [
+  "afterRefreshFirst5Names": [
+    "1st Place Awards & Embroidery",
     "OWNER",
     "#gregsvinyl",
-    "1st Place Awards & Embroidery",
     "4 FORTY SCREENS AND STITCHES",
     "404 Cafe and Creamery"
   ],
   "afterRefreshFirst5Ids": [
+    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_yiq7m5fer8hsmabh621l87wd",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
-    "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
     "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn"
   ],
@@ -85,25 +84,22 @@
       "method": "GET"
     },
     {
-      "url": "https://api.dtfbank.com/api/v1/person/workspace/summary",
-      "status": 200,
-      "method": "GET"
-    },
-    {
       "url": "https://api.dtfbank.com/api/v1/person/workspace/daily-operations",
       "status": 200,
       "method": "GET"
     }
   ],
   "consoleMessages": [],
+  "failedResponses": [],
   "assertions": {
     "urlIsLiveApp": true,
-    "dragSourceIsHandleOrIcon": true,
     "patchStatusOk": true,
     "afterDragMatchesExpectedFirst3": true,
     "afterRefreshMatchesExpectedFirst3": true,
     "dailyOperationsLoaded": true,
     "dailyOrderPatchCaptured": true,
+    "noConsoleErrors": true,
+    "noFailedResponses": true,
     "noLocalhost": true
   }
 }

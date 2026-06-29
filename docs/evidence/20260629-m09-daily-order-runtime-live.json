@@ -1,33 +1,13 @@
-﻿{
-    "generatedAt":  "2026-06-29T01:32:34.5953304Z",
-    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
-    "health":  {
-                   "ok":  true,
-                   "service":  "factory-engine-pro-backend"
-               },
-    "buildSha":  "e2127f50dec157097f23a37c169e4c5beb80a41c",
-    "touchedContainer":  "factoryengine-dtfbank-app",
-    "factoryengineContainers":  [
-                                    "factoryengine-dtfbank-app|Up 5 minutes",
-                                    "factoryengine-dtfprint-app|Up 6 days",
-                                    "factoryengine-eagledtfsupply-app|Up 6 days",
-                                    "factoryengine-fastdtfsupply-app|Up 6 days",
-                                    "factoryengine-fastdtftransfer-app|Up 6 days",
-                                    "factoryengine-dtfprintdepot-app|Up 6 days"
-                                ],
-    "logExcerpt":  [
-                       "\u001b[32m[Nest] 1234  - \u001b[39m06/29/2026, 1:22:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                       "\u001b[32m[Nest] 1234  - \u001b[39m06/29/2026, 1:22:32 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                       "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
-                       "No pending migrations to apply.",
-                       "\u001b[32m[Nest] 1222  - \u001b[39m06/29/2026, 1:28:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                       "\u001b[32m[Nest] 1222  - \u001b[39m06/29/2026, 1:28:36 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
-                   ],
-    "assertions":  {
-                       "healthOk":  true,
-                       "buildMatchesHead":  true,
-                       "onlyDtfbankRestarted":  true,
-                       "noRuntimeErrorsInExcerpt":  true,
-                       "noLocalhost":  true
-                   }
+{
+  "generatedAt": "2026-06-29T04:19:27.505Z",
+  "healthUrl": "https://api.dtfbank.com/api/v1/health",
+  "buildSha": "6b8cc165f093770208b2428fcac82d71a7a18d56",
+  "raw": "BUILD_SHA=6b8cc165f093770208b2428fcac82d71a7a18d56\nHEALTH={\"ok\":true,\"service\":\"factory-engine-pro-backend\"}\nCONTAINERS\nfactoryengine-dtfbank-app Up 53 minutes\nfactoryengine-dtfprint-app Up 6 days\nfactoryengine-eagledtfsupply-app Up 6 days\nfactoryengine-fastdtfsupply-app Up 6 days\nfactoryengine-fastdtftransfer-app Up 6 days\nfactoryengine-dtfprintdepot-app Up 6 days\n\nLOG_TAIL\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-call-order, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 4:19:08 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"9bd96e01-ea88-4d55-86c9-212763562ec5\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"daily.reorder\",\"message\":\"Person daily call order saved\",\"member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"segment_id\":\"seg_ylrrmvy2s4tv0xcsjuuy5q2z\",\"item_count\":25}\u001b[39m\n",
+  "assertions": {
+    "healthOk": true,
+    "buildMatchesHead": true,
+    "dtfbankContainerListed": true,
+    "noRuntimeErrorsInExcerpt": true,
+    "noLocalhost": true
+  }
 }
