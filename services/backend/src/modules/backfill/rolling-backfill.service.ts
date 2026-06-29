@@ -146,6 +146,12 @@ export class RollingBackfillService {
   async process(job: RollingBackfillJobData): Promise<RollingBackfillRunResponse> {
     const input = this.normalizeInput(job.input);
     const syncLogId = job.syncLogId ?? await this.createRunLog(job.source, input);
+    const existingLog = await this.prisma.db.syncLog.findFirst({
+      where: { id: syncLogId },
+      select: { metadata: true },
+    });
+    const existingMetadata = objectMetadata(existingLog?.metadata ?? {});
+    const jobId = typeof existingMetadata.jobId === 'string' ? existingMetadata.jobId : syncLogId;
     const startedAt = new Date();
     await this.prisma.db.syncLog.updateMany({
       where: { id: syncLogId },
@@ -154,7 +160,7 @@ export class RollingBackfillService {
         message: 'Rolling 7d backfill is running.',
         startedAt,
         finishedAt: null,
-        metadata: this.metadata({ source: job.source, recentDays: input.recentDays, input, jobId: syncLogId, steps: [] }),
+        metadata: this.metadata({ source: job.source, recentDays: input.recentDays, input, jobId, steps: [] }),
       },
     });
 
@@ -218,7 +224,7 @@ export class RollingBackfillService {
         status,
         message,
         finishedAt,
-        metadata: this.metadata({ source: job.source, recentDays: input.recentDays, input, jobId: syncLogId, steps }),
+        metadata: this.metadata({ source: job.source, recentDays: input.recentDays, input, jobId, steps }),
       },
     });
     this.logger[status === 'failed' ? 'error' : status === 'partial_success' ? 'warn' : 'log'](
@@ -230,7 +236,7 @@ export class RollingBackfillService {
 
     return {
       syncLogId,
-      jobId: syncLogId,
+      jobId,
       queued: false,
       status,
       message,
@@ -290,9 +296,14 @@ export class RollingBackfillService {
 
   private async schedulers() {
     if (!this.queue) return [];
+    const tenantId = this.tenantId();
     const schedulers = await this.queue.getJobSchedulers(0, 100, false);
     return schedulers
       .filter((scheduler) => scheduler.name === ROLLING_BACKFILL_JOB)
+      .filter((scheduler) => {
+        const data = scheduler.template?.data as Partial<RollingBackfillJobData> | undefined;
+        return data?.tenantId === tenantId;
+      })
       .map((scheduler) => ({
         id: scheduler.id ?? scheduler.key,
         name: scheduler.name,
