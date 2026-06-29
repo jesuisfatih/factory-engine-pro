@@ -1,0 +1,25 @@
+﻿{
+  "checkedAt": "2026-06-29T07:57:05.401Z",
+  "tenantId": "ten_dtfbank",
+  "window": "refresh tokens created in last 10 minutes",
+  "rows": [
+    {
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "lastCreatedAt": "2026-06-29T07:56:43.222Z",
+      "latestExpiresAt": "2027-06-29T07:56:43.220Z",
+      "expiresInDays": 364,
+      "recentRefreshTokens": 5
+    },
+    {
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "lastCreatedAt": "2026-06-29T07:56:38.914Z",
+      "latestExpiresAt": "2027-06-29T07:56:38.912Z",
+      "expiresInDays": 364,
+      "recentRefreshTokens": 6
+    }
+  ],
+  "tokenHashesIncluded": false,
+  "pass": true
+}

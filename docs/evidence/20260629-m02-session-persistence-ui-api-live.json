@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-06-29T07:56:45.401Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "deployedSha": "fca977f974ff827d1f37faacca62c70eff5fe2b5",
+  "accessTokens": [
+    {
+      "label": "admin-owner-api",
+      "email": "info@dtfbank.com",
+      "principalId": "tmbr_ten_dtfbank_info_owner",
+      "meStatus": 200,
+      "accessToken": {
+        "sub": "tmbr_ten_dtfbank_info_owner",
+        "tenant_id": "ten_dtfbank",
+        "principal_type": "member",
+        "exp": 1814255795,
+        "expiresAt": "2027-06-29T07:56:35.000Z",
+        "expiresInDays": 364
+      }
+    },
+    {
+      "label": "person-linda-api",
+      "email": "dtfbanktx@gmail.com",
+      "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+      "meStatus": 200,
+      "accessToken": {
+        "sub": "tmbr_ten_dtfbank_linda_marroquin",
+        "tenant_id": "ten_dtfbank",
+        "principal_type": "member",
+        "exp": 1814255795,
+        "expiresAt": "2027-06-29T07:56:35.000Z",
+        "expiresInDays": 364
+      }
+    }
+  ],
+  "browserReopen": [
+    {
+      "label": "admin-owner-browser-reopen",
+      "loginUrl": "https://app.dtfbank.com/login",
+      "reopenedUrl": "https://app.dtfbank.com/dashboard",
+      "expectedSurfaceUrl": "https://app.dtfbank.com/dashboard",
+      "sessionBeforeClose": true,
+      "sessionAfterReopen": true,
+      "didNotReturnToLogin": true,
+      "screenshot": "docs/evidence/20260629-m02-admin-session-reopen-ui-live.png",
+      "pass": true
+    },
+    {
+      "label": "person-linda-browser-reopen",
+      "loginUrl": "https://app.dtfbank.com/staff/login",
+      "reopenedUrl": "https://app.dtfbank.com/staff/queue",
+      "expectedSurfaceUrl": "https://app.dtfbank.com/staff/queue",
+      "sessionBeforeClose": true,
+      "sessionAfterReopen": true,
+      "didNotReturnToLogin": true,
+      "screenshot": "docs/evidence/20260629-m02-person-session-reopen-ui-live.png",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

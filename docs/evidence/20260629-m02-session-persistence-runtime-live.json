@@ -1,0 +1,16 @@
+﻿{
+    "checkedAt":  "2026-06-29T07:57:24.5807957Z",
+    "container":  "factoryengine-dtfbank-app",
+    "deployedSha":  "fca977f974ff827d1f37faacca62c70eff5fe2b5",
+    "dockerStatus":  "factoryengine-dtfbank-app Up 10 minutes",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "codeEvidence":  {
+                         "authSessionService":  "services/backend/src/modules/auth/auth-session.service.ts",
+                         "sessionTtlDays":  365,
+                         "accessTokenExpiresIn":  "365d"
+                     },
+    "pass":  true
+}
