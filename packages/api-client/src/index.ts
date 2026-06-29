@@ -27,6 +27,7 @@ import type {
   CallCenterOverview,
   CallCenterSaveCustomerNoteInput,
   CallCenterTransferTaskInput,
+  CommissionProfileDto,
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
@@ -62,6 +63,7 @@ import type {
   UpdateMemberInput,
   UpdateMemberRoleInput,
   UpdatePricingRuleInput,
+  UpsertCommissionProfileInput,
   UpsertSegmentOwnershipInput,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
@@ -531,6 +533,18 @@ export class ApiClient {
 
   callCenterCreateCustomerTask(customerId: string, input: CallCenterCreateCustomerTaskInput) {
     return this.post<CallCenterActionResult>(`/call-center/customers/${encodeURIComponent(customerId)}/tasks`, input);
+  }
+
+  commissionProfiles() {
+    return this.get<CommissionProfileDto[]>('/commissions/profiles');
+  }
+
+  upsertCommissionProfile(id: string, input: UpsertCommissionProfileInput) {
+    return this.put<CommissionProfileDto>(`/commissions/profiles/${encodeURIComponent(id)}`, input);
+  }
+
+  deleteCommissionProfile(id: string) {
+    return this.delete<{ ok: boolean }>(`/commissions/profiles/${encodeURIComponent(id)}`);
   }
 
   personWorkspaceSummary() {

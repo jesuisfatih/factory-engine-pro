@@ -374,16 +374,21 @@ export async function savePricingRule(input: PricingRule) {
 }
 
 export async function fetchCommissionProfiles(): Promise<CommissionProfile[]> {
-  await adminApi.members();
-  return [];
+  return adminApi.commissionProfiles() as Promise<CommissionProfile[]>;
 }
 
-export async function saveCommissionProfile(_input: CommissionProfile): Promise<CommissionProfile> {
-  throw new Error('Commission profile API is not available in the current backend.');
+export async function saveCommissionProfile(input: CommissionProfile): Promise<CommissionProfile> {
+  return adminApi.upsertCommissionProfile(input.id, {
+    name: input.name,
+    assignType: input.assignType,
+    assigneeId: input.assigneeId,
+    active: input.active,
+    rules: input.rules,
+  }) as Promise<CommissionProfile>;
 }
 
-export async function deleteCommissionProfile(_id: string): Promise<void> {
-  throw new Error('Commission profile API is not available in the current backend.');
+export async function deleteCommissionProfile(id: string): Promise<void> {
+  await adminApi.deleteCommissionProfile(id);
 }
 
 function toTaskRow(row: Record<string, unknown>): TaskRow {

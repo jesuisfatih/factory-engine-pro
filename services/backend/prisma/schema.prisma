@@ -111,6 +111,7 @@ model Tenant {
   taskParticipants        TaskParticipant[]
   personDailyCallOrders   PersonDailyCallOrder[]
   personDailyTaskOrders   PersonDailyTaskOrder[]
+  commissionProfiles      CommissionProfile[]
 
   @@map("tenants")
 }
@@ -873,6 +874,24 @@ model PersonDailyTaskOrder {
   @@index([tenantId, memberId, workDate, position])
   @@index([tenantId, serviceRequestId])
   @@map("person_daily_task_orders")
+}
+
+model CommissionProfile {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  name       String
+  assignType String   @map("assign_type")
+  assigneeId String?  @map("assignee_id")
+  active     Boolean  @default(true)
+  rules      Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active])
+  @@index([tenantId, assigneeId])
+  @@map("commission_profiles")
 }
 
 model ShopifyCustomerSegment {

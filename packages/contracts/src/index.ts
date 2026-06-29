@@ -3,6 +3,7 @@ export * from './accounts.js';
 export * from './ai.js';
 export * from './aircall.js';
 export * from './call-center.js';
+export * from './commission.js';
 export * from './commerce.js';
 export * from './common.js';
 export * from './enums.js';

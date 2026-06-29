@@ -4,17 +4,19 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp, Plus, Save, Trash2, Users as UsersIcon, User } from 'lucide-react';
+import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
 import {
   fetchCommissionProfiles, saveCommissionProfile, deleteCommissionProfile,
-  SELLERUSERS,
   type CommissionProfile, type CommissionRule, type CommissionAssignType,
   type CommissionRuleType, type CommissionPeriod,
 } from '@/lib/live-data';
-import { ROLES } from '@/lib/permissions';
+import { adminApi } from '@/lib/api';
+import { ROLES, useCan } from '@/lib/permissions';
 
 const QK = ['team', 'commission-profiles'] as const;
+type MemberOption = { id: string; email: string; firstName: string; lastName: string };
 
 function emptyRule(): CommissionRule {
   return { id: `cr-${Date.now()}-${Math.floor(Math.random() * 1000)}`, type: 'flat', target: '', ratePct: 5, period: 'monthly', priority: 1, thresholdUsd: null, capUsd: null };
@@ -40,9 +42,10 @@ interface RowProps {
   onSave: (next: CommissionProfile) => void;
   onDelete: () => void;
   canWrite: boolean;
+  sellerUsers: Array<{ id: string; email: string; name: string }>;
 }
 
-function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, canWrite }: RowProps) {
+function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, canWrite, sellerUsers }: RowProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<CommissionProfile>(profile);
 
@@ -53,12 +56,12 @@ function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, ca
   const removeRule = (id: string) => setDraft((current) => ({ ...current, rules: current.rules.filter((rule) => rule.id !== id) }));
 
   const assigneeOptions = draft.assignType === 'rep'
-    ? SELLERUSERS.map((su) => ({ value: su.id, label: `${su.name} · ${su.email}` }))
+    ? sellerUsers.map((su) => ({ value: su.id, label: `${su.name} - ${su.email}` }))
     : ROLES.map((role) => ({ value: role, label: t(`roles.${role}`) }));
 
   const headerSummary = `${profile.rules.length} ${profile.rules.length === 1 ? 'rule' : 'rules'} · base ${profile.rules.find((rule) => rule.type === 'flat')?.ratePct ?? 0}%`;
   const assigneeLabel = profile.assignType === 'rep'
-    ? SELLERUSERS.find((su) => su.id === profile.assigneeId)?.name ?? '—'
+    ? sellerUsers.find((su) => su.id === profile.assigneeId)?.name ?? '-'
     : t(`roles.${profile.assigneeId ?? 'admin'}`);
 
   return (
@@ -113,7 +116,7 @@ function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, ca
                   return {
                     ...current,
                     assignType: nextType,
-                    assigneeId: nextType === 'rep' ? SELLERUSERS[0].id : 'sales_service',
+                    assigneeId: nextType === 'rep' ? sellerUsers[0]?.id ?? '' : 'sales_service',
                   };
                 })}
                 disabled={!canWrite}
@@ -277,9 +280,18 @@ function ProfileRow({ profile, expanded, isDraft, onToggle, onSave, onDelete, ca
 function CommissionsView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const canWrite = false;
+  const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
 
   const { data: profiles = [] } = useQuery({ queryKey: QK, queryFn: fetchCommissionProfiles });
+  const { data: members = [] } = useQuery({
+    queryKey: ['identity', 'members', 'commission-assignees'],
+    queryFn: () => adminApi.members() as Promise<MemberOption[]>,
+  });
+  const sellerUsers = members.map((member) => ({
+    id: member.id,
+    email: member.email,
+    name: `${member.firstName} ${member.lastName}`.trim() || member.email,
+  }));
 
   const [drafts, setDrafts] = useState<CommissionProfile[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -382,6 +394,7 @@ function CommissionsView() {
             onSave={(next) => save.mutate(next)}
             onDelete={() => remove.mutate(profile.id)}
             canWrite={canWrite}
+            sellerUsers={sellerUsers}
           />
         ))}
       </div>

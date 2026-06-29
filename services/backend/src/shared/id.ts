@@ -21,6 +21,7 @@ export type IdPrefix =
   | 'clit'
   | 'casn'
   | 'caud'
+  | 'cprof'
   | 'prule'
   | 'seg'
   | 'sown'
