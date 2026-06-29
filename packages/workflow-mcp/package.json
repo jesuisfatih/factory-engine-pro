@@ -1,0 +1,22 @@
+{
+  "name": "@factory-engine-pro/workflow-mcp",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "factory-engine-workflow-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@factory-engine-pro/contracts": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
