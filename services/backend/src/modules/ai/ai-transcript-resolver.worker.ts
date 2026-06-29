@@ -327,6 +327,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
             urgencySignal: output.urgency_signal,
           },
         });
+        response = await this.recoverDuplicateWorkflowResponse(tenantId, eventId, response);
         status = transcriptEvaluationStatus(signal, response);
         reason = transcriptEvaluationReason(signal, response);
       } catch (error) {
@@ -400,6 +401,65 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         },
       });
     }
+  }
+
+  private async recoverDuplicateWorkflowResponse(
+    tenantId: string,
+    eventId: string,
+    response: WorkflowTriggerFireResponse,
+  ): Promise<WorkflowTriggerFireResponse> {
+    if (response.matchedRules > 0 || response.tasksCreated > 0) return response;
+    const duplicateOnly = response.results.length > 0
+      && response.results.every((result) => result.status === 'skipped' && result.reason === 'duplicate_event');
+    if (!duplicateOnly) return response;
+
+    const executions = await this.prisma.db.workflowRuleExecution.findMany({
+      where: {
+        tenantId,
+        eventId,
+        trigger: 'call.operational_signal.detected',
+        status: { notIn: ['started', 'skipped'] },
+      },
+      include: {
+        rule: { select: { id: true, name: true } },
+      },
+    });
+    if (executions.length === 0) return response;
+
+    const taskIds = uniqueStrings(executions.flatMap((execution) => execution.taskIds));
+    const tasks = taskIds.length === 0
+      ? []
+      : await this.prisma.db.serviceRequest.findMany({
+          where: { tenantId, id: { in: taskIds } },
+          select: { id: true, title: true },
+        });
+    const taskById = new Map(tasks.map((task) => [task.id, task]));
+    const executionByRuleId = new Map(executions.map((execution) => [execution.ruleId, execution]));
+    return {
+      ...response,
+      matchedRules: executions.length,
+      evaluatedRules: Math.max(response.evaluatedRules, executions.length),
+      tasksCreated: taskIds.length,
+      tasks: executions.flatMap((execution) => execution.taskIds.map((taskId) => ({
+        ruleId: execution.ruleId,
+        ruleName: execution.rule?.name ?? execution.ruleId,
+        actionId: 'recovered_duplicate_execution',
+        action: 'create_task',
+        taskId,
+        title: taskById.get(taskId)?.title ?? 'Recovered workflow task',
+      }))),
+      results: response.results.map((result) => {
+        const execution = executionByRuleId.get(result.ruleId);
+        if (!execution) return result;
+        const { reason, ...rest } = result;
+        void reason;
+        return {
+          ...rest,
+          status: recoveredExecutionStatus(execution.status),
+          taskIds: execution.taskIds,
+        };
+      }),
+    };
   }
 }
 
@@ -510,6 +570,17 @@ function transcriptEvaluationReason(signal: TranscriptOperationalSignal, respons
   return signal.reason;
 }
 
+function recoveredExecutionStatus(status: string): WorkflowTriggerFireResponse['results'][number]['status'] {
+  if (status === 'task_created'
+    || status === 'actions_applied'
+    || status === 'no_op'
+    || status === 'shadow_matched'
+    || status === 'skipped') {
+    return status;
+  }
+  return 'actions_applied';
+}
+
 function dedupeSignals(signals: TranscriptOperationalSignal[]) {
   const byIntent = new Map<string, TranscriptOperationalSignal>();
   for (const signal of signals) {
@@ -518,6 +589,10 @@ function dedupeSignals(signals: TranscriptOperationalSignal[]) {
   }
   const actionable = Array.from(byIntent.values()).filter((signal) => signal.intent !== 'no_action');
   return actionable.length > 0 ? actionable : Array.from(byIntent.values());
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
 }
 
 function normalizedText(value: string) {
