@@ -286,7 +286,7 @@ export class PersonWorkspaceService {
     const priorityTaskCards = scopedRows
       .filter((row) => !CLOSED.has(row.status))
       .filter((row) => this.isAiOrSegmentPriorityTask(row))
-      .filter((row) => this.isAdminOrderTransferTask(row) || this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
+      .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
       .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext));
     const priorityTaskCustomerIds = new Set(priorityTaskCards.map((card) => card.customerId).filter((id): id is string => Boolean(id)));
     const segmentPriorityCards = dailyCallList
@@ -1633,12 +1633,8 @@ export class PersonWorkspaceService {
   }
 
   private isAiOrSegmentPriorityTask(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
-    return taskSource(row) !== 'manual';
-  }
-
-  private isAdminOrderTransferTask(row: { metadata: Prisma.JsonValue }) {
-    const metadata = this.record(row.metadata);
-    return normalizeText(metadata.category) === 'admin_order_transfer';
+    const source = taskSource(row);
+    return source === 'ai_transcript' || source === 'ai_segment' || source === 'ai_stale';
   }
 
   private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
