@@ -584,10 +584,15 @@ export class RulesService {
         trigger: parsed.trigger,
       });
       let recoveringStaleExecution = false;
+      let replayingWorkflowRepairExecution = false;
       if (!execution) {
         const existing = await this.repository.findExecution({ eventId, ruleId: rule.id });
         const stale = await this.staleExecutionRecovery(existing);
-        if (!existing || !stale.recover) {
+        const repairReplay = Boolean(existing)
+          && booleanParam(parsed.params, 'forceWorkflowEvaluationRepair')
+          && stale.reason !== 'tasks_present'
+          && stale.reason !== 'partial_tasks_present';
+        if (!existing || (!stale.recover && !repairReplay)) {
           this.logger.log('rules', 'event_duplicate_skipped', 'Duplicate workflow event/rule execution skipped', {
             event_id: eventId,
             trigger: parsed.trigger,
@@ -611,15 +616,27 @@ export class RulesService {
           continue;
         }
         execution = existing;
-        recoveringStaleExecution = true;
-        this.logger.warn('rules', 'stale_execution_recovered', 'Workflow execution referenced missing task rows; actions will be replayed.', {
-          event_id: eventId,
-          trigger: parsed.trigger,
-          rule_id: rule.id,
-          execution_id: execution.id,
-          stale_task_ids: stale.taskIds,
-          missing_task_count: stale.missingTaskCount,
-        });
+        if (stale.recover) {
+          recoveringStaleExecution = true;
+          this.logger.warn('rules', 'stale_execution_recovered', 'Workflow execution referenced missing task rows; actions will be replayed.', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            execution_id: execution.id,
+            stale_task_ids: stale.taskIds,
+            missing_task_count: stale.missingTaskCount,
+          });
+        } else {
+          replayingWorkflowRepairExecution = true;
+          this.logger.warn('rules', 'workflow_repair_execution_replayed', 'Workflow repair is replaying an existing non-task execution result.', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            execution_id: execution.id,
+            previous_status: existing.status,
+            duplicate_reason: stale.reason,
+          });
+        }
       }
 
       const cooldown = await this.evaluateCooldown(rule, state);
@@ -742,7 +759,7 @@ export class RulesService {
         taskIds,
         result: activeResult as unknown as Prisma.InputJsonValue,
       });
-      if (!recoveringStaleExecution) await this.recordCooldownFire(rule, cooldown, actionStatus);
+      if (!recoveringStaleExecution && !replayingWorkflowRepairExecution) await this.recordCooldownFire(rule, cooldown, actionStatus);
 
       if (!rule.composable && actionStatus !== 'skipped') {
         this.logger.log('rules', 'runtime_short_circuit', 'Workflow runtime stopped after non-composable active rule', {

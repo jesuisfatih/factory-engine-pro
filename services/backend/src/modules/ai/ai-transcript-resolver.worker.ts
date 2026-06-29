@@ -116,7 +116,12 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
 
       const storedOutput = transcriptResolverOutputSchema.safeParse(callEvent.resolverOutput);
       if (storedOutput.success) {
-        await this.fireDerivedWorkflowTriggers(callEvent, storedOutput.data, callEvent.resolverModel ?? 'stored-resolver-output');
+        await this.fireDerivedWorkflowTriggers(
+          callEvent,
+          storedOutput.data,
+          callEvent.resolverModel ?? 'stored-resolver-output',
+          Boolean(job.data?.forceWorkflowEvaluationRepair),
+        );
         const repairedEvaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
           where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
         });
@@ -209,7 +214,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         force_reprocess: Boolean(job.data?.forceReprocess),
         latency_ms: result.latencyMs,
       });
-      await this.fireDerivedWorkflowTriggers(callEvent, result.output, result.model);
+      await this.fireDerivedWorkflowTriggers(callEvent, result.output, result.model, Boolean(job.data?.forceWorkflowEvaluationRepair));
       return { status: 'succeeded', resolvedWithVersion: result.output.resolved_with_version };
     } catch (error) {
       const message = messageOf(error).slice(0, 500);
@@ -237,7 +242,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         fallback_model: fallbackModel,
         target_version: targetVersion,
       });
-      await this.fireDerivedWorkflowTriggers(callEvent, fallbackOutput, fallbackModel);
+      await this.fireDerivedWorkflowTriggers(callEvent, fallbackOutput, fallbackModel, Boolean(job.data?.forceWorkflowEvaluationRepair));
       return { status: 'succeeded_with_local_fallback', resolvedWithVersion: fallbackOutput.resolved_with_version, error: message };
     }
   }
@@ -246,6 +251,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null },
     output: TranscriptResolverOutput,
     resolverModel: string,
+    forceWorkflowEvaluationRepair = false,
   ) {
     const matchedCustomer = await this.resolveCustomerForCall(callEvent, output);
     const baseParams = {
@@ -308,7 +314,14 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         error: error instanceof Error ? error.message : String(error),
       });
     }
-    await this.fireOperationalSignalFlow(callEvent, output, baseParams, resolverModel, Boolean(matchedCustomer?.id ?? output.customer_match.customer_id));
+    await this.fireOperationalSignalFlow(
+      callEvent,
+      output,
+      baseParams,
+      resolverModel,
+      Boolean(matchedCustomer?.id ?? output.customer_match.customer_id),
+      forceWorkflowEvaluationRepair,
+    );
   }
 
   private async fireOperationalSignalFlow(
@@ -317,6 +330,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     baseParams: Record<string, unknown>,
     resolverModel: string,
     customerMatched: boolean,
+    forceWorkflowEvaluationRepair: boolean,
   ) {
     const signals = transcriptOperationalSignals(output, { customerMatched });
     const tenantId = this.tenantContext.require().tenantId;
@@ -336,6 +350,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
             operationalIntent: signal.intent,
             operationalConfidence: signal.confidence,
             actionRequired: signal.action_required,
+            forceWorkflowEvaluationRepair,
             recommendedAxis: signal.recommended_axis,
             suggestedTaskTitle: signal.suggested_task_title,
             reason: signal.reason,
