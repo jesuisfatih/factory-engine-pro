@@ -21,7 +21,7 @@ export interface TransactionalMailInput {
   metadata?: Record<string, unknown>;
 }
 
-export interface WorkflowDisabledMailInput {
+export interface WorkflowMailInput {
   eventKey: string;
   to: string;
   templateId?: string | null;
@@ -67,7 +67,7 @@ export class MailService {
     return this.deliverQueued(delivery.id);
   }
 
-  async queueDisabledWorkflowMail(input: WorkflowDisabledMailInput) {
+  async sendWorkflowMail(input: WorkflowMailInput) {
     const templateHint = input.templateId?.trim() || null;
     const template = templateHint
       ? await this.prisma.db.emailTemplate.findFirst({
@@ -84,40 +84,30 @@ export class MailService {
     const variables = input.variables ?? {};
     const subject = template
       ? renderTemplate(template.subject, variables)
-      : `Workflow email queued: ${input.eventKey}`;
+      : `Workflow email: ${input.eventKey}`;
     const html = template
       ? renderTemplate(template.html, variables)
       : `<p>Workflow email action matched for <strong>${escapeHtml(input.eventKey)}</strong>.</p>`;
     const text = template?.text
       ? renderTemplate(template.text, variables)
       : `Workflow email action matched for ${input.eventKey}.`;
-    const delivery = await this.repository.createDelivery({
+
+    return this.sendTransactional({
       eventKey: input.eventKey,
-      category: 'workflow',
-      recipientEmail: input.to,
+      to: input.to,
       subject,
       html,
       text,
-      status: 'queued_disabled',
-      provider: 'disabled',
-      errorMessage: 'mail.provider.disabled_in_phase_1',
       metadata: {
         ...(input.metadata ?? {}),
         source: 'workflow_send_mail',
-        sendingEnabled: false,
-        providerMode: 'disabled',
+        sendingEnabled: true,
+        providerMode: 'resend',
         templateId: template?.id ?? templateHint,
         templateFound: Boolean(template),
         customerId: input.customerId ?? null,
-      } as Prisma.InputJsonValue,
+      },
     });
-    this.logger.warn('mail', 'provider.disabled_in_phase_1', 'Workflow mail delivery was queued with provider disabled', {
-      mail_delivery_id: delivery.id,
-      event_key: input.eventKey,
-      template_id: template?.id ?? templateHint,
-      customer_id: input.customerId ?? null,
-    });
-    return delivery;
   }
 
   list(query: MailListQuery) {

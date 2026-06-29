@@ -1198,7 +1198,7 @@ export class RulesService {
     } else if (action.action === 'escalate') {
       result = await this.escalateTask(action, context);
     } else if (action.action === 'send_mail') {
-      result = await this.sendMailDisabled(action, context);
+      result = await this.sendMail(action, context);
     } else {
       result = {
         trace: {
@@ -1244,7 +1244,7 @@ export class RulesService {
     return result;
   }
 
-  private async sendMailDisabled(action: WorkflowRuleAction, context: WorkflowActionContext) {
+  private async sendMail(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const customer = context.state.customer;
     const recipientEmail = stringParam(context.params, 'recipientEmail')
       ?? stringParam(context.params, 'to')
@@ -1260,7 +1260,7 @@ export class RulesService {
       ?? stringParam(context.params, 'mail_template_id')
       ?? action.value?.trim()
       ?? null;
-    const delivery = await this.mail.queueDisabledWorkflowMail({
+    const delivery = await this.mail.sendWorkflowMail({
       eventKey: `workflow.${context.trigger}`,
       to: recipientEmail,
       templateId,
@@ -1276,7 +1276,7 @@ export class RulesService {
         actionValue: action.value ?? null,
       },
     });
-    this.logger.warn('rules', 'workflow_send_mail_disabled', 'Workflow send_mail queued with provider disabled', {
+    this.logger.log('rules', 'workflow_send_mail_queued', 'Workflow send_mail queued a transactional delivery', {
       event_id: context.eventId,
       trigger: context.trigger,
       rule_id: context.rule.id,
@@ -1292,10 +1292,10 @@ export class RulesService {
         status: 'applied' as const,
         targetType: 'mail_delivery' as const,
         targetId: delivery.id,
-        message: 'send_mail action queued a disabled mail delivery row; provider sending is off in Phase 1.',
+        message: 'send_mail action queued a transactional mail delivery.',
         metadata: {
-          sendingEnabled: false,
-          providerMode: 'disabled',
+          sendingEnabled: true,
+          providerMode: 'resend',
           customerId: customer?.id ?? null,
           recipientEmail,
           templateId,
