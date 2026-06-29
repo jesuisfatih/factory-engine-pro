@@ -1,21 +1,18 @@
 {
   "proof": "roadmap_m07_priority_owned_segments_ui_live",
-  "checkedAt": "2026-06-29T00:48:22Z",
+  "checkedAt": "2026-06-29T04:05:46.851Z",
+  "pass": true,
   "url": "https://app.dtfbank.com/staff/queue",
   "finalUrl": "https://app.dtfbank.com/staff/queue",
-  "screenshot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-owned-segments-ui-live.png",
-  "priorityCardsCount": 0,
-  "priorityCards": [],
+  "screenshot": {
+    "path": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-owned-segments-ui-live.png",
+    "bytes": 95026,
+    "sha256": "a61b3e230d94babe55e91868c17ac9b2909d5f43a19a69da59281016b13f25ba"
+  },
   "priorityPanelText": "Priority kanban\n\nRule-engine tasks, axis-scoped and urgency-desc.\n\nNo priority tasks in your axis scope.",
-  "emptyStateVisible": true,
-  "containsOtherMemberSalesLeak": false,
-  "segmentGroupCount": 5,
-  "segmentGroups": [
-    "Min 2 max 5 purchase\n25/25",
-    "Customers over 20 orders\n17/17",
-    "Wholesale Customers\n25/25",
-    "Customers who have purchased DTF or UV DTF Printer\n12/12",
-    "Customers who have purchased DTF inks, DTF films, or DTF powders\n25/25"
-  ],
-  "bodyHasLocalhost": false
+  "priorityCardTexts": [],
+  "visibleTextHasPermissionError": false,
+  "forbiddenResponses": [],
+  "consoleErrors": [],
+  "pageErrors": []
 }

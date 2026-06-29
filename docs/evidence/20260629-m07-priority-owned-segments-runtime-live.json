@@ -1,25 +1,50 @@
-﻿{
-    "proof":  "roadmap_m07_priority_owned_segments_runtime_live",
-    "checkedAt":  "2026-06-29T00:48:46.6675674Z",
-    "deployedBuildSha":  "cf11b539eac69f70f927a55c9355cd049dec0ee8",
-    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
-    "health":  {
-                   "ok":  true,
-                   "service":  "factory-engine-pro-backend"
-               },
-    "containerScope":  "factoryengine-dtfbank-app only",
-    "containers":  [
-                       "factoryengine-dtfbank-app|Up 7 minutes",
-                       "factoryengine-dtfprint-app|Up 6 days",
-                       "factoryengine-eagledtfsupply-app|Up 6 days",
-                       "factoryengine-fastdtfsupply-app|Up 6 days",
-                       "factoryengine-fastdtftransfer-app|Up 6 days",
-                       "factoryengine-dtfprintdepot-app|Up 6 days"
-                   ],
-    "startupLogSample":  [
-                             "\u003e node scripts/guard-database-url.mjs \u0026\u0026 prisma migrate deploy",
-                             "33 migrations found in prisma/migrations",
-                             "No pending migrations to apply.",
-                             "\u001b[32m[Nest] 1221  - \u001b[39m06/29/2026, 12:43:14 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
-                         ]
+{
+  "proof": "roadmap_m07_priority_owned_segments_runtime_live",
+  "checkedAt": "2026-06-29T04:05:46.851Z",
+  "pass": true,
+  "scope": {
+    "container": "factoryengine-dtfbank-app",
+    "remote": "root@144.202.125.169",
+    "tenantId": "ten_dtfbank"
+  },
+  "git": {
+    "codeCommit": "099191c59913ce0040c060181d027be790a436a7",
+    "deployedBuildSha": "099191c59913ce0040c060181d027be790a436a7",
+    "branch": "main"
+  },
+  "health": {
+    "url": "https://api.dtfbank.com/api/v1/health",
+    "status": 200,
+    "body": {
+      "ok": true,
+      "service": "factory-engine-pro-backend"
+    }
+  },
+  "tokenRow": {
+    "id": "tok_ye5awGU9whI6Flu7SHj80G4Q",
+    "kind": "refresh",
+    "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+    "expiresAt": "2027-06-29T04:05:30.810Z",
+    "createdAt": "2026-06-29T04:05:30.813Z",
+    "tokenHashRedacted": true
+  },
+  "tokenValuesPersistedInEvidence": false,
+  "logEvidence": [
+    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1224  - \u001b[39m06/29/2026, 3:14:57 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1437  - \u001b[39m06/29/2026, 3:21:48 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/daily-operations, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "\u001b[32m[Nest] 1226  - \u001b[39m06/29/2026, 3:27:27 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
+  ],
+  "containerStatus": [
+    "factoryengine-dtfbank-app Up 40 minutes",
+    "factoryengine-dtfprint-app Up 6 days",
+    "factoryengine-eagledtfsupply-app Up 6 days",
+    "factoryengine-fastdtfsupply-app Up 6 days",
+    "factoryengine-fastdtftransfer-app Up 6 days",
+    "factoryengine-dtfprintdepot-app Up 6 days"
+  ],
+  "seedMockPolicy": "No seed/mock data was added. Proof uses live Shopify segment ownership, customer assignments, and live workflow records.",
+  "nextRoadmapItem": 8
 }
