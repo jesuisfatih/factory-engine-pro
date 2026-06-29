@@ -967,6 +967,10 @@ export class PersonWorkspaceService {
     const customerEmail = row.customer?.email ?? row.customerUser?.email ?? null;
     const customerPhone = row.customer?.phone ?? row.customerUser?.phone ?? null;
     const aircallWhere = aircallWhereFor(customerEmail, customerPhone);
+    const aircallScopes: Prisma.AircallCallEventWhereInput[] = [
+      ...(row.sourceCallId ? [{ id: row.sourceCallId }] : []),
+      ...(aircallWhere ? [aircallWhere] : []),
+    ];
     const matchedRuleId = matchedRuleIdFrom(row);
 
     const [
@@ -1005,9 +1009,9 @@ export class PersonWorkspaceService {
             take: 30,
           })
         : Promise.resolve([]),
-      aircallWhere
+      aircallScopes.length > 0
         ? this.prisma.db.aircallCallEvent.findMany({
-            where: aircallWhere,
+            where: { OR: aircallScopes },
             orderBy: { eventTimestamp: 'desc' },
             take: 8,
           })
@@ -2626,7 +2630,13 @@ function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskState
   const workflow = asRecord(metadata.workflow);
   const params = asRecord(workflow.params);
   const snapshot = asRecord(taskStateSnapshot);
-  const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
+  const workflowSnapshot = asRecord(workflow.stateSnapshot ?? workflow.state_snapshot);
+  const resolverOutput = asRecord(
+    snapshot.resolverOutput
+    ?? snapshot.resolver_output
+    ?? workflowSnapshot.resolverOutput
+    ?? workflowSnapshot.resolver_output,
+  );
   const callIntent = stringOrNull(params.intent)
     ?? stringOrNull(params.callIntent)
     ?? stringOrNull(params.call_intent)
