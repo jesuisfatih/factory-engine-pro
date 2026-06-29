@@ -1,0 +1,40 @@
+{
+  "proof": "roadmap_m17_customer_routing_live",
+  "generatedAt": "2026-06-29T10:47:22.062Z",
+  "url": "https://app.dtfbank.com/customers",
+  "appUrl": "https://app.dtfbank.com/customers",
+  "apiHealthUrl": "https://api.dtfbank.com/api/v1/health",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "011cd527fa21f1819c27d298d6d82d1227c7731b",
+  "tokenValuesPersistedInEvidence": false,
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "runtime": {
+    "buildSha": "011cd527fa21f1819c27d298d6d82d1227c7731b",
+    "pm2Status": [
+      "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 55263    │ 53s    │ 194  │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+      "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 49102    │ 21m    │ 552  │ online    │ 0%       │ 529.9mb  │ root     │ disabled │"
+    ],
+    "publicHealth": "{\"ok\":true,\"service\":\"factory-engine-pro-backend\"}",
+    "appHttpStatus": 200
+  },
+  "ui": {
+    "panelTextBeforeTooltip": "Customer Routing\nThis customer has separate primary owners for Sales, Support, and Account.\nSarah Mae Specially Made For You\nSarah Mae Specially Made For You\nJM Digital Media\navmedacan@gmail.com\nTina Salazar\nBeary Creative\nreachable rentals\nSP101. INC\nCleo Harris\nCorry Bailey\nPnutzgang Apparel\nTEAM THREADS & THINGS, LLC\nAshley Fairchild\nHeather Lee\nTrend Monkey\nKelly Smith\nGabriel Sanchez\nTeal Threads LLC\nErica Washington\nSock Religious\nFast Dog Print Co.\nTMANIA\nMiranda Fulps\nDavid Jaramillo\nOWNER\nStitchin 'N Bitchin\nCBT Screen Printing & Embroidery, LLC\nTina Hamilton\nWanda Richardson\nRed River Printing Co\nCitlalli Mundo\nFable and Whimsy\nAllan Wade\nCali Custom\nKelly Roe\nMelvin Giles\njared elsen\nValerie Lopez\nBrandon Saucier\nKatie Kratzer\nAbdel Ali\nZac Carrigan\nBecca Vaughn\nMichael A Gonzales\nBoardwalk Retail Inc.\nNSTI\nElisabeth Ortiz-Ruiz\nSS Shirts N More\nCustom Conceptions\nManases Gauna\nWahoo Screen Graphix\nDon Sylvia\nCadillac Lake Lures Company\n7Bros Apparel\nAnthony Caraballo\nAna Teresita Uz Santos\ngabriel rodriguez656 Rodríguez\nDavid Gram\njames anderson\njomalone2024@gmail.com\nViking ESP\nSarah Wilson\nCustom Stuff USA LLC\njames anderson\nWill Johnson\nWilliam Bruno\nJs Designs\nBlue Hydrangea Market\nPaul Garner\nMalcolm May\nGinger Knight\nBristol Plymouth Regional Tech School\nYafreisy Roman\nGreg Ross\nLuis Ramirez\nedgar.signworks@gmail.com\nManuel Salazar\nTriple Elevation Custom Creations LLC\nNOE ORTIZ\nMr Embroidery\nShane Davis\nRyan Peters\nJessica Hansen\nraquel Zapata Villanueva\nKerry Bowen\nCorrina Carney\nMonarch Designs\ngustavoalicea1@gmail.com\nBora ozyigit\nEmbroidery Northwest\nTrendy Transfers\nCUSTOM PROMOTIONAL BRANDING\nRudy Cuellar\nJoseph Heimuli\nLinda Smith\nGables Sporting Goods\nDream Chasing Solutions\nJennifer Miller\nDavid Smith\nMadison Badminton Inc\nTrinity Ink Studio\nAXIS\tPRIMARY OWNER\tSOURCE\tACTION\nsales\t\nIhsan Taskiran\nihsan@dtfbank.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\nsupport\t\nLinda Marroquin\ndtfbanktx@gmail.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\naccount\t\nDTF Bank Owner\ninfo@dtfbank.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\nRecent ownership log\ndefault axis assigned - account - DTF Bank Owner - Jun 28, 2026\ndefault axis assigned - support - Linda Marroquin - Jun 28, 2026\ndefault axis assigned - sales - Ihsan Taskiran - Jun 28, 2026",
+    "panelTextAfterTooltip": "Customer Routing\nEach axis has one primary owner. Sales handles revenue follow-up, Support handles service cases, and Account owns ongoing relationship work. The primary owner receives axis-specific calls and tasks.\nThis customer has separate primary owners for Sales, Support, and Account.\nSarah Mae Specially Made For You\nSarah Mae Specially Made For You\nJM Digital Media\navmedacan@gmail.com\nTina Salazar\nBeary Creative\nreachable rentals\nSP101. INC\nCleo Harris\nCorry Bailey\nPnutzgang Apparel\nTEAM THREADS & THINGS, LLC\nAshley Fairchild\nHeather Lee\nTrend Monkey\nKelly Smith\nGabriel Sanchez\nTeal Threads LLC\nErica Washington\nSock Religious\nFast Dog Print Co.\nTMANIA\nMiranda Fulps\nDavid Jaramillo\nOWNER\nStitchin 'N Bitchin\nCBT Screen Printing & Embroidery, LLC\nTina Hamilton\nWanda Richardson\nRed River Printing Co\nCitlalli Mundo\nFable and Whimsy\nAllan Wade\nCali Custom\nKelly Roe\nMelvin Giles\njared elsen\nValerie Lopez\nBrandon Saucier\nKatie Kratzer\nAbdel Ali\nZac Carrigan\nBecca Vaughn\nMichael A Gonzales\nBoardwalk Retail Inc.\nNSTI\nElisabeth Ortiz-Ruiz\nSS Shirts N More\nCustom Conceptions\nManases Gauna\nWahoo Screen Graphix\nDon Sylvia\nCadillac Lake Lures Company\n7Bros Apparel\nAnthony Caraballo\nAna Teresita Uz Santos\ngabriel rodriguez656 Rodríguez\nDavid Gram\njames anderson\njomalone2024@gmail.com\nViking ESP\nSarah Wilson\nCustom Stuff USA LLC\njames anderson\nWill Johnson\nWilliam Bruno\nJs Designs\nBlue Hydrangea Market\nPaul Garner\nMalcolm May\nGinger Knight\nBristol Plymouth Regional Tech School\nYafreisy Roman\nGreg Ross\nLuis Ramirez\nedgar.signworks@gmail.com\nManuel Salazar\nTriple Elevation Custom Creations LLC\nNOE ORTIZ\nMr Embroidery\nShane Davis\nRyan Peters\nJessica Hansen\nraquel Zapata Villanueva\nKerry Bowen\nCorrina Carney\nMonarch Designs\ngustavoalicea1@gmail.com\nBora ozyigit\nEmbroidery Northwest\nTrendy Transfers\nCUSTOM PROMOTIONAL BRANDING\nRudy Cuellar\nJoseph Heimuli\nLinda Smith\nGables Sporting Goods\nDream Chasing Solutions\nJennifer Miller\nDavid Smith\nMadison Badminton Inc\nTrinity Ink Studio\nAXIS\tPRIMARY OWNER\tSOURCE\tACTION\nsales\t\nIhsan Taskiran\nihsan@dtfbank.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\nsupport\t\nLinda Marroquin\ndtfbanktx@gmail.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\n\naccount\t\nDTF Bank Owner\ninfo@dtfbank.com\n\t\ndefault axis backfill\nJun 28, 2026\n\t\nAssign primary member\nIhsan Taskiran\nCharlette Boatman\nLinda Marroquin\nDTF Bank Owner\nRecent ownership log\ndefault axis assigned - account - DTF Bank Owner - Jun 28, 2026\ndefault axis assigned - support - Linda Marroquin - Jun 28, 2026\ndefault axis assigned - sales - Ihsan Taskiran - Jun 28, 2026",
+    "hasCustomerRoutingTitle": true,
+    "hasAxisOwnershipText": false,
+    "hasRoutingSummary": true,
+    "hasHelpTooltip": true,
+    "assignmentAxisRows": 3
+  },
+  "screenshots": {
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m17-customer-routing-ui-live.png",
+    "tooltipScreenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m17-customer-routing-tooltip-ui-live.png"
+  },
+  "consoleErrors": [],
+  "failedResponses": [],
+  "pass": true
+}
