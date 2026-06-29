@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CALL_INTENTS, CREATE_TASK_AXIS, OPERATIONAL_INTENTS, PSYCH_TAGS, URGENCY_LEVELS } from './enums.js';
 
-export const TRANSCRIPT_RESOLVER_SCHEMA_VERSION = 2;
+export const TRANSCRIPT_RESOLVER_SCHEMA_VERSION = 3;
 
 export const TRANSCRIPT_RESOLVER_OUTPUT_FIELDS = [
   'customer_match',
