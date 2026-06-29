@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
+import { assertServiceRequestSourceContract, serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
 import type {
   AddServiceRequestCommentInput,
   AssignServiceRequestInput,
@@ -477,7 +477,7 @@ export class SupportService {
     if (!parsed.success) {
       throw new BadRequestException('Support cases only accept manual, customer_self_service, or admin_created sources.');
     }
-    return parsed.data;
+    return assertServiceRequestSourceContract(parsed.data);
   }
 
   private cleanMetadata(metadata: Record<string, unknown>) {

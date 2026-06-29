@@ -4,6 +4,7 @@ import {
   workflowConditionSchema,
   workflowTriggerSchema,
   createTaskAxisSchema,
+  assertCreateTaskAxisContract,
   type CreateTaskAxis,
   WORKFLOW_ACTIONS,
   WORKFLOW_CONDITIONS,
@@ -40,7 +41,7 @@ export class WorkflowExecutorService {
     }
     const axis = createTaskAxisSchema.safeParse(raw);
     if (!axis.success) throw new BadRequestException(`Invalid create_task axis: ${String(value)}`);
-    return axis.data;
+    return assertCreateTaskAxisContract(axis.data);
   }
 
   recognizedCounts() {

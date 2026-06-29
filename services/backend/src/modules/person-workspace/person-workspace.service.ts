@@ -42,7 +42,8 @@ import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scorin
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
 const CUSTOMER_PIN_KIND = 'customer_pin';
-const CUSTOMER_PIN_SOURCE = 'manual_pin';
+const CUSTOMER_PIN_SOURCE = 'manual';
+const LEGACY_CUSTOMER_PIN_SOURCE = 'manual_pin';
 const CUSTOMER_PIN_SURFACE = 'person_pin';
 const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request', CUSTOMER_PIN_KIND]);
 const COLUMN_STATUS: Record<PersonQueueColumn, string> = {
@@ -495,7 +496,7 @@ export class PersonWorkspaceService {
       where: {
         customerId: id,
         assignedMemberId: member.id,
-        source: CUSTOMER_PIN_SOURCE,
+        source: { in: [CUSTOMER_PIN_SOURCE, LEGACY_CUSTOMER_PIN_SOURCE] },
         surface: CUSTOMER_PIN_SURFACE,
         metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },
       },
@@ -506,9 +507,13 @@ export class PersonWorkspaceService {
 
     if (nextPinned) {
       if (existing) {
+        const sourceOrigin = existing.source === LEGACY_CUSTOMER_PIN_SOURCE
+          ? { sourceOrigin: LEGACY_CUSTOMER_PIN_SOURCE }
+          : {};
         await this.prisma.db.serviceRequest.updateMany({
           where: { id: existing.id },
           data: {
+            source: CUSTOMER_PIN_SOURCE,
             status: 'open',
             closedAt: null,
             metadata: {
@@ -516,6 +521,7 @@ export class PersonWorkspaceService {
               personWorkspaceKind: CUSTOMER_PIN_KIND,
               personPinnedBy: { [member.id]: Date.now() },
               category: 'customer_pin',
+              ...sourceOrigin,
             } as Prisma.InputJsonValue,
           },
         });
@@ -538,14 +544,19 @@ export class PersonWorkspaceService {
               personWorkspaceKind: CUSTOMER_PIN_KIND,
               personPinnedBy: { [member.id]: Date.now() },
               category: 'customer_pin',
+              sourceOrigin: 'person_workspace_pin',
             } as Prisma.InputJsonValue,
           },
         });
       }
     } else if (existing) {
+      const sourceOrigin = existing.source === LEGACY_CUSTOMER_PIN_SOURCE
+        ? { sourceOrigin: LEGACY_CUSTOMER_PIN_SOURCE }
+        : {};
       await this.prisma.db.serviceRequest.updateMany({
         where: { id: existing.id },
         data: {
+          source: CUSTOMER_PIN_SOURCE,
           status: 'closed',
           closedAt: new Date(),
           metadata: {
@@ -553,6 +564,7 @@ export class PersonWorkspaceService {
             personWorkspaceKind: CUSTOMER_PIN_KIND,
             personPinnedBy: {},
             category: 'customer_pin',
+            ...sourceOrigin,
           } as Prisma.InputJsonValue,
         },
       });
@@ -1640,7 +1652,7 @@ export class PersonWorkspaceService {
       where: {
         customerId: { in: customerIds },
         assignedMemberId: memberId,
-        source: CUSTOMER_PIN_SOURCE,
+        source: { in: [CUSTOMER_PIN_SOURCE, LEGACY_CUSTOMER_PIN_SOURCE] },
         surface: CUSTOMER_PIN_SURFACE,
         status: { notIn: Array.from(CLOSED) },
         metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },

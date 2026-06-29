@@ -117,6 +117,27 @@ export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
 export type WorkflowCondition = z.infer<typeof workflowConditionSchema>;
 export type WorkflowAction = z.infer<typeof workflowActionSchema>;
 
+export function assertCreateTaskAxisContract(axis: CreateTaskAxis) {
+  switch (axis) {
+    case 'sales':
+    case 'account':
+      return axis;
+    default:
+      return exhaustiveEnum(axis);
+  }
+}
+
+export function assertServiceRequestSourceContract(source: z.infer<typeof serviceRequestSourceSchema>) {
+  switch (source) {
+    case 'manual':
+    case 'customer_self_service':
+    case 'admin_created':
+      return source;
+    default:
+      return exhaustiveEnum(source);
+  }
+}
+
 export type WorkflowTriggerFamily = 'system' | 'ai_derived' | 'aggregate' | 'accounts' | 'chaining_prep';
 export type WorkflowConditionCategory = 'ai' | 'commerce' | 'segment' | 'call_history' | 'task_state' | 'ownership' | 'time';
 export type WorkflowValueType = 'string' | 'number' | 'boolean' | 'enum' | 'range' | 'window';
@@ -356,4 +377,8 @@ function labelFromEnum(value: string) {
   return value
     .replace(/[-_.]/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function exhaustiveEnum(value: never): never {
+  throw new Error(`Unhandled workflow enum value: ${String(value)}`);
 }
