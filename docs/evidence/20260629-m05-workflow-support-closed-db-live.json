@@ -1,21 +1,90 @@
 ﻿{
-  "generatedAt": "2026-06-29T06:45:08.302Z",
-  "database": "managed Vultr Postgres via container DATABASE_URL",
-  "buildSha": "dae8c11d472a092c76242af819eb7c476a581331",
+  "generatedAt": "2026-06-29T08:29:54.717Z",
+  "database": "managed Vultr Postgres via factoryengine-dtfbank-app env",
+  "buildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
   "deletedWorkflowSourcesQuery": "SELECT count(*) FROM service_requests WHERE source IN ('workflow','ai_workflow','ai_transcript','ai_segment')",
   "deletedWorkflowSourcesCount": 0,
+  "unsupportedSourceCount": 0,
+  "manualPinCount": 0,
   "serviceRequestSources": [
     {
+      "source": "admin_created",
+      "count": 2
+    },
+    {
       "source": "manual",
-      "count": 9
+      "count": 15
     }
   ],
-  "seedOrSyntheticServiceRequestCount": 0,
-  "supportCreateTaskRuleCount": 0,
-  "workflowCategoryRows": [],
-  "migration": {
-    "migration_name": "202606309_close_workflow_support_path",
-    "finished_at": "2026-06-29T06:31:15.263Z"
+  "serviceRequestSourceConstraint": [
+    {
+      "conname": "service_requests_source_allowed",
+      "definition": "CHECK ((source = ANY (ARRAY['manual'::text, 'customer_self_service'::text, 'admin_created'::text])))"
+    }
+  ],
+  "supportWorkflowTriggerCounts": {
+    "workflowRules": 0,
+    "ruleVersions": 0,
+    "executions": 0,
+    "backfills": 0,
+    "createTaskSupportActions": 0
   },
+  "lindaPriority": {
+    "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "nativeSegmentOwnershipCount": 5,
+    "activeShopifySegmentMembershipCount": 977,
+    "expectedPriorityCustomerCountAfterCaps": 93,
+    "supportPrimaryAssignmentCount": 5958,
+    "serviceRequestBackedForbiddenPriority": 0,
+    "supportWorkflowCasesForLinda": 0,
+    "groupSamples": [
+      {
+        "segmentId": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "segmentName": "Min 2 max 5 purchase",
+        "dailyCap": 25,
+        "activeMemberships": 355,
+        "cappedItems": 25
+      },
+      {
+        "segmentId": "seg_i2igf1ynhxp1umg8relmg5aa",
+        "segmentName": "Customers over 20 orders",
+        "dailyCap": 17,
+        "activeMemberships": 17,
+        "cappedItems": 17
+      },
+      {
+        "segmentId": "seg_ui2gyn7udvfekebsyyuyn0mo",
+        "segmentName": "Wholesale Customers",
+        "dailyCap": 25,
+        "activeMemberships": 30,
+        "cappedItems": 25
+      },
+      {
+        "segmentId": "seg_rz3xkyzxykilcj4pswvdixtd",
+        "segmentName": "Customers who have purchased DTF or UV DTF Printer",
+        "dailyCap": 12,
+        "activeMemberships": 12,
+        "cappedItems": 12
+      },
+      {
+        "segmentId": "seg_eftzjgf9bcyvnjz09d66b6h6",
+        "segmentName": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+        "dailyCap": 25,
+        "activeMemberships": 563,
+        "cappedItems": 25
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "migration_name": "202606310_remove_support_workflow_trigger",
+      "finished_at": "2026-06-29T08:10:00.219Z"
+    },
+    {
+      "migration_name": "202606311_normalize_support_case_sources",
+      "finished_at": "2026-06-29T08:21:55.470Z"
+    }
+  ],
   "pass": true
 }

@@ -1,27 +1,49 @@
 {
-  "generatedAt": "2026-06-29T06:46:26.368Z",
-  "appUrl": "https://app.dtfbank.com/rules",
-  "apiBase": "https://api.dtfbank.com/api/v1",
-  "tenantId": "ten_dtfbank",
-  "buildSha": "dae8c11d472a092c76242af819eb7c476a581331",
-  "principal": {
-    "email": "info@dtfbank.com",
-    "type": "member",
-    "permissionCount": 27
-  },
-  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-workflow-axis-dropdown-ui-live.png",
-  "screenshotNote": "The live select was temporarily rendered with size=2 through CDP so both native options are visible in the screenshot; no source code was changed for this visual proof.",
-  "dom": {
+  "checkedAt": "2026-06-29T08:33:23.612Z",
+  "appBase": "https://app.dtfbank.com",
+  "browserMode": "standalone Playwright fallback; in-app browser node_repl transport closed",
+  "rules": {
     "url": "https://app.dtfbank.com/rules",
-    "selectId": "create-task-axis-act-1782715585514-102",
-    "selected": "sales",
-    "axisOptions": [
-      "sales",
-      "account"
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-workflow-axis-ui-live.png",
+    "axisSelectOptions": [
+      {
+        "value": "sales",
+        "text": "Sales"
+      },
+      {
+        "value": "account",
+        "text": "Account"
+      }
     ],
-    "supportOptionPresent": false,
-    "serviceRequestSourceCatalogVisible": true,
-    "bodyTextSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nRule engine\nD\nDTF Bank\nOwner\nRule engine\nVisual editor for task-generation rules. Author here, the engine consumes the JSON.\nVerify chain\nMASTER ENUM CATALOG V2026-06-29.2\n8 psych tags · 5 call intents · 4 urgency levels · 29 triggers · 14 conditions · 10 actions · 2 create-task axes\nSAVED RULES\n10\nactive\np50\nDefault: Purchase intent sales follow-up\npsych.tag.detected -> create_task\n1 conditions\n16 fires\n14 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Shipping issue escalation\npsych.tag.detected -> no-op + escalate\n1 conditions\n5 fires\n5 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Refund intent support task\npsych.tag.detected -> no-op + add_watcher\n1 conditions\n16 fires\n16 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Angry customer support follow-up\npsych.tag.detected -> no-op\n1 conditions\n1 fires\n1 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Missed call callback\naircall.call.missed -> no-op\n0 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Overdue task escalation\ntask.overdue -> escalate + add_watcher\n0 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nactive\np70\nDefault: Repeat call account escalation\ncustomer.repeat_call.detected -> escalate + add_watcher\n1 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: First call account onboarding\ncustomer.first_call.detected -> create_task\n0 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: First order customer note\nshopify.order.created -> add_note\n1 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nactive\np50\nDefault: VIP customer pin\ncustomer.ltv.crossed_threshold -> segment_add + pin_customer\n1 conditions\n0 fires\n0 tasks\nsingle fire\n1/24h cooldown\nRULE AUDIT\n0\n Select a saved rule to inspect versions.\nSHADOW REPORTS\n0\n Select a saved rule to inspect shadow reports.\nLIVE TASK HISTORY\n0\n Select a saved rule to inspect live transcript/task executions.\nCATALOG\nV2026-06-29.2\nTriggers\n29\nTriggers\naircall.call.created · aircall.call.ended · aircall.call.missed · aircall.transcript.received · shopify.order.created · shopify.order.cancelled · shopify.order.refunde"
+    "axisSelectBox": {
+      "x": 1171.3055419921875,
+      "y": 671.6805419921875,
+      "width": 58.3333740234375,
+      "height": 23.3333740234375
+    },
+    "catalogText": "Create task axis\n2\nCreate task axis\nsales · account",
+    "supportAxisVisibleInCreateTaskDropdown": false
   },
+  "support": {
+    "url": "https://app.dtfbank.com/support",
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-support-sources-ui-live.png",
+    "sourceButtons": [
+      "All",
+      "Internal",
+      "Customer-facing",
+      "All sources",
+      "Manual",
+      "Customer Self Service",
+      "Admin Created"
+    ],
+    "sourceTextIncludesWorkflow": true,
+    "sourceTextIncludesAiTranscript": false,
+    "sourceTextIncludesManualPin": false,
+    "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nSupport\nD\nDTF Bank\nOwner\nSupport\nService requests across customer-facing and internal surfaces\nRefresh\nNew request\nOPEN\n12\nIN PROGRESS\n0\nURGENT\n0\nRESOLVED\n2\nAll\nInternal\nCustomer-facing\nAll sources\nManual\nCustomer Self Service\nAdmin Created\nSR\tTITLE\tCUSTOMER\tSTATUS\tPRIORITY\tASSIGNEE\tLAST ACTIVITY\nSR-DSI2KWP3\t\nPinned customer: Akil Kurji\nCustomer Pin / Manual / Support\n\tAkil Kurji\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 11:01:03\nSR-CXI68YL8\t\nPinned customer: AA FASHION EXPRESS PRESS\nCustomer Pin / Manual / Support\n\tAA FASHION EXPRESS PRESS\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 11:00:58\nSR-PB9VEATN\t\nPinned customer: Beary Creative\nCustomer Pin / Manual / Support\n\tBeary Creative\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 10:07:41\nSR-A4P16ZLT\t\nPinned customer: 1st Place Awards & Embroidery\nCustomer Pin / Manual / Support\n\t1st Place Awards & Embroidery\tCLOSED\tMedium\tLinda Marroquin\t29.06.2026 10:07:38\nSR-GV1U7J5S\t\nPinned customer: Apliiq, Inc\nCustomer Pin / Manual / Support\n\tApliiq, Inc\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 10:07:32\nSR-NRKGWDNE\t\nPinned customer: Americraft Sign Co. LLC\nCustomer Pin / Manual / Support\n\tAmericraft Sign Co. LLC\tCLOSED\tMedium\tLinda Marroquin\t29.06.2026 10:07:29\nSR-6HDOWZWF\t\nNew note\nPerson Note / Manual / No ax",
+    "forbiddenSourceButtons": [],
+    "sourceTextWorkflowNote": "The word WORKFLOW appears in the support detail trace heading, not in source filters. Source filter buttons are evaluated separately."
+  },
+  "consoleErrors": [],
+  "failedResponses": [],
   "pass": true
 }
