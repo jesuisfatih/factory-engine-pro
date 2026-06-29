@@ -104,6 +104,17 @@ interface CardContext {
   performance: Map<string, PersonPerformance30d>;
 }
 
+interface CardCallContext {
+  callsById: Map<string, CardCallRow>;
+}
+
+interface CardCallRow {
+  id: string;
+  contactPhone: string | null;
+  contactPhoneE164: string | null;
+  contactEmail: string | null;
+}
+
 interface OwnedSegmentContext {
   segmentId: string;
   segmentName: string;
@@ -204,10 +215,11 @@ export class PersonWorkspaceService {
       ...memberships.map((membership) => membership.customerId),
       ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [customerPinRows, repeatCounts, cardContext] = await Promise.all([
+    const [customerPinRows, repeatCounts, cardContext, callContext] = await Promise.all([
       this.customerPins(member.id, contextCustomerIds),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
+      this.cardCallContext(requestRows),
     ]);
     const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
@@ -243,12 +255,12 @@ export class PersonWorkspaceService {
     const priorityKanban = scopedRows
       .filter((row) => !CLOSED.has(row.status))
       .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext))
       .sort(sortByUrgency)
       .slice(0, 120);
     const pinnedTasks = scopedRows
       .filter((row) => this.isTaskPinned(row, member.id))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext));
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, null, callContext));
     const pinnedCustomers = customerPinRows
       .filter((row) => row.customer)
       .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
@@ -281,13 +293,14 @@ export class PersonWorkspaceService {
     });
     const visible = rows.filter((row) => this.isQueueVisible(row) && this.isServiceRequestScoped(row, assignments, member.id));
     const visibleCustomerIds = visible.map((row) => row.customerId).filter((id): id is string => Boolean(id));
-    const [config, repeatCounts, cardContext] = await Promise.all([
+    const [config, repeatCounts, cardContext, callContext] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(visibleCustomerIds),
       this.cardContext(visibleCustomerIds),
+      this.cardCallContext(visible),
     ]);
     return visible
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, null, callContext))
       .sort(sortByUrgency)
       .slice(0, 120);
   }
@@ -313,6 +326,8 @@ export class PersonWorkspaceService {
       await this.urgencyConfig(),
       await this.repeatCount(updated.customerId),
       await this.cardContext(updated.customerId ? [updated.customerId] : []),
+      null,
+      await this.cardCallContext([updated]),
     );
   }
 
@@ -342,6 +357,8 @@ export class PersonWorkspaceService {
       await this.urgencyConfig(),
       await this.repeatCount(updated.customerId),
       await this.cardContext(updated.customerId ? [updated.customerId] : []),
+      null,
+      await this.cardCallContext([updated]),
     );
   }
 
@@ -701,6 +718,7 @@ export class PersonWorkspaceService {
       relatedRequests,
       aircallRows,
       rule,
+      callContext,
     ] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCount(customerId),
@@ -737,9 +755,10 @@ export class PersonWorkspaceService {
       matchedRuleId
         ? this.prisma.db.workflowRule.findFirst({ where: { id: matchedRuleId } })
         : Promise.resolve(null),
+      this.cardCallContext([row]),
     ]);
 
-    const card = this.queueCard(row, member.id, config, repeatCount, cardContext);
+    const card = this.queueCard(row, member.id, config, repeatCount, cardContext, null, callContext);
     const orders = recentOrders.map((order) => miniOrder(order));
     const basePerformance = customerId
       ? cardContext.performance.get(customerId) ?? { ...EMPTY_PERFORMANCE_30D }
@@ -1484,13 +1503,14 @@ export class PersonWorkspaceService {
     repeatCount = 0,
     cardContext?: CardContext,
     ownedSegment?: OwnedSegmentContext | null,
+    callContext?: CardCallContext,
   ) {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
     const columnId = personColumn(row.status, metadata.personColumnId);
     const source = taskSource(row);
-    const customerName = row.customer?.companyName ?? row.customerUser?.email ?? row.title;
+    const header = taskHeader(row, metadata, callContext);
     const ticket = ticketNumber(row);
     const workflowTrace = workflowTraceFromMetadata(metadata);
     const matchedRuleId = row.matchedRuleId ?? workflowTrace?.matchedRuleId ?? workflowTrace?.ruleId ?? null;
@@ -1512,7 +1532,7 @@ export class PersonWorkspaceService {
       assignedMemberId: row.assignedMemberId,
       assignedMemberName: row.assignedMember ? memberDisplayName(row.assignedMember) : null,
       axis: axisOrNull(row.axis),
-      title: customerName,
+      title: header.title,
       summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
       segment: ownedSegment?.segmentName ?? String(metadata.category ?? row.surface ?? 'Support'),
       segmentColor: ownedSegment?.segmentColor ?? colorForUrgency(urgencyBreakdown.score),
@@ -1523,8 +1543,8 @@ export class PersonWorkspaceService {
       pinned: pinnedAt !== null,
       pinnedAt,
       source,
-      phone: row.customer?.phone ?? row.customerUser?.phone ?? undefined,
-      email: row.customer?.email ?? row.customerUser?.email ?? undefined,
+      phone: header.phone ?? undefined,
+      email: header.email ?? undefined,
       ordersCount: row.customer?.ordersCount ?? undefined,
       totalSpent: row.customer ? money(row.customer.totalSpent) : undefined,
       segmentId: ownedSegment?.segmentId ?? row.customer?.segmentMemberships[0]?.segment.id ?? null,
@@ -1638,6 +1658,16 @@ export class PersonWorkspaceService {
       });
     }
     return { miniOrders, performance };
+  }
+
+  private async cardCallContext(rows: Array<{ sourceCallId: string | null }>): Promise<CardCallContext> {
+    const sourceCallIds = uniqueStrings(rows.map((row) => row.sourceCallId).filter((id): id is string => Boolean(id)));
+    if (sourceCallIds.length === 0) return { callsById: new Map() };
+    const calls = await this.prisma.db.aircallCallEvent.findMany({
+      where: { id: { in: sourceCallIds } },
+      select: { id: true, contactPhone: true, contactPhoneE164: true, contactEmail: true },
+    });
+    return { callsById: new Map(calls.map((call) => [call.id, call])) };
   }
 
   private calendarFromRequest(row: ServiceRequestRow) {
@@ -1854,11 +1884,72 @@ function uniqueHighUrgencyCount(
   return count;
 }
 
+function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {
+  if (row.customer) {
+    return {
+      title: shopifyCustomerHeader(row.customer),
+      phone: row.customer.phone ?? null,
+      email: row.customer.email ?? null,
+    };
+  }
+
+  const workflow = asRecord(metadata.workflow);
+  const params = asRecord(workflow.params);
+  const snapshot = asRecord(row.taskStateSnapshot);
+  const snapshotCustomer = asRecord(snapshot.customer);
+  const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
+  const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) : null;
+  const phone = firstString(
+    row.customerUser?.phone,
+    params.contactPhoneE164,
+    params.customerPhone,
+    params.phone,
+    params.contactPhone,
+    snapshotCustomer.phone,
+    resolverOutput.customer_phone,
+    resolverOutput.phone,
+    sourceCall?.contactPhoneE164,
+    sourceCall?.contactPhone,
+  );
+  const email = firstString(
+    row.customerUser?.email,
+    params.customerEmail,
+    params.email,
+    params.contactEmail,
+    snapshotCustomer.email,
+    resolverOutput.customer_email,
+    resolverOutput.email,
+    sourceCall?.contactEmail,
+  );
+
+  return {
+    title: phone ?? email ?? row.title,
+    phone,
+    email,
+  };
+}
+
+function shopifyCustomerHeader(customer: { companyName: string | null; firstName?: string | null; lastName?: string | null; email: string | null; id: string }) {
+  return `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()
+    || customer.companyName
+    || customer.email
+    || customer.id;
+}
+
 function customerDisplayName(customer: { companyName: string | null; firstName?: string | null; lastName?: string | null; email: string | null; id: string }) {
   return customer.companyName
     || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()
     || customer.email
     || customer.id;
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
 }
 
 function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTaskWorkflowTrace | undefined {
