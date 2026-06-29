@@ -36,7 +36,7 @@ const emptyForm: WorkspaceFormState = {
 
 const URGENCY_WEIGHT_FIELDS = ['segmentWeight', 'repeatCountWeight', 'intentWeight', 'aiUrgencyWeight', 'waitingHoursWeight'] as const;
 const INTENT_SCORE_FIELDS = ['complaint', 'escalation', 'reorder', 'sales', 'support', 'follow_up'] as const;
-const AI_URGENCY_SCORE_FIELDS = ['critical', 'high', 'medium', 'low'] as const;
+const RESOLVER_URGENCY_SCORE_FIELDS = ['critical', 'high', 'medium', 'low'] as const;
 
 export function WorkspaceSettingsPage() {
   const { t } = useTranslation();
@@ -217,13 +217,13 @@ export function WorkspaceSettingsPage() {
             </div>
           </div>
           <div className="field">
-            <label>{t('settings.workspace.ai_urgency_scores')}</label>
+            <label>{t('settings.workspace.resolver_urgency_scores')}</label>
             <div className="field-row">
-              {AI_URGENCY_SCORE_FIELDS.map((field) => (
+              {RESOLVER_URGENCY_SCORE_FIELDS.map((field) => (
                 <div className="field" key={field}>
-                  <label htmlFor={`ai-urgency-${field}`}>{field}</label>
+                  <label htmlFor={`resolver-urgency-${field}`}>{field}</label>
                   <input
-                    id={`ai-urgency-${field}`}
+                    id={`resolver-urgency-${field}`}
                     type="number"
                     min="0"
                     max="100"

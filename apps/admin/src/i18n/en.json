@@ -609,7 +609,7 @@
       "aiUrgencyWeight": "Resolver urgency",
       "waitingHoursWeight": "Waiting hours",
       "intent_scores": "Intent scores",
-      "ai_urgency_scores": "Resolver urgency scores",
+      "resolver_urgency_scores": "Resolver urgency scores",
       "save": "Save workspace",
       "saving": "Saving",
       "preview_title": "Live preview",

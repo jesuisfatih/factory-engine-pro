@@ -110,6 +110,9 @@ export class IdentityService {
         aircallUserId: input.aircallUserId,
       });
       await this.repository.setMemberRoles(member.id, input.roleIds);
+      if (input.aircallUserId) {
+        await this.syncMemberAircallMap(member.id, input.aircallUserId, 'identity_create');
+      }
       const invitation = input.sendInvite
         ? await this.createInvitation(member.id, 'member')
         : null;
@@ -136,6 +139,9 @@ export class IdentityService {
       ...(input.aircallUserId !== undefined && { aircallUserId: input.aircallUserId }),
     });
     if (input.roleIds) await this.repository.setMemberRoles(id, input.roleIds);
+    if (input.aircallUserId !== undefined) {
+      await this.syncMemberAircallMap(id, input.aircallUserId ?? null, 'identity_update');
+    }
     const updated = await this.repository.findMemberById(id);
     if (!updated) throw new NotFoundException('Member not found');
     return stripPasswordHash(updated);
@@ -359,6 +365,41 @@ export class IdentityService {
         status: delivery.status,
       },
     };
+  }
+
+  private async syncMemberAircallMap(memberId: string, aircallUserId: string | null, source: string) {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new BadRequestException('Tenant context is required');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.aircallMemberMap.deleteMany({
+        where: {
+          tenantId,
+          OR: [
+            { memberId },
+            ...(aircallUserId ? [{ aircallUserId }] : []),
+          ],
+        },
+      });
+      if (aircallUserId) {
+        await tx.member.updateMany({
+          where: { tenantId, aircallUserId, id: { not: memberId } },
+          data: { aircallUserId: null },
+        });
+        await tx.aircallMemberMap.create({
+          data: {
+            id: prefixedId('acmap'),
+            tenantId,
+            aircallUserId,
+            memberId,
+            source,
+          },
+        });
+      }
+      await tx.member.updateMany({
+        where: { tenantId, id: memberId },
+        data: { aircallUserId },
+      });
+    });
   }
 
   private async principalsForInvitation(principalId: string, principalType: 'member' | 'customer_user' | 'sub_user') {

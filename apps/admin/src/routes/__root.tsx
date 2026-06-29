@@ -15,6 +15,7 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/mail-marketing/, key: 'nav.mail_marketing' },
   { test: /^\/system-mail/, key: 'nav.system_mail' },
   { test: /^\/dashboard/, key: 'nav.dashboard' },
+  { test: /^\/call-center/, key: 'nav.call_center' },
   { test: /^\/team\/users\/add/, key: 'team.users.wizard.title' },
   { test: /^\/team/, key: 'nav.team' },
   { test: /^\/settings\/workspace/, key: 'nav.workspace_settings' },
@@ -38,6 +39,7 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> 
   { test: /^\/segments/, permission: MEMBER_PERMISSIONS.segmentsRead },
   { test: /^\/support/, permission: MEMBER_PERMISSIONS.supportRead },
   { test: /^\/b2b-requests/, permission: MEMBER_PERMISSIONS.b2bAccessRead },
+  { test: /^\/call-center/, permission: [MEMBER_PERMISSIONS.membersRead, MEMBER_PERMISSIONS.taskAssign] },
   { test: /^\/tasks/, permission: MEMBER_PERMISSIONS.taskAssign },
   { test: /^\/rules\/shadow-telemetry/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/rules\/stats/, permission: MEMBER_PERMISSIONS.settingsRead },
@@ -45,7 +47,6 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> 
   { test: /^\/mail-marketing/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.settingsRead },
-  { test: /^\/settings\/ai/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/shopify/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/workspace/, permission: MEMBER_PERMISSIONS.settingsRead },
 ];

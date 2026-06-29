@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Check, Edit2, Mail, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-react';
-import { MEMBER_PERMISSIONS, type AircallUsersResponse } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, type AircallUsersResponse, type UpdateMemberInput } from '@factory-engine-pro/contracts';
 import { adminApi, apiErrorMessage } from '@/lib/api';
+import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { Tabs } from '@/components/Tabs';
 import { useCan } from '@/lib/permissions';
@@ -43,8 +44,28 @@ const inviteSteps = [
 
 export function TeamUsersPage() {
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<Member | null>(null);
+  const qc = useQueryClient();
   const query = useQuery(memberQuery);
   const canWrite = useCan(MEMBER_PERMISSIONS.membersWrite);
+  const aircallUsers = useQuery({
+    queryKey: ['aircall', 'users', 'team-members'],
+    queryFn: () => adminApi.aircallUsers() as Promise<AircallUsersResponse>,
+    enabled: canWrite,
+    retry: false,
+  });
+  const roleOptions = useQuery({ ...roleQuery, enabled: canWrite });
+  const updateMember = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateMemberInput }) => adminApi.updateMember(id, input) as Promise<Member>,
+    onSuccess: () => {
+      setEditing(null);
+      qc.invalidateQueries({ queryKey: memberQuery.queryKey });
+      qc.invalidateQueries({ queryKey: ['aircall', 'users'] });
+      qc.invalidateQueries({ queryKey: ['call-center'] });
+      toast.success('Member updated');
+    },
+    onError: (error) => toast.error('Member update failed', { description: apiErrorMessage(error) }),
+  });
   const users = query.data ?? [];
   const filtered = useMemo(() => {
     const text = search.trim().toLowerCase();
@@ -74,7 +95,7 @@ export function TeamUsersPage() {
       {query.isSuccess && users.length > 0 && (
         <div className="data-card">
           <table className="data-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th>Aircall</th><th>Last login</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th>Aircall</th><th>Last login</th>{canWrite && <th>Actions</th>}</tr></thead>
             <tbody>
               {filtered.map((user) => (
                 <tr key={user.id}>
@@ -84,6 +105,20 @@ export function TeamUsersPage() {
                   <td><span className={`pill dot ${user.status === 'active' ? 'success' : user.status === 'invited' ? 'info' : 'danger'}`}>{user.status}</span></td>
                   <td>{user.aircallUserId ? <span className="pill success">{user.aircallUserId}</span> : <span className="pill">Not linked</span>}</td>
                   <td className="muted">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}</td>
+                  {canWrite && (
+                    <td>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          if (!roleOptions.data && !roleOptions.isFetching) roleOptions.refetch();
+                          setEditing(user);
+                        }}
+                      >
+                        <Edit2 size={13} /> Edit
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -91,7 +126,163 @@ export function TeamUsersPage() {
         </div>
       )}
       {query.isSuccess && users.length > 0 && filtered.length === 0 && <StateCard title="No matching members" body="Clear the search to see the full team list." />}
+      {editing && (
+        <MemberEditDialog
+          member={editing}
+          roles={roleOptions.data ?? []}
+          rolesLoading={roleOptions.isLoading || roleOptions.isFetching}
+          rolesError={roleOptions.error}
+          aircallUsers={aircallUsers.data}
+          aircallLoading={aircallUsers.isLoading}
+          aircallError={aircallUsers.error}
+          isSaving={updateMember.isPending}
+          error={updateMember.error}
+          onClose={() => setEditing(null)}
+          onSubmit={(input) => updateMember.mutate({ id: editing.id, input })}
+        />
+      )}
     </>
+  );
+}
+
+function MemberEditDialog({
+  member,
+  roles,
+  rolesLoading,
+  rolesError,
+  aircallUsers,
+  aircallLoading,
+  aircallError,
+  isSaving,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  member: Member;
+  roles: Role[];
+  rolesLoading: boolean;
+  rolesError: unknown;
+  aircallUsers?: AircallUsersResponse;
+  aircallLoading: boolean;
+  aircallError: unknown;
+  isSaving: boolean;
+  error: unknown;
+  onClose: () => void;
+  onSubmit: (input: UpdateMemberInput) => void;
+}) {
+  const [form, setForm] = useState({
+    firstName: member.firstName,
+    lastName: member.lastName,
+    phone: member.phone ?? '',
+    status: member.status,
+    roleIds: member.roleAssignments.map((assignment) => assignment.role.id),
+    aircallUserId: member.aircallUserId ?? '',
+  });
+  const toggleRole = (roleId: string, checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      roleIds: checked ? Array.from(new Set([...current.roleIds, roleId])) : current.roleIds.filter((id) => id !== roleId),
+    }));
+  };
+  const availableAircallUsers = (aircallUsers?.users ?? []).filter((user) => (
+    !user.linkedMember
+    || user.linkedMember.id === member.id
+    || user.aircallUserId === member.aircallUserId
+  ));
+  const canSubmit = Boolean(form.firstName.trim() && form.lastName.trim() && form.roleIds.length > 0 && !isSaving);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()} labelledBy="member-edit-title" describedBy="member-edit-subtitle">
+      <div className="modal-head">
+        <div>
+          <DialogTitle id="member-edit-title" asChild><h2>Edit member</h2></DialogTitle>
+          <DialogDescription id="member-edit-subtitle" className="sub">Update identity, role assignment, status, and Aircall mapping from the live tenant record.</DialogDescription>
+        </div>
+        <DialogClose className="close"><X size={16} /></DialogClose>
+      </div>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        if (!canSubmit) return;
+        onSubmit({
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim() || null,
+          status: form.status as UpdateMemberInput['status'],
+          roleIds: form.roleIds,
+          aircallUserId: form.aircallUserId || null,
+        });
+      }}>
+        <div className="modal-body">
+          <section className="modal-section">
+            <h3>Identity</h3>
+            <div className="field-row">
+              <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
+              <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
+            </div>
+            <div className="field-row">
+              <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
+              <div className="field">
+                <label>Status</label>
+                <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+                  <option value="invited">Invited</option>
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+            <div className="muted">{member.email}</div>
+          </section>
+
+          <section className="modal-section">
+            <h3>Roles</h3>
+            {rolesLoading && <div className="muted">Loading roles...</div>}
+            {Boolean(rolesError) && <div className="error-state">{apiErrorMessage(rolesError)}</div>}
+            {!rolesLoading && roles.length === 0 && <div className="empty-state">No roles are available.</div>}
+            <div style={{ display: 'grid', gap: 8 }}>
+              {roles.map((role) => (
+                <label key={role.id} className="checkbox-row" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginBottom: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={form.roleIds.includes(role.id)}
+                    onChange={(event) => toggleRole(role.id, event.target.checked)}
+                  />
+                  <span style={{ flex: 1 }}>{role.name}</span>
+                  <span className={`pill ${role.isSystem ? 'info' : 'accent'}`}>{role.isSystem ? 'system' : 'custom'}</span>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section className="modal-section">
+            <h3>Aircall user</h3>
+            {Boolean(aircallError) && <div className="error-state">{apiErrorMessage(aircallError)}</div>}
+            <div className="field">
+              <label>Linked Aircall user</label>
+              <select
+                value={form.aircallUserId}
+                disabled={aircallLoading}
+                onChange={(event) => setForm({ ...form, aircallUserId: event.target.value })}
+              >
+                <option value="">{aircallLoading ? 'Loading Aircall users' : 'Not linked'}</option>
+                {availableAircallUsers.map((user) => (
+                  <option key={user.aircallUserId} value={user.aircallUserId}>
+                    {user.name} - {user.email ?? user.aircallUserId}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+          {Boolean(error) && <div className="error-state">{apiErrorMessage(error)}</div>}
+        </div>
+        <div className="modal-foot">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="save-btn" disabled={!canSubmit}>
+            <Save size={13} /> {isSaving ? 'Saving member' : 'Save member'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
