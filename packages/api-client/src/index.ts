@@ -115,6 +115,7 @@ import type {
   SaveMailAudienceInput,
   SaveMailFlowInput,
   SavePersonEmailDraftInput,
+  SendPersonEmailInput,
   SubmitCommissionRequestInput,
   SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
@@ -694,6 +695,10 @@ export class ApiClient {
 
   savePersonEmailDraft(input: SavePersonEmailDraftInput) {
     return this.post('/person/workspace/emails/drafts', input);
+  }
+
+  sendPersonEmail(input: SendPersonEmailInput) {
+    return this.post('/person/workspace/emails/send', input);
   }
 
   personAnnouncements() {

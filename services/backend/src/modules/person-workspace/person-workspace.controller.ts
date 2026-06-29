@@ -7,6 +7,7 @@ import {
   reorderPersonDailyCallSchema,
   savePersonCustomerNoteSchema,
   savePersonEmailDraftSchema,
+  sendPersonEmailSchema,
   savePersonNoteSchema,
   replyPersonNoteSchema,
   savePersonTaskNoteSchema,
@@ -21,6 +22,7 @@ import {
   type ReplyPersonNoteInput,
   type SavePersonCustomerNoteInput,
   type SavePersonEmailDraftInput,
+  type SendPersonEmailInput,
   type SavePersonNoteInput,
   type SavePersonTaskNoteInput,
   type SchedulePersonTaskFollowUpInput,
@@ -236,6 +238,12 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   saveEmailDraft(@Body(new ZodValidationPipe(savePersonEmailDraftSchema)) body: SavePersonEmailDraftInput) {
     return this.workspace.saveEmailDraft(body);
+  }
+
+  @Post('emails/send')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  sendEmail(@Body(new ZodValidationPipe(sendPersonEmailSchema)) body: SendPersonEmailInput) {
+    return this.workspace.sendEmail(body);
   }
 
   @Get('announcements')

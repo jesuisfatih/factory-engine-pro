@@ -435,6 +435,9 @@ export const savePersonEmailDraftSchema = z.object({
 });
 export type SavePersonEmailDraftInput = z.infer<typeof savePersonEmailDraftSchema>;
 
+export const sendPersonEmailSchema = savePersonEmailDraftSchema;
+export type SendPersonEmailInput = z.infer<typeof sendPersonEmailSchema>;
+
 export const personEmailContactSchema = z.object({
   id: z.string(),
   name: z.string(),

@@ -16,6 +16,7 @@ import type {
   SavePersonNoteInput,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
+  SendPersonEmailInput,
   TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
@@ -169,6 +170,7 @@ export const replyNote = (id: string, input: ReplyPersonNoteInput) => personApi.
 export const fetchEmails = () => personApi.personEmails() as Promise<EmailRow[]>;
 export const fetchEmailContacts = () => personApi.personEmailContacts() as Promise<PersonEmailContact[]>;
 export const saveEmailDraft = (input: SavePersonEmailDraftInput) => personApi.savePersonEmailDraft(input) as Promise<EmailRow>;
+export const sendEmail = (input: SendPersonEmailInput) => personApi.sendPersonEmail(input) as Promise<EmailRow>;
 export const fetchAnnouncements = () => personApi.personAnnouncements() as Promise<Announcement[]>;
 export const fetchNotifications = () => personApi.personNotifications() as Promise<NotificationRow[]>;
 export const fetchTraining = () => personApi.personTraining() as Promise<TrainingResponse>;

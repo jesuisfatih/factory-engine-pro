@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Mail, Save, Send, X } from 'lucide-react';
-import { fetchEmailContacts, fetchEmails, friendlyError, saveEmailDraft } from '../api/live';
+import { fetchEmailContacts, fetchEmails, friendlyError, saveEmailDraft, sendEmail } from '../api/live';
 import { QueryState } from '../components/QueryState';
 
 export function EmailView() {
@@ -19,23 +19,40 @@ export function EmailView() {
     const source = query ? contacts.filter((contact) => contactMatches(contact, query)) : contacts;
     return source.slice(0, 8);
   }, [contacts, draft.to]);
-  const canSave = draft.to.trim().length > 0 && draft.subject.trim().length > 0 && draft.body.trim().length > 0;
+  const canSubmit = draft.to.trim().length > 0 && draft.subject.trim().length > 0 && draft.body.trim().length > 0;
+  const resetComposer = async () => {
+    setDraft(emptyDraft());
+    setDraftError(null);
+    setComposing(false);
+    await queryClient.invalidateQueries({ queryKey: ['person', 'emails'] });
+  };
   const draftMutation = useMutation({
     mutationFn: saveEmailDraft,
-    onSuccess: async () => {
-      setDraft(emptyDraft());
-      setDraftError(null);
-      setComposing(false);
-      await queryClient.invalidateQueries({ queryKey: ['person', 'emails'] });
-    },
+    onSuccess: resetComposer,
     onError: (mutationError) => setDraftError(friendlyError(mutationError)),
   });
+  const sendMutation = useMutation({
+    mutationFn: sendEmail,
+    onSuccess: resetComposer,
+    onError: (mutationError) => setDraftError(friendlyError(mutationError)),
+  });
+  const isSubmitting = draftMutation.isPending || sendMutation.isPending;
 
   function submitDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSave || draftMutation.isPending) return;
+    if (!canSubmit || isSubmitting) return;
     setDraftError(null);
     draftMutation.mutate({
+      to: draft.to,
+      subject: draft.subject,
+      body: draft.body,
+    });
+  }
+
+  function sendNow() {
+    if (!canSubmit || isSubmitting) return;
+    setDraftError(null);
+    sendMutation.mutate({
       to: draft.to,
       subject: draft.subject,
       body: draft.body,
@@ -132,11 +149,11 @@ export function EmailView() {
           </div>
           {draftError ? <div className="email-compose-error">{draftError}</div> : null}
           <div className="email-compose-actions">
-            <button type="button" className="email-send-disabled" disabled title="Send disabled">
+            <button type="button" className="email-send-now" disabled={!canSubmit || isSubmitting} onClick={sendNow}>
               <Send size={14} />
-              <span>Send</span>
+              <span>{sendMutation.isPending ? 'Sending' : 'Send'}</span>
             </button>
-            <button type="submit" className="email-save-draft" disabled={!canSave || draftMutation.isPending}>
+            <button type="submit" className="email-save-draft" disabled={!canSubmit || isSubmitting}>
               <Save size={14} />
               <span>{draftMutation.isPending ? 'Saving' : 'Save draft'}</span>
             </button>

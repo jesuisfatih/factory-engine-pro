@@ -30,6 +30,7 @@ import type {
   SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
   SendPersonMessageInput,
+  SendPersonEmailInput,
   TogglePersonQueuePinInput,
   TransferPersonTaskInput,
   WorkflowConditionTrace,
@@ -46,6 +47,7 @@ import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
@@ -197,6 +199,7 @@ export class PersonWorkspaceService {
     private readonly scoring: UrgencyScoringService,
     private readonly customersService: CustomersService,
     private readonly aircall: AircallService,
+    private readonly mail: MailService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
   ) {}
@@ -1726,6 +1729,29 @@ export class PersonWorkspaceService {
       member_id: member.id,
     });
     return this.emailRow(created);
+  }
+
+  async sendEmail(input: SendPersonEmailInput) {
+    const member = await this.currentMember();
+    const delivery = await this.mail.sendTransactional({
+      eventKey: 'person.email.sent',
+      to: input.to,
+      subject: input.subject,
+      html: htmlFromPlainText(input.body),
+      text: input.body,
+      metadata: {
+        source: 'person_email_compose',
+        createdByMemberId: member.id,
+        createdByMemberEmail: member.email,
+        createdByMemberName: memberDisplayName(member),
+      },
+    });
+    this.logger.log('person_workspace', 'email.send', 'Person email sent from workspace compose', {
+      mail_delivery_id: delivery.id,
+      member_id: member.id,
+      recipient_email: input.to,
+    });
+    return this.emailRow(delivery);
   }
 
   async announcements() {
