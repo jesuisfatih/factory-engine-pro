@@ -281,10 +281,15 @@ export class SyncService {
     const phone = stringOrNull(raw.phone);
     const totalSpent = numeric(raw.total_spent);
     const ordersCount = integer(raw.orders_count);
+    const customerTags = tags(raw.tags);
     const companyName = stringOrNull((raw.default_address as Record<string, unknown> | undefined)?.company)
       || [firstName, lastName].filter(Boolean).join(' ').trim()
       || email
       || `Shopify Customer ${shopifyCustomerId}`;
+    if (isNonProductionShopifyCustomer({ email, firstName, lastName, companyName, tags: customerTags, totalSpent, ordersCount })) {
+      await this.removeNonProductionShopifyCustomer(shopifyCustomerId, 'shopify_customer_sync');
+      return;
+    }
 
     const customer = await this.prisma.db.customer.upsert({
       where: { tenantId_shopifyCustomerId: { tenantId: this.tenantId(), shopifyCustomerId } },
@@ -299,7 +304,7 @@ export class SyncService {
         phone,
         billingAddress: jsonOrDbNull(raw.default_address),
         shippingAddress: jsonOrDbNull(raw.default_address),
-        tags: tags(raw.tags),
+        tags: customerTags,
         note: stringOrNull(raw.note),
         totalSpent,
         ordersCount,
@@ -315,7 +320,7 @@ export class SyncService {
         phone,
         billingAddress: jsonOrDbNull(raw.default_address),
         shippingAddress: jsonOrDbNull(raw.default_address),
-        tags: tags(raw.tags),
+        tags: customerTags,
         note: stringOrNull(raw.note),
         totalSpent,
         ordersCount,
@@ -500,6 +505,11 @@ export class SyncService {
     const companyName = [firstName, lastName].filter(Boolean).join(' ').trim()
       || email
       || `Shopify Customer ${shopifyCustomerId}`;
+    const customerTags = tags(customer.tags);
+    if (isNonProductionShopifyCustomer({ email, firstName, lastName, companyName, tags: customerTags, totalSpent: 0, ordersCount: 0 })) {
+      await this.removeNonProductionShopifyCustomer(shopifyCustomerId, 'shopify_order_customer_sync');
+      return null;
+    }
     const created = await this.prisma.db.customer.create({
       data: {
         id: prefixedId('cust'),
@@ -510,13 +520,24 @@ export class SyncService {
         lastName,
         email,
         phone: stringOrNull(customer.phone),
-        tags: tags(customer.tags),
+        tags: customerTags,
         rawData: customer as Prisma.InputJsonValue,
         syncedAt: new Date(),
       },
     });
     await this.evaluateCustomerSegments(created.id, 'shopify_order_customer_sync');
     return created;
+  }
+
+  private async removeNonProductionShopifyCustomer(shopifyCustomerId: string, source: string) {
+    const removed = await this.prisma.db.customer.deleteMany({ where: { shopifyCustomerId } });
+    if (removed.count > 0) {
+      this.logger.warn('shopify', 'non_production_customer_removed', 'Non-production Shopify customer excluded from canonical customer data', {
+        shopify_customer_id: shopifyCustomerId,
+        source,
+        removed: removed.count,
+      });
+    }
   }
 
   private async evaluateCustomerSegments(customerId: string, source: string) {
@@ -652,6 +673,31 @@ function tags(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((tag) => String(tag).trim()).filter(Boolean);
   if (typeof value === 'string') return value.split(',').map((tag) => tag.trim()).filter(Boolean);
   return [];
+}
+
+const NON_PRODUCTION_EMAIL_DOMAINS = new Set(['example.com', 'example.net', 'example.org']);
+const NON_PRODUCTION_MARKERS = /\b(seed|mock|demo|dummy)\b/i;
+
+function isNonProductionShopifyCustomer(input: {
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  companyName: string;
+  tags: string[];
+  totalSpent: number;
+  ordersCount: number;
+}) {
+  if (input.ordersCount > 0 || input.totalSpent > 0) return false;
+  const emailDomain = input.email?.split('@')[1]?.trim().toLowerCase() ?? '';
+  if (NON_PRODUCTION_EMAIL_DOMAINS.has(emailDomain)) return true;
+  const searchable = [
+    input.email,
+    input.firstName,
+    input.lastName,
+    input.companyName,
+    ...input.tags,
+  ].filter(Boolean).join(' ');
+  return NON_PRODUCTION_MARKERS.test(searchable);
 }
 
 function jsonOrDbNull(value: unknown) {
