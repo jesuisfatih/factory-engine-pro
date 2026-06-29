@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import {
+  createPersonTaskSupportCaseSchema,
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
@@ -12,6 +13,7 @@ import {
   togglePersonQueuePinSchema,
   transferPersonTaskSchema,
   type CreatePersonRequestInput,
+  type CreatePersonTaskSupportCaseInput,
   type MovePersonQueueCardInput,
   type ReorderPersonDailyCallInput,
   type SavePersonEmailDraftInput,
@@ -126,6 +128,15 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(schedulePersonTaskFollowUpSchema)) body: SchedulePersonTaskFollowUpInput,
   ) {
     return this.workspace.scheduleTaskFollowUp(id, body);
+  }
+
+  @Post('tasks/:id/support-case')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  createTaskSupportCase(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(createPersonTaskSupportCaseSchema)) body: CreatePersonTaskSupportCaseInput,
+  ) {
+    return this.workspace.createTaskSupportCase(id, body);
   }
 
   @Get('customers')

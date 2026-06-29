@@ -80,6 +80,7 @@ import type {
   PatchMailAudienceInput,
   PatchMailFlowInput,
   MovePersonQueueCardInput,
+  CreatePersonTaskSupportCaseInput,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SendPersonMessageInput,
@@ -102,6 +103,7 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
+  PersonTaskSupportCaseResult,
   PersonTaskTransferResult,
   PersonTransferTarget,
   TransferPersonTaskInput,
@@ -540,6 +542,10 @@ export class ApiClient {
 
   schedulePersonTaskFollowUp(id: string, input: SchedulePersonTaskFollowUpInput) {
     return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/calendar`, input);
+  }
+
+  createPersonTaskSupportCase(id: string, input: CreatePersonTaskSupportCaseInput = { priority: 'medium' }) {
+    return this.post<PersonTaskSupportCaseResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/support-case`, input);
   }
 
   personCustomers() {

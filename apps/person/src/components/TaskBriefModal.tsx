@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   X, Phone, Mail, ExternalLink, Sparkles, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
-  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
+  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle, LifeBuoy,
 } from 'lucide-react';
-import { fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { createTaskSupportCase, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
 
 interface Props {
@@ -89,6 +89,14 @@ function initialScheduleValue() {
   if (value.getHours() < 9) value.setHours(9);
   if (value.getHours() > 17) value.setHours(17);
   return dateTimeLocal(value);
+}
+
+function supportPriority(priority: number) {
+  if (priority >= 9) return 'critical' as const;
+  if (priority >= 7) return 'urgent' as const;
+  if (priority >= 5) return 'high' as const;
+  if (priority >= 3) return 'medium' as const;
+  return 'low' as const;
 }
 
 interface NarrativeFieldProps {
@@ -207,6 +215,22 @@ export function TaskBriefModal({ card, onClose }: Props) {
       queryClient.setQueryData(queryKey, next);
       queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
       queryClient.invalidateQueries({ queryKey: ['person', 'calendar'] });
+    },
+  });
+
+  const supportCaseMutation = useMutation({
+    mutationFn: () => createTaskSupportCase(card.id, { priority: supportPriority(liveCard.priority) }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      queryClient.invalidateQueries({ queryKey });
+      window.localStorage.setItem('factory-engine-pro.person.lastSupportCase', JSON.stringify({
+        taskId: result.taskId,
+        supportCaseId: result.supportCaseId,
+        ticketNumber: result.ticketNumber,
+        supportUrl: result.supportUrl,
+        createdAt: new Date().toISOString(),
+      }));
+      onClose();
     },
   });
 
@@ -501,9 +525,25 @@ export function TaskBriefModal({ card, onClose }: Props) {
           </aside>
         </div>
 
+        {supportCaseMutation.isError ? (
+          <div className="brief-footer-error danger-text">
+            <AlertTriangle size={13} />
+            <span>{friendlyError(supportCaseMutation.error)}</span>
+          </div>
+        ) : null}
+
         <footer className="modal-foot">
           <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
+          <button
+            type="button"
+            className="btn"
+            disabled={!detail || supportCaseMutation.isPending}
+            onClick={() => supportCaseMutation.mutate()}
+            title={detail ? 'Create Support Case' : 'Load the live task brief first'}
+          >
+            {supportCaseMutation.isPending ? <Loader2 size={13} className="spin" /> : <LifeBuoy size={13} />} Create Support Case
+          </button>
           <button type="button" className="btn"><Phone size={13} /> Call now</button>
           <button type="button" className="btn primary" onClick={onClose}>
             <CheckCircle2 size={13} /> Done

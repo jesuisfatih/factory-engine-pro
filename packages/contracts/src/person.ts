@@ -332,6 +332,23 @@ export const schedulePersonTaskFollowUpSchema = z.object({
 });
 export type SchedulePersonTaskFollowUpInput = z.infer<typeof schedulePersonTaskFollowUpSchema>;
 
+export const createPersonTaskSupportCaseSchema = z.object({
+  title: z.string().trim().min(1).max(240).optional(),
+  description: z.string().trim().max(8000).optional(),
+  priority: serviceRequestPrioritySchema.default('medium'),
+});
+export type CreatePersonTaskSupportCaseInput = z.infer<typeof createPersonTaskSupportCaseSchema>;
+
+export const personTaskSupportCaseResultSchema = z.object({
+  ok: z.literal(true),
+  taskId: z.string(),
+  supportCaseId: z.string(),
+  ticketNumber: z.string(),
+  customerId: z.string().nullable(),
+  supportUrl: z.string(),
+});
+export type PersonTaskSupportCaseResult = z.infer<typeof personTaskSupportCaseResultSchema>;
+
 export const sendPersonMessageSchema = z.object({
   threadId: z.string().trim().min(1),
   text: z.string().trim().min(1).max(4000),

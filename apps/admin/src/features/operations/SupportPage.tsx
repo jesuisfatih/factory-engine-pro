@@ -104,14 +104,20 @@ const STATUSES: ServiceRequestStatus[] = ['open', 'in_progress', 'waiting', 'wai
 const SOURCE_FILTERS: SourceFilter[] = ['all', 'ai_transcript', 'workflow', 'call', 'manual', 'email', 'form'];
 const QK = ['operations', 'support'] as const;
 
+function initialCaseId() {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get('caseId')?.trim() ?? '';
+}
+
 export function SupportPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const canWrite = useCan('support.write');
+  const caseId = initialCaseId();
   const [surface, setSurface] = useState<SurfaceFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
-  const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState(caseId);
+  const [selectedId, setSelectedId] = useState<string | null>(caseId || null);
   const [creating, setCreating] = useState(false);
   const [comment, setComment] = useState('');
   const [internalComment, setInternalComment] = useState(false);

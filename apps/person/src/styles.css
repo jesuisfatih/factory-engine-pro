@@ -427,6 +427,8 @@ button { font-family: inherit; }
 .modal-card .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .modal-card .btn.primary { background: var(--success); color: #fff; border-color: var(--success); }
 .modal-card .btn:disabled { opacity: .55; cursor: not-allowed; }
+.brief-footer-error { display: flex; align-items: center; gap: 6px; padding: 8px 20px 0; font-size: 11px; line-height: 1.35; }
+.brief-footer-error span { min-width: 0; overflow-wrap: anywhere; }
 .event-summary { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .event-summary h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
 .event-summary .meta { font-size: 11px; color: var(--text-muted); }
@@ -580,6 +582,8 @@ button { font-family: inherit; }
   .brief-body, .transfer-body { grid-template-columns: 1fr; }
   .brief-grid-two, .brief-schedule-grid { grid-template-columns: 1fr; }
   .card-signals { grid-template-columns: 1fr; }
+  .modal-foot { flex-wrap: wrap; justify-content: stretch; }
+  .modal-foot .btn { flex: 1 1 140px; justify-content: center; }
 }
 
 /* ─── Notes ──────────────────────────────────────────────── */
