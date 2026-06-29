@@ -549,6 +549,7 @@ export class RulesService {
       }
 
       const taskIds: string[] = [];
+      const supportCaseIds: string[] = [];
       const actionTrace: WorkflowActionTrace[] = [];
       for (const action of rule.definition.actions) {
         const applied = await this.applyAction(action, {
@@ -563,6 +564,7 @@ export class RulesService {
           whenTrace,
           cooldown: cooldown.trace,
           taskIds,
+          supportCaseIds,
         });
         actionTrace.push(applied.trace);
         if (applied.task) {
@@ -576,6 +578,7 @@ export class RulesService {
             title: applied.task.title,
           });
         }
+        if (applied.supportCase) supportCaseIds.push(applied.supportCase.id);
       }
 
       const actionStatus = resultStatus(taskIds, actionTrace);
@@ -1083,15 +1086,17 @@ export class RulesService {
     whenTrace: WorkflowWhenGroupTrace[];
     cooldown: WorkflowCooldownTrace;
     taskIds: string[];
-  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
+    supportCaseIds: string[];
+  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string }; supportCase?: { id: string; title: string } }> {
     this.executor.recognizeAction(action.action);
-    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string } };
+    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string }; supportCase?: { id: string; title: string } };
 
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
       const source = this.workflowTaskSource(context, sourceCallId);
+      const supportCaseOnly = assignment.axis === 'support';
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
@@ -1109,16 +1114,19 @@ export class RulesService {
         taskStateSnapshot,
       });
       result = {
-        task: { id: task.id, title: task.title },
+        ...(supportCaseOnly
+          ? { supportCase: { id: task.id, title: task.title } }
+          : { task: { id: task.id, title: task.title } }),
         trace: {
           actionId: action.id,
           action: action.action,
           status: 'applied',
-          targetType: 'service_request',
+          targetType: supportCaseOnly ? 'support_case' : 'service_request',
           targetId: task.id,
-          message: 'Created service request from workflow action.',
+          message: supportCaseOnly ? 'Created support case from workflow action.' : 'Created service request from workflow action.',
           metadata: {
             axis: assignment.axis,
+            eventType: supportCaseOnly ? 'support.case.created' : context.trigger,
             assignedMemberId: assignment.assigneeMemberId,
             watcherMemberIds: assignment.watcherMemberIds,
             matchedRuleId: context.rule.id,
@@ -1182,6 +1190,17 @@ export class RulesService {
         rule_id: context.rule.id,
         action_id: action.id,
         task_id: result.task.id,
+        axis: result.trace.metadata && 'axis' in result.trace.metadata ? result.trace.metadata.axis : null,
+      });
+    }
+    if (result.supportCase) {
+      this.logger.log('rules', 'support_case_created', 'Workflow rule created a support case event', {
+        event_id: context.eventId,
+        event_type: 'support.case.created',
+        trigger: context.trigger,
+        rule_id: context.rule.id,
+        action_id: action.id,
+        support_case_id: result.supportCase.id,
         axis: result.trace.metadata && 'axis' in result.trace.metadata ? result.trace.metadata.axis : null,
       });
     }
@@ -1567,6 +1586,7 @@ export class RulesService {
     return {
       category: 'workflow_rule',
       ...(supportCaseOnly ? {
+        eventType: 'support.case.created',
         personQueueVisible: false,
         supportCaseOnly: true,
         personQueueHiddenReason: 'support_case',
@@ -1585,6 +1605,7 @@ export class RulesService {
         ruleName: context.rule.name,
         actionId: action.id,
         action: action.action,
+        ...(supportCaseOnly ? { supportCaseEvent: 'support.case.created' } : {}),
         rulePriority: context.rule.priority,
         axis: assignment.axis,
         assigneeResolution: {
@@ -1641,6 +1662,7 @@ export class RulesService {
 
   private targetTaskId(context: WorkflowActionContext) {
     return context.taskIds.at(-1)
+      ?? context.supportCaseIds.at(-1)
       ?? stringParam(context.params, 'taskId')
       ?? stringParam(context.params, 'serviceRequestId')
       ?? null;
@@ -1826,6 +1848,7 @@ type WorkflowActionContext = {
   whenTrace: WorkflowWhenGroupTrace[];
   cooldown: WorkflowCooldownTrace;
   taskIds: string[];
+  supportCaseIds: string[];
 };
 
 type TaskAssignment = {
