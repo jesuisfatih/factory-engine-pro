@@ -187,6 +187,7 @@ export class ShopifyCustomerSegmentsService {
       const customerIds = Array.from(new Set(
         members.map((member) => this.parseShopifyCustomerId(member.node.id)).filter((value): value is string => Boolean(value)),
       ));
+      const canonicalCustomerIds = await this.filterCanonicalShopifyCustomerIds(customerIds);
       const now = new Date();
       const tenantId = this.tenantId();
 
@@ -195,7 +196,7 @@ export class ShopifyCustomerSegmentsService {
           where: { tenantId, shopifySegmentRefId: metadata.id },
         });
 
-        for (const chunk of chunks(customerIds, 500)) {
+        for (const chunk of chunks(canonicalCustomerIds, 500)) {
           if (chunk.length === 0) continue;
           await tx.shopifyCustomerSegmentMember.createMany({
             data: chunk.map((shopifyCustomerId) => ({
@@ -215,7 +216,7 @@ export class ShopifyCustomerSegmentsService {
           data: {
             name: detail.name,
             query: detail.query,
-            customerCount: customerIds.length,
+            customerCount: canonicalCustomerIds.length,
             lastSeenAt: now,
             lastSyncedAt: now,
             syncStatus: 'ready',
@@ -226,7 +227,8 @@ export class ShopifyCustomerSegmentsService {
 
       this.logger.log('segments', 'shopify_segment_snapshot_synced', 'Shopify customer segment snapshot synced', {
         shopify_segment_id: detail.id,
-        customer_count: customerIds.length,
+        customer_count: canonicalCustomerIds.length,
+        excluded_non_canonical_count: customerIds.length - canonicalCustomerIds.length,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown Shopify segment sync error';
@@ -389,6 +391,16 @@ export class ShopifyCustomerSegmentsService {
   private parseShopifyCustomerId(value: string) {
     const match = String(value || '').match(/\/(\d+)$/);
     return match?.[1] ?? null;
+  }
+
+  private async filterCanonicalShopifyCustomerIds(shopifyCustomerIds: string[]) {
+    if (shopifyCustomerIds.length === 0) return [];
+    const canonicalCustomers = await this.prisma.db.customer.findMany({
+      where: { shopifyCustomerId: { in: shopifyCustomerIds }, status: 'active' },
+      select: { shopifyCustomerId: true },
+    });
+    const canonicalIds = new Set(canonicalCustomers.map((customer) => customer.shopifyCustomerId).filter(Boolean));
+    return shopifyCustomerIds.filter((shopifyCustomerId) => canonicalIds.has(shopifyCustomerId));
   }
 
   private async requireCredentials() {
