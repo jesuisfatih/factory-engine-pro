@@ -108,12 +108,14 @@ export interface SyncShopifySegmentsResponse {
   created: number;
   updated: number;
   evaluated: number;
+  skippedEvaluation: number;
   failed: number;
   segments: Array<{
     id: string;
     name: string;
     shopifySegmentId: string;
     action: 'created' | 'updated';
+    evaluationStatus: 'evaluated' | 'skipped' | 'failed';
     customerCount: number;
     syncStatus: string | null;
     error: string | null;

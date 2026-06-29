@@ -104,7 +104,7 @@ export class ShopifyCustomerSegmentsService {
 
   async ensureMembershipSnapshots(shopifySegmentIds: string[], options?: { force?: boolean; staleAfterMs?: number }) {
     const uniqueSegmentIds = this.normalizeSegmentIds(shopifySegmentIds);
-    if (uniqueSegmentIds.length === 0) return;
+    if (uniqueSegmentIds.length === 0) return [];
 
     const staleAfterMs = options?.staleAfterMs ?? SEGMENT_SNAPSHOT_STALE_MS;
     const metadata = await this.prisma.db.shopifyCustomerSegment.findMany({
@@ -122,6 +122,7 @@ export class ShopifyCustomerSegmentsService {
     });
 
     for (const segmentId of staleSegmentIds) await this.syncSegmentMembershipSnapshot(segmentId);
+    return staleSegmentIds;
   }
 
   async getMembershipsByCustomerId(shopifySegmentIds: string[]): Promise<Map<string, string[]>> {

@@ -295,29 +295,45 @@ export class SegmentsService {
     const liveSegments = await this.shopifySegments.listSegments({ limit: input.limit ?? 100 });
     const existingSegments = await this.repository.list();
     const existingByShopifySegmentId = this.existingSegmentsByShopifySegmentId(existingSegments);
+    const orderedLiveSegments = [...liveSegments].sort((left, right) => {
+      const leftExists = existingByShopifySegmentId.has(left.id);
+      const rightExists = existingByShopifySegmentId.has(right.id);
+      if (leftExists !== rightExists) return leftExists ? 1 : -1;
+      return left.name.localeCompare(right.name);
+    });
     const results: SyncShopifySegmentsResponse['segments'] = [];
 
     let created = 0;
     let updated = 0;
     let evaluated = 0;
+    let skippedEvaluation = 0;
     let failed = 0;
 
-    for (const [index, shopifySegment] of liveSegments.entries()) {
+    for (const [index, shopifySegment] of orderedLiveSegments.entries()) {
       const conditions = this.shopifySegmentConditions(shopifySegment.id);
       const rules = this.buildRules('all', conditions, {
         source: 'shopify_customer_segment',
         shopifySegmentId: shopifySegment.id,
         shopifyQuery: shopifySegment.query,
       });
+      const rulesHash = this.hashRules(rules);
       const existing = existingByShopifySegmentId.get(shopifySegment.id);
       const description = this.shopifySegmentDescription(shopifySegment.query);
       const action = existing ? 'updated' as const : 'created' as const;
       let canonicalId: string | null = existing?.id ?? null;
       let customerCount = existing?.customerCount ?? 0;
+      let evaluationStatus: 'evaluated' | 'skipped' | 'failed' = 'skipped';
       let error: string | null = null;
 
       try {
-        await this.shopifySegments.ensureMembershipSnapshots([shopifySegment.id], { force: input.force ?? false });
+        const refreshedSnapshots = await this.shopifySegments.ensureMembershipSnapshots([shopifySegment.id], { force: input.force ?? false });
+        const snapshotRefreshed = refreshedSnapshots.includes(shopifySegment.id);
+        const shouldEvaluate = !existing
+          || input.force === true
+          || snapshotRefreshed
+          || !existing.lastEvaluatedAt
+          || existing.rulesHash !== rulesHash;
+
         if (existing) {
           await this.repository.update(existing.id, {
             name: shopifySegment.name,
@@ -326,7 +342,7 @@ export class SegmentsService {
             matchMode: 'all',
             conditions,
             rules,
-            rulesHash: this.hashRules(rules),
+            rulesHash,
           });
           updated += 1;
         } else {
@@ -341,18 +357,24 @@ export class SegmentsService {
             matchMode: 'all',
             conditions,
             rules,
-            rulesHash: this.hashRules(rules),
+            rulesHash,
             isActive: true,
           });
           canonicalId = segment.id;
           created += 1;
         }
 
-        const evaluatedSegment = canonicalId ? await this.evaluate(canonicalId) as { customerCount?: number } | null : null;
-        customerCount = Number(evaluatedSegment?.customerCount ?? customerCount ?? 0);
-        evaluated += 1;
+        if (canonicalId && shouldEvaluate) {
+          const evaluatedSegment = await this.evaluate(canonicalId) as { customerCount?: number } | null;
+          customerCount = Number(evaluatedSegment?.customerCount ?? customerCount ?? 0);
+          evaluationStatus = 'evaluated';
+          evaluated += 1;
+        } else {
+          skippedEvaluation += 1;
+        }
       } catch (caught) {
         failed += 1;
+        evaluationStatus = 'failed';
         error = caught instanceof Error ? caught.message : String(caught);
         this.logger.warn('segments', 'shopify_segment_sync_failed', 'Shopify segment canonical sync failed', {
           shopify_segment_id: shopifySegment.id,
@@ -366,6 +388,7 @@ export class SegmentsService {
         name: shopifySegment.name,
         shopifySegmentId: shopifySegment.id,
         action,
+        evaluationStatus,
         customerCount,
         syncStatus: shopifySegment.syncStatus,
         error,
@@ -377,6 +400,7 @@ export class SegmentsService {
       created,
       updated,
       evaluated,
+      skipped_evaluation: skippedEvaluation,
       failed,
       force: input.force ?? false,
     });
@@ -386,6 +410,7 @@ export class SegmentsService {
       created,
       updated,
       evaluated,
+      skippedEvaluation,
       failed,
       segments: results,
     };

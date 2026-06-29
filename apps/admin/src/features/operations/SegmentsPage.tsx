@@ -261,7 +261,7 @@ export function SegmentsPage() {
     mutationFn: () => adminApi.syncShopifySegments({ force: false, limit: 100 }) as Promise<SyncShopifySegmentsResponse>,
     onSuccess: (result) => {
       toast.success('Shopify segments synced', {
-        description: `${result.created} created, ${result.updated} updated, ${result.evaluated} evaluated${result.failed ? `, ${result.failed} failed` : ''}.`,
+        description: `${result.created} created, ${result.updated} updated, ${result.evaluated} evaluated, ${result.skippedEvaluation} already current${result.failed ? `, ${result.failed} failed` : ''}.`,
       });
       invalidateSegments(qc);
     },
