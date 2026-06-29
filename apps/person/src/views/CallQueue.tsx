@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
-import { fetchDailyOperations, friendlyError, toggleCustomerPin, togglePin } from '../api/live';
+import { fetchDailyOperations, fetchTaskBrief, friendlyError, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
@@ -14,6 +14,8 @@ const QK = ['person', 'daily-operations'] as const;
 export function CallQueueView() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deepLinkCard, setDeepLinkCard] = useState<CardData | null>(null);
+  const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [transferCard, setTransferCard] = useState<CardData | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const { data, isLoading, error } = useQuery({ queryKey: QK, queryFn: fetchDailyOperations });
@@ -40,9 +42,37 @@ export function CallQueueView() {
     },
   });
 
-  const selectedCard = priority.find((card) => card.id === selectedId) ?? null;
+  useEffect(() => {
+    const taskId = new URLSearchParams(window.location.search).get('taskId');
+    if (!taskId) return;
+    let cancelled = false;
+    setSelectedId(taskId);
+    fetchTaskBrief(taskId)
+      .then((detail) => {
+        if (!cancelled) {
+          setDeepLinkCard(detail.card);
+          setDeepLinkError(null);
+        }
+      })
+      .catch((taskError: unknown) => {
+        if (!cancelled) setDeepLinkError(friendlyError(taskError));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedCard = priority.find((card) => card.id === selectedId) ?? (deepLinkCard?.id === selectedId ? deepLinkCard : null);
   const summary = data?.summary;
   const empty = !isLoading && daily.length === 0 && priority.length === 0 && pinned.length === 0;
+  const closeTaskModal = () => {
+    setSelectedId(null);
+    setDeepLinkCard(null);
+    setDeepLinkError(null);
+    if (window.location.search.includes('taskId=')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  };
 
   return (
     <div className="queue-wrap">
@@ -94,6 +124,7 @@ export function CallQueueView() {
               </div>
             </div>
             <div className="ops-list">
+              {deepLinkError ? <div className="ops-empty">{deepLinkError}</div> : null}
               {priority.length === 0 ? (
                 <div className="ops-empty">No priority tasks in your axis scope.</div>
               ) : priority.map((card) => (
@@ -114,7 +145,7 @@ export function CallQueueView() {
         </div>
       </QueryState>
 
-      {selectedCard && <TaskBriefModal card={selectedCard} onClose={() => setSelectedId(null)} />}
+      {selectedCard && <TaskBriefModal card={selectedCard} onClose={closeTaskModal} />}
       {transferCard && (
         <TransferTaskModal
           card={transferCard}
