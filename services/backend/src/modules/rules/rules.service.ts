@@ -15,6 +15,8 @@ import {
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
+  createTaskAxisSchema,
+  operationalIntentSchema,
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
   type ActiveWorkflowRuleStatsQuery,
@@ -1544,15 +1546,24 @@ export class RulesService {
   }
 
   private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): CreateTaskAxis {
+    const explicitAxis = createTaskAxisValue(action?.axis);
+    if (explicitAxis) return this.executor.requireCreateTaskAxis(explicitAxis);
+
+    const paramAxis = createTaskAxisValue(stringParam(context.params, 'axis'))
+      ?? createTaskAxisValue(stringParam(context.params, 'taskAxis'))
+      ?? createTaskAxisValue(stringParam(context.params, 'recommendedAxis'));
+    if (paramAxis) return this.executor.requireCreateTaskAxis(paramAxis);
+
+    const operationalAxis = axisForActionableOperationalIntent(stringParam(context.params, 'operationalIntent'))
+      ?? axisForActionableOperationalIntent(stringParam(context.params, 'intent'))
+      ?? axisForActionableOperationalIntent(stringParam(context.params, 'taskIntent'));
+    if (operationalAxis) return this.executor.requireCreateTaskAxis(operationalAxis);
+
     const valueAxis = normalizeTaskAxis(action?.value);
     if (valueAxis === 'support') return this.executor.requireCreateTaskAxis(valueAxis);
-    const axis = action?.axis
-      ?? valueAxis
-      ?? normalizeTaskAxis(stringParam(context.params, 'axis'))
-      ?? normalizeTaskAxis(stringParam(context.params, 'taskAxis'))
-      ?? normalizeTaskAxis(stringParam(context.params, 'intent'))
+
+    const axis = valueAxis
       ?? normalizeTaskAxis(stringParam(context.params, 'callIntent'))
-      ?? normalizeTaskAxis(stringParam(context.params, 'taskIntent'))
       ?? normalizeTaskAxis(stringValue(context.state.resolverOutput.call_intent))
       ?? normalizeTaskAxis(context.trigger)
       ?? 'sales';
@@ -2312,11 +2323,17 @@ export class RulesService {
   }
 
   private validateCreateTaskAxes(definition: WorkflowRuleDefinition) {
+    const operationalAxis = operationalAxisFromDefinition(definition);
     for (const action of definition.actions) {
       if (action.action !== 'create_task') continue;
+      const explicitAxis = createTaskAxisValue(action.axis);
+      if (explicitAxis) {
+        this.executor.requireCreateTaskAxis(explicitAxis);
+        continue;
+      }
       const valueAxis = normalizeTaskAxis(action.value);
-      if (valueAxis === 'support') this.executor.requireCreateTaskAxis(valueAxis);
-      const axis = action.axis ?? valueAxis ?? 'sales';
+      if (valueAxis === 'support' && !operationalAxis) this.executor.requireCreateTaskAxis(valueAxis);
+      const axis = operationalAxis ?? valueAxis ?? 'sales';
       this.executor.requireCreateTaskAxis(axis);
     }
   }
@@ -2707,6 +2724,37 @@ function axisForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detected
     default:
       return exhaustiveIntent(intent);
   }
+}
+
+function axisForActionableOperationalIntent(value: unknown): CreateTaskAxis | null {
+  const parsed = operationalIntentSchema.safeParse(normalize(value));
+  if (!parsed.success || parsed.data === 'no_action') return null;
+  return axisForOperationalIntent(parsed.data);
+}
+
+function createTaskAxisValue(value: unknown): CreateTaskAxis | null {
+  const parsed = createTaskAxisSchema.safeParse(normalize(value));
+  return parsed.success ? parsed.data : null;
+}
+
+function operationalAxisFromDefinition(definition: WorkflowRuleDefinition): CreateTaskAxis | null {
+  const axes = new Set<CreateTaskAxis>();
+  for (const condition of workflowDefinitionConditions(definition)) {
+    if (condition.condition !== 'operational_intent') continue;
+    if (condition.operator !== '=' && condition.operator !== 'in') continue;
+    for (const value of condition.value.split(',')) {
+      const axis = axisForActionableOperationalIntent(value);
+      if (axis) axes.add(axis);
+    }
+  }
+  return axes.size === 1 ? [...axes][0] ?? null : null;
+}
+
+function workflowDefinitionConditions(definition: WorkflowRuleDefinition): WorkflowRuleCondition[] {
+  return [
+    ...definition.when,
+    ...(definition.whenGroups ?? []).flatMap((group) => group.conditions),
+  ];
 }
 
 function priorityFromGoal(text: string) {
