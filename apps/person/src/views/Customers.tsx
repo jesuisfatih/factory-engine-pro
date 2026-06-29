@@ -2,7 +2,7 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, fetchMyCommissionRequests, friendlyError, submitCommissionRequest } from '../api/live';
+import { fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, fetchMyCommissionRequests, friendlyError, saveCustomerNote, submitCommissionRequest } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -23,6 +23,8 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   });
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
   const [commissionTarget, setCommissionTarget] = useState<CustomerRow | null>(null);
+  const [noteTarget, setNoteTarget] = useState<CustomerRow | null>(null);
+  const [noteBody, setNoteBody] = useState('');
   const { data: commissionRequests = [] } = useQuery({ queryKey: ['person', 'commission-requests'], queryFn: fetchMyCommissionRequests });
   const detailQuery = useQuery({
     queryKey: ['person', archive ? 'customer-archive-detail' : 'customer-detail', detailCustomerId],
@@ -53,6 +55,19 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     onSuccess: async () => {
       setCommissionTarget(null);
       await qc.invalidateQueries({ queryKey: ['person', 'commission-requests'] });
+    },
+  });
+  const customerNote = useMutation({
+    mutationFn: (input: { customerId: string; body: string }) => saveCustomerNote(input.customerId, { body: input.body }),
+    onSuccess: async (_detail, input) => {
+      setNoteTarget(null);
+      setNoteBody('');
+      setDetailCustomerId(input.customerId);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['person', archive ? 'customer-archive' : 'customers'] }),
+        qc.invalidateQueries({ queryKey: ['person', 'notes'] }),
+        qc.invalidateQueries({ queryKey: ['person', archive ? 'customer-archive-detail' : 'customer-detail', input.customerId] }),
+      ]);
     },
   });
   const latestCommissionByCustomer = useMemo(() => {
@@ -99,20 +114,29 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        const customer = row.original;
+        const phoneHref = customer.phone ? `tel:${cleanPhone(customer.phone)}` : undefined;
+        const emailHref = customer.email ? `mailto:${customer.email}` : undefined;
+        return (
         <div className="actions">
-          <button type="button" className="action-btn" title="Open customer detail" onClick={() => openCustomerDetail(row.original.id)}>
+          <button type="button" className="action-btn" title="Open customer detail" onClick={() => openCustomerDetail(customer.id)}>
             <Icon name="customers" size={14} />
           </button>
-          <button type="button" className="action-btn" title="Submit commission request" onClick={() => setCommissionTarget(row.original)}>
+          <button type="button" className="action-btn" title="Submit commission request" onClick={() => setCommissionTarget(customer)}>
             %
           </button>
-          <button type="button" className="action-btn" title="Dial"><Icon name="phone" size={14} /></button>
-          <button type="button" className="action-btn" title="Email"><Icon name="mail-action" size={14} /></button>
-          <button type="button" className="action-btn" title="Add note"><Icon name="note-action" size={14} /></button>
-          <button type="button" className="action-btn" title="More"><Icon name="more" size={14} /></button>
+          {phoneHref ? (
+            <a className="action-btn" title="Dial" href={phoneHref}><Icon name="phone" size={14} /></a>
+          ) : null}
+          {emailHref ? (
+            <a className="action-btn" title="Email" href={emailHref}><Icon name="mail-action" size={14} /></a>
+          ) : null}
+          <button type="button" className="action-btn" title="Add note" onClick={() => setNoteTarget(customer)}><Icon name="note-action" size={14} /></button>
+          <button type="button" className="action-btn" title="Open customer history" onClick={() => openCustomerDetail(customer.id)}><Icon name="more" size={14} /></button>
         </div>
-      ),
+        );
+      },
     },
   ];
 
@@ -179,12 +203,73 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
           onSubmit={(input) => submitCommission.mutate(input)}
         />
       ) : null}
+      {noteTarget ? (
+        <CustomerNoteModal
+          customer={noteTarget}
+          body={noteBody}
+          isSaving={customerNote.isPending}
+          error={customerNote.error ? friendlyError(customerNote.error) : null}
+          onBodyChange={setNoteBody}
+          onClose={() => {
+            setNoteTarget(null);
+            setNoteBody('');
+          }}
+          onSubmit={() => customerNote.mutate({ customerId: noteTarget.id, body: noteBody.trim() })}
+        />
+      ) : null}
     </>
   );
 }
 
 function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
+}
+
+function cleanPhone(value: string) {
+  return value.replace(/[^\d+]/g, '');
+}
+
+function CustomerNoteModal({
+  customer,
+  body,
+  isSaving,
+  error,
+  onBodyChange,
+  onClose,
+  onSubmit,
+}: {
+  customer: CustomerRow;
+  body: string;
+  isSaving: boolean;
+  error: string | null;
+  onBodyChange: (body: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="customer-note-title" onMouseDown={onClose}>
+      <section className="modal-card commission-request-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="modal-head">
+          <div>
+            <h3 id="customer-note-title">Customer note</h3>
+            <p>{customer.name} - {customer.email || customer.phone || customer.id}</p>
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose}>x</button>
+        </header>
+        <label>
+          Note
+          <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} maxLength={5000} rows={8} />
+        </label>
+        {error ? <div className="email-compose-error">{error}</div> : null}
+        <footer className="modal-foot">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn primary" disabled={isSaving || !body.trim()} onClick={onSubmit}>
+            {isSaving ? 'Saving...' : 'Save note'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
 }
 
 function CommissionRequestModal({
