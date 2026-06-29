@@ -22,6 +22,7 @@ const TITLES: Record<NavId, string> = {
   queue: 'Call Queue',
   'daily-archive': 'Daily Archive',
   customers: 'Customers',
+  'customer-archive': 'Customer Archive',
   email: 'E-mail',
   training: 'Training',
   calendar: 'Calendar',
@@ -100,6 +101,7 @@ export default function App() {
       case 'queue': return <CallQueueView />;
       case 'daily-archive': return <CallQueueView range="archive" archive />;
       case 'customers': return <CustomersView />;
+      case 'customer-archive': return <CustomersView archive />;
       case 'messaging': return <MessagesView />;
       case 'calendar': return <CalendarView />;
       case 'notes': return <NotesView />;
@@ -135,7 +137,7 @@ function isStaffAuthPath(pathname: string) {
 
 function initialNav(): NavId {
   const segment = window.location.pathname.replace(/^\/staff\/?/, '').split('/')[0];
-  const allowed: NavId[] = ['queue', 'daily-archive', 'customers', 'email', 'training', 'calendar', 'notes', 'announcements', 'messaging', 'requests', 'notifications'];
+  const allowed: NavId[] = ['queue', 'daily-archive', 'customers', 'customer-archive', 'email', 'training', 'calendar', 'notes', 'announcements', 'messaging', 'requests', 'notifications'];
   return allowed.includes(segment as NavId) ? segment as NavId : 'queue';
 }
 

@@ -25,6 +25,7 @@ import type {
   CallCenterActionResult,
   CallCenterCreateCustomerTaskInput,
   CallCenterOverview,
+  CallCenterReplyNoteInput,
   CallCenterSaveCustomerNoteInput,
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
@@ -96,6 +97,7 @@ import type {
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  ReplyPersonNoteInput,
   SendPersonMessageInput,
   SendTestMailInput,
   ShopifyConnectionTestResponse,
@@ -534,6 +536,10 @@ export class ApiClient {
     return this.post<CustomerDetailPanelDto>(`/call-center/customers/${encodeURIComponent(customerId)}/notes`, input);
   }
 
+  callCenterReplyNote(noteTaskId: string, input: CallCenterReplyNoteInput) {
+    return this.post<{ ok: true; taskId: string }>(`/call-center/notes/${encodeURIComponent(noteTaskId)}/replies`, input);
+  }
+
   callCenterTransferTask(id: string, input: CallCenterTransferTaskInput) {
     return this.post<CallCenterActionResult>(`/call-center/tasks/${encodeURIComponent(id)}/transfer`, input);
   }
@@ -615,8 +621,16 @@ export class ApiClient {
     return this.get('/person/workspace/customers');
   }
 
+  personCustomerArchive() {
+    return this.get('/person/workspace/customer-archive');
+  }
+
   personCustomerDetail(customerId: string) {
     return this.get<CustomerDetailPanelDto>(`/person/workspace/customers/${encodeURIComponent(customerId)}/detail`);
+  }
+
+  personCustomerArchiveDetail(customerId: string) {
+    return this.get<CustomerDetailPanelDto>(`/person/workspace/customer-archive/${encodeURIComponent(customerId)}/detail`);
   }
 
   savePersonCustomerNote(customerId: string, input: SavePersonCustomerNoteInput) {
@@ -645,6 +659,10 @@ export class ApiClient {
 
   savePersonNote(input: SavePersonNoteInput) {
     return this.post('/person/workspace/notes', input);
+  }
+
+  replyPersonNote(id: string, input: ReplyPersonNoteInput) {
+    return this.post(`/person/workspace/notes/${encodeURIComponent(id)}/replies`, input);
   }
 
   personEmails() {

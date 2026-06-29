@@ -2,8 +2,10 @@ import type {
   CreatePersonRequestInput,
   CustomerDetailPanelDto,
   PersonEmailContact,
+  PersonNoteRow,
   PersonDailyOperationRange,
   PersonTaskSyncResult,
+  ReplyPersonNoteInput,
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -69,16 +71,7 @@ export interface CalEvent {
     suggestedActions: string[];
   };
 }
-export interface NoteRow {
-  id: string;
-  kind: 'scratch' | 'queue';
-  title: string;
-  body: string;
-  linkedCustomer?: string;
-  linkedQueueId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type NoteRow = PersonNoteRow;
 export interface EmailRow {
   id: string;
   from: string;
@@ -153,7 +146,9 @@ export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => pers
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
+export const fetchCustomerArchive = () => personApi.personCustomerArchive() as Promise<CustomerRow[]>;
 export const fetchCustomerDetail = (customerId: string) => personApi.personCustomerDetail(customerId) as Promise<CustomerDetailPanelDto>;
+export const fetchCustomerArchiveDetail = (customerId: string) => personApi.personCustomerArchiveDetail(customerId) as Promise<CustomerDetailPanelDto>;
 export const saveCustomerNote = (customerId: string, input: SavePersonCustomerNoteInput) =>
   personApi.savePersonCustomerNote(customerId, input) as Promise<CustomerDetailPanelDto>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
@@ -163,6 +158,7 @@ export const sendChatMessage = (input: { threadId: string; text: string }) =>
   personApi.sendPersonMessage(input) as Promise<ChatMessage>;
 export const fetchNotes = () => personApi.personNotes() as Promise<NoteRow[]>;
 export const saveNote = (input: SavePersonNoteInput) => personApi.savePersonNote(input) as Promise<NoteRow>;
+export const replyNote = (id: string, input: ReplyPersonNoteInput) => personApi.replyPersonNote(id, input) as Promise<NoteRow>;
 export const fetchEmails = () => personApi.personEmails() as Promise<EmailRow[]>;
 export const fetchEmailContacts = () => personApi.personEmailContacts() as Promise<PersonEmailContact[]>;
 export const saveEmailDraft = (input: SavePersonEmailDraftInput) => personApi.savePersonEmailDraft(input) as Promise<EmailRow>;

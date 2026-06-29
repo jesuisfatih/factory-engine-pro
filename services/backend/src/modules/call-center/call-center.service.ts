@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type {
   CallCenterActionResult,
   CallCenterCreateCustomerTaskInput,
+  CallCenterReplyNoteInput,
   CallCenterCalendarEvent,
   CallCenterMember,
   CallCenterMessage,
@@ -162,6 +163,39 @@ export class CallCenterService {
       member_id: actor.id,
     });
     return this.customers.detail(id);
+  }
+
+  async replyNote(id: string, input: CallCenterReplyNoteInput): Promise<{ ok: true; taskId: string }> {
+    const actor = await this.currentMember();
+    const row = await this.prisma.db.serviceRequest.findFirst({
+      where: { id },
+      select: { id: true, customerId: true, metadata: true },
+    });
+    if (!row) throw new NotFoundException('Note or task not found');
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: row.id,
+        actorId: actor.id,
+        actorType: 'member',
+        body: input.body,
+        internal: true,
+        attachmentsJson: [{
+          kind: 'call_center_note_reply',
+          customerId: row.customerId,
+          actorMemberId: actor.id,
+          at: new Date().toISOString(),
+        }] as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
+    this.logger.log('call_center', 'note.reply', 'Admin Call Center note reply saved', {
+      service_request_id: row.id,
+      customer_id: row.customerId,
+      member_id: actor.id,
+    });
+    return { ok: true, taskId: row.id };
   }
 
   async transferTask(id: string, input: CallCenterTransferTaskInput): Promise<CallCenterActionResult> {
@@ -709,7 +743,7 @@ export class CallCenterService {
   private async notes(memberById: Map<string, CallCenterMember>): Promise<CallCenterNote[]> {
     const noteRows = await this.prisma.db.serviceRequest.findMany({
       where: { metadata: { path: ['personWorkspaceKind'], equals: NOTE_KIND } },
-      include: { customer: true },
+      include: { customer: true, comments: { orderBy: { createdAt: 'desc' }, take: 20 } },
       orderBy: [{ updatedAt: 'desc' }],
       take: 100,
     });
@@ -725,6 +759,14 @@ export class CallCenterService {
     return [
       ...noteRows.map((row) => {
         const author = row.createdByActorId ? memberById.get(row.createdByActorId) : null;
+        const replies = row.comments.filter(isNoteReplyComment);
+        const latestReply = replies[0] ? {
+          id: replies[0].id,
+          authorName: memberById.get(replies[0].actorId ?? '')?.name ?? 'Unknown member',
+          authorRole: memberById.get(replies[0].actorId ?? '')?.role ?? 'Member',
+          body: replies[0].body,
+          createdAt: replies[0].createdAt.toISOString(),
+        } : null;
         return {
           id: row.id,
           taskId: row.id,
@@ -735,9 +777,11 @@ export class CallCenterService {
           authorRole: author?.role ?? 'Member',
           body: row.description ?? row.title,
           createdAt: row.createdAt.toISOString(),
+          replyCount: replies.length,
+          latestReply,
         };
       }),
-      ...commentRows.map((comment) => {
+      ...commentRows.filter((comment) => !isNoteReplyComment(comment)).map((comment) => {
         const author = comment.actorId ? memberById.get(comment.actorId) : null;
         return {
           id: comment.id,
@@ -749,6 +793,8 @@ export class CallCenterService {
           authorRole: author?.role ?? 'Member',
           body: comment.body,
           createdAt: comment.createdAt.toISOString(),
+          replyCount: 0,
+          latestReply: null,
         };
       }),
     ].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 150);
@@ -1062,6 +1108,14 @@ function emptyPriorityCustomerContext(): PriorityCustomerContext {
 function isInternalWorkspaceRow(value: unknown) {
   const kind = record(value).personWorkspaceKind;
   return kind === MESSAGE_THREAD_KIND || kind === NOTE_KIND;
+}
+
+function isNoteReplyComment(comment: { attachmentsJson: Prisma.JsonValue }) {
+  const attachments = Array.isArray(comment.attachmentsJson) ? comment.attachmentsJson : [];
+  return attachments.some((attachment) => {
+    const item = record(attachment);
+    return item.kind === 'call_center_note_reply' || item.kind === 'person_note_reply';
+  });
 }
 
 function isCustomerRequest(row: { source: string; surface: string; axis?: string | null; metadata: Prisma.JsonValue }) {

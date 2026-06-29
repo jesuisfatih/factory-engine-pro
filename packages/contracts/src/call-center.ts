@@ -125,6 +125,14 @@ export const callCenterNoteSchema = z.object({
   authorRole: z.string(),
   body: z.string(),
   createdAt: z.string(),
+  replyCount: z.number().default(0),
+  latestReply: z.object({
+    id: z.string(),
+    authorName: z.string(),
+    authorRole: z.string(),
+    body: z.string(),
+    createdAt: z.string(),
+  }).nullable().default(null),
 });
 export type CallCenterNote = z.infer<typeof callCenterNoteSchema>;
 
@@ -201,6 +209,11 @@ export const callCenterSaveCustomerNoteSchema = z.object({
   body: z.string().trim().min(1).max(5000),
 });
 export type CallCenterSaveCustomerNoteInput = z.infer<typeof callCenterSaveCustomerNoteSchema>;
+
+export const callCenterReplyNoteSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+export type CallCenterReplyNoteInput = z.infer<typeof callCenterReplyNoteSchema>;
 
 export const callCenterTransferTaskSchema = z.object({
   targetMemberId: z.string().min(1),

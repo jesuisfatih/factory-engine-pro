@@ -15,6 +15,7 @@ const NAV_ICONS: Record<NavId, Parameters<typeof Icon>[0]['name']> = {
   queue: 'queue',
   'daily-archive': 'queue',
   customers: 'customers',
+  'customer-archive': 'customers',
   email: 'mail',
   training: 'training',
   calendar: 'calendar',

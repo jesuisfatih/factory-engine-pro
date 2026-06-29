@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save } from 'lucide-react';
-import { fetchNotes, friendlyError, saveNote, type NoteRow } from '../api/live';
+import { MessageSquareReply, Plus, Save } from 'lucide-react';
+import { fetchNotes, friendlyError, replyNote, saveNote, type NoteRow } from '../api/live';
 import { QueryState } from '../components/QueryState';
 
 type Tab = 'all' | 'scratch' | 'queue';
@@ -10,8 +10,10 @@ export function NotesView() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [replyBody, setReplyBody] = useState('');
 
   const { data: notes = [], isLoading, error } = useQuery({ queryKey: ['person', 'notes'], queryFn: fetchNotes });
 
@@ -23,7 +25,27 @@ export function NotesView() {
     },
   });
 
-  const filtered = notes.filter((note) => tab === 'all' ? true : note.kind === tab);
+  const reply = useMutation({
+    mutationFn: (input: { id: string; body: string }) => replyNote(input.id, { body: input.body }),
+    onSuccess: (note) => {
+      qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+      setSelectedId(note.id);
+      setReplyBody('');
+    },
+  });
+
+  const filtered = notes.filter((note) => {
+    if (tab !== 'all' && note.kind !== tab) return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      note.title,
+      note.body,
+      note.linkedCustomer,
+      note.linkedQueueId,
+      ...(note.replies ?? []).flatMap((item) => [item.body, item.authorName]),
+    ].some((value) => String(value ?? '').toLowerCase().includes(query));
+  });
 
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
@@ -35,9 +57,11 @@ export function NotesView() {
     if (selected) {
       setTitle(selected.title);
       setBody(selected.body);
+      setReplyBody('');
     } else {
       setTitle('');
       setBody('');
+      setReplyBody('');
     }
   }, [selected?.id]);
 
@@ -75,6 +99,15 @@ export function NotesView() {
             <button type="button" className={tab === 'scratch' ? 'active' : ''} onClick={() => setTab('scratch')}>Scratch</button>
             <button type="button" className={tab === 'queue' ? 'active' : ''} onClick={() => setTab('queue')}>Queue</button>
           </div>
+
+          <label className="notes-search">
+            <span>Search notes</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Customer, body, reply"
+            />
+          </label>
 
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
             <button type="button"
@@ -123,6 +156,42 @@ export function NotesView() {
                 </div>
               )}
               <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." />
+              <div className="note-replies">
+                <div className="note-replies-head">
+                  <strong>Replies</strong>
+                  <span>{selected.replies?.length ?? 0}</span>
+                </div>
+                {(selected.replies ?? []).length === 0 ? (
+                  <div className="note-reply-empty">No replies yet.</div>
+                ) : (
+                  <div className="note-reply-list">
+                    {(selected.replies ?? []).map((item) => (
+                      <article key={item.id} className="note-reply">
+                        <strong>{item.authorName} - {item.authorRole}</strong>
+                        <p>{item.body}</p>
+                        <span>{item.createdAt}</span>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className="note-reply-form">
+                  <textarea
+                    value={replyBody}
+                    onChange={(event) => setReplyBody(event.target.value)}
+                    placeholder="Write a reply..."
+                  />
+                  <button
+                    type="button"
+                    className="save"
+                    disabled={!replyBody.trim() || reply.isPending}
+                    onClick={() => reply.mutate({ id: selected.id, body: replyBody.trim() })}
+                  >
+                    <MessageSquareReply size={12} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
+                    {reply.isPending ? 'Saving...' : 'Reply'}
+                  </button>
+                </div>
+              </div>
+              {reply.isError ? <div className="email-compose-error">{friendlyError(reply.error)}</div> : null}
               <div className="actions">
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   {selected.kind === 'queue' ? 'Team-visible - syncs to customer history' : 'Personal - only you can see this'}

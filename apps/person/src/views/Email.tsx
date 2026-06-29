@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Mail, Save, Send, X } from 'lucide-react';
 import { fetchEmailContacts, fetchEmails, friendlyError, saveEmailDraft } from '../api/live';
@@ -13,6 +13,12 @@ export function EmailView() {
   const [composing, setComposing] = useState(false);
   const [draft, setDraft] = useState(() => emptyDraft());
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const filteredContacts = useMemo(() => {
+    const query = draft.to.trim().toLowerCase();
+    const source = query ? contacts.filter((contact) => contactMatches(contact, query)) : contacts;
+    return source.slice(0, 8);
+  }, [contacts, draft.to]);
   const canSave = draft.to.trim().length > 0 && draft.subject.trim().length > 0 && draft.body.trim().length > 0;
   const draftMutation = useMutation({
     mutationFn: saveEmailDraft,
@@ -57,21 +63,40 @@ export function EmailView() {
           <div className="email-compose-grid">
             <label>
               <span>To</span>
-              <input
-                type="email"
-                value={draft.to}
-                onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))}
-                list="person-email-contacts"
-                autoComplete="email"
-                required
-              />
-              <datalist id="person-email-contacts">
-                {contacts.map((contact) => (
-                  <option key={`${contact.source}-${contact.id}`} value={contact.email}>
-                    {contactLabel(contact)}
-                  </option>
-                ))}
-              </datalist>
+              <div className="email-contact-picker">
+                <input
+                  type="email"
+                  value={draft.to}
+                  onChange={(event) => {
+                    setDraft((current) => ({ ...current, to: event.target.value }));
+                    setContactPickerOpen(true);
+                  }}
+                  onFocus={() => setContactPickerOpen(true)}
+                  onBlur={() => window.setTimeout(() => setContactPickerOpen(false), 120)}
+                  autoComplete="off"
+                  required
+                />
+                {contactPickerOpen && filteredContacts.length > 0 ? (
+                  <div className="email-contact-menu" role="listbox" aria-label="Customer email suggestions">
+                    {filteredContacts.map((contact) => (
+                      <button
+                        key={`${contact.source}-${contact.id}`}
+                        type="button"
+                        role="option"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setDraft((current) => ({ ...current, to: contact.email }));
+                          setContactPickerOpen(false);
+                        }}
+                      >
+                        <strong>{contact.name}</strong>
+                        <span>{contact.email}</span>
+                        <em>{contactLabel(contact)}</em>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               {contacts.length > 0 ? (
                 <div className="email-contact-quick">
                   {contacts.slice(0, 8).map((contact) => (
@@ -155,4 +180,11 @@ function emptyDraft() {
 
 function contactLabel(contact: { name: string; phone: string | null; source: string }) {
   return [contact.name, contact.phone, contact.source === 'customer' ? 'customer' : 'recent mail'].filter(Boolean).join(' - ');
+}
+
+function contactMatches(contact: { name: string; email: string; phone: string | null; source: string }, query: string) {
+  return contact.name.toLowerCase().includes(query)
+    || contact.email.toLowerCase().includes(query)
+    || String(contact.phone ?? '').toLowerCase().includes(query)
+    || contact.source.toLowerCase().includes(query);
 }

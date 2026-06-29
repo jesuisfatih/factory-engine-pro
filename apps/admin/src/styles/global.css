@@ -2111,6 +2111,45 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 10px;
   align-items: start;
 }
+.call-center-note-search {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.call-center-note-search span {
+  color: var(--muted, var(--text-muted));
+  font-size: 11px;
+}
+.call-center-note-search input,
+.call-center-note-reply textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+.call-center-note-search input:focus,
+.call-center-note-reply textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+.call-center-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.call-center-note-reply {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.call-center-note-reply textarea { resize: vertical; }
+.call-center-note-reply .btn { justify-self: end; }
 .call-center-empty {
   border: 1px dashed var(--border);
   border-radius: 8px;

@@ -20,8 +20,10 @@ import type {
   PersonTaskTimelineEntry,
   PersonTaskWorkflowTrace,
   PersonTransferTarget,
+  UrgencyScoringConfig,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  ReplyPersonNoteInput,
   SavePersonEmailDraftInput,
   SavePersonCustomerNoteInput,
   SavePersonTaskNoteInput,
@@ -102,6 +104,13 @@ type SegmentMembershipRow = Prisma.SegmentCustomerMembershipGetPayload<{
         segmentMemberships: { include: { segment: true } };
       };
     };
+  };
+}>;
+
+type CustomerWorkspaceRow = Prisma.CustomerGetPayload<{
+  include: {
+    insight: true;
+    segmentMemberships: { include: { segment: true } };
   };
 }>;
 
@@ -1269,42 +1278,40 @@ export class PersonWorkspaceService {
       this.urgencyConfig(),
       this.repeatCounts(rows.map((row) => row.id)),
     ]);
-    return rows.map((customer, index) => {
-      const segment = customer.segmentMemberships[0]?.segment;
-      const urgencyBreakdown = this.scoring.score({
-        priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
-        source: 'daily_customer',
-        axis: 'support',
-        createdAt: customer.lastOrderAt ?? customer.updatedAt,
-        updatedAt: customer.updatedAt,
-        metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
-        taskStateSnapshot: {},
-        segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? index,
-        repeatCount: repeatCounts.get(customer.id) ?? 0,
-      }, config);
-      return {
-        id: customer.id,
-        name: customer.companyName || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.email || customer.id,
-        email: customer.email ?? '',
-        phone: customer.phone ?? '',
-        ordersCount: customer.ordersCount,
-        totalSpent: money(customer.totalSpent),
-        lastContact: isoDate(customer.lastOrderAt ?? customer.updatedAt),
-        lifecycle: lifecycle(customer.insight?.churnRisk, customer.ordersCount, customer.lastOrderAt),
-        segment: {
-          id: segment?.id ?? `insight-${customer.insight?.rfmSegment ?? 'general'}`,
-          name: segment?.name ?? titleize(customer.insight?.rfmSegment ?? 'General'),
-          color: segment?.color ?? SEGMENT_COLORS[index % SEGMENT_COLORS.length],
-        },
-        urgencyScore: urgencyBreakdown.score,
-        urgencyBreakdown,
-      };
-    }).sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
+    return rows
+      .map((customer, index) => this.customerRow(customer, index, config, repeatCounts))
+      .sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
+  }
+
+  async customerArchive() {
+    const rows = await this.prisma.db.customer.findMany({
+      where: { status: 'active', shopifyCustomerId: { not: null } },
+      include: {
+        insight: true,
+        segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
+      },
+      orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
+      take: 1000,
+    });
+    const [config, repeatCounts] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCounts(rows.map((row) => row.id)),
+    ]);
+    return rows.map((customer, index) => this.customerRow(customer, index, config, repeatCounts));
   }
 
   async customerDetail(id: string) {
     const member = await this.currentMember();
     await this.assertCustomerInWorkspace(id, member.id);
+    return this.customersService.detail(id);
+  }
+
+  async customerArchiveDetail(id: string) {
+    const customer = await this.prisma.db.customer.findFirst({
+      where: { id, status: 'active', shopifyCustomerId: { not: null } },
+      select: { id: true },
+    });
+    if (!customer) throw new NotFoundException('Shopify customer not found');
     return this.customersService.detail(id);
   }
 
@@ -1489,6 +1496,7 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const rows = await this.prisma.db.serviceRequest.findMany({
       where: { createdByActorId: member.id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
+      include: { comments: { orderBy: { createdAt: 'asc' }, take: 50 } },
       orderBy: [{ updatedAt: 'desc' }],
       take: 100,
     });
@@ -1541,6 +1549,39 @@ export class PersonWorkspaceService {
     });
     this.logger.log('person_workspace', 'note.create', 'Person note created', { note_id: created.id, member_id: member.id });
     return this.note(created);
+  }
+
+  async replyNote(id: string, input: ReplyPersonNoteInput) {
+    const member = await this.currentMember();
+    const row = await this.prisma.db.serviceRequest.findFirst({
+      where: { id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
+      include: serviceRequestInclude,
+    });
+    if (!row) throw new NotFoundException('Note not found');
+    if (row.createdByActorId !== member.id) {
+      const linkedCustomer = this.record(row.metadata).linkedCustomer;
+      if (typeof linkedCustomer !== 'string') throw new ForbiddenException('Note is outside your workspace');
+      await this.assertCustomerInWorkspace(linkedCustomer, member.id);
+    }
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: row.id,
+        actorId: member.id,
+        actorType: 'member',
+        body: input.body,
+        internal: true,
+        attachmentsJson: [{
+          kind: 'person_note_reply',
+          actorMemberId: member.id,
+          at: new Date().toISOString(),
+        }] as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
+    this.logger.log('person_workspace', 'note.reply', 'Person note reply saved', { note_id: id, member_id: member.id });
+    return this.note(await this.requireServiceRequest(id));
   }
 
   async emails() {
@@ -2521,7 +2562,53 @@ export class PersonWorkspaceService {
     };
   }
 
-  private note(row: { id: string; title: string; description: string | null; metadata: Prisma.JsonValue; createdAt: Date; updatedAt: Date }) {
+  private customerRow(
+    customer: CustomerWorkspaceRow,
+    index: number,
+    config: UrgencyScoringConfig,
+    repeatCounts: Map<string, number>,
+  ) {
+    const segment = customer.segmentMemberships[0]?.segment;
+    const urgencyBreakdown = this.scoring.score({
+      priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
+      source: 'daily_customer',
+      axis: 'support',
+      createdAt: customer.lastOrderAt ?? customer.updatedAt,
+      updatedAt: customer.updatedAt,
+      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
+      taskStateSnapshot: {},
+      segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? index,
+      repeatCount: repeatCounts.get(customer.id) ?? 0,
+    }, config);
+    return {
+      id: customer.id,
+      name: customer.companyName || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.email || customer.id,
+      email: customer.email ?? '',
+      phone: customer.phone ?? '',
+      ordersCount: customer.ordersCount,
+      totalSpent: money(customer.totalSpent),
+      lastContact: isoDate(customer.lastOrderAt ?? customer.updatedAt),
+      lifecycle: lifecycle(customer.insight?.churnRisk, customer.ordersCount, customer.lastOrderAt),
+      segment: {
+        id: segment?.id ?? `insight-${customer.insight?.rfmSegment ?? 'general'}`,
+        name: segment?.name ?? titleize(customer.insight?.rfmSegment ?? 'General'),
+        color: segment?.color ?? SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+      },
+      urgencyScore: urgencyBreakdown.score,
+      urgencyBreakdown,
+    };
+  }
+
+  private note(row: {
+    id: string;
+    title: string;
+    description: string | null;
+    metadata: Prisma.JsonValue;
+    createdAt: Date;
+    updatedAt: Date;
+    createdByActorId?: string | null;
+    comments?: Array<{ id: string; body: string; actorId: string | null; actorType: string | null; attachmentsJson: Prisma.JsonValue; createdAt: Date }>;
+  }) {
     const metadata = this.record(row.metadata);
     return {
       id: row.id,
@@ -2532,6 +2619,13 @@ export class PersonWorkspaceService {
       linkedQueueId: typeof metadata.linkedQueueId === 'string' ? metadata.linkedQueueId : undefined,
       createdAt: relative(row.createdAt),
       updatedAt: relative(row.updatedAt),
+      replies: (row.comments ?? []).filter(isNoteReplyComment).map((comment) => ({
+        id: comment.id,
+        body: comment.body,
+        authorName: comment.actorId === row.createdByActorId ? 'You' : 'Team member',
+        authorRole: comment.actorType ?? 'member',
+        createdAt: relative(comment.createdAt),
+      })),
     };
   }
 
@@ -2880,6 +2974,14 @@ function isCustomerRequestLike(row: { source: string; surface: string; axis: str
     || row.axis === 'support'
     || category.includes('support')
     || category.includes('customer_request');
+}
+
+function isNoteReplyComment(comment: { attachmentsJson: Prisma.JsonValue }) {
+  const attachments = Array.isArray(comment.attachmentsJson) ? comment.attachmentsJson : [];
+  return attachments.some((attachment) => {
+    const item = asRecord(attachment);
+    return item.kind === 'person_note_reply' || item.kind === 'call_center_note_reply';
+  });
 }
 
 function customerIdForPriorityCall(

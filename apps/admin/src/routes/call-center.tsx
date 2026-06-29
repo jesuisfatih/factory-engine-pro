@@ -13,7 +13,7 @@ import {
   StickyNote,
   Activity,
 } from 'lucide-react';
-import type { CallCenterMember, CallCenterOverview, CallCenterPriorityCustomer } from '@factory-engine-pro/contracts';
+import type { CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { apiErrorMessage } from '@/lib/api';
@@ -21,6 +21,7 @@ import {
   createCallCenterCustomerTask,
   fetchCallCenterCustomerDetail,
   fetchCallCenterOverview,
+  replyCallCenterNote,
   saveCallCenterCustomerNote,
   syncCallCenterTasks,
   transferCallCenterTask,
@@ -62,6 +63,12 @@ function CallCenterView() {
       setNoteTarget(null);
       void query.refetch();
       void queryClient.invalidateQueries({ queryKey: ['call-center', 'customer-detail', input.customerId] });
+    },
+  });
+  const replyNote = useMutation({
+    mutationFn: (input: { note: CallCenterNote; body: string }) => replyCallCenterNote(input.note.taskId, { body: input.body }),
+    onSuccess: () => {
+      void query.refetch();
     },
   });
   const transferWork = useMutation({
@@ -155,7 +162,16 @@ function CallCenterView() {
               />
             )}
             {tab === 'calendar' && <CalendarTab data={data} />}
-            {tab === 'notes' && <NotesTab data={data} />}
+            {tab === 'notes' && (
+              <NotesTab
+                data={data}
+                onOpenCustomer={(customerId) => setDetailCustomerId(customerId)}
+                onNoteCustomer={(target) => setNoteTarget(target)}
+                onReply={(note, body) => replyNote.mutate({ note, body })}
+                isReplySaving={replyNote.isPending}
+                replyError={replyNote.error ? apiErrorMessage(replyNote.error) : null}
+              />
+            )}
             {tab === 'messages' && <MessagesTab data={data} />}
           </div>
           <CustomerDetailPanel
@@ -458,21 +474,102 @@ function CalendarTab({ data }: { data: CallCenterOverview }) {
   );
 }
 
-function NotesTab({ data }: { data: CallCenterOverview }) {
+function NotesTab({
+  data,
+  onOpenCustomer,
+  onNoteCustomer,
+  onReply,
+  isReplySaving,
+  replyError,
+}: {
+  data: CallCenterOverview;
+  onOpenCustomer: (customerId: string) => void;
+  onNoteCustomer: (target: NoteTarget) => void;
+  onReply: (note: CallCenterNote, body: string) => void;
+  isReplySaving: boolean;
+  replyError: string | null;
+}) {
+  const [search, setSearch] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState('');
+  const filtered = data.notes.filter((note) => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      note.customerName,
+      note.authorName,
+      note.authorRole,
+      note.body,
+      note.latestReply?.body,
+      note.latestReply?.authorName,
+    ].some((value) => String(value ?? '').toLowerCase().includes(query));
+  });
   return (
     <section className="call-center-panel">
-      <PanelHead title="Customer notes" meta={`${data.notes.length} notes`} />
+      <PanelHead title="Customer notes" meta={`${filtered.length}/${data.notes.length} notes`} />
+      <label className="call-center-note-search">
+        <span>Search by customer, staff, note, reply</span>
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search notes" />
+      </label>
       {data.notes.length === 0 ? <EmptyLine>No personnel notes yet.</EmptyLine> : (
         <div className="call-center-list">
-          {data.notes.map((note) => (
+          {filtered.map((note) => (
             <div key={note.id} className="call-center-list-row note-row">
               <StickyNote size={14} />
               <div>
                 <strong>{note.customerName ?? 'No customer'} - {note.authorName} - {note.authorRole}</strong>
                 <span>{note.body}</span>
+                {note.latestReply ? (
+                  <em>Latest reply: {note.latestReply.authorName} - {note.latestReply.body}</em>
+                ) : null}
+                <div className="call-center-note-actions">
+                  {note.customerId ? (
+                    <button type="button" className="btn ghost" onClick={() => onOpenCustomer(note.customerId!)}>
+                      Open customer
+                    </button>
+                  ) : null}
+                  {note.customerId ? (
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => onNoteCustomer({ customerId: note.customerId!, customerName: note.customerName ?? 'Customer' })}
+                    >
+                      Add note
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => {
+                      setReplyingTo(replyingTo === note.id ? null : note.id);
+                      setReplyBody('');
+                    }}
+                  >
+                    Reply{note.replyCount ? ` (${note.replyCount})` : ''}
+                  </button>
+                </div>
+                {replyingTo === note.id ? (
+                  <div className="call-center-note-reply">
+                    <textarea value={replyBody} onChange={(event) => setReplyBody(event.target.value)} placeholder="Reply to this note" rows={3} />
+                    {replyError ? <p className="form-error">{replyError}</p> : null}
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={!replyBody.trim() || isReplySaving}
+                      onClick={() => {
+                        onReply(note, replyBody.trim());
+                        setReplyBody('');
+                        setReplyingTo(null);
+                      }}
+                    >
+                      {isReplySaving ? <Loader2 size={13} className="spin" /> : <MessageSquareText size={13} />} Save reply
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
+          {filtered.length === 0 ? <EmptyLine>No notes match this search.</EmptyLine> : null}
         </div>
       )}
     </section>

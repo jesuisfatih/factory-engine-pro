@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   callCenterCreateCustomerTaskSchema,
+  callCenterReplyNoteSchema,
   callCenterSaveCustomerNoteSchema,
   callCenterTransferTaskSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
+  type CallCenterReplyNoteInput,
   type CallCenterSaveCustomerNoteInput,
   type CallCenterTransferTaskInput,
 } from '@factory-engine-pro/contracts';
@@ -41,6 +43,15 @@ export class CallCenterController {
     @Body(new ZodValidationPipe(callCenterSaveCustomerNoteSchema)) body: CallCenterSaveCustomerNoteInput,
   ) {
     return this.callCenter.saveCustomerNote(id, body);
+  }
+
+  @Post('notes/:id/replies')
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite, MEMBER_PERMISSIONS.taskAssign)
+  replyNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(callCenterReplyNoteSchema)) body: CallCenterReplyNoteInput,
+  ) {
+    return this.callCenter.replyNote(id, body);
   }
 
   @Post('tasks/:id/transfer')

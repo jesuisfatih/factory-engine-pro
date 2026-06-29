@@ -2,7 +2,7 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { fetchCustomerDetail, fetchCustomers, friendlyError } from '../api/live';
+import { fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -15,12 +15,15 @@ function fmtMoney(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 }
 
-export function CustomersView() {
-  const { data: customers = [], isLoading, error } = useQuery({ queryKey: ['person', 'customers'], queryFn: fetchCustomers });
+export function CustomersView({ archive = false }: { archive?: boolean }) {
+  const { data: customers = [], isLoading, error } = useQuery({
+    queryKey: ['person', archive ? 'customer-archive' : 'customers'],
+    queryFn: archive ? fetchCustomerArchive : fetchCustomers,
+  });
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
   const detailQuery = useQuery({
-    queryKey: ['person', 'customer-detail', detailCustomerId],
-    queryFn: () => fetchCustomerDetail(detailCustomerId ?? ''),
+    queryKey: ['person', archive ? 'customer-archive-detail' : 'customer-detail', detailCustomerId],
+    queryFn: () => archive ? fetchCustomerArchiveDetail(detailCustomerId ?? '') : fetchCustomerDetail(detailCustomerId ?? ''),
     enabled: Boolean(detailCustomerId),
   });
 
@@ -92,19 +95,19 @@ export function CustomersView() {
   return (
     <>
       <div className="kpis">
-        <div className="kpi"><div className="label">Customers</div><div className="val">{customers.length}</div><div className="sub">in your segments</div></div>
-        <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">across portfolio</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Shopify customers' : 'Customers'}</div><div className="val">{customers.length}</div><div className="sub">{archive ? 'active archive' : 'in your segments'}</div></div>
+        <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'across portfolio'}</div></div>
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
         <div className="kpi"><div className="label">Avg orders</div><div className="val">{customers.length ? Math.round(customers.reduce((a, c) => a + c.ordersCount, 0) / customers.length) : 0}</div><div className="sub">per customer</div></div>
-        <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">owned</div></div>
+        <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'matched' : 'owned'}</div></div>
       </div>
 
       <QueryState
         isLoading={isLoading}
         error={error ? new Error(friendlyError(error)) : null}
         empty={customers.length === 0}
-        emptyTitle="No customers in this workspace"
-        emptyBody="Shopify sync or customer import needs to add customers before this table fills."
+        emptyTitle={archive ? 'No Shopify customers in archive' : 'No customers in this workspace'}
+        emptyBody={archive ? 'Run Shopify customer sync before the archive can show live customers.' : 'Shopify sync or customer import needs to add customers before this table fills.'}
       >
       <div className="data-card">
         <table className="data-table">

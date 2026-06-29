@@ -656,6 +656,28 @@ button { font-family: inherit; }
 .notes-tabs { display: flex; gap: 6px; padding: 8px; margin-bottom: 8px; background: var(--surface-2); border-radius: 6px; }
 .notes-tabs button { flex: 1; background: none; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; font-weight: 600; }
 .notes-tabs button.active { background: var(--accent); color: #fff; }
+.notes-search {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.notes-search span {
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.notes-search input {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+.notes-search input:focus { border-color: var(--accent); }
 .note-row { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; background: none; border-left: none; border-right: none; border-top: none; color: var(--text); width: 100%; text-align: left; }
 .note-row:hover { background: var(--surface-2); }
 .note-row.active { background: var(--accent-soft); }
@@ -671,6 +693,33 @@ button { font-family: inherit; }
 .note-editor .actions { display: flex; justify-content: space-between; align-items: center; }
 .note-editor .actions .save { background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .note-editor .linked { font-size: 11px; color: var(--text-muted); }
+.note-replies {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+.note-replies-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+.note-replies-head span,
+.note-reply-empty { color: var(--text-muted); font-size: 11px; }
+.note-reply-list { display: grid; gap: 6px; max-height: 160px; overflow-y: auto; }
+.note-reply {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--surface);
+}
+.note-reply strong { font-size: 11px; color: var(--text); }
+.note-reply p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.note-reply span { color: var(--text-faint); font-size: 10px; }
+.note-reply-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.note-reply-form textarea { min-height: 68px; resize: vertical; }
+.note-reply-form .save { background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.note-reply-form .save:disabled { opacity: .6; cursor: not-allowed; }
 
 /* ─── Email list ─────────────────────────────────────────── */
 .email-compose-toggle {
@@ -701,6 +750,42 @@ button { font-family: inherit; }
 .email-compose-grid textarea { min-height: 150px; resize: vertical; line-height: 1.45; }
 .email-compose-grid input:focus,
 .email-compose-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.email-contact-picker { position: relative; min-width: 0; }
+.email-contact-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, .16);
+}
+.email-contact-menu button {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.email-contact-menu button:hover,
+.email-contact-menu button:focus-visible { background: var(--surface-2); border-color: var(--border); outline: none; }
+.email-contact-menu strong,
+.email-contact-menu span,
+.email-contact-menu em { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email-contact-menu span { color: var(--text-muted); font-size: 11px; }
+.email-contact-menu em { color: var(--text-faint); font-size: 10px; font-style: normal; text-transform: none; letter-spacing: 0; }
 .email-contact-quick { display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; }
 .email-contact-quick button {
   border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);

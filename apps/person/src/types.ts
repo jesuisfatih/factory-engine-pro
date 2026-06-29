@@ -115,6 +115,7 @@ export type NavId =
   | 'queue'
   | 'daily-archive'
   | 'customers'
+  | 'customer-archive'
   | 'email'
   | 'training'
   | 'calendar'
@@ -135,6 +136,7 @@ export const NAV: NavItem[] = [
   { id: 'queue', label: 'Call Queue', group: 'Workspace' },
   { id: 'daily-archive', label: 'Daily Archive', group: 'Workspace' },
   { id: 'customers', label: 'Customers', group: 'Workspace' },
+  { id: 'customer-archive', label: 'Customer Archive', group: 'Workspace' },
   { id: 'email', label: 'E-mail', group: 'Workspace' },
   { id: 'calendar', label: 'Calendar', group: 'Workspace' },
   { id: 'notes', label: 'Notes', group: 'Workspace' },

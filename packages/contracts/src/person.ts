@@ -401,6 +401,33 @@ export const savePersonNoteSchema = z.object({
 });
 export type SavePersonNoteInput = z.infer<typeof savePersonNoteSchema>;
 
+export const replyPersonNoteSchema = z.object({
+  body: z.string().trim().min(1).max(12000),
+});
+export type ReplyPersonNoteInput = z.infer<typeof replyPersonNoteSchema>;
+
+export const personNoteReplySchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  authorName: z.string(),
+  authorRole: z.string(),
+  createdAt: z.string(),
+});
+export type PersonNoteReply = z.infer<typeof personNoteReplySchema>;
+
+export const personNoteRowSchema = z.object({
+  id: z.string(),
+  kind: personNoteKindSchema,
+  title: z.string(),
+  body: z.string(),
+  linkedCustomer: z.string().optional(),
+  linkedQueueId: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  replies: z.array(personNoteReplySchema).default([]),
+});
+export type PersonNoteRow = z.infer<typeof personNoteRowSchema>;
+
 export const savePersonEmailDraftSchema = z.object({
   to: emailSchema,
   subject: z.string().trim().min(1).max(240),

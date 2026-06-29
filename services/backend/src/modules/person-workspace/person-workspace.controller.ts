@@ -8,6 +8,7 @@ import {
   savePersonCustomerNoteSchema,
   savePersonEmailDraftSchema,
   savePersonNoteSchema,
+  replyPersonNoteSchema,
   savePersonTaskNoteSchema,
   schedulePersonTaskFollowUpSchema,
   sendPersonMessageSchema,
@@ -17,6 +18,7 @@ import {
   type MovePersonQueueCardInput,
   type PersonDailyOperationsQuery,
   type ReorderPersonDailyCallInput,
+  type ReplyPersonNoteInput,
   type SavePersonCustomerNoteInput,
   type SavePersonEmailDraftInput,
   type SavePersonNoteInput,
@@ -161,6 +163,12 @@ export class PersonWorkspaceController {
     return this.workspace.customers();
   }
 
+  @Get('customer-archive')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  customerArchive() {
+    return this.workspace.customerArchive();
+  }
+
   @Get('calendar')
   @RequirePermission(MEMBER_PERMISSIONS.supportRead)
   calendar() {
@@ -195,6 +203,21 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   saveNote(@Body(new ZodValidationPipe(savePersonNoteSchema)) body: SavePersonNoteInput) {
     return this.workspace.saveNote(body);
+  }
+
+  @Post('notes/:id/replies')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  replyNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(replyPersonNoteSchema)) body: ReplyPersonNoteInput,
+  ) {
+    return this.workspace.replyNote(id, body);
+  }
+
+  @Get('customer-archive/:id/detail')
+  @RequirePermission(MEMBER_PERMISSIONS.customersRead)
+  customerArchiveDetail(@Param('id') id: string) {
+    return this.workspace.customerArchiveDetail(id);
   }
 
   @Get('emails')
