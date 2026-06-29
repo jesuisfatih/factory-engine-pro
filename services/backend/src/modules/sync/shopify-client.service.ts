@@ -22,6 +22,10 @@ export interface ShopifyPage<T> {
   nextCursor: string | null;
 }
 
+const SHOPIFY_GRAPHQL_MAX_ATTEMPTS = 7;
+const SHOPIFY_GRAPHQL_BASE_RETRY_MS = 750;
+const SHOPIFY_GRAPHQL_MAX_RETRY_MS = 30_000;
+
 export class ShopifyAdminApiError extends Error {
   constructor(
     message: string,
@@ -134,27 +138,37 @@ export class ShopifyClientService {
     variables: Record<string, unknown> = {},
   ): Promise<T> {
     const url = this.adminUrl(credentials, '/graphql.json');
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'X-Shopify-Access-Token': credentials.adminToken,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
-    const text = await response.text();
-    const body = parseJson(text);
-    const graphqlErrors = Array.isArray(body?.errors) ? body.errors : [];
-    if (!response.ok || graphqlErrors.length > 0) {
+    let lastError: ShopifyAdminApiError | null = null;
+    for (let attempt = 1; attempt <= SHOPIFY_GRAPHQL_MAX_ATTEMPTS; attempt += 1) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'X-Shopify-Access-Token': credentials.adminToken,
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+      const text = await response.text();
+      const body = parseJson(text);
+      const graphqlErrors = Array.isArray(body?.errors) ? body.errors : [];
+      if (response.ok && graphqlErrors.length === 0) {
+        return ((body?.data && typeof body.data === 'object') ? body.data : {}) as T;
+      }
+
       const providerMessage = extractShopifyError(body) ?? text.trim().slice(0, 240);
-      throw new ShopifyAdminApiError(
+      lastError = new ShopifyAdminApiError(
         `Shopify Admin GraphQL failed with ${response.status}${providerMessage ? `: ${providerMessage}` : ''}`,
         response.status,
         typeof body?.errors === 'string' ? body.errors : undefined,
       );
+      if (attempt < SHOPIFY_GRAPHQL_MAX_ATTEMPTS && isShopifyThrottle(response, body, text)) {
+        await sleep(shopifyGraphqlRetryDelayMs(response, body, attempt));
+        continue;
+      }
+      throw lastError;
     }
-    return ((body?.data && typeof body.data === 'object') ? body.data : {}) as T;
+    throw lastError ?? new ShopifyAdminApiError('Shopify Admin GraphQL failed', 0);
   }
 
   private async getPage<T>(
@@ -239,9 +253,60 @@ function extractShopifyError(body: Record<string, unknown> | null) {
 function formatShopifyError(error: unknown) {
   if (!error || typeof error !== 'object') return String(error);
   const record = error as Record<string, unknown>;
-  const message = typeof record.message === 'string' ? record.message : JSON.stringify(record);
+  const rawMessage = typeof record.message === 'string' ? record.message : null;
+  const message = rawMessage ?? safeJson(record);
   const path = Array.isArray(record.path) ? ` path=${record.path.join('.')}` : '';
   return `${message}${path}`;
+}
+
+function isShopifyThrottle(response: Response, body: Record<string, unknown> | null, text: string) {
+  if (response.status === 429) return true;
+  const providerMessage = (extractShopifyError(body) ?? text).toLowerCase();
+  if (providerMessage.includes('throttled') || providerMessage.includes('throttle')) return true;
+  const errors = Array.isArray(body?.errors) ? body.errors : [];
+  return errors.some((error) => safeJson(error).toLowerCase().includes('throttled')
+    || safeJson(error).toLowerCase().includes('throttle'));
+}
+
+function shopifyGraphqlRetryDelayMs(response: Response, body: Record<string, unknown> | null, attempt: number) {
+  const retryAfter = Number(response.headers.get('retry-after'));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return clamp(retryAfter * 1000, SHOPIFY_GRAPHQL_BASE_RETRY_MS, SHOPIFY_GRAPHQL_MAX_RETRY_MS);
+  }
+
+  const extensions = asRecord(body?.extensions);
+  const cost = asRecord(extensions.cost);
+  const throttleStatus = asRecord(cost.throttleStatus);
+  const requestedQueryCost = Number(cost.requestedQueryCost ?? 0);
+  const currentlyAvailable = Number(throttleStatus.currentlyAvailable ?? 0);
+  const restoreRate = Number(throttleStatus.restoreRate ?? 0);
+  if (requestedQueryCost > currentlyAvailable && restoreRate > 0) {
+    const waitForBucket = ((requestedQueryCost - currentlyAvailable) / restoreRate) * 1000;
+    return clamp(Math.ceil(waitForBucket + 500), SHOPIFY_GRAPHQL_BASE_RETRY_MS, SHOPIFY_GRAPHQL_MAX_RETRY_MS);
+  }
+
+  const exponential = SHOPIFY_GRAPHQL_BASE_RETRY_MS * 2 ** (attempt - 1);
+  return clamp(exponential, SHOPIFY_GRAPHQL_BASE_RETRY_MS, SHOPIFY_GRAPHQL_MAX_RETRY_MS);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function safeJson(value: unknown) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function nextPageInfo(linkHeader: string | null) {
