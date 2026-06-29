@@ -2036,14 +2036,17 @@ function toExecutionTaskDto(task: {
 }
 
 function callEventIdFromExecutionEvent(eventId: string) {
-  const match = eventId.match(/^aircall:([^:]+):/);
-  return match?.[1] ?? null;
+  const aircallMatch = eventId.match(/^aircall:([^:]+):/);
+  if (aircallMatch?.[1]) return aircallMatch[1];
+  const transcriptResolverMatch = eventId.match(/^(acev_[^:]+)/);
+  return transcriptResolverMatch?.[1] ?? null;
 }
 
 function sourceFromExecution(eventId: string, result: Record<string, unknown>) {
   const explicit = stringValue(result.source);
   if (explicit) return explicit;
   if (eventId.startsWith('aircall:')) return 'aircall';
+  if (eventId.startsWith('acev_')) return 'ai_transcript';
   if (eventId.startsWith('segment-')) return 'segments';
   if (eventId.startsWith('backfill:')) return 'backfill';
   return null;
