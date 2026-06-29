@@ -6,7 +6,7 @@ import {
   Mail, Rocket,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
-import { adminApi, adminTokenStore } from '@/lib/api';
+import { adminApi, clearSurfaceSessions } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
@@ -108,8 +108,8 @@ export function Sidebar({ collapsed }: Props) {
     } catch {
       // Local session cleanup must still happen if the server token is already expired.
     } finally {
-      adminTokenStore.clear();
-      window.location.assign('/login');
+      clearSurfaceSessions();
+      window.location.replace('/login');
     }
   };
 

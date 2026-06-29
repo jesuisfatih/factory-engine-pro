@@ -3,6 +3,11 @@ import { ApiClient, type TokenStore } from '@factory-engine-pro/api-client';
 
 const SESSION_KEY = 'factory-engine-pro.person.session';
 const ADMIN_SESSION_KEY = 'factory-engine-pro.admin.session';
+export const PERSON_SESSION_CHANGED_EVENT = 'factory-engine-pro.person.session.changed';
+
+function notifySessionChanged() {
+  window.dispatchEvent(new Event(PERSON_SESSION_CHANGED_EVENT));
+}
 
 export const personTokenStore: TokenStore = {
   getAccessToken() {
@@ -13,9 +18,11 @@ export const personTokenStore: TokenStore = {
   },
   setSession(session) {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    notifySessionChanged();
   },
   clear() {
     window.localStorage.removeItem(SESSION_KEY);
+    notifySessionChanged();
   },
 };
 
@@ -51,6 +58,12 @@ export function handOffToAdmin(session: AuthSession, target = '/dashboard') {
   window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
   personTokenStore.clear();
   window.location.assign(target);
+}
+
+export function clearSurfaceSessions() {
+  window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(ADMIN_SESSION_KEY);
+  notifySessionChanged();
 }
 
 export function apiErrorMessage(error: unknown) {

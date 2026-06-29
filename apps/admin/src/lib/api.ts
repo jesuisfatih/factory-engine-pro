@@ -64,6 +64,12 @@ export function handOffToPerson(session: AuthSession, target = '/staff/queue') {
   window.location.assign(target);
 }
 
+export function clearSurfaceSessions() {
+  window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(PERSON_SESSION_KEY);
+  notifySessionChanged();
+}
+
 export function subscribeSession(callback: () => void) {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === SESSION_KEY) callback();

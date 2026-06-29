@@ -15,7 +15,7 @@ import { TrainingView } from './views/Training';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { LoginView } from './views/auth/LoginView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
-import { handOffToAdmin, readAdminSession, readSession } from './lib/api';
+import { PERSON_SESSION_CHANGED_EVENT, handOffToAdmin, readAdminSession, readSession } from './lib/api';
 import { type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
@@ -59,6 +59,12 @@ export default function App() {
     const onPopState = () => setCurrent(initialNav());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    const onSessionChanged = () => setAuthed(Boolean(readSession()?.accessToken));
+    window.addEventListener(PERSON_SESSION_CHANGED_EVENT, onSessionChanged);
+    return () => window.removeEventListener(PERSON_SESSION_CHANGED_EVENT, onSessionChanged);
   }, []);
 
   useEffect(() => {

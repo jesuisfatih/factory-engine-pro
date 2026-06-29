@@ -1,5 +1,5 @@
 import { NAV, type NavId } from '../types';
-import { personApi, personTokenStore, readSession } from '../lib/api';
+import { clearSurfaceSessions, personApi, readSession } from '../lib/api';
 import { Icon } from './Icon';
 import { WorkspaceBrand } from './WorkspaceBrand';
 import { useQuery } from '@tanstack/react-query';
@@ -56,8 +56,8 @@ export function Sidebar({ current, onSelect, collapsed }: Props) {
     } catch {
       // Local session cleanup must still happen if the server token is already expired.
     } finally {
-      personTokenStore.clear();
-      window.location.assign('/staff/login');
+      clearSurfaceSessions();
+      window.location.replace('/staff/login');
     }
   };
 
