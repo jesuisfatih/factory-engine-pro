@@ -437,7 +437,10 @@ function SegmentCustomerCard({
       <div className="daily-card-row segment-customer-top">
         <div className="daily-title-wrap segment-customer-title">
           <div className="daily-title">{item.customerName}</div>
-          <div className="segment-customer-contact">{item.phone || item.email || 'No phone on file'}</div>
+          <div className="segment-customer-contact">
+            <span>{item.phone ? item.phone : 'No phone on file'}</span>
+            {item.email ? <span>{item.email}</span> : null}
+          </div>
         </div>
         <span className="priority p7">U{item.urgencyScore}</span>
       </div>
