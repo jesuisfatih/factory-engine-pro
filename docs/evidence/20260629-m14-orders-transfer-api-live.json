@@ -1,48 +1,90 @@
 {
-  "checkedAt": "2026-06-29T07:20:25.355Z",
-  "baseUrl": "https://api.dtfbank.com/api/v1",
+  "proof": "roadmap_m14_orders_transfer_api_live",
+  "checkedAt": "2026-06-29T10:11:58.260Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
   "tenantId": "ten_dtfbank",
-  "ownerLogin": {
-    "status": 201,
-    "principalEmail": "info@dtfbank.com"
+  "git": {
+    "localEvidenceCommit": "e10d4b235c44d338ea7aef303f5431a1fcfdbdd1",
+    "deployedBuildSha": "e10d4b235c44d338ea7aef303f5431a1fcfdbdd1",
+    "branch": "main"
   },
-  "selectedOrder": {
+  "tokenValuesPersistedInEvidence": false,
+  "principals": {
+    "owner": {
+      "memberId": "tmbr_ten_dtfbank_info_owner",
+      "email": "info@dtfbank.com",
+      "permissionCount": 27,
+      "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+    },
+    "linda": {
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "permissionCount": 10,
+      "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+    }
+  },
+  "pass": true,
+  "order": {
     "id": "ord_v82hxctskqfyfz7kk1168ogo",
     "orderNumber": "4816",
+    "shopifyOrderId": "7113897836820",
     "customerId": "cust_b63prax5ugnd5ev60uhtzz9h",
     "customerName": "Teal Threads LLC",
     "totalPrice": 3638.82,
-    "fulfillmentStatus": null
+    "currency": "USD"
   },
-  "detail": {
-    "status": 200,
+  "detailSummary": {
+    "orderLoaded": true,
     "lineItemCount": 1,
-    "designFileCount": 0,
-    "historyCount": 1,
-    "ltv": 3638.82,
-    "aov": 3638.82,
-    "last30Days": {
-      "orderCount": 1,
-      "totalSpent": 3638.82
-    }
+    "fulfillmentStatus": null,
+    "financialStatus": "authorized",
+    "historyOrderCount": 1,
+    "historyTotalSpent": 3638.82,
+    "historyAverageOrderValue": 3638.82,
+    "activitiesCount": 0
   },
   "transfer": {
-    "status": 201,
+    "httpStatus": 201,
     "ok": true,
-    "serviceRequestId": "sr_zqonyye72mgc1kxgl7r0bnue",
+    "serviceRequestId": "sr_gwfut9y693se5u0wqlgimhd3",
+    "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
     "assignedMemberName": "Linda Marroquin",
     "axis": "support",
     "source": "admin_created",
     "queueSource": "admin_transfer"
   },
   "lindaQueue": {
-    "status": 200,
-    "cardFound": true,
-    "source": "admin_transfer",
-    "title": "Morgan Allen",
-    "assignedMemberName": "Linda Marroquin",
-    "axis": "support",
-    "summary": "SR-L7R0BNUE - U9 - Open - Now"
+    "priorityCount": 94,
+    "transferCardFound": true,
+    "transferCard": {
+      "id": "sr_gwfut9y693se5u0wqlgimhd3",
+      "source": "admin_transfer",
+      "title": "Morgan Allen",
+      "axis": "support",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_b63prax5ugnd5ev60uhtzz9h",
+      "miniOrder": {
+        "id": "ord_v82hxctskqfyfz7kk1168ogo",
+        "orderNumber": "4816",
+        "totalPrice": 3638.82,
+        "currency": "USD",
+        "financialStatus": "authorized",
+        "fulfillmentStatus": null,
+        "processedAt": "2026-06-29T02:13:34.000Z",
+        "createdAt": "2026-06-29T05:54:09.377Z"
+      }
+    }
   },
-  "pass": true
+  "assertions": {
+    "orderDetailLoaded": true,
+    "shopifyHistoryLoaded": true,
+    "transferAccepted": true,
+    "lindaPriorityHasTransfer": true,
+    "noAdminConsoleErrors": true,
+    "noStaffConsoleErrors": true,
+    "noAdminFailedResponses": true,
+    "noStaffFailedResponses": true,
+    "staffUiShowsTransfer": true
+  }
 }

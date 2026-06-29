@@ -1,40 +1,30 @@
 {
-  "checkedAt": "2026-06-29T07:35:11.379Z",
-  "appUrl": "https://app.dtfbank.com",
-  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "proof": "roadmap_m14_orders_transfer_ui_live",
+  "checkedAt": "2026-06-29T10:11:58.260Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
   "tenantId": "ten_dtfbank",
-  "orderId": "ord_v82hxctskqfyfz7kk1168ogo",
-  "orderNumber": "4816",
-  "uiCreatedServiceRequestId": "sr_jy7wdfuvx24p0efvvtxiuijo",
-  "apiOrderDetailHasHistory": true,
-  "apiOrderHistoryCount": 1,
-  "apiPriorityCardFound": true,
-  "apiPriorityCard": {
-    "id": "sr_jy7wdfuvx24p0efvvtxiuijo",
-    "title": "Morgan Allen",
-    "source": "admin_transfer",
-    "axis": "support",
-    "assignedMemberName": "Linda Marroquin",
-    "priority": 3,
-    "urgencyScore": 10,
-    "segment": "admin_order_transfer",
-    "miniOrder": {
-      "orderNumber": "4816",
-      "totalPrice": 3638.82,
-      "currency": "USD"
-    }
+  "git": {
+    "localEvidenceCommit": "e10d4b235c44d338ea7aef303f5431a1fcfdbdd1",
+    "deployedBuildSha": "e10d4b235c44d338ea7aef303f5431a1fcfdbdd1",
+    "branch": "main"
   },
-  "modalHasOrderDetail": true,
-  "modalHasHistory": true,
-  "modalHasTransferButton": true,
-  "lindaQueueHasAdminTransfer": true,
-  "lindaQueueHasOrder": true,
-  "lindaCardVisibleInViewport": true,
-  "screenshots": [
-    "docs/evidence/20260629-m14-orders-modal-transfer-ui-live.png",
-    "docs/evidence/20260629-m14-orders-modal-history-ui-live.png",
-    "docs/evidence/20260629-m14-linda-admin-transfer-card-ui-live.png",
-    "docs/evidence/20260629-m14-linda-admin-transfer-card-crop-ui-live.png"
-  ],
-  "pass": true
+  "tokenValuesPersistedInEvidence": false,
+  "pass": true,
+  "admin": {
+    "url": "https://app.dtfbank.com/orders",
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m14-orders-modal-ui-live.png",
+    "modalTitle": "4816",
+    "consoleErrors": [],
+    "failedResponses": []
+  },
+  "staff": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m14-linda-admin-transfer-ui-live.png",
+    "containsServiceRequestId": false,
+    "containsAdminTransfer": true,
+    "containsOrderNumber": true,
+    "bodyTextSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n94\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n7\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nDAILY CALLS\n91\nsegment customers\nPRIORITY TASKS\n94\nurgency desc\nPINNED\n4\npersistent board\nU80+\n91\nsame formula\nAXES\n1\nsupport\nDaily call list\n\nSegment-driven customers, sorted by the urgency formula.\n\n5 groups\nMin 2 max 5 purchase\n25/25\n#gregsvinyl\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $300\nPin\n4 FORTY SCREENS AND STITCHES\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $4.593\nPin\n404 Cafe and Creamery\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $400\nPin\nOWNER\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $3.920\nPin\n802 Print\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.297\nPin\n904 Vinyls & More\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $2.803\nPin\nA3-USA\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $264\nPin\nAaron Turpin\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.102\nPin\nAbdul Mallah\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $217\nPin\nAbundant Design\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $4.193\nPin\nAkil Kurji\nU151.6\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $411\nPinned\nAkin Industries LLC\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $168\nPin\nAlabama Adult and Teen Challenge\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $170\nPin\nalfredos\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $349\nPin\nAlpha Supply Company\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $1.692\nPin\nAmericraft Sign Co. LLC\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $688\nPin\nAmericraft Sign Co. LLC\nU151.6\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $1.511\nPin\nAngela Ocampo\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $103\nPin\nAngie Swaney\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.993\nPin\nAnn Nguyen\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $41\nPin\nAntonio Zapata\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $613\nPin\nApliiq, Inc\nU151.6\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $413\nPinned\narmando.franco.72@gmail.com\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $148\nPin\nARSENIO THUNSTROM\nU150.6\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $358\nPin\n1st Place Awards & Embroidery\nU151.6\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $3.229\nPin\nCustomers over 20 orders\n17/17\nAA FASHION EXPRESS PRESS\nU144.1\nCustomers over 20 orders segment - 1 recent requests - support axis\nCustomers over 20 orders\n50 orders | $13.217\nPinned\nBeary Creative\nU144.1\nCustomers over 20 orders segment - 1 recent requests - support axis\nCustomers over 20 orders\n61 orders | $13.346\nPinned\nAshley Fairchild\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n33 orders | $11.796\nPin\nCleo Harris\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n36 orders | $12.740\nPin\nCorry Bailey\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n22 orders | $30.088\nPin\nCynthia Hagan\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n30 orders | $5.378\nPin\nEpic Marks LLC\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n21 orders | $25.630\nPin\nGraphic Connection\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n44 orders | $27.325\nPin\nKelly Smith\nU143.1\nCustomers over 20 orders segment - 0 recent requests - support axis\nCustomers over 20 orders\n88 order",
+    "consoleErrors": [],
+    "failedResponses": []
+  }
 }
