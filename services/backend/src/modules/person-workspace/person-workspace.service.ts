@@ -11,6 +11,7 @@ import type {
   PersonTaskSupportCaseResult,
   PersonMiniOrder,
   PersonPerformance30d,
+  PersonQueueCardDto,
   PersonQueueColumn,
   PersonTaskBriefDetail,
   PersonTaskStateSnapshot,
@@ -281,11 +282,17 @@ export class PersonWorkspaceService {
     const scopedRows = requestRows
       .filter((row) => this.isQueueVisible(row))
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
-    const priorityKanban = scopedRows
+    const priorityTaskCards = scopedRows
       .filter((row) => !CLOSED.has(row.status))
       .filter((row) => this.isAiOrSegmentPriorityTask(row))
       .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext));
+    const priorityTaskCustomerIds = new Set(priorityTaskCards.map((card) => card.customerId).filter((id): id is string => Boolean(id)));
+    const segmentPriorityCards = dailyCallList
+      .filter((item) => assignments.has(item.customerId))
+      .filter((item) => !priorityTaskCustomerIds.has(item.customerId))
+      .map((item) => this.segmentPriorityCard(item, cardContext));
+    const priorityKanban = [...priorityTaskCards, ...segmentPriorityCards]
       .sort(sortByUrgency)
       .slice(0, 120);
     const pinnedTasks = scopedRows
@@ -1761,6 +1768,50 @@ export class PersonWorkspaceService {
       email: customer?.email ?? undefined,
       ordersCount: customer?.ordersCount ?? undefined,
       totalSpent: customer ? money(customer.totalSpent) : undefined,
+    };
+  }
+
+  private segmentPriorityCard(item: PersonDailyCallItem, cardContext?: CardContext): PersonQueueCardDto {
+    const urgencyScore = item.urgencyScore;
+    return {
+      kind: 'customer',
+      id: item.id,
+      customerId: item.customerId,
+      assignedMemberId: null,
+      assignedMemberName: null,
+      axis: axisOrNull(item.assignedAxis),
+      title: item.customerName,
+      summary: `${item.segment.name} segment - U${urgencyScore} - ${item.assignedAxis} axis`,
+      segment: item.segment.name,
+      segmentColor: item.segment.color,
+      segmentId: item.segment.id,
+      segmentName: item.segment.name,
+      segmentPriority: item.segment.priority,
+      segmentOwnershipPriority: item.segment.priority,
+      priority: priorityRankFromUrgency(urgencyScore),
+      urgencyScore,
+      urgencyBreakdown: item.urgencyBreakdown,
+      columnId: 'unassigned',
+      pinned: item.pinned,
+      pinnedAt: null,
+      source: 'ai_segment',
+      phone: item.phone ?? undefined,
+      email: item.email ?? undefined,
+      ordersCount: item.ordersCount,
+      totalSpent: item.totalSpent,
+      aiBrief: {
+        whyCalling: `Customer is in ${item.segment.name}, a Shopify segment assigned to this workspace.`,
+        upsetAbout: 'No complaint captured from the segment signal.',
+        callGoal: 'Review recent Shopify activity and decide the next human outreach step.',
+        suggestedActions: ['Review latest order', 'Call or email the customer', 'Pin if follow-up is needed'],
+        promptKey: 'person.workspace.segment-priority',
+        promptVersion: 'live',
+        modelUsed: 'not-generated',
+        confidence: 1,
+        transcriptSnippet: item.reason,
+      },
+      miniOrder: cardContext?.miniOrders.get(item.customerId),
+      performance30d: cardContext?.performance.get(item.customerId) ?? { ...EMPTY_PERFORMANCE_30D },
     };
   }
 

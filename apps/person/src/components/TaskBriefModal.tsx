@@ -146,14 +146,19 @@ function NarrativeField({ label, aiValue, value, onChange, multiLine }: Narrativ
 export function TaskBriefModal({ card, onClose }: Props) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
+  const isTaskCard = card.kind === 'task';
   const { data, isLoading, isError, error } = useQuery({
     queryKey,
     queryFn: () => fetchTaskBrief(card.id),
+    enabled: isTaskCard,
   });
 
   const detail = data as TaskBriefDetail | undefined;
   const liveCard = detail?.card ?? card;
+  const loadingTaskBrief = isTaskCard && isLoading;
+  const taskBriefError = isTaskCard && isError;
   const hasBrief = liveCard.source !== 'manual' && liveCard.aiBrief;
+  const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
     why: liveCard.aiBrief?.whyCalling ?? '',
     upset: liveCard.aiBrief?.upsetAbout ?? '',
@@ -279,7 +284,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
         <div className="modal-body brief-body">
           <div className="brief-main">
-            {isLoading && (
+            {loadingTaskBrief && (
               <div className="brief-state">
                 <Loader2 size={16} className="spin" />
                 <strong>Loading live task brief</strong>
@@ -287,7 +292,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               </div>
             )}
 
-            {isError && (
+            {taskBriefError && (
               <div className="brief-state danger-text">
                 <AlertTriangle size={16} />
                 <strong>Task brief could not be loaded</strong>
@@ -295,7 +300,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               </div>
             )}
 
-            {!isLoading && !isError && !detail && (
+            {isTaskCard && !isLoading && !isError && !detail && (
               <div className="brief-state">
                 <StickyNote size={16} />
                 <strong>No task brief data</strong>
@@ -303,7 +308,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               </div>
             )}
 
-            {!isError && (
+            {!taskBriefError && (
               <>
                 {hasBrief ? (
                   <>
@@ -421,49 +426,53 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   )}
                 </div>
 
-                <form className="brief-block" onSubmit={submitNote}>
-                  <div className="brief-block-head">
-                    <span className="lbl">Task note</span>
-                    {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
-                  </div>
-                  <textarea
-                    className="brief-edit"
-                    rows={3}
-                    placeholder="Save a task note to customer history..."
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                  />
-                  <div className="brief-form-actions">
-                    <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted as a service request comment.'}</span>
-                    <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
-                      <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
-                    </button>
-                  </div>
-                  {detail?.notes.length ? (
-                    <div className="brief-mini-list">
-                      {detail.notes.slice(0, 3).map((item) => (
-                        <div key={item.id} className="brief-note-row">
-                          <span>{fmtDate(item.createdAt)}</span>
-                          <p>{item.body}</p>
+                {isTaskCard ? (
+                  <>
+                    <form className="brief-block" onSubmit={submitNote}>
+                      <div className="brief-block-head">
+                        <span className="lbl">Task note</span>
+                        {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
+                      </div>
+                      <textarea
+                        className="brief-edit"
+                        rows={3}
+                        placeholder="Save a task note to customer history..."
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                      />
+                      <div className="brief-form-actions">
+                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted as a service request comment.'}</span>
+                        <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
+                          <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
+                        </button>
+                      </div>
+                      {detail?.notes.length ? (
+                        <div className="brief-mini-list">
+                          {detail.notes.slice(0, 3).map((item) => (
+                            <div key={item.id} className="brief-note-row">
+                              <span>{fmtDate(item.createdAt)}</span>
+                              <p>{item.body}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </form>
+                      ) : null}
+                    </form>
 
-                <form className="brief-block" onSubmit={submitSchedule}>
-                  <div className="brief-block-head">
-                    <span className="lbl">Calendar action</span>
-                  </div>
-                  <div className="brief-schedule-grid">
-                    <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
-                    <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
-                    <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
-                      <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
-                    </button>
-                  </div>
-                  {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
-                </form>
+                    <form className="brief-block" onSubmit={submitSchedule}>
+                      <div className="brief-block-head">
+                        <span className="lbl">Calendar action</span>
+                      </div>
+                      <div className="brief-schedule-grid">
+                        <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                        <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
+                        <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
+                          <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
+                        </button>
+                      </div>
+                      {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
+                    </form>
+                  </>
+                ) : null}
               </>
             )}
           </div>
@@ -520,7 +529,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> Email</a>
             </div>
             <div className="brief-quick-actions">
-              <a className="btn" href={detail?.customerDetailUrl ?? '#'}><ExternalLink size={12} /> Customer detail</a>
+              <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> Customer detail</a>
             </div>
           </aside>
         </div>
@@ -535,15 +544,17 @@ export function TaskBriefModal({ card, onClose }: Props) {
         <footer className="modal-foot">
           <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-          <button
-            type="button"
-            className="btn"
-            disabled={!detail || supportCaseMutation.isPending}
-            onClick={() => supportCaseMutation.mutate()}
-            title={detail ? 'Create Support Case' : 'Load the live task brief first'}
-          >
-            {supportCaseMutation.isPending ? <Loader2 size={13} className="spin" /> : <LifeBuoy size={13} />} Create Support Case
-          </button>
+          {isTaskCard ? (
+            <button
+              type="button"
+              className="btn"
+              disabled={!detail || supportCaseMutation.isPending}
+              onClick={() => supportCaseMutation.mutate()}
+              title={detail ? 'Create Support Case' : 'Load the live task brief first'}
+            >
+              {supportCaseMutation.isPending ? <Loader2 size={13} className="spin" /> : <LifeBuoy size={13} />} Create Support Case
+            </button>
+          ) : null}
           <button type="button" className="btn"><Phone size={13} /> Call now</button>
           <button type="button" className="btn primary" onClick={onClose}>
             <CheckCircle2 size={13} /> Done
