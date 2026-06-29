@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-06-29T08:33:23.612Z",
+  "checkedAt": "2026-06-29T09:14:41.393Z",
   "appBase": "https://app.dtfbank.com",
-  "browserMode": "standalone Playwright fallback; in-app browser node_repl transport closed",
+  "browserMode": "standalone Playwright fallback; in-app browser transport closed",
   "rules": {
     "url": "https://app.dtfbank.com/rules",
-    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-workflow-axis-ui-live.png",
+    "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-workflow-axis-dropdown-ui-live.png",
     "axisSelectOptions": [
       {
         "value": "sales",
@@ -15,33 +15,18 @@
         "text": "Account"
       }
     ],
-    "axisSelectBox": {
-      "x": 1171.3055419921875,
-      "y": 671.6805419921875,
-      "width": 58.3333740234375,
-      "height": 23.3333740234375
-    },
-    "catalogText": "Create task axis\n2\nCreate task axis\nsales · account",
     "supportAxisVisibleInCreateTaskDropdown": false
   },
   "support": {
     "url": "https://app.dtfbank.com/support",
     "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m05-support-sources-ui-live.png",
-    "sourceButtons": [
-      "All",
-      "Internal",
-      "Customer-facing",
+    "sourceFilterButtons": [
       "All sources",
       "Manual",
       "Customer Self Service",
       "Admin Created"
     ],
-    "sourceTextIncludesWorkflow": true,
-    "sourceTextIncludesAiTranscript": false,
-    "sourceTextIncludesManualPin": false,
-    "textSample": "D\nDTF Bank\nBack panel\nOVERVIEW\nDashboard\nCOMMERCE\nOrders\nCustomers\nB2B Pricing\nOPERATIONS\nSegments\nSupport\nB2B Applications\nTask Management\nAUTOMATION\nRule engine\nORGANIZATION\nMembers\nRoles\nCommissions\nTRANSACTIONAL MAIL\nSystem mail\nMail Marketing\nSYSTEM\nWorkspace\nAircall\nAI keys\nShopify\nInitial setup\nDB\ninfo@dtfbank.com\nOwner\nWorkspace settings\nSupport\nD\nDTF Bank\nOwner\nSupport\nService requests across customer-facing and internal surfaces\nRefresh\nNew request\nOPEN\n12\nIN PROGRESS\n0\nURGENT\n0\nRESOLVED\n2\nAll\nInternal\nCustomer-facing\nAll sources\nManual\nCustomer Self Service\nAdmin Created\nSR\tTITLE\tCUSTOMER\tSTATUS\tPRIORITY\tASSIGNEE\tLAST ACTIVITY\nSR-DSI2KWP3\t\nPinned customer: Akil Kurji\nCustomer Pin / Manual / Support\n\tAkil Kurji\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 11:01:03\nSR-CXI68YL8\t\nPinned customer: AA FASHION EXPRESS PRESS\nCustomer Pin / Manual / Support\n\tAA FASHION EXPRESS PRESS\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 11:00:58\nSR-PB9VEATN\t\nPinned customer: Beary Creative\nCustomer Pin / Manual / Support\n\tBeary Creative\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 10:07:41\nSR-A4P16ZLT\t\nPinned customer: 1st Place Awards & Embroidery\nCustomer Pin / Manual / Support\n\t1st Place Awards & Embroidery\tCLOSED\tMedium\tLinda Marroquin\t29.06.2026 10:07:38\nSR-GV1U7J5S\t\nPinned customer: Apliiq, Inc\nCustomer Pin / Manual / Support\n\tApliiq, Inc\tOPEN\tMedium\tLinda Marroquin\t29.06.2026 10:07:32\nSR-NRKGWDNE\t\nPinned customer: Americraft Sign Co. LLC\nCustomer Pin / Manual / Support\n\tAmericraft Sign Co. LLC\tCLOSED\tMedium\tLinda Marroquin\t29.06.2026 10:07:29\nSR-6HDOWZWF\t\nNew note\nPerson Note / Manual / No ax",
-    "forbiddenSourceButtons": [],
-    "sourceTextWorkflowNote": "The word WORKFLOW appears in the support detail trace heading, not in source filters. Source filter buttons are evaluated separately."
+    "forbiddenSourceButtons": []
   },
   "consoleErrors": [],
   "failedResponses": [],

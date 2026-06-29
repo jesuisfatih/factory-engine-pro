@@ -1,12 +1,17 @@
 {
-  "checkedAt": "2026-06-29T08:29:15.422Z",
+  "checkedAt": "2026-06-29T09:14:16.919Z",
   "baseUrl": "https://api.dtfbank.com/api/v1",
-  "tenantId": "ten_dtfbank",
-  "buildSha": "958866daa2ac632ca0d262be4558dc905645fa1f",
+  "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
   "principal": {
     "id": "tmbr_ten_dtfbank_info_owner",
     "email": "info@dtfbank.com",
     "permissionCount": 27,
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "lindaPrincipal": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "permissionCount": 10,
     "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
   },
   "catalog": {
@@ -53,55 +58,60 @@
     }
   },
   "forbiddenRequests": {
-    "createRuleExplicitAxisSupport": {
+    "postWorkflowRuleAxisSupport": {
       "status": 400,
       "ok": false,
       "message": "Validation failed",
-      "requestId": "0f0171cd-5211-4004-8bdb-fd836f9c2825"
+      "code": "validation_failed",
+      "issues": null,
+      "requestId": "367870bf-a728-4e4d-81f9-404fccf81623"
     },
-    "createRuleSupportValueExecutorGuard": {
+    "postWorkflowRuleSupportValue": {
       "status": 400,
       "ok": false,
       "message": "Workflow create_task cannot target support. Create Support cases manually from the Support or staff task UI.",
-      "requestId": "5bba5bed-61f5-4694-95ae-a2bcfbea6c0e"
+      "code": "bad_request",
+      "issues": null,
+      "requestId": "70a335f9-ed41-434e-9c0e-c3ed335c65de"
     },
-    "fireSupportRequestCreatedTrigger": {
+    "fireSupportCaseCreated": {
       "status": 400,
       "ok": false,
       "message": "Validation failed",
-      "requestId": "8818fd2f-be90-495c-9786-ce879bcaa6ed"
+      "code": "validation_failed",
+      "issues": null,
+      "requestId": "ef016647-26ce-41ef-86eb-16b035e3bdb6"
     },
-    "fireSupportCaseCreatedTrigger": {
+    "createSupportWorkflowSource": {
       "status": 400,
       "ok": false,
       "message": "Validation failed",
-      "requestId": "7ecaec6f-31f2-4692-86a3-9c4a2292f783"
+      "code": "validation_failed",
+      "issues": null,
+      "requestId": "12458f61-fa8d-4ca1-a78d-6299048eae60"
     },
-    "createSupportWithWorkflowSource": {
+    "createSupportAiTranscriptSource": {
       "status": 400,
       "ok": false,
       "message": "Validation failed",
-      "requestId": "a63a2f64-c2f1-4e07-8786-e979c320f498"
-    },
-    "createSupportWithAiTranscriptSource": {
-      "status": 400,
-      "ok": false,
-      "message": "Validation failed",
-      "requestId": "7106315a-56bc-4635-aba1-98069335a062"
+      "code": "validation_failed",
+      "issues": null,
+      "requestId": "6c8f81ae-b8e4-4403-8ac4-5348293c8248"
     }
-  },
-  "supportList": {
-    "total": 14,
-    "returned": 14,
-    "sources": [
-      "manual"
-    ],
-    "disallowedSupportRows": []
   },
   "supportWorkflowFilter": {
     "status": 200,
     "total": 0,
     "returned": 0
+  },
+  "supportListSources": [
+    "manual"
+  ],
+  "lindaPriority": {
+    "status": 200,
+    "priorityCount": 0,
+    "supportLeakCount": 0,
+    "supportLeakSamples": []
   },
   "pass": true
 }

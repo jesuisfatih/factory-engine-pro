@@ -1,81 +1,53 @@
-﻿{
-    "generatedAt":  "2026-06-29T08:30:16.9092696Z",
-    "environment":  "dtfbank-live",
-    "scope":  "factoryengine-dtfbank-app only",
-    "healthUrl":  "https://api.dtfbank.com/api/v1/health",
-    "buildShaExpected":  "958866daa2ac632ca0d262be4558dc905645fa1f",
-    "container":  "factoryengine-dtfbank-app Up 8 minutes",
-    "buildSha":  "958866daa2ac632ca0d262be4558dc905645fa1f",
-    "health":  {
-                   "ok":  true,
-                   "service":  "factory-engine-pro-backend"
-               },
-    "migrationStatus":  [
-                            "Datasource \"db\": PostgreSQL database \"factory_engine_pro_test\", schema \"public\" at \"vultr-prod-06b04f43-aac0-4622-9a10-4dafd8537b6c-vultr-prod-a35c.vultrdb.com:16751\"",
-                            "39 migrations found in prisma/migrations",
-                            "Database schema is up to date!"
-                        ],
-    "routeLogs":  [
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/export, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/bulk, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/overdue/sweep, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/assign, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/status, PUT} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/status, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/comments, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/close, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/reopen, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1122  - \u001b[39m06/29/2026, 8:12:03 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/defaults/bootstrap, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/events/fire, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/catalog, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/enum-chain, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/stats/active, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/versions, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/rollback, POST} route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/backfills, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/executions, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id/backfill, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/rules/:id, PUT} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/stats, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/stats/overview, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/customers, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/export, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/bulk, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/overdue/sweep, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/assign, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/status, PUT} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/status, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/comments, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/close, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/support/:id/reopen, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/stats, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/stats/overview, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/customers, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/export, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/bulk, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/overdue/sweep, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/assign, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/status, PUT} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/status, PATCH} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/comments, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/close, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/service-requests/:id/reopen, POST} route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m",
-                      "\u001b[32m[Nest] 1472  - \u001b[39m06/29/2026, 8:24:04 AM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +1ms\u001b[39m"
-                  ],
-    "pass":  true
+{
+  "checkedAt": "2026-06-29T09:14:32.953Z",
+  "scope": "factoryengine-dtfbank-app only",
+  "deployedBuildSha": "596d100d15a1e5e15832e8182a2942a1da20df2c",
+  "publicHealth": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "service": "factory-engine-pro-backend"
+    }
+  },
+  "pm2": [
+    {
+      "name": "factory-engine-pro-api",
+      "status": "online",
+      "pid": 12622,
+      "restarts": 53
+    },
+    {
+      "name": "factory-engine-pro-admin",
+      "status": "online",
+      "pid": 12671,
+      "restarts": 56
+    },
+    {
+      "name": "factory-engine-pro-person",
+      "status": "online",
+      "pid": 1491,
+      "restarts": 0
+    },
+    {
+      "name": "factory-engine-pro-accounts",
+      "status": "online",
+      "pid": 1505,
+      "restarts": 0
+    }
+  ],
+  "portOwners": [
+    {
+      "port": 4000,
+      "pid": "12622",
+      "cmd": "/usr/local/bin/node dist/services/backend/src/main.js"
+    },
+    {
+      "port": 3000,
+      "pid": "12712",
+      "cmd": "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3000"
+    }
+  ],
+  "postCleanupRecentErrorLines": [],
+  "note": "Earlier restart loop was corrected by killing orphan child processes inside factoryengine-dtfbank-app; this evidence records the post-clean window.",
+  "pass": true
 }
