@@ -10,6 +10,7 @@ import type {
   SegmentField,
   SegmentImportance,
   SegmentOperator,
+  SyncShopifySegmentsResponse,
   UpdateSegmentInput,
 } from '@factory-engine-pro/contracts';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
@@ -256,6 +257,17 @@ export function SegmentsPage() {
     onError: (error) => toast.error(t('segments.evaluate_failed'), { description: apiErrorMessage(error) }),
   });
 
+  const syncShopify = useMutation({
+    mutationFn: () => adminApi.syncShopifySegments({ force: false, limit: 100 }) as Promise<SyncShopifySegmentsResponse>,
+    onSuccess: (result) => {
+      toast.success('Shopify segments synced', {
+        description: `${result.created} created, ${result.updated} updated, ${result.evaluated} evaluated${result.failed ? `, ${result.failed} failed` : ''}.`,
+      });
+      invalidateSegments(qc);
+    },
+    onError: (error) => toast.error('Shopify segments could not be synced', { description: apiErrorMessage(error) }),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => adminApi.deleteSegment(id),
     onSuccess: () => {
@@ -309,6 +321,9 @@ export function SegmentsPage() {
             </button>
             {canWrite && (
               <>
+                <button type="button" className="btn" disabled={syncShopify.isPending} onClick={() => syncShopify.mutate()}>
+                  <RefreshCw size={14} className={syncShopify.isPending ? 'spin' : undefined} /> Sync Shopify segments
+                </button>
                 <button type="button" className="btn" disabled={evaluateAll.isPending || rows.length === 0} onClick={() => evaluateAll.mutate()}>
                   <GitBranch size={14} /> {t('segments.evaluate_all')}
                 </button>
@@ -334,7 +349,14 @@ export function SegmentsPage() {
         <StateBlock
           title={t('segments.empty_title')}
           body={t('segments.empty_state')}
-          action={canWrite ? <button type="button" className="btn primary" onClick={() => setEditing(emptyDraft())}><Plus size={14} /> {t('segments.new_segment')}</button> : undefined}
+          action={canWrite ? (
+            <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn primary" disabled={syncShopify.isPending} onClick={() => syncShopify.mutate()}>
+                <RefreshCw size={14} className={syncShopify.isPending ? 'spin' : undefined} /> Sync Shopify segments
+              </button>
+              <button type="button" className="btn" onClick={() => setEditing(emptyDraft())}><Plus size={14} /> {t('segments.new_segment')}</button>
+            </div>
+          ) : undefined}
         />
       )}
       {segments.isSuccess && rows.length > 0 && (
@@ -774,7 +796,7 @@ function draftFromSegment(segment: SegmentRow): SegmentDraft {
 }
 
 function emptyCondition(): ConditionDraft {
-  return { id: crypto.randomUUID(), field: 'totalRevenue', operator: 'gte', value: '1000', timeframeDays: '', scopeType: 'all', scopeValues: '' };
+  return { id: crypto.randomUUID(), field: 'shopifyCustomerSegmentIds', operator: 'in', value: '', timeframeDays: '', scopeType: 'all', scopeValues: '' };
 }
 
 function toCreateInput(draft: SegmentDraft): CreateSegmentInput {

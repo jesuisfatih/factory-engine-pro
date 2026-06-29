@@ -60,9 +60,9 @@ export class AuthService {
         permissions: [],
       },
       async () => {
-        await this.identity.seedDefaultRoles();
+        await this.identity.ensureDefaultRoles();
         const ownerRole = await this.prisma.db.memberRole.findFirst({ where: { slug: 'owner' } });
-        if (!ownerRole) throw new BadRequestException('Owner role was not seeded');
+        if (!ownerRole) throw new BadRequestException('Owner role is missing after default role bootstrap');
         const owner = await this.identityRepository.createMember({
           email: input.ownerEmail,
           firstName: input.ownerFirstName,
@@ -107,7 +107,7 @@ export class AuthService {
 
   async registerCustomer(input: CustomerRegisterInput): Promise<AuthSession> {
     const tenantId = this.requireTenant();
-    await this.identity.seedDefaultRoles();
+    await this.identity.ensureDefaultRoles();
     const adminRole = await this.prisma.db.customerRole.findFirst({ where: { slug: 'b2b_admin' } });
     if (!adminRole) throw new BadRequestException('B2B admin role missing');
     const adminRoleId = adminRole.id;

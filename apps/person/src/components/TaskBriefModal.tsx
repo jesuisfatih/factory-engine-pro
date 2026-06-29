@@ -376,7 +376,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
                 <div className="brief-block">
                   <div className="brief-block-head">
-                    <span className="lbl">Order and customer timeline</span>
+                    <span className="lbl">Order, call, and task history</span>
                     {detail ? <span className="rule-trace-count">{detail.timeline.length}</span> : null}
                   </div>
                   {detail?.timeline.length ? (
@@ -393,7 +393,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                       ))}
                     </div>
                   ) : (
-                    <div className="brief-val brief-val-muted">No timeline entries yet.</div>
+                    <div className="brief-val brief-val-muted">No customer history entries yet.</div>
                   )}
                 </div>
 

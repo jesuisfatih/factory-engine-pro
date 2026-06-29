@@ -5,6 +5,8 @@ import type {
   CreateSegmentInput,
   PreviewSegmentInput,
   SegmentConditionInput,
+  SyncShopifySegmentsInput,
+  SyncShopifySegmentsResponse,
   UpsertSegmentOwnershipInput,
   UpdateSegmentInput,
 } from '@factory-engine-pro/contracts';
@@ -75,6 +77,7 @@ const SHOPIFY_CUSTOMER_FIELDS = new Set([
   'shopifyCustomerOrdersCount',
   'shopifyCustomerTotalSpent',
 ]);
+const SHOPIFY_SEGMENT_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#b45309', '#b91c1c', '#475569'];
 
 @Injectable()
 export class SegmentsService {
@@ -288,6 +291,106 @@ export class SegmentsService {
     return { evaluated };
   }
 
+  async syncShopifySegments(input: SyncShopifySegmentsInput = {}): Promise<SyncShopifySegmentsResponse> {
+    const liveSegments = await this.shopifySegments.listSegments({ limit: input.limit ?? 100 });
+    const existingSegments = await this.repository.list();
+    const existingByShopifySegmentId = this.existingSegmentsByShopifySegmentId(existingSegments);
+    const results: SyncShopifySegmentsResponse['segments'] = [];
+
+    let created = 0;
+    let updated = 0;
+    let evaluated = 0;
+    let failed = 0;
+
+    for (const [index, shopifySegment] of liveSegments.entries()) {
+      const conditions = this.shopifySegmentConditions(shopifySegment.id);
+      const rules = this.buildRules('all', conditions, {
+        source: 'shopify_customer_segment',
+        shopifySegmentId: shopifySegment.id,
+        shopifyQuery: shopifySegment.query,
+      });
+      const existing = existingByShopifySegmentId.get(shopifySegment.id);
+      const description = this.shopifySegmentDescription(shopifySegment.query);
+      const action = existing ? 'updated' as const : 'created' as const;
+      let canonicalId: string | null = existing?.id ?? null;
+      let customerCount = existing?.customerCount ?? 0;
+      let error: string | null = null;
+
+      try {
+        await this.shopifySegments.ensureMembershipSnapshots([shopifySegment.id], { force: input.force ?? false });
+        if (existing) {
+          await this.repository.update(existing.id, {
+            name: shopifySegment.name,
+            ...(this.shouldReplaceShopifyDescription(existing) ? { description } : {}),
+            audienceType: 'shopify_customer',
+            matchMode: 'all',
+            conditions,
+            rules,
+            rulesHash: this.hashRules(rules),
+          });
+          updated += 1;
+        } else {
+          const segment = await this.repository.create({
+            name: shopifySegment.name,
+            description,
+            color: SHOPIFY_SEGMENT_COLORS[index % SHOPIFY_SEGMENT_COLORS.length],
+            priority: 0,
+            priorityGlobal: 0,
+            audienceType: 'shopify_customer',
+            lifecycleStage: null,
+            matchMode: 'all',
+            conditions,
+            rules,
+            rulesHash: this.hashRules(rules),
+            isActive: true,
+          });
+          canonicalId = segment.id;
+          created += 1;
+        }
+
+        const evaluatedSegment = canonicalId ? await this.evaluate(canonicalId) as { customerCount?: number } | null : null;
+        customerCount = Number(evaluatedSegment?.customerCount ?? customerCount ?? 0);
+        evaluated += 1;
+      } catch (caught) {
+        failed += 1;
+        error = caught instanceof Error ? caught.message : String(caught);
+        this.logger.warn('segments', 'shopify_segment_sync_failed', 'Shopify segment canonical sync failed', {
+          shopify_segment_id: shopifySegment.id,
+          shopify_segment_name: shopifySegment.name,
+          error,
+        });
+      }
+
+      results.push({
+        id: canonicalId ?? shopifySegment.id,
+        name: shopifySegment.name,
+        shopifySegmentId: shopifySegment.id,
+        action,
+        customerCount,
+        syncStatus: shopifySegment.syncStatus,
+        error,
+      });
+    }
+
+    this.logger.log('segments', 'sync_shopify_segments', 'Shopify customer segments synced into canonical operations segments', {
+      scanned: liveSegments.length,
+      created,
+      updated,
+      evaluated,
+      failed,
+      force: input.force ?? false,
+    });
+
+    return {
+      scanned: liveSegments.length,
+      created,
+      updated,
+      evaluated,
+      failed,
+      segments: results,
+    };
+  }
+
   async evaluateForCustomer(customerId: string) {
     const customer = await this.repository.findCustomerById(customerId);
     if (!customer) throw new NotFoundException('Customer not found for segment evaluation');
@@ -394,6 +497,38 @@ export class SegmentsService {
     const segment = await this.repository.findById(id);
     if (!segment) throw new NotFoundException('Segment not found');
     return segment;
+  }
+
+  private existingSegmentsByShopifySegmentId(segments: Awaited<ReturnType<SegmentsRepository['list']>>) {
+    const mapped = new Map<string, (typeof segments)[number]>();
+    for (const segment of segments) {
+      for (const shopifySegmentId of extractShopifySegmentIds(this.normalizeConditions(segment.conditions))) {
+        if (!mapped.has(shopifySegmentId)) mapped.set(shopifySegmentId, segment);
+      }
+    }
+    return mapped;
+  }
+
+  private shopifySegmentConditions(shopifySegmentId: string): SegmentConditionInput[] {
+    return [{
+      field: 'shopifyCustomerSegmentIds',
+      operator: 'in',
+      value: [shopifySegmentId],
+      scopeType: 'all',
+      scopeValues: [],
+    }];
+  }
+
+  private shopifySegmentDescription(query: string) {
+    const trimmed = query.trim();
+    return trimmed ? `Shopify segment query: ${trimmed}` : 'Imported from Shopify customer segments.';
+  }
+
+  private shouldReplaceShopifyDescription(segment: { description: string | null; rules: Prisma.JsonValue }) {
+    if (!segment.description) return true;
+    if (segment.description.startsWith('Shopify segment query:')) return true;
+    const metadata = record(record(segment.rules).metadata);
+    return metadata.source === 'shopify_customer_segment';
   }
 
   private async buildEvaluationContext(customers: CustomerRow[], conditions: SegmentConditionInput[]): Promise<EvaluationContext> {
@@ -805,8 +940,8 @@ export class SegmentsService {
     return Array.isArray(raw) ? raw as SegmentConditionInput[] : [];
   }
 
-  private buildRules(matchMode: string, conditions: SegmentConditionInput[]) {
-    return { matchMode, conditions };
+  private buildRules(matchMode: string, conditions: SegmentConditionInput[], metadata: Record<string, unknown> = {}) {
+    return (Object.keys(metadata).length ? { matchMode, conditions, metadata } : { matchMode, conditions }) as Prisma.InputJsonObject;
   }
 
   private hashRules(rules: unknown) {

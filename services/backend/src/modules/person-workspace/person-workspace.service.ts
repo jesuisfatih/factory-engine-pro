@@ -837,7 +837,7 @@ export class PersonWorkspaceService {
             where: { customerId },
             include: { comments: { orderBy: { createdAt: 'desc' }, take: 3 } },
             orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-            take: 5,
+            take: 30,
           })
         : Promise.resolve([]),
       aircallWhere
@@ -2177,6 +2177,14 @@ function taskTimeline(
     title: string;
     status: string;
     priority: string;
+    source: string;
+    surface: string;
+    axis: string | null;
+    matchedRuleId: string | null;
+    sourceCallId: string | null;
+    sourceEmailId: string | null;
+    metadata: Prisma.JsonValue;
+    taskStateSnapshot?: Prisma.JsonValue;
     updatedAt: Date;
     createdAt: Date;
     comments?: Array<{ body: string; createdAt: Date }>;
@@ -2235,13 +2243,32 @@ function taskTimeline(
 
   for (const request of relatedRequests) {
     if (request.id === row.id) continue;
+    const metadata = asRecord(request.metadata);
+    const workflow = asRecord(metadata.workflow);
+    const source = taskSource(request);
+    const matchedRuleId = request.matchedRuleId ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
+    const ruleName = stringOrNull(workflow.ruleName);
+    const latest = latestComment(request);
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
-      title: request.title,
-      summary: `${titleize(request.status)} - ${titleize(request.priority)}`,
+      title: `${source === 'ai_transcript' ? 'AI transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
+      summary: [
+        `${titleize(request.status)} - ${titleize(request.priority)}`,
+        ruleName ? `Rule: ${ruleName}` : matchedRuleId ? `Rule: ${matchedRuleId}` : null,
+        latest?.body ? `Latest note: ${latest.body.slice(0, 180)}` : null,
+      ].filter(Boolean).join(' - '),
       at: request.updatedAt.toISOString(),
-      meta: { requestId: request.id, comments: request.comments?.length ?? 0 },
+      meta: {
+        requestId: request.id,
+        source,
+        workflowSource: stringOrNull(workflow.source),
+        trigger: stringOrNull(workflow.trigger),
+        action: stringOrNull(workflow.action),
+        matchedRuleId,
+        axis: request.axis,
+        comments: request.comments?.length ?? 0,
+      },
     });
   }
 
@@ -2258,7 +2285,7 @@ function taskTimeline(
 
   return entries
     .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
-    .slice(0, 16);
+    .slice(0, 50);
 }
 
 function latestAiPsychAnalysis(calls: Array<{

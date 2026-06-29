@@ -29,7 +29,7 @@ function HealthView() {
       transcript: PROBE_TRANSCRIPT,
       metadata: {
         source: 'admin-ai-health',
-        purpose: 'roadmap-3-transcript-resolver-proof',
+        purpose: 'live-transcript-resolver-check',
       },
     }) as Promise<TranscriptResolverTestResponse>,
   });
@@ -172,7 +172,7 @@ function HealthView() {
               <FileText size={18} />
               <div>
                 <strong>No resolver probe has been run in this view</strong>
-                <span>Run the test to produce the roadmap transcript JSON proof.</span>
+                <span>Run the test to inspect the live transcript resolver JSON output.</span>
               </div>
             </div>
           )}

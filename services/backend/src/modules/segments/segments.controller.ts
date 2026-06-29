@@ -3,10 +3,12 @@ import {
   createSegmentSchema,
   MEMBER_PERMISSIONS,
   previewSegmentSchema,
+  syncShopifySegmentsSchema,
   upsertSegmentOwnershipSchema,
   updateSegmentSchema,
   type CreateSegmentInput,
   type PreviewSegmentInput,
+  type SyncShopifySegmentsInput,
   type UpsertSegmentOwnershipInput,
   type UpdateSegmentInput,
 } from '@factory-engine-pro/contracts';
@@ -40,6 +42,14 @@ export class SegmentsController {
   @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
   evaluateAll(): Promise<unknown> {
     return this.segments.evaluateAll();
+  }
+
+  @Post('sync-shopify')
+  @RequirePermission(MEMBER_PERMISSIONS.segmentsWrite)
+  syncShopifySegments(
+    @Body(new ZodValidationPipe(syncShopifySegmentsSchema)) body: SyncShopifySegmentsInput,
+  ): Promise<unknown> {
+    return this.segments.syncShopifySegments(body);
   }
 
   @Post()

@@ -64,7 +64,7 @@ function AiSettingsView() {
       transcript: PROBE_TRANSCRIPT,
       metadata: {
         source: 'admin-ai-settings',
-        purpose: 'roadmap-3-transcript-resolver-proof',
+        purpose: 'live-transcript-resolver-check',
       },
     }) as Promise<TranscriptResolverTestResponse>,
   });

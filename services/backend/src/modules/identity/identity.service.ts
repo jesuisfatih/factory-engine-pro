@@ -34,7 +34,7 @@ export class IdentityService {
     private readonly mail: MailService,
   ) {}
 
-  async seedDefaultRoles() {
+  async ensureDefaultRoles() {
     for (const role of DEFAULT_MEMBER_ROLES) {
       const existing = await this.prisma.db.memberRole.findFirst({ where: { slug: role.slug } });
       if (!existing) {

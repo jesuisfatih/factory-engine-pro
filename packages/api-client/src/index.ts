@@ -87,6 +87,8 @@ import type {
   ShopifyInitialSyncInput,
   ShopifyInitialSyncResponse,
   ShopifySyncStatus,
+  SyncShopifySegmentsInput,
+  SyncShopifySegmentsResponse,
   SavePersonNoteInput,
   SavePersonTaskNoteInput,
   SaveEmailTemplateInput,
@@ -431,6 +433,10 @@ export class ApiClient {
 
   syncShopifyCustomerSegment(id: string) {
     return this.post(`/shopify-customers/segments/sync?id=${encodeURIComponent(id)}`, {});
+  }
+
+  syncShopifySegments(input: SyncShopifySegmentsInput = {}) {
+    return this.post<SyncShopifySegmentsResponse>('/segments/sync-shopify', input);
   }
 
   evaluateSegment(id: string) {

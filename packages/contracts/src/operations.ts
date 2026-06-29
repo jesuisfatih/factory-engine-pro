@@ -97,6 +97,29 @@ export const upsertSegmentOwnershipSchema = z.object({
 });
 export type UpsertSegmentOwnershipInput = z.infer<typeof upsertSegmentOwnershipSchema>;
 
+export const syncShopifySegmentsSchema = z.object({
+  force: z.boolean().default(false).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(100).optional(),
+});
+export type SyncShopifySegmentsInput = z.infer<typeof syncShopifySegmentsSchema>;
+
+export interface SyncShopifySegmentsResponse {
+  scanned: number;
+  created: number;
+  updated: number;
+  evaluated: number;
+  failed: number;
+  segments: Array<{
+    id: string;
+    name: string;
+    shopifySegmentId: string;
+    action: 'created' | 'updated';
+    customerCount: number;
+    syncStatus: string | null;
+    error: string | null;
+  }>;
+}
+
 export const serviceRequestSourceSchema = z.enum(['call', 'email', 'form', 'manual', 'workflow', 'ai_transcript']);
 export const serviceRequestSurfaceSchema = z.enum(['internal', 'customer_facing']);
 export const serviceRequestPrioritySchema = z.enum(['critical', 'urgent', 'high', 'medium', 'low']);

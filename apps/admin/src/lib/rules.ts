@@ -125,7 +125,7 @@ export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
 
 export function makeRuleDraft(catalog: WorkflowEnumCatalogResponse): RuleDraft {
   return {
-    name: 'Enum chain smoke rule',
+    name: 'New workflow rule',
     status: 'draft',
     priority: 50,
     composable: false,
