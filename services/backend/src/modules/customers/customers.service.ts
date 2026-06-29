@@ -22,7 +22,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
-import { ShopifyClientService } from '../sync/shopify-client.service.js';
+import { ShopifyClientService, type ShopifyCredentials } from '../sync/shopify-client.service.js';
 import {
   type CustomerAssignmentAuditWithMembers,
   type CustomerAssignmentWithMember,
@@ -133,9 +133,7 @@ export class CustomersService {
     const email = customer.email?.trim() ?? null;
     const phone = customer.phone?.trim() ?? null;
     const aircallWhere = aircallWhereFor(email, phone);
-    const orderWhere: Prisma.CommerceOrderWhereInput = customer.shopifyCustomerId
-      ? { OR: [{ customerId: id }, { shopifyCustomerId: customer.shopifyCustomerId }] }
-      : { customerId: id };
+    const orderWhere: Prisma.CommerceOrderWhereInput = { OR: compactOrderCustomerMatchers(customer) };
     const [orders, aircallCalls, serviceRequests, mailDeliveries, linkedNotes, linkedMessages] = await Promise.all([
       this.prisma.db.commerceOrder.findMany({
         where: orderWhere,
@@ -838,6 +836,10 @@ export class CustomersService {
         .map(mapLiveShopifyOrder)
         .sort((left, right) => (dateFromIso(right.processedAt ?? right.createdAt)?.getTime() ?? 0) - (dateFromIso(left.processedAt ?? left.createdAt)?.getTime() ?? 0))
         .slice(0, 50);
+      if (liveOrders.length === 0) {
+        const graphqlOrders = await this.detailShopifyOrdersGraphql(credentials, customer, shopifyCustomerId);
+        if (graphqlOrders.length > 0) return graphqlOrders;
+      }
       this.logger.log('customers', 'customer_detail.shopify_live_orders', 'Customer detail loaded live Shopify orders', {
         customer_id: customer.id,
         shopify_customer_id: shopifyCustomerId,
@@ -852,6 +854,59 @@ export class CustomersService {
       });
       return [];
     }
+  }
+
+  private async detailShopifyOrdersGraphql(
+    credentials: ShopifyCredentials,
+    customer: { id: string; shopifyCustomerId: string | null; email: string | null },
+    shopifyCustomerId: string,
+  ): Promise<CustomerDetailShopifyOrderDto[]> {
+    const queryParts = [`customer_id:${shopifyCustomerId}`];
+    if (customer.email) queryParts.push(`email:${customer.email}`);
+    const queryText = queryParts.join(' OR ');
+    const data = await this.shopify.graphql<{
+      orders?: {
+        nodes?: Array<Record<string, unknown>>;
+      };
+    }>(credentials, `
+      query CustomerDetailOrders($query: String!) {
+        orders(first: 50, sortKey: PROCESSED_AT, reverse: true, query: $query) {
+          nodes {
+            id
+            legacyResourceId
+            name
+            tags
+            processedAt
+            createdAt
+            displayFinancialStatus
+            displayFulfillmentStatus
+            currentSubtotalPriceSet { shopMoney { amount currencyCode } }
+            currentTotalDiscountsSet { shopMoney { amount currencyCode } }
+            currentTotalTaxSet { shopMoney { amount currencyCode } }
+            totalShippingPriceSet { shopMoney { amount currencyCode } }
+            currentTotalPriceSet { shopMoney { amount currencyCode } }
+            customer { id legacyResourceId email phone }
+            lineItems(first: 20) {
+              nodes {
+                title
+                quantity
+                sku
+                variant { id legacyResourceId sku title product { id legacyResourceId title } }
+              }
+            }
+          }
+        }
+      }
+    `, { query: queryText });
+    const orders = Array.isArray(data.orders?.nodes) ? data.orders.nodes : [];
+    const mapped = orders.map(mapGraphqlShopifyOrder);
+    this.logger.log('customers', 'customer_detail.shopify_graphql_orders', 'Customer detail loaded Shopify orders through GraphQL fallback', {
+      customer_id: customer.id,
+      shopify_customer_id: shopifyCustomerId,
+      query: queryText,
+      orders: mapped.length,
+    });
+    return mapped;
   }
 
   private mapCustomer(customer: CustomerWithCommerce) {
@@ -1184,8 +1239,41 @@ function mapLiveShopifyOrder(raw: Record<string, unknown>): CustomerDetailShopif
   };
 }
 
+function mapGraphqlShopifyOrder(raw: Record<string, unknown>): CustomerDetailShopifyOrderDto {
+  const legacyId = stringId(raw.legacyResourceId);
+  const gid = stringId(raw.id);
+  const orderName = stringId(raw.name);
+  const createdAt = isoFromUnknown(raw.createdAt) ?? new Date().toISOString();
+  return {
+    id: `shopify-live-${legacyId ?? gid ?? orderName ?? createdAt}`,
+    shopifyOrderId: legacyId ?? gid,
+    orderNumber: orderName?.replace(/^#/, '') ?? legacyId ?? gid,
+    totalPrice: moneySet(raw.currentTotalPriceSet),
+    subtotal: moneySet(raw.currentSubtotalPriceSet),
+    totalDiscounts: moneySet(raw.currentTotalDiscountsSet),
+    totalTax: moneySet(raw.currentTotalTaxSet),
+    totalShipping: moneySet(raw.totalShippingPriceSet),
+    currency: currencyFromMoneySet(raw.currentTotalPriceSet) ?? 'USD',
+    financialStatus: stringId(raw.displayFinancialStatus),
+    fulfillmentStatus: stringId(raw.displayFulfillmentStatus),
+    fulfillmentMode: 'shopify',
+    processedAt: isoFromUnknown(raw.processedAt),
+    createdAt,
+    tags: tags(raw.tags),
+    lineItems: graphqlLineItems(raw.lineItems),
+  };
+}
+
 function numericShopifyCustomerId(value: string) {
   return value.replace(/^gid:\/\/shopify\/Customer\//, '').trim() || null;
+}
+
+function compactOrderCustomerMatchers(customer: { id: string; shopifyCustomerId: string | null; email: string | null; phone: string | null }): Prisma.CommerceOrderWhereInput[] {
+  const matchers: Prisma.CommerceOrderWhereInput[] = [{ customerId: customer.id }];
+  if (customer.shopifyCustomerId?.trim()) matchers.push({ shopifyCustomerId: customer.shopifyCustomerId.trim() });
+  if (customer.email?.trim()) matchers.push({ email: { equals: customer.email.trim(), mode: 'insensitive' } });
+  if (customer.phone?.trim()) matchers.push({ phone: customer.phone.trim() });
+  return matchers;
 }
 
 function stringId(value: unknown) {
@@ -1202,6 +1290,31 @@ function numeric(value: unknown) {
   if (value === null || value === undefined || value === '') return 0;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function moneySet(value: unknown) {
+  return numeric(jsonRecord(jsonRecord(value).shopMoney).amount);
+}
+
+function currencyFromMoneySet(value: unknown) {
+  return stringId(jsonRecord(jsonRecord(value).shopMoney).currencyCode);
+}
+
+function graphqlLineItems(value: unknown) {
+  const nodes = jsonArray(jsonRecord(value).nodes);
+  return nodes.map((node) => {
+    const row = jsonRecord(node);
+    const variant = jsonRecord(row.variant);
+    const product = jsonRecord(variant.product);
+    return {
+      title: stringId(row.title) ?? stringId(variant.title) ?? 'Line item',
+      quantity: numeric(row.quantity),
+      sku: stringId(row.sku ?? variant.sku),
+      shopifyVariantId: stringId(variant.legacyResourceId ?? variant.id),
+      shopifyProductId: stringId(product.legacyResourceId ?? product.id),
+      productTitle: stringId(product.title),
+    };
+  });
 }
 
 function isoFromUnknown(value: unknown) {
@@ -1326,9 +1439,13 @@ function permissionEnabled(permissions: Record<string, unknown>, permission: str
   return permissions[permission] === true;
 }
 
-function jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {
+function jsonRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function jsonArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function mapComment(comment: {
