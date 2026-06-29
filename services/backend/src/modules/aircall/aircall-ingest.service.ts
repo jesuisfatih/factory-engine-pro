@@ -475,6 +475,7 @@ export class AircallIngestService {
 
     const targetVersion = normalizeTargetVersion(options.targetVersion);
     let needsWorkflowEvaluationRepair = false;
+    let needsResolverVersionRepair = false;
     if (!options.forceReprocess && (callEvent.resolverStatus === 'succeeded' || callEvent.resolvedAt)) {
       const currentVersion = callEvent.resolvedWithVersion ?? 0;
       const versionLabel = callEvent.resolvedWithVersion ? `v${callEvent.resolvedWithVersion}` : 'legacy';
@@ -486,6 +487,8 @@ export class AircallIngestService {
           return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
         }
         needsWorkflowEvaluationRepair = true;
+      } else {
+        needsResolverVersionRepair = true;
       }
     }
 
@@ -506,7 +509,7 @@ export class AircallIngestService {
       const state = await existingJob.getState();
       const returnValue = existingJob.returnvalue as { status?: unknown } | null;
       const completedWithoutSuccess = state === 'completed' && !successfulResolverJobStatus(returnValue?.status);
-      if ((options.forceReprocess || needsWorkflowEvaluationRepair) && state !== 'active') {
+      if ((options.forceReprocess || needsWorkflowEvaluationRepair || needsResolverVersionRepair) && state !== 'active') {
         await existingJob.remove();
       } else if (state === 'failed' || completedWithoutSuccess) {
         await existingJob.remove();
@@ -552,6 +555,7 @@ export class AircallIngestService {
       target_version: targetVersion,
       force_reprocess: Boolean(options.forceReprocess),
       workflow_evaluation_repair: needsWorkflowEvaluationRepair,
+      resolver_version_repair: needsResolverVersionRepair,
       source: options.source ?? 'ingest',
     });
     return { queued: true, jobId, skippedReason: null };
