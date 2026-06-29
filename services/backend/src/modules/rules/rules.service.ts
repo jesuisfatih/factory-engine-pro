@@ -20,6 +20,7 @@ import {
   type WorkflowCooldownTrace,
   type SaveWorkflowRuleInput,
   type RollbackWorkflowRuleInput,
+  type CreateTaskAxis,
   type TaskAxis,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
@@ -58,7 +59,7 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'Default: Angry customer support follow-up',
     'psych.tag.detected',
     [defaultCondition('tag_angry', 'psych_tag_includes', '=', 'angry')],
-    [defaultAction('create_support_task', 'create_task', 'support: Angry customer follow-up')],
+    [defaultAction('support_case_manual_only', 'no-op', 'Support intent detected; Support cases are created manually.')],
     70,
   ),
   defaultRule(
@@ -74,8 +75,7 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'psych.tag.detected',
     [defaultCondition('tag_shipping_issue', 'psych_tag_includes', '=', 'shipping_issue')],
     [
-      defaultAction('create_shipping_task', 'create_task', 'support: Shipping issue follow-up'),
-      defaultAction('escalate_shipping_task', 'escalate', 'Shipping issue escalation'),
+      defaultAction('support_case_manual_only', 'no-op', 'Shipping support intent detected; Support cases are created manually.'),
     ],
     70,
   ),
@@ -85,7 +85,6 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'psych.tag.detected',
     [defaultCondition('tag_refund_intent', 'psych_tag_includes', '=', 'refund_intent')],
     [
-      defaultAction('create_refund_task', 'create_task', 'support: Refund intent follow-up'),
       defaultAction('add_account_watcher', 'add_watcher', 'account'),
     ],
     70,
@@ -141,7 +140,7 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'Default: Missed call callback',
     'aircall.call.missed',
     [],
-    [defaultAction('create_callback_task', 'create_task', 'support: Missed call callback')],
+    [defaultAction('missed_call_manual_review', 'no-op', 'Missed support callback requires manual staff review.')],
     70,
   ),
 ];
@@ -549,7 +548,6 @@ export class RulesService {
       }
 
       const taskIds: string[] = [];
-      const supportCaseIds: string[] = [];
       const actionTrace: WorkflowActionTrace[] = [];
       for (const action of rule.definition.actions) {
         const applied = await this.applyAction(action, {
@@ -564,7 +562,6 @@ export class RulesService {
           whenTrace,
           cooldown: cooldown.trace,
           taskIds,
-          supportCaseIds,
         });
         actionTrace.push(applied.trace);
         if (applied.task) {
@@ -578,7 +575,6 @@ export class RulesService {
             title: applied.task.title,
           });
         }
-        if (applied.supportCase) supportCaseIds.push(applied.supportCase.id);
       }
 
       const actionStatus = resultStatus(taskIds, actionTrace);
@@ -1086,17 +1082,15 @@ export class RulesService {
     whenTrace: WorkflowWhenGroupTrace[];
     cooldown: WorkflowCooldownTrace;
     taskIds: string[];
-    supportCaseIds: string[];
-  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string }; supportCase?: { id: string; title: string } }> {
+  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
     this.executor.recognizeAction(action.action);
-    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string }; supportCase?: { id: string; title: string } };
+    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string } };
 
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
       const source = this.workflowTaskSource(context, sourceCallId);
-      const supportCaseOnly = assignment.axis === 'support';
       const task = await this.support.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
@@ -1114,19 +1108,17 @@ export class RulesService {
         taskStateSnapshot,
       });
       result = {
-        ...(supportCaseOnly
-          ? { supportCase: { id: task.id, title: task.title } }
-          : { task: { id: task.id, title: task.title } }),
+        task: { id: task.id, title: task.title },
         trace: {
           actionId: action.id,
           action: action.action,
           status: 'applied',
-          targetType: supportCaseOnly ? 'support_case' : 'service_request',
+          targetType: 'service_request',
           targetId: task.id,
-          message: supportCaseOnly ? 'Created support case from workflow action.' : 'Created service request from workflow action.',
+          message: 'Created workflow task from create_task action.',
           metadata: {
             axis: assignment.axis,
-            eventType: supportCaseOnly ? 'support.case.created' : context.trigger,
+            eventType: context.trigger,
             assignedMemberId: assignment.assigneeMemberId,
             watcherMemberIds: assignment.watcherMemberIds,
             matchedRuleId: context.rule.id,
@@ -1190,17 +1182,6 @@ export class RulesService {
         rule_id: context.rule.id,
         action_id: action.id,
         task_id: result.task.id,
-        axis: result.trace.metadata && 'axis' in result.trace.metadata ? result.trace.metadata.axis : null,
-      });
-    }
-    if (result.supportCase) {
-      this.logger.log('rules', 'support_case_created', 'Workflow rule created a support case event', {
-        event_id: context.eventId,
-        event_type: 'support.case.created',
-        trigger: context.trigger,
-        rule_id: context.rule.id,
-        action_id: action.id,
-        support_case_id: result.supportCase.id,
         axis: result.trace.metadata && 'axis' in result.trace.metadata ? result.trace.metadata.axis : null,
       });
     }
@@ -1333,8 +1314,9 @@ export class RulesService {
     return assignment;
   }
 
-  private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): TaskAxis {
-    return normalizeTaskAxis(action?.value)
+  private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): CreateTaskAxis {
+    const axis = action?.axis
+      ?? normalizeTaskAxis(action?.value)
       ?? normalizeTaskAxis(stringParam(context.params, 'axis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'taskAxis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'intent'))
@@ -1342,7 +1324,8 @@ export class RulesService {
       ?? normalizeTaskAxis(stringParam(context.params, 'taskIntent'))
       ?? normalizeTaskAxis(stringValue(context.state.resolverOutput.call_intent))
       ?? normalizeTaskAxis(context.trigger)
-      ?? 'support';
+      ?? 'sales';
+    return this.executor.requireCreateTaskAxis(axis);
   }
 
   private async findAxisPrimaryMembers(axis: TaskAxis) {
@@ -1582,15 +1565,8 @@ export class RulesService {
   ) {
     const aiSource = this.workflowAiSource(context);
     const sourceCallId = this.workflowSourceCallId(context);
-    const supportCaseOnly = assignment.axis === 'support';
     return {
       category: 'workflow_rule',
-      ...(supportCaseOnly ? {
-        eventType: 'support.case.created',
-        personQueueVisible: false,
-        supportCaseOnly: true,
-        personQueueHiddenReason: 'support_case',
-      } : {}),
       ...(aiSource ? { aiSource } : {}),
       workflow: {
         eventId: context.eventId,
@@ -1605,7 +1581,6 @@ export class RulesService {
         ruleName: context.rule.name,
         actionId: action.id,
         action: action.action,
-        ...(supportCaseOnly ? { supportCaseEvent: 'support.case.created' } : {}),
         rulePriority: context.rule.priority,
         axis: assignment.axis,
         assigneeResolution: {
@@ -1632,11 +1607,10 @@ export class RulesService {
       ?? null;
   }
 
-  private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null) {
-    const aiSource = this.workflowAiSource(context);
-    if (aiSource === 'transcript') return 'ai_transcript';
-    if (sourceCallId) return 'call';
-    return 'workflow';
+  private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null): 'admin_created' {
+    void context;
+    void sourceCallId;
+    return 'admin_created';
   }
 
   private workflowAiSource(context: WorkflowActionContext) {
@@ -1662,7 +1636,6 @@ export class RulesService {
 
   private targetTaskId(context: WorkflowActionContext) {
     return context.taskIds.at(-1)
-      ?? context.supportCaseIds.at(-1)
       ?? stringParam(context.params, 'taskId')
       ?? stringParam(context.params, 'serviceRequestId')
       ?? null;
@@ -1730,6 +1703,7 @@ export class RulesService {
 
   async createRule(input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
+    this.validateCreateTaskAxes(parsed.definition);
     const rule = await this.repository.create(parsed, this.editedByMemberId());
     this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
       rule_id: rule.id,
@@ -1743,6 +1717,7 @@ export class RulesService {
 
   async updateRule(id: string, input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
+    this.validateCreateTaskAxes(parsed.definition);
     const rule = await this.repository.update(id, parsed, this.editedByMemberId());
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
@@ -1774,6 +1749,8 @@ export class RulesService {
       psychTags: [...WORKFLOW_ENUM_CATALOG.psychTags],
       callIntents: [...WORKFLOW_ENUM_CATALOG.callIntents],
       urgencyLevels: [...WORKFLOW_ENUM_CATALOG.urgencyLevels],
+      createTaskAxes: [...WORKFLOW_ENUM_CATALOG.createTaskAxes],
+      serviceRequestSources: [...WORKFLOW_ENUM_CATALOG.serviceRequestSources],
       triggers: [...WORKFLOW_ENUM_CATALOG.triggers],
       triggerGroups: Object.fromEntries(
         Object.entries(WORKFLOW_ENUM_CATALOG.triggerGroups).map(([family, values]) => [family, [...values]]),
@@ -1782,6 +1759,14 @@ export class RulesService {
       actions: [...WORKFLOW_ENUM_CATALOG.actions],
       counts: { ...WORKFLOW_ENUM_CATALOG.counts },
     };
+  }
+
+  private validateCreateTaskAxes(definition: WorkflowRuleDefinition) {
+    for (const action of definition.actions) {
+      if (action.action !== 'create_task') continue;
+      const axis = action.axis ?? normalizeTaskAxis(action.value) ?? 'sales';
+      this.executor.requireCreateTaskAxis(axis);
+    }
   }
 
   enumChainProbe(): WorkflowEnumChainProbeResponse {
@@ -1848,11 +1833,10 @@ type WorkflowActionContext = {
   whenTrace: WorkflowWhenGroupTrace[];
   cooldown: WorkflowCooldownTrace;
   taskIds: string[];
-  supportCaseIds: string[];
 };
 
 type TaskAssignment = {
-  axis: TaskAxis;
+  axis: CreateTaskAxis;
   assigneeMemberId: string | null;
   watcherMemberIds: string[];
   candidateMemberIds: string[];

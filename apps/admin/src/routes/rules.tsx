@@ -235,8 +235,23 @@ function ConditionValueInput({
   );
 }
 
+type CanvasCreateTaskAxis = WorkflowEnumCatalogResponse['createTaskAxes'][number]['value'];
+
+function createTaskAxisFromValue(value: string, catalog: WorkflowEnumCatalogResponse): CanvasCreateTaskAxis {
+  const raw = value.trim().toLowerCase();
+  const axis = catalog.createTaskAxes.find((entry) => raw === entry.value || raw.startsWith(`${entry.value}:`));
+  return axis?.value ?? catalog.createTaskAxes[0]?.value ?? 'sales';
+}
+
+function createTaskTitleFromValue(value: string) {
+  return value.replace(/^(sales|account)\s*:\s*/i, '').trim();
+}
+
 function ActionNode({ data }: NodeProps<Node<ActionNodeData>>) {
   const actionMeta = data.catalog.actions.find((entry) => entry.value === data.action.action);
+  const isCreateTask = data.action.action === 'create_task';
+  const createTaskAxis = data.action.axis ?? createTaskAxisFromValue(data.action.value, data.catalog);
+  const createTaskTitle = createTaskTitleFromValue(data.action.value);
   return (
     <div className={`rule-node rule-node-action action-${data.action.action.replace(/[^a-z0-9]/g, '-')}`}>
       <Handle type="target" position={Position.Left} />
@@ -249,7 +264,15 @@ function ActionNode({ data }: NodeProps<Node<ActionNodeData>>) {
       </div>
       <select
         value={data.action.action}
-        onChange={(event) => data.onEdit({ ...data.action, action: event.target.value as WorkflowAction })}
+        onChange={(event) => {
+          const nextAction = event.target.value as WorkflowAction;
+          data.onEdit({
+            ...data.action,
+            action: nextAction,
+            axis: nextAction === 'create_task' ? createTaskAxis : undefined,
+            value: nextAction === 'create_task' ? (createTaskTitle || 'Follow up') : data.action.value,
+          });
+        }}
       >
         {data.catalog.actions.map((action) => (
           <option key={action.value} value={action.value}>
@@ -257,11 +280,33 @@ function ActionNode({ data }: NodeProps<Node<ActionNodeData>>) {
           </option>
         ))}
       </select>
-      <input
-        value={data.action.value}
-        onChange={(event) => data.onEdit({ ...data.action, value: event.target.value })}
-        placeholder={actionMeta?.auditOnly ? 'audit reason' : 'target or note'}
-      />
+      {isCreateTask ? (
+        <div className="rule-node-row">
+          <select
+            id={`create-task-axis-${data.action.id}`}
+            aria-label="Create task axis"
+            value={createTaskAxis}
+            onChange={(event) => data.onEdit({ ...data.action, axis: event.target.value as CanvasCreateTaskAxis })}
+          >
+            {data.catalog.createTaskAxes.map((axis) => (
+              <option key={axis.value} value={axis.value}>
+                {axis.label}
+              </option>
+            ))}
+          </select>
+          <input
+            value={createTaskTitle}
+            onChange={(event) => data.onEdit({ ...data.action, axis: createTaskAxis, value: event.target.value })}
+            placeholder="task title"
+          />
+        </div>
+      ) : (
+        <input
+          value={data.action.value}
+          onChange={(event) => data.onEdit({ ...data.action, axis: undefined, value: event.target.value })}
+          placeholder={actionMeta?.auditOnly ? 'audit reason' : 'target or note'}
+        />
+      )}
       <div className="rule-node-title">{actionMeta?.auditOnly ? 'audit only' : actionMeta?.createsTask ? 'task output' : 'state output'}</div>
     </div>
   );
@@ -633,7 +678,7 @@ function RulesView() {
             <div>
               <div className="rules-banner-title">Master enum catalog v{catalog.version}</div>
               <div className="rules-banner-body">
-                {catalog.counts.psychTags} psych tags · {catalog.counts.callIntents} call intents · {catalog.counts.urgencyLevels} urgency levels · {catalog.counts.triggers} triggers · {catalog.counts.conditions} conditions · {catalog.counts.actions} actions
+                {catalog.counts.psychTags} psych tags · {catalog.counts.callIntents} call intents · {catalog.counts.urgencyLevels} urgency levels · {catalog.counts.triggers} triggers · {catalog.counts.conditions} conditions · {catalog.counts.actions} actions · {catalog.counts.createTaskAxes} create-task axes
               </div>
             </div>
           </div>
@@ -855,6 +900,8 @@ function RulesView() {
               <CatalogCard title="Triggers" count={catalog.counts.triggers} values={catalog.triggers.slice(0, 8).map((entry) => entry.value)} />
               <CatalogCard title="Conditions" count={catalog.counts.conditions} values={catalog.conditions.slice(0, 8).map((entry) => entry.value)} />
               <CatalogCard title="Actions" count={catalog.counts.actions} values={catalog.actions.map((entry) => entry.value)} />
+              <CatalogCard title="Create task axis" count={catalog.counts.createTaskAxes} values={catalog.createTaskAxes.map((entry) => entry.value)} />
+              <CatalogCard title="ServiceRequest sources" count={catalog.counts.serviceRequestSources} values={catalog.serviceRequestSources.map((entry) => entry.value)} />
               <CatalogCard title="Psych tags" count={catalog.counts.psychTags} values={catalog.psychTags.map((entry) => entry.value)} />
               <CatalogCard title="Call intents" count={catalog.counts.callIntents} values={catalog.callIntents.map((entry) => entry.value)} />
               <CatalogCard title="Urgency" count={catalog.counts.urgencyLevels} values={catalog.urgencyLevels.map((entry) => entry.value)} />

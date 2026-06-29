@@ -1,6 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { createHash } from 'node:crypto';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
@@ -279,21 +278,6 @@ export class PersonWorkspaceService {
 
     const dailyCallList = Array.from(dailyByCustomer.values()).sort(sortDaily).slice(0, 150);
     const ownedSegmentByCustomer = this.highestOwnedSegmentByCustomer(segmentOwnerships, memberships);
-    const materializedSegmentTasks = await this.ensureSegmentPriorityTasks(member.id, dailyCallList, assignments, ownedSegmentByCustomer, requestRows);
-    if (materializedSegmentTasks > 0) {
-      requestRows = await this.personRequestRows(member.id, visibleCustomerIds);
-      const refreshedContextCustomerIds = uniqueStrings([
-        ...visibleCustomerIds,
-        ...memberships.map((membership) => membership.customerId),
-        ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
-      ]);
-      [repeatCounts, cardContext, callContext] = await Promise.all([
-        this.repeatCounts(refreshedContextCustomerIds),
-        this.cardContext(refreshedContextCustomerIds),
-        this.cardCallContext(requestRows),
-      ]);
-    }
-
     const scopedRows = requestRows
       .filter((row) => this.isQueueVisible(row))
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
@@ -341,114 +325,6 @@ export class PersonWorkspaceService {
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       take: 500,
     });
-  }
-
-  private async ensureSegmentPriorityTasks(
-    memberId: string,
-    dailyCallList: PersonDailyCallItem[],
-    assignments: AxisAssignments,
-    ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
-    existingRows: ServiceRequestRow[],
-  ) {
-    if (dailyCallList.length === 0) return 0;
-    const existingOpenCustomers = new Set(existingRows
-      .filter((row) => !CLOSED.has(row.status))
-      .filter((row) => this.isQueueVisible(row))
-      .filter((row) => row.assignedMemberId === memberId)
-      .filter((row) => row.customerId)
-      .filter((row) => this.isAiOrSegmentPriorityTask(row))
-      .map((row) => row.customerId as string));
-
-    let created = 0;
-    const tenantId = this.tenantId();
-    for (const item of dailyCallList.slice(0, 25)) {
-      if (existingOpenCustomers.has(item.customerId)) continue;
-      const ownedSegment = ownedSegmentByCustomer.get(item.customerId);
-      if (!ownedSegment) continue;
-      const axes = assignments.get(item.customerId);
-      const axis = preferredAxis(axes);
-      if (!axis) continue;
-      const taskId = segmentPriorityTaskId(tenantId, memberId, item.customerId, ownedSegment.segmentId);
-      const existing = await this.prisma.db.serviceRequest.findUnique({
-        where: { id: taskId },
-        select: { id: true, status: true },
-      });
-      if (existing) {
-        if (!CLOSED.has(existing.status)) existingOpenCustomers.add(item.customerId);
-        continue;
-      }
-
-      try {
-        await this.prisma.db.serviceRequest.create({
-          data: {
-            id: taskId,
-            tenantId,
-            customerId: item.customerId,
-            assignedMemberId: memberId,
-            axis,
-            source: 'workflow',
-            surface: 'internal',
-            title: `Segment follow-up: ${item.customerName}`,
-            description: `Live Shopify segment priority task for ${item.customerName} from ${ownedSegment.segmentName}.`,
-            status: 'open',
-            priority: servicePriorityFromUrgency(item.urgencyScore),
-            metadata: {
-              category: 'segment_priority_task',
-              aiSource: 'segment',
-              segmentPriorityTask: true,
-              personQueueVisible: true,
-              segmentId: ownedSegment.segmentId,
-              segmentName: ownedSegment.segmentName,
-              segmentPriority: ownedSegment.segmentPriority,
-              segmentOwnershipPriority: ownedSegment.ownershipPriority,
-              workflow: {
-                eventId: `segment-priority:${tenantId}:${memberId}:${item.customerId}:${ownedSegment.segmentId}`,
-                trigger: 'segment.member_added',
-                source: 'person_workspace.segment_priority',
-                action: 'create_task',
-                actionId: 'segment-priority-materialized',
-                ruleName: 'Segment priority task materializer',
-                params: {
-                  customerId: item.customerId,
-                  segmentId: ownedSegment.segmentId,
-                  segmentName: ownedSegment.segmentName,
-                  ownerMemberId: memberId,
-                  axis,
-                },
-              },
-            } as Prisma.InputJsonValue,
-            taskStateSnapshot: {
-              customer: {
-                id: item.customerId,
-                email: item.email,
-                phone: item.phone,
-                ordersCount: item.ordersCount,
-                totalSpent: item.totalSpent,
-              },
-              segment: {
-                id: ownedSegment.segmentId,
-                name: ownedSegment.segmentName,
-                priority: ownedSegment.segmentPriority,
-                ownershipPriority: ownedSegment.ownershipPriority,
-              },
-              urgency: item.urgencyBreakdown,
-            } as Prisma.InputJsonValue,
-          },
-        });
-        existingOpenCustomers.add(item.customerId);
-        created += 1;
-      } catch (error) {
-        if (!isUniqueConstraint(error)) throw error;
-      }
-    }
-
-    if (created > 0) {
-      this.logger.log('person_workspace', 'segment_priority.materialized', 'Segment priority tasks materialized from live Shopify segments', {
-        member_id: memberId,
-        created_count: created,
-      });
-    }
-    return created;
   }
 
   async legacyQueue() {
@@ -2352,34 +2228,6 @@ function uniqueHighUrgencyCount(
     }
   }
   return count;
-}
-
-function preferredAxis(axes: Set<string> | undefined): CustomerAssignmentAxis | null {
-  if (!axes || axes.size === 0) return null;
-  if (axes.has('sales')) return 'sales';
-  if (axes.has('account')) return 'account';
-  if (axes.has('support')) return 'support';
-  return null;
-}
-
-function segmentPriorityTaskId(tenantId: string, memberId: string, customerId: string, segmentId: string) {
-  const hash = createHash('sha256')
-    .update([tenantId, memberId, customerId, segmentId].join(':'))
-    .digest('hex')
-    .slice(0, 24);
-  return `srseg_${hash}`;
-}
-
-function servicePriorityFromUrgency(score: number) {
-  if (score >= 100) return 'critical';
-  if (score >= 80) return 'urgent';
-  if (score >= 50) return 'high';
-  if (score >= 25) return 'medium';
-  return 'low';
-}
-
-function isUniqueConstraint(error: unknown) {
-  return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'P2002');
 }
 
 function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {

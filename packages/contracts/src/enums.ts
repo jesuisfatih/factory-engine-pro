@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-29.1';
+export const WORKFLOW_ENUM_VERSION = '2026-06-29.2';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -28,6 +28,17 @@ export const URGENCY_LEVELS = [
   'critical',
 ] as const;
 
+export const CREATE_TASK_AXIS = [
+  'sales',
+  'account',
+] as const;
+
+export const SERVICE_REQUEST_SOURCES = [
+  'manual',
+  'customer_self_service',
+  'admin_created',
+] as const;
+
 export const WORKFLOW_TRIGGERS = [
   'aircall.call.created',
   'aircall.call.ended',
@@ -42,7 +53,6 @@ export const WORKFLOW_TRIGGERS = [
   'segment.member_removed',
   'b2b_access.request.created',
   'support.request.created',
-  'support.case.created',
   'schedule.daily',
   'manual.trigger',
   'psych.tag.detected',
@@ -94,6 +104,8 @@ export const WORKFLOW_ACTIONS = [
 export const psychTagSchema = z.enum(PSYCH_TAGS);
 export const callIntentSchema = z.enum(CALL_INTENTS);
 export const urgencyLevelSchema = z.enum(URGENCY_LEVELS);
+export const createTaskAxisSchema = z.enum(CREATE_TASK_AXIS);
+export const serviceRequestSourceSchema = z.enum(SERVICE_REQUEST_SOURCES);
 export const workflowTriggerSchema = z.enum(WORKFLOW_TRIGGERS);
 export const workflowConditionSchema = z.enum(WORKFLOW_CONDITIONS);
 export const workflowActionSchema = z.enum(WORKFLOW_ACTIONS);
@@ -101,6 +113,7 @@ export const workflowActionSchema = z.enum(WORKFLOW_ACTIONS);
 export type PsychTag = z.infer<typeof psychTagSchema>;
 export type CallIntent = z.infer<typeof callIntentSchema>;
 export type UrgencyLevel = z.infer<typeof urgencyLevelSchema>;
+export type CreateTaskAxis = z.infer<typeof createTaskAxisSchema>;
 export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
 export type WorkflowCondition = z.infer<typeof workflowConditionSchema>;
 export type WorkflowAction = z.infer<typeof workflowActionSchema>;
@@ -147,7 +160,6 @@ export const WORKFLOW_TRIGGER_GROUPS: Record<WorkflowTriggerFamily, readonly Wor
     'segment.member_removed',
     'b2b_access.request.created',
     'support.request.created',
-    'support.case.created',
     'schedule.daily',
     'manual.trigger',
   ],
@@ -217,6 +229,8 @@ export const WORKFLOW_ENUM_COUNTS = {
   psychTags: PSYCH_TAGS.length,
   callIntents: CALL_INTENTS.length,
   urgencyLevels: URGENCY_LEVELS.length,
+  createTaskAxes: CREATE_TASK_AXIS.length,
+  serviceRequestSources: SERVICE_REQUEST_SOURCES.length,
   triggers: WORKFLOW_TRIGGERS.length,
   conditions: WORKFLOW_CONDITIONS.length,
   actions: WORKFLOW_ACTIONS.length,
@@ -227,6 +241,8 @@ export const WORKFLOW_ENUM_CATALOG = {
   psychTags: PSYCH_TAGS.map(option),
   callIntents: CALL_INTENTS.map(option),
   urgencyLevels: URGENCY_LEVELS.map(option),
+  createTaskAxes: CREATE_TASK_AXIS.map(option),
+  serviceRequestSources: SERVICE_REQUEST_SOURCES.map(option),
   triggers: WORKFLOW_TRIGGER_OPTIONS,
   triggerGroups: WORKFLOW_TRIGGER_GROUPS,
   conditions: WORKFLOW_CONDITION_OPTIONS,
@@ -240,6 +256,8 @@ export const workflowEnumCatalogResponseSchema = z.object({
   psychTags: z.array(z.object({ value: psychTagSchema, label: z.string() })),
   callIntents: z.array(z.object({ value: callIntentSchema, label: z.string() })),
   urgencyLevels: z.array(z.object({ value: urgencyLevelSchema, label: z.string() })),
+  createTaskAxes: z.array(z.object({ value: createTaskAxisSchema, label: z.string() })),
+  serviceRequestSources: z.array(z.object({ value: serviceRequestSourceSchema, label: z.string() })),
   triggers: z.array(z.object({
     value: workflowTriggerSchema,
     label: z.string(),
@@ -266,6 +284,8 @@ export const workflowEnumCatalogResponseSchema = z.object({
     psychTags: z.number(),
     callIntents: z.number(),
     urgencyLevels: z.number(),
+    createTaskAxes: z.number(),
+    serviceRequestSources: z.number(),
     triggers: z.number(),
     conditions: z.number(),
     actions: z.number(),

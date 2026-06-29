@@ -1,6 +1,7 @@
 import type {
   WorkflowAction,
   WorkflowCondition,
+  CreateTaskAxis,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
   WorkflowRuleDto,
@@ -30,6 +31,7 @@ export interface RuleDraftAction {
   id: string;
   action: WorkflowAction;
   value: string;
+  axis?: CreateTaskAxis;
 }
 
 export interface RuleDraftWhenGroup {
@@ -163,7 +165,8 @@ export function makeAction(catalog: WorkflowEnumCatalogResponse): RuleDraftActio
   return {
     id: `act-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     action: catalog.actions[0]?.value ?? 'create_task',
-    value: '',
+    axis: catalog.createTaskAxes[0]?.value ?? 'sales',
+    value: 'Follow up',
   };
 }
 

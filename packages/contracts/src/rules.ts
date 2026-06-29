@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
+import { createTaskAxisSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
 
 export const workflowRuleStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
 export type WorkflowRuleStatus = z.infer<typeof workflowRuleStatusSchema>;
@@ -26,6 +26,7 @@ export const workflowRuleActionSchema = z.object({
   id: z.string().trim().min(1),
   action: workflowActionSchema,
   value: z.string(),
+  axis: createTaskAxisSchema.optional(),
 });
 export type WorkflowRuleAction = z.infer<typeof workflowRuleActionSchema>;
 
@@ -265,7 +266,7 @@ export interface WorkflowActionTrace {
   actionId: string;
   action: string;
   status: 'applied' | 'skipped';
-  targetType: 'service_request' | 'support_case' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
+  targetType: 'service_request' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
   targetId?: string;
   message: string;
   metadata?: Record<string, unknown>;

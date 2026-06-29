@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ServiceRequestPriority, ServiceRequestStatus, ServiceRequestSurface, TaskAxis } from '@factory-engine-pro/contracts';
+import type { ServiceRequestPriority, ServiceRequestSource, ServiceRequestStatus, ServiceRequestSurface, TaskAxis } from '@factory-engine-pro/contracts';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
@@ -90,18 +90,19 @@ interface SupportDraft {
   description: string;
   surface: ServiceRequestSurface;
   priority: ServiceRequestPriority;
-  source: 'manual' | 'call' | 'email' | 'form';
+  source: ServiceRequestSource;
   category: string;
   customerId: string;
   assignedMemberId: string;
 }
 
 type SurfaceFilter = 'all' | ServiceRequestSurface;
-type SourceFilter = 'all' | 'ai_transcript' | 'workflow' | 'call' | 'manual' | 'email' | 'form';
+type SourceFilter = 'all' | ServiceRequestSource;
 
 const PRIORITIES: ServiceRequestPriority[] = ['critical', 'urgent', 'high', 'medium', 'low'];
 const STATUSES: ServiceRequestStatus[] = ['open', 'in_progress', 'waiting', 'waiting_on_customer', 'pending_resolve', 'resolved', 'closed', 'reopened'];
-const SOURCE_FILTERS: SourceFilter[] = ['all', 'ai_transcript', 'workflow', 'call', 'manual', 'email', 'form'];
+const SUPPORT_SOURCES: ServiceRequestSource[] = ['manual', 'customer_self_service', 'admin_created'];
+const SOURCE_FILTERS: SourceFilter[] = ['all', ...SUPPORT_SOURCES];
 const QK = ['operations', 'support'] as const;
 
 function initialCaseId() {
@@ -388,7 +389,7 @@ function SupportCreateDialog({ onClose, onCreated }: { onClose: () => void; onCr
     description: '',
     surface: 'internal',
     priority: 'medium',
-    source: 'manual',
+    source: 'admin_created',
     category: 'other',
     customerId: '',
     assignedMemberId: '',
@@ -439,7 +440,7 @@ function SupportCreateDialog({ onClose, onCreated }: { onClose: () => void; onCr
               <Select label={t('support.field_priority')} value={draft.priority} onChange={(priority) => setDraft({ ...draft, priority: priority as ServiceRequestPriority })} options={PRIORITIES} />
             </div>
             <div className="field-row">
-              <Select label={t('support.field_source')} value={draft.source} onChange={(source) => setDraft({ ...draft, source: source as SupportDraft['source'] })} options={['manual', 'call', 'email', 'form']} />
+              <Select label={t('support.field_source')} value={draft.source} onChange={(source) => setDraft({ ...draft, source: source as SupportDraft['source'] })} options={SUPPORT_SOURCES} />
               <div className="field">
                 <label>{t('support.field_category')}</label>
                 <input value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} />

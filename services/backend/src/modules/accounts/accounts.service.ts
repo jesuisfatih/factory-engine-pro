@@ -312,7 +312,7 @@ export class AccountsService {
         tenantId: this.tenantId(),
         customerId: actor.customerId,
         customerUserId: actor.principalType === 'customer_user' ? actor.principalId : null,
-        source: 'form',
+        source: 'customer_self_service',
         surface: 'customer_facing',
         title: input.subject,
         description: input.description,

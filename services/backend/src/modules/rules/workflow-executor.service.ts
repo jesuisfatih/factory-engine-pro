@@ -3,6 +3,8 @@ import {
   workflowActionSchema,
   workflowConditionSchema,
   workflowTriggerSchema,
+  createTaskAxisSchema,
+  type CreateTaskAxis,
   WORKFLOW_ACTIONS,
   WORKFLOW_CONDITIONS,
   WORKFLOW_TRIGGERS,
@@ -31,6 +33,16 @@ export class WorkflowExecutorService {
     return this.describeAction(action.data);
   }
 
+  requireCreateTaskAxis(value: unknown): CreateTaskAxis {
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (raw === 'support') {
+      throw new BadRequestException('Workflow create_task cannot target support. Create Support cases manually from the Support or staff task UI.');
+    }
+    const axis = createTaskAxisSchema.safeParse(raw);
+    if (!axis.success) throw new BadRequestException(`Invalid create_task axis: ${String(value)}`);
+    return axis.data;
+  }
+
   recognizedCounts() {
     for (const trigger of WORKFLOW_TRIGGERS) this.describeTrigger(trigger);
     for (const condition of WORKFLOW_CONDITIONS) this.describeCondition(condition);
@@ -57,7 +69,6 @@ export class WorkflowExecutorService {
       case 'segment.member_removed':
       case 'b2b_access.request.created':
       case 'support.request.created':
-      case 'support.case.created':
       case 'schedule.daily':
       case 'manual.trigger':
       case 'psych.tag.detected':

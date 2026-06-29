@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import type { Prisma } from '@prisma/client';
 import type {
   AddServiceRequestCommentInput,
@@ -17,7 +16,6 @@ import type {
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
-import { RULES_RUNTIME, type RulesRuntime } from '../rules/rules.tokens.js';
 import { SupportRepository } from './support.repository.js';
 
 const CLOSED_STATUSES = new Set(['closed', 'resolved']);
@@ -29,7 +27,6 @@ export class SupportService {
     private readonly repository: SupportRepository,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
-    private readonly moduleRef: ModuleRef,
   ) {}
 
   async list(query: SupportQuery) {
@@ -316,7 +313,11 @@ export class SupportService {
   }
 
   private buildWhere(query: SupportQuery): Prisma.ServiceRequestWhereInput {
-    const where: Prisma.ServiceRequestWhereInput = {};
+    const where: Prisma.ServiceRequestWhereInput = {
+      NOT: [
+        { metadata: { path: ['category'], equals: 'workflow_rule' } },
+      ],
+    };
     if (query.surface && query.surface !== 'all') where.surface = query.surface;
     const priority = splitCsv(query.priority);
     if (priority.length) where.priority = { in: priority };
@@ -397,65 +398,12 @@ export class SupportService {
     row: any,
     extraParams: Record<string, unknown> = {},
   ): Promise<WorkflowTriggerFireResponse | null> {
-    try {
-      const rules = this.moduleRef.get<RulesRuntime>(RULES_RUNTIME, { strict: false });
-      const metadata = this.asRecord(row.metadata);
-      const workflow = this.asRecord(metadata.workflow);
-      const occurredAt = trigger === 'task.completed'
-        ? (row.closedAt ?? row.updatedAt ?? new Date())
-        : new Date();
-      const eventKey = trigger === 'task.overdue'
-        ? String(extraParams.dueAt ?? row.updatedAt ?? new Date().toISOString())
-        : new Date(occurredAt).toISOString();
-      const result = await rules.fireTrigger({
-        trigger,
-        eventId: `${trigger}:${row.id}:${eventKey}`,
-        source: 'support.task_lifecycle',
-        occurredAt: new Date(occurredAt).toISOString(),
-        params: {
-          taskId: row.id,
-          serviceRequestId: row.id,
-          customerId: row.customerId ?? undefined,
-          customerUserId: row.customerUserId ?? undefined,
-          assignedMemberId: row.assignedMemberId ?? undefined,
-          status: row.status,
-          priority: row.priority,
-          axis: row.axis ?? undefined,
-          dueAt: row.dueAt?.toISOString?.() ?? extraParams.dueAt,
-          surface: row.surface,
-          source: row.source,
-          title: row.title,
-          category: metadata.category,
-          matchedRuleId: row.matchedRuleId ?? workflow.matchedRuleId ?? workflow.matched_rule_id,
-          conditionTrace: Array.isArray(row.conditionTrace) ? row.conditionTrace : [],
-          workflow,
-          ...extraParams,
-        },
-      });
-      this.logger.log(
-        'support',
-        trigger === 'task.overdue' ? 'task_overdue_trigger_fired' : 'task_completed_trigger_fired',
-        trigger === 'task.overdue'
-          ? 'Overdue task fired workflow trigger'
-          : 'Completed task fired workflow trigger',
-        {
-          service_request_id: row.id,
-          event_id: result.eventId,
-          trigger,
-          evaluated_rules: result.evaluatedRules,
-          tasks_created: result.tasksCreated,
-          result_statuses: result.results.map((entry) => entry.status),
-        },
-      );
-      return result;
-    } catch (error) {
-      this.logger.error('support', 'task_lifecycle_trigger_failed', 'Task lifecycle workflow trigger failed', {
-        service_request_id: row.id,
-        trigger,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
+    this.logger.log('support', 'task_lifecycle_workflow_suppressed', 'Support case lifecycle does not emit workflow triggers', {
+      service_request_id: row.id,
+      trigger,
+      extra_params: extraParams,
+    });
+    return null;
   }
 
   private extractExplicitDueAt(metadataValue: unknown) {

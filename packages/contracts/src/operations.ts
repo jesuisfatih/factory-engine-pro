@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema, pageQuerySchema, passwordSchema } from './common.js';
+import { serviceRequestSourceSchema } from './enums.js';
 
 export const segmentFieldSchema = z.enum([
   'companyStatus',
@@ -122,7 +123,6 @@ export interface SyncShopifySegmentsResponse {
   }>;
 }
 
-export const serviceRequestSourceSchema = z.enum(['call', 'email', 'form', 'manual', 'workflow', 'ai_transcript']);
 export const serviceRequestSurfaceSchema = z.enum(['internal', 'customer_facing']);
 export const serviceRequestPrioritySchema = z.enum(['critical', 'urgent', 'high', 'medium', 'low']);
 export const taskAxisSchema = z.enum(['sales', 'support', 'account']);
