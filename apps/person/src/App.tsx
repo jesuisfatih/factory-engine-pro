@@ -71,6 +71,10 @@ export default function App() {
     if (authed && isStaffAuthPath(window.location.pathname)) {
       window.history.replaceState(null, '', '/staff/queue');
     }
+    if (!authed && !isStaffAuthPath(window.location.pathname)) {
+      window.history.replaceState(null, '', '/staff/login');
+      setAuthScreen('login');
+    }
   }, [authed]);
 
   if (shouldHandOffToAdmin) return null;

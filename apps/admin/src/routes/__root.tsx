@@ -1,9 +1,9 @@
 import { Outlet, createRootRoute, redirect, useRouterState } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { MEMBER_PERMISSIONS, memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
-import { handOffToPerson, readPersonSession, readSession } from '@/lib/api';
+import { handOffToPerson, readPersonSession, readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/rules/, key: 'nav.rules' },
@@ -69,12 +69,19 @@ function hasRoutePermission(permissions: string[], required: string | string[] |
 function RootLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const sessionSnapshot = useSyncExternalStore(subscribeSession, readSessionSnapshot, () => null);
   const titleKey = useMemo(() => {
     for (const item of TITLE_BY_PATH) if (item.test.test(pathname)) return item.key;
     return 'nav.dashboard';
   }, [pathname]);
 
   const isAuth = isAuthRoute(pathname);
+  useEffect(() => {
+    if (!isAuth && !sessionSnapshot) {
+      window.location.replace('/login');
+    }
+  }, [isAuth, sessionSnapshot]);
+
   if (isAuth) {
     return (
       <div className="auth-shell">
@@ -82,6 +89,8 @@ function RootLayout() {
       </div>
     );
   }
+
+  if (!sessionSnapshot) return null;
 
   return (
     <div className={`layout${collapsed ? ' collapsed' : ''}`}>
