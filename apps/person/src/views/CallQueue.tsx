@@ -98,8 +98,8 @@ export function CallQueueView() {
   return (
     <div className="queue-wrap">
       <div className="kpis">
-        <div className="kpi"><div className="label">Daily calls</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">segment customers</div></div>
-        <div className="kpi"><div className="label">Priority tasks</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">urgency desc</div></div>
+        <div className="kpi"><div className="label">Daily calls</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">today&apos;s AI workflow</div></div>
+        <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>
         <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>
         <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>
         <div className="kpi"><div className="label">Axes</div><div className="val">{summary?.visibleAxes.length ?? 0}</div><div className="sub">{summary?.visibleAxes.join(', ') || 'none'}</div></div>
@@ -138,7 +138,7 @@ export function CallQueueView() {
                 <h2>Priority kanban</h2>
                 <p>Assigned Shopify segments grouped by segment owner scope.</p>
               </div>
-              <span className="ops-count">{groups.length} groups</span>
+              <span className="ops-count">{groups.length} segments</span>
             </div>
             <div className="segment-groups">
               {deepLinkError ? <div className="ops-empty">{deepLinkError}</div> : null}
