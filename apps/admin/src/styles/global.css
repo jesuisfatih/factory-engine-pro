@@ -2169,10 +2169,29 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 5px;
   margin-bottom: 10px;
 }
+.call-center-message-compose {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.call-center-message-compose label {
+  display: grid;
+  gap: 5px;
+}
+.call-center-message-compose span {
+  color: var(--muted, var(--text-muted));
+  font-size: 11px;
+}
 .call-center-note-search span {
   color: var(--muted, var(--text-muted));
   font-size: 11px;
 }
+.call-center-message-compose select,
+.call-center-message-compose textarea,
 .call-center-note-search input,
 .call-center-note-reply textarea {
   width: 100%;
@@ -2184,6 +2203,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-size: 12px;
   outline: none;
 }
+.call-center-message-compose select:focus,
+.call-center-message-compose textarea:focus,
 .call-center-note-search input:focus,
 .call-center-note-reply textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
 .call-center-note-actions {

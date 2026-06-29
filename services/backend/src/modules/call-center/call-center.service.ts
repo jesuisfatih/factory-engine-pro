@@ -12,6 +12,7 @@ import type {
   CallCenterPin,
   CallCenterPriorityGroup,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSendMessageInput,
   CallCenterSyncResult,
   CallCenterTask,
   CallCenterTransferTaskInput,
@@ -201,6 +202,45 @@ export class CallCenterService {
     });
     this.emitRealtimeInvalidate('note.reply');
     return { ok: true, taskId: row.id };
+  }
+
+  async sendMessage(input: CallCenterSendMessageInput): Promise<CallCenterMessage> {
+    const actor = await this.currentMember();
+    const target = await this.requireActiveMember(input.toMemberId);
+    if (target.id === actor.id) throw new BadRequestException('Choose another staff member for internal messages.');
+    const thread = await this.findMessageThread(actor.id, target.id) ?? await this.createMessageThread(actor, target);
+    const created = await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: thread.id,
+        actorId: actor.id,
+        actorType: 'member',
+        body: input.body,
+        internal: true,
+        attachmentsJson: [],
+      },
+    });
+    await this.prisma.db.serviceRequest.updateMany({ where: { id: thread.id }, data: { updatedAt: new Date() } });
+    const [actorRole, targetRole] = await Promise.all([this.memberRole(actor.id), this.memberRole(target.id)]);
+    this.logger.log('call_center', 'message.send', 'Admin Call Center internal message sent', {
+      thread_id: thread.id,
+      member_id: actor.id,
+      recipient_member_id: target.id,
+    });
+    this.emitRealtimeInvalidate('message.send');
+    return {
+      id: created.id,
+      threadId: thread.id,
+      fromMemberId: actor.id,
+      fromName: memberName(actor),
+      fromRole: actorRole,
+      toMemberId: target.id,
+      toName: memberName(target),
+      toRole: targetRole,
+      body: created.body,
+      createdAt: created.createdAt.toISOString(),
+    };
   }
 
   async transferTask(id: string, input: CallCenterTransferTaskInput): Promise<CallCenterActionResult> {
@@ -424,6 +464,57 @@ export class CallCenterService {
     const member = await this.prisma.db.member.findFirst({ where: { id, status: 'active' } });
     if (!member) throw new NotFoundException('Target member not found');
     return member;
+  }
+
+  private async memberRole(id: string) {
+    const member = await this.prisma.db.member.findFirst({
+      where: { id },
+      include: { roleAssignments: { include: { role: true } } },
+    });
+    return member?.roleAssignments[0]?.role.name ?? 'Member';
+  }
+
+  private async messageThreads() {
+    return this.prisma.db.serviceRequest.findMany({
+      where: { metadata: { path: ['personWorkspaceKind'], equals: MESSAGE_THREAD_KIND } },
+      include: { comments: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 300,
+    });
+  }
+
+  private async findMessageThread(memberA: string, memberB: string) {
+    const threads = await this.messageThreads();
+    return threads.find((thread) => {
+      const ids = stringArray(record(thread.metadata).participantIds);
+      return ids.includes(memberA) && ids.includes(memberB);
+    }) ?? null;
+  }
+
+  private async createMessageThread(
+    actor: { id: string; firstName: string; lastName: string; email: string },
+    target: { id: string; firstName: string; lastName: string; email: string },
+  ) {
+    return this.prisma.db.serviceRequest.create({
+      data: {
+        id: prefixedId('sr'),
+        tenantId: this.tenantId(),
+        source: 'manual',
+        surface: 'internal',
+        title: `Internal chat: ${actor.email} / ${target.email}`,
+        description: null,
+        status: 'open',
+        priority: 'low',
+        createdByActorId: actor.id,
+        metadata: {
+          personWorkspaceKind: MESSAGE_THREAD_KIND,
+          participantIds: [actor.id, target.id],
+          category: 'internal_message',
+          createdFrom: 'admin_call_center',
+        } as Prisma.InputJsonValue,
+      },
+      include: { comments: true },
+    });
   }
 
   private tenantId() {
@@ -715,6 +806,14 @@ export class CallCenterService {
       const pinnedBy = record(metadata.personPinnedBy);
       for (const [memberId, value] of Object.entries(pinnedBy)) {
         const owner = memberById.get(memberId) ?? anonymousMember(memberId);
+        const assigned = row.assignedMemberId ? memberById.get(row.assignedMemberId) : null;
+        const active = assigned ?? (row.assignedMember ? {
+          id: row.assignedMember.id,
+          name: memberName(row.assignedMember),
+          email: row.assignedMember.email,
+          role: 'Member',
+          status: row.assignedMember.status,
+        } : owner);
         pins.push({
           id: `${row.id}:${memberId}`,
           serviceRequestId: row.id,
@@ -723,6 +822,9 @@ export class CallCenterService {
           ownerMemberId: owner.id,
           ownerName: owner.name,
           ownerRole: owner.role,
+          activeMemberId: active.id,
+          activeMemberName: active.name,
+          activeMemberRole: active.role,
           customerName: row.customer ? customerName(row.customer) : null,
           kind: metadata.category === 'customer_pin' ? 'customer' : 'task',
           pinnedAt: typeof value === 'string' ? value : typeof value === 'number' ? new Date(value).toISOString() : null,
@@ -841,7 +943,9 @@ export class CallCenterService {
           fromMemberId: comment.actorId,
           fromName: author?.name ?? 'Unknown member',
           fromRole: author?.role ?? 'Member',
+          toMemberId: recipient?.id ?? recipientId,
           toName: recipient?.name ?? null,
+          toRole: recipient?.role ?? null,
           body: comment.body,
           createdAt: comment.createdAt.toISOString(),
         });

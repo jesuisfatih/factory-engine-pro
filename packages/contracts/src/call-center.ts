@@ -98,6 +98,9 @@ export const callCenterPinSchema = z.object({
   ownerMemberId: z.string(),
   ownerName: z.string(),
   ownerRole: z.string(),
+  activeMemberId: z.string().nullable(),
+  activeMemberName: z.string(),
+  activeMemberRole: z.string(),
   customerName: z.string().nullable(),
   kind: z.enum(['task', 'customer']),
   pinnedAt: z.string().nullable(),
@@ -145,7 +148,9 @@ export const callCenterMessageSchema = z.object({
   fromMemberId: z.string().nullable(),
   fromName: z.string(),
   fromRole: z.string(),
+  toMemberId: z.string().nullable(),
   toName: z.string().nullable(),
+  toRole: z.string().nullable(),
   body: z.string(),
   createdAt: z.string(),
 });
@@ -217,6 +222,12 @@ export const callCenterReplyNoteSchema = z.object({
   body: z.string().trim().min(1).max(5000),
 });
 export type CallCenterReplyNoteInput = z.infer<typeof callCenterReplyNoteSchema>;
+
+export const callCenterSendMessageSchema = z.object({
+  toMemberId: z.string().trim().min(1),
+  body: z.string().trim().min(1).max(5000),
+});
+export type CallCenterSendMessageInput = z.infer<typeof callCenterSendMessageSchema>;
 
 export const callCenterTransferTaskSchema = z.object({
   targetMemberId: z.string().min(1),

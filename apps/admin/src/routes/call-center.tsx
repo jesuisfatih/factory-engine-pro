@@ -10,6 +10,7 @@ import {
   Phone,
   RefreshCw,
   Rows3,
+  Send,
   StickyNote,
   Activity,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
   fetchCallCenterOverview,
   replyCallCenterNote,
   saveCallCenterCustomerNote,
+  sendCallCenterMessage,
   syncCallCenterTasks,
   transferCallCenterTask,
 } from '@/lib/live-data';
@@ -74,6 +76,12 @@ function CallCenterView() {
   });
   const replyNote = useMutation({
     mutationFn: (input: { note: CallCenterNote; body: string }) => replyCallCenterNote(input.note.taskId, { body: input.body }),
+    onSuccess: () => {
+      void query.refetch();
+    },
+  });
+  const sendMessage = useMutation({
+    mutationFn: sendCallCenterMessage,
     onSuccess: () => {
       void query.refetch();
     },
@@ -188,7 +196,14 @@ function CallCenterView() {
                 replyError={replyNote.error ? apiErrorMessage(replyNote.error) : null}
               />
             )}
-            {tab === 'messages' && <MessagesTab data={data} />}
+            {tab === 'messages' && (
+              <MessagesTab
+                data={data}
+                onSend={(payload) => sendMessage.mutate(payload)}
+                isSending={sendMessage.isPending}
+                sendError={sendMessage.error ? apiErrorMessage(sendMessage.error) : null}
+              />
+            )}
           </div>
           <CustomerDetailPanel
             open={Boolean(detailCustomerId)}
@@ -473,7 +488,7 @@ function KanbanTab({
         ) : kanban.pinBoard.map((pin) => (
           <div key={pin.id} className="pin-line" onClick={() => pin.customerId && onOpenCustomer(pin.customerId)}>
             <span>Owner: {pin.ownerName}</span>
-            <span>Active: {pin.ownerName}</span>
+            <span>Active: {pin.activeMemberName} - {pin.activeMemberRole}</span>
             <strong>{pin.customerName ?? pin.title}</strong>
             <em>{pin.kind}</em>
             {pin.serviceRequestId && (
@@ -488,7 +503,8 @@ function KanbanTab({
                       id: pin.serviceRequestId!,
                       title: pin.title,
                       customerId: pin.customerId,
-                      assignedMemberName: pin.ownerName,
+                      assignedMemberId: pin.activeMemberId,
+                      assignedMemberName: pin.activeMemberName,
                     },
                   });
                 }}
@@ -627,22 +643,79 @@ function NotesTab({
   );
 }
 
-function MessagesTab({ data }: { data: CallCenterOverview }) {
+function MessagesTab({
+  data,
+  onSend,
+  isSending,
+  sendError,
+}: {
+  data: CallCenterOverview;
+  onSend: (payload: { toMemberId: string; body: string }) => void;
+  isSending: boolean;
+  sendError: string | null;
+}) {
+  const [search, setSearch] = useState('');
+  const [toMemberId, setToMemberId] = useState(data.members[0]?.id ?? '');
+  const [body, setBody] = useState('');
+  useEffect(() => {
+    if (!toMemberId && data.members[0]) setToMemberId(data.members[0].id);
+  }, [data.members, toMemberId]);
+  const normalized = search.trim().toLowerCase();
+  const messages = normalized
+    ? data.messages.filter((message) => [
+        message.fromName,
+        message.fromRole,
+        message.toName,
+        message.toRole,
+        message.body,
+      ].some((value) => String(value ?? '').toLowerCase().includes(normalized)))
+    : data.messages;
   return (
     <section className="call-center-panel">
-      <PanelHead title="Internal messages" meta={`${data.messages.length} messages`} />
+      <PanelHead title="Internal messages" meta={`${messages.length}/${data.messages.length} messages`} />
+      <form
+        className="call-center-message-compose"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!toMemberId || !body.trim()) return;
+          onSend({ toMemberId, body: body.trim() });
+          setBody('');
+        }}
+      >
+        <label>
+          <span>Send to staff</span>
+          <select value={toMemberId} onChange={(event) => setToMemberId(event.target.value)}>
+            {data.members.map((member) => (
+              <option key={member.id} value={member.id}>{member.name} - {member.role}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Message</span>
+          <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={3} placeholder="Write an internal message as owner/admin" />
+        </label>
+        {sendError ? <p className="form-error">{sendError}</p> : null}
+        <button type="submit" className="btn primary" disabled={!toMemberId || !body.trim() || isSending}>
+          {isSending ? <Loader2 size={13} className="spin" /> : <Send size={13} />} Send message
+        </button>
+      </form>
+      <label className="call-center-note-search">
+        <span>Search by staff, role, message</span>
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search messages" />
+      </label>
       {data.messages.length === 0 ? <EmptyLine>No internal messages yet.</EmptyLine> : (
         <div className="call-center-list">
-          {data.messages.map((message) => (
+          {messages.map((message) => (
             <div key={message.id} className="call-center-list-row">
               <MessageSquareText size={14} />
               <div>
-                <strong>{message.fromName} to {message.toName ?? 'team'}</strong>
+                <strong>{message.fromName} ({message.fromRole}) to {message.toName ?? 'team'}{message.toRole ? ` (${message.toRole})` : ''}</strong>
                 <span>{message.body}</span>
               </div>
               <em>{relative(message.createdAt)}</em>
             </div>
           ))}
+          {messages.length === 0 ? <EmptyLine>No messages match this search.</EmptyLine> : null}
         </div>
       )}
     </section>

@@ -3,11 +3,13 @@ import {
   callCenterCreateCustomerTaskSchema,
   callCenterReplyNoteSchema,
   callCenterSaveCustomerNoteSchema,
+  callCenterSendMessageSchema,
   callCenterTransferTaskSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
   type CallCenterReplyNoteInput,
   type CallCenterSaveCustomerNoteInput,
+  type CallCenterSendMessageInput,
   type CallCenterTransferTaskInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
@@ -52,6 +54,12 @@ export class CallCenterController {
     @Body(new ZodValidationPipe(callCenterReplyNoteSchema)) body: CallCenterReplyNoteInput,
   ) {
     return this.callCenter.replyNote(id, body);
+  }
+
+  @Post('messages')
+  @RequirePermission(MEMBER_PERMISSIONS.messagingWrite)
+  sendMessage(@Body(new ZodValidationPipe(callCenterSendMessageSchema)) body: CallCenterSendMessageInput) {
+    return this.callCenter.sendMessage(body);
   }
 
   @Post('tasks/:id/transfer')

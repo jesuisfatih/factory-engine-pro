@@ -24,9 +24,11 @@ import type {
   CalculatePricesInput,
   CallCenterActionResult,
   CallCenterCreateCustomerTaskInput,
+  CallCenterMessage,
   CallCenterOverview,
   CallCenterReplyNoteInput,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSendMessageInput,
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
   CommissionProfileDto,
@@ -542,6 +544,10 @@ export class ApiClient {
 
   callCenterReplyNote(noteTaskId: string, input: CallCenterReplyNoteInput) {
     return this.post<{ ok: true; taskId: string }>(`/call-center/notes/${encodeURIComponent(noteTaskId)}/replies`, input);
+  }
+
+  callCenterSendMessage(input: CallCenterSendMessageInput) {
+    return this.post<CallCenterMessage>('/call-center/messages', input);
   }
 
   callCenterTransferTask(id: string, input: CallCenterTransferTaskInput) {

@@ -1,8 +1,10 @@
 import type {
   CallCenterCreateCustomerTaskInput,
+  CallCenterMessage,
   CallCenterOverview,
   CallCenterReplyNoteInput,
   CallCenterSaveCustomerNoteInput,
+  CallCenterSendMessageInput,
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
   CommissionRequestDto,
@@ -261,6 +263,10 @@ export async function saveCallCenterCustomerNote(customerId: string, input: Call
 
 export async function replyCallCenterNote(noteTaskId: string, input: CallCenterReplyNoteInput): Promise<{ ok: true; taskId: string }> {
   return adminApi.callCenterReplyNote(noteTaskId, input);
+}
+
+export async function sendCallCenterMessage(input: CallCenterSendMessageInput): Promise<CallCenterMessage> {
+  return adminApi.callCenterSendMessage(input);
 }
 
 export async function transferCallCenterTask(id: string, input: CallCenterTransferTaskInput) {
