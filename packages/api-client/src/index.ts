@@ -195,7 +195,6 @@ export class ApiClient {
         method: 'POST',
         headers,
         body: JSON.stringify({ refreshToken }),
-        keepalive: true,
       }));
 
       if (!parsed.ok) {
