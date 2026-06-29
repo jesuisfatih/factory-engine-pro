@@ -1,0 +1,32 @@
+﻿{
+  "checkedAt": "2026-06-29T08:03:33.905Z",
+  "tenantId": "ten_dtfbank",
+  "member": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "roles": [
+      "customer_service"
+    ],
+    "permissionCount": 10,
+    "requiredPermissionPresence": {
+      "messaging.read": true,
+      "messaging.write": true,
+      "customers.read": true,
+      "support.read": true,
+      "task.assign": true
+    },
+    "permissions": [
+      "aircall.users.read",
+      "customers.read",
+      "customers.write",
+      "messaging.read",
+      "messaging.write",
+      "orders.read",
+      "segments.read",
+      "support.read",
+      "support.write",
+      "task.assign"
+    ]
+  },
+  "pass": true
+}

@@ -1,0 +1,12 @@
+﻿{
+    "checkedAt":  "2026-06-29T08:03:52.7540976Z",
+    "container":  "factoryengine-dtfbank-app",
+    "deployedSha":  "f8ecaa41d74fa266ca0e0c00962f1115a3c074aa",
+    "dockerStatus":  "factoryengine-dtfbank-app Up 17 minutes",
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "auditedSurface":  "app.dtfbank.com/staff/*",
+    "pass":  true
+}

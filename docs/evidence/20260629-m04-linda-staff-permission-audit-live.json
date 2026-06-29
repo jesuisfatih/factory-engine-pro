@@ -1,0 +1,212 @@
+{
+  "checkedAt": "2026-06-29T08:03:16.079Z",
+  "appUrl": "https://app.dtfbank.com",
+  "apiUrl": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "linda": {
+    "email": "dtfbanktx@gmail.com",
+    "principalId": "tmbr_ten_dtfbank_linda_marroquin",
+    "permissionCount": 10,
+    "permissions": [
+      "orders.read",
+      "task.assign",
+      "support.read",
+      "segments.read",
+      "support.write",
+      "customers.read",
+      "messaging.read",
+      "customers.write",
+      "messaging.write",
+      "aircall.users.read"
+    ]
+  },
+  "routes": [
+    {
+      "route": "/staff/queue",
+      "finalUrl": "https://app.dtfbank.com/staff/queue",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/customers",
+      "finalUrl": "https://app.dtfbank.com/staff/customers",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/email",
+      "finalUrl": "https://app.dtfbank.com/staff/email",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/training",
+      "finalUrl": "https://app.dtfbank.com/staff/training",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/calendar",
+      "finalUrl": "https://app.dtfbank.com/staff/calendar",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/notes",
+      "finalUrl": "https://app.dtfbank.com/staff/notes",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/announcements",
+      "finalUrl": "https://app.dtfbank.com/staff/announcements",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/messaging",
+      "finalUrl": "https://app.dtfbank.com/staff/messaging",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": "docs/evidence/20260629-m04-linda-messaging-no-403-ui-live.png",
+      "pass": true
+    },
+    {
+      "route": "/staff/requests",
+      "finalUrl": "https://app.dtfbank.com/staff/requests",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    },
+    {
+      "route": "/staff/notifications",
+      "finalUrl": "https://app.dtfbank.com/staff/notifications",
+      "network403": [],
+      "hasPermissionErrorText": false,
+      "visibleTitle": "D | DTF Bank | Customer Service | WORKSPACE | Call Queue | Customers | E-mail | Calendar",
+      "consoleErrors": [],
+      "screenshot": null,
+      "pass": true
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "endpoint": "/person/workspace/summary",
+      "status": 200,
+      "requestId": "e486bb82-b9ad-4b0a-ab5f-098015b0605e",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/queue",
+      "status": 200,
+      "requestId": "5e55ee8e-a5ad-4384-9e2c-49ed032b4f4a",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/daily-operations",
+      "status": 200,
+      "requestId": "2bee48ff-621b-402d-8233-3a979e5af91e",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/customers",
+      "status": 200,
+      "requestId": "f193d5b6-ba77-4253-bcd5-cec50e08b69a",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/emails",
+      "status": 200,
+      "requestId": "14db629c-7405-4936-8afd-e0a570880738",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/training",
+      "status": 200,
+      "requestId": "2c296b79-aeb7-4d6e-8347-df866cddaf66",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/calendar",
+      "status": 200,
+      "requestId": "9e99ba15-c71f-40be-8f0e-9e225885e66f",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/notes",
+      "status": 200,
+      "requestId": "c6b13eb9-e1f6-423d-816e-c674f8c39e8b",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/announcements",
+      "status": 200,
+      "requestId": "b6105ae5-4265-4496-adf0-f524dd4baf9b",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/messages/teammates",
+      "status": 200,
+      "requestId": "ce9e23b5-2b6c-405d-9d3f-598e36390b86",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/requests",
+      "status": 200,
+      "requestId": "874a35c1-1c91-482f-9885-d39d4b4efa2b",
+      "message": null,
+      "pass": true
+    },
+    {
+      "endpoint": "/person/workspace/notifications",
+      "status": 200,
+      "requestId": "56dfb8d7-1bab-459e-bddf-4ec89cf48718",
+      "message": null,
+      "pass": true
+    }
+  ],
+  "pass": true
+}
