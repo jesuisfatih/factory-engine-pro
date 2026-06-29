@@ -72,6 +72,10 @@ type ServiceRequestRow = Prisma.ServiceRequestGetPayload<{
 
 type AxisAssignments = Map<string, Set<string>>;
 
+type SegmentOwnershipRow = Prisma.SegmentOwnershipGetPayload<{
+  include: { segment: true };
+}>;
+
 type SegmentMembershipRow = Prisma.SegmentCustomerMembershipGetPayload<{
   include: {
     segment: true;
@@ -98,6 +102,15 @@ type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
 interface CardContext {
   miniOrders: Map<string, PersonMiniOrder>;
   performance: Map<string, PersonPerformance30d>;
+}
+
+interface OwnedSegmentContext {
+  segmentId: string;
+  segmentName: string;
+  segmentColor: string;
+  segmentPriority: number;
+  ownershipPriority: number;
+  matchedAt: Date;
 }
 
 @Injectable()
@@ -226,9 +239,11 @@ export class PersonWorkspaceService {
     const scopedRows = requestRows
       .filter((row) => this.isQueueVisible(row))
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
+    const ownedSegmentByCustomer = this.highestOwnedSegmentByCustomer(segmentOwnerships, memberships);
     const priorityKanban = scopedRows
       .filter((row) => !CLOSED.has(row.status))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext))
+      .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null))
       .sort(sortByUrgency)
       .slice(0, 120);
     const pinnedTasks = scopedRows
@@ -1294,6 +1309,18 @@ export class PersonWorkspaceService {
     return row.axis ? axes.has(row.axis) : true;
   }
 
+  private isOwnedSegmentPriorityTask(
+    row: { customerId: string | null; axis: string | null },
+    assignments: AxisAssignments,
+    ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
+  ) {
+    if (!row.customerId) return false;
+    if (!ownedSegmentByCustomer.has(row.customerId)) return false;
+    const axes = assignments.get(row.customerId);
+    if (!axes) return false;
+    return row.axis ? axes.has(row.axis) : true;
+  }
+
   private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
     const pinnedBy = this.record(this.record(row.metadata).personPinnedBy);
     return typeof pinnedBy[memberId] === 'number';
@@ -1450,7 +1477,14 @@ export class PersonWorkspaceService {
     return row;
   }
 
-  private queueCard(row: ServiceRequestRow, memberId: string, config = this.scoring.configFrom({}), repeatCount = 0, cardContext?: CardContext) {
+  private queueCard(
+    row: ServiceRequestRow,
+    memberId: string,
+    config = this.scoring.configFrom({}),
+    repeatCount = 0,
+    cardContext?: CardContext,
+    ownedSegment?: OwnedSegmentContext | null,
+  ) {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
@@ -1468,7 +1502,7 @@ export class PersonWorkspaceService {
       updatedAt: row.updatedAt,
       metadata: row.metadata,
       taskStateSnapshot: row.taskStateSnapshot,
-      segmentPriority: row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
+      segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       repeatCount,
     }, config);
     return {
@@ -1480,8 +1514,8 @@ export class PersonWorkspaceService {
       axis: axisOrNull(row.axis),
       title: customerName,
       summary: `${ticket} - U${urgencyBreakdown.score} - ${titleize(row.status)} - ${relative(row.updatedAt)}`,
-      segment: String(metadata.category ?? row.surface ?? 'Support'),
-      segmentColor: colorForUrgency(urgencyBreakdown.score),
+      segment: ownedSegment?.segmentName ?? String(metadata.category ?? row.surface ?? 'Support'),
+      segmentColor: ownedSegment?.segmentColor ?? colorForUrgency(urgencyBreakdown.score),
       priority: priorityRankFromUrgency(urgencyBreakdown.score),
       urgencyScore: urgencyBreakdown.score,
       urgencyBreakdown,
@@ -1493,6 +1527,10 @@ export class PersonWorkspaceService {
       email: row.customer?.email ?? row.customerUser?.email ?? undefined,
       ordersCount: row.customer?.ordersCount ?? undefined,
       totalSpent: row.customer ? money(row.customer.totalSpent) : undefined,
+      segmentId: ownedSegment?.segmentId ?? row.customer?.segmentMemberships[0]?.segment.id ?? null,
+      segmentName: ownedSegment?.segmentName ?? row.customer?.segmentMemberships[0]?.segment.name ?? null,
+      segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
+      segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
       aiBrief: source === 'manual' ? undefined : this.brief(row),
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
@@ -1500,6 +1538,35 @@ export class PersonWorkspaceService {
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
+  }
+
+  private highestOwnedSegmentByCustomer(
+    ownerships: SegmentOwnershipRow[],
+    memberships: SegmentMembershipRow[],
+  ) {
+    const ownershipBySegment = new Map(ownerships.map((ownership) => [ownership.segmentId, ownership]));
+    const result = new Map<string, OwnedSegmentContext>();
+
+    for (const membership of memberships) {
+      const ownership = ownershipBySegment.get(membership.segmentId);
+      if (!ownership) continue;
+      const context: OwnedSegmentContext = {
+        segmentId: ownership.segment.id,
+        segmentName: ownership.segment.name,
+        segmentColor: ownership.segment.color,
+        segmentPriority: Math.max(ownership.priority, membership.segment.priorityGlobal, membership.segment.priority),
+        ownershipPriority: ownership.priority,
+        matchedAt: membership.matchedAt,
+      };
+      const current = result.get(membership.customerId);
+      if (!current
+        || context.segmentPriority > current.segmentPriority
+        || (context.segmentPriority === current.segmentPriority && context.matchedAt.getTime() > current.matchedAt.getTime())) {
+        result.set(membership.customerId, context);
+      }
+    }
+
+    return result;
   }
 
   private async urgencyConfig() {

@@ -56,6 +56,9 @@ export function Card({ card, onTogglePin, onOpen, onTransfer }: Props) {
       <div className="assign-line">
         <span>{card.assignedMemberName ? `Owner: ${card.assignedMemberName}` : 'Owner: unassigned'}</span>
         <span>{card.axis ? `Axis: ${card.axis}` : 'Axis: none'}</span>
+        {card.segmentPriority !== null && card.segmentPriority !== undefined ? (
+          <span>{`Segment P${card.segmentPriority}`}</span>
+        ) : null}
       </div>
       <div className="card-signals">
         <span title="Latest Shopify order"><ShoppingBag size={10} /> {lastOrder}</span>

@@ -38,6 +38,10 @@ export interface Card {
   summary: string;
   segment: string;
   segmentColor: string;
+  segmentId?: string | null;
+  segmentName?: string | null;
+  segmentPriority?: number | null;
+  segmentOwnershipPriority?: number | null;
   priority: number;
   urgencyScore: number;
   urgencyBreakdown: PersonUrgencyBreakdown;
