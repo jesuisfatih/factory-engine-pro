@@ -401,7 +401,7 @@ export class SupportService {
     row: any,
     extraParams: Record<string, unknown> = {},
   ): Promise<WorkflowTriggerFireResponse | null> {
-    this.logger.log('support', 'task_lifecycle_workflow_suppressed', 'Support case lifecycle does not emit workflow triggers', {
+    this.logger.log('support', 'task_lifecycle_workflow_suppressed', 'Customer request lifecycle does not emit rule triggers', {
       service_request_id: row.id,
       trigger,
       extra_params: extraParams,
@@ -475,7 +475,7 @@ export class SupportService {
   private requireServiceRequestSource(value: unknown) {
     const parsed = serviceRequestSourceSchema.safeParse(value);
     if (!parsed.success) {
-      throw new BadRequestException('Support cases only accept manual, customer_self_service, or admin_created sources.');
+      throw new BadRequestException('Customer requests only accept manual, customer_self_service, or admin_created sources.');
     }
     return assertServiceRequestSourceContract(parsed.data);
   }

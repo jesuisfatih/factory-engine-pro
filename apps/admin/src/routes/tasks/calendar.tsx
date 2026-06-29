@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CalendarEventModal } from '@/components/CalendarEventModal';
 import { apiErrorMessage } from '@/lib/api';
@@ -76,7 +76,7 @@ function CalendarView() {
           </button>
           <h3>{weekLabel}</h3>
           <span className="muted" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {events.filter((event) => event.source !== 'manual').length} call-analysis
+            <FileText size={12} style={{ color: '#2563eb' }} /> {events.filter((event) => event.source !== 'manual').length} call tasks
           </span>
         </div>
 

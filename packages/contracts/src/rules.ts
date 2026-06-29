@@ -33,7 +33,7 @@ export const workflowRuleActionSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['value'],
-      message: 'Workflow create_task cannot target support. Create Support cases manually.',
+      message: 'Rule-created tasks cannot target customer requests. Customer service must open customer requests manually.',
     });
   }
 });

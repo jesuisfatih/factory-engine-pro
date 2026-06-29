@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { X, Sparkles, Phone, Mail, Clock, User, AlarmClockOff, RefreshCw, CheckCircle2, ExternalLink } from 'lucide-react';
+import { X, FileText, Phone, Mail, Clock, User, AlarmClockOff, RefreshCw, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Dialog, DialogTitle, DialogClose } from '@/components/Dialog';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { fetchCalendarEventById, type EventSource } from '@/lib/live-data';
@@ -23,6 +23,14 @@ const SOURCE_KEY: Record<EventSource, string> = {
   ai_stale: 'calendar_view.source_ai_stale',
 };
 
+function briefSourceLabel(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('transcript') || normalized.includes('resolver')) return 'Transcript resolver';
+  if (normalized.includes('segment')) return 'Segment context';
+  if (normalized.includes('stale')) return 'Follow-up context';
+  return 'Live context';
+}
+
 export function CalendarEventModal({ eventId, onClose }: Props) {
   const { t } = useTranslation();
   const canWrite = useCan('calendar.write');
@@ -34,11 +42,11 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
 
   const complete = useMutation({
     mutationFn: async (id: string) => {
-      if (!id.startsWith('sr-')) throw new Error('Only service request calendar events can be completed from this view.');
+      if (!id.startsWith('sr-')) throw new Error('Only customer task calendar events can be completed from this view.');
       await adminApi.changeSupportStatus(id.slice(3), { status: 'resolved' });
       return id;
     },
-    onSuccess: () => toast.success('Event completed', { description: 'Service request marked resolved.' }),
+    onSuccess: () => toast.success('Event completed', { description: 'Customer task marked resolved.' }),
     onError: (error) => toast.error('Complete failed', { description: apiErrorMessage(error) }),
   });
 
@@ -61,7 +69,7 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
           </DialogTitle>
           <div className="sub" style={{ marginTop: 6, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <span className="pill" style={{ background: SOURCE_BG[event.source], color: 'var(--text)' }}>
-              <Sparkles size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
+              <FileText size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
               {t(SOURCE_KEY[event.source])}
             </span>
             <span className="pill accent">{t(`calendar_view.event_kind_${event.kind}`)}</span>
@@ -120,7 +128,7 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
           {event.aiBrief ? (
             <div className="ai-brief" id={`ai-brief-${event.id}`}>
               <div className="head">
-                <Sparkles size={14} style={{ color: '#7c3aed' }} />
+                <FileText size={14} style={{ color: '#2563eb' }} />
                 <h4 data-i18n-key="calendar_view.ai_brief_title">{t('calendar_view.ai_brief_title')}</h4>
                 <span className="badge" data-i18n-key="calendar_view.ai_brief_badge">{t('calendar_view.ai_brief_badge')}</span>
               </div>
@@ -157,8 +165,7 @@ export function CalendarEventModal({ eventId, onClose }: Props) {
               </div>
 
               <div className="footer-meta">
-                <span>{t('calendar_view.ai_meta_prompt', { key: event.aiBrief.promptKey, version: event.aiBrief.promptVersion })}</span>
-                <span>{t('calendar_view.ai_meta_model', { model: event.aiBrief.modelUsed })}</span>
+                <span>{t('calendar_view.ai_meta_prompt', { key: briefSourceLabel(event.aiBrief.promptKey), version: event.aiBrief.promptVersion })}</span>
                 <span>{t('calendar_view.ai_meta_confidence', { pct: Math.round(event.aiBrief.confidence * 100) })}</span>
               </div>
             </div>

@@ -352,7 +352,7 @@ a { color: inherit; text-decoration: none; }
 .save-btn:hover { filter: brightness(.92); }
 .save-btn:disabled { opacity: .55; cursor: not-allowed; filter: none; }
 
-/* ─── Integration shell (used by AI / Aircall / Shopify) ─── */
+/* Integration shell (used by resolver, Aircall, Shopify) */
 .integration-header {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px 20px; margin-bottom: 12px;
@@ -497,7 +497,7 @@ a { color: inherit; text-decoration: none; }
 
 .json-block { background: #0A0F1A; color: #E5E7EB; border-radius: 8px; padding: 16px 20px; font-family: ui-monospace, "JetBrains Mono", "Menlo", monospace; font-size: 12px; line-height: 1.6; overflow: auto; max-height: 360px; white-space: pre; }
 
-/* AI Settings toggles */
+/* Resolver settings toggles */
 .master-toggle-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
 .master-toggle-card .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .master-toggle-card .name { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text); }

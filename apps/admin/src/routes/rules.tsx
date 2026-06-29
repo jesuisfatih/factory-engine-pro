@@ -1033,7 +1033,7 @@ function RulesView() {
 
               <div className="rules-telemetry">
                 <Activity size={11} />
-                <span><strong>Prompt:</strong> ai.transcript-resolver</span>
+                <span><strong>Transcript resolver:</strong> active</span>
                 <span><strong>Canvas source:</strong> /api/v1/rules/catalog</span>
                 <span><strong>Rule JSON source:</strong> {selectedRuleId ? `/api/v1/rules/${selectedRuleId}` : '/api/v1/rules'}</span>
                 {fireMutation.data && <span><strong>Last fire:</strong> {fireMutation.data.tasksCreated} task(s)</span>}

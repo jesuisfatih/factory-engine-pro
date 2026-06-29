@@ -40,7 +40,6 @@ import { Route as SettingsWorkspaceRouteImport } from './routes/settings/workspa
 import { Route as SettingsShopifyRouteImport } from './routes/settings/shopify'
 import { Route as SettingsInitialSetupRouteImport } from './routes/settings/initial-setup'
 import { Route as SettingsAircallRouteImport } from './routes/settings/aircall'
-import { Route as SettingsAiRouteImport } from './routes/settings/ai'
 import { Route as TeamUsersIndexRouteImport } from './routes/team/users.index'
 import { Route as TeamUsersAddRouteImport } from './routes/team/users.add'
 import { Route as SettingsAircallWebhooksRouteImport } from './routes/settings/aircall/webhooks'
@@ -48,13 +47,6 @@ import { Route as SettingsAircallUsersRouteImport } from './routes/settings/airc
 import { Route as SettingsAircallSyncLogsRouteImport } from './routes/settings/aircall/sync-logs'
 import { Route as SettingsAircallNumbersRouteImport } from './routes/settings/aircall/numbers'
 import { Route as SettingsAircallConnectionRouteImport } from './routes/settings/aircall/connection'
-import { Route as SettingsAiUsageLogRouteImport } from './routes/settings/ai/usage-log'
-import { Route as SettingsAiTasksRouteImport } from './routes/settings/ai/tasks'
-import { Route as SettingsAiSettingsRouteImport } from './routes/settings/ai/settings'
-import { Route as SettingsAiServicesRouteImport } from './routes/settings/ai/services'
-import { Route as SettingsAiPromptsRouteImport } from './routes/settings/ai/prompts'
-import { Route as SettingsAiHealthRouteImport } from './routes/settings/ai/health'
-import { Route as SettingsAiBudgetRouteImport } from './routes/settings/ai/budget'
 
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
@@ -211,11 +203,6 @@ const SettingsAircallRoute = SettingsAircallRouteImport.update({
   path: '/aircall',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsAiRoute = SettingsAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => SettingsRoute,
-} as any)
 const TeamUsersIndexRoute = TeamUsersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -252,41 +239,6 @@ const SettingsAircallConnectionRoute =
     path: '/connection',
     getParentRoute: () => SettingsAircallRoute,
   } as any)
-const SettingsAiUsageLogRoute = SettingsAiUsageLogRouteImport.update({
-  id: '/usage-log',
-  path: '/usage-log',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiTasksRoute = SettingsAiTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiSettingsRoute = SettingsAiSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiServicesRoute = SettingsAiServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiPromptsRoute = SettingsAiPromptsRouteImport.update({
-  id: '/prompts',
-  path: '/prompts',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiHealthRoute = SettingsAiHealthRouteImport.update({
-  id: '/health',
-  path: '/health',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
-const SettingsAiBudgetRoute = SettingsAiBudgetRouteImport.update({
-  id: '/budget',
-  path: '/budget',
-  getParentRoute: () => SettingsAiRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -306,7 +258,6 @@ export interface FileRoutesByFullPath {
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
-  '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -321,13 +272,6 @@ export interface FileRoutesByFullPath {
   '/team/users': typeof TeamUsersRouteWithChildren
   '/segments/': typeof SegmentsIndexRoute
   '/support/': typeof SupportIndexRoute
-  '/settings/ai/budget': typeof SettingsAiBudgetRoute
-  '/settings/ai/health': typeof SettingsAiHealthRoute
-  '/settings/ai/prompts': typeof SettingsAiPromptsRoute
-  '/settings/ai/services': typeof SettingsAiServicesRoute
-  '/settings/ai/settings': typeof SettingsAiSettingsRoute
-  '/settings/ai/tasks': typeof SettingsAiTasksRoute
-  '/settings/ai/usage-log': typeof SettingsAiUsageLogRoute
   '/settings/aircall/connection': typeof SettingsAircallConnectionRoute
   '/settings/aircall/numbers': typeof SettingsAircallNumbersRoute
   '/settings/aircall/sync-logs': typeof SettingsAircallSyncLogsRoute
@@ -353,7 +297,6 @@ export interface FileRoutesByTo {
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
-  '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -367,13 +310,6 @@ export interface FileRoutesByTo {
   '/team/roles': typeof TeamRolesRoute
   '/segments': typeof SegmentsIndexRoute
   '/support': typeof SupportIndexRoute
-  '/settings/ai/budget': typeof SettingsAiBudgetRoute
-  '/settings/ai/health': typeof SettingsAiHealthRoute
-  '/settings/ai/prompts': typeof SettingsAiPromptsRoute
-  '/settings/ai/services': typeof SettingsAiServicesRoute
-  '/settings/ai/settings': typeof SettingsAiSettingsRoute
-  '/settings/ai/tasks': typeof SettingsAiTasksRoute
-  '/settings/ai/usage-log': typeof SettingsAiUsageLogRoute
   '/settings/aircall/connection': typeof SettingsAircallConnectionRoute
   '/settings/aircall/numbers': typeof SettingsAircallNumbersRoute
   '/settings/aircall/sync-logs': typeof SettingsAircallSyncLogsRoute
@@ -401,7 +337,6 @@ export interface FileRoutesById {
   '/system-mail': typeof SystemMailRoute
   '/tasks': typeof TasksRouteWithChildren
   '/team': typeof TeamRouteWithChildren
-  '/settings/ai': typeof SettingsAiRouteWithChildren
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
@@ -416,13 +351,6 @@ export interface FileRoutesById {
   '/team/users': typeof TeamUsersRouteWithChildren
   '/segments/': typeof SegmentsIndexRoute
   '/support/': typeof SupportIndexRoute
-  '/settings/ai/budget': typeof SettingsAiBudgetRoute
-  '/settings/ai/health': typeof SettingsAiHealthRoute
-  '/settings/ai/prompts': typeof SettingsAiPromptsRoute
-  '/settings/ai/services': typeof SettingsAiServicesRoute
-  '/settings/ai/settings': typeof SettingsAiSettingsRoute
-  '/settings/ai/tasks': typeof SettingsAiTasksRoute
-  '/settings/ai/usage-log': typeof SettingsAiUsageLogRoute
   '/settings/aircall/connection': typeof SettingsAircallConnectionRoute
   '/settings/aircall/numbers': typeof SettingsAircallNumbersRoute
   '/settings/aircall/sync-logs': typeof SettingsAircallSyncLogsRoute
@@ -451,7 +379,6 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
-    | '/settings/ai'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -466,13 +393,6 @@ export interface FileRouteTypes {
     | '/team/users'
     | '/segments/'
     | '/support/'
-    | '/settings/ai/budget'
-    | '/settings/ai/health'
-    | '/settings/ai/prompts'
-    | '/settings/ai/services'
-    | '/settings/ai/settings'
-    | '/settings/ai/tasks'
-    | '/settings/ai/usage-log'
     | '/settings/aircall/connection'
     | '/settings/aircall/numbers'
     | '/settings/aircall/sync-logs'
@@ -498,7 +418,6 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
-    | '/settings/ai'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -512,13 +431,6 @@ export interface FileRouteTypes {
     | '/team/roles'
     | '/segments'
     | '/support'
-    | '/settings/ai/budget'
-    | '/settings/ai/health'
-    | '/settings/ai/prompts'
-    | '/settings/ai/services'
-    | '/settings/ai/settings'
-    | '/settings/ai/tasks'
-    | '/settings/ai/usage-log'
     | '/settings/aircall/connection'
     | '/settings/aircall/numbers'
     | '/settings/aircall/sync-logs'
@@ -545,7 +457,6 @@ export interface FileRouteTypes {
     | '/system-mail'
     | '/tasks'
     | '/team'
-    | '/settings/ai'
     | '/settings/aircall'
     | '/settings/initial-setup'
     | '/settings/shopify'
@@ -560,13 +471,6 @@ export interface FileRouteTypes {
     | '/team/users'
     | '/segments/'
     | '/support/'
-    | '/settings/ai/budget'
-    | '/settings/ai/health'
-    | '/settings/ai/prompts'
-    | '/settings/ai/services'
-    | '/settings/ai/settings'
-    | '/settings/ai/tasks'
-    | '/settings/ai/usage-log'
     | '/settings/aircall/connection'
     | '/settings/aircall/numbers'
     | '/settings/aircall/sync-logs'
@@ -816,13 +720,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAircallRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/ai': {
-      id: '/settings/ai'
-      path: '/ai'
-      fullPath: '/settings/ai'
-      preLoaderRoute: typeof SettingsAiRouteImport
-      parentRoute: typeof SettingsRoute
-    }
     '/team/users/': {
       id: '/team/users/'
       path: '/'
@@ -872,81 +769,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAircallConnectionRouteImport
       parentRoute: typeof SettingsAircallRoute
     }
-    '/settings/ai/usage-log': {
-      id: '/settings/ai/usage-log'
-      path: '/usage-log'
-      fullPath: '/settings/ai/usage-log'
-      preLoaderRoute: typeof SettingsAiUsageLogRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/tasks': {
-      id: '/settings/ai/tasks'
-      path: '/tasks'
-      fullPath: '/settings/ai/tasks'
-      preLoaderRoute: typeof SettingsAiTasksRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/settings': {
-      id: '/settings/ai/settings'
-      path: '/settings'
-      fullPath: '/settings/ai/settings'
-      preLoaderRoute: typeof SettingsAiSettingsRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/services': {
-      id: '/settings/ai/services'
-      path: '/services'
-      fullPath: '/settings/ai/services'
-      preLoaderRoute: typeof SettingsAiServicesRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/prompts': {
-      id: '/settings/ai/prompts'
-      path: '/prompts'
-      fullPath: '/settings/ai/prompts'
-      preLoaderRoute: typeof SettingsAiPromptsRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/health': {
-      id: '/settings/ai/health'
-      path: '/health'
-      fullPath: '/settings/ai/health'
-      preLoaderRoute: typeof SettingsAiHealthRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
-    '/settings/ai/budget': {
-      id: '/settings/ai/budget'
-      path: '/budget'
-      fullPath: '/settings/ai/budget'
-      preLoaderRoute: typeof SettingsAiBudgetRouteImport
-      parentRoute: typeof SettingsAiRoute
-    }
   }
 }
-
-interface SettingsAiRouteChildren {
-  SettingsAiBudgetRoute: typeof SettingsAiBudgetRoute
-  SettingsAiHealthRoute: typeof SettingsAiHealthRoute
-  SettingsAiPromptsRoute: typeof SettingsAiPromptsRoute
-  SettingsAiServicesRoute: typeof SettingsAiServicesRoute
-  SettingsAiSettingsRoute: typeof SettingsAiSettingsRoute
-  SettingsAiTasksRoute: typeof SettingsAiTasksRoute
-  SettingsAiUsageLogRoute: typeof SettingsAiUsageLogRoute
-}
-
-const SettingsAiRouteChildren: SettingsAiRouteChildren = {
-  SettingsAiBudgetRoute: SettingsAiBudgetRoute,
-  SettingsAiHealthRoute: SettingsAiHealthRoute,
-  SettingsAiPromptsRoute: SettingsAiPromptsRoute,
-  SettingsAiServicesRoute: SettingsAiServicesRoute,
-  SettingsAiSettingsRoute: SettingsAiSettingsRoute,
-  SettingsAiTasksRoute: SettingsAiTasksRoute,
-  SettingsAiUsageLogRoute: SettingsAiUsageLogRoute,
-}
-
-const SettingsAiRouteWithChildren = SettingsAiRoute._addFileChildren(
-  SettingsAiRouteChildren,
-)
 
 interface SettingsAircallRouteChildren {
   SettingsAircallConnectionRoute: typeof SettingsAircallConnectionRoute
@@ -969,7 +793,6 @@ const SettingsAircallRouteWithChildren = SettingsAircallRoute._addFileChildren(
 )
 
 interface SettingsRouteChildren {
-  SettingsAiRoute: typeof SettingsAiRouteWithChildren
   SettingsAircallRoute: typeof SettingsAircallRouteWithChildren
   SettingsInitialSetupRoute: typeof SettingsInitialSetupRoute
   SettingsShopifyRoute: typeof SettingsShopifyRoute
@@ -977,7 +800,6 @@ interface SettingsRouteChildren {
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
-  SettingsAiRoute: SettingsAiRouteWithChildren,
   SettingsAircallRoute: SettingsAircallRouteWithChildren,
   SettingsInitialSetupRoute: SettingsInitialSetupRoute,
   SettingsShopifyRoute: SettingsShopifyRoute,

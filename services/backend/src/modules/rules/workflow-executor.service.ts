@@ -37,7 +37,7 @@ export class WorkflowExecutorService {
   requireCreateTaskAxis(value: unknown): CreateTaskAxis {
     const raw = String(value ?? '').trim().toLowerCase();
     if (raw === 'support') {
-      throw new BadRequestException('Workflow create_task cannot target support. Create Support cases manually from the Support or staff task UI.');
+      throw new BadRequestException('Rule-created tasks cannot target customer requests. Customer service must open customer requests manually.');
     }
     const axis = createTaskAxisSchema.safeParse(raw);
     if (!axis.success) throw new BadRequestException(`Invalid create_task axis: ${String(value)}`);

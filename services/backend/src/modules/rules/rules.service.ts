@@ -59,7 +59,7 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'Default: Angry customer support follow-up',
     'psych.tag.detected',
     [defaultCondition('tag_angry', 'psych_tag_includes', '=', 'angry')],
-    [defaultAction('support_case_manual_only', 'no-op', 'Support intent detected; Support cases are created manually.')],
+    [defaultAction('customer_request_manual_only', 'no-op', 'Customer request intent detected; customer service opens the request manually.')],
     70,
   ),
   defaultRule(
@@ -75,7 +75,7 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     'psych.tag.detected',
     [defaultCondition('tag_shipping_issue', 'psych_tag_includes', '=', 'shipping_issue')],
     [
-      defaultAction('support_case_manual_only', 'no-op', 'Shipping support intent detected; Support cases are created manually.'),
+      defaultAction('customer_request_manual_only', 'no-op', 'Shipping request intent detected; customer service opens the request manually.'),
     ],
     70,
   ),

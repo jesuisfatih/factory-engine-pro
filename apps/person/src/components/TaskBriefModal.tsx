@@ -33,6 +33,15 @@ function labelize(value: string | null | undefined) {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function workflowSourceLabel(value: string | null | undefined) {
+  if (!value) return 'Automation';
+  const normalized = value.toLowerCase();
+  if (normalized.includes('transcript') || normalized.includes('resolver')) return 'Transcript resolver';
+  if (normalized.includes('aircall')) return 'Aircall';
+  if (normalized.includes('workflow') || normalized.includes('rule')) return 'Rule engine';
+  return labelize(value.replace(/\bai\b/gi, 'resolver'));
+}
+
 function traceValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return 'empty';
   if (Array.isArray(value)) return value.length ? value.map((item) => traceValue(item)).join(', ') : '[]';
@@ -551,7 +560,7 @@ function RuleTraceBlock({
           <div className="rule-trace-meta">
             <span><GitBranch size={11} /> {rule?.name ?? workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
             <span>{labelize(workflowTrace.trigger)}</span>
-            <span>{workflowTrace.source ?? 'automation'}</span>
+            <span>{workflowSourceLabel(workflowTrace.source)}</span>
             {rule ? (
               <a href={rule.canvasUrl} className="rule-canvas-link">
                 <ExternalLink size={11} /> Open rule canvas
@@ -574,7 +583,7 @@ function RuleTraceBlock({
                       <span>Expected <strong>{traceValue(trace.expected)}</strong></span>
                       <span>Actual <strong>{traceValue(trace.actual)}</strong></span>
                     </div>
-                    <div className="rule-trace-source">{trace.source}</div>
+                    <div className="rule-trace-source">{workflowSourceLabel(trace.source)}</div>
                   </div>
                 </div>
               ))}
