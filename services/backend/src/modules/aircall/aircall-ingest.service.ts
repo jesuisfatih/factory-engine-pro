@@ -762,6 +762,7 @@ function normalizeTargetVersion(value: unknown) {
 
 function successfulResolverJobStatus(value: unknown) {
   return value === 'succeeded'
+    || value === 'succeeded_with_local_fallback'
     || value === 'skipped_already_resolved'
     || value === 'repaired_missing_workflow_evaluations';
 }

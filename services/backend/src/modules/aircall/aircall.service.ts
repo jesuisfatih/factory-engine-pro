@@ -305,7 +305,12 @@ export class AircallService {
       ? []
       : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
           where: { tenantId, callEventId: { in: callEventIds } },
-          select: { callEventId: true },
+          select: {
+            callEventId: true,
+            actionRequired: true,
+            status: true,
+            tasksCreated: true,
+          },
         });
     const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
     const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
@@ -318,6 +323,12 @@ export class AircallService {
       transcriptEvents: transcriptRows.length,
       resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
       evaluatedEvents: evaluatedIds.size,
+      evaluationRows: evaluations.length,
+      actionableEvaluations: evaluations.filter((row) => row.actionRequired).length,
+      noActionEvaluations: evaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
+      taskCreatedEvaluations: evaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
+      matchedWithoutTaskEvaluations: evaluations.filter((row) => row.status === 'matched_without_task').length,
+      failedEvaluations: evaluations.filter((row) => row.status === 'failed').length,
       missingEvaluations: missingRows.length,
       staleResolverVersion: transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length,
       resolverQueuedOrProcessing: transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length,

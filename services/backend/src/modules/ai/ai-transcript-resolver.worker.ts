@@ -211,23 +211,31 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     } catch (error) {
       const message = messageOf(error).slice(0, 500);
       const code = httpErrorCode(error);
+      const fallbackOutput = localFallbackResolverOutput(transcript, targetVersion);
+      const fallbackModel = 'local-rule-fallback';
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEventId },
         data: {
-          resolverStatus: 'failed',
-          resolverError: code ? `${code}: ${message}` : message,
+          resolverStatus: 'succeeded',
+          resolverOutput: fallbackOutput as Prisma.InputJsonValue,
+          resolverError: code ? `local_fallback_after_${code}: ${message}` : `local_fallback_after_provider_error: ${message}`,
+          resolverModel: fallbackModel,
+          resolverPromptKey: 'ai.transcript-resolver.local-fallback',
+          resolverLatencyMs: null,
+          resolvedAt: new Date(),
+          resolvedWithVersion: fallbackOutput.resolved_with_version,
         },
       });
-      this.logger.error('ai', 'transcript_resolve_failed', 'Aircall transcript resolver failed', {
+      this.logger.warn('ai', 'transcript_resolve_local_fallback', 'Aircall transcript resolver failed; deterministic local fallback was used so workflow evaluation still runs', {
         call_event_id: callEventId,
         external_call_id: callEvent.externalCallId,
         error_code: code,
         error: message,
+        fallback_model: fallbackModel,
+        target_version: targetVersion,
       });
-      if (code === 'anthropic_resolver_network_error' || code === 'anthropic_resolver_timeout') {
-        throw error;
-      }
-      return { status: 'failed', error: message };
+      await this.fireDerivedWorkflowTriggers(callEvent, fallbackOutput, fallbackModel);
+      return { status: 'succeeded_with_local_fallback', resolvedWithVersion: fallbackOutput.resolved_with_version, error: message };
     }
   }
 
@@ -701,6 +709,77 @@ const PURCHASE_SIGNAL_KEYWORDS = [
   'do you have',
   'availability',
 ] as const;
+
+function localFallbackResolverOutput(transcript: string, targetVersion: number): TranscriptResolverOutput {
+  const text = normalizedText(transcript);
+  const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(text, needle));
+  const psychTags = new Set<TranscriptResolverOutput['psych_tags'][number]>();
+  const productMentions: TranscriptResolverOutput['product_mentions'] = [];
+  const hasPurchaseSignal = hasAny(PURCHASE_SIGNAL_KEYWORDS);
+  const hasHeatPressSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent);
+  const hasDtfSupplySignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.dtf_supply_reorder_signal);
+  const hasQuoteSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.quote_request);
+  const hasCallbackSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.callback_requested);
+  const hasRefundSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.refund_requested);
+  const hasShippingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.shipping_status_question);
+  const hasFinancingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.financing_question);
+  const hasPriceSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.price_objection);
+  const hasFitSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.product_fit_question);
+  const hasTrainingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.training_installation_need);
+  const hasSampleSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.sample_request);
+  const hasUpgradeSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.machine_upgrade_interest);
+  const hasComplaintSignal = hasRefundSignal
+    || hasShippingSignal
+    || hasTrainingSignal
+    || hasAny(['complaint', 'problem', 'issue', 'broken', 'not working', 'wrong item', 'damaged']);
+
+  if (hasPurchaseSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) psychTags.add('purchase_intent');
+  if (hasQuoteSignal || hasPriceSignal || hasFitSignal || hasFinancingSignal || hasSampleSignal) psychTags.add('info_request');
+  if (hasCallbackSignal) psychTags.add('follow_up');
+  if (hasRefundSignal) psychTags.add('refund_intent');
+  if (hasShippingSignal) psychTags.add('shipping_issue');
+  if (hasComplaintSignal) psychTags.add('complaint');
+
+  if (hasHeatPressSignal) {
+    productMentions.push({ sku: null, name_hint: 'Heat press', confidence: 0.72 });
+  }
+  if (hasDtfSupplySignal) {
+    productMentions.push({ sku: null, name_hint: 'DTF supplies', confidence: 0.72 });
+  }
+
+  let callIntent: TranscriptResolverOutput['call_intent'] = 'inquiry';
+  if (hasPurchaseSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) callIntent = 'sale';
+  else if (hasCallbackSignal) callIntent = 'follow_up';
+  else if (hasComplaintSignal) callIntent = 'complaint';
+
+  return {
+    customer_match: {
+      customer_id: null,
+      phone: null,
+      name_hint: null,
+      confidence: 0,
+    },
+    product_mentions: productMentions,
+    psych_tags: Array.from(psychTags),
+    call_intent: callIntent,
+    shipping_signals: {
+      address_mentioned: hasAny(['address', 'ship to', 'delivery address']),
+      tracking_asked: hasAny(['tracking', 'where is my order', 'eta']),
+      complaint: hasShippingSignal && hasComplaintSignal,
+    },
+    payment_signals: {
+      method_mentioned: hasFinancingSignal || hasAny(['card', 'wire', 'ach', 'paypal', 'payment method']),
+      refund_asked: hasRefundSignal,
+      complaint: hasRefundSignal || hasPriceSignal,
+    },
+    urgency_signal: hasAny(['urgent', 'asap', 'today', 'critical']) ? 'high' : 'medium',
+    operational_signals: [],
+    competitor_mentioned: [],
+    summary: transcript.replace(/\s+/g, ' ').trim().slice(0, 1200),
+    language_detected: 'unknown',
+    resolved_with_version: targetVersion,
+  };
+}
 
 function transcriptOperationalSignals(output: TranscriptResolverOutput): TranscriptOperationalSignal[] {
   const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
