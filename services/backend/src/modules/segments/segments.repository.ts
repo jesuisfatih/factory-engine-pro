@@ -178,185 +178,191 @@ export class SegmentsRepository {
     name: string;
     lifecycleStage: string | null;
   }, matchedCustomerIds: string[], metricsByCustomer: Map<string, Record<string, unknown>>) {
-    const tenantId = this.tenantId();
-    const now = new Date();
-    const uniqueMatched = Array.from(new Set(matchedCustomerIds));
-    await this.prisma.db.segmentCustomerAssignment.updateMany({
-      where: { segmentId: segment.id, customerId: { notIn: uniqueMatched } },
-      data: {
-        isMatched: false,
-        isCurrent: false,
-        lastEvaluatedAt: now,
-      },
-    });
-    for (const customerId of uniqueMatched) {
-      await this.prisma.db.segmentCustomerAssignment.upsert({
-        where: { tenantId_customerId_segmentId: { tenantId, customerId, segmentId: segment.id } },
-        create: {
-          id: prefixedId('sasg'),
-          tenantId,
-          customerId,
-          segmentId: segment.id,
-          segmentName: segment.name,
-          lifecycleStage: segment.lifecycleStage,
-          isMatched: true,
+    await this.withSegmentAssignmentWriteLock(async (db, tenantId) => {
+      const now = new Date();
+      const uniqueMatched = Array.from(new Set(matchedCustomerIds));
+      await db.segmentCustomerAssignment.updateMany({
+        where: { tenantId, segmentId: segment.id, customerId: { notIn: uniqueMatched } },
+        data: {
+          isMatched: false,
           isCurrent: false,
-          firstMatchedAt: now,
-          lastMatchedAt: now,
           lastEvaluatedAt: now,
-          matchCount: 1,
-          metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
-        },
-        update: {
-          segmentName: segment.name,
-          lifecycleStage: segment.lifecycleStage,
-          isMatched: true,
-          lastMatchedAt: now,
-          lastEvaluatedAt: now,
-          matchCount: { increment: 1 },
-          metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
         },
       });
-    }
-    await this.refreshCurrentAssignments();
+      for (const customerId of uniqueMatched) {
+        await db.segmentCustomerAssignment.upsert({
+          where: { tenantId_customerId_segmentId: { tenantId, customerId, segmentId: segment.id } },
+          create: {
+            id: prefixedId('sasg'),
+            tenantId,
+            customerId,
+            segmentId: segment.id,
+            segmentName: segment.name,
+            lifecycleStage: segment.lifecycleStage,
+            isMatched: true,
+            isCurrent: false,
+            firstMatchedAt: now,
+            lastMatchedAt: now,
+            lastEvaluatedAt: now,
+            matchCount: 1,
+            metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
+          },
+          update: {
+            segmentName: segment.name,
+            lifecycleStage: segment.lifecycleStage,
+            isMatched: true,
+            lastMatchedAt: now,
+            lastEvaluatedAt: now,
+            matchCount: { increment: 1 },
+            metricsSnapshot: (metricsByCustomer.get(customerId) ?? {}) as Prisma.InputJsonValue,
+          },
+        });
+      }
+      await this.refreshCurrentAssignments(db, tenantId);
+    });
   }
 
   async syncSalesAssignmentsFromCurrentSegments(customerIds: string[]) {
-    const tenantId = this.tenantId();
-    const uniqueCustomerIds = Array.from(new Set(customerIds.filter(Boolean)));
-    if (uniqueCustomerIds.length === 0) return { assigned: 0, skipped: 0, cleared: 0 };
+    return this.withSegmentAssignmentWriteLock(async (db, tenantId) => {
+      const uniqueCustomerIds = Array.from(new Set(customerIds.filter(Boolean)));
+      if (uniqueCustomerIds.length === 0) return { assigned: 0, skipped: 0, cleared: 0 };
 
-    const [currentAssignments, existingSalesAssignments] = await Promise.all([
-      this.prisma.db.segmentCustomerAssignment.findMany({
-        where: {
-          customerId: { in: uniqueCustomerIds },
-          isCurrent: true,
-          isMatched: true,
-        },
-        include: {
-          segment: {
-            include: {
-              ownerships: {
-                where: {
-                  autoAssignNew: true,
-                  member: { status: 'active' },
+      const [currentAssignments, existingSalesAssignments] = await Promise.all([
+        db.segmentCustomerAssignment.findMany({
+          where: {
+            tenantId,
+            customerId: { in: uniqueCustomerIds },
+            isCurrent: true,
+            isMatched: true,
+          },
+          include: {
+            segment: {
+              include: {
+                ownerships: {
+                  where: {
+                    tenantId,
+                    autoAssignNew: true,
+                    member: { status: 'active' },
+                  },
+                  include: { member: true },
+                  orderBy: [{ priority: 'desc' }, { updatedAt: 'asc' }],
                 },
-                include: { member: true },
-                orderBy: [{ priority: 'desc' }, { updatedAt: 'asc' }],
               },
             },
           },
-        },
-      }),
-      this.prisma.db.customerAssignment.findMany({
-        where: { customerId: { in: uniqueCustomerIds }, axis: 'sales' },
-        include: customerAssignmentMemberInclude,
-      }),
-    ]);
+        }),
+        db.customerAssignment.findMany({
+          where: { tenantId, customerId: { in: uniqueCustomerIds }, axis: 'sales' },
+          include: customerAssignmentMemberInclude,
+        }),
+      ]);
 
-    const currentByCustomer = new Map(currentAssignments.map((assignment) => [assignment.customerId, assignment]));
-    const existingByCustomer = new Map(existingSalesAssignments.map((assignment) => [assignment.customerId, assignment]));
-    let assigned = 0;
-    let skipped = 0;
-    let cleared = 0;
+      const currentByCustomer = new Map(currentAssignments.map((assignment) => [assignment.customerId, assignment]));
+      const existingByCustomer = new Map(existingSalesAssignments.map((assignment) => [assignment.customerId, assignment]));
+      let assigned = 0;
+      let skipped = 0;
+      let cleared = 0;
 
-    for (const customerId of uniqueCustomerIds) {
-      const current = currentByCustomer.get(customerId);
-      const owner = current?.segment.ownerships[0] ?? null;
-      const existing = existingByCustomer.get(customerId);
+      for (const customerId of uniqueCustomerIds) {
+        const current = currentByCustomer.get(customerId);
+        const owner = current?.segment.ownerships[0] ?? null;
+        const existing = existingByCustomer.get(customerId);
 
-      if (!current || !owner) {
-        if (existing && isSegmentOwnershipSource(existing.source)) {
-          await this.prisma.db.customerAssignment.deleteMany({ where: { id: existing.id } });
-          await this.createCustomerAssignmentAudit({
+        if (!current || !owner) {
+          if (existing && isSegmentOwnershipSource(existing.source)) {
+            await db.customerAssignment.deleteMany({ where: { tenantId, id: existing.id } });
+            await this.createCustomerAssignmentAudit(db, tenantId, {
+              customerId,
+              action: 'primary_cleared',
+              previousMemberId: existing.memberId,
+              newMemberId: null,
+              source: SEGMENT_ASSIGNMENT_SOURCE,
+              reason: 'Customer no longer has a current segment owner.',
+              metadata: {
+                previousAssignmentId: existing.id,
+                previousSource: existing.source,
+              },
+            });
+            cleared += 1;
+          }
+          continue;
+        }
+
+        if (existing && existing.memberId !== owner.memberId && !isSegmentOwnershipSource(existing.source)) {
+          await this.createCustomerAssignmentAudit(db, tenantId, {
             customerId,
-            action: 'primary_cleared',
+            action: 'auto_reassign_skipped',
             previousMemberId: existing.memberId,
-            newMemberId: null,
+            newMemberId: owner.memberId,
             source: SEGMENT_ASSIGNMENT_SOURCE,
-            reason: 'Customer no longer has a current segment owner.',
+            reason: `Manual sales owner preserved while segment ${current.segment.name} requested auto assignment.`,
             metadata: {
-              previousAssignmentId: existing.id,
-              previousSource: existing.source,
+              segmentId: current.segmentId,
+              segmentName: current.segment.name,
+              preservedAssignmentId: existing.id,
+              preservedSource: existing.source,
+              attemptedMemberId: owner.memberId,
             },
           });
-          cleared += 1;
+          skipped += 1;
+          continue;
         }
-        continue;
-      }
 
-      if (existing && existing.memberId !== owner.memberId && !isSegmentOwnershipSource(existing.source)) {
-        await this.createCustomerAssignmentAudit({
-          customerId,
-          action: 'auto_reassign_skipped',
-          previousMemberId: existing.memberId,
-          newMemberId: owner.memberId,
-          source: SEGMENT_ASSIGNMENT_SOURCE,
-          reason: `Manual sales owner preserved while segment ${current.segment.name} requested auto assignment.`,
-          metadata: {
-            segmentId: current.segmentId,
-            segmentName: current.segment.name,
-            preservedAssignmentId: existing.id,
-            preservedSource: existing.source,
-            attemptedMemberId: owner.memberId,
+        await db.customerAssignment.upsert({
+          where: {
+            tenantId_customerId_axis: {
+              tenantId,
+              customerId,
+              axis: 'sales',
+            },
           },
-        });
-        skipped += 1;
-        continue;
-      }
-
-      await this.prisma.db.customerAssignment.upsert({
-        where: {
-          tenantId_customerId_axis: {
+          create: {
+            id: prefixedId('casn'),
             tenantId,
             customerId,
             axis: 'sales',
+            memberId: owner.memberId,
+            source: SEGMENT_ASSIGNMENT_SOURCE,
+            reason: `Segment ownership: ${current.segment.name}`,
+            approvedByMemberId: null,
+            approvedAt: new Date(),
           },
-        },
-        create: {
-          id: prefixedId('casn'),
-          tenantId,
+          update: {
+            memberId: owner.memberId,
+            source: SEGMENT_ASSIGNMENT_SOURCE,
+            reason: `Segment ownership: ${current.segment.name}`,
+            approvedByMemberId: null,
+            approvedAt: new Date(),
+            isPrimary: true,
+          },
+        });
+        await this.createCustomerAssignmentAudit(db, tenantId, {
           customerId,
-          axis: 'sales',
-          memberId: owner.memberId,
+          action: 'primary_assigned',
+          previousMemberId: existing?.memberId ?? null,
+          newMemberId: owner.memberId,
           source: SEGMENT_ASSIGNMENT_SOURCE,
           reason: `Segment ownership: ${current.segment.name}`,
-          approvedByMemberId: null,
-          approvedAt: new Date(),
-        },
-        update: {
-          memberId: owner.memberId,
-          source: SEGMENT_ASSIGNMENT_SOURCE,
-          reason: `Segment ownership: ${current.segment.name}`,
-          approvedByMemberId: null,
-          approvedAt: new Date(),
-          isPrimary: true,
-        },
-      });
-      await this.createCustomerAssignmentAudit({
-        customerId,
-        action: 'primary_assigned',
-        previousMemberId: existing?.memberId ?? null,
-        newMemberId: owner.memberId,
-        source: SEGMENT_ASSIGNMENT_SOURCE,
-        reason: `Segment ownership: ${current.segment.name}`,
-        metadata: {
-          segmentId: current.segmentId,
-          segmentName: current.segment.name,
-          currentSegmentAssignmentId: current.id,
-          unchanged: existing?.memberId === owner.memberId,
-        },
-      });
-      assigned += 1;
-    }
+          metadata: {
+            segmentId: current.segmentId,
+            segmentName: current.segment.name,
+            currentSegmentAssignmentId: current.id,
+            unchanged: existing?.memberId === owner.memberId,
+          },
+        });
+        assigned += 1;
+      }
 
-    return { assigned, skipped, cleared };
+      return { assigned, skipped, cleared };
+    });
   }
 
-  private async refreshCurrentAssignments() {
-    const tenantId = this.tenantId();
-    const rows = await this.prisma.db.segmentCustomerAssignment.findMany({
-      where: { isMatched: true },
+  private async refreshCurrentAssignments(db: Prisma.TransactionClient, tenantId: string) {
+    const rows = await db.segmentCustomerAssignment.findMany({
+      where: {
+        tenantId,
+        isMatched: true,
+      },
       include: { segment: { select: { priorityGlobal: true, priority: true } } },
       orderBy: [{ lastMatchedAt: 'desc' }, { updatedAt: 'desc' }],
     });
@@ -373,12 +379,12 @@ export class SegmentsRepository {
       if (nextPriority > existingPriority) currentByCustomer.set(row.customerId, row.id);
     }
     const currentIds = Array.from(currentByCustomer.values());
-    await this.prisma.db.segmentCustomerAssignment.updateMany({
+    await db.segmentCustomerAssignment.updateMany({
       where: currentIds.length ? { tenantId, id: { notIn: currentIds } } : { tenantId },
       data: { isCurrent: false },
     });
     if (currentIds.length > 0) {
-      await this.prisma.db.segmentCustomerAssignment.updateMany({
+      await db.segmentCustomerAssignment.updateMany({
         where: { tenantId, id: { in: currentIds } },
         data: { isCurrent: true },
       });
@@ -470,7 +476,20 @@ export class SegmentsRepository {
     return this.prisma.db.member.findFirst({ where: { id, status: 'active' } });
   }
 
-  private createCustomerAssignmentAudit(input: {
+  private async withSegmentAssignmentWriteLock<T>(
+    operation: (db: Prisma.TransactionClient, tenantId: string) => Promise<T>,
+  ): Promise<T> {
+    const tenantId = this.tenantId();
+    const lockKey = `factory-engine-pro:segment-assignment:${tenantId}`;
+    return retryTransientSegmentWrite(() =>
+      this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}), 0)`;
+        return operation(tx, tenantId);
+      }, { maxWait: 30_000, timeout: 180_000 }),
+    );
+  }
+
+  private createCustomerAssignmentAudit(db: Prisma.TransactionClient, tenantId: string, input: {
     customerId: string;
     action: string;
     previousMemberId?: string | null;
@@ -479,10 +498,10 @@ export class SegmentsRepository {
     reason?: string | null;
     metadata?: Prisma.InputJsonValue;
   }) {
-    return this.prisma.db.customerAssignmentAudit.create({
+    return db.customerAssignmentAudit.create({
       data: {
         id: prefixedId('caud'),
-        tenantId: this.tenantId(),
+        tenantId,
         customerId: input.customerId,
         axis: 'sales',
         action: input.action,
@@ -511,4 +530,36 @@ const customerAssignmentMemberInclude = {
 
 function isSegmentOwnershipSource(source: string | null | undefined) {
   return source === SEGMENT_ASSIGNMENT_SOURCE || source?.startsWith(`${SEGMENT_ASSIGNMENT_SOURCE}:`) === true;
+}
+
+async function retryTransientSegmentWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const maxAttempts = 5;
+  let attempt = 0;
+  let lastError: unknown;
+  while (attempt < maxAttempts) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      attempt += 1;
+      if (attempt >= maxAttempts || !isTransientSegmentWriteError(error)) break;
+      await sleep(Math.min(5_000, 250 * 2 ** (attempt - 1)));
+    }
+  }
+  throw lastError;
+}
+
+function isTransientSegmentWriteError(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code)
+    : '';
+  const message = error instanceof Error ? error.message : String(error);
+  return code === 'P2034'
+    || message.includes('40P01')
+    || message.includes('deadlock detected')
+    || message.includes('could not serialize access');
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
