@@ -2460,8 +2460,8 @@ function istanbulDayRange(now = new Date()) {
   };
 }
 
-function dailyWorkflowRange(range: PersonDailyOperationRange, today = istanbulDayRange()) {
-  const sevenDayStart = new Date(today.start.getTime() - 6 * 86_400_000);
+function dailyWorkflowRange(range: PersonDailyOperationRange, today = istanbulDayRange(), now = new Date()) {
+  const sevenDayStart = new Date(now.getTime() - 7 * 86_400_000);
   if (range === 'today') {
     return {
       start: today.start,
