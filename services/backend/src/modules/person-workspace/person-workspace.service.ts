@@ -285,8 +285,7 @@ export class PersonWorkspaceService {
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
     const priorityTaskCards = scopedRows
       .filter((row) => !CLOSED.has(row.status))
-      .filter((row) => this.isAiOrSegmentPriorityTask(row))
-      .filter((row) => this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer))
+      .filter((row) => this.isPriorityKanbanTask(row, member.id, assignments, ownedSegmentByCustomer))
       .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext));
     const priorityTaskCustomerIds = new Set(priorityTaskCards.map((card) => card.customerId).filter((id): id is string => Boolean(id)));
     const segmentPriorityCards = dailyCallList
@@ -1635,6 +1634,16 @@ export class PersonWorkspaceService {
   private isAiOrSegmentPriorityTask(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
     const source = taskSource(row);
     return source === 'ai_transcript' || source === 'ai_segment' || source === 'ai_stale';
+  }
+
+  private isPriorityKanbanTask(
+    row: ServiceRequestRow,
+    memberId: string,
+    assignments: AxisAssignments,
+    ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
+  ) {
+    if (taskSource(row) === 'admin_transfer') return row.assignedMemberId === memberId;
+    return this.isAiOrSegmentPriorityTask(row) && this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer);
   }
 
   private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
