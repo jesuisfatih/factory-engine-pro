@@ -1,0 +1,213 @@
+﻿{
+  "checkedAt": "2026-06-29T12:45:41.634Z",
+  "deployedBuildSha": "518ed3c4afee666cf0bb61aeb244be83f85a5533",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted",
+  "dbRows": [
+    {
+      "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "memberName": "Charlette Boatman",
+      "email": "charlette@dtfbank.com",
+      "aircallUserId": "1972780",
+      "callEvents7d": 371,
+      "operatorWorkflowTasks7d": 8,
+      "assignedToSelf7d": 0
+    },
+    {
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "memberName": "Linda Marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "aircallUserId": "1831312",
+      "callEvents7d": 156,
+      "operatorWorkflowTasks7d": 3,
+      "assignedToSelf7d": 0
+    },
+    {
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "memberName": "Ihsan Taskiran",
+      "email": "ihsan@dtfbank.com",
+      "aircallUserId": "1831184",
+      "callEvents7d": 1,
+      "operatorWorkflowTasks7d": 0,
+      "assignedToSelf7d": 0
+    }
+  ],
+  "api": [
+    {
+      "email": "charlette@dtfbank.com",
+      "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 8,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyCount": 8
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [],
+          "segmentGroupCount": 0
+        },
+        "dailyCount": 0
+      },
+      "firstDailyCard": {
+        "id": "sr_btqb22s9n9cjb9j1r8806qwx",
+        "title": "+16087514012",
+        "axis": "sales",
+        "source": "ai_transcript",
+        "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "createdAt": "2026-06-29T12:06:35.056Z",
+        "callIntent": "inquiry",
+        "psychTags": [
+          "purchase_intent",
+          "info_request",
+          "follow_up"
+        ]
+      },
+      "firstBrief": {
+        "status": 200,
+        "ok": true,
+        "hasAiPsychAnalysis": true,
+        "aiTalkTrack": "Nathan, a high-volume screen print shop owner in Wisconsin, is evaluating a dual-station hydraulic heat press ($3,149.99 + $369 shipping, 9-17 day delivery). Primary concerns: hydr",
+        "cardCallIntent": "inquiry",
+        "cardPsychTags": [
+          "purchase_intent",
+          "info_request",
+          "follow_up"
+        ]
+      }
+    },
+    {
+      "email": "dtfbanktx@gmail.com",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 3,
+          "priorityCount": 104,
+          "pinnedCount": 4,
+          "highUrgencyCount": 90,
+          "visibleAxes": [
+            "sales",
+            "support"
+          ],
+          "segmentGroupCount": 5
+        },
+        "dailyCount": 3
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 104,
+          "pinnedCount": 4,
+          "highUrgencyCount": 90,
+          "visibleAxes": [
+            "support"
+          ],
+          "segmentGroupCount": 5
+        },
+        "dailyCount": 0
+      },
+      "firstDailyCard": {
+        "id": "sr_s0e6lbgir4bzty730iy89un0",
+        "title": "James Ervin",
+        "axis": "sales",
+        "source": "ai_transcript",
+        "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "createdAt": "2026-06-29T12:05:59.165Z",
+        "callIntent": "sale",
+        "psychTags": [
+          "purchase_intent",
+          "satisfied"
+        ]
+      },
+      "firstBrief": {
+        "status": 200,
+        "ok": true,
+        "hasAiPsychAnalysis": true,
+        "aiTalkTrack": "Outbound confirmation call with customer James Irvin regarding his order of two additional magnetic laser guide attachments. Agent confirmed the customer intentionally ordered extr",
+        "cardCallIntent": "sale",
+        "cardPsychTags": [
+          "purchase_intent",
+          "satisfied"
+        ]
+      }
+    },
+    {
+      "email": "ihsan@dtfbank.com",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "last7d": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 11,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyCount": 11
+      },
+      "archive": {
+        "status": 200,
+        "ok": true,
+        "summary": {
+          "dailyCount": 0,
+          "priorityCount": 0,
+          "pinnedCount": 0,
+          "highUrgencyCount": 0,
+          "visibleAxes": [
+            "sales"
+          ],
+          "segmentGroupCount": 0
+        },
+        "dailyCount": 0
+      },
+      "firstDailyCard": {
+        "id": "sr_p360udwqsjrmf530dd5mng82",
+        "title": "+19144974674",
+        "axis": "sales",
+        "source": "ai_transcript",
+        "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+        "createdAt": "2026-06-29T12:06:29.702Z",
+        "callIntent": "sale",
+        "psychTags": [
+          "purchase_intent",
+          "info_request"
+        ]
+      },
+      "firstBrief": {
+        "status": 200,
+        "ok": true,
+        "hasAiPsychAnalysis": true,
+        "aiTalkTrack": "Business owner customer inquired about purchasing a Hydro 1620 dual head hydraulic heat press machine. Agent confirmed included components (pump, hydraulic system, magnetic laser g",
+        "cardCallIntent": "sale",
+        "cardPsychTags": [
+          "purchase_intent",
+          "info_request"
+        ]
+      }
+    }
+  ]
+}

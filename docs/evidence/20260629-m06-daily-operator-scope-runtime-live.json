@@ -1,0 +1,30 @@
+﻿{
+    "checkedAt":  "2026-06-29T12:46:07.8673657Z",
+    "deployedBuildSha":  "518ed3c4afee666cf0bb61aeb244be83f85a5533",
+    "remoteRuntime":  {
+                          "checkedAt":  "2026-06-29T12:46:05.416Z",
+                          "buildSha":  "518ed3c4afee666cf0bb61aeb244be83f85a5533",
+                          "listeners":  [
+                                            {
+                                                "port":  4000,
+                                                "pid":  108420,
+                                                "cmd":  "/usr/local/bin/node dist/services/backend/src/main.js"
+                                            },
+                                            {
+                                                "port":  3002,
+                                                "pid":  108519,
+                                                "cmd":  "node node_modules/.bin/../vite/bin/vite.js preview --host 0.0.0.0 --port 3002"
+                                            }
+                                        ]
+                      },
+    "health":  {
+                   "ok":  true,
+                   "service":  "factory-engine-pro-backend"
+               },
+    "urls":  {
+                 "staffQueue":  "https://app.dtfbank.com/staff/queue",
+                 "staffQueueStatus":  200,
+                 "dailyArchive":  "https://app.dtfbank.com/staff/daily-archive",
+                 "dailyArchiveStatus":  200
+             }
+}
