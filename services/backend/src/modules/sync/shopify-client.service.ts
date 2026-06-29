@@ -108,6 +108,16 @@ export class ShopifyClientService {
     );
   }
 
+  customerOrders(credentials: ShopifyCredentials, shopifyCustomerId: string, cursor?: string | null, query: Record<string, string> = {}) {
+    return this.getPage<Record<string, unknown>>(
+      credentials,
+      `/customers/${encodeURIComponent(shopifyCustomerId)}/orders.json`,
+      'orders',
+      cursor,
+      cursor ? {} : { status: 'any', ...query },
+    );
+  }
+
   async shop(credentials: ShopifyCredentials) {
     const url = this.adminUrl(credentials, '/shop.json');
     const response = await fetch(url, {

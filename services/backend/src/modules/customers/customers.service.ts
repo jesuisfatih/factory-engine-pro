@@ -22,6 +22,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { ShopifyClientService } from '../sync/shopify-client.service.js';
 import {
   type CustomerAssignmentAuditWithMembers,
   type CustomerAssignmentWithMember,
@@ -32,6 +33,7 @@ import {
 
 const CLOSED_STATUSES = new Set(['closed', 'resolved', 'transferred']);
 const INTERNAL_CUSTOMER_KINDS = new Set(['message_thread', 'note', 'staff_request', 'customer_pin']);
+type CustomerDetailShopifyOrderDto = CustomerDetailPanelDto['tabs']['shopifyOrders'][number];
 
 const ALARM_DEFINITIONS = [
   { systemType: 'churn_alarm', name: 'Churn alarm', color: '#dc2626', icon: 'alert-triangle' },
@@ -51,6 +53,7 @@ export class CustomersService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly shopify: ShopifyClientService,
   ) {}
 
   async list(query: CustomerCommerceQuery) {
@@ -194,6 +197,7 @@ export class CustomersService {
         take: 50,
       }),
     ]);
+    const shopifyOrders = await this.detailShopifyOrders(customer, orders);
     const ruleIds = uniqueStrings(serviceRequests.map((row) => row.matchedRuleId));
     const rules = ruleIds.length
       ? await this.prisma.db.workflowRule.findMany({
@@ -237,11 +241,11 @@ export class CustomersService {
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 50);
     const visibleTabs = this.customerDetailTabs();
     const recentCutoff = new Date(Date.now() - 30 * 86_400_000);
-    const revenue30d = orders
-      .filter((order) => (order.processedAt ?? order.createdAt).getTime() >= recentCutoff.getTime())
-      .reduce((sum, order) => sum + money(order.totalPrice), 0);
+    const revenue30d = shopifyOrders
+      .filter((order) => (dateFromIso(order.processedAt ?? order.createdAt)?.getTime() ?? 0) >= recentCutoff.getTime())
+      .reduce((sum, order) => sum + order.totalPrice, 0);
     const lastContactAt = latestIso([
-      ...orders.map((order) => order.processedAt ?? order.createdAt),
+      ...shopifyOrders.map((order) => dateFromIso(order.processedAt ?? order.createdAt)),
       ...aircallCalls.map((call) => call.eventTimestamp),
       ...mailDeliveries.map((mail) => mail.sentAt ?? mail.updatedAt ?? mail.createdAt),
       ...serviceRequests.map((request) => request.updatedAt),
@@ -249,7 +253,7 @@ export class CustomersService {
 
     this.logger.log('customers', 'customer_detail.read', 'Customer detail panel opened', {
       customer_id: id,
-      orders: orders.length,
+      orders: shopifyOrders.length,
       calls: aircallCalls.length,
       support: support.length,
       emails: mailDeliveries.length,
@@ -337,24 +341,7 @@ export class CustomersService {
           tags: customer.tags,
           rawNote: customer.note,
         },
-        shopifyOrders: orders.map((order) => ({
-          id: order.id,
-          shopifyOrderId: order.shopifyOrderId,
-          orderNumber: order.shopifyOrderNumber,
-          totalPrice: money(order.totalPrice),
-          subtotal: money(order.subtotal),
-          totalDiscounts: money(order.totalDiscounts),
-          totalTax: money(order.totalTax),
-          totalShipping: money(order.totalShipping),
-          currency: order.currency,
-          financialStatus: order.financialStatus,
-          fulfillmentStatus: order.fulfillmentStatus,
-          fulfillmentMode: order.fulfillmentMode,
-          processedAt: order.processedAt?.toISOString() ?? null,
-          createdAt: order.createdAt.toISOString(),
-          tags: order.tags,
-          lineItems: order.lineItems,
-        })),
+        shopifyOrders,
         aircallCalls: aircallCalls.map((call) => {
           const resolver = jsonRecord(call.resolverOutput);
           return {
@@ -816,6 +803,57 @@ export class CustomersService {
     });
   }
 
+  private async detailShopifyOrders(
+    customer: { id: string; shopifyCustomerId: string | null; ordersCount: number; email: string | null },
+    localOrders: Array<{
+      id: string;
+      shopifyOrderId: string | null;
+      shopifyOrderNumber: string | null;
+      totalPrice: unknown;
+      subtotal: unknown;
+      totalDiscounts: unknown;
+      totalTax: unknown;
+      totalShipping: unknown;
+      currency: string;
+      financialStatus: string | null;
+      fulfillmentStatus: string | null;
+      fulfillmentMode: string;
+      processedAt: Date | null;
+      createdAt: Date;
+      tags: string[];
+      lineItems: Prisma.JsonValue;
+    }>,
+  ): Promise<CustomerDetailShopifyOrderDto[]> {
+    if (localOrders.length > 0) return localOrders.map(mapPersistedDetailOrder);
+    if (!customer.shopifyCustomerId || customer.ordersCount <= 0) return [];
+
+    const credentials = await this.shopify.resolveCredentials();
+    if (!credentials) return [];
+    const shopifyCustomerId = numericShopifyCustomerId(customer.shopifyCustomerId);
+    if (!shopifyCustomerId) return [];
+
+    try {
+      const page = await this.shopify.customerOrders(credentials, shopifyCustomerId, null, { status: 'any' });
+      const liveOrders = page.items
+        .map(mapLiveShopifyOrder)
+        .sort((left, right) => (dateFromIso(right.processedAt ?? right.createdAt)?.getTime() ?? 0) - (dateFromIso(left.processedAt ?? left.createdAt)?.getTime() ?? 0))
+        .slice(0, 50);
+      this.logger.log('customers', 'customer_detail.shopify_live_orders', 'Customer detail loaded live Shopify orders', {
+        customer_id: customer.id,
+        shopify_customer_id: shopifyCustomerId,
+        orders: liveOrders.length,
+      });
+      return liveOrders;
+    } catch (error) {
+      this.logger.warn('customers', 'customer_detail.shopify_live_orders_failed', 'Customer detail could not load live Shopify orders', {
+        customer_id: customer.id,
+        shopify_customer_id: shopifyCustomerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
   private mapCustomer(customer: CustomerWithCommerce) {
     const personName = [customer.firstName, customer.lastName].filter(Boolean).join(' ');
     const insight = customer.insight;
@@ -1081,6 +1119,115 @@ export class CustomersService {
 function money(value: unknown) {
   if (value === null || value === undefined) return 0;
   return Number(value);
+}
+
+function mapPersistedDetailOrder(order: {
+  id: string;
+  shopifyOrderId: string | null;
+  shopifyOrderNumber: string | null;
+  totalPrice: unknown;
+  subtotal: unknown;
+  totalDiscounts: unknown;
+  totalTax: unknown;
+  totalShipping: unknown;
+  currency: string;
+  financialStatus: string | null;
+  fulfillmentStatus: string | null;
+  fulfillmentMode: string;
+  processedAt: Date | null;
+  createdAt: Date;
+  tags: string[];
+  lineItems: Prisma.JsonValue;
+}): CustomerDetailShopifyOrderDto {
+  return {
+    id: order.id,
+    shopifyOrderId: order.shopifyOrderId,
+    orderNumber: order.shopifyOrderNumber,
+    totalPrice: money(order.totalPrice),
+    subtotal: money(order.subtotal),
+    totalDiscounts: money(order.totalDiscounts),
+    totalTax: money(order.totalTax),
+    totalShipping: money(order.totalShipping),
+    currency: order.currency,
+    financialStatus: order.financialStatus,
+    fulfillmentStatus: order.fulfillmentStatus,
+    fulfillmentMode: order.fulfillmentMode,
+    processedAt: order.processedAt?.toISOString() ?? null,
+    createdAt: order.createdAt.toISOString(),
+    tags: order.tags,
+    lineItems: order.lineItems,
+  };
+}
+
+function mapLiveShopifyOrder(raw: Record<string, unknown>): CustomerDetailShopifyOrderDto {
+  const shopifyOrderId = stringId(raw.id);
+  const orderName = stringId(raw.name);
+  const orderNumber = stringId(raw.order_number) ?? orderName?.replace(/^#/, '') ?? shopifyOrderId;
+  const createdAt = isoFromUnknown(raw.created_at) ?? new Date().toISOString();
+  return {
+    id: `shopify-live-${shopifyOrderId ?? orderNumber ?? createdAt}`,
+    shopifyOrderId,
+    orderNumber,
+    totalPrice: numeric(raw.total_price),
+    subtotal: numeric(raw.subtotal_price),
+    totalDiscounts: numeric(raw.total_discounts),
+    totalTax: numeric(raw.total_tax),
+    totalShipping: liveShippingTotal(raw.shipping_lines),
+    currency: stringId(raw.currency) ?? 'USD',
+    financialStatus: stringId(raw.financial_status),
+    fulfillmentStatus: stringId(raw.fulfillment_status),
+    fulfillmentMode: 'shopify',
+    processedAt: isoFromUnknown(raw.processed_at),
+    createdAt,
+    tags: tags(raw.tags),
+    lineItems: Array.isArray(raw.line_items) ? raw.line_items : [],
+  };
+}
+
+function numericShopifyCustomerId(value: string) {
+  return value.replace(/^gid:\/\/shopify\/Customer\//, '').trim() || null;
+}
+
+function stringId(value: unknown) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value).toString();
+  if (typeof value === 'bigint') return value.toString();
+  return null;
+}
+
+function numeric(value: unknown) {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isoFromUnknown(value: unknown) {
+  const text = stringId(value);
+  if (!text) return null;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function dateFromIso(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function tags(value: unknown) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  return stringId(value)?.split(',').map((item) => item.trim()).filter(Boolean) ?? [];
+}
+
+function liveShippingTotal(value: unknown) {
+  if (!Array.isArray(value)) return 0;
+  return value.reduce((sum, line) => {
+    if (!line || typeof line !== 'object' || Array.isArray(line)) return sum;
+    return sum + numeric((line as Record<string, unknown>).price);
+  }, 0);
 }
 
 function daysBetween(start: Date, end: Date) {
