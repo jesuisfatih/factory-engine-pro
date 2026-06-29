@@ -11,6 +11,7 @@ import type {
   SaveWorkflowRuleInput,
   SweepOverdueServiceRequestsResponse,
   WorkflowTriggerFireInput,
+  ActiveWorkflowRuleStatsResponse,
 } from '@factory-engine-pro/contracts';
 import { adminApi } from './api';
 
@@ -59,6 +60,10 @@ export function verifyWorkflowEnumChain(): Promise<WorkflowEnumChainProbeRespons
 
 export function fetchWorkflowRules() {
   return adminApi.workflowRules();
+}
+
+export function fetchWorkflowRuleActiveStats(days = 30): Promise<ActiveWorkflowRuleStatsResponse> {
+  return adminApi.workflowRuleActiveStats(`?days=${encodeURIComponent(String(days))}`);
 }
 
 export function saveWorkflowRule(draft: RuleDraft, id?: string) {

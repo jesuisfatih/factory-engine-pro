@@ -13,7 +13,7 @@ export function AnnouncementsView() {
         <h2>Announcements</h2>
         <div className="sub">
           <Megaphone size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
-          {unread} unread - broadcasts from owner + engineering
+          {unread} unread - live Aircall, Shopify, sync, and mail events
         </div>
       </div>
 

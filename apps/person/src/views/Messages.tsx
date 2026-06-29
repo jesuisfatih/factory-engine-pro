@@ -137,12 +137,19 @@ export function MessagesView() {
               </form>
 
               <div className="msg-thread-body" ref={scrollRef}>
-                {thread.map((message) => (
-                  <div key={message.id} style={{ display: 'flex', flexDirection: 'column', alignItems: message.fromMe ? 'flex-end' : 'flex-start' }}>
-                    <div className={`bubble ${message.fromMe ? 'me' : 'other'}`}>{message.text}</div>
-                    <div className="bubble-meta">{message.at}</div>
+                {thread.length === 0 ? (
+                  <div className="msg-thread-empty">
+                    <strong>No messages in this thread yet</strong>
+                    <span>Send the first internal note to create a live conversation record.</span>
                   </div>
-                ))}
+                ) : (
+                  thread.map((message) => (
+                    <div key={message.id} style={{ display: 'flex', flexDirection: 'column', alignItems: message.fromMe ? 'flex-end' : 'flex-start' }}>
+                      <div className={`bubble ${message.fromMe ? 'me' : 'other'}`}>{message.text}</div>
+                      <div className="bubble-meta">{message.at}</div>
+                    </div>
+                  ))
+                )}
               </div>
             </>
           )}

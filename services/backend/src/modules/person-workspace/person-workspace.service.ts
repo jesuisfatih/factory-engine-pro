@@ -1478,19 +1478,18 @@ export class PersonWorkspaceService {
   }
 
   async training() {
-    const [stats, rawSegments, requests] = await Promise.all([
-      this.prisma.db.serviceRequest.groupBy({ by: ['priority'], _count: { _all: true } }),
+    const [rawSegments, rawRequests] = await Promise.all([
       this.prisma.db.segment.findMany({ where: { isActive: true }, orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }], take: 30 }),
       this.prisma.db.serviceRequest.findMany({
-        where: { priority: { in: ['critical', 'urgent', 'high'] } },
+        where: { priority: { in: ['critical', 'urgent', 'high'] }, status: { notIn: Array.from(CLOSED) } },
         orderBy: [{ updatedAt: 'desc' }],
-        take: 8,
+        take: 30,
       }),
     ]);
-    const highCount = stats.filter((row) => ['critical', 'urgent', 'high'].includes(row.priority)).reduce((sum, row) => sum + row._count._all, 0);
     const segments = rawSegments.filter(isShopifyNativeSegment).slice(0, 8);
+    const requests = rawRequests.filter((request) => this.isOperationalTrainingRequest(request)).slice(0, 8);
     return {
-      highPriorityCount: highCount,
+      highPriorityCount: requests.length,
       cards: [
         ...segments.map((segment) => ({
           id: `segment-${segment.id}`,
@@ -2074,6 +2073,28 @@ export class PersonWorkspaceService {
     if (this.isSupportWorkflowCase(row, metadata)) return false;
     const kind = metadata.personWorkspaceKind;
     return typeof kind !== 'string' || !INTERNAL_WORKSPACE_KINDS.has(kind);
+  }
+
+  private isOperationalTrainingRequest(row: { status: string; priority: string; source: string; surface: string; title: string; metadata: Prisma.JsonValue }) {
+    if (CLOSED.has(row.status) || !['critical', 'urgent', 'high'].includes(row.priority)) return false;
+    const metadata = this.record(row.metadata);
+    const kind = metadata.personWorkspaceKind;
+    if (typeof kind === 'string' && INTERNAL_WORKSPACE_KINDS.has(kind)) return false;
+    return !this.isSyntheticOperationalRecord(row, metadata);
+  }
+
+  private isSyntheticOperationalRecord(
+    row: { source: string; surface: string; title: string },
+    metadata: Record<string, unknown>,
+  ) {
+    if (has(metadata, 'createdForRoadmapItem') || metadata.seed === true || metadata.mock === true || metadata.demo === true) return true;
+    const metadataSource = normalizeText(metadata.source);
+    const workflow = this.record(metadata.workflow);
+    const workflowSource = normalizeText(workflow.source);
+    const source = normalizeText(row.source);
+    const surface = normalizeText(row.surface);
+    const syntheticMarkers = ['seed', 'mock', 'demo', 'fixture', 'prodtest', 'roadmap', 'proof', 'live_flow', 'person_item'];
+    return [metadataSource, workflowSource, source, surface].some((value) => syntheticMarkers.some((marker) => value.includes(marker)));
   }
 
   private isSupportWorkflowCase(

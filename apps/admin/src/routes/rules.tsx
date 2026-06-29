@@ -52,6 +52,7 @@ import {
   fireWorkflowTrigger,
   fetchWorkflowCatalog,
   fetchWorkflowRuleBackfills,
+  fetchWorkflowRuleActiveStats,
   fetchWorkflowRuleExecutions,
   fetchWorkflowRuleVersions,
   fetchWorkflowRules,
@@ -72,6 +73,7 @@ import {
 
 const CATALOG_QK = ['rules', 'catalog'] as const;
 const RULES_QK = ['rules', 'saved'] as const;
+const RULE_STATS_QK = ['rules', 'active-stats', 30] as const;
 const versionsQk = (ruleId: string | null) => ['rules', 'versions', ruleId ?? 'none'] as const;
 const backfillsQk = (ruleId: string | null) => ['rules', 'backfills', ruleId ?? 'none'] as const;
 const executionsQk = (ruleId: string | null) => ['rules', 'executions', ruleId ?? 'none'] as const;
@@ -441,6 +443,7 @@ function RulesView() {
   const queryClient = useQueryClient();
   const catalogQuery = useQuery({ queryKey: CATALOG_QK, queryFn: fetchWorkflowCatalog });
   const rulesQuery = useQuery({ queryKey: RULES_QK, queryFn: fetchWorkflowRules });
+  const ruleStatsQuery = useQuery({ queryKey: RULE_STATS_QK, queryFn: () => fetchWorkflowRuleActiveStats(30) });
   const verify = useMutation({ mutationFn: verifyWorkflowEnumChain });
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
@@ -466,19 +469,19 @@ function RulesView() {
     if (catalogQuery.data && !draft) setDraft(makeRuleDraft(catalogQuery.data));
   }, [catalogQuery.data, draft]);
 
-  useEffect(() => {
-    if (!catalogQuery.data || didHydratePersistedRule || !rulesQuery.isSuccess) return;
-    const queryRuleId = new URLSearchParams(window.location.search).get('ruleId');
-    const selectedRule = rulesQuery.data?.rules.find((rule) => rule.id === queryRuleId) ?? rulesQuery.data?.rules[0];
-    if (selectedRule) {
-      setSelectedRuleId(selectedRule.id);
-      setDraft(draftFromWorkflowRule(selectedRule));
-    }
-    setDidHydratePersistedRule(true);
-  }, [catalogQuery.data, didHydratePersistedRule, rulesQuery.data?.rules, rulesQuery.isSuccess]);
-
   const catalog = catalogQuery.data;
   const rules = rulesQuery.data?.rules ?? [];
+  const ruleStatsById = useMemo(() => new Map((ruleStatsQuery.data?.rows ?? []).map((row) => [row.ruleId, row])), [ruleStatsQuery.data?.rows]);
+  const sortedRules = useMemo(() => [...rules].sort((left, right) => {
+    const leftStats = ruleStatsById.get(left.id);
+    const rightStats = ruleStatsById.get(right.id);
+    const leftLast = leftStats?.lastFiredAt ? Date.parse(leftStats.lastFiredAt) : 0;
+    const rightLast = rightStats?.lastFiredAt ? Date.parse(rightStats.lastFiredAt) : 0;
+    return rightLast - leftLast
+      || (rightStats?.taskCreatedCount ?? 0) - (leftStats?.taskCreatedCount ?? 0)
+      || right.priority - left.priority
+      || left.name.localeCompare(right.name);
+  }), [rules, ruleStatsById]);
   const catalogEmpty = catalog && (
     catalog.triggers.length === 0
     || catalog.conditions.length === 0
@@ -488,6 +491,21 @@ function RulesView() {
     setSelectedRuleId(rule.id);
     setDraft(draftFromWorkflowRule(rule));
   };
+
+  useEffect(() => {
+    const statsReady = ruleStatsQuery.isSuccess || ruleStatsQuery.isError;
+    if (!catalogQuery.data || didHydratePersistedRule || !rulesQuery.isSuccess || !statsReady) return;
+    const queryRuleId = new URLSearchParams(window.location.search).get('ruleId');
+    const selectedRule = rules.find((rule) => rule.id === queryRuleId)
+      ?? sortedRules.find((rule) => ruleStatsById.get(rule.id)?.lastFiredAt)
+      ?? sortedRules[0];
+    if (selectedRule) {
+      setSelectedRuleId(selectedRule.id);
+      setDraft(draftFromWorkflowRule(selectedRule));
+    }
+    setDidHydratePersistedRule(true);
+  }, [catalogQuery.data, didHydratePersistedRule, ruleStatsById, ruleStatsQuery.isError, ruleStatsQuery.isSuccess, rules, rulesQuery.isSuccess, sortedRules]);
+
   const newRule = () => {
     if (!catalog) return;
     setSelectedRuleId(null);
@@ -538,6 +556,7 @@ function RulesView() {
     },
     onSuccess: async (result) => {
       if (selectedRuleId) await queryClient.invalidateQueries({ queryKey: executionsQk(selectedRuleId) });
+      await queryClient.invalidateQueries({ queryKey: RULE_STATS_QK });
       toast.success('Event fired', {
         description: `${result.tasksCreated} task(s) created from ${result.matchedRules} active rule(s).`,
       });
@@ -552,6 +571,7 @@ function RulesView() {
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: backfillsQk(result.report.ruleId) });
       await queryClient.invalidateQueries({ queryKey: executionsQk(result.report.ruleId) });
+      await queryClient.invalidateQueries({ queryKey: RULE_STATS_QK });
       toast.success('Shadow backfill completed', {
         description: `${result.report.matchedEvents}/${result.report.evaluatedEvents} event(s), ${result.report.actualTasksCreated} task(s) created.`,
       });
@@ -643,7 +663,9 @@ function RulesView() {
                   </button>
                 </div>
               )}
-              {rules.map((rule) => (
+              {sortedRules.map((rule) => {
+                const stats = ruleStatsById.get(rule.id);
+                return (
                 <button
                   key={rule.id}
                   type="button"
@@ -660,12 +682,15 @@ function RulesView() {
                   </div>
                   <div className="rule-card-meta">
                     <span>{conditionCount(rule.definition)} conditions</span>
+                    {stats && <span>{stats.fireCount} fires</span>}
+                    {stats && <span>{stats.taskCreatedCount} tasks</span>}
                     {whenGroupCount(rule.definition) > 1 && <span>{whenGroupCount(rule.definition)} WHEN groups</span>}
                     <span>{rule.composable ? 'composable' : 'single fire'}</span>
                     <span>{cooldownLabel(rule.definition.cooldown)}</span>
                   </div>
                 </button>
-              ))}
+                );
+              })}
 
               <div className="rules-section-head">
                 <span><History size={12} /> Rule audit</span>
