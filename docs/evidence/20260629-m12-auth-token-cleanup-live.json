@@ -1,0 +1,28 @@
+﻿{
+    "generatedAt":  "2026-06-29T05:30:59.1274968Z",
+    "leakedBomTokens":  {
+                            "revoked":  2,
+                            "authMeStatusCodes":  [
+                                                      401,
+                                                      401
+                                                  ],
+                            "tokenValuesStored":  false
+                        },
+    "uiProofTokens":  {
+                          "revoked":  2,
+                          "authMeStatusCodes":  [
+                                                    401,
+                                                    401
+                                                ],
+                          "tokenValuesStored":  false,
+                          "tempSessionFileRemoved":  true
+                      },
+    "rulesScreenshotToken":  {
+                                 "revoked":  1,
+                                 "authMeStatusCodes":  [
+                                                           401
+                                                       ],
+                                 "tokenValuesStored":  false,
+                                 "tempSessionFileRemoved":  true
+                             }
+}

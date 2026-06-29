@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-06-29T05:28:38.740Z",
+  "visits": [
+    {
+      "name": "training",
+      "url": "https://app.dtfbank.com/staff/training",
+      "screenshot": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-training-live.png",
+      "title": "Factory Engine Pro Staff",
+      "bodyChecks": [
+        "Training",
+        "Shopify segment query"
+      ]
+    },
+    {
+      "name": "announcements",
+      "url": "https://app.dtfbank.com/staff/announcements",
+      "screenshot": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-announcements-live.png",
+      "title": "Factory Engine Pro Staff",
+      "bodyChecks": [
+        "Announcements",
+        "Shopify sync"
+      ]
+    },
+    {
+      "name": "messages",
+      "url": "https://app.dtfbank.com/staff/messaging",
+      "screenshot": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-messages-live.png",
+      "title": "Factory Engine Pro Staff",
+      "bodyChecks": [
+        "Messages",
+        "Directory"
+      ]
+    },
+    {
+      "name": "rules",
+      "url": "https://app.dtfbank.com/rules",
+      "screenshot": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-admin-rules-history-live.png",
+      "title": "Workspace Admin",
+      "bodyChecks": [
+        "Live task history",
+        "task"
+      ]
+    }
+  ],
+  "screenshots": {
+    "training": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-training-live.png",
+    "announcements": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-announcements-live.png",
+    "messages": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-staff-messages-live.png",
+    "rules": "C:/Users/mhmmd/Desktop/factory-engine-pro/docs/evidence/20260629-m12-admin-rules-history-live.png"
+  },
+  "consoleErrors": [],
+  "failedResponses": [],
+  "assertions": {
+    "noConsoleErrors": true,
+    "noFailedResponses": true,
+    "noLocalhostUrls": true
+  }
+}

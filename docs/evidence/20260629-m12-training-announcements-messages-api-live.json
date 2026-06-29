@@ -1,0 +1,202 @@
+﻿{
+    "generatedAt":  "2026-06-29T05:24:41.4765788Z",
+    "baseUrls":  {
+                     "admin":  "https://app.dtfbank.com/rules",
+                     "person":  "https://app.dtfbank.com/staff",
+                     "api":  "https://api.dtfbank.com/api/v1"
+                 },
+    "buildSha":  "a0893ee6decb5ae01f1e81a40f495969d3b494e1",
+    "training":  {
+                     "highPriorityCount":  8,
+                     "cardCount":  12,
+                     "sources":  [
+                                     "shopify_segment",
+                                     "support"
+                                 ],
+                     "hasSeedOrMockCard":  false,
+                     "shopifySegmentCards":  [
+                                                 {
+                                                     "id":  "segment-seg_i2igf1ynhxp1umg8relmg5aa",
+                                                     "title":  "Customers over 20 orders segment context",
+                                                     "description":  "Shopify segment query: number_of_orders \u003e 20",
+                                                     "updatedAt":  "3h"
+                                                 },
+                                                 {
+                                                     "id":  "segment-seg_ui2gyn7udvfekebsyyuyn0mo",
+                                                     "title":  "Wholesale Customers segment context",
+                                                     "description":  "Shopify segment query: customer_tags CONTAINS \u0027wholesale30\u0027",
+                                                     "updatedAt":  "3h"
+                                                 },
+                                                 {
+                                                     "id":  "segment-seg_rz3xkyzxykilcj4pswvdixtd",
+                                                     "title":  "Customers who have purchased DTF or UV DTF Printer segment context",
+                                                     "description":  "Shopify segment query: number_of_orders \u003e= 1\nAND products_purchased MATCHES (\n  id IN ( 9616199614740, 9570503786772, 9570505687316, 9570509848852 )\n)",
+                                                     "updatedAt":  "3h"
+                                                 },
+                                                 {
+                                                     "id":  "segment-seg_eftzjgf9bcyvnjz09d66b6h6",
+                                                     "title":  "Customers who have purchased DTF inks, DTF films, or DTF powders segment context",
+                                                     "description":  "Shopify segment query: number_of_orders \u003e= 1\nAND products_purchased MATCHES (\n  id IN ( 9570521973012, 9570523283732, 9570524791060, 9570525610260, 9570526626068, 9679549432084, 9838284636436, 9838318387476, 9838317273364, 9840919347476, 9800007385364, 9686896050452, 9659226423572, 9838320025876, 9838321074452, 9736372945172, 9736374550804, 9736377041172, 9736369275156, 9570516500756, 9838319632660, 9838319010068, 9616207184148, 9839332000020, 9659244249364 )\n)",
+                                                     "updatedAt":  "3h"
+                                                 },
+                                                 {
+                                                     "id":  "segment-seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+                                                     "title":  "Min 2 max 5 purchase segment context",
+                                                     "description":  "Shopify segment query: number_of_orders BETWEEN 2 AND 5",
+                                                     "updatedAt":  "3h"
+                                                 },
+                                                 {
+                                                     "id":  "segment-seg_lsnbcihpgtkw1j7ffwjaolbg",
+                                                     "title":  "Promo-eligible customers who haven\u0027t purchased yet segment context",
+                                                     "description":  "Shopify segment query: customer_tags NOT CONTAINS \u0027wholesale30\u0027 AND number_of_orders \u003c= 0",
+                                                     "updatedAt":  "3h"
+                                                 }
+                                             ],
+                     "supportCards":  [
+                                          {
+                                              "id":  "request-sr_irctsy8eswd9dggjlfxj7lcq",
+                                              "title":  "CRITICAL case review",
+                                              "description":  "support: Shipping issue follow-up",
+                                              "updatedAt":  "8h"
+                                          },
+                                          {
+                                              "id":  "request-sr_q4u8c97mr5ufn0pjstb2w1ck",
+                                              "title":  "HIGH case review",
+                                              "description":  "support: Refund intent follow-up",
+                                              "updatedAt":  "8h"
+                                          },
+                                          {
+                                              "id":  "request-sr_hb10at9vm5wz5n3q4kcldm9c",
+                                              "title":  "HIGH case review",
+                                              "description":  "support: Refund intent follow-up",
+                                              "updatedAt":  "8h"
+                                          },
+                                          {
+                                              "id":  "request-sr_s89e3806x011p6nh3juxwhxa",
+                                              "title":  "HIGH case review",
+                                              "description":  "support: Refund intent follow-up",
+                                              "updatedAt":  "8h"
+                                          }
+                                      ]
+                 },
+    "announcements":  {
+                          "count":  10,
+                          "unread":  0,
+                          "sources":  [
+                                          "Aircall integration",
+                                          "Shopify sync",
+                                          "System sync"
+                                      ],
+                          "hasSeedOrMockRow":  false,
+                          "sample":  [
+                                         {
+                                             "id":  "aircall-webhook-awcfg_ccf37367-a5d9-46a3-8473-0304fbdd405d",
+                                             "title":  "Aircall webhook active",
+                                             "from":  "Aircall integration",
+                                             "severity":  "success",
+                                             "read":  true,
+                                             "at":  "6h"
+                                         },
+                                         {
+                                             "id":  "shopify-ssync_cgrovrwgsavdubcpc0amwl05",
+                                             "title":  "Shopify products sync completed",
+                                             "from":  "Shopify sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "6h"
+                                         },
+                                         {
+                                             "id":  "shopify-ssync_jkind4fixgudnldblmi950fq",
+                                             "title":  "Shopify customers sync completed",
+                                             "from":  "Shopify sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "6h"
+                                         },
+                                         {
+                                             "id":  "shopify-ssync_o06towdcxj3xr49v6tsow3l3",
+                                             "title":  "Shopify orders sync completed",
+                                             "from":  "Shopify sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "6h"
+                                         },
+                                         {
+                                             "id":  "sync-slog_cs2y09ssflrawdmku461gjcd",
+                                             "title":  "aircall calls.resolver_reprocess success",
+                                             "from":  "System sync",
+                                             "severity":  "success",
+                                             "read":  true,
+                                             "at":  "8h"
+                                         },
+                                         {
+                                             "id":  "sync-slog_mt5f10rwnx3f4fddna9jkevv",
+                                             "title":  "shopify initial.products completed",
+                                             "from":  "System sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "8h"
+                                         },
+                                         {
+                                             "id":  "sync-slog_d9z0ltftcg70p7vnmj7nrduq",
+                                             "title":  "shopify initial.customers completed",
+                                             "from":  "System sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "8h"
+                                         },
+                                         {
+                                             "id":  "sync-slog_qcrgtxy6nuzqhogue8j3fm85",
+                                             "title":  "shopify initial.orders completed",
+                                             "from":  "System sync",
+                                             "severity":  "info",
+                                             "read":  true,
+                                             "at":  "8h"
+                                         }
+                                     ]
+                      },
+    "messages":  {
+                     "teammateCount":  3,
+                     "activeSeedTeammates":  0,
+                     "selectedTeammate":  {
+                                              "email":  "charlette@dtfbank.com",
+                                              "status":  "online",
+                                              "preview":  "No internal messages yet.",
+                                              "name":  "Charlette Boatman",
+                                              "id":  "tmbr_ten_dtfbank_charlette_boatman"
+                                          },
+                     "selectedThreadMessageCount":  0
+                 },
+    "rules":  {
+                  "ruleCount":  10,
+                  "statsRows":  10,
+                  "topExecutionRule":  {
+                                           "ruleId":  "wrule_cmx85amzl2vxoxiuqf7zq439",
+                                           "ruleName":  "Default: Shipping issue escalation",
+                                           "trigger":  "psych.tag.detected",
+                                           "priority":  70,
+                                           "fireCount":  2,
+                                           "matchCount":  2,
+                                           "matchRate":  100,
+                                           "taskCreatedCount":  2,
+                                           "avgLatencyMs":  70,
+                                           "lastFiredAt":  "2026-06-28T21:38:20.058Z",
+                                           "health":  "healthy"
+                                       },
+                  "topExecutionCount":  2,
+                  "topTaskCount":  2,
+                  "transcriptExecutions":  2,
+                  "sampleExecution":  {
+                                          "id":  "wrex_g2cs61ci95vyyiu1v11bmyhu",
+                                          "ruleId":  "wrule_cmx85amzl2vxoxiuqf7zq439",
+                                          "eventId":  "acev_dltdv904c9v7afn9p8yl9ov5:psych_tag:shipping_issue",
+                                          "trigger":  "psych.tag.detected",
+                                          "status":  "task_created",
+                                          "source":  "ai_transcript",
+                                          "taskIds":  [
+                                                          "sr_irctsy8eswd9dggjlfxj7lcq"
+                                                      ],
+                                          "firstSeenAt":  "2026-06-28T21:38:20.058Z"
+                                      }
+              }
+}

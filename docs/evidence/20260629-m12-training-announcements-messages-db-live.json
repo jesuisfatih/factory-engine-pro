@@ -1,0 +1,213 @@
+﻿{
+  "generatedAt": "2026-06-29T05:25:10.286Z",
+  "tenant": {
+    "id": "ten_dtfbank",
+    "slug": "dtfbank",
+    "name": "DTF Bank"
+  },
+  "segmentIntegrity": {
+    "activeSegments": 28,
+    "nativeShopifyBackedSegments": 28,
+    "shopifyCustomerSegments": 28,
+    "membershipSourceCount": 26,
+    "nonShopifyMembershipSources": [],
+    "sampleNativeSegments": [
+      {
+        "id": "seg_i2igf1ynhxp1umg8relmg5aa",
+        "name": "Customers over 20 orders",
+        "customerCount": 17
+      },
+      {
+        "id": "seg_ui2gyn7udvfekebsyyuyn0mo",
+        "name": "Wholesale Customers",
+        "customerCount": 30
+      },
+      {
+        "id": "seg_rz3xkyzxykilcj4pswvdixtd",
+        "name": "Customers who have purchased DTF or UV DTF Printer",
+        "customerCount": 12
+      },
+      {
+        "id": "seg_eftzjgf9bcyvnjz09d66b6h6",
+        "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+        "customerCount": 563
+      },
+      {
+        "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+        "name": "Min 2 max 5 purchase",
+        "customerCount": 355
+      },
+      {
+        "id": "seg_lsnbcihpgtkw1j7ffwjaolbg",
+        "name": "Promo-eligible customers who haven't purchased yet",
+        "customerCount": 4106
+      },
+      {
+        "id": "seg_mekkf42ophx9pzfhpkzmpqox",
+        "name": "Email subscribers",
+        "customerCount": 4323
+      },
+      {
+        "id": "seg_xoeuylceqvrpgwr0rxzfzksu",
+        "name": "Customers who haven't purchased",
+        "customerCount": 4107
+      }
+    ],
+    "sampleShopifySegments": [
+      {
+        "shopifySegmentId": "gid://shopify/Segment/656206889236",
+        "name": "Customers over 20 orders",
+        "customerCount": 17,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:16:15.255Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/596688371988",
+        "name": "Email subscribers",
+        "customerCount": 4323,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:12:14.946Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/596688273684",
+        "name": "Customers who haven't purchased",
+        "customerCount": 4107,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:08:57.518Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/606944559380",
+        "name": "Promo-eligible customers (Discount Audience)",
+        "customerCount": 5928,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:08:57.511Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/606950162708",
+        "name": "Promo-eligible customers who haven't purchased yet",
+        "customerCount": 4106,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:08:57.504Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/648705343764",
+        "name": "Customers not added to companies",
+        "customerCount": 5958,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T02:08:57.497Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/596688306452",
+        "name": "Customers who have purchased more than once",
+        "customerCount": 445,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T01:54:48.182Z"
+      },
+      {
+        "shopifySegmentId": "gid://shopify/Segment/596688339220",
+        "name": "Abandoned checkouts in the last 30 days",
+        "customerCount": 109,
+        "syncStatus": "ready",
+        "lastSyncedAt": "2026-06-29T01:54:38.423Z"
+      }
+    ]
+  },
+  "seedCleanup": {
+    "activeSuspiciousRequestCount": 0,
+    "activeSuspiciousRequests": [],
+    "item11ProofRemnants": [],
+    "membersMatchingSeedPattern": []
+  },
+  "liveWorkspace": {
+    "activeHighPriorityOperationalRequests": 11,
+    "messageThreadCount": 0,
+    "messageThreads": []
+  },
+  "ruleHistory": {
+    "executionRows": 25,
+    "transcriptExecutions": 25,
+    "executionsWithTasks": 23,
+    "sample": [
+      {
+        "id": "wrex_g2cs61ci95vyyiu1v11bmyhu",
+        "ruleId": "wrule_cmx85amzl2vxoxiuqf7zq439",
+        "eventId": "acev_dltdv904c9v7afn9p8yl9ov5:psych_tag:shipping_issue",
+        "status": "task_created",
+        "taskIds": [
+          "sr_irctsy8eswd9dggjlfxj7lcq"
+        ],
+        "firstSeenAt": "2026-06-28T21:38:20.058Z"
+      },
+      {
+        "id": "wrex_bqz6uyuvh4w049t3fhky9viz",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_legacy_371ca3bf-7bcc-48cc-a5b9-3f036bc0c176:psych_tag:refund_intent",
+        "status": "task_created",
+        "taskIds": [
+          "sr_q4u8c97mr5ufn0pjstb2w1ck"
+        ],
+        "firstSeenAt": "2026-06-28T20:38:07.511Z"
+      },
+      {
+        "id": "wrex_c1f7c4wfd1adcgjdv63vmaeu",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_legacy_69a64371-ee45-42bf-93e1-5b747a316438:psych_tag:refund_intent",
+        "status": "task_created",
+        "taskIds": [
+          "sr_hn7oidh00z2f1tnpk9unr79y"
+        ],
+        "firstSeenAt": "2026-06-28T20:38:07.382Z"
+      },
+      {
+        "id": "wrex_zlogi6j6rt8waa993yr2dees",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_legacy_821ba698-1a92-4b15-a2ec-66b73a603c0a:psych_tag:refund_intent",
+        "status": "task_created",
+        "taskIds": [
+          "sr_s89e3806x011p6nh3juxwhxa"
+        ],
+        "firstSeenAt": "2026-06-28T20:37:37.116Z"
+      },
+      {
+        "id": "wrex_hqc9etvezw66z400awfmsrpi",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_legacy_99c2cba5-d681-41a6-bb83-3ef378c08968:psych_tag:refund_intent",
+        "status": "task_created",
+        "taskIds": [
+          "sr_lena8yf9ssgvutd9fy06r2kh"
+        ],
+        "firstSeenAt": "2026-06-28T20:37:36.897Z"
+      },
+      {
+        "id": "wrex_szgc8hsjq4odudso43wko7kv",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_dni3u52ai8wzhc4sdks24pfu:psych_tag:complaint",
+        "status": "task_created",
+        "taskIds": [
+          "sr_wqjzahkdpj7gembxq3zyyzjf"
+        ],
+        "firstSeenAt": "2026-06-28T20:35:33.261Z"
+      },
+      {
+        "id": "wrex_v76pkl9jjp2fyc80y5b4p6b4",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_dni3u52ai8wzhc4sdks24pfu:psych_tag:refund_intent",
+        "status": "task_created",
+        "taskIds": [
+          "sr_hb10at9vm5wz5n3q4kcldm9c"
+        ],
+        "firstSeenAt": "2026-06-28T20:35:33.159Z"
+      },
+      {
+        "id": "wrex_ruja9aktwvxt9rjt02gqhcxa",
+        "ruleId": "wrule_k5pk06wyebtratqu3kbmz101",
+        "eventId": "acev_legacy_ea9cd140-8f81-4f04-a91c-ec23ee8abfa2:psych_tag:complaint",
+        "status": "task_created",
+        "taskIds": [
+          "sr_r253k9stpdqyiqjx6vv4ezfw"
+        ],
+        "firstSeenAt": "2026-06-28T20:35:32.022Z"
+      }
+    ]
+  }
+}
