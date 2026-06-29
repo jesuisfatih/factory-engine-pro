@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTaskAxisSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
+import { createTaskAxisSchema, operationalIntentSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
 
 export const workflowRuleStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
 export type WorkflowRuleStatus = z.infer<typeof workflowRuleStatusSchema>;
@@ -95,6 +95,40 @@ export const activeWorkflowRuleStatsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(30).default(7),
 });
 export type ActiveWorkflowRuleStatsQuery = z.infer<typeof activeWorkflowRuleStatsQuerySchema>;
+
+export const workflowMcpDraftRuleSchema = z.object({
+  naturalLanguageGoal: z.string().trim().min(8).max(1200),
+  preferredStatus: workflowRuleStatusSchema.default('draft'),
+});
+export type WorkflowMcpDraftRuleInput = z.infer<typeof workflowMcpDraftRuleSchema>;
+
+export const workflowMcpValidateRuleSchema = z.object({
+  rule: saveWorkflowRuleSchema,
+});
+export type WorkflowMcpValidateRuleInput = z.infer<typeof workflowMcpValidateRuleSchema>;
+
+export const workflowMcpSimulateRuleSchema = z.object({
+  ruleId: z.string().trim().min(1).optional(),
+  rule: saveWorkflowRuleSchema.optional(),
+  recentDays: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+}).refine((value) => Boolean(value.ruleId) !== Boolean(value.rule), {
+  message: 'Provide exactly one of ruleId or rule.',
+});
+export type WorkflowMcpSimulateRuleInput = z.infer<typeof workflowMcpSimulateRuleSchema>;
+
+export const workflowMcpCreateDraftRuleSchema = z.object({
+  rule: saveWorkflowRuleSchema,
+  sourceGoal: z.string().trim().max(1200).optional(),
+});
+export type WorkflowMcpCreateDraftRuleInput = z.infer<typeof workflowMcpCreateDraftRuleSchema>;
+
+export const workflowMcpPublishRuleSchema = z.object({
+  ruleId: z.string().trim().min(1),
+  backfillReportId: z.string().trim().min(1),
+  comment: z.string().trim().max(500).optional(),
+});
+export type WorkflowMcpPublishRuleInput = z.infer<typeof workflowMcpPublishRuleSchema>;
 
 export interface WorkflowRuleDto {
   id: string;
@@ -251,6 +285,65 @@ export interface ActiveWorkflowRuleStatsResponse {
     avgLatencyMs: number | null;
   };
   rows: ActiveWorkflowRuleStatsRow[];
+}
+
+export interface WorkflowMcpCapabilityTool {
+  name: 'list_workflow_capabilities' | 'draft_workflow_rule' | 'validate_workflow_rule' | 'simulate_workflow_rule' | 'create_workflow_rule_draft' | 'publish_workflow_rule';
+  description: string;
+  mutates: boolean;
+  requiresPermission: string;
+}
+
+export interface WorkflowMcpCapabilitiesResponse {
+  catalogVersion: string;
+  tools: WorkflowMcpCapabilityTool[];
+  safeguards: string[];
+  allowed: {
+    triggers: string[];
+    conditions: string[];
+    actions: string[];
+    createTaskAxes: string[];
+    operationalIntents: string[];
+  };
+  examples: string[];
+}
+
+export interface WorkflowMcpDraftRuleResponse {
+  rule: SaveWorkflowRuleInput;
+  confidence: number;
+  detectedIntent: z.infer<typeof operationalIntentSchema>;
+  assumptions: string[];
+  warnings: string[];
+  unsupported: string[];
+}
+
+export interface WorkflowMcpValidateRuleResponse {
+  ok: boolean;
+  issues: string[];
+  normalizedRule: SaveWorkflowRuleInput | null;
+}
+
+export interface WorkflowMcpSimulateRuleResponse {
+  mode: 'stored_rule' | 'draft_rule';
+  ruleId: string | null;
+  reportId: string | null;
+  recentDays: number;
+  evaluatedEvents: number;
+  matchedEvents: number;
+  wouldCreateTasks: number;
+  samples: WorkflowRuleBackfillSample[];
+  warnings: string[];
+}
+
+export interface WorkflowMcpCreateDraftRuleResponse {
+  rule: WorkflowRuleDto;
+  warnings: string[];
+}
+
+export interface WorkflowMcpPublishRuleResponse {
+  rule: WorkflowRuleDto;
+  reportId: string;
+  publishedAt: string;
 }
 
 export const fireWorkflowTriggerSchema = z.object({

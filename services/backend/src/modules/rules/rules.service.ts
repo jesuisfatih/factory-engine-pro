@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import {
@@ -7,6 +7,11 @@ import {
   fireWorkflowTriggerSchema,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
+  workflowMcpCreateDraftRuleSchema,
+  workflowMcpDraftRuleSchema,
+  workflowMcpPublishRuleSchema,
+  workflowMcpSimulateRuleSchema,
+  workflowMcpValidateRuleSchema,
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
@@ -32,6 +37,17 @@ import {
   type WorkflowWhenGroupTrace,
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
+  type WorkflowMcpCapabilitiesResponse,
+  type WorkflowMcpCreateDraftRuleInput,
+  type WorkflowMcpCreateDraftRuleResponse,
+  type WorkflowMcpDraftRuleInput,
+  type WorkflowMcpDraftRuleResponse,
+  type WorkflowMcpPublishRuleInput,
+  type WorkflowMcpPublishRuleResponse,
+  type WorkflowMcpSimulateRuleInput,
+  type WorkflowMcpSimulateRuleResponse,
+  type WorkflowMcpValidateRuleInput,
+  type WorkflowMcpValidateRuleResponse,
   type WorkflowRuleDto,
   type WorkflowRuleBackfillReportDto,
   type WorkflowRuleBackfillReportsResponse,
@@ -1324,6 +1340,8 @@ export class RulesService {
       result = await this.removeCustomerFromSegment(action, context);
     } else if (action.action === 'route_member') {
       result = await this.routeTaskToMember(action, context);
+    } else if (action.action === 'route_segment_owner') {
+      result = await this.routeTaskToSegmentOwner(action, context);
     } else if (action.action === 'add_watcher') {
       result = await this.addTaskWatcher(action, context);
     } else if (action.action === 'escalate') {
@@ -1669,6 +1687,77 @@ export class RulesService {
     };
   }
 
+  private async routeTaskToSegmentOwner(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const taskId = this.targetTaskId(context);
+    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_segment_owner.');
+    const customerId = context.state.customer?.id ?? null;
+    if (!customerId) return skippedTrace(action, 'customer', 'Customer target was not resolved for segment owner routing.');
+    const segmentNameOrId = action.value.trim();
+    const membership = await this.prisma.db.segmentCustomerMembership.findFirst({
+      where: {
+        customerId,
+        ...(segmentNameOrId
+          ? {
+              segment: {
+                OR: [
+                  { id: segmentNameOrId },
+                  { name: { equals: segmentNameOrId, mode: 'insensitive' } },
+                ],
+              },
+            }
+          : {}),
+      },
+      include: {
+        segment: {
+          include: {
+            ownerships: {
+              include: { member: true },
+              orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+            },
+          },
+        },
+      },
+      orderBy: [{ score: 'desc' }, { matchedAt: 'desc' }],
+    });
+    const owner = membership?.segment.ownerships.find((row) => row.member.status === 'active') ?? null;
+    if (!membership || !owner) return skippedTrace(action, 'member', 'No active segment owner was found for this customer.');
+    const updated = await this.prisma.db.serviceRequest.updateMany({
+      where: { id: taskId },
+      data: { assignedMemberId: owner.memberId },
+    });
+    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_segment_owner.');
+    await this.updateTaskWorkflow(taskId, (workflow) => ({
+      ...workflow,
+      assigneeResolution: {
+        ...asRecord(workflow.assigneeResolution),
+        source: 'segment_owner',
+        segmentId: membership.segmentId,
+        segmentName: membership.segment.name,
+        assigneeMemberId: owner.memberId,
+      },
+      routeEvents: [
+        ...recordArray(workflow.routeEvents),
+        { memberId: owner.memberId, segmentId: membership.segmentId, eventId: context.eventId, at: new Date().toISOString(), source: 'segment_owner' },
+      ],
+    }));
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'service_request' as const,
+        targetId: taskId,
+        message: 'Routed service request to segment owner.',
+        metadata: {
+          memberId: owner.memberId,
+          email: owner.member.email,
+          segmentId: membership.segmentId,
+          segmentName: membership.segment.name,
+        },
+      },
+    };
+  }
+
   private async addTaskWatcher(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
     if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for add_watcher.');
@@ -1976,6 +2065,249 @@ export class RulesService {
     };
   }
 
+  mcpCapabilities(): WorkflowMcpCapabilitiesResponse {
+    return {
+      catalogVersion: WORKFLOW_ENUM_CATALOG.version,
+      tools: [
+        { name: 'list_workflow_capabilities', description: 'List allowed triggers, conditions, actions, axes, and operational intents.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'draft_workflow_rule', description: 'Compile a natural-language sales/personnel goal into a draft workflow rule.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'validate_workflow_rule', description: 'Validate a workflow rule against the safe deterministic DSL.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'simulate_workflow_rule', description: 'Dry-run a stored or draft workflow rule against recent operational signals.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'create_workflow_rule_draft', description: 'Persist a validated rule as draft only.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'publish_workflow_rule', description: 'Publish a stored rule only after an attached successful simulation report.', mutates: true, requiresPermission: 'settings.write' },
+      ],
+      safeguards: [
+        'Claude never executes workflow actions directly; it only drafts the deterministic workflow DSL.',
+        'Rule-created tasks can target only sales or account axes.',
+        'Automatic customer request/support case creation is not a supported action.',
+        'Publish requires a stored rule and a recent simulation/backfill report for that rule.',
+        'Unsupported actions such as send_mail or segment removal are rejected for MCP-authored rules.',
+      ],
+      allowed: {
+        triggers: WORKFLOW_ENUM_CATALOG.triggers.map((entry) => entry.value),
+        conditions: WORKFLOW_ENUM_CATALOG.conditions.map((entry) => entry.value),
+        actions: MCP_ALLOWED_ACTIONS,
+        createTaskAxes: WORKFLOW_ENUM_CATALOG.createTaskAxes.map((entry) => entry.value),
+        operationalIntents: WORKFLOW_ENUM_CATALOG.operationalIntents.map((entry) => entry.value),
+      },
+      examples: [
+        'Heat press fiyatı soranları Linda’ya high priority callback task yap.',
+        'DTF supply tekrar sipariş sinyali olan müşterileri segment owner’a sales task olarak ata.',
+        'Financing soran müşteriler için account follow-up task oluştur.',
+      ],
+    };
+  }
+
+  async draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput): Promise<WorkflowMcpDraftRuleResponse> {
+    const parsed = workflowMcpDraftRuleSchema.parse(input);
+    return this.compileNaturalLanguageRule(parsed.naturalLanguageGoal, parsed.preferredStatus);
+  }
+
+  validateWorkflowRuleFromMcp(input: WorkflowMcpValidateRuleInput): WorkflowMcpValidateRuleResponse {
+    const parsed = workflowMcpValidateRuleSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, issues: parsed.error.issues.map((issue) => issue.message), normalizedRule: null };
+    }
+    const issues = this.mcpRuleIssues(parsed.data.rule);
+    return { ok: issues.length === 0, issues, normalizedRule: issues.length === 0 ? parsed.data.rule : null };
+  }
+
+  async simulateWorkflowRuleFromMcp(input: WorkflowMcpSimulateRuleInput): Promise<WorkflowMcpSimulateRuleResponse> {
+    const parsed = workflowMcpSimulateRuleSchema.parse(input);
+    if (parsed.ruleId) {
+      const report = await this.runBackfill(parsed.ruleId, { recentDays: parsed.recentDays, limit: parsed.limit });
+      return {
+        mode: 'stored_rule',
+        ruleId: parsed.ruleId,
+        reportId: report.report.id,
+        recentDays: parsed.recentDays,
+        evaluatedEvents: report.report.evaluatedEvents,
+        matchedEvents: report.report.matchedEvents,
+        wouldCreateTasks: report.report.wouldCreateTasks,
+        samples: report.report.result.samples,
+        warnings: report.report.actualTasksCreated > 0 ? ['Backfill attempted mutation; report is not publish-safe.'] : [],
+      };
+    }
+    const rule = saveWorkflowRuleSchema.parse(parsed.rule);
+    const issues = this.mcpRuleIssues(rule);
+    if (issues.length > 0) throw new BadRequestException(`MCP rule is not valid: ${issues.join('; ')}`);
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - parsed.recentDays * 24 * 60 * 60 * 1000);
+    const dto = transientRuleDto(rule);
+    const candidates = await this.backfillCandidates(dto.definition.trigger, windowStart, now, parsed.limit);
+    const samples = await Promise.all(candidates.map((candidate) => this.evaluateBackfillCandidate(dto, candidate)));
+    return {
+      mode: 'draft_rule',
+      ruleId: null,
+      reportId: null,
+      recentDays: parsed.recentDays,
+      evaluatedEvents: samples.length,
+      matchedEvents: samples.filter((sample) => sample.matched).length,
+      wouldCreateTasks: samples.reduce((sum, sample) => sum + sample.wouldCreateTaskCount, 0),
+      samples,
+      warnings: ['Draft simulation is not publish proof. Persist the draft, then simulate the stored rule before publishing.'],
+    };
+  }
+
+  async createWorkflowRuleDraftFromMcp(input: WorkflowMcpCreateDraftRuleInput): Promise<WorkflowMcpCreateDraftRuleResponse> {
+    const parsed = workflowMcpCreateDraftRuleSchema.parse(input);
+    const ruleInput: SaveWorkflowRuleInput = {
+      ...parsed.rule,
+      definition: {
+        ...parsed.rule.definition,
+        status: 'draft',
+        metadata: {
+          ...(parsed.rule.definition.metadata ?? {}),
+          authoringSurface: 'mcp',
+          ...(parsed.sourceGoal ? { sourceGoal: parsed.sourceGoal } : {}),
+        },
+      },
+      comment: parsed.rule.comment ?? 'Created as MCP workflow draft',
+    };
+    const issues = this.mcpRuleIssues(ruleInput);
+    if (issues.length > 0) throw new BadRequestException(`MCP rule is not valid: ${issues.join('; ')}`);
+    const created = await this.repository.create(ruleInput, this.editedByMemberId());
+    return { rule: toDto(created), warnings: ['Rule is stored as draft. Run simulate_workflow_rule before publishing.'] };
+  }
+
+  async publishWorkflowRuleFromMcp(input: WorkflowMcpPublishRuleInput): Promise<WorkflowMcpPublishRuleResponse> {
+    const parsed = workflowMcpPublishRuleSchema.parse(input);
+    const rule = await this.repository.findById(parsed.ruleId);
+    if (!rule) throw new NotFoundException('Workflow rule was not found.');
+    const dto = toDto(rule);
+    const issues = this.mcpRuleIssues({ name: dto.name, definition: dto.definition });
+    if (issues.length > 0) throw new BadRequestException(`MCP rule cannot be published: ${issues.join('; ')}`);
+    const report = await this.prisma.db.workflowRuleBackfillReport.findFirst({
+      where: { id: parsed.backfillReportId, ruleId: parsed.ruleId, status: 'completed' },
+    });
+    if (!report) throw new BadRequestException('A completed simulation/backfill report is required before publishing.');
+    const maxAgeMs = 24 * 60 * 60 * 1000;
+    if (Date.now() - report.createdAt.getTime() > maxAgeMs) throw new BadRequestException('Simulation report is stale; run simulate_workflow_rule again.');
+    if (report.actualTasksCreated !== 0) throw new BadRequestException('Simulation report is not publish-safe because it mutated live tasks.');
+    const updated = await this.repository.update(parsed.ruleId, {
+      name: dto.name,
+      definition: {
+        ...dto.definition,
+        status: 'active',
+        metadata: {
+          ...(dto.definition.metadata ?? {}),
+          authoringSurface: 'mcp',
+          publishedFromReportId: report.id,
+        },
+      },
+      comment: parsed.comment ?? `Published from MCP after simulation ${report.id}`,
+    }, this.editedByMemberId());
+    if (!updated) throw new NotFoundException('Workflow rule was not found.');
+    return { rule: toDto(updated), reportId: report.id, publishedAt: new Date().toISOString() };
+  }
+
+  private async compileNaturalLanguageRule(
+    naturalLanguageGoal: string,
+    preferredStatus: WorkflowRuleDefinition['status'],
+  ): Promise<WorkflowMcpDraftRuleResponse> {
+    const text = normalizeHumanText(naturalLanguageGoal);
+    const detectedIntent = detectOperationalIntent(text);
+    const unsupported = unsupportedMcpRequests(text);
+    const warnings: string[] = [];
+    const assumptions: string[] = [];
+    const requestedActive = preferredStatus === 'active';
+    const status = requestedActive ? 'draft' : preferredStatus;
+    if (requestedActive) warnings.push('Rules drafted through MCP are stored as draft first; publish requires simulation.');
+    const axis = axisForOperationalIntent(detectedIntent);
+    const priority = priorityFromGoal(text);
+    const actions: WorkflowRuleAction[] = detectedIntent === 'no_action'
+      ? [mcpAction('audit_no_action', 'no-op', 'No actionable sales or personnel follow-up.')]
+      : [mcpAction('create_task', 'create_task', taskTitleForOperationalIntent(detectedIntent, text), axis)];
+
+    const member = await this.resolveMentionedMember(naturalLanguageGoal);
+    if (member) {
+      actions.push(mcpAction('route_named_member', 'route_member', member.email));
+      assumptions.push(`Named assignee resolved to ${member.email}.`);
+    } else if (mentionsSegmentOwner(text)) {
+      actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
+      assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
+    } else {
+      assumptions.push('Assignee will default to call owner, customer axis primary, or axis primary role at runtime.');
+    }
+
+    if (mentionsNote(text)) actions.push(mcpAction('add_customer_note', 'add_note', noteValueForGoal(naturalLanguageGoal)));
+    if (mentionsPin(text)) actions.push(mcpAction('pin_customer', 'pin_customer', `Pinned by rule: ${labelFromIntent(detectedIntent)}`));
+
+    const rule: SaveWorkflowRuleInput = {
+      name: ruleNameFromGoal(detectedIntent, naturalLanguageGoal),
+      definition: {
+        status,
+        priority,
+        composable: false,
+        trigger: 'call.operational_signal.detected',
+        cooldown: { hours: 24, limit: 1 },
+        metadata: {
+          authoringSurface: 'mcp',
+          sourceGoal: naturalLanguageGoal,
+          detectedIntent,
+        },
+        when: [
+          {
+            id: `intent_${detectedIntent}`,
+            condition: 'operational_intent',
+            operator: '=',
+            value: detectedIntent,
+          },
+        ],
+        actions,
+      },
+      comment: 'Drafted from MCP natural-language goal',
+    };
+    const issues = this.mcpRuleIssues(rule);
+    return {
+      rule,
+      confidence: confidenceForDraft(detectedIntent, unsupported, issues),
+      detectedIntent,
+      assumptions,
+      warnings: [...warnings, ...issues],
+      unsupported,
+    };
+  }
+
+  private mcpRuleIssues(rule: SaveWorkflowRuleInput) {
+    const parsed = saveWorkflowRuleSchema.safeParse(rule);
+    if (!parsed.success) return parsed.error.issues.map((issue) => issue.message);
+    const issues: string[] = [];
+    try {
+      this.validateCreateTaskAxes(parsed.data.definition);
+    } catch (error) {
+      issues.push(error instanceof Error ? error.message : String(error));
+    }
+    for (const action of parsed.data.definition.actions) {
+      if (!MCP_ALLOWED_ACTIONS.includes(action.action)) {
+        issues.push(`Action ${action.action} is not allowed for MCP-authored rules.`);
+      }
+      const actionText = normalizeHumanText(`${action.action} ${action.value}`);
+      if (actionText.includes('support case') || actionText.includes('customer request') || actionText.includes('ticket')) {
+        issues.push('MCP-authored rules cannot automate support cases, customer requests, or tickets.');
+      }
+    }
+    return issues;
+  }
+
+  private async resolveMentionedMember(goal: string) {
+    const text = normalizeHumanText(goal);
+    const members = await this.prisma.db.member.findMany({
+      where: { status: 'active' },
+      orderBy: [{ createdAt: 'asc' }],
+      take: 100,
+    });
+    return members.find((member) => {
+      const candidates = [
+        member.email,
+        member.firstName,
+        member.lastName,
+        `${member.firstName ?? ''} ${member.lastName ?? ''}`,
+      ].map(normalizeHumanText).filter(Boolean);
+      return candidates.some((candidate) => candidate.length >= 3 && text.includes(candidate));
+    }) ?? null;
+  }
+
   private validateCreateTaskAxes(definition: WorkflowRuleDefinition) {
     for (const action of definition.actions) {
       if (action.action !== 'create_task') continue;
@@ -2096,6 +2428,163 @@ function conditionGroups(definition: WorkflowRuleDefinition): WorkflowRuleWhenGr
   if (definition.whenGroups?.length) return definition.whenGroups;
   if (definition.when.length > 0) return [{ id: 'default', conditions: definition.when }];
   return [];
+}
+
+const MCP_ALLOWED_ACTIONS: WorkflowRuleAction['action'][] = [
+  'create_task',
+  'route_member',
+  'route_segment_owner',
+  'add_note',
+  'pin_customer',
+  'add_watcher',
+  'escalate',
+  'no-op',
+];
+
+function detectOperationalIntent(text: string): WorkflowMcpDraftRuleResponse['detectedIntent'] {
+  return workflowEnumOperationalIntent(text);
+}
+
+function workflowEnumOperationalIntent(text: string) {
+  const candidates: Array<[WorkflowMcpDraftRuleResponse['detectedIntent'], string[]]> = [
+    ['dtf_supply_reorder_signal', ['dtf supply', 'supplies', 'ink', 'powder', 'film', 'transfer', 'gang sheet', 'consumable', 'reorder', 'again']],
+    ['quote_request', ['quote', 'estimate', 'proposal', 'invoice', 'pricing send']],
+    ['callback_requested', ['call back', 'callback', 'call me', 'reach out', 'follow up', 'tekrar ara']],
+    ['refund_requested', ['refund', 'return', 'chargeback', 'cancel order', 'iade']],
+    ['shipping_status_question', ['shipping', 'delivery', 'tracking', 'freight', 'liftgate', 'address', 'kargo']],
+    ['financing_question', ['financing', 'finance', 'lease', 'timepayment', 'monthly payment', 'payment plan', 'finans']],
+    ['price_objection', ['price', 'discount', 'expensive', 'too much', 'cheaper', 'fiyat', 'indirim']],
+    ['product_fit_question', ['which machine', 'right machine', 'what size', 'compare', 'recommend', 'fit my', 'uygun']],
+    ['sample_request', ['sample', 'samples', 'test print', 'demo print', 'numune']],
+    ['machine_upgrade_interest', ['upgrade', 'bigger machine', 'larger machine', 'second machine', 'another machine']],
+    ['training_installation_need', ['training', 'installation', 'install', 'setup', 'assembly', 'how to use', 'kurulum', 'egitim']],
+    ['existing_customer_expansion_signal', ['existing customer', 'buy more', 'add another', 'new product', 'upsell']],
+    ['heat_press_purchase_intent', ['heat press', 'hydro', 'hydraulic press', 'press machine', 'machine purchase']],
+  ];
+  const matched = candidates.find(([, keywords]) => keywords.some((keyword) => text.includes(keyword)));
+  return matched?.[0] ?? 'no_action';
+}
+
+function axisForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent']): CreateTaskAxis {
+  switch (intent) {
+    case 'refund_requested':
+    case 'shipping_status_question':
+    case 'financing_question':
+    case 'training_installation_need':
+      return 'account';
+    case 'heat_press_purchase_intent':
+    case 'dtf_supply_reorder_signal':
+    case 'quote_request':
+    case 'callback_requested':
+    case 'price_objection':
+    case 'product_fit_question':
+    case 'sample_request':
+    case 'machine_upgrade_interest':
+    case 'existing_customer_expansion_signal':
+    case 'no_action':
+      return 'sales';
+    default:
+      return exhaustiveIntent(intent);
+  }
+}
+
+function priorityFromGoal(text: string) {
+  if (text.includes('critical') || text.includes('urgent') || text.includes('acil')) return 90;
+  if (text.includes('high') || text.includes('important') || text.includes('yüksek') || text.includes('yuksek')) return 80;
+  if (text.includes('low') || text.includes('dusuk') || text.includes('düşük')) return 30;
+  return 60;
+}
+
+function taskTitleForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent'], text: string) {
+  if (text.includes('callback') || text.includes('call back') || text.includes('tekrar ara')) return `${labelFromIntent(intent)} callback`;
+  return `${labelFromIntent(intent)} follow-up`;
+}
+
+function labelFromIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent']) {
+  return intent.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function ruleNameFromGoal(intent: WorkflowMcpDraftRuleResponse['detectedIntent'], goal: string) {
+  const compact = goal.trim().replace(/\s+/g, ' ').slice(0, 64);
+  return compact.length >= 12 ? compact : `${labelFromIntent(intent)} rule`;
+}
+
+function mcpAction(
+  id: string,
+  action: WorkflowRuleAction['action'],
+  value: string,
+  axis?: WorkflowRuleAction['axis'],
+): WorkflowRuleAction {
+  return axis ? { id, action, value, axis } : { id, action, value };
+}
+
+function mentionsSegmentOwner(text: string) {
+  return text.includes('segment owner') || text.includes('segment sahibi') || text.includes('segment sorumlusu');
+}
+
+function mentionsNote(text: string) {
+  return text.includes('note') || text.includes('not ekle') || text.includes('customer note');
+}
+
+function mentionsPin(text: string) {
+  return text.includes('pin') || text.includes('sabitle') || text.includes('vip');
+}
+
+function noteValueForGoal(goal: string) {
+  return `Workflow note: ${goal.trim().replace(/\s+/g, ' ').slice(0, 220)}`;
+}
+
+function unsupportedMcpRequests(text: string) {
+  const unsupported: string[] = [];
+  if (text.includes('support case') || text.includes('ticket') || text.includes('customer request')) {
+    unsupported.push('Automatic support case/ticket/customer request creation is not supported.');
+  }
+  if (text.includes('send email') || text.includes('mail gönder') || text.includes('email gönder')) {
+    unsupported.push('Sending mail directly from MCP-authored rules is not enabled in this MVP.');
+  }
+  if (text.includes('delete') || text.includes('remove segment') || text.includes('sil')) {
+    unsupported.push('Destructive actions are not supported for MCP-authored rules.');
+  }
+  return unsupported;
+}
+
+function confidenceForDraft(
+  intent: WorkflowMcpDraftRuleResponse['detectedIntent'],
+  unsupported: string[],
+  issues: string[],
+) {
+  if (unsupported.length > 0 || issues.length > 0) return 0.35;
+  if (intent === 'no_action') return 0.45;
+  return 0.78;
+}
+
+function transientRuleDto(input: SaveWorkflowRuleInput): WorkflowRuleDto {
+  const now = new Date().toISOString();
+  return {
+    id: `draft_${randomUUID()}`,
+    name: input.name,
+    status: input.definition.status,
+    priority: input.definition.priority,
+    composable: input.definition.composable,
+    trigger: input.definition.trigger,
+    definition: input.definition,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function normalizeHumanText(value: unknown) {
+  return String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function exhaustiveIntent(value: never): never {
+  throw new Error(`Unhandled operational intent: ${String(value)}`);
 }
 
 function normalizeCooldown(definition: WorkflowRuleDefinition): RuleCooldownConfig {

@@ -123,6 +123,7 @@ export class WorkflowExecutorService {
       case 'segment_add':
       case 'segment_remove':
       case 'route_member':
+      case 'route_segment_owner':
       case 'add_watcher':
       case 'escalate':
       case 'send_mail':

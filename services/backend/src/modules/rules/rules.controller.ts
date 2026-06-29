@@ -7,12 +7,22 @@ import {
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
+  workflowMcpCreateDraftRuleSchema,
+  workflowMcpDraftRuleSchema,
+  workflowMcpPublishRuleSchema,
+  workflowMcpSimulateRuleSchema,
+  workflowMcpValidateRuleSchema,
   type ActiveWorkflowRuleStatsQuery,
   type BackfillWorkflowRuleInput,
   type BootstrapWorkflowDefaultsInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
+  type WorkflowMcpCreateDraftRuleInput,
+  type WorkflowMcpDraftRuleInput,
+  type WorkflowMcpPublishRuleInput,
+  type WorkflowMcpSimulateRuleInput,
+  type WorkflowMcpValidateRuleInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -56,6 +66,42 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   enumChainProbe() {
     return this.rules.enumChainProbe();
+  }
+
+  @Get('mcp/capabilities')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpCapabilities() {
+    return this.rules.mcpCapabilities();
+  }
+
+  @Post('mcp/draft')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpDraft(@Body(new ZodValidationPipe(workflowMcpDraftRuleSchema)) body: WorkflowMcpDraftRuleInput) {
+    return this.rules.draftWorkflowRuleFromMcp(body);
+  }
+
+  @Post('mcp/validate')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpValidate(@Body(new ZodValidationPipe(workflowMcpValidateRuleSchema)) body: WorkflowMcpValidateRuleInput) {
+    return this.rules.validateWorkflowRuleFromMcp(body);
+  }
+
+  @Post('mcp/simulate')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpSimulate(@Body(new ZodValidationPipe(workflowMcpSimulateRuleSchema)) body: WorkflowMcpSimulateRuleInput) {
+    return this.rules.simulateWorkflowRuleFromMcp(body);
+  }
+
+  @Post('mcp/drafts')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpCreateDraft(@Body(new ZodValidationPipe(workflowMcpCreateDraftRuleSchema)) body: WorkflowMcpCreateDraftRuleInput) {
+    return this.rules.createWorkflowRuleDraftFromMcp(body);
+  }
+
+  @Post('mcp/publish')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpPublish(@Body(new ZodValidationPipe(workflowMcpPublishRuleSchema)) body: WorkflowMcpPublishRuleInput) {
+    return this.rules.publishWorkflowRuleFromMcp(body);
   }
 
   @Get('stats/active')

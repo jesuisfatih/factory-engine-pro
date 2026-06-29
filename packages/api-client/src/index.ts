@@ -73,6 +73,17 @@ import type {
   UpsertSegmentOwnershipInput,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
+  WorkflowMcpCapabilitiesResponse,
+  WorkflowMcpCreateDraftRuleInput,
+  WorkflowMcpCreateDraftRuleResponse,
+  WorkflowMcpDraftRuleInput,
+  WorkflowMcpDraftRuleResponse,
+  WorkflowMcpPublishRuleInput,
+  WorkflowMcpPublishRuleResponse,
+  WorkflowMcpSimulateRuleInput,
+  WorkflowMcpSimulateRuleResponse,
+  WorkflowMcpValidateRuleInput,
+  WorkflowMcpValidateRuleResponse,
   WorkflowTriggerFireInput,
   WorkflowTriggerFireResponse,
   WorkflowRuleDto,
@@ -1023,6 +1034,30 @@ export class ApiClient {
 
   workflowRuleActiveStats(query = '?days=7') {
     return this.get<ActiveWorkflowRuleStatsResponse>(`/rules/stats/active${query}`);
+  }
+
+  workflowMcpCapabilities() {
+    return this.get<WorkflowMcpCapabilitiesResponse>('/rules/mcp/capabilities');
+  }
+
+  draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput) {
+    return this.post<WorkflowMcpDraftRuleResponse>('/rules/mcp/draft', input);
+  }
+
+  validateWorkflowRuleFromMcp(input: WorkflowMcpValidateRuleInput) {
+    return this.post<WorkflowMcpValidateRuleResponse>('/rules/mcp/validate', input);
+  }
+
+  simulateWorkflowRuleFromMcp(input: WorkflowMcpSimulateRuleInput) {
+    return this.post<WorkflowMcpSimulateRuleResponse>('/rules/mcp/simulate', input);
+  }
+
+  createWorkflowRuleDraftFromMcp(input: WorkflowMcpCreateDraftRuleInput) {
+    return this.post<WorkflowMcpCreateDraftRuleResponse>('/rules/mcp/drafts', input);
+  }
+
+  publishWorkflowRuleFromMcp(input: WorkflowMcpPublishRuleInput) {
+    return this.post<WorkflowMcpPublishRuleResponse>('/rules/mcp/publish', input);
   }
 
   fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
