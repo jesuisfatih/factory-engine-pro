@@ -27,6 +27,15 @@ export const workflowRuleActionSchema = z.object({
   action: workflowActionSchema,
   value: z.string(),
   axis: createTaskAxisSchema.optional(),
+}).superRefine((action, ctx) => {
+  if (action.action !== 'create_task') return;
+  if (/^\s*support\s*:/i.test(action.value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['value'],
+      message: 'Workflow create_task cannot target support. Create Support cases manually.',
+    });
+  }
 });
 export type WorkflowRuleAction = z.infer<typeof workflowRuleActionSchema>;
 

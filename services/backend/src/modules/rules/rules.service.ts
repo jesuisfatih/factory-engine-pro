@@ -1315,8 +1315,10 @@ export class RulesService {
   }
 
   private resolveTaskAxis(context: WorkflowActionContext, action?: WorkflowRuleAction): CreateTaskAxis {
+    const valueAxis = normalizeTaskAxis(action?.value);
+    if (valueAxis === 'support') return this.executor.requireCreateTaskAxis(valueAxis);
     const axis = action?.axis
-      ?? normalizeTaskAxis(action?.value)
+      ?? valueAxis
       ?? normalizeTaskAxis(stringParam(context.params, 'axis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'taskAxis'))
       ?? normalizeTaskAxis(stringParam(context.params, 'intent'))
@@ -1764,7 +1766,9 @@ export class RulesService {
   private validateCreateTaskAxes(definition: WorkflowRuleDefinition) {
     for (const action of definition.actions) {
       if (action.action !== 'create_task') continue;
-      const axis = action.axis ?? normalizeTaskAxis(action.value) ?? 'sales';
+      const valueAxis = normalizeTaskAxis(action.value);
+      if (valueAxis === 'support') this.executor.requireCreateTaskAxis(valueAxis);
+      const axis = action.axis ?? valueAxis ?? 'sales';
       this.executor.requireCreateTaskAxis(axis);
     }
   }
