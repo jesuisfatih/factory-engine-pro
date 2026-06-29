@@ -7,12 +7,15 @@ export const AUTH_EVENTS_QUEUE = Symbol('AUTH_EVENTS_QUEUE');
 export const PRICING_RULE_SYNC_QUEUE = Symbol('PRICING_RULE_SYNC_QUEUE');
 export const MAIL_OUTBOUND_QUEUE = Symbol('MAIL_OUTBOUND_QUEUE');
 export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
+export const AIRCALL_ROLLING_SYNC_QUEUE = Symbol('AIRCALL_ROLLING_SYNC_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE');
 export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
 export const ROLLING_BACKFILL_QUEUE = Symbol('ROLLING_BACKFILL_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
 export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
+export const AIRCALL_ROLLING_SYNC_QUEUE_NAME = 'aircall-rolling-sync';
+export const AIRCALL_ROLLING_SYNC_JOB = 'rolling_sync';
 export const SEGMENT_EVALUATION_QUEUE_NAME = 'segment-evaluation';
 export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
 export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
@@ -63,6 +66,14 @@ export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
       },
     },
     {
+      provide: AIRCALL_ROLLING_SYNC_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(AIRCALL_ROLLING_SYNC_QUEUE_NAME, { connection });
+      },
+    },
+    {
       provide: AI_TRANSCRIPT_RESOLVER_QUEUE,
       inject: [REDIS_CONNECTION],
       useFactory: (connection: ConnectionOptions | null) => {
@@ -101,6 +112,7 @@ export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
     PRICING_RULE_SYNC_QUEUE,
     MAIL_OUTBOUND_QUEUE,
     AIRCALL_INGEST_QUEUE,
+    AIRCALL_ROLLING_SYNC_QUEUE,
     AI_TRANSCRIPT_RESOLVER_QUEUE,
     SHOPIFY_SYNC_QUEUE,
     SEGMENT_EVALUATION_QUEUE,
