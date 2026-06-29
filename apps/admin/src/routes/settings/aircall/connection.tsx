@@ -434,16 +434,45 @@ function ConnectionView() {
               <RuntimeCell label={t('aircall_hub.connection.workflow_target_version')} value={`v${workflowCoverage.data.targetVersion}`} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_transcripts')} value={String(workflowCoverage.data.transcriptEvents)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_evaluated')} value={String(workflowCoverage.data.evaluatedEvents)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_flow_completed')} value={String(workflowCoverage.data.flowCompletedEvents)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_evaluation_rows')} value={String(workflowCoverage.data.evaluationRows)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_actionable')} value={String(workflowCoverage.data.actionableEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_no_action')} value={String(workflowCoverage.data.noActionEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_task_created')} value={String(workflowCoverage.data.taskCreatedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_matched_without_task')} value={String(workflowCoverage.data.matchedWithoutTaskEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_failed')} value={String(workflowCoverage.data.failedEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_unmatched')} value={String(workflowCoverage.data.unmatchedEvaluations)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_missing')} value={String(workflowCoverage.data.missingEvaluations)} />
+              <RuntimeCell label={t('aircall_hub.connection.workflow_missing_flow')} value={String(workflowCoverage.data.missingFlowOutcomeEvents)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_stale')} value={String(workflowCoverage.data.staleResolverVersion)} />
               <RuntimeCell label={t('aircall_hub.connection.workflow_local_fallback')} value={String(workflowCoverage.data.localFallbackResolvedEvents)} />
             </div>
+            {workflowCoverage.data.signalOutcomes.length > 0 && (
+              <table className="data-table" id="aircall-workflow-signal-table" style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th>{t('aircall_hub.connection.col_signal')}</th>
+                    <th>{t('aircall_hub.connection.col_evaluations')}</th>
+                    <th>{t('aircall_hub.connection.col_task_created')}</th>
+                    <th>{t('aircall_hub.connection.col_no_action')}</th>
+                    <th>{t('aircall_hub.connection.col_unmatched')}</th>
+                    <th>{t('aircall_hub.connection.col_axis')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workflowCoverage.data.signalOutcomes.slice(0, 12).map((signal) => (
+                    <tr key={signal.signal}>
+                      <td>{signal.signal}</td>
+                      <td>{signal.evaluations}</td>
+                      <td>{signal.taskCreated}</td>
+                      <td>{signal.noAction}</td>
+                      <td>{signal.noMatchingRule + signal.failed}</td>
+                      <td>{`S:${signal.recommendedAxis.sales} A:${signal.recommendedAxis.account} -:${signal.recommendedAxis.none} ?:${signal.recommendedAxis.other}`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             {workflowCoverage.data.missing.length > 0 && (
               <table className="data-table" id="aircall-workflow-missing-table" style={{ marginTop: 12 }}>
                 <thead>

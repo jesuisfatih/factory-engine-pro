@@ -191,6 +191,7 @@ export interface AircallWorkflowCoverageResponse {
   transcriptEvents: number;
   resolvedEvents: number;
   evaluatedEvents: number;
+  flowCompletedEvents: number;
   workflowInvariantOk: boolean;
   evaluationRows: number;
   actionableEvaluations: number;
@@ -198,11 +199,29 @@ export interface AircallWorkflowCoverageResponse {
   taskCreatedEvaluations: number;
   matchedWithoutTaskEvaluations: number;
   failedEvaluations: number;
+  unmatchedEvaluations: number;
   localFallbackResolvedEvents: number;
   missingEvaluations: number;
+  missingFlowOutcomeEvents: number;
   staleResolverVersion: number;
   resolverQueuedOrProcessing: number;
   resolverFailed: number;
+  signalOutcomes: Array<{
+    signal: string;
+    evaluations: number;
+    actionRequired: number;
+    taskCreated: number;
+    matchedWithoutTask: number;
+    noAction: number;
+    noMatchingRule: number;
+    failed: number;
+    recommendedAxis: {
+      sales: number;
+      account: number;
+      none: number;
+      other: number;
+    };
+  }>;
   missing: Array<{
     id: string;
     externalCallId: string;

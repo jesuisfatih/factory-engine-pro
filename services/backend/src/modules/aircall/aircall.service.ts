@@ -59,6 +59,15 @@ type PresentedAircallUser = AircallUsersResponse['users'][number] & {
   numbers: unknown;
 };
 
+type WorkflowEvaluationCoverageRow = {
+  callEventId: string;
+  signal: string;
+  actionRequired: boolean;
+  recommendedAxis: string | null;
+  status: string;
+  tasksCreated: number;
+};
+
 @Injectable()
 export class AircallService {
   constructor(
@@ -308,17 +317,23 @@ export class AircallService {
           where: { tenantId, callEventId: { in: callEventIds } },
           select: {
             callEventId: true,
+            signal: true,
             actionRequired: true,
+            recommendedAxis: true,
             status: true,
             tasksCreated: true,
           },
         });
     const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
+    const completedEvaluationRows = evaluations.filter((row) => isCompletedWorkflowEvaluationStatus(row.status));
+    const flowCompletedIds = new Set(completedEvaluationRows.map((row) => row.callEventId));
     const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
+    const missingFlowOutcomeRows = transcriptRows.filter((row) => !flowCompletedIds.has(row.id));
     const staleResolverVersion = transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length;
     const resolverQueuedOrProcessing = transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length;
     const resolverFailed = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
     const failedEvaluations = evaluations.filter((row) => row.status === 'failed').length;
+    const unmatchedEvaluations = evaluations.filter((row) => isUnmatchedWorkflowEvaluationStatus(row.status)).length;
 
     return {
       targetVersion,
@@ -328,23 +343,29 @@ export class AircallService {
       transcriptEvents: transcriptRows.length,
       resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
       evaluatedEvents: evaluatedIds.size,
+      flowCompletedEvents: flowCompletedIds.size,
       workflowInvariantOk: transcriptRows.length === evaluatedIds.size
         && missingRows.length === 0
+        && missingFlowOutcomeRows.length === 0
         && staleResolverVersion === 0
         && resolverQueuedOrProcessing === 0
         && resolverFailed === 0
-        && failedEvaluations === 0,
+        && failedEvaluations === 0
+        && unmatchedEvaluations === 0,
       evaluationRows: evaluations.length,
       actionableEvaluations: evaluations.filter((row) => row.actionRequired).length,
       noActionEvaluations: evaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
       taskCreatedEvaluations: evaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
       matchedWithoutTaskEvaluations: evaluations.filter((row) => row.status === 'matched_without_task').length,
       failedEvaluations,
+      unmatchedEvaluations,
       localFallbackResolvedEvents: transcriptRows.filter((row) => row.resolverModel === 'local-rule-fallback').length,
       missingEvaluations: missingRows.length,
+      missingFlowOutcomeEvents: missingFlowOutcomeRows.length,
       staleResolverVersion,
       resolverQueuedOrProcessing,
       resolverFailed,
+      signalOutcomes: signalOutcomeRows(evaluations),
       missing: missingRows.slice(0, 50).map((row) => ({
         id: row.id,
         externalCallId: row.externalCallId,
@@ -1255,6 +1276,53 @@ function workflowActionRepairMode(row: {
   if (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') return 'wait_for_resolver';
   if ((row.resolvedWithVersion ?? 0) >= targetVersion && row.resolverOutput && row.resolvedAt) return 'replay_stored_output';
   return 'rerun_resolver';
+}
+
+function isCompletedWorkflowEvaluationStatus(status: string) {
+  return status === 'task_created'
+    || status === 'matched_without_task'
+    || status === 'no_action';
+}
+
+function isUnmatchedWorkflowEvaluationStatus(status: string) {
+  return status === 'no_matching_rule'
+    || status === 'no_action_unmatched';
+}
+
+function signalOutcomeRows(evaluations: WorkflowEvaluationCoverageRow[]): AircallWorkflowCoverageResponse['signalOutcomes'] {
+  const rows = new Map<string, AircallWorkflowCoverageResponse['signalOutcomes'][number]>();
+  for (const evaluation of evaluations) {
+    const signal = evaluation.signal || 'unknown';
+    const row = rows.get(signal) ?? {
+      signal,
+      evaluations: 0,
+      actionRequired: 0,
+      taskCreated: 0,
+      matchedWithoutTask: 0,
+      noAction: 0,
+      noMatchingRule: 0,
+      failed: 0,
+      recommendedAxis: {
+        sales: 0,
+        account: 0,
+        none: 0,
+        other: 0,
+      },
+    };
+    row.evaluations += 1;
+    if (evaluation.actionRequired) row.actionRequired += 1;
+    if (evaluation.tasksCreated > 0 || evaluation.status === 'task_created') row.taskCreated += 1;
+    if (evaluation.status === 'matched_without_task') row.matchedWithoutTask += 1;
+    if (evaluation.status === 'no_action' || evaluation.status === 'no_action_unmatched') row.noAction += 1;
+    if (isUnmatchedWorkflowEvaluationStatus(evaluation.status)) row.noMatchingRule += 1;
+    if (evaluation.status === 'failed') row.failed += 1;
+    if (evaluation.recommendedAxis === 'sales') row.recommendedAxis.sales += 1;
+    else if (evaluation.recommendedAxis === 'account') row.recommendedAxis.account += 1;
+    else if (!evaluation.recommendedAxis) row.recommendedAxis.none += 1;
+    else row.recommendedAxis.other += 1;
+    rows.set(signal, row);
+  }
+  return Array.from(rows.values()).sort((left, right) => right.evaluations - left.evaluations || left.signal.localeCompare(right.signal));
 }
 
 function messageOf(error: unknown) {
