@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-06-29T07:00:53.929Z",
+  "appUrl": "https://app.dtfbank.com/staff/queue",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "62e1eb7fa9b3b86bb2346d3e79d10815a98d972d",
+  "principal": {
+    "email": "dtfbanktx@gmail.com",
+    "type": "member"
+  },
+  "screenshotPath": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-segment-cards-ui-live.png",
+  "dom": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "priorityCardCount": 91,
+    "textHasNoPriorityEmpty": false,
+    "kpiText": [
+      "DAILY CALLS\n91\nsegment customers",
+      "PRIORITY TASKS\n91\nurgency desc",
+      "PINNED\n0\npersistent board",
+      "U80+\n91\nsame formula",
+      "AXES\n1\nsupport"
+    ],
+    "firstCards": [
+      "#gregsvinyl\nAI - Segment\nU150.7\nMin 2 max 5 purchase segment - U150.7 - support axis\nOwner: Linda Marroquin\nAxis: support\nSegment P95\nNo Shopify order\n0 orders - $0 - 0 tasks\nMin 2 max 5 purchase\nPin",
+      "1st Place Awards & Embroidery\nAI - Segment\nU150.7\nMin 2 max 5 purchase segment - U150.7 - support axis\nOwner: Linda Marroquin\nAxis: support\nSegment P95\nNo Shopify order\n0 orders - $0 - 0 tasks\nMin 2 max 5 purchase\nPin",
+      "4 FORTY SCREENS AND STITCHES\nAI - Segment\nU150.7\nMin 2 max 5 purchase segment - U150.7 - support axis\nOwner: Linda Marroquin\nAxis: support\nSegment P95\nNo Shopify order\n1 orders - $3,519 - 0 tasks\nMin 2 max 5 purchase\nPin",
+      "404 Cafe and Creamery\nAI - Segment\nU150.7\nMin 2 max 5 purchase segment - U150.7 - support axis\nOwner: Linda Marroquin\nAxis: support\nSegment P95\nNo Shopify order\n0 orders - $0 - 0 tasks\nMin 2 max 5 purchase\nPin",
+      "802 Print\nAI - Segment\nU150.7\nMin 2 max 5 purchase segment - U150.7 - support axis\nOwner: Linda Marroquin\nAxis: support\nSegment P95\nNo Shopify order\n0 orders - $0 - 0 tasks\nMin 2 max 5 purchase\nPin"
+    ],
+    "bodyTextSample": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n91\nCustomers\n91\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n0\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nDAILY CALLS\n91\nsegment customers\nPRIORITY TASKS\n91\nurgency desc\nPINNED\n0\npersistent board\nU80+\n91\nsame formula\nAXES\n1\nsupport\nDaily call list\n\nSegment-driven customers, sorted by the urgency formula.\n\n5 groups\nMin 2 max 5 purchase\n25/25\n1st Place Awards & Embroidery\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $3.229\nPin\nOWNER\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $3.920\nPin\n#gregsvinyl\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $300\nPin\n4 FORTY SCREENS AND STITCHES\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $4.593\nPin\n404 Cafe and Creamery\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $400\nPin\n802 Print\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.297\nPin\n904 Vinyls & More\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $2.803\nPin\nA3-USA\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $264\nPin\nAaron Turpin\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.102\nPin\nAbdul Mallah\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $217\nPin\nAbundant Design\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $4.193\nPin\nAkil Kurji\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $411\nPin\nAkin Industries LLC\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $168\nPin\nAlabama Adult and Teen Challenge\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $170\nPin\nalfredos\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $349\nPin\nAlpha Supply Company\nU150.7\nMin 2 max 5 purchase segment - 0 recent requests - support ax"
+  },
+  "pass": true
+}

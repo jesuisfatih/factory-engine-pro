@@ -1,0 +1,134 @@
+{
+  "generatedAt": "2026-06-29T07:00:14.099Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "buildSha": "62e1eb7fa9b3b86bb2346d3e79d10815a98d972d",
+  "principal": {
+    "email": "dtfbanktx@gmail.com",
+    "type": "member",
+    "permissionCount": 10
+  },
+  "summary": {
+    "dailyCount": 91,
+    "priorityCount": 91,
+    "pinnedCount": 0,
+    "highUrgencyCount": 91,
+    "visibleAxes": [
+      "support"
+    ],
+    "segmentGroupCount": 5
+  },
+  "priorityCount": 91,
+  "priorityKindCounts": {
+    "customer": 91
+  },
+  "prioritySourceCounts": {
+    "ai_segment": 91
+  },
+  "supportWorkflowTaskCount": 0,
+  "serviceRequestBackedCount": 0,
+  "segmentCustomerBackedCount": 91,
+  "sample": [
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "#gregsvinyl",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 150.7,
+      "hasAiBrief": true,
+      "hasMiniOrder": false,
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "1st Place Awards & Embroidery",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 150.7,
+      "hasAiBrief": true,
+      "hasMiniOrder": false,
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "4 FORTY SCREENS AND STITCHES",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_fdzuxkydrpvjfr3p46ujbv3r",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 150.7,
+      "hasAiBrief": true,
+      "hasMiniOrder": false,
+      "performance30d": {
+        "orders": 1,
+        "revenue": 3518.99,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vtpg2aijqlqusy3ygdflpljn",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "404 Cafe and Creamery",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_vtpg2aijqlqusy3ygdflpljn",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 150.7,
+      "hasAiBrief": true,
+      "hasMiniOrder": false,
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    },
+    {
+      "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_xamz9bo142cf7xdxhff4hx5l",
+      "kind": "customer",
+      "source": "ai_segment",
+      "title": "802 Print",
+      "axis": "support",
+      "assignedMemberName": "Linda Marroquin",
+      "customerId": "cust_xamz9bo142cf7xdxhff4hx5l",
+      "segmentName": "Min 2 max 5 purchase",
+      "urgencyScore": 150.7,
+      "hasAiBrief": true,
+      "hasMiniOrder": false,
+      "performance30d": {
+        "orders": 0,
+        "revenue": 0,
+        "calls": 0,
+        "callMinutes": 0,
+        "serviceRequests": 0
+      }
+    }
+  ],
+  "pass": true
+}
