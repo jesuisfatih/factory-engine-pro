@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   X, Phone, Mail, ExternalLink, Sparkles, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
-  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle, LifeBuoy,
+  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
-import { createTaskSupportCase, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
 
 interface Props {
@@ -15,9 +15,9 @@ interface Props {
 
 const SOURCE_LABEL: Record<TaskSource, string> = {
   manual: 'Manual',
-  ai_transcript: 'AI - Transcript',
-  ai_segment: 'AI - Segment',
-  ai_stale: 'AI - Stale follow-up',
+  ai_transcript: 'Transcript',
+  ai_segment: 'Segment',
+  ai_stale: 'Stale follow-up',
   admin_transfer: 'Admin transfer',
 };
 
@@ -92,32 +92,24 @@ function initialScheduleValue() {
   return dateTimeLocal(value);
 }
 
-function supportPriority(priority: number) {
-  if (priority >= 9) return 'critical' as const;
-  if (priority >= 7) return 'urgent' as const;
-  if (priority >= 5) return 'high' as const;
-  if (priority >= 3) return 'medium' as const;
-  return 'low' as const;
-}
-
 interface NarrativeFieldProps {
   label: string;
-  aiValue: string;
+  suggestedValue: string;
   value: string;
   onChange: (next: string) => void;
   multiLine?: boolean;
 }
 
-function NarrativeField({ label, aiValue, value, onChange, multiLine }: NarrativeFieldProps) {
+function NarrativeField({ label, suggestedValue, value, onChange, multiLine }: NarrativeFieldProps) {
   const [editing, setEditing] = useState(false);
-  const dirty = value !== aiValue;
+  const dirty = value !== suggestedValue;
   return (
     <div className="brief-block">
       <div className="brief-block-head">
         <span className="lbl">{label}</span>
         <div className="brief-actions">
           {dirty && (
-            <button type="button" className="brief-icon-btn" title="Reset to AI" onClick={() => onChange(aiValue)}>
+            <button type="button" className="brief-icon-btn" title="Reset suggestion" onClick={() => onChange(suggestedValue)}>
               <RotateCcw size={11} />
             </button>
           )}
@@ -224,22 +216,6 @@ export function TaskBriefModal({ card, onClose }: Props) {
     },
   });
 
-  const supportCaseMutation = useMutation({
-    mutationFn: () => createTaskSupportCase(card.id, { priority: supportPriority(liveCard.priority) }),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
-      queryClient.invalidateQueries({ queryKey });
-      window.localStorage.setItem('factory-engine-pro.person.lastSupportCase', JSON.stringify({
-        taskId: result.taskId,
-        supportCaseId: result.supportCaseId,
-        ticketNumber: result.ticketNumber,
-        supportUrl: result.supportUrl,
-        createdAt: new Date().toISOString(),
-      }));
-      onClose();
-    },
-  });
-
   const submitNote = (event: FormEvent) => {
     event.preventDefault();
     if (!note.trim()) return;
@@ -289,7 +265,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <div className="brief-state">
                 <Loader2 size={16} className="spin" />
                 <strong>Loading live task brief</strong>
-                <span>Shopify orders, Aircall resolver output, timeline, and rule trace are being read from the API.</span>
+                <span>Shopify orders, call resolver output, timeline, and rule trace are being read from the API.</span>
               </div>
             )}
 
@@ -313,9 +289,9 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <>
                 {hasBrief ? (
                   <>
-                    <NarrativeField label="Why you're calling" aiValue={initial.why} value={why} onChange={setWhy} multiLine />
-                    <NarrativeField label="What they're upset about" aiValue={initial.upset} value={upset} onChange={setUpset} multiLine />
-                    <NarrativeField label="Your goal" aiValue={initial.goal} value={goal} onChange={setGoal} multiLine />
+                    <NarrativeField label="Why you're calling" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
+                    <NarrativeField label="What they're upset about" suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine />
+                    <NarrativeField label="Your goal" suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine />
 
                     {liveCard.aiBrief?.suggestedActions?.length ? (
                       <div className="brief-block">
@@ -388,7 +364,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
                   <div className="brief-block">
                     <div className="brief-block-head">
-                      <span className="lbl">AI psych analysis</span>
+                      <span className="lbl">Call analysis</span>
                     </div>
                     {detail?.aiPsychAnalysis ? (
                       <div className="brief-psych">
@@ -518,7 +494,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
 
             {hasBrief && liveCard.aiBrief && (
               <div className="brief-card brief-card-meta">
-                <div className="brief-card-head"><Sparkles size={12} /> AI metadata</div>
+                <div className="brief-card-head"><Sparkles size={12} /> Resolver metadata</div>
                 <div className="brief-card-row"><span className="lbl">Prompt</span><span className="val">{liveCard.aiBrief.promptKey} - {liveCard.aiBrief.promptVersion}</span></div>
                 <div className="brief-card-row"><span className="lbl">Model</span><span className="val">{liveCard.aiBrief.modelUsed}</span></div>
                 <div className="brief-card-row"><span className="lbl">Confidence</span><span className="val">{Math.round(liveCard.aiBrief.confidence * 100)}%</span></div>
@@ -535,27 +511,9 @@ export function TaskBriefModal({ card, onClose }: Props) {
           </aside>
         </div>
 
-        {supportCaseMutation.isError ? (
-          <div className="brief-footer-error danger-text">
-            <AlertTriangle size={13} />
-            <span>{friendlyError(supportCaseMutation.error)}</span>
-          </div>
-        ) : null}
-
         <footer className="modal-foot">
           <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-          {isTaskCard ? (
-            <button
-              type="button"
-              className="btn"
-              disabled={!detail || supportCaseMutation.isPending}
-              onClick={() => supportCaseMutation.mutate()}
-              title={detail ? 'Create Support Case' : 'Load the live task brief first'}
-            >
-              {supportCaseMutation.isPending ? <Loader2 size={13} className="spin" /> : <LifeBuoy size={13} />} Create Support Case
-            </button>
-          ) : null}
           <button type="button" className="btn"><Phone size={13} /> Call now</button>
           <button type="button" className="btn primary" onClick={onClose}>
             <CheckCircle2 size={13} /> Done

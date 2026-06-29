@@ -161,9 +161,19 @@ export class CustomersService {
         : Promise.resolve([]),
       this.prisma.db.serviceRequest.findMany({
         where: {
-          AND: [
-            { metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-            { metadata: { path: ['linkedCustomer'], equals: id } },
+          OR: [
+            {
+              AND: [
+                { metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
+                { metadata: { path: ['linkedCustomer'], equals: id } },
+              ],
+            },
+            {
+              AND: [
+                { customerId: id },
+                { metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
+              ],
+            },
           ],
         },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -189,13 +199,24 @@ export class CustomersService {
         })
       : [];
     const rulesById = new Map(rules.map((rule) => [rule.id, rule.name]));
+    const authorIds = uniqueStrings([
+      ...linkedNotes.map((row) => row.createdByActorId),
+      ...serviceRequests.flatMap((row) => row.comments.map((comment) => comment.actorId)),
+    ]);
+    const authorRows = authorIds.length
+      ? await this.prisma.db.member.findMany({
+          where: { id: { in: authorIds } },
+          select: { id: true, email: true, firstName: true, lastName: true },
+        })
+      : [];
+    const authorsById = new Map(authorRows.map((row) => [row.id, row]));
 
     const customerRequests = serviceRequests.filter((row) => !INTERNAL_CUSTOMER_KINDS.has(String(jsonRecord(row.metadata).personWorkspaceKind ?? '')));
     const supportRows = customerRequests.filter((row) => ['support', 'customer', 'customer_portal', 'email', 'call'].includes(row.surface) || ['email', 'call', 'customer_portal'].includes(row.source));
     const support = (supportRows.length ? supportRows : customerRequests).map((row) => this.mapDetailRequest(row));
     const tasks = customerRequests.map((row) => this.mapDetailTask(row, rulesById.get(row.matchedRuleId ?? '') ?? null));
     const noteRows = [
-      ...linkedNotes.map((row) => this.mapLinkedNote(row)),
+      ...linkedNotes.map((row) => this.mapLinkedNote(row, authorsById)),
       ...customerRequests.flatMap((row) => row.comments
         .filter((comment) => comment.internal)
         .map((comment) => ({
@@ -207,6 +228,8 @@ export class CustomersService {
           updatedAt: comment.createdAt.toISOString(),
           linkedQueueId: row.id,
           authorMemberId: comment.actorId,
+          authorMemberName: comment.actorId && authorsById.get(comment.actorId) ? memberName(authorsById.get(comment.actorId)!) : null,
+          authorMemberEmail: comment.actorId && authorsById.get(comment.actorId) ? authorsById.get(comment.actorId)!.email : null,
         }))),
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 50);
     const visibleTabs = this.customerDetailTabs();
@@ -981,8 +1004,14 @@ export class CustomersService {
     };
   }
 
-  private mapLinkedNote(row: { id: string; title: string; description: string | null; createdByActorId: string | null; metadata: Prisma.JsonValue; createdAt: Date; updatedAt: Date }) {
+  private mapLinkedNote(
+    row: { id: string; title: string; description: string | null; createdByActorId: string | null; metadata: Prisma.JsonValue; createdAt: Date; updatedAt: Date },
+    authorsById: Map<string, { firstName: string; lastName: string; email: string }>,
+  ) {
     const metadata = jsonRecord(row.metadata);
+    const author = row.createdByActorId ? authorsById.get(row.createdByActorId) : null;
+    const metadataAuthorName = stringOrNull(metadata.createdByMemberName);
+    const metadataAuthorEmail = stringOrNull(metadata.createdByMemberEmail);
     return {
       id: row.id,
       title: row.title,
@@ -992,6 +1021,8 @@ export class CustomersService {
       updatedAt: row.updatedAt.toISOString(),
       linkedQueueId: stringOrNull(metadata.linkedQueueId),
       authorMemberId: row.createdByActorId,
+      authorMemberName: author ? memberName(author) : metadataAuthorName,
+      authorMemberEmail: author?.email ?? metadataAuthorEmail,
     };
   }
 

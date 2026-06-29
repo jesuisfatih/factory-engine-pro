@@ -296,7 +296,11 @@ function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
           <div className="customer-detail-row">
             <div>
               <strong>{note.title}</strong>
-              <span>{label(note.kind)} {note.linkedQueueId ? `- task ${note.linkedQueueId}` : ''}</span>
+              <span>
+                {label(note.kind)}
+                {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
+                {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
+              </span>
             </div>
             <small>{dateTime(note.updatedAt)}</small>
           </div>

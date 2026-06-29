@@ -84,7 +84,6 @@ import type {
   PatchMailAudienceInput,
   PatchMailFlowInput,
   MovePersonQueueCardInput,
-  CreatePersonTaskSupportCaseInput,
   PersonDailyOperationRange,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -97,6 +96,7 @@ import type {
   SyncShopifySegmentsInput,
   SyncShopifySegmentsResponse,
   SavePersonNoteInput,
+  SavePersonCustomerNoteInput,
   SavePersonTaskNoteInput,
   SaveEmailTemplateInput,
   SaveMailAudienceInput,
@@ -108,7 +108,6 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
-  PersonTaskSupportCaseResult,
   PersonTaskTransferResult,
   PersonTransferTarget,
   TransferPersonTaskInput,
@@ -557,16 +556,16 @@ export class ApiClient {
     return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/calendar`, input);
   }
 
-  createPersonTaskSupportCase(id: string, input: CreatePersonTaskSupportCaseInput = { priority: 'medium' }) {
-    return this.post<PersonTaskSupportCaseResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/support-case`, input);
-  }
-
   personCustomers() {
     return this.get('/person/workspace/customers');
   }
 
   personCustomerDetail(customerId: string) {
     return this.get<CustomerDetailPanelDto>(`/person/workspace/customers/${encodeURIComponent(customerId)}/detail`);
+  }
+
+  savePersonCustomerNote(customerId: string, input: SavePersonCustomerNoteInput) {
+    return this.post<CustomerDetailPanelDto>(`/person/workspace/customers/${encodeURIComponent(customerId)}/notes`, input);
   }
 
   personCalendarEvents() {

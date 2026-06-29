@@ -378,6 +378,8 @@ export const customerDetailPanelSchema = z.object({
       updatedAt: z.string(),
       linkedQueueId: z.string().nullable(),
       authorMemberId: z.string().nullable(),
+      authorMemberName: z.string().nullable().optional(),
+      authorMemberEmail: z.string().nullable().optional(),
     })),
     tasks: z.array(z.object({
       id: z.string(),

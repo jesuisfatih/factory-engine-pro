@@ -49,13 +49,13 @@ export interface Card {
   columnId: ColumnId;
   pinned: boolean;
   pinnedAt: number | null;
-  /** Where the task came from. AI sources get a small badge + open the AI brief modal. */
+  /** Where the task came from. Generated sources get a small badge + open the live brief modal. */
   source: TaskSource;
   /** Created timestamp used for Daily call list date grouping. */
   createdAt?: string;
-  /** AI resolver call intent badge shown on Daily call list cards. */
+  /** Resolver call intent badge shown on Daily call list cards. */
   callIntent?: string | null;
-  /** AI resolver psych tag badges shown on Daily call list cards. */
+  /** Resolver psych tag badges shown on Daily call list cards. */
   psychTags?: string[];
   /** Phone + email surface for the customer card panel. */
   phone?: string;

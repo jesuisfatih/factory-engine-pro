@@ -1,10 +1,11 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, GripVertical } from 'lucide-react';
-import { fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, toggleCustomerPin, togglePin } from '../api/live';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
+import { ChevronDown, GripVertical, Phone, StickyNote, X } from 'lucide-react';
+import { fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
@@ -22,8 +23,16 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [transferCard, setTransferCard] = useState<CardData | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
+  const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
+  const [noteBody, setNoteBody] = useState('');
   const queryKey = [...QK_BASE, range] as const;
   const { data, isLoading, error } = useQuery({ queryKey, queryFn: () => fetchDailyOperations(range) });
+  const customerDetailQuery = useQuery({
+    queryKey: ['person', 'customer-detail', detailCustomerId],
+    queryFn: () => fetchCustomerDetail(detailCustomerId ?? ''),
+    enabled: Boolean(detailCustomerId),
+  });
 
   const daily = data?.dailyCallList ?? [];
   const priority = data?.priorityKanban ?? [];
@@ -60,6 +69,18 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QK_BASE });
+    },
+  });
+
+  const customerNote = useMutation({
+    mutationFn: (input: { customerId: string; body: string }) => saveCustomerNote(input.customerId, { body: input.body }),
+    onSuccess: (detail, input) => {
+      setNoteCustomer(null);
+      setNoteBody('');
+      setDetailCustomerId(input.customerId);
+      qc.setQueryData(['person', 'customer-detail', input.customerId], detail);
+      qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+      qc.invalidateQueries({ queryKey: ['person', 'customers'] });
     },
   });
 
@@ -104,7 +125,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       <div className="kpis">
-        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days' : range === 'today' ? 'today only' : 'last 7 days AI workflow'}</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days' : range === 'today' ? 'today only' : 'last 7 days workflow'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
         {!archive && <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>}
@@ -116,14 +137,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={error ? new Error(friendlyError(error)) : null}
         empty={empty}
         emptyTitle={archive ? 'No archived daily calls' : 'No call work assigned yet'}
-        emptyBody={archive ? 'AI workflow tasks older than 7 days will appear here after they age out of the Daily call list.' : 'Workflow tasks from recent calls and assigned Shopify segment customers will appear here.'}
+        emptyBody={archive ? 'Workflow tasks older than 7 days will appear here after they age out of the Daily call list.' : 'Workflow tasks from recent calls and assigned Shopify segment customers will appear here.'}
       >
         <div className={`ops-grid${archive ? ' archive' : ''}`}>
           <section className="ops-panel">
             <div className="ops-head">
               <div>
                 <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
-                <p>{archive ? 'Workflow tasks older than 7 days from live call analysis.' : 'AI workflow tasks from live call analysis, grouped by day.'}</p>
+                <p>{archive ? 'Workflow tasks older than 7 days from live call analysis.' : 'Workflow tasks from live call analysis, grouped by day.'}</p>
               </div>
               <div className="ops-head-actions">
                 {!archive && (
@@ -166,6 +187,8 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   collapsed={Boolean(collapsedGroups[group.segmentId])}
                   onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
                   onTogglePin={(item) => customerPin.mutate(item.customerId)}
+                  onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
+                  onAddNote={(item) => setNoteCustomer(item)}
                   pinDisabled={customerPin.isPending}
                 />
               ))}
@@ -179,6 +202,31 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} onClose={closeTaskModal} />}
+      <CustomerDetailPanel
+        open={Boolean(detailCustomerId)}
+        detail={customerDetailQuery.data}
+        isLoading={customerDetailQuery.isLoading}
+        error={customerDetailQuery.error ? friendlyError(customerDetailQuery.error) : null}
+        onRetry={() => customerDetailQuery.refetch()}
+        onClose={() => setDetailCustomerId(null)}
+      />
+      {noteCustomer && (
+        <CustomerNoteModal
+          customer={noteCustomer}
+          body={noteBody}
+          isSaving={customerNote.isPending}
+          error={customerNote.error ? friendlyError(customerNote.error) : null}
+          onBodyChange={setNoteBody}
+          onClose={() => {
+            setNoteCustomer(null);
+            setNoteBody('');
+          }}
+          onSubmit={() => {
+            if (!noteCustomer || !noteBody.trim()) return;
+            customerNote.mutate({ customerId: noteCustomer.customerId, body: noteBody });
+          }}
+        />
+      )}
       {transferCard && (
         <TransferTaskModal
           card={transferCard}
@@ -289,9 +337,9 @@ function DailyTaskBadges({ card }: { card: CardData }) {
   const tags = (card.psychTags ?? []).filter(Boolean).slice(0, 3);
   if (!card.callIntent && tags.length === 0) return null;
   return (
-    <div className="daily-task-badges" aria-label="AI call analysis">
-      {card.callIntent ? <span className="ai-badge">intent: {card.callIntent}</span> : null}
-      {tags.map((tag) => <span key={tag} className="ai-badge">tag: {tag}</span>)}
+    <div className="daily-task-badges" aria-label="Call analysis">
+      {card.callIntent ? <span className="insight-badge">intent: {card.callIntent}</span> : null}
+      {tags.map((tag) => <span key={tag} className="insight-badge">tag: {tag}</span>)}
     </div>
   );
 }
@@ -301,12 +349,16 @@ function PrioritySegmentGroup({
   collapsed,
   onToggle,
   onTogglePin,
+  onOpenCustomer,
+  onAddNote,
   pinDisabled,
 }: {
   group: SegmentDailyGroup;
   collapsed: boolean;
   onToggle: () => void;
   onTogglePin: (item: DailyCallItem) => void;
+  onOpenCustomer: (item: DailyCallItem) => void;
+  onAddNote: (item: DailyCallItem) => void;
   pinDisabled: boolean;
 }) {
   const cap = group.dailyCap ?? group.totalCustomers;
@@ -327,6 +379,8 @@ function PrioritySegmentGroup({
               key={item.id}
               item={item}
               onTogglePin={() => onTogglePin(item)}
+              onOpen={() => onOpenCustomer(item)}
+              onAddNote={() => onAddNote(item)}
               disabled={pinDisabled}
             />
           ))}
@@ -339,37 +393,151 @@ function PrioritySegmentGroup({
 function SegmentCustomerCard({
   item,
   onTogglePin,
+  onOpen,
+  onAddNote,
   disabled,
 }: {
   item: DailyCallItem;
   onTogglePin: () => void;
+  onOpen: () => void;
+  onAddNote: () => void;
   disabled: boolean;
 }) {
   const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpen();
+    }
+  };
 
   return (
-    <article className="daily-card" data-priority-customer-id={item.id}>
-      <div className="daily-card-row">
-        <div className="daily-title-wrap">
+    <article
+      className="daily-card segment-customer-card"
+      data-priority-customer-id={item.id}
+      tabIndex={0}
+      role="button"
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="daily-card-row segment-customer-top">
+        <div className="daily-title-wrap segment-customer-title">
           <div className="daily-title">{item.customerName}</div>
+          <div className="segment-customer-contact">{item.phone || item.email || 'No phone on file'}</div>
         </div>
         <span className="priority p7">U{item.urgencyScore}</span>
       </div>
       <div className="daily-meta">{item.reason}</div>
-      <div className="daily-card-row daily-foot">
+      <div className="segment-customer-foot">
         <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
-        <span>{orderSummary}</span>
-        <button
-          type="button"
-          className={`pin-btn${item.pinned ? ' pinned' : ''}`}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={onTogglePin}
-          disabled={disabled}
-        >
-          {item.pinned ? 'Pinned' : 'Pin'}
-        </button>
+        <span className="segment-customer-orders">{orderSummary}</span>
+        <div className="segment-customer-actions">
+          <a
+            className={`quick-action${item.phone ? '' : ' disabled'}`}
+            href={item.phone ? `tel:${item.phone}` : undefined}
+            aria-disabled={!item.phone}
+            title={item.phone ? `Call ${item.phone}` : 'No phone on file'}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              if (!item.phone) event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
+            <Phone size={12} />
+            <span>Call</span>
+          </a>
+          <button
+            type="button"
+            className="quick-action"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddNote();
+            }}
+          >
+            <StickyNote size={12} />
+            <span>Note</span>
+          </button>
+          <button
+            type="button"
+            className={`pin-btn${item.pinned ? ' pinned' : ''}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onTogglePin();
+            }}
+            disabled={disabled}
+          >
+            {item.pinned ? 'Pinned' : 'Pin'}
+          </button>
+        </div>
       </div>
     </article>
+  );
+}
+
+function CustomerNoteModal({
+  customer,
+  body,
+  isSaving,
+  error,
+  onBodyChange,
+  onClose,
+  onSubmit,
+}: {
+  customer: DailyCallItem;
+  body: string;
+  isSaving: boolean;
+  error: string | null;
+  onBodyChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!body.trim() || isSaving) return;
+    onSubmit();
+  };
+  return (
+    <div className="modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-labelledby="customer-note-title">
+      <form className="modal-card customer-note-modal" onSubmit={submit}>
+        <header className="modal-head">
+          <div>
+            <div className="brief-eyebrow">
+              <span className="chip" style={{ background: customer.segment.color }}>{customer.segment.name}</span>
+            </div>
+            <h2 id="customer-note-title">Customer note</h2>
+            <div className="brief-identity">
+              <span>{customer.customerName}</span>
+              {customer.phone ? <span><Phone size={11} /> {customer.phone}</span> : null}
+            </div>
+          </div>
+          <button type="button" className="close" onClick={onClose} aria-label="Close">
+            <X size={16} />
+          </button>
+        </header>
+        <div className="modal-body customer-note-body">
+          <label className="customer-note-field">
+            <span>Note</span>
+            <textarea
+              className="brief-edit"
+              rows={6}
+              value={body}
+              onChange={(event) => onBodyChange(event.target.value)}
+              placeholder="Write the customer-specific note..."
+              autoFocus
+            />
+          </label>
+          {error ? <div className="ops-inline-error">{error}</div> : null}
+        </div>
+        <footer className="modal-foot">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn primary" disabled={!body.trim() || isSaving}>
+            <StickyNote size={13} /> {isSaving ? 'Saving' : 'Save note'}
+          </button>
+        </footer>
+      </form>
+    </div>
   );
 }
 

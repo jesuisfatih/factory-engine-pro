@@ -9,9 +9,9 @@ import { QueryState } from '../components/QueryState';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
   manual: 'Manual',
-  ai_transcript: 'AI - Transcript',
-  ai_segment: 'AI - Segment',
-  ai_stale: 'AI - Stale follow-up',
+  ai_transcript: 'Transcript',
+  ai_segment: 'Segment',
+  ai_stale: 'Stale follow-up',
   admin_transfer: 'Admin transfer',
 };
 
@@ -51,14 +51,14 @@ export function CalendarView() {
     return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)} ${end.getFullYear()}`;
   }, [weekStart]);
 
-  const aiCount = events.filter((event) => event.source !== 'manual').length;
+  const assistedCount = events.filter((event) => event.source !== 'manual').length;
   const selected: CalEvent | null = events.find((event) => event.id === selectedId) ?? null;
 
   return (
     <>
       <div className="page-head">
         <h2>Calendar</h2>
-        <div className="sub">Your week - AI-tasked calls show their brief on click</div>
+        <div className="sub">Your week - workflow calls show their brief on click</div>
       </div>
 
       <div className="cal-shell">
@@ -74,7 +74,7 @@ export function CalendarView() {
           </button>
           <h3>{weekLabel}</h3>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {aiCount} AI-tasked
+            <Sparkles size={12} style={{ color: '#7c3aed' }} /> {assistedCount} workflow
           </span>
         </div>
 
@@ -170,10 +170,10 @@ export function CalendarView() {
               </div>
 
               {selected.aiBrief ? (
-                <div className="ai-brief">
+                <div className="generated-brief">
                   <div className="head">
                     <Sparkles size={14} style={{ color: '#7c3aed' }} />
-                    <h4>AI Task Brief</h4>
+                    <h4>Task Brief</h4>
                     <span className="badge">{selected.aiBrief.modelUsed}</span>
                   </div>
                   <div className="row">
@@ -207,7 +207,7 @@ export function CalendarView() {
               ) : (
                 <section className="event-summary">
                   <h4>Manual event</h4>
-                  <div className="meta">No AI brief for manually-created events. Add notes during the call to feed future intelligence.</div>
+                  <div className="meta">No generated brief for manually-created events. Add notes during the call to feed future context.</div>
                 </section>
               )}
             </div>

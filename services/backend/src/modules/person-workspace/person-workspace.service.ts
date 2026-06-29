@@ -3,14 +3,12 @@ import type { Prisma } from '@prisma/client';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
-  CreatePersonTaskSupportCaseInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
   PersonDailyCallItem,
   PersonDailyOperationRange,
   PersonDailyOperationsQuery,
   PersonTaskTransferResult,
-  PersonTaskSupportCaseResult,
   PersonMiniOrder,
   PersonPerformance30d,
   PersonQueueCardDto,
@@ -23,6 +21,7 @@ import type {
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SavePersonEmailDraftInput,
+  SavePersonCustomerNoteInput,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
   SavePersonNoteInput,
@@ -39,7 +38,6 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomersService } from '../customers/customers.service.js';
-import { SupportService } from '../support/support.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
@@ -157,7 +155,6 @@ export class PersonWorkspaceService {
     private readonly scoring: UrgencyScoringService,
     private readonly customersService: CustomersService,
     private readonly logger: AppLogger,
-    private readonly support: SupportService,
   ) {}
 
   async summary() {
@@ -1136,134 +1133,6 @@ export class PersonWorkspaceService {
     return this.taskBrief(id);
   }
 
-  async createTaskSupportCase(id: string, input: CreatePersonTaskSupportCaseInput): Promise<PersonTaskSupportCaseResult> {
-    const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
-
-    if (!row.customerId && !row.customerUserId) {
-      throw new BadRequestException('Support case requires a matched customer or customer user');
-    }
-
-    const metadata = this.record(row.metadata);
-    const workflow = this.record(metadata.workflow);
-    const header = taskHeader(row, metadata);
-    const matchedRuleId = matchedRuleIdFrom(row);
-    const originalTicketNumber = ticketNumber(row);
-    const title = input.title?.trim()
-      || `Support case: ${header.title}`;
-    const description = input.description?.trim()
-      || [
-        `Created from person task ${originalTicketNumber} (${row.id}).`,
-        `Original task: ${row.title}`,
-        row.description ? `Task details: ${row.description}` : null,
-        matchedRuleId ? `Matched rule: ${matchedRuleId}` : null,
-        header.phone ? `Phone: ${header.phone}` : null,
-        header.email ? `Email: ${header.email}` : null,
-      ].filter(Boolean).join('\n');
-
-    const existingCase = await this.prisma.db.serviceRequest.findFirst({
-      where: {
-        status: { notIn: Array.from(CLOSED) },
-        metadata: { path: ['createdFromTaskId'], equals: row.id },
-      },
-      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-    });
-    if (existingCase) {
-      this.logger.log('person_workspace', 'task.support_case.reused', 'Existing support case returned for person task', {
-        task_id: row.id,
-        support_case_id: existingCase.id,
-        member_id: member.id,
-        customer_id: row.customerId,
-      });
-      return {
-        ok: true,
-        taskId: row.id,
-        supportCaseId: existingCase.id,
-        ticketNumber: ticketNumber(existingCase),
-        customerId: row.customerId,
-        supportUrl: `/support?caseId=${encodeURIComponent(existingCase.id)}`,
-      };
-    }
-
-    const created = await this.support.create({
-      title,
-      description,
-      source: 'manual',
-      surface: 'internal',
-      priority: input.priority,
-      axis: 'support',
-      customerId: row.customerId ?? undefined,
-      customerUserId: row.customerUserId ?? undefined,
-      assignedMemberId: row.assignedMemberId ?? member.id,
-      matchedRuleId: matchedRuleId ?? undefined,
-      conditionTrace: Array.isArray(row.conditionTrace) ? row.conditionTrace : [],
-      sourceCallId: row.sourceCallId ?? undefined,
-      sourceEmailId: row.sourceEmailId ?? undefined,
-      sourceFormId: row.sourceFormId ?? undefined,
-      taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
-      metadata: {
-        category: 'support_case',
-        source: 'person_task_modal',
-        supportCaseOnly: true,
-        personQueueVisible: false,
-        personQueueHiddenReason: 'support_case',
-        createdFromTaskId: row.id,
-        createdFromTaskTicketNumber: originalTicketNumber,
-        createdFromTaskTitle: row.title,
-        createdFromTaskSource: taskSource(row),
-        createdByMemberId: member.id,
-        createdByMemberEmail: member.email,
-        workflow: {
-          ...workflow,
-          origin: 'person_task_modal',
-          originalTaskId: row.id,
-        },
-      },
-    });
-
-    await Promise.all([
-      this.support.addComment(created.id, {
-        body: `Created from person task ${originalTicketNumber} by ${memberDisplayName(member)}.`,
-        internal: true,
-      }),
-      this.prisma.db.serviceRequestComment.create({
-        data: {
-          id: prefixedId('srcm'),
-          tenantId: this.tenantId(),
-          serviceRequestId: row.id,
-          actorId: member.id,
-          actorType: 'member',
-          body: `Support case created: ${created.ticketNumber ?? created.id}`,
-          internal: true,
-          attachmentsJson: [{
-            kind: 'support_case_created',
-            supportCaseId: created.id,
-            ticketNumber: created.ticketNumber ?? null,
-          }] as Prisma.InputJsonValue,
-        },
-      }),
-      this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } }),
-    ]);
-
-    this.logger.log('person_workspace', 'task.support_case', 'Support case created from person task', {
-      task_id: row.id,
-      support_case_id: created.id,
-      ticket_number: created.ticketNumber ?? null,
-      member_id: member.id,
-      customer_id: row.customerId,
-    });
-
-    return {
-      ok: true,
-      taskId: row.id,
-      supportCaseId: created.id,
-      ticketNumber: String(created.ticketNumber ?? created.id),
-      customerId: row.customerId,
-      supportUrl: `/support?caseId=${encodeURIComponent(created.id)}`,
-    };
-  }
-
   async customers() {
     const member = await this.currentMember();
     const assignments = await this.axisAssignments(member.id);
@@ -1317,9 +1186,58 @@ export class PersonWorkspaceService {
 
   async customerDetail(id: string) {
     const member = await this.currentMember();
-    const assignments = await this.axisAssignments(member.id);
-    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your axis scope');
+    await this.assertCustomerInWorkspace(id, member.id);
     return this.customersService.detail(id);
+  }
+
+  async saveCustomerNote(id: string, input: SavePersonCustomerNoteInput) {
+    const member = await this.currentMember();
+    await this.assertCustomerInWorkspace(id, member.id);
+    const title = `Customer note - ${memberDisplayName(member)}`;
+    await this.prisma.db.serviceRequest.create({
+      data: {
+        id: prefixedId('sr'),
+        tenantId: this.tenantId(),
+        customerId: id,
+        source: 'manual',
+        surface: 'internal',
+        title,
+        description: input.body,
+        status: 'closed',
+        priority: 'low',
+        createdByActorId: member.id,
+        metadata: {
+          personWorkspaceKind: 'note',
+          noteKind: 'customer',
+          linkedCustomer: id,
+          category: 'person_customer_note',
+          createdByMemberId: member.id,
+          createdByMemberEmail: member.email,
+          createdByMemberName: memberDisplayName(member),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('person_workspace', 'customer.note.create', 'Customer note saved from priority board', {
+      customer_id: id,
+      member_id: member.id,
+    });
+    return this.customersService.detail(id);
+  }
+
+  private async assertCustomerInWorkspace(customerId: string, memberId: string) {
+    const assignments = await this.axisAssignments(memberId);
+    if (assignments.has(customerId)) return;
+    const ownedSegmentMembership = await this.prisma.db.segmentCustomerMembership.findFirst({
+      where: {
+        customerId,
+        shopifySegmentRef: { not: null },
+        segment: {
+          ownerships: { some: { memberId } },
+        },
+      },
+      select: { id: true },
+    });
+    if (!ownedSegmentMembership) throw new ForbiddenException('Customer is outside your workspace');
   }
 
   async calendar() {
@@ -2803,7 +2721,7 @@ function taskTimeline(
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
-      title: `${source === 'ai_transcript' ? 'AI transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
+      title: `${source === 'ai_transcript' ? 'Transcript task' : request.source === 'workflow' ? 'Workflow task' : 'Task'}: ${request.title}`,
       summary: [
         `${titleize(request.status)} - ${titleize(request.priority)}`,
         ruleName ? `Rule: ${ruleName}` : matchedRuleId ? `Rule: ${matchedRuleId}` : null,

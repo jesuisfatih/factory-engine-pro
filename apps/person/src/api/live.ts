@@ -1,12 +1,11 @@
 import type {
   CreatePersonRequestInput,
-  CreatePersonTaskSupportCaseInput,
   CustomerDetailPanelDto,
   PersonDailyOperationRange,
-  PersonTaskSupportCaseResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   SavePersonEmailDraftInput,
+  SavePersonCustomerNoteInput,
   SavePersonNoteInput,
   SavePersonTaskNoteInput,
   SchedulePersonTaskFollowUpInput,
@@ -147,10 +146,10 @@ export const fetchTaskBrief = (id: string) => personApi.personTaskBrief(id) as P
 export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => personApi.savePersonTaskNote(id, input) as Promise<TaskBriefDetail>;
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
-export const createTaskSupportCase = (id: string, input: CreatePersonTaskSupportCaseInput) =>
-  personApi.createPersonTaskSupportCase(id, input) as Promise<PersonTaskSupportCaseResult>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
 export const fetchCustomerDetail = (customerId: string) => personApi.personCustomerDetail(customerId) as Promise<CustomerDetailPanelDto>;
+export const saveCustomerNote = (customerId: string, input: SavePersonCustomerNoteInput) =>
+  personApi.savePersonCustomerNote(customerId, input) as Promise<CustomerDetailPanelDto>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
 export const fetchTeammates = () => personApi.personTeammates() as Promise<Teammate[]>;
 export const fetchThread = (id: string) => personApi.personThread(id) as Promise<ChatMessage[]>;

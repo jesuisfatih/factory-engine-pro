@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
-  createPersonTaskSupportCaseSchema,
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
   personDailyOperationsQuerySchema,
   reorderPersonDailyCallSchema,
+  savePersonCustomerNoteSchema,
   savePersonEmailDraftSchema,
   savePersonNoteSchema,
   savePersonTaskNoteSchema,
@@ -14,10 +14,10 @@ import {
   togglePersonQueuePinSchema,
   transferPersonTaskSchema,
   type CreatePersonRequestInput,
-  type CreatePersonTaskSupportCaseInput,
   type MovePersonQueueCardInput,
   type PersonDailyOperationsQuery,
   type ReorderPersonDailyCallInput,
+  type SavePersonCustomerNoteInput,
   type SavePersonEmailDraftInput,
   type SavePersonNoteInput,
   type SavePersonTaskNoteInput,
@@ -101,6 +101,15 @@ export class PersonWorkspaceController {
     return this.workspace.customerDetail(id);
   }
 
+  @Post('customers/:id/notes')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  saveCustomerNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(savePersonCustomerNoteSchema)) body: SavePersonCustomerNoteInput,
+  ) {
+    return this.workspace.saveCustomerNote(id, body);
+  }
+
   @Get('tasks/:id/brief')
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   taskBrief(@Param('id') id: string) {
@@ -132,15 +141,6 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(schedulePersonTaskFollowUpSchema)) body: SchedulePersonTaskFollowUpInput,
   ) {
     return this.workspace.scheduleTaskFollowUp(id, body);
-  }
-
-  @Post('tasks/:id/support-case')
-  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
-  createTaskSupportCase(
-    @Param('id') id: string,
-    @Body(new ZodValidationPipe(createPersonTaskSupportCaseSchema)) body: CreatePersonTaskSupportCaseInput,
-  ) {
-    return this.workspace.createTaskSupportCase(id, body);
   }
 
   @Get('customers')
