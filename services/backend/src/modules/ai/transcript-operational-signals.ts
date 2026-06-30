@@ -400,6 +400,9 @@ export function isCarrierVendorOnlyTranscript(value: string, options: { customer
   const hasDtfContext = DTF_PRODUCT_CONTEXT_PHRASES.some((phrase) => keywordMatches(text, phrase));
   const hasShopifyOrderContext = SHOPIFY_ORDER_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
   const hasDirectCustomerRequest = CUSTOMER_DEMAND_PATTERNS.some((pattern) => pattern.test(text));
+  const hasCarrierScheduling = CARRIER_SCHEDULING_PATTERNS.some((pattern) => pattern.test(text));
+  if (carrierScore >= 1 && hasCarrierScheduling && !hasShopifyOrderContext) return true;
+  if (carrierScore >= 2 && !hasShopifyOrderContext && !hasDirectCustomerRequest) return true;
   return !hasDtfContext && !hasShopifyOrderContext && (
     carrierScore >= 2
     || (carrierScore >= 1 && !hasDirectCustomerRequest)
@@ -519,4 +522,13 @@ const SHOPIFY_ORDER_CONTEXT_PATTERNS = [
   /\border\s*(#|number|no\.?)\s*\d{3,}/,
   /\bshopify\b/,
   /\btracking\s*(#|number|no\.?)\b/,
+] as const;
+
+const CARRIER_SCHEDULING_PATTERNS = [
+  /\bcalling to schedule (a )?delivery appointment\b/,
+  /\bschedule (a )?delivery appointment\b/,
+  /\bdelivery appointment\b/,
+  /\bfour pallets\b/,
+  /\bpallets? of\b/,
+  /\bfreight delivery\b/,
 ] as const;
