@@ -68,6 +68,12 @@ export class RulesController {
     return this.rules.enumChainProbe();
   }
 
+  @Get('operational-contract')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  operationalContractProbe() {
+    return this.rules.operationalContractProbe();
+  }
+
   @Get('mcp/capabilities')
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   mcpCapabilities() {

@@ -349,6 +349,38 @@ export interface WorkflowMcpPublishRuleResponse {
   publishedAt: string;
 }
 
+export interface WorkflowOperationalContractProbeResponse {
+  ok: boolean;
+  checkedAt: string;
+  expectedIntents: string[];
+  totals: {
+    expectedIntentCount: number;
+    coveredDefaultIntentCount: number;
+    coveredLiveIntentCount: number;
+    issueCount: number;
+  };
+  intents: Array<{
+    intent: string;
+    expectedOutcome: 'task:sales' | 'task:account' | 'no-op';
+    defaultRuleKeys: string[];
+    liveRuleIds: string[];
+    liveRuleNames: string[];
+    issues: string[];
+  }>;
+  support: {
+    createTaskAxes: string[];
+    serviceRequestSources: string[];
+    supportAxisAllowed: boolean;
+    workflowSourceAllowed: boolean;
+    supportMatchedRuleCount: number;
+  };
+  mcp: {
+    allowedTriggers: string[];
+    allowedActions: string[];
+    issues: string[];
+  };
+}
+
 export const fireWorkflowTriggerSchema = z.object({
   trigger: workflowTriggerSchema,
   eventId: z.string().trim().min(1).max(180).optional(),

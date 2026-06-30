@@ -88,6 +88,7 @@ import type {
   WorkflowMcpSimulateRuleResponse,
   WorkflowMcpValidateRuleInput,
   WorkflowMcpValidateRuleResponse,
+  WorkflowOperationalContractProbeResponse,
   WorkflowTriggerFireInput,
   WorkflowTriggerFireResponse,
   WorkflowRuleDto,
@@ -1050,6 +1051,10 @@ export class ApiClient {
 
   workflowMcpCapabilities() {
     return this.get<WorkflowMcpCapabilitiesResponse>('/rules/mcp/capabilities');
+  }
+
+  workflowOperationalContract() {
+    return this.get<WorkflowOperationalContractProbeResponse>('/rules/operational-contract');
   }
 
   draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput) {

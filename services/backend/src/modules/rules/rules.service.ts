@@ -15,6 +15,7 @@ import {
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
+  OPERATIONAL_INTENTS,
   createTaskAxisSchema,
   operationalIntentSchema,
   workflowRuleDefinitionSchema,
@@ -50,6 +51,7 @@ import {
   type WorkflowMcpSimulateRuleResponse,
   type WorkflowMcpValidateRuleInput,
   type WorkflowMcpValidateRuleResponse,
+  type WorkflowOperationalContractProbeResponse,
   type WorkflowRuleDto,
   type WorkflowRuleBackfillReportDto,
   type WorkflowRuleBackfillReportsResponse,
@@ -2458,6 +2460,95 @@ export class RulesService {
     return response;
   }
 
+  async operationalContractProbe(): Promise<WorkflowOperationalContractProbeResponse> {
+    const tenantId = this.tenantId();
+    const activeRules = await this.prisma.db.workflowRule.findMany({
+      where: { tenantId, trigger: 'call.operational_signal.detected', status: 'active' },
+      orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const supportMatchedRuleCount = await this.prisma.db.serviceRequest.count({
+      where: { tenantId, axis: 'support', matchedRuleId: { not: null } },
+    });
+
+    const defaultRulesByIntent = workflowRulesByOperationalIntent(DEFAULT_WORKFLOW_RULES.map((rule) => ({
+      id: defaultRuleKeyFromInput(rule),
+      name: rule.name,
+      definition: rule.definition,
+    })));
+    const activeRulesByIntent = workflowRulesByOperationalIntent(activeRules.map((rule) => ({
+      id: rule.id,
+      name: rule.name,
+      definition: workflowRuleDefinitionSchema.parse(rule.definition),
+    })));
+
+    const intents = OPERATIONAL_INTENTS.map((intent) => {
+      const expectedOutcome = expectedOperationalOutcome(intent);
+      const defaultRules = defaultRulesByIntent.get(intent) ?? [];
+      const liveRules = activeRulesByIntent.get(intent) ?? [];
+      const issues: string[] = [];
+      if (defaultRules.length === 0) issues.push('No default workflow rule covers this operational intent.');
+      if (liveRules.length === 0) issues.push('No active workflow rule covers this operational intent in this tenant.');
+      if (defaultRules.length > 0 && !defaultRules.some((rule) => operationalRuleMatchesExpectedOutcome(intent, expectedOutcome, rule.definition))) {
+        issues.push(`Default workflow rules for this intent do not provide expected outcome ${expectedOutcome}.`);
+      }
+      if (liveRules.length > 0 && !liveRules.some((rule) => operationalRuleMatchesExpectedOutcome(intent, expectedOutcome, rule.definition))) {
+        issues.push(`Active workflow rules for this intent do not provide expected outcome ${expectedOutcome}.`);
+      }
+      for (const rule of [...defaultRules, ...liveRules]) {
+        issues.push(...unsafeOperationalRuleIssues(rule.definition));
+      }
+      return {
+        intent,
+        expectedOutcome,
+        defaultRuleKeys: defaultRules.map((rule) => rule.id),
+        liveRuleIds: liveRules.map((rule) => rule.id),
+        liveRuleNames: liveRules.map((rule) => rule.name),
+        issues: [...new Set(issues)],
+      };
+    });
+
+    const supportAxisAllowed = WORKFLOW_ENUM_CATALOG.createTaskAxes.some((entry) => String(entry.value) === 'support');
+    const workflowSourceAllowed = WORKFLOW_ENUM_CATALOG.serviceRequestSources.some((entry) => entry.value.includes('workflow') || entry.value.includes('ai'));
+    const mcpIssues: string[] = [];
+    if (MCP_ALLOWED_TRIGGERS.some((trigger) => trigger !== 'call.operational_signal.detected')) {
+      mcpIssues.push('MCP exposes non-operational triggers.');
+    }
+    if (MCP_ALLOWED_ACTIONS.some((action) => action === 'send_mail' || action === 'segment_add' || action === 'segment_remove')) {
+      mcpIssues.push('MCP exposes unsupported mutation actions.');
+    }
+
+    const issueCount = intents.reduce((sum, row) => sum + row.issues.length, 0)
+      + supportMatchedRuleCount
+      + (supportAxisAllowed ? 1 : 0)
+      + (workflowSourceAllowed ? 1 : 0)
+      + mcpIssues.length;
+
+    return {
+      ok: issueCount === 0,
+      checkedAt: new Date().toISOString(),
+      expectedIntents: [...OPERATIONAL_INTENTS],
+      totals: {
+        expectedIntentCount: OPERATIONAL_INTENTS.length,
+        coveredDefaultIntentCount: intents.filter((row) => row.defaultRuleKeys.length > 0).length,
+        coveredLiveIntentCount: intents.filter((row) => row.liveRuleIds.length > 0).length,
+        issueCount,
+      },
+      intents,
+      support: {
+        createTaskAxes: WORKFLOW_ENUM_CATALOG.createTaskAxes.map((entry) => entry.value),
+        serviceRequestSources: WORKFLOW_ENUM_CATALOG.serviceRequestSources.map((entry) => entry.value),
+        supportAxisAllowed,
+        workflowSourceAllowed,
+        supportMatchedRuleCount,
+      },
+      mcp: {
+        allowedTriggers: MCP_ALLOWED_TRIGGERS,
+        allowedActions: MCP_ALLOWED_ACTIONS,
+        issues: mcpIssues,
+      },
+    };
+  }
+
   private editedByMemberId() {
     const context = this.tenantContext.get();
     return context?.principalType === 'member' ? context.principalId ?? null : null;
@@ -2897,6 +2988,60 @@ function operationalIntentsFromDefinition(definition: WorkflowRuleDefinition) {
     }
   }
   return [...new Set(intents)];
+}
+
+function workflowRulesByOperationalIntent(
+  rules: Array<{ id: string; name: string; definition: WorkflowRuleDefinition }>,
+) {
+  const byIntent = new Map<string, Array<{ id: string; name: string; definition: WorkflowRuleDefinition }>>();
+  for (const rule of rules) {
+    if (rule.definition.trigger !== 'call.operational_signal.detected') continue;
+    for (const intent of operationalIntentsFromDefinition(rule.definition)) {
+      const list = byIntent.get(intent) ?? [];
+      list.push(rule);
+      byIntent.set(intent, list);
+    }
+  }
+  return byIntent;
+}
+
+function expectedOperationalOutcome(intent: (typeof OPERATIONAL_INTENTS)[number]): WorkflowOperationalContractProbeResponse['intents'][number]['expectedOutcome'] {
+  if (intent === 'no_action') return 'no-op';
+  return `task:${axisForOperationalIntent(intent)}`;
+}
+
+function operationalRuleMatchesExpectedOutcome(
+  intent: (typeof OPERATIONAL_INTENTS)[number],
+  expectedOutcome: WorkflowOperationalContractProbeResponse['intents'][number]['expectedOutcome'],
+  definition: WorkflowRuleDefinition,
+) {
+  if (definition.trigger !== 'call.operational_signal.detected') return false;
+  if (!operationalIntentsFromDefinition(definition).includes(intent)) return false;
+  if (expectedOutcome === 'no-op') {
+    return definition.actions.some((action) => action.action === 'no-op')
+      && !definition.actions.some((action) => action.action === 'create_task');
+  }
+  const expectedAxis = expectedOutcome.replace('task:', '') as CreateTaskAxis;
+  return definition.actions.some((action) => {
+    if (action.action !== 'create_task') return false;
+    const explicitAxis = createTaskAxisValue(action.axis);
+    const valueAxis = normalizeTaskAxis(action.value);
+    const inferredAxis = explicitAxis ?? (valueAxis === 'support' ? null : valueAxis) ?? axisForActionableOperationalIntent(intent);
+    return inferredAxis === expectedAxis;
+  });
+}
+
+function unsafeOperationalRuleIssues(definition: WorkflowRuleDefinition) {
+  const issues: string[] = [];
+  if (definition.trigger !== 'call.operational_signal.detected') return issues;
+  for (const action of definition.actions) {
+    if (action.action !== 'create_task') continue;
+    const axis = createTaskAxisValue(action.axis) ?? normalizeTaskAxis(action.value);
+    if (axis === 'support') {
+      issues.push('Operational workflow create_task action targets support, which is not allowed.');
+    }
+  }
+  return issues;
 }
 
 function priorityFromGoal(text: string) {
