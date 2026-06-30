@@ -655,12 +655,12 @@ function extractEventTimestamp(payload: Record<string, unknown>) {
 }
 
 function aircallWorkflowTriggers(eventType: string, transcriptRaw?: string | null): WorkflowTrigger[] {
+  void transcriptRaw;
   const triggers: WorkflowTrigger[] = [];
   const normalized = eventType.trim().toLowerCase().replace(/^aircall\./, '');
   if (normalized === 'call.created') triggers.push('aircall.call.created');
   if (normalized === 'call.ended' || normalized === 'call.hungup') triggers.push('aircall.call.ended');
   if (normalized === 'call.missed') triggers.push('aircall.call.missed');
-  if (transcriptRaw?.trim()) triggers.push('aircall.transcript.received');
   return triggers;
 }
 

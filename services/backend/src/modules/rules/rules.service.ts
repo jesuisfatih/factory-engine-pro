@@ -2505,6 +2505,14 @@ export class RulesService {
       const parsed = workflowRuleDefinitionSchema.safeParse(rule.definition);
       return parsed.success && parsed.data.actions.some((action) => action.action === 'create_task');
     }));
+    const activeLegacyTranscriptRules = await this.prisma.db.workflowRule.findMany({
+      where: {
+        tenantId,
+        status: 'active',
+        trigger: { in: LEGACY_TRANSCRIPT_WORKFLOW_TRIGGERS },
+      },
+      orderBy: [{ trigger: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }],
+    });
     const supportMatchedRuleCount = await this.prisma.db.serviceRequest.count({
       where: { tenantId, axis: 'support', matchedRuleId: { not: null } },
     });
@@ -2584,6 +2592,7 @@ export class RulesService {
       + supportMatchedRuleCount
       + (supportAxisAllowed ? 1 : 0)
       + (workflowSourceAllowed ? 1 : 0)
+      + activeLegacyTranscriptRules.length
       + activeCallDerivedTaskBypassRules.length
       + mcpIssues.length
       + transcriptAudit.issues.length;
@@ -2610,6 +2619,12 @@ export class RulesService {
         ...transcriptAudit,
         taskCreationTrigger: 'call.operational_signal.detected',
         blockedTaskTriggers: CALL_DERIVED_TASK_BYPASS_TRIGGERS,
+        activeLegacyTranscriptRuleCount: activeLegacyTranscriptRules.length,
+        activeLegacyTranscriptRules: activeLegacyTranscriptRules.map((rule) => ({
+          id: rule.id,
+          name: rule.name,
+          trigger: rule.trigger,
+        })),
         activeNonOperationalTaskRuleCount: activeCallDerivedTaskBypassRules.length,
         activeNonOperationalTaskRules: activeCallDerivedTaskBypassRules.map((rule) => ({
           id: rule.id,
@@ -2823,6 +2838,15 @@ const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
   'route_segment_owner',
   'add_watcher',
   'escalate',
+];
+
+const LEGACY_TRANSCRIPT_WORKFLOW_TRIGGERS: WorkflowTrigger[] = [
+  'aircall.transcript.received',
+  'call_intent.classified',
+  'psych.tag.detected',
+  'product.detected_in_transcript',
+  'customer.matched_from_transcript',
+  'psych.analysis.completed',
 ];
 
 const CALL_DERIVED_TASK_BYPASS_TRIGGERS: WorkflowTrigger[] = [

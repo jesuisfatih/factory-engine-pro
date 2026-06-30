@@ -272,57 +272,6 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
       customerPhone: callEvent.contactPhoneE164 ?? output.customer_match.phone ?? null,
       customerEmail: callEvent.contactEmail ?? null,
     };
-    try {
-      await this.rules.fireTrigger({
-        trigger: 'call_intent.classified',
-        eventId: `${callEvent.id}:call_intent:${output.call_intent}`,
-        source: 'ai-transcript-resolver',
-        params: { ...baseParams, intent: output.call_intent },
-      });
-      for (const tag of output.psych_tags) {
-        await this.rules.fireTrigger({
-          trigger: 'psych.tag.detected',
-          eventId: `${callEvent.id}:psych_tag:${tag}`,
-          source: 'ai-transcript-resolver',
-          params: { ...baseParams, tag },
-        });
-      }
-      for (const mention of output.product_mentions) {
-        await this.rules.fireTrigger({
-          trigger: 'product.detected_in_transcript',
-          eventId: `${callEvent.id}:product:${mention.sku ?? mention.name_hint ?? 'unknown'}`,
-          source: 'ai-transcript-resolver',
-          params: { ...baseParams, sku: mention.sku, nameHint: mention.name_hint, confidence: mention.confidence },
-        });
-      }
-      const customerId = output.customer_match.customer_id ?? matchedCustomer?.id ?? null;
-      if (customerId) {
-        await this.rules.fireTrigger({
-          trigger: 'customer.matched_from_transcript',
-          eventId: `${callEvent.id}:customer:${customerId}`,
-          source: 'ai-transcript-resolver',
-          params: { ...baseParams, customerId, confidence: output.customer_match.customer_id ? output.customer_match.confidence : 0.65 },
-        });
-      }
-      await this.rules.fireTrigger({
-        trigger: 'psych.analysis.completed',
-        eventId: `${callEvent.id}:psych_analysis_completed:${output.resolved_with_version}`,
-        source: 'ai-transcript-resolver',
-        params: {
-          ...baseParams,
-          psychTags: output.psych_tags,
-          callIntent: output.call_intent,
-          urgencySignal: output.urgency_signal,
-          resolvedWithVersion: output.resolved_with_version,
-        },
-      });
-    } catch (error) {
-      this.logger.warn('rules', 'ai_derived_trigger_fire_failed', 'AI-derived workflow triggers could not be evaluated', {
-        call_event_id: callEvent.id,
-        external_call_id: callEvent.externalCallId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
     await this.fireOperationalSignalFlow(
       callEvent,
       output,

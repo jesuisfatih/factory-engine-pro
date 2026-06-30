@@ -419,6 +419,12 @@ export interface WorkflowOperationalContractProbeResponse {
     issues: string[];
     taskCreationTrigger: 'call.operational_signal.detected';
     blockedTaskTriggers: string[];
+    activeLegacyTranscriptRuleCount: number;
+    activeLegacyTranscriptRules: Array<{
+      id: string;
+      name: string;
+      trigger: string;
+    }>;
     activeNonOperationalTaskRuleCount: number;
     activeNonOperationalTaskRules: Array<{
       id: string;
