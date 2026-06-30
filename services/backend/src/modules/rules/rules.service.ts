@@ -1413,6 +1413,8 @@ export class RulesService {
       result = await this.routeTaskToMember(action, context);
     } else if (action.action === 'route_segment_owner') {
       result = await this.routeTaskToSegmentOwner(action, context);
+    } else if (action.action === 'route_call_owner') {
+      result = await this.routeTaskToCallOwner(action, context);
     } else if (action.action === 'add_watcher') {
       result = await this.addTaskWatcher(action, context);
     } else if (action.action === 'escalate') {
@@ -1838,6 +1840,41 @@ export class RulesService {
     };
   }
 
+  private async routeTaskToCallOwner(action: WorkflowRuleAction, context: WorkflowActionContext) {
+    const taskId = this.targetTaskId(context);
+    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_call_owner.');
+    const member = await this.resolveAircallOperatorMember(context);
+    if (!member) return skippedTrace(action, 'member', 'No active Aircall call owner was resolved for route_call_owner.');
+    const updated = await this.prisma.db.serviceRequest.updateMany({
+      where: { id: taskId },
+      data: { assignedMemberId: member.id },
+    });
+    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_call_owner.');
+    await this.updateTaskWorkflow(taskId, (workflow) => ({
+      ...workflow,
+      assigneeResolution: {
+        ...asRecord(workflow.assigneeResolution),
+        source: 'aircall_operator',
+        assigneeMemberId: member.id,
+      },
+      routeEvents: [
+        ...recordArray(workflow.routeEvents),
+        { memberId: member.id, eventId: context.eventId, at: new Date().toISOString(), source: 'aircall_operator' },
+      ],
+    }));
+    return {
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'service_request' as const,
+        targetId: taskId,
+        message: 'Routed service request to Aircall call owner.',
+        metadata: { memberId: member.id, email: member.email },
+      },
+    };
+  }
+
   private async addTaskWatcher(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
     if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for add_watcher.');
@@ -2166,6 +2203,7 @@ export class RulesService {
         'Rule-created tasks can target only sales or account axes.',
         'Task routing, watcher, and escalation actions must follow create_task in the same rule.',
         'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role in that order.',
+        'route_call_owner can explicitly bind a created task to the Aircall operator for the transcript event.',
         'Automatic customer request/support case creation is not a supported action.',
         'Publish requires a stored rule and a recent simulation/backfill report for that rule.',
         'Unsupported actions such as send_mail or segment removal are rejected for MCP-authored rules.',
@@ -2331,7 +2369,8 @@ export class RulesService {
       actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
       assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
     } else if (mentionsCallOwner(text)) {
-      assumptions.push('Assignee will resolve to the Aircall call owner first, then customer axis primary, then axis primary role.');
+      if (detectedIntent !== 'no_action') actions.push(mcpAction('route_call_owner', 'route_call_owner', ''));
+      assumptions.push('Assignee will resolve to the Aircall call owner for the transcript event.');
     } else {
       assumptions.push('Assignee will default to call owner, customer axis primary, or axis primary role at runtime.');
     }
@@ -2931,6 +2970,7 @@ const MCP_ALLOWED_ACTIONS: WorkflowRuleAction['action'][] = [
   'create_task',
   'route_member',
   'route_segment_owner',
+  'route_call_owner',
   'add_note',
   'pin_customer',
   'add_watcher',
@@ -2955,6 +2995,7 @@ const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [
   'create_task',
   'route_member',
   'route_segment_owner',
+  'route_call_owner',
   'add_note',
   'pin_customer',
   'no-op',
@@ -2970,6 +3011,7 @@ const MCP_OUTCOME_ACTIONS: WorkflowRuleAction['action'][] = [
 const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
   'route_member',
   'route_segment_owner',
+  'route_call_owner',
   'add_watcher',
   'escalate',
 ];
@@ -3186,6 +3228,9 @@ function mentionsCallOwner(text: string) {
     || text.includes('agent who answered')
     || text.includes('answered the call')
     || text.includes('aramayi cevaplayan')
+    || text.includes('cagriyi cevaplayan')
+    || text.includes('cagriyi alan')
+    || text.includes('konusmayi alan')
     || text.includes('arama sahibi');
 }
 

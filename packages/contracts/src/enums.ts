@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-30.2';
+export const WORKFLOW_ENUM_VERSION = '2026-06-30.3';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -114,6 +114,7 @@ export const WORKFLOW_ACTIONS = [
   'segment_remove',
   'route_member',
   'route_segment_owner',
+  'route_call_owner',
   'add_watcher',
   'escalate',
   'send_mail',
@@ -536,6 +537,7 @@ export const WORKFLOW_ACTION_OPTIONS: readonly WorkflowActionOption[] = [
   { value: 'segment_remove', label: 'Remove from segment', createsTask: false, mutatesCustomer: true, auditOnly: false },
   { value: 'route_member', label: 'Route member', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'route_segment_owner', label: 'Route segment owner', createsTask: false, mutatesCustomer: false, auditOnly: false },
+  { value: 'route_call_owner', label: 'Route call owner', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'add_watcher', label: 'Add watcher', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'escalate', label: 'Escalate', createsTask: false, mutatesCustomer: false, auditOnly: false },
   { value: 'send_mail', label: 'Send mail', createsTask: false, mutatesCustomer: false, auditOnly: true },
