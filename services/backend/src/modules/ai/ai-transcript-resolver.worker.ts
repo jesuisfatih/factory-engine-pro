@@ -335,6 +335,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     const signals = transcriptOperationalSignals(output, { customerMatched });
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new Error('Tenant context is required for transcript workflow evaluation');
+    const currentSignalIntents = signals.map((signal) => signal.intent);
     for (const signal of signals) {
       const eventId = `${callEvent.id}:operational_signal:${signal.intent}`;
       let response: WorkflowTriggerFireResponse | null = null;
@@ -433,6 +434,20 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         },
       });
     }
+    await this.prisma.db.transcriptWorkflowEvaluation.updateMany({
+      where: {
+        tenantId,
+        callEventId: callEvent.id,
+        signal: { notIn: currentSignalIntents },
+        status: { not: 'superseded' },
+      },
+      data: {
+        status: 'superseded',
+        reason: `Superseded by resolver output version ${output.resolved_with_version}; signal is not present in the current operational signal set.`,
+        resolverVersion: output.resolved_with_version,
+        resolverModel,
+      },
+    });
   }
 
   private async resolveCustomerForCall(

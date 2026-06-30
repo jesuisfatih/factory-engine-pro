@@ -324,16 +324,17 @@ export class AircallService {
             tasksCreated: true,
           },
         });
-    const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
-    const completedEvaluationRows = evaluations.filter((row) => isCompletedWorkflowEvaluationStatus(row.status));
+    const activeEvaluations = evaluations.filter((row) => row.status !== 'superseded');
+    const evaluatedIds = new Set(activeEvaluations.map((row) => row.callEventId));
+    const completedEvaluationRows = activeEvaluations.filter((row) => isCompletedWorkflowEvaluationStatus(row.status));
     const flowCompletedIds = new Set(completedEvaluationRows.map((row) => row.callEventId));
     const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
     const missingFlowOutcomeRows = transcriptRows.filter((row) => !flowCompletedIds.has(row.id));
     const staleResolverVersion = transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length;
     const resolverQueuedOrProcessing = transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length;
     const resolverFailed = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
-    const failedEvaluations = evaluations.filter((row) => row.status === 'failed').length;
-    const unmatchedEvaluations = evaluations.filter((row) => isUnmatchedWorkflowEvaluationStatus(row.status)).length;
+    const failedEvaluations = activeEvaluations.filter((row) => row.status === 'failed').length;
+    const unmatchedEvaluations = activeEvaluations.filter((row) => isUnmatchedWorkflowEvaluationStatus(row.status)).length;
 
     return {
       targetVersion,
@@ -352,12 +353,12 @@ export class AircallService {
         && resolverFailed === 0
         && failedEvaluations === 0
         && unmatchedEvaluations === 0,
-      evaluationRows: evaluations.length,
-      actionableEvaluations: evaluations.filter((row) => row.actionRequired).length,
-      noActionEvaluations: evaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
-      taskCreatedEvaluations: evaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
-      matchedWithoutTaskEvaluations: evaluations.filter((row) => row.status === 'matched_without_task').length,
-      cooldownSuppressedEvaluations: evaluations.filter((row) => row.status === 'cooldown_suppressed').length,
+      evaluationRows: activeEvaluations.length,
+      actionableEvaluations: activeEvaluations.filter((row) => row.actionRequired).length,
+      noActionEvaluations: activeEvaluations.filter((row) => row.status === 'no_action' || row.status === 'no_action_unmatched').length,
+      taskCreatedEvaluations: activeEvaluations.filter((row) => row.tasksCreated > 0 || row.status === 'task_created').length,
+      matchedWithoutTaskEvaluations: activeEvaluations.filter((row) => row.status === 'matched_without_task').length,
+      cooldownSuppressedEvaluations: activeEvaluations.filter((row) => row.status === 'cooldown_suppressed').length,
       failedEvaluations,
       unmatchedEvaluations,
       localFallbackResolvedEvents: transcriptRows.filter((row) => row.resolverModel === 'local-rule-fallback').length,
@@ -366,7 +367,7 @@ export class AircallService {
       staleResolverVersion,
       resolverQueuedOrProcessing,
       resolverFailed,
-      signalOutcomes: signalOutcomeRows(evaluations),
+      signalOutcomes: signalOutcomeRows(activeEvaluations),
       missing: missingRows.slice(0, 50).map((row) => ({
         id: row.id,
         externalCallId: row.externalCallId,
@@ -680,9 +681,10 @@ export class AircallService {
           where: { tenantId, callEventId: { in: rows.map((row) => row.id) } },
           select: { callEventId: true, status: true },
         });
+    const activeEvaluations = evaluations.filter((evaluation) => evaluation.status !== 'superseded');
     const evaluationCounts = new Map<string, number>();
     const evaluationProblemCounts = new Map<string, number>();
-    for (const evaluation of evaluations) {
+    for (const evaluation of activeEvaluations) {
       evaluationCounts.set(evaluation.callEventId, (evaluationCounts.get(evaluation.callEventId) ?? 0) + 1);
       if (evaluation.status === 'failed' || isUnmatchedWorkflowEvaluationStatus(evaluation.status)) {
         evaluationProblemCounts.set(evaluation.callEventId, (evaluationProblemCounts.get(evaluation.callEventId) ?? 0) + 1);
