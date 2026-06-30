@@ -592,6 +592,29 @@ export class RulesService {
           && booleanParam(parsed.params, 'forceWorkflowEvaluationRepair')
           && stale.reason !== 'tasks_present'
           && stale.reason !== 'partial_tasks_present';
+        if (existing && (stale.reason === 'tasks_present' || stale.reason === 'partial_tasks_present')) {
+          this.logger.log('rules', 'event_duplicate_existing_task', 'Duplicate workflow event/rule already has task rows; treating as completed flow.', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            execution_mode: rule.status === 'shadow' ? 'shadow' : 'active',
+            duplicate_reason: stale.reason,
+            task_ids: stale.taskIds,
+          });
+          results.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            status: 'existing_task',
+            reason: 'existing_task',
+            executionMode: rule.status === 'shadow' ? 'shadow' : 'active',
+            shortCircuited: rule.status === 'active' && !rule.composable,
+            taskIds: stale.taskIds,
+            conditionTrace,
+            whenTrace,
+          });
+          if (rule.status === 'active' && !rule.composable) break;
+          continue;
+        }
         if (!existing || (!stale.recover && !repairReplay)) {
           this.logger.log('rules', 'event_duplicate_skipped', 'Duplicate workflow event/rule execution skipped', {
             event_id: eventId,
