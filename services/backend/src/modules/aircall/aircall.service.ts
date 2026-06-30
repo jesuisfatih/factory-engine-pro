@@ -18,6 +18,7 @@ import type {
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
+  AircallWorkflowCoverageQuery,
   AircallWorkflowCoverageResponse,
   AircallWorkflowRepairInput,
   AircallWorkflowRepairResponse,
@@ -305,16 +306,17 @@ export class AircallService {
     };
   }
 
-  async workflowCoverage(): Promise<AircallWorkflowCoverageResponse> {
+  async workflowCoverage(input: AircallWorkflowCoverageQuery = { scope: 'recent', recentDays: 7 }): Promise<AircallWorkflowCoverageResponse> {
     const tenantId = this.tenantId();
-    const recentDays = 7;
+    const scope = input.scope ?? 'recent';
+    const recentDays = input.recentDays ?? 7;
     const targetVersion = TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
     const to = new Date();
-    const from = new Date(to.getTime() - recentDays * 86_400_000);
+    const from = scope === 'all' ? null : new Date(to.getTime() - recentDays * 86_400_000);
     const rows = await this.prisma.db.aircallCallEvent.findMany({
       where: {
         tenantId,
-        eventTimestamp: { gte: from, lte: to },
+        eventTimestamp: from ? { gte: from, lte: to } : { lte: to },
         transcriptRaw: { not: null },
       },
       orderBy: { eventTimestamp: 'desc' },
@@ -368,8 +370,9 @@ export class AircallService {
 
     return {
       targetVersion,
-      recentDays,
-      from: from.toISOString(),
+      scope,
+      recentDays: scope === 'all' ? null : recentDays,
+      from: from?.toISOString() ?? null,
       to: to.toISOString(),
       transcriptEvents: transcriptRows.length,
       resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
@@ -874,7 +877,7 @@ export class AircallService {
       staleResolverVersion,
       unresolved,
       callEvents,
-      coverage: await this.workflowCoverage(),
+      coverage: await this.workflowCoverage({ scope: 'recent', recentDays }),
     };
   }
 

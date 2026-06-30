@@ -1,13 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import {
   aircallBackfillRecentSchema,
   aircallLinkUserSchema,
   aircallResolverReprocessSchema,
+  aircallWorkflowCoverageQuerySchema,
   aircallWorkflowRepairSchema,
   MEMBER_PERMISSIONS,
   type AircallBackfillRecentInput,
   type AircallLinkUserInput,
   type AircallResolverReprocessInput,
+  type AircallWorkflowCoverageQuery,
   type AircallWorkflowRepairInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
@@ -68,8 +70,10 @@ export class AircallController {
 
   @Get('calls/workflow-coverage')
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
-  workflowCoverage() {
-    return this.aircall.workflowCoverage();
+  workflowCoverage(
+    @Query(new ZodValidationPipe(aircallWorkflowCoverageQuerySchema)) query: AircallWorkflowCoverageQuery,
+  ) {
+    return this.aircall.workflowCoverage(query);
   }
 
   @Post('calls/backfill-recent')

@@ -401,7 +401,8 @@ export interface WorkflowOperationalContractProbeResponse {
     supportMatchedRuleCount: number;
   };
   transcript: {
-    coverageWindowDays: number;
+    coverageScope: 'all_time';
+    coverageWindowDays: number | null;
     transcriptEvents: number;
     evaluatedEvents: number;
     flowCompletedEvents: number;

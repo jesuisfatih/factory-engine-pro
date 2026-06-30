@@ -2689,13 +2689,11 @@ export class RulesService {
   }
 
   private async operationalTranscriptAudit(tenantId: string) {
-    const coverageWindowDays = 7;
     const to = new Date();
-    const from = new Date(to.getTime() - coverageWindowDays * 86_400_000);
     const transcriptRows = await this.prisma.db.aircallCallEvent.findMany({
       where: {
         tenantId,
-        eventTimestamp: { gte: from, lte: to },
+        eventTimestamp: { lte: to },
         transcriptRaw: { not: null },
       },
       select: {
@@ -2838,7 +2836,8 @@ export class RulesService {
       ...(extraSignalEvaluationCount > 0 ? [`${extraSignalEvaluationCount} active workflow evaluation signal(s) are not in the current resolver signal set.`] : []),
     ];
     return {
-      coverageWindowDays,
+      coverageScope: 'all_time' as const,
+      coverageWindowDays: null,
       transcriptEvents: transcriptRows.length,
       evaluatedEvents: evaluatedIds.size,
       flowCompletedEvents: flowCompletedIds.size,

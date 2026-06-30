@@ -17,6 +17,7 @@ import type {
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
+  AircallWorkflowCoverageQuery,
   AircallWorkflowCoverageResponse,
   AircallWorkflowRepairInput,
   AircallWorkflowRepairResponse,
@@ -965,8 +966,12 @@ export class ApiClient {
     return this.get<AircallCallEventsResponse>('/aircall/calls');
   }
 
-  aircallWorkflowCoverage() {
-    return this.get<AircallWorkflowCoverageResponse>('/aircall/calls/workflow-coverage');
+  aircallWorkflowCoverage(query: Partial<AircallWorkflowCoverageQuery> = {}) {
+    const params = new URLSearchParams();
+    if (query.scope) params.set('scope', query.scope);
+    if (query.recentDays !== undefined) params.set('recentDays', String(query.recentDays));
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.get<AircallWorkflowCoverageResponse>(`/aircall/calls/workflow-coverage${suffix}`);
   }
 
   repairAircallWorkflowEvaluations(input: AircallWorkflowRepairInput = { targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 }) {

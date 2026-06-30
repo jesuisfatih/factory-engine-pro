@@ -28,6 +28,12 @@ export const aircallWorkflowRepairSchema = z.object({
 });
 export type AircallWorkflowRepairInput = z.infer<typeof aircallWorkflowRepairSchema>;
 
+export const aircallWorkflowCoverageQuerySchema = z.object({
+  scope: z.enum(['recent', 'all']).default('recent'),
+  recentDays: z.coerce.number().int().min(1).max(365).default(7),
+});
+export type AircallWorkflowCoverageQuery = z.infer<typeof aircallWorkflowCoverageQuerySchema>;
+
 export interface AircallUserDto {
   id: string;
   aircallUserId: string;
@@ -185,8 +191,9 @@ export interface AircallCallEventsResponse {
 
 export interface AircallWorkflowCoverageResponse {
   targetVersion: number;
-  recentDays: number;
-  from: string;
+  scope: 'recent' | 'all';
+  recentDays: number | null;
+  from: string | null;
   to: string;
   transcriptEvents: number;
   resolvedEvents: number;
