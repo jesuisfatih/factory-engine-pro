@@ -429,6 +429,12 @@ export interface WorkflowOperationalContractProbeResponse {
   mcp: {
     allowedTriggers: string[];
     allowedActions: string[];
+    requiredTools: WorkflowMcpCapabilityTool['name'][];
+    exposedTools: WorkflowMcpCapabilityTool['name'][];
+    missingRequiredTools: WorkflowMcpCapabilityTool['name'][];
+    requiredActions: string[];
+    missingRequiredActions: string[];
+    publishRequiresStoredSimulation: boolean;
     issues: string[];
   };
 }

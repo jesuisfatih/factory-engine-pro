@@ -2549,12 +2549,35 @@ export class RulesService {
 
     const supportAxisAllowed = WORKFLOW_ENUM_CATALOG.createTaskAxes.some((entry) => String(entry.value) === 'support');
     const workflowSourceAllowed = WORKFLOW_ENUM_CATALOG.serviceRequestSources.some((entry) => entry.value.includes('workflow') || entry.value.includes('ai'));
+    const mcpCapabilities = this.mcpCapabilities();
+    const exposedMcpTools = mcpCapabilities.tools.map((tool) => tool.name);
+    const missingMcpTools = MCP_REQUIRED_TOOLS.filter((tool) => !exposedMcpTools.includes(tool));
+    const missingMcpActions = MCP_REQUIRED_ACTIONS.filter((action) => !MCP_ALLOWED_ACTIONS.includes(action));
+    const simulateTool = mcpCapabilities.tools.find((tool) => tool.name === 'simulate_workflow_rule');
+    const createDraftTool = mcpCapabilities.tools.find((tool) => tool.name === 'create_workflow_rule_draft');
+    const publishTool = mcpCapabilities.tools.find((tool) => tool.name === 'publish_workflow_rule');
+    const publishRequiresStoredSimulation = true;
     const mcpIssues: string[] = [];
     if (MCP_ALLOWED_TRIGGERS.some((trigger) => trigger !== 'call.operational_signal.detected')) {
       mcpIssues.push('MCP exposes non-operational triggers.');
     }
     if (MCP_ALLOWED_ACTIONS.some((action) => action === 'send_mail' || action === 'segment_add' || action === 'segment_remove')) {
       mcpIssues.push('MCP exposes unsupported mutation actions.');
+    }
+    if (missingMcpTools.length > 0) {
+      mcpIssues.push(`MCP is missing required tool(s): ${missingMcpTools.join(', ')}.`);
+    }
+    if (missingMcpActions.length > 0) {
+      mcpIssues.push(`MCP is missing required sales/personnel action(s): ${missingMcpActions.join(', ')}.`);
+    }
+    if (simulateTool?.mutates !== false || simulateTool.requiresPermission !== 'settings.read') {
+      mcpIssues.push('simulate_workflow_rule must be read-only and require settings.read.');
+    }
+    if (createDraftTool?.mutates !== true || createDraftTool.requiresPermission !== 'settings.write') {
+      mcpIssues.push('create_workflow_rule_draft must mutate only drafts and require settings.write.');
+    }
+    if (publishTool?.mutates !== true || publishTool.requiresPermission !== 'settings.write' || !publishRequiresStoredSimulation) {
+      mcpIssues.push('publish_workflow_rule must require settings.write and a stored simulation report.');
     }
 
     const issueCount = intents.reduce((sum, row) => sum + row.issues.length, 0)
@@ -2597,6 +2620,12 @@ export class RulesService {
       mcp: {
         allowedTriggers: MCP_ALLOWED_TRIGGERS,
         allowedActions: MCP_ALLOWED_ACTIONS,
+        requiredTools: MCP_REQUIRED_TOOLS,
+        exposedTools: exposedMcpTools,
+        missingRequiredTools: missingMcpTools,
+        requiredActions: MCP_REQUIRED_ACTIONS,
+        missingRequiredActions: missingMcpActions,
+        publishRequiresStoredSimulation,
         issues: mcpIssues,
       },
     };
@@ -2762,6 +2791,24 @@ const MCP_ALLOWED_ACTIONS: WorkflowRuleAction['action'][] = [
 
 const MCP_ALLOWED_TRIGGERS: WorkflowTrigger[] = [
   'call.operational_signal.detected',
+];
+
+const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name'][] = [
+  'list_workflow_capabilities',
+  'draft_workflow_rule',
+  'validate_workflow_rule',
+  'simulate_workflow_rule',
+  'create_workflow_rule_draft',
+  'publish_workflow_rule',
+];
+
+const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [
+  'create_task',
+  'route_member',
+  'route_segment_owner',
+  'add_note',
+  'pin_customer',
+  'no-op',
 ];
 
 const MCP_OUTCOME_ACTIONS: WorkflowRuleAction['action'][] = [
