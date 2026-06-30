@@ -331,7 +331,10 @@ export class AircallService {
     const missingRows = transcriptRows.filter((row) => !evaluatedIds.has(row.id));
     const missingFlowOutcomeRows = transcriptRows.filter((row) => !flowCompletedIds.has(row.id));
     const staleResolverVersion = transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion).length;
-    const resolverQueuedOrProcessing = transcriptRows.filter((row) => row.resolverStatus === 'queued' || row.resolverStatus === 'processing').length;
+    const resolverQueuedOrProcessing = transcriptRows.filter((row) => {
+      const resolvedWithCurrentVersion = Boolean(row.resolvedAt) && (row.resolvedWithVersion ?? 0) >= targetVersion;
+      return (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') && !resolvedWithCurrentVersion;
+    }).length;
     const resolverFailed = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
     const failedEvaluations = activeEvaluations.filter((row) => row.status === 'failed').length;
     const unmatchedEvaluations = activeEvaluations.filter((row) => isUnmatchedWorkflowEvaluationStatus(row.status)).length;
@@ -711,13 +714,20 @@ export class AircallService {
       if (!row.resolvedAt && row.resolverStatus !== 'succeeded') unresolved++;
 
       if (hasCurrentEvaluation) {
+        const resolvedWithCurrentVersion = Boolean(row.resolvedAt) && (row.resolvedWithVersion ?? 0) >= targetVersion;
+        if (resolvedWithCurrentVersion && (row.resolverStatus === 'queued' || row.resolverStatus === 'processing')) {
+          await this.prisma.db.aircallCallEvent.updateMany({
+            where: { tenantId, id: row.id },
+            data: { resolverStatus: 'succeeded', resolverError: null },
+          });
+        }
         alreadyEvaluated++;
         skipped++;
         callEvents.push({
           id: row.id,
           externalCallId: row.externalCallId,
           resolvedWithVersion: row.resolvedWithVersion,
-          resolverStatus: row.resolverStatus,
+          resolverStatus: resolvedWithCurrentVersion ? 'succeeded' : row.resolverStatus,
           evaluationCount,
           evaluationProblemCount,
           repairMode: 'already_evaluated',
