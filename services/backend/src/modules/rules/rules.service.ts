@@ -2311,11 +2311,7 @@ export class RulesService {
   }
 
   async mcpAgentGuide(): Promise<WorkflowMcpAgentGuideResponse> {
-    const absolutePath = resolve(process.cwd(), RULE_ENGINE_AGENT_GUIDE_PATH);
-    const [markdown, fileStat] = await Promise.all([
-      readFile(absolutePath, 'utf8'),
-      stat(absolutePath).catch(() => null),
-    ]);
+    const { markdown, fileStat } = await this.readAgentGuideFile();
 
     return {
       version: RULE_ENGINE_AGENT_GUIDE_VERSION,
@@ -2328,6 +2324,29 @@ export class RulesService {
       summary: [...RULE_ENGINE_AGENT_GUIDE_SUMMARY],
       markdown,
     };
+  }
+
+  private async readAgentGuideFile() {
+    const candidates = [
+      resolve(process.cwd(), RULE_ENGINE_AGENT_GUIDE_PATH),
+      resolve(process.cwd(), '..', '..', RULE_ENGINE_AGENT_GUIDE_PATH),
+      resolve(process.cwd(), '..', '..', '..', RULE_ENGINE_AGENT_GUIDE_PATH),
+    ];
+    let lastError: unknown = null;
+
+    for (const absolutePath of candidates) {
+      try {
+        const [markdown, fileStat] = await Promise.all([
+          readFile(absolutePath, 'utf8'),
+          stat(absolutePath).catch(() => null),
+        ]);
+        return { markdown, fileStat };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error(`Rule Engine agent guide not found at ${RULE_ENGINE_AGENT_GUIDE_PATH}`);
   }
 
   private async shopifyProductLanguage(): Promise<WorkflowMcpCapabilitiesResponse['registry']['productLanguage']> {
