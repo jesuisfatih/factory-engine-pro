@@ -22,15 +22,18 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
+  ClipboardCheck,
   Database,
   FilePlus2,
   Filter,
   History,
   Network,
+  PlayCircle,
   Plus,
   RefreshCw,
   RotateCcw,
   Save,
+  Send,
   Trash2,
   Zap,
 } from 'lucide-react';
@@ -50,8 +53,12 @@ import {
   defaultOperator,
   defaultValue,
   cooldownLabel,
+  createWorkflowRuleDraftFromMcp,
+  draftFromWorkflowInput,
   draftFromWorkflowRule,
+  draftWorkflowRuleFromMcp,
   fireWorkflowTrigger,
+  fetchWorkflowMcpCapabilities,
   fetchWorkflowCatalog,
   fetchWorkflowRuleBackfills,
   fetchWorkflowRuleActiveStats,
@@ -62,20 +69,25 @@ import {
   makeAction,
   makeCondition,
   makeRuleDraft,
+  publishWorkflowRuleFromMcp,
   rollbackWorkflowRule,
   runOverdueTaskSweep,
   runWorkflowRuleBackfill,
   saveWorkflowRule,
+  simulateDraftWorkflowRuleFromMcp,
+  simulateStoredWorkflowRuleFromMcp,
   type ConditionOperator,
   type RuleDraft,
   type RuleDraftAction,
   type RuleDraftCondition,
+  validateWorkflowRuleFromMcp,
   verifyWorkflowEnumChain,
 } from '@/lib/rules';
 
 const CATALOG_QK = ['rules', 'catalog'] as const;
 const RULES_QK = ['rules', 'saved'] as const;
 const RULE_STATS_QK = ['rules', 'active-stats', 30] as const;
+const MCP_CAPABILITIES_QK = ['rules', 'mcp-capabilities'] as const;
 const versionsQk = (ruleId: string | null) => ['rules', 'versions', ruleId ?? 'none'] as const;
 const backfillsQk = (ruleId: string | null) => ['rules', 'backfills', ruleId ?? 'none'] as const;
 const executionsQk = (ruleId: string | null) => ['rules', 'executions', ruleId ?? 'none'] as const;
@@ -498,11 +510,14 @@ function RulesView() {
   const catalogQuery = useQuery({ queryKey: CATALOG_QK, queryFn: fetchWorkflowCatalog });
   const rulesQuery = useQuery({ queryKey: RULES_QK, queryFn: fetchWorkflowRules });
   const ruleStatsQuery = useQuery({ queryKey: RULE_STATS_QK, queryFn: () => fetchWorkflowRuleActiveStats(30) });
+  const mcpCapabilitiesQuery = useQuery({ queryKey: MCP_CAPABILITIES_QK, queryFn: fetchWorkflowMcpCapabilities });
   const verify = useMutation({ mutationFn: verifyWorkflowEnumChain });
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
   const [backfillDays, setBackfillDays] = useState(7);
   const [didHydratePersistedRule, setDidHydratePersistedRule] = useState(false);
+  const [mcpGoal, setMcpGoal] = useState("Heat press fiyati soranlari Linda'ya high priority callback task yap.");
+  const [mcpStoredReportId, setMcpStoredReportId] = useState<string | null>(null);
   const versionsQuery = useQuery({
     queryKey: versionsQk(selectedRuleId),
     queryFn: () => fetchWorkflowRuleVersions(selectedRuleId!),
@@ -639,6 +654,92 @@ function RulesView() {
     }),
     onError: (error) => toast.error('Overdue sweep failed', { description: apiErrorMessage(error) }),
   });
+  const mcpDraftMutation = useMutation({
+    mutationFn: () => draftWorkflowRuleFromMcp(mcpGoal),
+    onSuccess: (result) => {
+      setSelectedRuleId(null);
+      setMcpStoredReportId(null);
+      setDraft(draftFromWorkflowInput(result.rule));
+      toast.success('Draft compiled', { description: `${result.detectedIntent} -> ${result.rule.definition.trigger}` });
+    },
+    onError: (error) => toast.error('Draft failed', { description: apiErrorMessage(error) }),
+  });
+  const mcpValidateMutation = useMutation({
+    mutationFn: () => {
+      if (!draft) throw new Error('Compile or select a rule before validation.');
+      return validateWorkflowRuleFromMcp(draft);
+    },
+    onSuccess: (result) => {
+      if (result.ok) toast.success('Validation passed', { description: 'Rule is accepted by the safe workflow DSL.' });
+      else toast.error('Validation failed', { description: result.issues.join('; ') || 'Rule is not publish-safe.' });
+    },
+    onError: (error) => toast.error('Validation failed', { description: apiErrorMessage(error) }),
+  });
+  const mcpDraftSimulationMutation = useMutation({
+    mutationFn: () => {
+      if (!draft) throw new Error('Compile or select a rule before simulation.');
+      return simulateDraftWorkflowRuleFromMcp(draft, backfillDays);
+    },
+    onSuccess: (result) => toast.success('Draft simulation completed', {
+      description: `${result.matchedEvents}/${result.evaluatedEvents} matched, ${result.wouldCreateTasks} virtual task(s).`,
+    }),
+    onError: (error) => toast.error('Draft simulation failed', { description: apiErrorMessage(error) }),
+  });
+  const mcpCreateDraftMutation = useMutation({
+    mutationFn: () => {
+      if (!draft) throw new Error('Compile or select a rule before storing a draft.');
+      return createWorkflowRuleDraftFromMcp(draft, mcpGoal);
+    },
+    onSuccess: async (result) => {
+      setSelectedRuleId(result.rule.id);
+      setMcpStoredReportId(null);
+      setDraft(draftFromWorkflowRule(result.rule));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: RULES_QK }),
+        queryClient.invalidateQueries({ queryKey: versionsQk(result.rule.id) }),
+        queryClient.invalidateQueries({ queryKey: backfillsQk(result.rule.id) }),
+      ]);
+      toast.success('Draft stored', { description: `${result.rule.name} is stored as draft. Run stored simulation before publish.` });
+    },
+    onError: (error) => toast.error('Store draft failed', { description: apiErrorMessage(error) }),
+  });
+  const mcpStoredSimulationMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedRuleId) throw new Error('Store or select a rule before stored simulation.');
+      return simulateStoredWorkflowRuleFromMcp(selectedRuleId, backfillDays);
+    },
+    onSuccess: async (result) => {
+      if (result.reportId) setMcpStoredReportId(result.reportId);
+      if (selectedRuleId) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: backfillsQk(selectedRuleId) }),
+          queryClient.invalidateQueries({ queryKey: executionsQk(selectedRuleId) }),
+        ]);
+      }
+      toast.success('Stored simulation completed', {
+        description: `${result.matchedEvents}/${result.evaluatedEvents} matched, report ${result.reportId ?? 'not stored'}.`,
+      });
+    },
+    onError: (error) => toast.error('Stored simulation failed', { description: apiErrorMessage(error) }),
+  });
+  const mcpPublishMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedRuleId || !mcpStoredReportId) throw new Error('Run stored simulation before publishing.');
+      return publishWorkflowRuleFromMcp(selectedRuleId, mcpStoredReportId);
+    },
+    onSuccess: async (result) => {
+      setSelectedRuleId(result.rule.id);
+      setDraft(draftFromWorkflowRule(result.rule));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: RULES_QK }),
+        queryClient.invalidateQueries({ queryKey: versionsQk(result.rule.id) }),
+        queryClient.invalidateQueries({ queryKey: backfillsQk(result.rule.id) }),
+        queryClient.invalidateQueries({ queryKey: RULE_STATS_QK }),
+      ]);
+      toast.success('Rule published', { description: `${result.rule.name} is active from report ${result.reportId}.` });
+    },
+    onError: (error) => toast.error('Publish failed', { description: apiErrorMessage(error) }),
+  });
   const latestBackfill = backfillsQuery.data?.reports[0];
 
   return (
@@ -699,6 +800,123 @@ function RulesView() {
             versionsCount={versionsQuery.data?.versions.length ?? 0}
             executionsCount={executionsQuery.data?.executions.length ?? 0}
           />
+
+          <section className="rules-mcp-panel" id="workflow-mcp-authoring">
+            <div className="rules-mcp-editor">
+              <div className="rules-section-head">
+                <span><Network size={12} /> Claude workflow authoring</span>
+                <span className="muted">registry v{mcpCapabilitiesQuery.data?.catalogVersion ?? catalog.version}</span>
+              </div>
+              <textarea
+                value={mcpGoal}
+                onChange={(event) => setMcpGoal(event.target.value)}
+                placeholder="Heat press fiyati soranlari Linda'ya high priority callback task yap."
+              />
+              <div className="rules-mcp-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={mcpGoal.trim().length < 8 || mcpDraftMutation.isPending}
+                  onClick={() => mcpDraftMutation.mutate()}
+                >
+                  <FilePlus2 size={12} /> {mcpDraftMutation.isPending ? 'Drafting...' : 'Draft'}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  disabled={!draft || mcpValidateMutation.isPending}
+                  onClick={() => mcpValidateMutation.mutate()}
+                >
+                  <ClipboardCheck size={12} /> {mcpValidateMutation.isPending ? 'Validating...' : 'Validate'}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  disabled={!draft || mcpDraftSimulationMutation.isPending}
+                  onClick={() => mcpDraftSimulationMutation.mutate()}
+                >
+                  <PlayCircle size={12} /> {mcpDraftSimulationMutation.isPending ? 'Simulating...' : 'Simulate draft'}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  disabled={!draft || mcpCreateDraftMutation.isPending}
+                  onClick={() => mcpCreateDraftMutation.mutate()}
+                >
+                  <Save size={12} /> {mcpCreateDraftMutation.isPending ? 'Storing...' : 'Store draft'}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  disabled={!selectedRuleId || mcpStoredSimulationMutation.isPending}
+                  onClick={() => mcpStoredSimulationMutation.mutate()}
+                >
+                  <Activity size={12} /> {mcpStoredSimulationMutation.isPending ? 'Running...' : 'Simulate stored'}
+                </button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={!selectedRuleId || !mcpStoredReportId || mcpPublishMutation.isPending}
+                  onClick={() => mcpPublishMutation.mutate()}
+                >
+                  <Send size={12} /> {mcpPublishMutation.isPending ? 'Publishing...' : 'Publish'}
+                </button>
+              </div>
+              <div className="rules-mcp-status">
+                {mcpDraftMutation.data && (
+                  <span><strong>Draft:</strong> {mcpDraftMutation.data.detectedIntent} / {mcpDraftMutation.data.confidence.toFixed(2)}</span>
+                )}
+                {mcpValidateMutation.data && (
+                  <span className={mcpValidateMutation.data.ok ? '' : 'danger-text'}>
+                    <strong>Validate:</strong> {mcpValidateMutation.data.ok ? 'ok' : mcpValidateMutation.data.issues.join('; ')}
+                  </span>
+                )}
+                {mcpDraftSimulationMutation.data && (
+                  <span><strong>Draft run:</strong> {mcpDraftSimulationMutation.data.matchedEvents}/{mcpDraftSimulationMutation.data.evaluatedEvents} matched, {mcpDraftSimulationMutation.data.wouldCreateTasks} task(s)</span>
+                )}
+                {mcpStoredSimulationMutation.data && (
+                  <span><strong>Stored run:</strong> {mcpStoredSimulationMutation.data.reportId ?? 'no report'} / {mcpStoredSimulationMutation.data.matchedEvents} matched</span>
+                )}
+                {mcpStoredReportId && <span><strong>Publish proof:</strong> {mcpStoredReportId}</span>}
+                {(mcpDraftMutation.error || mcpValidateMutation.error || mcpDraftSimulationMutation.error || mcpCreateDraftMutation.error || mcpStoredSimulationMutation.error || mcpPublishMutation.error) && (
+                  <span className="danger-text">
+                    {apiErrorMessage(mcpDraftMutation.error ?? mcpValidateMutation.error ?? mcpDraftSimulationMutation.error ?? mcpCreateDraftMutation.error ?? mcpStoredSimulationMutation.error ?? mcpPublishMutation.error)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="rules-mcp-registry">
+              <div className="rules-section-head">
+                <span><Database size={12} /> Operational registry</span>
+                <span className="muted">{mcpCapabilitiesQuery.data?.registry.operationalIntents.length ?? 0}</span>
+              </div>
+              {mcpCapabilitiesQuery.isLoading && (
+                <div className="rules-empty"><RefreshCw size={16} /> Loading registry...</div>
+              )}
+              {mcpCapabilitiesQuery.isError && (
+                <div className="rules-empty danger-text"><AlertTriangle size={16} /> {apiErrorMessage(mcpCapabilitiesQuery.error)}</div>
+              )}
+              {mcpCapabilitiesQuery.isSuccess && mcpCapabilitiesQuery.data.registry.operationalIntents.length === 0 && (
+                <div className="rules-empty"><Database size={16} /> Registry returned no operational intents.</div>
+              )}
+              {mcpCapabilitiesQuery.data?.registry.operationalIntents.slice(0, 8).map((intent) => (
+                <div className="rules-mcp-intent" key={intent.value}>
+                  <div>
+                    <strong>{intent.label}</strong>
+                    <span>{intent.expectedOutcome}{intent.defaultAxis ? ` / ${intent.defaultAxis}` : ''}</span>
+                  </div>
+                  <em>{intent.keywords.slice(0, 4).join(', ')}</em>
+                </div>
+              ))}
+              {mcpCapabilitiesQuery.data && (
+                <div className="rules-mcp-foot">
+                  <span>{mcpCapabilitiesQuery.data.registry.conditions.length} conditions</span>
+                  <span>{mcpCapabilitiesQuery.data.registry.actions.length} actions</span>
+                  <span>{mcpCapabilitiesQuery.data.allowed.triggers.join(', ')}</span>
+                </div>
+              )}
+            </div>
+          </section>
 
           <div className="rules-shell">
             <aside className="rules-list">

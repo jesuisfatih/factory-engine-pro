@@ -13,6 +13,12 @@ import type {
   SweepOverdueServiceRequestsResponse,
   WorkflowTriggerFireInput,
   ActiveWorkflowRuleStatsResponse,
+  WorkflowMcpCapabilitiesResponse,
+  WorkflowMcpCreateDraftRuleResponse,
+  WorkflowMcpDraftRuleResponse,
+  WorkflowMcpPublishRuleResponse,
+  WorkflowMcpSimulateRuleResponse,
+  WorkflowMcpValidateRuleResponse,
 } from '@factory-engine-pro/contracts';
 import { adminApi } from './api';
 
@@ -69,9 +75,14 @@ export function fetchWorkflowRuleActiveStats(days = 30): Promise<ActiveWorkflowR
 }
 
 export function saveWorkflowRule(draft: RuleDraft, id?: string) {
-  const input: SaveWorkflowRuleInput = {
+  const input = workflowRuleInputFromDraft(draft, id ? 'Edited from rules canvas' : 'Created from rules canvas');
+  return id ? adminApi.updateWorkflowRule(id, input) : adminApi.createWorkflowRule(input);
+}
+
+export function workflowRuleInputFromDraft(draft: RuleDraft, comment = 'Workflow rule draft'): SaveWorkflowRuleInput {
+  return {
     name: draft.name,
-    comment: id ? 'Edited from rules canvas' : 'Created from rules canvas',
+    comment,
     definition: {
       status: draft.status,
       priority: draft.priority,
@@ -85,7 +96,6 @@ export function saveWorkflowRule(draft: RuleDraft, id?: string) {
       actions: draft.actions,
     },
   };
-  return id ? adminApi.updateWorkflowRule(id, input) : adminApi.createWorkflowRule(input);
 }
 
 export function fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
@@ -119,6 +129,49 @@ export function fetchWorkflowRuleExecutions(id: string): Promise<WorkflowRuleExe
   return adminApi.workflowRuleExecutions(id);
 }
 
+export function fetchWorkflowMcpCapabilities(): Promise<WorkflowMcpCapabilitiesResponse> {
+  return adminApi.workflowMcpCapabilities();
+}
+
+export function draftWorkflowRuleFromMcp(naturalLanguageGoal: string): Promise<WorkflowMcpDraftRuleResponse> {
+  return adminApi.draftWorkflowRuleFromMcp({ naturalLanguageGoal, preferredStatus: 'active' });
+}
+
+export function validateWorkflowRuleFromMcp(draft: RuleDraft): Promise<WorkflowMcpValidateRuleResponse> {
+  return adminApi.validateWorkflowRuleFromMcp({ rule: workflowRuleInputFromDraft(draft, 'Validated from MCP authoring panel') });
+}
+
+export function simulateDraftWorkflowRuleFromMcp(draft: RuleDraft, recentDays = 7): Promise<WorkflowMcpSimulateRuleResponse> {
+  return adminApi.simulateWorkflowRuleFromMcp({
+    rule: workflowRuleInputFromDraft(draft, 'Draft simulation from MCP authoring panel'),
+    recentDays,
+    limit: 100,
+  });
+}
+
+export function createWorkflowRuleDraftFromMcp(draft: RuleDraft, sourceGoal: string): Promise<WorkflowMcpCreateDraftRuleResponse> {
+  return adminApi.createWorkflowRuleDraftFromMcp({
+    rule: workflowRuleInputFromDraft(draft, 'Created from MCP authoring panel'),
+    sourceGoal,
+  });
+}
+
+export function simulateStoredWorkflowRuleFromMcp(ruleId: string, recentDays = 7): Promise<WorkflowMcpSimulateRuleResponse> {
+  return adminApi.simulateWorkflowRuleFromMcp({
+    ruleId,
+    recentDays,
+    limit: 100,
+  });
+}
+
+export function publishWorkflowRuleFromMcp(ruleId: string, backfillReportId: string): Promise<WorkflowMcpPublishRuleResponse> {
+  return adminApi.publishWorkflowRuleFromMcp({
+    ruleId,
+    backfillReportId,
+    comment: `Published from MCP authoring panel after simulation ${backfillReportId}`,
+  });
+}
+
 export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
   const cooldown = cooldownFromDefinition(rule.definition.cooldown);
   return {
@@ -132,6 +185,22 @@ export function draftFromWorkflowRule(rule: WorkflowRuleDto): RuleDraft {
     when: rule.definition.when,
     whenGroups: rule.definition.whenGroups ?? [],
     actions: rule.definition.actions,
+  };
+}
+
+export function draftFromWorkflowInput(input: SaveWorkflowRuleInput): RuleDraft {
+  const cooldown = cooldownFromDefinition(input.definition.cooldown);
+  return {
+    name: input.name,
+    status: input.definition.status,
+    priority: input.definition.priority,
+    composable: input.definition.composable,
+    cooldownHours: cooldown.hours,
+    cooldownLimit: cooldown.limit,
+    trigger: input.definition.trigger,
+    when: input.definition.when,
+    whenGroups: input.definition.whenGroups ?? [],
+    actions: input.definition.actions,
   };
 }
 
