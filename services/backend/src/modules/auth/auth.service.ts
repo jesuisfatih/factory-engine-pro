@@ -6,9 +6,11 @@ import {
   type AcceptInvitationInput,
   type AuthSession,
   type BootstrapTenantInput,
+  type CreateMcpTokenInput,
   type CustomerLoginInput,
   type CustomerRegisterInput,
   type ForgotPasswordInput,
+  MEMBER_PERMISSIONS,
   type MemberLoginInput,
   type ResetPasswordInput,
 } from '@factory-engine-pro/contracts';
@@ -239,6 +241,71 @@ export class AuthService {
     };
   }
 
+  async listMcpTokens() {
+    const tenantId = this.requireTenant();
+    const rows = await this.prisma.db.authToken.findMany({
+      where: { tenantId, kind: 'mcp_access' },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return {
+      tenantId,
+      tokens: rows.map((row) => this.mcpTokenDto(row)),
+    };
+  }
+
+  async createMcpToken(input: CreateMcpTokenInput) {
+    const context = this.tenantContext.require();
+    const tenantId = this.requireTenant();
+    if (context.principalType !== 'member' || !context.principalId) {
+      throw new BadRequestException('MCP tokens can only be created by workspace members');
+    }
+    const permissions = input.canPublish
+      ? [MEMBER_PERMISSIONS.settingsRead, MEMBER_PERMISSIONS.settingsWrite]
+      : [MEMBER_PERMISSIONS.settingsRead];
+    const expiresAt = new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000);
+    const token = await this.sessions.issueMcpAccessToken({
+      tenantId,
+      principalId: context.principalId,
+      permissions,
+      expiresAt,
+    });
+    const row = await this.authTokens.storeToken({
+      tenantId,
+      kind: 'mcp_access',
+      principalType: 'member',
+      principalId: context.principalId,
+      token,
+      expiresAt,
+      createdById: context.principalId,
+      metadata: {
+        label: input.label,
+        canPublish: input.canPublish,
+        permissions,
+        lastFour: token.slice(-8),
+        surface: 'workflow_mcp',
+      },
+    });
+    this.logger.log('auth', 'mcp_token.created', 'Workflow MCP token created', {
+      token_id: row.id,
+      principal_id: context.principalId,
+      can_publish: input.canPublish,
+      expires_at: expiresAt.toISOString(),
+    });
+    return {
+      ...this.mcpTokenDto(row),
+      tenantId,
+      token,
+    };
+  }
+
+  async revokeMcpToken(id: string) {
+    const tenantId = this.requireTenant();
+    await this.authTokens.revokeById({ tenantId, id, kind: 'mcp_access' });
+    this.logger.log('auth', 'mcp_token.revoked', 'Workflow MCP token revoked', { token_id: id });
+    return { ok: true };
+  }
+
   private requireTenant() {
     const tenantId = this.tenantContext.get()?.tenantId;
     if (!tenantId) throw new BadRequestException('x-tenant-id header is required');
@@ -254,5 +321,38 @@ export class AuthService {
       success: Boolean(valid),
     });
     if (!valid) throw new UnauthorizedException('Invalid email or password');
+  }
+
+  private mcpTokenDto(row: {
+    id: string;
+    metadata: Prisma.JsonValue;
+    createdById: string | null;
+    createdAt: Date;
+    expiresAt: Date;
+    revokedAt: Date | null;
+  }) {
+    const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? row.metadata as Record<string, unknown>
+      : {};
+    const permissions = Array.isArray(metadata.permissions)
+      ? metadata.permissions.filter((permission): permission is string => typeof permission === 'string')
+      : [];
+    const status = row.revokedAt
+      ? 'revoked'
+      : row.expiresAt.getTime() <= Date.now()
+        ? 'expired'
+        : 'active';
+    return {
+      id: row.id,
+      label: typeof metadata.label === 'string' && metadata.label.trim() ? metadata.label : 'Workflow MCP token',
+      permissions,
+      canPublish: metadata.canPublish === true,
+      status,
+      lastFour: typeof metadata.lastFour === 'string' ? metadata.lastFour : null,
+      createdById: row.createdById,
+      createdAt: row.createdAt.toISOString(),
+      expiresAt: row.expiresAt.toISOString(),
+      revokedAt: row.revokedAt?.toISOString() ?? null,
+    };
   }
 }

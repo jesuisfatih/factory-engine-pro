@@ -82,6 +82,36 @@ export const tenantConfigSchema = z.object({
 });
 export type TenantConfigInput = z.infer<typeof tenantConfigSchema>;
 
+export const createMcpTokenSchema = z.object({
+  label: z.string().trim().min(2, 'Token label is required').max(80),
+  expiresInDays: z.number().int().min(1).max(365).default(90),
+  canPublish: z.boolean().default(false),
+});
+export type CreateMcpTokenInput = z.infer<typeof createMcpTokenSchema>;
+
+export interface McpTokenDto {
+  id: string;
+  label: string;
+  permissions: string[];
+  canPublish: boolean;
+  status: 'active' | 'expired' | 'revoked';
+  lastFour: string | null;
+  createdById: string | null;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+}
+
+export interface McpTokensResponse {
+  tenantId: string;
+  tokens: McpTokenDto[];
+}
+
+export interface CreateMcpTokenResponse extends McpTokenDto {
+  tenantId: string;
+  token: string;
+}
+
 export const identityListQuerySchema = pageQuerySchema.extend({
   status: z.string().optional(),
 });

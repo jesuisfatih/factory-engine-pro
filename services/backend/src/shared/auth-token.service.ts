@@ -34,6 +34,31 @@ export class AuthTokenService {
     return token;
   }
 
+  async storeToken(input: {
+    tenantId: string;
+    kind: AuthTokenKind;
+    principalType: PrincipalType;
+    principalId: string;
+    token: string;
+    expiresAt: Date;
+    metadata?: Record<string, unknown>;
+    createdById?: string | null;
+  }) {
+    return this.prisma.db.authToken.create({
+      data: {
+        id: prefixedId('tok'),
+        tenantId: input.tenantId,
+        kind: input.kind,
+        principalType: input.principalType,
+        principalId: input.principalId,
+        tokenHash: this.hash(input.token),
+        expiresAt: input.expiresAt,
+        metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+        createdById: input.createdById ?? null,
+      },
+    });
+  }
+
   async consume(kind: AuthTokenKind, token: string) {
     const tokenHash = this.hash(token);
     const row = await this.prisma.db.authToken.findFirst({
@@ -107,6 +132,32 @@ export class AuthTokenService {
       select: { id: true },
     });
     return Boolean(row);
+  }
+
+  async isMcpAccessTokenActive(token: string) {
+    const row = await this.prisma.db.authToken.findFirst({
+      where: {
+        kind: 'mcp_access',
+        tokenHash: this.hash(token),
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    return Boolean(row);
+  }
+
+  async revokeById(input: { tenantId: string; id: string; kind: AuthTokenKind }) {
+    const result = await this.prisma.db.authToken.updateMany({
+      where: {
+        id: input.id,
+        tenantId: input.tenantId,
+        kind: input.kind,
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+    if (result.count === 0) throw new NotFoundException('Token not found');
   }
 
   hash(token: string) {

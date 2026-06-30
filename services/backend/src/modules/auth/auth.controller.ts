@@ -1,16 +1,19 @@
-import { Body, Controller, Get, Headers, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Req } from '@nestjs/common';
 import {
   acceptInvitationSchema,
   bootstrapTenantSchema,
+  createMcpTokenSchema,
   customerLoginSchema,
   customerRegisterSchema,
   forgotPasswordSchema,
   logoutSchema,
+  MEMBER_PERMISSIONS,
   memberLoginSchema,
   refreshTokenSchema,
   resetPasswordSchema,
   type AcceptInvitationInput,
   type BootstrapTenantInput,
+  type CreateMcpTokenInput,
   type CustomerLoginInput,
   type CustomerRegisterInput,
   type ForgotPasswordInput,
@@ -22,6 +25,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, Body as NestBody } from '@nestjs/common';
 import type { Request } from 'express';
+import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { Public } from '../../shared/public.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
 import { AuthService } from './auth.service.js';
@@ -107,6 +111,24 @@ export class AuthController {
   @Get('me')
   me() {
     return this.auth.me();
+  }
+
+  @Get('mcp-tokens')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpTokens() {
+    return this.auth.listMcpTokens();
+  }
+
+  @Post('mcp-tokens')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  createMcpToken(@Body(new ZodValidationPipe(createMcpTokenSchema)) body: CreateMcpTokenInput) {
+    return this.auth.createMcpToken(body);
+  }
+
+  @Delete('mcp-tokens/:id')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  revokeMcpToken(@Param('id') id: string) {
+    return this.auth.revokeMcpToken(id);
   }
 }
 

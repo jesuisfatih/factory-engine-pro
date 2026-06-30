@@ -14,6 +14,7 @@ interface AccessTokenPayload {
   tenant_id: string;
   principal_type: PrincipalType;
   permissions?: string[];
+  token_use?: string;
 }
 
 @Injectable()
@@ -48,6 +49,9 @@ export class JwtAuthGuard implements CanActivate {
     }
     if (await this.authTokens.isAccessTokenRevoked(accessToken)) {
       throw new UnauthorizedException('Session was revoked');
+    }
+    if (payload.token_use === 'mcp' && !await this.authTokens.isMcpAccessTokenActive(accessToken)) {
+      throw new UnauthorizedException('MCP token is invalid or revoked');
     }
     this.tenantContext.set({
       tenantId: payload.tenant_id,

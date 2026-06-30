@@ -29,6 +29,7 @@ enum PrincipalStatus {
 enum AuthTokenKind {
   refresh
   access_revocation
+  mcp_access
   password_reset
   invitation
 }

@@ -4,6 +4,8 @@ import { ApiClient, type TokenStore } from '@factory-engine-pro/api-client';
 const SESSION_KEY = 'factory-engine-pro.admin.session';
 const PERSON_SESSION_KEY = 'factory-engine-pro.person.session';
 const SESSION_CHANGED_EVENT = 'factory-engine-pro.admin.session.changed';
+export const ADMIN_API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:4120/api/v1';
+export const ADMIN_TENANT_ID = import.meta.env.VITE_TENANT_ID ?? 'ten_remote_test';
 
 function notifySessionChanged() {
   window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
@@ -27,8 +29,8 @@ export const adminTokenStore: TokenStore = {
 };
 
 export const adminApi = new ApiClient({
-  baseUrl: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:4120/api/v1',
-  tenantId: import.meta.env.VITE_TENANT_ID ?? 'ten_remote_test',
+  baseUrl: ADMIN_API_BASE_URL,
+  tenantId: ADMIN_TENANT_ID,
   tokenStore: adminTokenStore,
 });
 

@@ -62,6 +62,28 @@ export class AuthSessionService {
     };
   }
 
+  async issueMcpAccessToken(input: {
+    tenantId: string;
+    principalId: string;
+    permissions: string[];
+    expiresAt: Date;
+  }) {
+    const expiresInSeconds = Math.max(60, Math.floor((input.expiresAt.getTime() - Date.now()) / 1000));
+    return this.jwt.signAsync(
+      {
+        sub: input.principalId,
+        tenant_id: input.tenantId,
+        principal_type: 'member' satisfies PrincipalType,
+        permissions: input.permissions,
+        token_use: 'mcp',
+      },
+      {
+        secret: getJwtAccessSecret(this.config),
+        expiresIn: expiresInSeconds,
+      },
+    );
+  }
+
   async revokeAccessToken(accessToken: string | undefined) {
     if (!accessToken) return false;
     let payload: AccessTokenPayload;

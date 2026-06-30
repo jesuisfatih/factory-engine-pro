@@ -41,6 +41,8 @@ import type {
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
+  CreateMcpTokenInput,
+  CreateMcpTokenResponse,
   CreateDirectOrderInput,
   TransferOrderToMemberInput,
   CreateMemberInput,
@@ -58,6 +60,7 @@ import type {
   ForgotPasswordInput,
   LogoutInput,
   MemberLoginInput,
+  McpTokensResponse,
   ResolveReorderInput,
   ResetPasswordInput,
   ReviewCommissionRequestInput,
@@ -303,6 +306,18 @@ export class ApiClient {
 
   updateTenantConfig(input: TenantConfigInput) {
     return this.patch('/identity/tenant-config', input);
+  }
+
+  mcpTokens() {
+    return this.get<McpTokensResponse>('/auth/mcp-tokens');
+  }
+
+  createMcpToken(input: CreateMcpTokenInput) {
+    return this.post<CreateMcpTokenResponse>('/auth/mcp-tokens', input);
+  }
+
+  revokeMcpToken(id: string) {
+    return this.delete<{ ok: true }>(`/auth/mcp-tokens/${id}`);
   }
 
   accountProfile() {
