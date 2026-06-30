@@ -3547,7 +3547,7 @@ function detectPsychTags(text: string) {
   if (['refund intent', 'iade istiyor', 'refund istiyor', 'money back'].some((keyword) => text.includes(keyword))) tags.push('refund_intent');
   if (['shipping issue', 'kargo sorunu', 'shipment issue', 'delivery issue'].some((keyword) => text.includes(keyword))) tags.push('shipping_issue');
   if (['info request', 'bilgi istiyor', 'inquiry', 'soru soruyor'].some((keyword) => text.includes(keyword))) tags.push('info_request');
-  if (['follow up', 'takip', 'tekrar ara', 'callback'].some((keyword) => text.includes(keyword))) tags.push('follow_up');
+  if (['follow up tag', 'psych follow up', 'takip tag'].some((keyword) => text.includes(keyword))) tags.push('follow_up');
   if (['satisfied', 'memnun', 'happy'].some((keyword) => text.includes(keyword))) tags.push('satisfied');
   return { tags: uniqueStrings(tags), strong };
 }
