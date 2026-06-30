@@ -51,6 +51,8 @@ Use tools in this order:
 
 Unsupported actions such as automatic support case creation, raw SQL, destructive segment changes, and direct email sends are rejected by the backend.
 
+MCP-authored rules are limited to `call.operational_signal.detected` with an `operational_intent` condition. Routing, watcher, and escalation actions must follow a `create_task` action in the same rule so they have a concrete personnel task target.
+
 Create-task assignment is deterministic: explicit member, Aircall call owner, customer axis primary, then axis primary role. Omit an explicit member when the rule should follow the person who handled the call.
 
 Domain goals should be phrased around operational signals such as DTF supply reorder, heat press pricing or purchase intent, quote request, callback, financing, product-fit consultation, sample request, machine upgrade, and training or installation. When a staff decision is required, create a task, note, pin, or route action; staff opens any customer support case manually.

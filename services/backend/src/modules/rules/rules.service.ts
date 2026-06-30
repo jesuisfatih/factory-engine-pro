@@ -2154,14 +2154,16 @@ export class RulesService {
       ],
       safeguards: [
         'Claude never executes workflow actions directly; it only drafts the deterministic workflow DSL.',
+        'MCP-authored rules are limited to call.operational_signal.detected and must include an operational_intent condition.',
         'Rule-created tasks can target only sales or account axes.',
+        'Task routing, watcher, and escalation actions must follow create_task in the same rule.',
         'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role in that order.',
         'Automatic customer request/support case creation is not a supported action.',
         'Publish requires a stored rule and a recent simulation/backfill report for that rule.',
         'Unsupported actions such as send_mail or segment removal are rejected for MCP-authored rules.',
       ],
       allowed: {
-        triggers: WORKFLOW_ENUM_CATALOG.triggers.map((entry) => entry.value),
+        triggers: MCP_ALLOWED_TRIGGERS,
         conditions: WORKFLOW_ENUM_CATALOG.conditions.map((entry) => entry.value),
         actions: MCP_ALLOWED_ACTIONS,
         createTaskAxes: WORKFLOW_ENUM_CATALOG.createTaskAxes.map((entry) => entry.value),
@@ -2361,6 +2363,7 @@ export class RulesService {
     } catch (error) {
       issues.push(error instanceof Error ? error.message : String(error));
     }
+    issues.push(...mcpDefinitionIssues(parsed.data.definition));
     const sourceGoal = stringValue(asRecord(parsed.data.definition.metadata).sourceGoal);
     if (sourceGoal) issues.push(...unsupportedMcpRequests(normalizeHumanText(sourceGoal)));
     for (const action of parsed.data.definition.actions) {
@@ -2528,6 +2531,24 @@ const MCP_ALLOWED_ACTIONS: WorkflowRuleAction['action'][] = [
   'add_watcher',
   'escalate',
   'no-op',
+];
+
+const MCP_ALLOWED_TRIGGERS: WorkflowTrigger[] = [
+  'call.operational_signal.detected',
+];
+
+const MCP_OUTCOME_ACTIONS: WorkflowRuleAction['action'][] = [
+  'create_task',
+  'add_note',
+  'pin_customer',
+  'no-op',
+];
+
+const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
+  'route_member',
+  'route_segment_owner',
+  'add_watcher',
+  'escalate',
 ];
 
 const MCP_OPERATIONAL_INTENT_KEYWORDS: Array<[WorkflowMcpDraftRuleResponse['detectedIntent'], readonly string[]]> = [
@@ -2824,6 +2845,58 @@ function workflowDefinitionConditions(definition: WorkflowRuleDefinition): Workf
     ...definition.when,
     ...(definition.whenGroups ?? []).flatMap((group) => group.conditions),
   ];
+}
+
+function mcpDefinitionIssues(definition: WorkflowRuleDefinition) {
+  const issues: string[] = [];
+  if (!MCP_ALLOWED_TRIGGERS.includes(definition.trigger)) {
+    issues.push(`MCP-authored rules must use one of these triggers: ${MCP_ALLOWED_TRIGGERS.join(', ')}.`);
+  }
+
+  const operationalIntents = operationalIntentsFromDefinition(definition);
+  if (operationalIntents.length === 0) {
+    issues.push('MCP-authored rules must include an operational_intent condition.');
+  }
+
+  const createTaskIndex = definition.actions.findIndex((action) => action.action === 'create_task');
+  const hasCreateTask = createTaskIndex >= 0;
+  const hasTaskTargetedAction = definition.actions.some((action) => MCP_TASK_TARGETED_ACTIONS.includes(action.action));
+  const hasOperationalOutcome = definition.actions.some((action) => MCP_OUTCOME_ACTIONS.includes(action.action) && action.action !== 'no-op');
+  const onlyNoAction = operationalIntents.length > 0 && operationalIntents.every((intent) => intent === 'no_action');
+
+  if (hasTaskTargetedAction && !hasCreateTask) {
+    issues.push('Task routing, watcher, or escalation actions require a create_task action earlier in the same MCP-authored rule.');
+  }
+  for (const [index, action] of definition.actions.entries()) {
+    if (MCP_TASK_TARGETED_ACTIONS.includes(action.action) && createTaskIndex > index) {
+      issues.push(`Action ${action.action} must come after create_task so it has a service request target.`);
+    }
+  }
+  if (onlyNoAction) {
+    if (hasCreateTask || hasTaskTargetedAction) {
+      issues.push('no_action MCP rules cannot create or route tasks; use no-op, add_note, or pin_customer only.');
+    }
+    if (!definition.actions.some((action) => action.action === 'no-op')) {
+      issues.push('no_action MCP rules must include an explicit no-op action with the audit reason.');
+    }
+  } else if (!hasOperationalOutcome) {
+    issues.push('MCP-authored operational rules must create a task, add a customer note, or pin the customer.');
+  }
+
+  return [...new Set(issues)];
+}
+
+function operationalIntentsFromDefinition(definition: WorkflowRuleDefinition) {
+  const intents: Array<WorkflowMcpDraftRuleResponse['detectedIntent']> = [];
+  for (const condition of workflowDefinitionConditions(definition)) {
+    if (condition.condition !== 'operational_intent') continue;
+    if (condition.operator !== '=' && condition.operator !== 'in') continue;
+    for (const value of condition.value.split(',')) {
+      const parsed = operationalIntentSchema.safeParse(normalize(value));
+      if (parsed.success) intents.push(parsed.data);
+    }
+  }
+  return [...new Set(intents)];
 }
 
 function priorityFromGoal(text: string) {
