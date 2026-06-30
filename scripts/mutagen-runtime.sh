@@ -47,9 +47,16 @@ module.exports = {
     {
       name: 'factory-engine-pro-api',
       cwd: '/app/services/backend',
-      script: 'node',
-      args: 'dist/services/backend/src/main.js',
-      env: { NODE_ENV: 'production', HOST: '0.0.0.0', PORT: '4000' },
+      script: '/app/services/backend/dist/services/backend/src/main.js',
+      interpreter: '/usr/local/bin/node',
+      filter_env: ['DD_', 'LD_PRELOAD', 'NODE_OPTIONS'],
+      env: {
+        NODE_ENV: 'production',
+        HOST: '0.0.0.0',
+        PORT: '4000',
+        LD_PRELOAD: '',
+        NODE_OPTIONS: '',
+      },
     },
     {
       name: 'factory-engine-pro-admin',
