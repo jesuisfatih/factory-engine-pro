@@ -2588,14 +2588,26 @@ export class RulesService {
     const wantsSegmentOwner = mentionsSegmentOwner(text);
     const member = wantsCallOwner || wantsSegmentOwner ? null : await this.resolveMentionedMember(naturalLanguageGoal);
     if (wantsCallOwner) {
-      if (detectedIntent !== 'no_action') actions.push(mcpAction('route_call_owner', 'route_call_owner', ''));
-      assumptions.push('Assignee will resolve to the Aircall call owner for the transcript event.');
+      if (detectedIntent !== 'no_action') {
+        actions.push(mcpAction('route_call_owner', 'route_call_owner', ''));
+        assumptions.push('Assignee will resolve to the Aircall call owner for the transcript event.');
+      } else {
+        assumptions.push('Call-owner routing was ignored because the prompt did not resolve to an actionable operational intent.');
+      }
     } else if (wantsSegmentOwner) {
-      actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
-      assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
+      if (detectedIntent !== 'no_action') {
+        actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
+        assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
+      } else {
+        assumptions.push('Segment-owner routing was ignored because the prompt did not resolve to an actionable operational intent.');
+      }
     } else if (member) {
-      actions.push(mcpAction('route_named_member', 'route_member', member.email));
-      assumptions.push(`Named assignee resolved to ${member.email}.`);
+      if (detectedIntent !== 'no_action') {
+        actions.push(mcpAction('route_named_member', 'route_member', member.email));
+        assumptions.push(`Named assignee resolved to ${member.email}.`);
+      } else {
+        assumptions.push(`Named assignee ${member.email} was ignored because the prompt did not resolve to an actionable operational intent.`);
+      }
     } else {
       assumptions.push('Assignee will default to call owner, customer axis primary, or axis primary role at runtime.');
     }
