@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, transcriptResolverOutputSchema } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
@@ -20,6 +20,8 @@ import type {
   PersonTaskTimelineEntry,
   PersonTaskWorkflowTrace,
   PersonTransferTarget,
+  PersonTaskBrief,
+  TranscriptResolverOutput,
   UrgencyScoringConfig,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -153,6 +155,11 @@ interface CardCallRow {
   contactPhone: string | null;
   contactPhoneE164: string | null;
   contactEmail: string | null;
+  transcriptRaw: string | null;
+  resolverOutput: Prisma.JsonValue | null;
+  resolverModel: string | null;
+  resolverPromptKey: string | null;
+  resolvedWithVersion: number | null;
 }
 
 interface OwnedSegmentContext {
@@ -2489,7 +2496,7 @@ export class PersonWorkspaceService {
       segmentName: ownedSegment?.segmentName ?? row.customer?.segmentMemberships[0]?.segment.name ?? null,
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
-      aiBrief: hasGeneratedBrief(source) ? this.brief(row) : undefined,
+      aiBrief: hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined,
       workflowTrace,
       taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
       matchedRuleId,
@@ -2603,7 +2610,17 @@ export class PersonWorkspaceService {
     if (sourceCallIds.length === 0) return { callsById: new Map() };
     const calls = await this.prisma.db.aircallCallEvent.findMany({
       where: { id: { in: sourceCallIds } },
-      select: { id: true, contactPhone: true, contactPhoneE164: true, contactEmail: true },
+      select: {
+        id: true,
+        contactPhone: true,
+        contactPhoneE164: true,
+        contactEmail: true,
+        transcriptRaw: true,
+        resolverOutput: true,
+        resolverModel: true,
+        resolverPromptKey: true,
+        resolvedWithVersion: true,
+      },
     });
     return { callsById: new Map(calls.map((call) => [call.id, call])) };
   }
@@ -2628,11 +2645,15 @@ export class PersonWorkspaceService {
     };
   }
 
-  private brief(row: ServiceRequestRow) {
+  private brief(row: ServiceRequestRow, callContext?: CardCallContext): PersonTaskBrief {
+    const metadata = this.record(row.metadata);
+    const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
+    const resolver = resolverForBrief(row, metadata, sourceCall);
+    if (resolver) return transcriptPersonBrief(row, resolver, sourceCall);
+
     return {
       whyCalling: row.description ?? row.title,
       upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority customer task needs a human response.' : 'No explicit complaint captured.',
-      painPoints: [titleize(row.priority), titleize(row.status), String(this.record(row.metadata).category ?? row.source)],
       callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the customer task to the next accountable status.',
       suggestedActions: ['Review customer context', 'Add an internal note', 'Update status before leaving the screen'],
       promptKey: 'person.workspace.live-context',
@@ -2984,6 +3005,144 @@ function uniqueHighUrgencyCount(
     }
   }
   return count;
+}
+
+function resolverForBrief(
+  row: ServiceRequestRow,
+  metadata: Record<string, unknown>,
+  sourceCall?: CardCallRow | null,
+): TranscriptResolverOutput | null {
+  const workflow = asRecord(metadata.workflow);
+  const workflowState = asRecord(workflow.stateSnapshot ?? workflow.state_snapshot);
+  const snapshot = asRecord(row.taskStateSnapshot);
+  const candidates = [
+    sourceCall?.resolverOutput,
+    snapshot.resolverOutput,
+    snapshot.resolver_output,
+    workflowState.resolverOutput,
+    workflowState.resolver_output,
+  ];
+  for (const candidate of candidates) {
+    const parsed = transcriptResolverOutputSchema.safeParse(candidate);
+    if (parsed.success) return parsed.data;
+  }
+  return null;
+}
+
+function transcriptPersonBrief(
+  row: ServiceRequestRow,
+  resolver: TranscriptResolverOutput,
+  sourceCall?: CardCallRow | null,
+): PersonTaskBrief {
+  const personBrief = resolver.person_brief;
+  const synthesized = synthesizedResolverBrief(row, resolver, sourceCall);
+  const suggestedActions = cleanedActions(personBrief.suggested_actions);
+  return {
+    whyCalling: staffBriefText(personBrief.why_calling, synthesized.whyCalling),
+    upsetAbout: staffBriefText(personBrief.upset_about, synthesized.upsetAbout),
+    callGoal: staffBriefText(personBrief.call_goal, synthesized.callGoal),
+    suggestedActions: suggestedActions.length > 0 ? suggestedActions : synthesized.suggestedActions,
+    promptKey: 'person.workspace.transcript-brief',
+    promptVersion: String(sourceCall?.resolvedWithVersion ?? resolver.resolved_with_version ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+    modelUsed: sourceCall?.resolverModel ?? 'transcript-resolver',
+    confidence: resolverBriefConfidence(resolver),
+    transcriptSnippet: staffBriefText(personBrief.transcript_snippet, sourceCall?.transcriptRaw?.slice(0, 500) ?? resolver.summary ?? row.description ?? row.title),
+  };
+}
+
+function synthesizedResolverBrief(
+  row: ServiceRequestRow,
+  resolver: TranscriptResolverOutput,
+  sourceCall?: CardCallRow | null,
+) {
+  const primarySignal = resolver.operational_signals.find((signal) => signal.action_required && signal.intent !== 'no_action')
+    ?? resolver.operational_signals.find((signal) => signal.intent !== 'no_action')
+    ?? null;
+  const products = resolver.product_mentions
+    .map((mention) => mention.name_hint ?? mention.sku)
+    .filter((value): value is string => Boolean(value?.trim()));
+  const productText = products.length ? ` about ${products.slice(0, 3).join(', ')}` : '';
+  const tags = new Set(resolver.psych_tags);
+  const signalIntent = primarySignal?.intent ?? null;
+  const intent = signalIntent
+    ?? (resolver.payment_signals.refund_asked ? 'refund_requested' : null)
+    ?? (resolver.shipping_signals.tracking_asked || resolver.shipping_signals.complaint ? 'shipping_status_question' : null)
+    ?? (tags.has('follow_up') || resolver.call_intent === 'follow_up' ? 'callback_requested' : null)
+    ?? (tags.has('purchase_intent') || resolver.call_intent === 'sale' ? 'sales_follow_up' : null)
+    ?? (products.length > 0 ? 'product_fit_question' : 'no_action');
+
+  const whyByIntent: Record<string, string> = {
+    refund_requested: 'Customer mentioned refund, return, cancellation, or payment recovery; handle the account follow-up.',
+    shipping_status_question: 'Customer asked about shipping, delivery, tracking, freight, or address details.',
+    callback_requested: 'Customer or agent indicated a follow-up call is needed; call back and close the loop.',
+    sales_follow_up: `Customer showed purchase or sales intent${productText}; qualify the next sales step.`,
+    product_fit_question: `Customer needs product guidance${productText}; clarify fit before recommending the next step.`,
+    no_action: resolver.summary || row.description || row.title,
+  };
+  const goalByIntent: Record<string, string> = {
+    refund_requested: 'Clarify order number, reason, and the next account-side action.',
+    shipping_status_question: 'Clarify order/tracking context and give the next accountable shipping update.',
+    callback_requested: 'Reach the customer and confirm what decision, order, or question is pending.',
+    sales_follow_up: 'Qualify product need, timing, price path, and next sales action.',
+    product_fit_question: 'Clarify use case, volume, material, and size before recommending a product.',
+    no_action: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Decide whether a human follow-up is still needed.',
+  };
+  const upsetAbout = resolver.payment_signals.refund_asked
+    ? 'Refund, return, cancellation, or payment recovery was mentioned.'
+    : resolver.shipping_signals.complaint || resolver.shipping_signals.tracking_asked
+      ? 'Shipping, delivery, tracking, freight, or address uncertainty was mentioned.'
+      : resolver.payment_signals.complaint
+        ? 'Payment, pricing, or refund friction was mentioned.'
+        : tags.has('complaint')
+          ? 'Complaint language was captured in the transcript.'
+          : 'No explicit complaint captured in the transcript.';
+
+  return {
+    whyCalling: primarySignal?.reason ?? whyByIntent[intent] ?? resolver.summary ?? row.description ?? row.title,
+    upsetAbout,
+    callGoal: goalByIntent[intent] ?? 'Move the customer to the next accountable sales or account step.',
+    suggestedActions: cleanedActions([
+      ...(synthesizedActionsByIntent(intent, products)),
+      primarySignal?.suggested_task_title ? `Use task context: ${primarySignal.suggested_task_title}` : null,
+      sourceCall?.transcriptRaw ? 'Record the call outcome before leaving the task' : null,
+    ]),
+  };
+}
+
+function synthesizedActionsByIntent(intent: string, products: string[]) {
+  const productAction = products.length ? `Confirm product context: ${products.slice(0, 3).join(', ')}` : null;
+  const actions: Record<string, Array<string | null>> = {
+    refund_requested: ['Ask for order number and refund reason', 'Clarify whether replacement, return, or account review is needed', 'Set the next account-side action'],
+    shipping_status_question: ['Ask for order or tracking number', 'Clarify freight, address, or delivery issue', 'Give the next accountable update path'],
+    callback_requested: ['Call the customer back from the task phone number', 'Confirm what decision or question is pending', 'Record the outcome before leaving the task'],
+    sales_follow_up: ['Clarify product need, timing, and budget', productAction, 'Set quote or order next step'],
+    product_fit_question: ['Ask use case, volume, material, and size', productAction, 'Recommend the matching product family'],
+    no_action: ['Review transcript signal', 'Decide if follow-up is required', 'Record the outcome before leaving the task'],
+  };
+  return actions[intent] ?? actions.no_action;
+}
+
+function resolverBriefConfidence(resolver: TranscriptResolverOutput) {
+  const values = [
+    resolver.customer_match.confidence,
+    ...resolver.product_mentions.map((mention) => mention.confidence),
+    ...resolver.operational_signals.map((signal) => signal.confidence),
+  ].filter((value) => Number.isFinite(value));
+  return Math.max(0.1, Math.min(1, values.length > 0 ? Math.max(...values) : 0.7));
+}
+
+function cleanedActions(values: Array<string | null | undefined>) {
+  return uniqueStrings(values.map((value) => staffBriefText(value, '')).filter(Boolean)).slice(0, 5);
+}
+
+function staffBriefText(value: unknown, fallback: string) {
+  const text = firstString(value, fallback) ?? fallback;
+  return text
+    .replace(/\bAI\b/gi, 'Transcript')
+    .replace(/\bautomation\b/gi, 'workflow')
+    .replace(/\bsupport case\b/gi, 'customer request')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {

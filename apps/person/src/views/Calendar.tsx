@@ -260,8 +260,8 @@ export function CalendarView() {
                     <div className="val">{selected.aiBrief.whyCalling}</div>
                   </div>
                   <div className="row">
-                    <div className="lbl">Pain points</div>
-                    <ul>{selected.aiBrief.painPoints.map((point) => <li key={point}>{point}</li>)}</ul>
+                    <div className="lbl">Concern</div>
+                    <div className="val">{selected.aiBrief.upsetAbout}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Goal</div>

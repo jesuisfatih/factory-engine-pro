@@ -20,7 +20,7 @@ import type {
   TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
-import type { Card, ColumnId, CustomerRow, DailyOperations, TaskBriefDetail, TransferTarget, TransferTaskResult } from '../types';
+import type { Card, ColumnId, CustomerRow, DailyOperations, TaskBrief, TaskBriefDetail, TransferTarget, TransferTaskResult } from '../types';
 
 export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
 export interface PersonSummary {
@@ -64,17 +64,7 @@ export interface CalEvent {
   durationMinutes: number;
   kind: EventKind;
   source: EventSource;
-  aiBrief?: {
-    whyCalling: string;
-    painPoints: string[];
-    callGoal: string;
-    promptKey: string;
-    promptVersion: string;
-    modelUsed: string;
-    confidence: number;
-    transcriptSnippet?: string;
-    suggestedActions: string[];
-  };
+  aiBrief?: TaskBrief;
 }
 export type NoteRow = PersonNoteRow;
 export interface EmailRow {

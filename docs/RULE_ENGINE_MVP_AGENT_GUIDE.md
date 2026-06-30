@@ -81,6 +81,26 @@ GET /api/v1/rules/mcp/agent-guide
 
 Agents should discover the markdown through `agentGuide.endpoint` in capabilities and read it through `read_workflow_agent_guide`. Users should not need to paste this markdown into a separate MVP prompt.
 
+## Staff Brief Contract
+
+Transcript resolver schema v4 includes a `person_brief` JSON object. This object is the source for the staff task modal narrative:
+
+```json
+{
+  "person_brief": {
+    "why_calling": "specific reason this customer should be called now",
+    "upset_about": "concrete complaint, objection, confusion, risk, or no explicit complaint",
+    "call_goal": "next human outcome",
+    "suggested_actions": ["2 to 5 concrete staff actions"],
+    "transcript_snippet": "short transcript evidence"
+  }
+}
+```
+
+Rules do not write these modal paragraphs directly. The resolver writes them from transcript evidence, and Rule Engine uses rules only to decide whether staff work should be created or enriched. If `person_brief` is missing on older resolved calls, the person workspace synthesizes the same fields from resolver summary, product mentions, operational signals, and transcript text.
+
+Do not include "AI", "automation", or automatic support-case language in `person_brief`. Use staff-facing sales/account language: call reason, concern, goal, and next actions.
+
 ## Allowed Trigger
 
 For MCP-authored rules, use:

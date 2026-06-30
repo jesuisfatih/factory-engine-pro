@@ -347,6 +347,13 @@ Return STRICT JSON only. The JSON must exactly match this schema:
     "reason": string,
     "suggested_task_title": string|null
   }],
+  "person_brief": {
+    "why_calling": string,
+    "upset_about": string,
+    "call_goal": string,
+    "suggested_actions": string[],
+    "transcript_snippet": string
+  },
   "competitor_mentioned": string[],
   "summary": string under 200 tokens,
   "language_detected": ISO-like language name or code,
@@ -355,6 +362,13 @@ Return STRICT JSON only. The JSON must exactly match this schema:
 Classify operational_signals for DTF Supply / Heat Press sales operations, not customer-request automation.
 Map calls to concrete operational intent: heat press machine purchase, spare part purchase, generic heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, or no_action.
 Do not create or imply an automatic support case, ticket, or customer request. Staff may later open a case manually if the customer explicitly asks.
+Write person_brief for the staff member who will call the customer. Base it on transcript evidence and resolver signals, not generic workflow text.
+person_brief.why_calling: one concise sentence explaining why this specific customer should be called now.
+person_brief.upset_about: the concrete complaint, objection, confusion, risk, or "No explicit complaint captured in the transcript."
+person_brief.call_goal: the next human outcome, such as confirm part fit, quote machine pricing, recover a refund concern, or schedule follow-up.
+person_brief.suggested_actions: 2 to 5 specific call actions. Do not include generic actions like "review customer context" unless the transcript has no usable signal.
+person_brief.transcript_snippet: a short evidence snippet or tight paraphrase from the transcript.
+Do not use the words "AI", "automation", or "support case" in person_brief text.
 Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, installation, refund/account, or shipping/account follow-up opportunity.
 Use null or empty arrays when unknown. Confidence values must be 0..1.`;
 }

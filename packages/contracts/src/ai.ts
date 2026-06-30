@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CALL_INTENTS, CREATE_TASK_AXIS, OPERATIONAL_INTENTS, PSYCH_TAGS, URGENCY_LEVELS } from './enums.js';
 
-export const TRANSCRIPT_RESOLVER_SCHEMA_VERSION = 3;
+export const TRANSCRIPT_RESOLVER_SCHEMA_VERSION = 4;
 
 export const TRANSCRIPT_RESOLVER_OUTPUT_FIELDS = [
   'customer_match',
@@ -12,6 +12,7 @@ export const TRANSCRIPT_RESOLVER_OUTPUT_FIELDS = [
   'payment_signals',
   'urgency_signal',
   'operational_signals',
+  'person_brief',
   'competitor_mentioned',
   'summary',
   'language_detected',
@@ -54,6 +55,21 @@ export const transcriptOperationalSignalSchema = z.object({
 });
 export type TranscriptOperationalSignal = z.infer<typeof transcriptOperationalSignalSchema>;
 
+export const transcriptPersonBriefSchema = z.object({
+  why_calling: z.string().max(800).default(''),
+  upset_about: z.string().max(800).default(''),
+  call_goal: z.string().max(500).default(''),
+  suggested_actions: z.array(z.string().max(160)).max(6).default([]),
+  transcript_snippet: z.string().max(600).default(''),
+}).default({
+  why_calling: '',
+  upset_about: '',
+  call_goal: '',
+  suggested_actions: [],
+  transcript_snippet: '',
+});
+export type TranscriptPersonBrief = z.infer<typeof transcriptPersonBriefSchema>;
+
 export const transcriptResolverOutputSchema = z.object({
   customer_match: z.object({
     customer_id: z.string().nullable(),
@@ -80,6 +96,7 @@ export const transcriptResolverOutputSchema = z.object({
   }),
   urgency_signal: z.enum(URGENCY_LEVELS),
   operational_signals: z.array(transcriptOperationalSignalSchema).default([]),
+  person_brief: transcriptPersonBriefSchema,
   competitor_mentioned: z.array(z.string()),
   summary: z.string().max(1200),
   language_detected: z.string(),

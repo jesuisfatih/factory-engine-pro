@@ -579,7 +579,7 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
   else if (hasCallbackSignal) callIntent = 'follow_up';
   else if (hasComplaintSignal) callIntent = 'complaint';
 
-  return {
+  const output: TranscriptResolverOutput = {
     customer_match: {
       customer_id: null,
       phone: null,
@@ -601,11 +601,112 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
     },
     urgency_signal: hasAny(['urgent', 'asap', 'today', 'critical']) ? 'high' : 'medium',
     operational_signals: [],
+    person_brief: {
+      why_calling: '',
+      upset_about: '',
+      call_goal: '',
+      suggested_actions: [],
+      transcript_snippet: '',
+    },
     competitor_mentioned: [],
     summary: transcript.replace(/\s+/g, ' ').trim().slice(0, 1200),
     language_detected: 'unknown',
     resolved_with_version: targetVersion,
   };
+  output.person_brief = localFallbackPersonBrief(transcript, output, transcriptOperationalSignals(output, { customerMatched: false }));
+  return output;
+}
+
+function localFallbackPersonBrief(
+  transcript: string,
+  output: TranscriptResolverOutput,
+  signals: TranscriptOperationalSignal[],
+): TranscriptResolverOutput['person_brief'] {
+  const cleanTranscript = transcript.replace(/\s+/g, ' ').trim();
+  const actionable = signals.filter((signal) => signal.action_required && signal.intent !== 'no_action');
+  const primary = actionable[0] ?? signals[0] ?? null;
+  const intent = primary?.intent ?? 'no_action';
+  const products = output.product_mentions
+    .map((mention) => mention.name_hint ?? mention.sku)
+    .filter((value): value is string => Boolean(value?.trim()));
+  const productText = products.length ? ` about ${products.join(', ')}` : '';
+  const whyByIntent: Record<string, string> = {
+    spare_part_purchase_intent: `Customer is asking about a replacement part${productText}; confirm fit before quoting.`,
+    heat_press_machine_purchase_intent: `Customer is showing purchase intent for a heat press machine${productText}; qualify the machine sale.`,
+    heat_press_purchase_intent: `Customer is evaluating a heat press purchase${productText}; guide them to the right model and next step.`,
+    dtf_supply_reorder_signal: `Customer may need DTF supplies or consumables${productText}; confirm reorder details.`,
+    quote_request: `Customer asked for pricing, quote, or proposal${productText}; prepare the sales follow-up.`,
+    callback_requested: 'Customer or agent indicated a follow-up call is needed; call back and close the loop.',
+    refund_requested: 'Customer mentioned refund, return, cancellation, or payment recovery; handle the account follow-up.',
+    shipping_status_question: 'Customer asked about shipping, delivery, tracking, freight, or address details.',
+    financing_question: 'Customer discussed financing, lease, payment method, or payment plan.',
+    price_objection: 'Customer raised a price, discount, budget, or competitor objection.',
+    product_fit_question: `Customer needs product fit guidance${productText}; clarify use case and recommend the right option.`,
+    sample_request: 'Customer asked for samples, a demo print, or proof of output quality.',
+    machine_upgrade_interest: 'Customer signaled upgrade, replacement, second machine, or higher-volume production interest.',
+    training_installation_need: 'Customer needs setup, training, installation, or equipment-use follow-up.',
+    existing_customer_expansion_signal: 'Existing customer showed expansion, upsell, or additional purchase signal.',
+    no_action: output.summary || cleanTranscript.slice(0, 180) || 'Transcript captured no clear sales or account follow-up signal.',
+  };
+  const goalByIntent: Record<string, string> = {
+    spare_part_purchase_intent: 'Confirm machine model, exact part, compatibility, price, and availability.',
+    heat_press_machine_purchase_intent: 'Qualify the machine need and move the customer toward quote or order.',
+    heat_press_purchase_intent: 'Match the customer to the right heat press and set the next sales step.',
+    dtf_supply_reorder_signal: 'Confirm consumable quantities, SKU, timing, and reorder path.',
+    quote_request: 'Collect required details and send or confirm the quote path.',
+    callback_requested: 'Reach the customer and confirm what decision, order, or question is pending.',
+    refund_requested: 'Clarify order number, reason, and the next account-side action.',
+    shipping_status_question: 'Clarify order/tracking context and give the next accountable shipping update.',
+    financing_question: 'Explain financing path and capture the details needed for the account step.',
+    price_objection: 'Understand the objection and offer the best qualified sales path.',
+    product_fit_question: 'Clarify use case, volume, material, and size before recommending a product.',
+    sample_request: 'Confirm sample type and explain the sample or proof process.',
+    machine_upgrade_interest: 'Qualify current setup and target production volume for the upgrade.',
+    training_installation_need: 'Clarify the setup or training gap and schedule the next help step.',
+    existing_customer_expansion_signal: 'Identify the expansion opportunity and guide the next purchase step.',
+    no_action: 'Decide whether a human follow-up is still needed after reviewing the transcript.',
+  };
+  const upsetAbout = output.payment_signals.refund_asked
+    ? 'Refund, return, cancellation, or payment recovery was mentioned.'
+    : output.shipping_signals.complaint || output.shipping_signals.tracking_asked
+      ? 'Shipping, delivery, tracking, freight, or address uncertainty was mentioned.'
+      : output.payment_signals.complaint
+        ? 'Payment, pricing, or refund friction was mentioned.'
+        : output.psych_tags.includes('complaint')
+          ? 'Complaint language was captured in the transcript.'
+          : 'No explicit complaint captured in the transcript.';
+  return {
+    why_calling: whyByIntent[intent] ?? primary?.reason ?? output.summary ?? cleanTranscript.slice(0, 180),
+    upset_about: upsetAbout,
+    call_goal: goalByIntent[intent] ?? 'Move the customer to the next accountable sales or account step.',
+    suggested_actions: localFallbackSuggestedActions(intent, products),
+    transcript_snippet: cleanTranscript.slice(0, 500),
+  };
+}
+
+function localFallbackSuggestedActions(intent: string, products: string[]) {
+  const productAction = products.length ? `Mention detected product context: ${products.slice(0, 3).join(', ')}` : null;
+  const actionsByIntent: Record<string, string[]> = {
+    spare_part_purchase_intent: ['Confirm exact machine model and part needed', 'Check compatibility before quoting', 'Give price and availability if the part match is clear'],
+    heat_press_machine_purchase_intent: ['Qualify size, production volume, and budget', 'Confirm model fit and availability', 'Set quote or order next step'],
+    heat_press_purchase_intent: ['Clarify target use case and machine size', 'Compare the best fit options', 'Set quote or order next step'],
+    dtf_supply_reorder_signal: ['Confirm SKU, quantity, and timing', 'Check recent purchase pattern', 'Guide reorder or quote path'],
+    quote_request: ['Collect product, quantity, and timing details', 'Confirm email for the quote', 'Set quote follow-up owner and deadline'],
+    callback_requested: ['Call the customer back from the task phone number', 'Confirm what decision or question is pending', 'Record the outcome before leaving the task'],
+    refund_requested: ['Ask for order number and refund reason', 'Clarify whether replacement, return, or account review is needed', 'Set the next account-side action'],
+    shipping_status_question: ['Ask for order or tracking number', 'Clarify freight, address, or delivery issue', 'Give the next accountable update path'],
+    financing_question: ['Clarify product and total budget', 'Explain financing or lease path', 'Capture details needed for account review'],
+    price_objection: ['Ask what price or competitor they are comparing', 'Confirm quantity and urgency', 'Offer the best qualified pricing path'],
+    product_fit_question: ['Ask use case, volume, material, and size', 'Recommend the matching product family', 'Confirm next quote/order step'],
+    sample_request: ['Clarify sample type and use case', 'Explain sample or proof process', 'Set follow-up after sample decision'],
+    machine_upgrade_interest: ['Ask current machine and production bottleneck', 'Qualify target volume and timeline', 'Recommend upgrade path'],
+    training_installation_need: ['Clarify setup or usage blocker', 'Confirm machine/model involved', 'Schedule the next training or account follow-up'],
+    existing_customer_expansion_signal: ['Confirm current setup and expansion goal', 'Identify cross-sell or upgrade fit', 'Set next sales action'],
+    no_action: ['Review transcript signal', 'Decide if follow-up is required', 'Record the outcome before leaving the task'],
+  };
+  return [...(actionsByIntent[intent] ?? actionsByIntent.no_action), productAction]
+    .filter((value): value is string => Boolean(value))
+    .slice(0, 5);
 }
 
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
