@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
+import { readFile, stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import {
   activeWorkflowRuleStatsQuerySchema,
   backfillWorkflowRuleSchema,
@@ -47,6 +49,7 @@ import {
   type WorkflowWhenGroupTrace,
   type WorkflowTriggerFireInput,
   type WorkflowTriggerFireResponse,
+  type WorkflowMcpAgentGuideResponse,
   type WorkflowMcpCapabilitiesResponse,
   type WorkflowMcpCreateDraftRuleInput,
   type WorkflowMcpCreateDraftRuleResponse,
@@ -81,6 +84,17 @@ import { transcriptOperationalSignals } from '../ai/transcript-operational-signa
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
 import { WorkflowPromptService } from './workflow-prompt.service.js';
+
+const RULE_ENGINE_AGENT_GUIDE_PATH = 'docs/RULE_ENGINE_MVP_AGENT_GUIDE.md';
+const RULE_ENGINE_AGENT_GUIDE_ENDPOINT = '/api/v1/rules/mcp/agent-guide';
+const RULE_ENGINE_AGENT_GUIDE_VERSION = '2026-06-30.rule-engine-mcp-guide.v1';
+const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
+  'Read this guide before drafting complex workflow rules.',
+  'Draft deterministic call operational signal rules only.',
+  'Use sales/account tasks; never create support cases automatically.',
+  'Use Shopify product taxonomy guards for machine, part, supply, and cross-sell splits.',
+  'Validate and simulate every draft before storing or publishing it.',
+] as const;
 
 const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
   defaultRule(
@@ -2239,8 +2253,17 @@ export class RulesService {
     const productLanguage = await this.shopifyProductLanguage();
     return {
       catalogVersion: WORKFLOW_ENUM_CATALOG.version,
+      agentGuide: {
+        version: RULE_ENGINE_AGENT_GUIDE_VERSION,
+        title: 'Rule Engine MCP/MVP Agent Guide',
+        path: RULE_ENGINE_AGENT_GUIDE_PATH,
+        endpoint: RULE_ENGINE_AGENT_GUIDE_ENDPOINT,
+        contentType: 'text/markdown',
+        summary: [...RULE_ENGINE_AGENT_GUIDE_SUMMARY],
+      },
       tools: [
         { name: 'list_workflow_capabilities', description: 'List allowed triggers, conditions, actions, axes, and operational intents.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'read_workflow_agent_guide', description: 'Read the Rule Engine authoring guide markdown before drafting complex workflow rules.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'draft_workflow_rule', description: 'Compile a natural-language sales/personnel goal into a draft workflow rule.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'validate_workflow_rule', description: 'Validate a workflow rule against the safe deterministic DSL.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'simulate_workflow_rule', description: 'Dry-run a stored or draft workflow rule against recent operational signals.', mutates: false, requiresPermission: 'settings.read' },
@@ -2248,7 +2271,7 @@ export class RulesService {
         { name: 'publish_workflow_rule', description: 'Publish a stored rule only after an attached successful simulation report.', mutates: true, requiresPermission: 'settings.write' },
       ],
       safeguards: [
-        'Claude never executes workflow actions directly; it only drafts the deterministic workflow DSL.',
+        'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
         'MCP-authored rules are limited to call.operational_signal.detected and must include an operational_intent condition.',
         'Rule-created tasks can target only sales or account axes.',
         'Task routing, watcher, and escalation actions must follow create_task in the same rule.',
@@ -2284,6 +2307,26 @@ export class RulesService {
         'Route DTF supply reorder signals to the segment owner only when the previous purchase includes the same Shopify product family.',
         'Create account follow-up tasks for financing questions and keep duplicate open-task guards on.',
       ],
+    };
+  }
+
+  async mcpAgentGuide(): Promise<WorkflowMcpAgentGuideResponse> {
+    const absolutePath = resolve(process.cwd(), RULE_ENGINE_AGENT_GUIDE_PATH);
+    const [markdown, fileStat] = await Promise.all([
+      readFile(absolutePath, 'utf8'),
+      stat(absolutePath).catch(() => null),
+    ]);
+
+    return {
+      version: RULE_ENGINE_AGENT_GUIDE_VERSION,
+      title: 'Rule Engine MCP/MVP Agent Guide',
+      path: RULE_ENGINE_AGENT_GUIDE_PATH,
+      contentType: 'text/markdown',
+      sha256: createHash('sha256').update(markdown).digest('hex'),
+      lineCount: markdown.split(/\r\n|\r|\n/).length,
+      updatedAt: fileStat ? fileStat.mtime.toISOString() : null,
+      summary: [...RULE_ENGINE_AGENT_GUIDE_SUMMARY],
+      markdown,
     };
   }
 
@@ -3133,6 +3176,7 @@ const MCP_ALLOWED_TRIGGERS: WorkflowTrigger[] = [
 
 const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name'][] = [
   'list_workflow_capabilities',
+  'read_workflow_agent_guide',
   'draft_workflow_rule',
   'validate_workflow_rule',
   'simulate_workflow_rule',

@@ -48,6 +48,7 @@ These boundaries are product rules, not implementation preferences.
 The MCP surface exposes these tool concepts:
 
 - `list_workflow_capabilities`
+- `read_workflow_agent_guide`
 - `draft_workflow_rule`
 - `validate_workflow_rule`
 - `simulate_workflow_rule`
@@ -57,15 +58,25 @@ The MCP surface exposes these tool concepts:
 The safe authoring sequence is always:
 
 1. `list_workflow_capabilities`
-2. `draft_workflow_rule`
-3. Inspect draft conditions and actions.
-4. `validate_workflow_rule`
-5. `simulate_workflow_rule` against the draft.
-6. `create_workflow_rule_draft`
-7. `simulate_workflow_rule` against the stored draft.
-8. `publish_workflow_rule` only with a fresh matching simulation report.
+2. `read_workflow_agent_guide`
+3. `draft_workflow_rule`
+4. Inspect draft conditions and actions.
+5. `validate_workflow_rule`
+6. `simulate_workflow_rule` against the draft.
+7. `create_workflow_rule_draft`
+8. `simulate_workflow_rule` against the stored draft.
+9. `publish_workflow_rule` only with a fresh matching simulation report.
 
 Never skip validation or simulation for a generated rule.
+
+Runtime binding:
+
+```text
+GET /api/v1/rules/mcp/capabilities
+GET /api/v1/rules/mcp/agent-guide
+```
+
+Agents should discover the markdown through `agentGuide.endpoint` in capabilities and read it through `read_workflow_agent_guide`. Users should not need to paste this markdown into a separate MVP prompt.
 
 ## Allowed Trigger
 
@@ -812,6 +823,7 @@ Minimal smoke examples:
 
 ```text
 GET /api/v1/rules/mcp/capabilities
+GET /api/v1/rules/mcp/agent-guide
 POST /api/v1/rules/mcp/draft
 POST /api/v1/rules/mcp/validate
 POST /api/v1/rules/mcp/simulate
@@ -934,4 +946,3 @@ When asked to create a rule:
 8. Add watcher/escalation only when requested or clearly justified by repeat-call/strong sentiment.
 9. Reject support case, direct mail, destructive, or Shopify mutation requests.
 10. Draft, validate, simulate, then store as draft. Publish only after fresh simulation proof.
-

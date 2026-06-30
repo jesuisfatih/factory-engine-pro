@@ -291,10 +291,33 @@ export interface ActiveWorkflowRuleStatsResponse {
 }
 
 export interface WorkflowMcpCapabilityTool {
-  name: 'list_workflow_capabilities' | 'draft_workflow_rule' | 'validate_workflow_rule' | 'simulate_workflow_rule' | 'create_workflow_rule_draft' | 'publish_workflow_rule';
+  name:
+    | 'list_workflow_capabilities'
+    | 'read_workflow_agent_guide'
+    | 'draft_workflow_rule'
+    | 'validate_workflow_rule'
+    | 'simulate_workflow_rule'
+    | 'create_workflow_rule_draft'
+    | 'publish_workflow_rule';
   description: string;
   mutates: boolean;
   requiresPermission: string;
+}
+
+export interface WorkflowMcpAgentGuideMetadata {
+  version: string;
+  title: string;
+  path: string;
+  endpoint: '/api/v1/rules/mcp/agent-guide';
+  contentType: 'text/markdown';
+  summary: string[];
+}
+
+export interface WorkflowMcpAgentGuideResponse extends Omit<WorkflowMcpAgentGuideMetadata, 'endpoint'> {
+  sha256: string;
+  lineCount: number;
+  updatedAt: string | null;
+  markdown: string;
 }
 
 export interface WorkflowMcpProductLanguageEntry {
@@ -315,6 +338,7 @@ export interface WorkflowMcpProductLanguageEntry {
 
 export interface WorkflowMcpCapabilitiesResponse {
   catalogVersion: string;
+  agentGuide: WorkflowMcpAgentGuideMetadata;
   tools: WorkflowMcpCapabilityTool[];
   safeguards: string[];
   allowed: {

@@ -80,6 +80,12 @@ export class RulesController {
     return this.rules.mcpCapabilities();
   }
 
+  @Get('mcp/agent-guide')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpAgentGuide() {
+    return this.rules.mcpAgentGuide();
+  }
+
   @Post('mcp/draft')
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   mcpDraft(@Body(new ZodValidationPipe(workflowMcpDraftRuleSchema)) body: WorkflowMcpDraftRuleInput) {
