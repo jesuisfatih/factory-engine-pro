@@ -363,6 +363,7 @@ Classify operational_signals for DTF Supply / Heat Press sales operations, not c
 Map calls to concrete operational intent: heat press machine purchase, spare part purchase, generic heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, or no_action.
 Do not create or imply an automatic support case, ticket, or customer request. Staff may later open a case manually if the customer explicitly asks.
 Treat carrier greetings, voicemail prompts, recording disclaimers, survey prompts, and phrases like "quality and training purposes" as boilerplate. They must not trigger training_installation_need, shipping_status_question, callback_requested, or any sales/account task unless the transcript also contains a real customer request.
+Treat freight/carrier/vendor-only calls, including Roadrunner or delivery appointment scheduling, as no_action when no Shopify customer, Shopify order, or DTF product request is present.
 If the transcript is only automated/voicemail/agent outbound courtesy text, return no_action with action_required=false and explain that no customer request was captured.
 Write person_brief for the staff member who will call the customer. Base it on transcript evidence and resolver signals, not generic workflow text.
 person_brief.why_calling: one concise sentence explaining why this specific customer should be called now.

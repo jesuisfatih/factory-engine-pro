@@ -291,6 +291,9 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   if (isAutomatedOrVoicemailOnlyTranscript(sourceText)) {
     return [noActionSignal('Automated carrier, recording, voicemail, or agent-only outbound message was captured; no customer sales or account request was detected.')];
   }
+  if (isCarrierVendorOnlyTranscript(sourceText, { customerMatched: options.customerMatched || Boolean(output.customer_match.customer_id) })) {
+    return [noActionSignal('Carrier or freight vendor contact was captured without a matched customer, Shopify order, or DTF product request.')];
+  }
 
   const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
     const parsed = transcriptOperationalSignalSchema.safeParse(signal);
@@ -388,6 +391,21 @@ export function isAutomatedOrVoicemailOnlyTranscript(value: string) {
   );
 }
 
+export function isCarrierVendorOnlyTranscript(value: string, options: { customerMatched?: boolean } = {}) {
+  if (options.customerMatched) return false;
+  const text = normalizedText(value);
+  if (!text) return false;
+  const carrierScore = phraseScore(text, CARRIER_VENDOR_PHRASES);
+  if (carrierScore === 0) return false;
+  const hasDtfContext = DTF_PRODUCT_CONTEXT_PHRASES.some((phrase) => keywordMatches(text, phrase));
+  const hasShopifyOrderContext = SHOPIFY_ORDER_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
+  const hasDirectCustomerRequest = CUSTOMER_DEMAND_PATTERNS.some((pattern) => pattern.test(text));
+  return !hasDtfContext && !hasShopifyOrderContext && (
+    carrierScore >= 2
+    || (carrierScore >= 1 && !hasDirectCustomerRequest)
+  );
+}
+
 function noActionSignal(reason: string): TranscriptOperationalSignal {
   return {
     intent: 'no_action',
@@ -459,9 +477,46 @@ const AGENT_OUTBOUND_ONLY_PHRASES = [
   'please feel free to reach out',
 ] as const;
 
+const CARRIER_VENDOR_PHRASES = [
+  'roadrunner',
+  'road runner',
+  'roadrunner transportation',
+  'road runner transportation',
+  'rrts.com',
+  'delivery appointment',
+  'schedule a delivery appointment',
+  'shipping smarter',
+  'freight carrier',
+  'transportation',
+] as const;
+
+const DTF_PRODUCT_CONTEXT_PHRASES = [
+  'dtf',
+  'dtf bank',
+  'dtf supply',
+  'dtf supplies',
+  'heat press',
+  'hydro',
+  'heat platen',
+  'gang sheet',
+  'transfer sheet',
+  'printer',
+  'film',
+  'powder',
+  'ink',
+  'spare part',
+  'machine',
+] as const;
+
 const CUSTOMER_DEMAND_PATTERNS = [
   /\bi\s+(need|want|would like|am looking|m looking|ordered|bought|purchased|have|got)\b/,
   /\bwe\s+(need|want|would like|are looking|re looking|ordered|bought|purchased|have|got)\b/,
   /\b(can|could)\s+you\b/,
   /\b(how much|what is the price|what's the price|quote|refund|tracking|where is my order|order number|need help|not working|broken|error code)\b/,
+] as const;
+
+const SHOPIFY_ORDER_CONTEXT_PATTERNS = [
+  /\border\s*(#|number|no\.?)\s*\d{3,}/,
+  /\bshopify\b/,
+  /\btracking\s*(#|number|no\.?)\b/,
 ] as const;

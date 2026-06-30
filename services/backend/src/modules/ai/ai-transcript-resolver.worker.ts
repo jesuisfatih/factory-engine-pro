@@ -23,6 +23,7 @@ import {
   OPERATIONAL_INTENT_KEYWORDS,
   PURCHASE_SIGNAL_KEYWORDS,
   isAutomatedOrVoicemailOnlyTranscript,
+  isCarrierVendorOnlyTranscript,
   keywordMatches,
   normalizedText,
   transcriptOperationalSignals,
@@ -537,6 +538,13 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
       transcript,
       targetVersion,
       'Automated carrier, recording, voicemail, or agent-only outbound message was captured; no customer sales or account request was detected.',
+    );
+  }
+  if (isCarrierVendorOnlyTranscript(transcript)) {
+    return localNoActionResolverOutput(
+      transcript,
+      targetVersion,
+      'Carrier or freight vendor contact was captured without a matched customer, Shopify order, or DTF product request.',
     );
   }
   const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(text, needle));
