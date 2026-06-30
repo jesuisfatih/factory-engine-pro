@@ -3486,6 +3486,7 @@ function taskTimeline(
   for (const request of relatedRequests) {
     if (request.id === row.id) continue;
     const metadata = asRecord(request.metadata);
+    if (metadata.personQueueVisible === false || metadata.workflowSuppressed === true) continue;
     const workflow = asRecord(metadata.workflow);
     const source = taskSource(request);
     const matchedRuleId = request.matchedRuleId ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
