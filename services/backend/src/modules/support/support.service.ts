@@ -118,7 +118,9 @@ export class SupportService {
     const workflow = this.asRecord(this.asRecord(metadata).workflow);
     const conditionTrace = input.conditionTrace
       ?? (Array.isArray(workflow.conditionTrace) ? workflow.conditionTrace : []);
-    const matchedRuleId = input.matchedRuleId
+    const matchedRuleId = input.axis === 'support'
+      ? null
+      : input.matchedRuleId
       ?? stringValue(workflow.matchedRuleId)
       ?? stringValue(workflow.matched_rule_id);
     const created = await this.repository.create({
@@ -453,7 +455,9 @@ export class SupportService {
       companyUser: row.customerUser ? { id: row.customerUser.id, email: row.customerUser.email, firstName: row.customerUser.firstName, lastName: row.customerUser.lastName } : null,
       assignedTo: row.assignedMember ? { id: row.assignedMember.id, name: `${row.assignedMember.firstName} ${row.assignedMember.lastName}`, email: row.assignedMember.email } : null,
       axis: row.axis ?? null,
-      matchedRuleId: row.matchedRuleId ?? stringValue(workflow.matchedRuleId) ?? stringValue(workflow.matched_rule_id),
+      matchedRuleId: row.axis === 'support'
+        ? null
+        : row.matchedRuleId ?? stringValue(workflow.matchedRuleId) ?? stringValue(workflow.matched_rule_id),
       conditionTrace: Array.isArray(row.conditionTrace) ? row.conditionTrace : [],
       participants,
       watchers: participants.filter((participant: any) => participant.role === 'watcher'),
