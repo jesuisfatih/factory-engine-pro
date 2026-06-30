@@ -297,6 +297,18 @@ export interface WorkflowMcpCapabilityTool {
   requiresPermission: string;
 }
 
+export interface WorkflowMcpProductLanguageEntry {
+  id: string;
+  title: string;
+  handle: string | null;
+  productType: string | null;
+  vendor: string | null;
+  tags: string[];
+  variantSkus: string[];
+  aliases: string[];
+  source: 'shopify_catalog';
+}
+
 export interface WorkflowMcpCapabilitiesResponse {
   catalogVersion: string;
   tools: WorkflowMcpCapabilityTool[];
@@ -333,6 +345,7 @@ export interface WorkflowMcpCapabilitiesResponse {
       mutatesCustomer: boolean;
       auditOnly: boolean;
     }>;
+    productLanguage: WorkflowMcpProductLanguageEntry[];
   };
   examples: string[];
 }

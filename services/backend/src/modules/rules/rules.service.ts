@@ -2186,7 +2186,8 @@ export class RulesService {
     };
   }
 
-  mcpCapabilities(): WorkflowMcpCapabilitiesResponse {
+  async mcpCapabilities(): Promise<WorkflowMcpCapabilitiesResponse> {
+    const productLanguage = await this.shopifyProductLanguage();
     return {
       catalogVersion: WORKFLOW_ENUM_CATALOG.version,
       tools: [
@@ -2227,13 +2228,64 @@ export class RulesService {
         })),
         conditions: WORKFLOW_ENUM_CATALOG.conditions.map((entry) => ({ ...entry })),
         actions: WORKFLOW_ENUM_CATALOG.actions.map((entry) => ({ ...entry })),
+        productLanguage,
       },
       examples: [
-        'Create a high-priority sales task for customers asking about heat press pricing.',
-        'Route DTF supply reorder signals to the segment owner as sales tasks.',
-        'Create account follow-up tasks for customers asking about financing.',
+        'Create a high-priority sales task when a fifth call in 30 days is angry and mentions a heat press product.',
+        'Route DTF supply reorder signals to the segment owner only when the previous purchase includes the same Shopify product family.',
+        'Create account follow-up tasks for financing questions and keep duplicate open-task guards on.',
       ],
     };
+  }
+
+  private async shopifyProductLanguage(): Promise<WorkflowMcpCapabilitiesResponse['registry']['productLanguage']> {
+    const tenantId = this.tenantId();
+    const products = await this.prisma.db.catalogProduct.findMany({
+      where: { tenantId, status: { not: 'archived' } },
+      select: {
+        id: true,
+        title: true,
+        handle: true,
+        vendor: true,
+        productType: true,
+        tags: true,
+        variants: {
+          select: { sku: true, title: true },
+          orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
+          take: 12,
+        },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 80,
+    });
+
+    return products.map((product) => {
+      const variantSkus = uniqueStrings(product.variants.map((variant) => variant.sku));
+      const aliases = productLanguageAliases([
+        product.title,
+        product.handle,
+        product.handle?.replace(/-/g, ' '),
+        product.vendor,
+        product.productType,
+        ...product.tags,
+        ...product.variants.flatMap((variant) => [
+          variant.sku,
+          variant.title,
+          `${product.title} ${variant.title}`,
+        ]),
+      ]);
+      return {
+        id: product.id,
+        title: product.title,
+        handle: product.handle,
+        productType: product.productType,
+        vendor: product.vendor,
+        tags: [...product.tags],
+        variantSkus,
+        aliases,
+        source: 'shopify_catalog' as const,
+      };
+    });
   }
 
   async draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput): Promise<WorkflowMcpDraftRuleResponse> {
@@ -2350,13 +2402,17 @@ export class RulesService {
     const text = normalizeHumanText(naturalLanguageGoal);
     const detectedIntent = detectOperationalIntent(text);
     const unsupported = unsupportedMcpRequests(text);
+    const productLanguage = await this.shopifyProductLanguage();
     const warnings: string[] = [];
     const assumptions: string[] = [];
     const requestedActive = preferredStatus === 'active';
     const status = requestedActive ? 'draft' : preferredStatus;
     if (requestedActive) warnings.push('Rules drafted through MCP are stored as draft first; publish requires simulation.');
+    const conditionPlan = compileMcpConditions(text, detectedIntent, productLanguage);
+    warnings.push(...conditionPlan.warnings);
+    assumptions.push(...conditionPlan.assumptions);
     const axis = axisForOperationalIntent(detectedIntent);
-    const priority = priorityFromGoal(text);
+    const priority = priorityFromGoal(text, conditionPlan);
     const actions: WorkflowRuleAction[] = detectedIntent === 'no_action'
       ? [mcpAction('audit_no_action', 'no-op', 'No actionable sales or personnel follow-up.')]
       : [mcpAction('create_task', 'create_task', taskTitleForMcpGoal(detectedIntent, text), axis)];
@@ -2377,6 +2433,14 @@ export class RulesService {
 
     if (mentionsNote(text)) actions.push(mcpAction('add_customer_note', 'add_note', noteValueForGoal(naturalLanguageGoal)));
     if (mentionsPin(text)) actions.push(mcpAction('pin_customer', 'pin_customer', `Pinned by rule: ${labelFromIntent(detectedIntent)}`));
+    if (shouldAddWatcher(text, conditionPlan) && detectedIntent !== 'no_action') {
+      actions.push(mcpAction('add_axis_watcher', 'add_watcher', axis));
+      assumptions.push(`A ${axis} axis watcher will be attached when the task is created.`);
+    }
+    if (shouldEscalate(text, conditionPlan) && detectedIntent !== 'no_action') {
+      actions.push(mcpAction('escalate_repeat_signal', 'escalate', escalationReasonForMcpGoal(conditionPlan)));
+      assumptions.push('Repeat-call or strong sentiment escalation will raise the created task priority to critical.');
+    }
 
     const rule: SaveWorkflowRuleInput = {
       name: ruleNameFromGoal(detectedIntent, naturalLanguageGoal),
@@ -2385,20 +2449,14 @@ export class RulesService {
         priority,
         composable: false,
         trigger: 'call.operational_signal.detected',
-        cooldown: { hours: 24, limit: 1 },
+        cooldown: cooldownForMcpGoal(text, conditionPlan),
         metadata: {
           authoringSurface: 'mcp',
           sourceGoal: naturalLanguageGoal,
           detectedIntent,
+          compiledConditionSummary: conditionPlan.metadata,
         },
-        when: [
-          {
-            id: `intent_${detectedIntent}`,
-            condition: 'operational_intent',
-            operator: '=',
-            value: detectedIntent,
-          },
-        ],
+        when: conditionPlan.conditions,
         actions,
       },
       comment: 'Drafted from MCP natural-language goal',
@@ -2599,7 +2657,7 @@ export class RulesService {
 
     const supportAxisAllowed = WORKFLOW_ENUM_CATALOG.createTaskAxes.some((entry) => String(entry.value) === 'support');
     const workflowSourceAllowed = WORKFLOW_ENUM_CATALOG.serviceRequestSources.some((entry) => entry.value.includes('workflow') || entry.value.includes('ai'));
-    const mcpCapabilities = this.mcpCapabilities();
+    const mcpCapabilities = await this.mcpCapabilities();
     const exposedMcpTools = mcpCapabilities.tools.map((tool) => tool.name);
     const missingMcpTools = MCP_REQUIRED_TOOLS.filter((tool) => !exposedMcpTools.includes(tool));
     const missingMcpActions = MCP_REQUIRED_ACTIONS.filter((action) => !MCP_ALLOWED_ACTIONS.includes(action));
@@ -3038,6 +3096,23 @@ const CALL_DERIVED_TASK_BYPASS_TRIGGERS: WorkflowTrigger[] = [
   'customer.first_call.detected',
 ];
 
+type McpProductLanguageEntry = WorkflowMcpCapabilitiesResponse['registry']['productLanguage'][number];
+
+interface McpConditionPlan {
+  conditions: WorkflowRuleCondition[];
+  assumptions: string[];
+  warnings: string[];
+  metadata: Record<string, unknown>;
+  repeatCallThreshold: number | null;
+  callWindowDays: number | null;
+  firstCall: boolean;
+  strongPsychSignal: boolean;
+  psychTags: string[];
+  matchedProductAliases: string[];
+  previousPurchaseGuard: boolean;
+  openTaskGuard: boolean;
+}
+
 function detectOperationalIntent(text: string): WorkflowMcpDraftRuleResponse['detectedIntent'] {
   return detectOperationalIntentFromText(text);
 }
@@ -3075,6 +3150,124 @@ function workflowDefinitionConditions(definition: WorkflowRuleDefinition): Workf
     ...definition.when,
     ...(definition.whenGroups ?? []).flatMap((group) => group.conditions),
   ];
+}
+
+function compileMcpConditions(
+  text: string,
+  detectedIntent: WorkflowMcpDraftRuleResponse['detectedIntent'],
+  productLanguage: McpProductLanguageEntry[],
+): McpConditionPlan {
+  const conditions: WorkflowRuleCondition[] = [
+    mcpCondition(`intent_${detectedIntent}`, 'operational_intent', '=', detectedIntent),
+  ];
+  const assumptions: string[] = [];
+  const warnings: string[] = [];
+  const metadata: Record<string, unknown> = { intent: detectedIntent };
+
+  const callSpec = detectCallSpec(text);
+  if (callSpec.firstCall) {
+    conditions.push(mcpCondition('first_call', 'is_first_call', '=', 'true'));
+    assumptions.push('First-call prompts compile to is_first_call=true instead of a repeat-call window.');
+    metadata.firstCall = true;
+  } else if (callSpec.count !== null) {
+    conditions.push(mcpCondition(
+      `call_count_${callSpec.count}_${callSpec.windowDays}d`,
+      'call_count_in_window',
+      '>=',
+      `${callSpec.count} calls / ${callSpec.windowDays} days`,
+    ));
+    assumptions.push(`Repeat-call prompt requires at least ${callSpec.count} calls in ${callSpec.windowDays} days.`);
+    metadata.callCountThreshold = callSpec.count;
+    metadata.callWindowDays = callSpec.windowDays;
+  }
+
+  const psych = detectPsychTags(text);
+  if (psych.tags.length > 0) {
+    conditions.push({
+      ...mcpCondition('psych_tags', 'psych_tag_includes', psych.tags.length > 1 ? 'in' : '=', psych.tags.join(',')),
+      ...(psych.strong ? { confidenceGte: 0.75 } : {}),
+    });
+    assumptions.push(`Transcript sentiment must include ${psych.tags.join(' or ')}.`);
+    metadata.psychTags = psych.tags;
+    if (psych.strong) metadata.strongPsychSignal = true;
+  }
+
+  const callIntent = detectCallIntentCondition(text);
+  if (callIntent) {
+    conditions.push(mcpCondition(`call_intent_${callIntent}`, 'call_intent', '=', callIntent));
+    metadata.callIntent = callIntent;
+  }
+
+  const productMatches = matchMcpProductLanguage(text, productLanguage);
+  const primaryProductMatch = productMatches[0] ?? null;
+  if (primaryProductMatch) {
+    conditions.push(mcpCondition('product_mentioned', 'product_mentioned', 'contains', primaryProductMatch.conditionValue));
+    assumptions.push(`Product condition resolved from Shopify catalog: ${primaryProductMatch.title} via "${primaryProductMatch.conditionValue}".`);
+    metadata.productAliases = productMatches.slice(0, 5).map((match) => match.conditionValue);
+    metadata.productTitles = productMatches.slice(0, 5).map((match) => match.title);
+  } else if (mentionsProductLanguage(text, detectedIntent)) {
+    warnings.push(productLanguage.length === 0
+      ? 'Shopify catalog product language is empty; product_mentioned condition was not added.'
+      : 'No Shopify catalog alias matched the product wording; rule uses operational intent and other guards only.');
+  }
+
+  const previousPurchaseRequested = mentionsPreviousPurchase(text);
+  if (previousPurchaseRequested && primaryProductMatch) {
+    conditions.push(mcpCondition('previous_purchase_product', 'previous_purchase_includes', 'contains', primaryProductMatch.conditionValue));
+    assumptions.push('Previous-purchase guard uses the same Shopify catalog product language as the transcript product mention.');
+    metadata.previousPurchaseGuard = true;
+  } else if (previousPurchaseRequested) {
+    warnings.push('Previous-purchase wording was detected, but no Shopify catalog product alias matched; previous_purchase_includes was not added.');
+  }
+
+  const orderSpec = detectOrderCountSpec(text);
+  if (orderSpec) {
+    conditions.push(mcpCondition(
+      `order_count_${orderSpec.count}_${orderSpec.windowDays}d`,
+      'order_count_in_window',
+      '>=',
+      `${orderSpec.count} orders / ${orderSpec.windowDays} days`,
+    ));
+    assumptions.push(`Commerce guard requires at least ${orderSpec.count} orders in ${orderSpec.windowDays} days.`);
+    metadata.orderCountThreshold = orderSpec.count;
+    metadata.orderWindowDays = orderSpec.windowDays;
+  }
+
+  const lastOrderAge = detectLastOrderAgeDays(text);
+  if (lastOrderAge !== null) {
+    conditions.push(mcpCondition(`last_order_${lastOrderAge}d`, 'last_order_age_lte', '<=', `${lastOrderAge}`));
+    assumptions.push(`Last-order guard requires a Shopify order within ${lastOrderAge} days.`);
+    metadata.lastOrderAgeLteDays = lastOrderAge;
+  }
+
+  const ltvThreshold = detectLtvThreshold(text);
+  if (ltvThreshold !== null) {
+    conditions.push(mcpCondition(`ltv_${Math.round(ltvThreshold)}`, 'customer_ltv_gte', '>=', `${ltvThreshold}`));
+    assumptions.push(`Customer spend guard requires LTV >= ${ltvThreshold}.`);
+    metadata.customerLtvGte = ltvThreshold;
+  }
+
+  const openTaskGuard = shouldAddOpenTaskGuard(text, detectedIntent);
+  if (openTaskGuard) {
+    conditions.push(mcpCondition('no_open_task_for_intent', 'open_task_exists_for_intent', '=', 'false'));
+    assumptions.push('Open-task guard prevents duplicate tasks for the same customer and operational intent.');
+    metadata.openTaskGuard = true;
+  }
+
+  return {
+    conditions: dedupeMcpConditions(conditions),
+    assumptions,
+    warnings,
+    metadata,
+    repeatCallThreshold: callSpec.firstCall ? null : callSpec.count,
+    callWindowDays: callSpec.firstCall ? null : callSpec.windowDays,
+    firstCall: callSpec.firstCall,
+    strongPsychSignal: psych.strong,
+    psychTags: psych.tags,
+    matchedProductAliases: productMatches.map((match) => match.conditionValue),
+    previousPurchaseGuard: Boolean(metadata.previousPurchaseGuard),
+    openTaskGuard,
+  };
 }
 
 function mcpDefinitionIssues(definition: WorkflowRuleDefinition) {
@@ -3186,11 +3379,36 @@ function unsafeOperationalRuleIssues(definition: WorkflowRuleDefinition) {
   return issues;
 }
 
-function priorityFromGoal(text: string) {
+function priorityFromGoal(text: string, plan?: Pick<McpConditionPlan, 'repeatCallThreshold' | 'strongPsychSignal'>) {
+  if ((plan?.repeatCallThreshold ?? 0) >= 5 && plan?.strongPsychSignal) return 95;
+  if ((plan?.repeatCallThreshold ?? 0) >= 5) return 90;
+  if (plan?.strongPsychSignal) return 85;
   if (text.includes('critical') || text.includes('urgent') || text.includes('acil')) return 90;
   if (text.includes('high') || text.includes('important') || text.includes('yuksek')) return 80;
   if (text.includes('low') || text.includes('dusuk')) return 30;
   return 60;
+}
+
+function cooldownForMcpGoal(text: string, plan: Pick<McpConditionPlan, 'repeatCallThreshold' | 'strongPsychSignal'>): WorkflowRuleDefinition['cooldown'] {
+  if (mentionsEveryOccurrence(text)) return { hours: 0, limit: 1 };
+  if ((plan.repeatCallThreshold ?? 0) >= 5) return { hours: 6, limit: 1 };
+  if (plan.strongPsychSignal) return { hours: 12, limit: 1 };
+  return { hours: 24, limit: 1 };
+}
+
+function shouldAddWatcher(text: string, plan: Pick<McpConditionPlan, 'repeatCallThreshold' | 'strongPsychSignal'>) {
+  return mentionsWatcher(text) || shouldEscalate(text, plan);
+}
+
+function shouldEscalate(text: string, plan: Pick<McpConditionPlan, 'repeatCallThreshold' | 'strongPsychSignal'>) {
+  if (text.includes('escalate') || text.includes('manager') || text.includes('supervisor') || text.includes('yonetici')) return true;
+  return (plan.repeatCallThreshold ?? 0) >= 5 && plan.strongPsychSignal;
+}
+
+function escalationReasonForMcpGoal(plan: Pick<McpConditionPlan, 'repeatCallThreshold' | 'strongPsychSignal'>) {
+  if ((plan.repeatCallThreshold ?? 0) >= 5 && plan.strongPsychSignal) return 'Repeat angry call requires manager visibility.';
+  if ((plan.repeatCallThreshold ?? 0) >= 5) return 'High repeat-call count requires manager visibility.';
+  return 'Workflow escalation requested by rule.';
 }
 
 function taskTitleForMcpGoal(intent: WorkflowMcpDraftRuleResponse['detectedIntent'], text: string) {
@@ -3214,6 +3432,247 @@ function mcpAction(
   axis?: WorkflowRuleAction['axis'],
 ): WorkflowRuleAction {
   return axis ? { id, action, value, axis } : { id, action, value };
+}
+
+function mcpCondition(
+  id: string,
+  condition: WorkflowRuleCondition['condition'],
+  operator: WorkflowRuleCondition['operator'],
+  value: string,
+): WorkflowRuleCondition {
+  return { id: slug(id), condition, operator, value };
+}
+
+function dedupeMcpConditions(conditions: WorkflowRuleCondition[]) {
+  const seen = new Set<string>();
+  return conditions.filter((condition) => {
+    const key = `${condition.condition}:${condition.operator}:${condition.value}:${condition.confidenceGte ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function detectCallSpec(text: string) {
+  const windowDaysValue = detectWindowDays(text) ?? 30;
+  if ([
+    'first call',
+    '1st call',
+    'ilk arama',
+    'ilk cagri',
+    'birinci arama',
+    'birinci cagri',
+    '1 arama',
+    '1. arama',
+    '1 cagri',
+    '1. cagri',
+  ].some((keyword) => text.includes(keyword))) {
+    return { firstCall: true, count: 1, windowDays: windowDaysValue };
+  }
+
+  const ordinalCount = numericCallOrdinal(text) ?? wordCallOrdinal(text);
+  if (ordinalCount !== null && ordinalCount <= 1) return { firstCall: true, count: 1, windowDays: windowDaysValue };
+  if (ordinalCount !== null) return { firstCall: false, count: ordinalCount, windowDays: windowDaysValue };
+  if (['repeat call', 'repeated call', 'tekrar aradi', 'tekrar arama', 'yeniden aradi', 'yeniden arama', 'ikinci kez'].some((keyword) => text.includes(keyword))) {
+    return { firstCall: false, count: 2, windowDays: windowDaysValue };
+  }
+  return { firstCall: false, count: null as number | null, windowDays: windowDaysValue };
+}
+
+function numericCallOrdinal(text: string) {
+  const patterns = [
+    /(?:^|\s)(\d+)\.?\s*(?:arama\w*|cagri\w*|call)\b/,
+    /(?:^|\s)(\d+)(?:st|nd|rd|th)\s+call\b/,
+    /(?:^|\s)(\d+)\s*(?:kez|kere|defa)\s*(?:aradi\w*|arama\w*|cagri\w*|called|call)\b/,
+    /(?:aradi|called|call)\s*(?:for\s*)?(?:the\s*)?(\d+)(?:st|nd|rd|th)?\s*(?:time|kez|kere|defa)\b/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const parsed = Number(match[1]);
+    if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+
+function wordCallOrdinal(text: string) {
+  const candidates: Array<[number, string[]]> = [
+    [1, ['birinci arama', 'birinci cagri', 'first call']],
+    [2, ['ikinci arama', 'ikinci cagri', 'second call', 'second time']],
+    [3, ['ucuncu arama', 'ucuncu cagri', 'third call', 'third time']],
+    [4, ['dorduncu arama', 'dorduncu cagri', 'fourth call', 'fourth time']],
+    [5, ['besinci arama', 'besinci cagri', 'fifth call', 'fifth time']],
+    [6, ['altinci arama', 'altinci cagri', 'sixth call', 'sixth time']],
+    [7, ['yedinci arama', 'yedinci cagri', 'seventh call', 'seventh time']],
+  ];
+  for (const [count, keywords] of candidates) {
+    if (keywords.some((keyword) => text.includes(keyword))) return count;
+  }
+  return null;
+}
+
+function detectWindowDays(text: string) {
+  const direct = text.match(/(?:son|last)\s+(\d+)\s*(gun|gunde|days?|hafta|weeks?|ay|months?)\b/);
+  if (direct) return unitToDays(Number(direct[1]), direct[2]);
+  const trailing = text.match(/\b(\d+)\s*(gun|days?|hafta|weeks?|ay|months?)\b/);
+  if (trailing) return unitToDays(Number(trailing[1]), trailing[2]);
+  if (text.includes('bu hafta') || text.includes('this week')) return 7;
+  if (text.includes('bu ay') || text.includes('this month')) return 30;
+  return null;
+}
+
+function unitToDays(count: number, unit: string) {
+  if (!Number.isFinite(count) || count <= 0) return 30;
+  if (unit.includes('hafta') || unit.includes('week')) return count * 7;
+  if (unit.includes('ay') || unit.includes('month')) return count * 30;
+  return count;
+}
+
+function detectPsychTags(text: string) {
+  const tags: string[] = [];
+  const strong = [
+    'cok sinirli',
+    'asiri sinirli',
+    'very angry',
+    'furious',
+    'extremely upset',
+    'ofkeli',
+    'rage',
+  ].some((keyword) => text.includes(keyword));
+  if (['sinirli', 'kizgin', 'angry', 'upset', 'frustrated', 'ofkeli', 'mad'].some((keyword) => text.includes(keyword))) tags.push('angry');
+  if (['sikayet', 'complaint', 'complain', 'complaining', 'memnun degil'].some((keyword) => text.includes(keyword))) tags.push('complaint');
+  if (['satin alim niyeti', 'purchase intent', 'buying intent', 'almaya niyetli', 'satinalma niyeti'].some((keyword) => text.includes(keyword))) tags.push('purchase_intent');
+  if (['refund intent', 'iade istiyor', 'refund istiyor', 'money back'].some((keyword) => text.includes(keyword))) tags.push('refund_intent');
+  if (['shipping issue', 'kargo sorunu', 'shipment issue', 'delivery issue'].some((keyword) => text.includes(keyword))) tags.push('shipping_issue');
+  if (['info request', 'bilgi istiyor', 'inquiry', 'soru soruyor'].some((keyword) => text.includes(keyword))) tags.push('info_request');
+  if (['follow up', 'takip', 'tekrar ara', 'callback'].some((keyword) => text.includes(keyword))) tags.push('follow_up');
+  if (['satisfied', 'memnun', 'happy'].some((keyword) => text.includes(keyword))) tags.push('satisfied');
+  return { tags: uniqueStrings(tags), strong };
+}
+
+function detectCallIntentCondition(text: string) {
+  if (['sales call', 'sale intent', 'satis', 'satin alma', 'purchase'].some((keyword) => text.includes(keyword))) return 'sale';
+  if (['complaint call', 'sikayet aramasi'].some((keyword) => text.includes(keyword))) return 'complaint';
+  if (['follow up call', 'takip aramasi'].some((keyword) => text.includes(keyword))) return 'follow_up';
+  if (['inquiry', 'bilgi aramasi', 'soru'].some((keyword) => text.includes(keyword))) return 'inquiry';
+  return null;
+}
+
+function matchMcpProductLanguage(text: string, productLanguage: McpProductLanguageEntry[]) {
+  const matches: Array<{ title: string; conditionValue: string; score: number }> = [];
+  for (const product of productLanguage) {
+    for (const alias of product.aliases) {
+      const normalizedAlias = normalizeHumanText(alias);
+      if (!isUsefulProductAlias(normalizedAlias)) continue;
+      if (!text.includes(normalizedAlias)) continue;
+      const score = normalizedAlias.length
+        + (product.title && normalizeHumanText(product.title) === normalizedAlias ? 20 : 0)
+        + (product.variantSkus.some((sku) => normalizeHumanText(sku) === normalizedAlias) ? 30 : 0);
+      matches.push({ title: product.title, conditionValue: alias, score });
+    }
+  }
+  return matches
+    .sort((a, b) => b.score - a.score || a.conditionValue.length - b.conditionValue.length)
+    .filter((match, index, all) => all.findIndex((candidate) => normalizeHumanText(candidate.conditionValue) === normalizeHumanText(match.conditionValue)) === index);
+}
+
+function productLanguageAliases(candidates: Array<string | null | undefined>) {
+  return uniqueStrings(candidates.flatMap((candidate) => expandProductLanguageAlias(candidate)))
+    .filter((alias) => isUsefulProductAlias(normalizeHumanText(alias)))
+    .slice(0, 24);
+}
+
+function expandProductLanguageAlias(value: string | null | undefined) {
+  if (!value?.trim()) return [];
+  const raw = value.trim();
+  const normalized = normalizeHumanText(raw);
+  const aliases = [raw];
+  if (normalized.includes('heat press')) aliases.push('heat press');
+  if (normalized.includes('hydraulic press')) aliases.push('hydraulic press');
+  if (normalized.includes('swing away')) aliases.push('swing away');
+  if (normalized.includes('clamshell')) aliases.push('clamshell');
+  if (normalized.includes('dual station')) aliases.push('dual station');
+  if (normalized.includes('mug press')) aliases.push('mug press');
+  if (normalized.includes('cap press')) aliases.push('cap press');
+  if (normalized.includes('dtf') && ['supply', 'supplies', 'ink', 'powder', 'film', 'transfer', 'gang sheet'].some((word) => normalized.includes(word))) {
+    aliases.push('dtf supplies');
+  }
+  if (normalized.includes('white ink')) aliases.push('white ink');
+  if (normalized.includes('ink')) aliases.push('ink');
+  if (normalized.includes('powder')) aliases.push('powder', 'adhesive powder');
+  if (normalized.includes('film')) aliases.push('film', 'transfer film', 'pet film');
+  if (normalized.includes('gang sheet')) aliases.push('gang sheet');
+  return aliases;
+}
+
+function isUsefulProductAlias(alias: string) {
+  if (alias.length < 3) return false;
+  if (/^\d+$/.test(alias)) return false;
+  return !['active', 'default', 'new', 'sale', 'shopify', 'product', 'products', 'variant', 'dtf'].includes(alias);
+}
+
+function mentionsProductLanguage(text: string, intent: WorkflowMcpDraftRuleResponse['detectedIntent']) {
+  if (intent === 'heat_press_purchase_intent' || intent === 'dtf_supply_reorder_signal' || intent === 'product_fit_question' || intent === 'machine_upgrade_interest') return true;
+  return ['heat press', 'dtf', 'powder', 'film', 'ink', 'machine', 'press', 'sku', 'urun', 'product'].some((keyword) => text.includes(keyword));
+}
+
+function mentionsPreviousPurchase(text: string) {
+  return [
+    'previous purchase',
+    'previously purchased',
+    'bought before',
+    'already bought',
+    'daha once aldi',
+    'daha once satin aldi',
+    'onceki siparis',
+    'gecmis siparis',
+    'reorder',
+    'tekrar siparis',
+    'yeniden siparis',
+  ].some((keyword) => text.includes(keyword));
+}
+
+function detectOrderCountSpec(text: string) {
+  const patterns = [
+    /(?:son|last)\s+(\d+)\s*(gun|days?|hafta|weeks?|ay|months?)\s*(?:icinde|within|in)?\s*(\d+)\s*(?:order|orders|siparis)\b/,
+    /(\d+)\s*(?:order|orders|siparis)\s*(?:in|within|son|last)?\s*(\d+)\s*(gun|days?|hafta|weeks?|ay|months?)\b/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    if (pattern === patterns[0]) {
+      return { count: Number(match[3]), windowDays: unitToDays(Number(match[1]), match[2]) };
+    }
+    return { count: Number(match[1]), windowDays: unitToDays(Number(match[2]), match[3]) };
+  }
+  return null;
+}
+
+function detectLastOrderAgeDays(text: string) {
+  const match = text.match(/(?:last order|son siparis)\s*(?:within|son|icinde)?\s*(\d+)\s*(gun|days?|hafta|weeks?|ay|months?)\b/);
+  if (!match) return null;
+  return unitToDays(Number(match[1]), match[2]);
+}
+
+function detectLtvThreshold(text: string) {
+  const match = text.match(/(?:ltv|spent|harcama|total spent|toplam harcama|vip)\s*(?:>=|over|above|ustunde|en az)?\s*\$?\s*([\d,.]+)/)
+    ?? text.match(/\$?\s*([\d,.]+)\+?\s*(?:ltv|spent|harcama|total spent|toplam harcama)/);
+  if (!match) return null;
+  const parsed = Number(String(match[1]).replace(/,/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function shouldAddOpenTaskGuard(text: string, intent: WorkflowMcpDraftRuleResponse['detectedIntent']) {
+  if (intent === 'no_action') return false;
+  return !mentionsEveryOccurrence(text);
+}
+
+function mentionsEveryOccurrence(text: string) {
+  return ['every call', 'every time', 'always create', 'her arama', 'her sefer', 'her defa', 'daima'].some((keyword) => text.includes(keyword));
+}
+
+function mentionsWatcher(text: string) {
+  return ['watcher', 'add watcher', 'izleyici', 'bilgilendir', 'haber ver', 'cc manager', 'manager visibility'].some((keyword) => text.includes(keyword));
 }
 
 function mentionsSegmentOwner(text: string) {
@@ -3289,7 +3748,7 @@ const MCP_UNSUPPORTED_DESTRUCTIVE_KEYWORDS = [
 
 function unsupportedMcpRequests(text: string) {
   const unsupported: string[] = [];
-  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS)) {
+  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS) && !isNegatedSupportCaseRequest(text)) {
     unsupported.push('Automatic support case/ticket/customer request creation is not supported.');
   }
   if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_MAIL_KEYWORDS) || mentionsMailSurface(text)) {
@@ -3299,6 +3758,29 @@ function unsupportedMcpRequests(text: string) {
     unsupported.push('Destructive actions are not supported for MCP-authored rules.');
   }
   return [...new Set(unsupported)];
+}
+
+function isNegatedSupportCaseRequest(text: string) {
+  if (!hasAnyHumanKeyword(text, MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS)) return false;
+  return [
+    'do not create',
+    'dont create',
+    'do not open',
+    'dont open',
+    'not create',
+    'not open',
+    'without support case',
+    'no support case',
+    'support case yok',
+    'support case acma',
+    'support case olusturma',
+    'ticket acma',
+    'ticket olusturma',
+    'talep acma',
+    'talep olusturma',
+    'destek talebi acma',
+    'otomatik support yok',
+  ].some((keyword) => text.includes(keyword));
 }
 
 function hasAnyHumanKeyword(text: string, keywords: readonly string[]) {
@@ -3338,6 +3820,7 @@ function transientRuleDto(input: SaveWorkflowRuleInput): WorkflowRuleDto {
 function normalizeHumanText(value: unknown) {
   return String(value ?? '')
     .toLowerCase()
+    .replace(/ı/g, 'i')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[_-]/g, ' ')

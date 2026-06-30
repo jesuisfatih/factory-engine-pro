@@ -806,13 +806,13 @@ function RulesView() {
           <section className="rules-mcp-panel" id="workflow-mcp-authoring">
             <div className="rules-mcp-editor">
               <div className="rules-section-head">
-                <span><Network size={12} /> Claude workflow authoring</span>
+                <span><Network size={12} /> Workflow authoring</span>
                 <span className="muted">registry v{mcpCapabilitiesQuery.data?.catalogVersion ?? catalog.version}</span>
               </div>
               <textarea
                 value={mcpGoal}
                 onChange={(event) => setMcpGoal(event.target.value)}
-                placeholder="Heat press fiyati soranlari Linda'ya high priority callback task yap."
+                placeholder="5. aramasinda cok sinirli olan ve heat press fiyati soran musteriyi call owner'a critical sales task yap."
               />
               <div className="rules-mcp-actions">
                 <button
@@ -910,10 +910,26 @@ function RulesView() {
                   <em>{intent.keywords.slice(0, 4).join(', ')}</em>
                 </div>
               ))}
+              {(mcpCapabilitiesQuery.data?.registry.productLanguage.length ?? 0) > 0 && (
+                <div className="rules-section-head compact">
+                  <span><Database size={12} /> Shopify product language</span>
+                  <span className="muted">{mcpCapabilitiesQuery.data?.registry.productLanguage.length}</span>
+                </div>
+              )}
+              {mcpCapabilitiesQuery.data?.registry.productLanguage.slice(0, 6).map((product) => (
+                <div className="rules-mcp-intent" key={product.id}>
+                  <div>
+                    <strong>{product.title}</strong>
+                    <span>{product.productType ?? product.vendor ?? 'catalog product'}</span>
+                  </div>
+                  <em>{product.aliases.slice(0, 5).join(', ')}</em>
+                </div>
+              ))}
               {mcpCapabilitiesQuery.data && (
                 <div className="rules-mcp-foot">
                   <span>{mcpCapabilitiesQuery.data.registry.conditions.length} conditions</span>
                   <span>{mcpCapabilitiesQuery.data.registry.actions.length} actions</span>
+                  <span>{mcpCapabilitiesQuery.data.registry.productLanguage.length} Shopify terms</span>
                   <span>{mcpCapabilitiesQuery.data.allowed.triggers.join(', ')}</span>
                 </div>
               )}

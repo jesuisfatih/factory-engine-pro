@@ -738,6 +738,7 @@ export function detectOperationalIntentFromText(value: unknown): OperationalInte
 export function normalizeWorkflowHumanText(value: unknown) {
   return String(value ?? '')
     .toLowerCase()
+    .replace(/ı/g, 'i')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[_-]/g, ' ')
