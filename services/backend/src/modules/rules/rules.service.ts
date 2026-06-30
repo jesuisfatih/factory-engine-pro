@@ -187,13 +187,6 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     10,
   ),
   defaultRule(
-    'customer_first_call_account_onboarding',
-    'Default: First call account onboarding',
-    'customer.first_call.detected',
-    [],
-    [defaultAction('create_account_task', 'create_task', 'account: First call onboarding')],
-  ),
-  defaultRule(
     'customer_repeat_call_account_escalation',
     'Default: Repeat call account escalation',
     'customer.repeat_call.detected',
@@ -2084,7 +2077,7 @@ export class RulesService {
 
   async createRule(input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
-    this.validateCreateTaskAxes(parsed.definition);
+    this.validateWorkflowTaskContract(parsed.definition);
     const rule = await this.repository.create(parsed, this.editedByMemberId());
     this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
       rule_id: rule.id,
@@ -2098,7 +2091,7 @@ export class RulesService {
 
   async updateRule(id: string, input: SaveWorkflowRuleInput): Promise<WorkflowRuleDto> {
     const parsed = saveWorkflowRuleSchema.parse(input);
-    this.validateCreateTaskAxes(parsed.definition);
+    this.validateWorkflowTaskContract(parsed.definition);
     const rule = await this.repository.update(id, parsed, this.editedByMemberId());
     if (!rule) throw new NotFoundException('Workflow rule was not found.');
     this.logger.log('rules', 'rule_saved', 'Workflow rule persisted with version audit', {
@@ -2361,7 +2354,7 @@ export class RulesService {
     if (!parsed.success) return parsed.error.issues.map((issue) => issue.message);
     const issues: string[] = [];
     try {
-      this.validateCreateTaskAxes(parsed.data.definition);
+      this.validateWorkflowTaskContract(parsed.data.definition);
     } catch (error) {
       issues.push(error instanceof Error ? error.message : String(error));
     }
@@ -2394,6 +2387,18 @@ export class RulesService {
       ].map(normalizeHumanText).filter(Boolean);
       return candidates.some((candidate) => candidate.length >= 3 && text.includes(candidate));
     }) ?? null;
+  }
+
+  private validateWorkflowTaskContract(definition: WorkflowRuleDefinition) {
+    this.validateCreateTaskAxes(definition);
+    this.validateCallDerivedTaskTrigger(definition);
+  }
+
+  private validateCallDerivedTaskTrigger(definition: WorkflowRuleDefinition) {
+    if (definition.trigger === 'call.operational_signal.detected') return;
+    if (!CALL_DERIVED_TASK_BYPASS_TRIGGERS.includes(definition.trigger)) return;
+    if (!definition.actions.some((action) => action.action === 'create_task')) return;
+    throw new BadRequestException('Call-derived task creation must go through call.operational_signal.detected after transcript operational intent normalization.');
   }
 
   private validateCreateTaskAxes(definition: WorkflowRuleDefinition) {
@@ -2466,11 +2471,11 @@ export class RulesService {
       where: { tenantId, trigger: 'call.operational_signal.detected', status: 'active' },
       orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
     });
-    const activeNonOperationalTranscriptTaskRules = await this.prisma.db.workflowRule.findMany({
+    const activeCallDerivedTaskBypassRules = await this.prisma.db.workflowRule.findMany({
       where: {
         tenantId,
         status: 'active',
-        trigger: { in: NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS },
+        trigger: { in: CALL_DERIVED_TASK_BYPASS_TRIGGERS },
       },
       orderBy: [{ trigger: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }],
     }).then((rules) => rules.filter((rule) => {
@@ -2532,7 +2537,7 @@ export class RulesService {
       + supportMatchedRuleCount
       + (supportAxisAllowed ? 1 : 0)
       + (workflowSourceAllowed ? 1 : 0)
-      + activeNonOperationalTranscriptTaskRules.length
+      + activeCallDerivedTaskBypassRules.length
       + mcpIssues.length;
 
     return {
@@ -2555,9 +2560,9 @@ export class RulesService {
       },
       transcript: {
         taskCreationTrigger: 'call.operational_signal.detected',
-        blockedTaskTriggers: NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS,
-        activeNonOperationalTaskRuleCount: activeNonOperationalTranscriptTaskRules.length,
-        activeNonOperationalTaskRules: activeNonOperationalTranscriptTaskRules.map((rule) => ({
+        blockedTaskTriggers: CALL_DERIVED_TASK_BYPASS_TRIGGERS,
+        activeNonOperationalTaskRuleCount: activeCallDerivedTaskBypassRules.length,
+        activeNonOperationalTaskRules: activeCallDerivedTaskBypassRules.map((rule) => ({
           id: rule.id,
           name: rule.name,
           trigger: rule.trigger,
@@ -2664,13 +2669,18 @@ const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
   'escalate',
 ];
 
-const NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS: WorkflowTrigger[] = [
+const CALL_DERIVED_TASK_BYPASS_TRIGGERS: WorkflowTrigger[] = [
+  'aircall.call.created',
+  'aircall.call.ended',
+  'aircall.call.missed',
   'aircall.transcript.received',
   'call_intent.classified',
   'psych.tag.detected',
   'product.detected_in_transcript',
   'customer.matched_from_transcript',
   'psych.analysis.completed',
+  'customer.repeat_call.detected',
+  'customer.first_call.detected',
 ];
 
 const MCP_OPERATIONAL_INTENT_KEYWORDS: Array<[WorkflowMcpDraftRuleResponse['detectedIntent'], readonly string[]]> = [
