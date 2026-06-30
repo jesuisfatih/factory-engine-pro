@@ -723,15 +723,20 @@ export class AircallService {
       ? []
       : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
           where: { tenantId, callEventId: { in: rows.map((row) => row.id) } },
-          select: { callEventId: true, signal: true, status: true },
+          select: { callEventId: true, eventId: true, signal: true, status: true },
         });
     const activeEvaluations = evaluations.filter((evaluation) => evaluation.status !== 'superseded');
+    const existingTaskEvaluationEventIds = await this.existingTaskEvaluationEventIds(tenantId, activeEvaluations);
     const signalStates = await this.workflowSignalStates(tenantId, rows, activeEvaluations);
     const evaluationCounts = new Map<string, number>();
     const evaluationProblemCounts = new Map<string, number>();
     for (const evaluation of activeEvaluations) {
       evaluationCounts.set(evaluation.callEventId, (evaluationCounts.get(evaluation.callEventId) ?? 0) + 1);
-      if (evaluation.status === 'failed' || isUnmatchedWorkflowEvaluationStatus(evaluation.status)) {
+      if (
+        evaluation.status === 'failed'
+        || isUnmatchedWorkflowEvaluationStatus(evaluation.status)
+        || existingTaskEvaluationEventIds.has(evaluation.eventId)
+      ) {
         evaluationProblemCounts.set(evaluation.callEventId, (evaluationProblemCounts.get(evaluation.callEventId) ?? 0) + 1);
       }
     }
@@ -871,6 +876,32 @@ export class AircallService {
       callEvents,
       coverage: await this.workflowCoverage(),
     };
+  }
+
+  private async existingTaskEvaluationEventIds(
+    tenantId: string,
+    evaluations: Array<{ eventId: string; status: string }>,
+  ) {
+    const eventIds = uniqueStrings(evaluations
+      .filter((evaluation) => evaluation.status === 'matched_without_task')
+      .map((evaluation) => evaluation.eventId));
+    if (eventIds.length === 0) return new Set<string>();
+
+    const executions = await this.prisma.db.workflowRuleExecution.findMany({
+      where: {
+        tenantId,
+        trigger: 'call.operational_signal.detected',
+        eventId: { in: eventIds },
+        status: { notIn: ['started', 'skipped'] },
+      },
+      select: {
+        eventId: true,
+        taskIds: true,
+      },
+    });
+    return new Set(executions
+      .filter((execution) => uniqueStrings(execution.taskIds).length > 0)
+      .map((execution) => execution.eventId));
   }
 
   async webhookStatus(): Promise<AircallWebhookStatusResponse> {
