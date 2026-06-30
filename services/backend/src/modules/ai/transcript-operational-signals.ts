@@ -296,6 +296,11 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
     const parsed = transcriptOperationalSignalSchema.safeParse(signal);
     return parsed.success ? [parsed.data] : [];
   }));
+  if (provided.length > 0 && provided.every((signal) => signal.intent === 'no_action' || !signal.action_required)) {
+    return provided.some((signal) => signal.intent === 'no_action')
+      ? provided
+      : [noActionSignal('Resolver explicitly marked this transcript as non-actionable.')];
+  }
 
   const text = normalizedText(sourceText);
   const hasTag = (tag: string) => output.psych_tags.includes(tag as TranscriptResolverOutput['psych_tags'][number]);
