@@ -305,6 +305,10 @@ export interface WorkflowMcpProductLanguageEntry {
   vendor: string | null;
   tags: string[];
   variantSkus: string[];
+  family: string | null;
+  role: 'machine' | 'spare_part' | 'consumable' | 'accessory' | 'service' | 'unknown';
+  category: 'heat_press' | 'dtf_supply' | 'printer_part' | 'transfer' | 'unknown';
+  collections: string[];
   aliases: string[];
   source: 'shopify_catalog';
 }

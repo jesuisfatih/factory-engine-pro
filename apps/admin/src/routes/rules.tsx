@@ -920,7 +920,7 @@ function RulesView() {
                 <div className="rules-mcp-intent" key={product.id}>
                   <div>
                     <strong>{product.title}</strong>
-                    <span>{product.productType ?? product.vendor ?? 'catalog product'}</span>
+                    <span>{[product.family, product.role, product.category].filter(Boolean).join(' / ') || product.productType || product.vendor || 'catalog product'}</span>
                   </div>
                   <em>{product.aliases.slice(0, 5).join(', ')}</em>
                 </div>

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-30.3';
+export const WORKFLOW_ENUM_VERSION = '2026-06-30.4';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -29,6 +29,8 @@ export const URGENCY_LEVELS = [
 ] as const;
 
 export const OPERATIONAL_INTENTS = [
+  'heat_press_machine_purchase_intent',
+  'spare_part_purchase_intent',
   'heat_press_purchase_intent',
   'dtf_supply_reorder_signal',
   'quote_request',
@@ -92,7 +94,15 @@ export const WORKFLOW_CONDITIONS = [
   'call_intent',
   'psych_tag_includes',
   'product_mentioned',
+  'product_family_is',
+  'product_role_is',
+  'product_category_is',
+  'product_sku_is',
+  'product_collection_is',
+  'product_match_confidence_gte',
   'previous_purchase_includes',
+  'previous_purchase_family_includes',
+  'owned_machine_family_is',
   'segment_member',
   'call_count_in_window',
   'is_first_call',
@@ -162,7 +172,7 @@ export function assertServiceRequestSourceContract(source: z.infer<typeof servic
 }
 
 export type WorkflowTriggerFamily = 'system' | 'ai_derived' | 'aggregate' | 'accounts' | 'chaining_prep';
-export type WorkflowConditionCategory = 'ai' | 'commerce' | 'segment' | 'call_history' | 'task_state' | 'ownership' | 'time';
+export type WorkflowConditionCategory = 'ai' | 'commerce' | 'segment' | 'call_history' | 'task_state' | 'ownership' | 'time' | 'product_taxonomy';
 export type WorkflowValueType = 'string' | 'number' | 'boolean' | 'enum' | 'range' | 'window';
 
 export interface WorkflowEnumOption<T extends string = string> {
@@ -179,7 +189,7 @@ export interface WorkflowConditionOption extends WorkflowEnumOption<WorkflowCond
   category: WorkflowConditionCategory;
   valueType: WorkflowValueType;
   aiDerived: boolean;
-  optionSource: 'call_intents' | 'psych_tags' | 'operational_intents' | 'segments' | 'products' | 'members' | 'none';
+  optionSource: 'call_intents' | 'psych_tags' | 'operational_intents' | 'segments' | 'products' | 'product_roles' | 'product_categories' | 'members' | 'none';
 }
 
 export interface WorkflowActionOption extends WorkflowEnumOption<WorkflowAction> {
@@ -199,6 +209,53 @@ export interface WorkflowOperationalIntentRegistryEntry extends WorkflowEnumOpti
 }
 
 export const OPERATIONAL_INTENT_REGISTRY = [
+  operationalIntentEntry('spare_part_purchase_intent', 'sales', 'Spare part purchase follow-up', [
+    'spare part',
+    'replacement part',
+    'part for',
+    'parts for',
+    'machine part',
+    'printer part',
+    'yedek parca',
+    'parca',
+    'wiper blade',
+    'blade',
+    'handle',
+    'sliding handle',
+    'nozzle',
+    'damper',
+    'cap top',
+    'printhead',
+    'motherboard',
+    'sensor',
+    'belt',
+    'cable',
+    'tube',
+  ], [
+    "Hydro1620 parcasi soranlari Ihsan'a sales task olarak ata.",
+    'Create a sales task when a caller asks for a replacement part or SKU.',
+  ]),
+  operationalIntentEntry('heat_press_machine_purchase_intent', 'sales', 'Heat press machine purchase follow-up', [
+    'heat press machine',
+    'new heat press',
+    'buy heat press',
+    'purchase heat press',
+    'heat press price',
+    'hydraulic press machine',
+    'press machine',
+    'machine purchase',
+    'new machine',
+    'hydro heat press',
+    'dual station',
+    'auto open',
+    'clamshell',
+    'swing away',
+    'pneumatic',
+    '16x20',
+    '15x15',
+  ], [
+    'Create a sales follow-up when a caller asks to buy a new heat press machine.',
+  ]),
   operationalIntentEntry('heat_press_purchase_intent', 'sales', 'Heat press purchase follow-up', [
     'heat press',
     'hydro',
@@ -516,7 +573,15 @@ export const WORKFLOW_CONDITION_OPTIONS: readonly WorkflowConditionOption[] = [
   { value: 'psych_tag_includes', label: 'Psych tag includes', category: 'ai', valueType: 'enum', aiDerived: true, optionSource: 'psych_tags' },
   { value: 'operational_intent', label: 'Operational intent', category: 'ai', valueType: 'enum', aiDerived: true, optionSource: 'operational_intents' },
   { value: 'product_mentioned', label: 'Product mentioned', category: 'ai', valueType: 'string', aiDerived: true, optionSource: 'products' },
+  { value: 'product_family_is', label: 'Product family is', category: 'product_taxonomy', valueType: 'string', aiDerived: true, optionSource: 'products' },
+  { value: 'product_role_is', label: 'Product role is', category: 'product_taxonomy', valueType: 'enum', aiDerived: true, optionSource: 'product_roles' },
+  { value: 'product_category_is', label: 'Product category is', category: 'product_taxonomy', valueType: 'enum', aiDerived: true, optionSource: 'product_categories' },
+  { value: 'product_sku_is', label: 'Product SKU is', category: 'product_taxonomy', valueType: 'string', aiDerived: true, optionSource: 'products' },
+  { value: 'product_collection_is', label: 'Product collection is', category: 'product_taxonomy', valueType: 'string', aiDerived: true, optionSource: 'products' },
+  { value: 'product_match_confidence_gte', label: 'Product match confidence greater than or equal', category: 'product_taxonomy', valueType: 'number', aiDerived: true, optionSource: 'none' },
   { value: 'previous_purchase_includes', label: 'Previous purchase includes', category: 'commerce', valueType: 'string', aiDerived: false, optionSource: 'products' },
+  { value: 'previous_purchase_family_includes', label: 'Previous purchase family includes', category: 'commerce', valueType: 'string', aiDerived: false, optionSource: 'products' },
+  { value: 'owned_machine_family_is', label: 'Owned machine family is', category: 'commerce', valueType: 'string', aiDerived: false, optionSource: 'products' },
   { value: 'segment_member', label: 'Segment member', category: 'segment', valueType: 'string', aiDerived: false, optionSource: 'segments' },
   { value: 'call_count_in_window', label: 'Call count in window', category: 'call_history', valueType: 'window', aiDerived: false, optionSource: 'none' },
   { value: 'is_first_call', label: 'Is first call', category: 'call_history', valueType: 'boolean', aiDerived: false, optionSource: 'none' },
@@ -598,10 +663,10 @@ export const workflowEnumCatalogResponseSchema = z.object({
   conditions: z.array(z.object({
     value: workflowConditionSchema,
     label: z.string(),
-    category: z.enum(['ai', 'commerce', 'segment', 'call_history', 'task_state', 'ownership', 'time']),
+    category: z.enum(['ai', 'commerce', 'segment', 'call_history', 'task_state', 'ownership', 'time', 'product_taxonomy']),
     valueType: z.enum(['string', 'number', 'boolean', 'enum', 'range', 'window']),
     aiDerived: z.boolean(),
-    optionSource: z.enum(['call_intents', 'psych_tags', 'operational_intents', 'segments', 'products', 'members', 'none']),
+    optionSource: z.enum(['call_intents', 'psych_tags', 'operational_intents', 'segments', 'products', 'product_roles', 'product_categories', 'members', 'none']),
   })),
   actions: z.array(z.object({
     value: workflowActionSchema,

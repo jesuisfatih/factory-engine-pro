@@ -5,6 +5,48 @@ import {
 } from '@factory-engine-pro/contracts';
 
 export const OPERATIONAL_INTENT_KEYWORDS = {
+  spare_part_purchase_intent: [
+    'spare part',
+    'replacement part',
+    'part for',
+    'parts for',
+    'machine part',
+    'printer part',
+    'yedek parca',
+    'parca',
+    'wiper blade',
+    'blade',
+    'handle',
+    'sliding handle',
+    'nozzle',
+    'damper',
+    'cap top',
+    'printhead',
+    'motherboard',
+    'sensor',
+    'belt',
+    'cable',
+    'tube',
+  ],
+  heat_press_machine_purchase_intent: [
+    'heat press machine',
+    'new heat press',
+    'buy heat press',
+    'purchase heat press',
+    'heat press price',
+    'hydraulic press machine',
+    'press machine',
+    'machine purchase',
+    'new machine',
+    'hydro heat press',
+    'dual station',
+    'auto open',
+    'clamshell',
+    'swing away',
+    'pneumatic',
+    '16x20',
+    '15x15',
+  ],
   refund_requested: [
     'refund',
     'return',
@@ -288,6 +330,9 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   if (hasAny(OPERATIONAL_INTENT_KEYWORDS.sample_request)) {
     action('sample_request', 0.82, 'sales', 'Sample request follow-up', 'Customer asked for samples, demo print, or test output.');
   }
+  if (hasAny(OPERATIONAL_INTENT_KEYWORDS.spare_part_purchase_intent) || hasProduct(OPERATIONAL_INTENT_KEYWORDS.spare_part_purchase_intent)) {
+    action('spare_part_purchase_intent', 0.84, 'sales', 'Spare part purchase follow-up', 'Customer asked about a replacement part, machine part, or SKU.');
+  }
   if (hasAny(OPERATIONAL_INTENT_KEYWORDS.machine_upgrade_interest)) {
     action('machine_upgrade_interest', 0.82, 'sales', 'Machine upgrade follow-up', 'Customer signaled upgrade, replacement, or additional machine interest.');
   }
@@ -299,6 +344,9 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   }
   if (hasAny(OPERATIONAL_INTENT_KEYWORDS.dtf_supply_reorder_signal) || hasProduct(OPERATIONAL_INTENT_KEYWORDS.dtf_supply_reorder_signal)) {
     action('dtf_supply_reorder_signal', 0.78, 'sales', 'DTF supply reorder follow-up', 'Customer mentioned DTF supplies, transfers, film, powder, ink, or consumables.');
+  }
+  if (hasPurchaseSignal && (hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_machine_purchase_intent) || hasProduct(OPERATIONAL_INTENT_KEYWORDS.heat_press_machine_purchase_intent))) {
+    action('heat_press_machine_purchase_intent', 0.9, 'sales', 'Heat press machine purchase follow-up', 'Customer showed purchase intent for a new heat press machine.');
   }
   if (hasPurchaseSignal && (hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent) || hasProduct(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent) || productText.includes('press'))) {
     action('heat_press_purchase_intent', 0.88, 'sales', 'Heat press purchase follow-up', 'Customer showed purchase intent for heat press or related machine.');

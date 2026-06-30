@@ -97,7 +97,15 @@ export class WorkflowExecutorService {
       case 'call_intent':
       case 'psych_tag_includes':
       case 'product_mentioned':
+      case 'product_family_is':
+      case 'product_role_is':
+      case 'product_category_is':
+      case 'product_sku_is':
+      case 'product_collection_is':
+      case 'product_match_confidence_gte':
       case 'previous_purchase_includes':
+      case 'previous_purchase_family_includes':
+      case 'owned_machine_family_is':
       case 'segment_member':
       case 'call_count_in_window':
       case 'is_first_call':

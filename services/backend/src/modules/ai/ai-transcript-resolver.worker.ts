@@ -535,6 +535,8 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
   const psychTags = new Set<TranscriptResolverOutput['psych_tags'][number]>();
   const productMentions: TranscriptResolverOutput['product_mentions'] = [];
   const hasPurchaseSignal = hasAny(PURCHASE_SIGNAL_KEYWORDS);
+  const hasSparePartSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.spare_part_purchase_intent);
+  const hasHeatPressMachineSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_machine_purchase_intent);
   const hasHeatPressSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent);
   const hasDtfSupplySignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.dtf_supply_reorder_signal);
   const hasQuoteSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.quote_request);
@@ -552,13 +554,19 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
     || hasTrainingSignal
     || hasAny(['complaint', 'problem', 'issue', 'broken', 'not working', 'wrong item', 'damaged']);
 
-  if (hasPurchaseSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) psychTags.add('purchase_intent');
+  if (hasPurchaseSignal || hasSparePartSignal || hasHeatPressMachineSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) psychTags.add('purchase_intent');
   if (hasQuoteSignal || hasPriceSignal || hasFitSignal || hasFinancingSignal || hasSampleSignal) psychTags.add('info_request');
   if (hasCallbackSignal) psychTags.add('follow_up');
   if (hasRefundSignal) psychTags.add('refund_intent');
   if (hasShippingSignal) psychTags.add('shipping_issue');
   if (hasComplaintSignal) psychTags.add('complaint');
 
+  if (hasSparePartSignal) {
+    productMentions.push({ sku: null, name_hint: 'Spare part', confidence: 0.7 });
+  }
+  if (hasHeatPressMachineSignal) {
+    productMentions.push({ sku: null, name_hint: 'Heat press machine', confidence: 0.74 });
+  }
   if (hasHeatPressSignal) {
     productMentions.push({ sku: null, name_hint: 'Heat press', confidence: 0.72 });
   }
@@ -567,7 +575,7 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
   }
 
   let callIntent: TranscriptResolverOutput['call_intent'] = 'inquiry';
-  if (hasPurchaseSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) callIntent = 'sale';
+  if (hasPurchaseSignal || hasSparePartSignal || hasHeatPressMachineSignal || hasHeatPressSignal || hasDtfSupplySignal || hasQuoteSignal || hasUpgradeSignal) callIntent = 'sale';
   else if (hasCallbackSignal) callIntent = 'follow_up';
   else if (hasComplaintSignal) callIntent = 'complaint';
 

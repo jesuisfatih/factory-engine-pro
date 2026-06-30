@@ -84,6 +84,22 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
 
 const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
   defaultRule(
+    'operational_spare_part_purchase_sales_task',
+    'Default: Spare part purchase follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_spare_part_purchase', 'operational_intent', '=', 'spare_part_purchase_intent')],
+    [defaultAction('create_spare_part_sales_task', 'create_task', 'Spare part purchase follow-up', 'sales')],
+    72,
+  ),
+  defaultRule(
+    'operational_heat_press_machine_purchase_sales_task',
+    'Default: Heat press machine purchase follow-up',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_heat_press_machine_purchase', 'operational_intent', '=', 'heat_press_machine_purchase_intent')],
+    [defaultAction('create_heat_press_machine_sales_task', 'create_task', 'Heat press machine purchase follow-up', 'sales')],
+    75,
+  ),
+  defaultRule(
     'operational_heat_press_purchase_sales_task',
     'Default: Heat press purchase follow-up',
     'call.operational_signal.detected',
@@ -991,6 +1007,29 @@ export class RulesService {
     if (condition === 'product_mentioned') {
       return { value: productValues(params, state.resolverOutput), source: 'event_or_resolver' };
     }
+    if (condition === 'product_family_is') {
+      const taxonomy = await this.currentProductTaxonomy(state);
+      return { value: taxonomy.families, source: taxonomy.source };
+    }
+    if (condition === 'product_role_is') {
+      const taxonomy = await this.currentProductTaxonomy(state);
+      return { value: taxonomy.roles, source: taxonomy.source };
+    }
+    if (condition === 'product_category_is') {
+      const taxonomy = await this.currentProductTaxonomy(state);
+      return { value: taxonomy.categories, source: taxonomy.source };
+    }
+    if (condition === 'product_sku_is') {
+      const taxonomy = await this.currentProductTaxonomy(state);
+      return { value: taxonomy.skus, source: taxonomy.source };
+    }
+    if (condition === 'product_collection_is') {
+      const taxonomy = await this.currentProductTaxonomy(state);
+      return { value: taxonomy.collections, source: taxonomy.source };
+    }
+    if (condition === 'product_match_confidence_gte') {
+      return { value: productMatchConfidence(params, state.resolverOutput), source: 'event_or_resolver' };
+    }
     if (condition === 'previous_purchase_includes') {
       if (!state.customer) return { value: [], source: 'commerce_orders' };
       const orders = await this.prisma.db.commerceOrder.findMany({
@@ -1000,6 +1039,16 @@ export class RulesService {
         take: 25,
       });
       return { value: orders.flatMap((order) => productValues(asRecord({ lineItems: order.lineItems }), {})), source: 'commerce_orders' };
+    }
+    if (condition === 'previous_purchase_family_includes') {
+      if (!state.customer) return { value: [], source: 'commerce_orders' };
+      const taxonomy = await this.previousPurchaseTaxonomy(state.customer.id);
+      return { value: taxonomy.families, source: taxonomy.source };
+    }
+    if (condition === 'owned_machine_family_is') {
+      if (!state.customer) return { value: [], source: 'commerce_orders' };
+      const taxonomy = await this.previousPurchaseTaxonomy(state.customer.id);
+      return { value: taxonomy.machineFamilies, source: taxonomy.source };
     }
     if (condition === 'segment_member') {
       if (!state.customer) return { value: false, source: 'segment_memberships' };
@@ -2249,6 +2298,7 @@ export class RulesService {
         vendor: true,
         productType: true,
         tags: true,
+        collections: true,
         variants: {
           select: { sku: true, title: true },
           orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
@@ -2261,13 +2311,26 @@ export class RulesService {
 
     return products.map((product) => {
       const variantSkus = uniqueStrings(product.variants.map((variant) => variant.sku));
+      const collections = collectionNames(product.collections);
+      const taxonomy = inferProductTaxonomy({
+        title: product.title,
+        handle: product.handle,
+        vendor: product.vendor,
+        productType: product.productType,
+        tags: product.tags,
+        variantSkus,
+        variantTitles: product.variants.map((variant) => variant.title),
+        collections,
+      });
       const aliases = productLanguageAliases([
         product.title,
         product.handle,
         product.handle?.replace(/-/g, ' '),
         product.vendor,
         product.productType,
+        taxonomy.family,
         ...product.tags,
+        ...collections,
         ...product.variants.flatMap((variant) => [
           variant.sku,
           variant.title,
@@ -2282,10 +2345,37 @@ export class RulesService {
         vendor: product.vendor,
         tags: [...product.tags],
         variantSkus,
+        family: taxonomy.family,
+        role: taxonomy.role,
+        category: taxonomy.category,
+        collections,
         aliases,
         source: 'shopify_catalog' as const,
       };
     });
+  }
+
+  private async currentProductTaxonomy(
+    state: Awaited<ReturnType<RulesService['resolveConditionState']>>,
+  ): Promise<ProductTaxonomySet> {
+    const language = await this.shopifyProductLanguage();
+    const values = productValues(state.params, state.resolverOutput);
+    return taxonomyForProductValues(values, language, 'event_or_resolver');
+  }
+
+  private async previousPurchaseTaxonomy(customerId: string): Promise<ProductTaxonomySet> {
+    const language = await this.shopifyProductLanguage();
+    const orders = await this.prisma.db.commerceOrder.findMany({
+      where: { customerId },
+      select: { lineItems: true },
+      orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 25,
+    });
+    return taxonomyForProductValues(
+      orders.flatMap((order) => productValues(asRecord({ lineItems: order.lineItems }), {})),
+      language,
+      'commerce_orders',
+    );
   }
 
   async draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput): Promise<WorkflowMcpDraftRuleResponse> {
@@ -3099,6 +3189,20 @@ const CALL_DERIVED_TASK_BYPASS_TRIGGERS: WorkflowTrigger[] = [
 ];
 
 type McpProductLanguageEntry = WorkflowMcpCapabilitiesResponse['registry']['productLanguage'][number];
+type ProductRole = McpProductLanguageEntry['role'];
+type ProductCategory = McpProductLanguageEntry['category'];
+
+interface ProductTaxonomySet {
+  source: string;
+  titles: string[];
+  aliases: string[];
+  skus: string[];
+  families: string[];
+  roles: ProductRole[];
+  categories: ProductCategory[];
+  collections: string[];
+  machineFamilies: string[];
+}
 
 interface McpConditionPlan {
   conditions: WorkflowRuleCondition[];
@@ -3110,13 +3214,68 @@ interface McpConditionPlan {
   firstCall: boolean;
   strongPsychSignal: boolean;
   psychTags: string[];
+  productFamilies: string[];
+  productRoles: ProductRole[];
+  productCategories: ProductCategory[];
   matchedProductAliases: string[];
   previousPurchaseGuard: boolean;
+  ownedMachineGuard: boolean;
   openTaskGuard: boolean;
 }
 
+function actionablePromptText(text: string) {
+  const clauses = text
+    .split(/(?<=[.;!?])\s+|[;!?]+/g)
+    .map((clause) => normalizeHumanText(clause))
+    .filter(Boolean);
+  const actionable = clauses.filter((clause) => !isExcludedProductScopeClause(clause));
+  return actionable.length > 0 ? actionable.join(' ') : text;
+}
+
+function isExcludedProductScopeClause(clause: string) {
+  const hasProductScope = [
+    'product',
+    'urun',
+    'sku',
+    'heat press',
+    'press',
+    'machine',
+    'makine',
+    'parca',
+    'yedek',
+    'spare',
+    'part',
+    'sarf',
+    'consumable',
+    'dtf',
+    'supply',
+    'malzeme',
+    'fiyat',
+    'price',
+  ].some((keyword) => clause.includes(keyword));
+  if (!hasProductScope) return false;
+  return [
+    'calismasin',
+    'calismayacak',
+    'tetiklenmesin',
+    'tetiklemesin',
+    'devreye girmesin',
+    'olmasin',
+    'sayma',
+    'sayilmasin',
+    'haric',
+    'haricinde',
+    'except',
+    'exclude',
+    'not for',
+    'do not',
+    'dont',
+    'degil',
+  ].some((keyword) => clause.includes(keyword));
+}
+
 function detectOperationalIntent(text: string): WorkflowMcpDraftRuleResponse['detectedIntent'] {
-  return detectOperationalIntentFromText(text);
+  return detectOperationalIntentFromText(actionablePromptText(text));
 }
 
 function axisForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent']): CreateTaskAxis {
@@ -3195,22 +3354,77 @@ function compileMcpConditions(
   }
 
   const callIntent = detectCallIntentCondition(text);
-  if (callIntent) {
+  if (callIntent && shouldAddCallIntentCondition(text, detectedIntent, callIntent)) {
     conditions.push(mcpCondition(`call_intent_${callIntent}`, 'call_intent', '=', callIntent));
     metadata.callIntent = callIntent;
   }
 
-  const productMatches = matchMcpProductLanguage(text, productLanguage);
+  const productScopeText = actionablePromptText(text);
+  const requestedProductRole = detectRequestedProductRole(productScopeText);
+  const requestedProductCategory = detectRequestedProductCategory(productScopeText);
+  let productMatches = matchMcpProductLanguage(productScopeText, productLanguage);
+  let productFamilyFromRoleMismatch: string | null = null;
+  if (requestedProductRole) {
+    const roleMatches = productMatches.filter((match) => match.product.role === requestedProductRole);
+    if (roleMatches.length > 0) {
+      productMatches = roleMatches;
+    } else if (productMatches.length > 0) {
+      productFamilyFromRoleMismatch = productMatches.find((match) => match.product.family)?.product.family ?? null;
+      productMatches = [];
+      assumptions.push(`Shopify catalog alias matched a different product role; using requested ${requestedProductRole} guard instead of the mismatched product row.`);
+    }
+  }
+  if (requestedProductCategory) {
+    const categoryMatches = productMatches.filter((match) => match.product.category === requestedProductCategory);
+    if (categoryMatches.length > 0) productMatches = categoryMatches;
+  }
   const primaryProductMatch = productMatches[0] ?? null;
   if (primaryProductMatch) {
     conditions.push(mcpCondition('product_mentioned', 'product_mentioned', 'contains', primaryProductMatch.conditionValue));
     assumptions.push(`Product condition resolved from Shopify catalog: ${primaryProductMatch.title} via "${primaryProductMatch.conditionValue}".`);
+    if (primaryProductMatch.product.family) {
+      conditions.push(mcpCondition('product_family', 'product_family_is', '=', primaryProductMatch.product.family));
+      metadata.productFamilies = uniqueStrings(productMatches.map((match) => match.product.family));
+    }
+    if (primaryProductMatch.product.role !== 'unknown') {
+      conditions.push(mcpCondition('product_role', 'product_role_is', '=', primaryProductMatch.product.role));
+      metadata.productRoles = uniqueProductRoles(productMatches.map((match) => match.product.role));
+    }
+    if (primaryProductMatch.product.category !== 'unknown') {
+      conditions.push(mcpCondition('product_category', 'product_category_is', '=', primaryProductMatch.product.category));
+      metadata.productCategories = uniqueProductCategories(productMatches.map((match) => match.product.category));
+    }
+    const matchedSku = primaryProductMatch.product.variantSkus.find((sku) => normalizeHumanText(sku) === normalizeHumanText(primaryProductMatch.conditionValue));
+    if (matchedSku) {
+      conditions.push(mcpCondition('product_sku', 'product_sku_is', '=', matchedSku));
+      metadata.productSku = matchedSku;
+    }
     metadata.productAliases = productMatches.slice(0, 5).map((match) => match.conditionValue);
     metadata.productTitles = productMatches.slice(0, 5).map((match) => match.title);
-  } else if (mentionsProductLanguage(text, detectedIntent)) {
+  } else if (!productFamilyFromRoleMismatch && mentionsProductLanguage(productScopeText, detectedIntent)) {
     warnings.push(productLanguage.length === 0
       ? 'Shopify catalog product language is empty; product_mentioned condition was not added.'
       : 'No Shopify catalog alias matched the product wording; rule uses operational intent and other guards only.');
+  }
+  if (!primaryProductMatch && requestedProductRole) {
+    if (productFamilyFromRoleMismatch) {
+      conditions.push(mcpCondition('product_family', 'product_family_is', '=', productFamilyFromRoleMismatch));
+      assumptions.push(`Product family guard inferred from a role-mismatched Shopify catalog alias: ${productFamilyFromRoleMismatch}.`);
+      metadata.productFamilies = [productFamilyFromRoleMismatch];
+    }
+    conditions.push(mcpCondition('requested_product_role', 'product_role_is', '=', requestedProductRole));
+    assumptions.push(`Product role guard inferred from the prompt: ${requestedProductRole}.`);
+    metadata.productRoles = [requestedProductRole];
+  }
+  if (!primaryProductMatch && requestedProductCategory) {
+    conditions.push(mcpCondition('requested_product_category', 'product_category_is', '=', requestedProductCategory));
+    assumptions.push(`Product category guard inferred from the prompt: ${requestedProductCategory}.`);
+    metadata.productCategories = [requestedProductCategory];
+  }
+  if (mentionsHighProductConfidence(text)) {
+    conditions.push(mcpCondition('product_confidence', 'product_match_confidence_gte', '>=', '0.75'));
+    assumptions.push('Product match confidence must be at least 0.75.');
+    metadata.productMatchConfidenceGte = 0.75;
   }
 
   const previousPurchaseRequested = mentionsPreviousPurchase(text);
@@ -3218,8 +3432,19 @@ function compileMcpConditions(
     conditions.push(mcpCondition('previous_purchase_product', 'previous_purchase_includes', 'contains', primaryProductMatch.conditionValue));
     assumptions.push('Previous-purchase guard uses the same Shopify catalog product language as the transcript product mention.');
     metadata.previousPurchaseGuard = true;
+    if (primaryProductMatch.product.family) {
+      conditions.push(mcpCondition('previous_purchase_family', 'previous_purchase_family_includes', 'contains', primaryProductMatch.product.family));
+      assumptions.push('Previous-purchase family guard prevents SKU-level ambiguity across machine, part, and consumable products.');
+      metadata.previousPurchaseFamilyGuard = primaryProductMatch.product.family;
+    }
   } else if (previousPurchaseRequested) {
     warnings.push('Previous-purchase wording was detected, but no Shopify catalog product alias matched; previous_purchase_includes was not added.');
+  }
+  const ownedMachineFamily = primaryProductMatch?.product.family ?? null;
+  if (ownedMachineFamily && mentionsOwnedMachineGuard(text)) {
+    conditions.push(mcpCondition('owned_machine_family', 'owned_machine_family_is', '=', ownedMachineFamily));
+    assumptions.push(`Owned-machine guard requires a previous machine purchase in family ${ownedMachineFamily}.`);
+    metadata.ownedMachineGuard = ownedMachineFamily;
   }
 
   const orderSpec = detectOrderCountSpec(text);
@@ -3256,18 +3481,35 @@ function compileMcpConditions(
     metadata.openTaskGuard = true;
   }
 
+  const normalizedWarnings = productFamilyFromRoleMismatch
+    ? warnings.filter((warning) => !warning.startsWith('No Shopify catalog alias matched'))
+    : warnings;
+
   return {
     conditions: dedupeMcpConditions(conditions),
     assumptions,
-    warnings,
+    warnings: normalizedWarnings,
     metadata,
     repeatCallThreshold: callSpec.firstCall ? null : callSpec.count,
     callWindowDays: callSpec.firstCall ? null : callSpec.windowDays,
     firstCall: callSpec.firstCall,
     strongPsychSignal: psych.strong,
     psychTags: psych.tags,
+    productFamilies: uniqueStrings([
+      ...productMatches.map((match) => match.product.family),
+      productFamilyFromRoleMismatch,
+    ]),
+    productRoles: uniqueProductRoles([
+      ...productMatches.map((match) => match.product.role),
+      requestedProductRole,
+    ]),
+    productCategories: uniqueProductCategories([
+      ...productMatches.map((match) => match.product.category),
+      requestedProductCategory,
+    ]),
     matchedProductAliases: productMatches.map((match) => match.conditionValue),
     previousPurchaseGuard: Boolean(metadata.previousPurchaseGuard),
+    ownedMachineGuard: Boolean(metadata.ownedMachineGuard),
     openTaskGuard,
   };
 }
@@ -3282,6 +3524,7 @@ function mcpDefinitionIssues(definition: WorkflowRuleDefinition) {
   if (operationalIntents.length === 0) {
     issues.push('MCP-authored rules must include an operational_intent condition.');
   }
+  issues.push(...productIntentConflictIssues(definition, operationalIntents));
 
   const createTaskIndex = definition.actions.findIndex((action) => action.action === 'create_task');
   const hasCreateTask = createTaskIndex >= 0;
@@ -3322,6 +3565,33 @@ function operationalIntentsFromDefinition(definition: WorkflowRuleDefinition) {
     }
   }
   return [...new Set(intents)];
+}
+
+function productIntentConflictIssues(
+  definition: WorkflowRuleDefinition,
+  intents: Array<WorkflowMcpDraftRuleResponse['detectedIntent']>,
+) {
+  const issues: string[] = [];
+  const roles = conditionValues(definition, 'product_role_is');
+  const categories = conditionValues(definition, 'product_category_is');
+  if (intents.includes('heat_press_machine_purchase_intent') && roles.some((role) => role === 'spare_part' || role === 'consumable')) {
+    issues.push('Heat press machine purchase rules cannot be guarded by spare_part or consumable product_role conditions.');
+  }
+  if (intents.includes('heat_press_machine_purchase_intent') && categories.some((category) => category === 'printer_part' || category === 'dtf_supply')) {
+    issues.push('Heat press machine purchase rules cannot be guarded by printer_part or dtf_supply product_category conditions.');
+  }
+  if (intents.includes('spare_part_purchase_intent') && roles.includes('machine')) {
+    issues.push('Spare part purchase rules cannot be guarded by machine product_role conditions.');
+  }
+  return issues;
+}
+
+function conditionValues(definition: WorkflowRuleDefinition, conditionName: WorkflowRuleCondition['condition']) {
+  return workflowDefinitionConditions(definition)
+    .filter((condition) => condition.condition === conditionName)
+    .flatMap((condition) => condition.value.split(','))
+    .map(normalize)
+    .filter(Boolean);
 }
 
 function workflowRulesByOperationalIntent(
@@ -3560,8 +3830,35 @@ function detectCallIntentCondition(text: string) {
   return null;
 }
 
+function shouldAddCallIntentCondition(
+  text: string,
+  intent: WorkflowMcpDraftRuleResponse['detectedIntent'],
+  callIntent: NonNullable<ReturnType<typeof detectCallIntentCondition>>,
+) {
+  if (callIntent !== 'inquiry') return true;
+  const productPurchaseIntent = [
+    'heat_press_machine_purchase_intent',
+    'heat_press_purchase_intent',
+    'spare_part_purchase_intent',
+    'dtf_supply_reorder_signal',
+  ].includes(intent);
+  if (!productPurchaseIntent) return true;
+  const broadPurchaseScope = [
+    ' veya ',
+    ' or ',
+    'buy',
+    'purchase',
+    'satin al',
+    'satin alma',
+    'almak',
+    'yeni makine',
+    'new machine',
+  ].some((keyword) => text.includes(keyword));
+  return !broadPurchaseScope;
+}
+
 function matchMcpProductLanguage(text: string, productLanguage: McpProductLanguageEntry[]) {
-  const matches: Array<{ title: string; conditionValue: string; score: number }> = [];
+  const matches: Array<{ product: McpProductLanguageEntry; title: string; conditionValue: string; score: number }> = [];
   for (const product of productLanguage) {
     for (const alias of product.aliases) {
       const normalizedAlias = normalizeHumanText(alias);
@@ -3570,12 +3867,180 @@ function matchMcpProductLanguage(text: string, productLanguage: McpProductLangua
       const score = normalizedAlias.length
         + (product.title && normalizeHumanText(product.title) === normalizedAlias ? 20 : 0)
         + (product.variantSkus.some((sku) => normalizeHumanText(sku) === normalizedAlias) ? 30 : 0);
-      matches.push({ title: product.title, conditionValue: alias, score });
+      matches.push({ product, title: product.title, conditionValue: alias, score });
     }
   }
   return matches
     .sort((a, b) => b.score - a.score || a.conditionValue.length - b.conditionValue.length)
     .filter((match, index, all) => all.findIndex((candidate) => normalizeHumanText(candidate.conditionValue) === normalizeHumanText(match.conditionValue)) === index);
+}
+
+function taxonomyForProductValues(
+  values: string[],
+  productLanguage: McpProductLanguageEntry[],
+  source: string,
+): ProductTaxonomySet {
+  const matches = matchProductEntriesForValues(values, productLanguage);
+  const fallbackTaxonomies = values.map((value) => inferProductTaxonomy({ title: value }));
+  const matchedProducts = matches.map((match) => match.product);
+  const allTaxonomies = [...matchedProducts, ...fallbackTaxonomies];
+  return {
+    source,
+    titles: uniqueStrings(matchedProducts.map((product) => product.title)),
+    aliases: uniqueStrings([...values, ...matches.map((match) => match.alias)]),
+    skus: uniqueStrings([
+      ...matchedProducts.flatMap((product) => product.variantSkus),
+      ...values.filter((value) => looksLikeSku(value)),
+    ]),
+    families: uniqueStrings(allTaxonomies.map((entry) => entry.family)),
+    roles: uniqueProductRoles(allTaxonomies.map((entry) => entry.role)),
+    categories: uniqueProductCategories(allTaxonomies.map((entry) => entry.category)),
+    collections: uniqueStrings(matchedProducts.flatMap((product) => product.collections)),
+    machineFamilies: uniqueStrings(allTaxonomies
+      .filter((entry) => entry.role === 'machine')
+      .map((entry) => entry.family)),
+  };
+}
+
+function matchProductEntriesForValues(values: string[], productLanguage: McpProductLanguageEntry[]) {
+  const matches: Array<{ product: McpProductLanguageEntry; alias: string; score: number }> = [];
+  for (const value of values) {
+    const normalizedValue = normalizeHumanText(value);
+    if (!isUsefulProductAlias(normalizedValue)) continue;
+    for (const product of productLanguage) {
+      const skuMatch = product.variantSkus.find((sku) => normalizeHumanText(sku) === normalizedValue);
+      if (skuMatch) {
+        matches.push({ product, alias: skuMatch, score: 120 });
+        continue;
+      }
+      for (const alias of product.aliases) {
+        const normalizedAlias = normalizeHumanText(alias);
+        if (!isUsefulProductAlias(normalizedAlias)) continue;
+        if (normalizedAlias === normalizedValue) {
+          matches.push({ product, alias, score: 100 + normalizedAlias.length });
+        } else if (normalizedValue.length >= 5 && normalizedAlias.length >= 5 && (normalizedValue.includes(normalizedAlias) || normalizedAlias.includes(normalizedValue))) {
+          matches.push({ product, alias, score: 40 + Math.min(normalizedAlias.length, normalizedValue.length) });
+        }
+      }
+    }
+  }
+  return matches
+    .sort((a, b) => b.score - a.score)
+    .filter((match, index, all) => all.findIndex((candidate) => candidate.product.id === match.product.id && normalizeHumanText(candidate.alias) === normalizeHumanText(match.alias)) === index);
+}
+
+function inferProductTaxonomy(input: {
+  title?: string | null;
+  handle?: string | null;
+  vendor?: string | null;
+  productType?: string | null;
+  tags?: string[];
+  variantSkus?: string[];
+  variantTitles?: string[];
+  collections?: string[];
+}): Pick<McpProductLanguageEntry, 'family' | 'role' | 'category'> {
+  const haystack = normalizeHumanText([
+    input.title,
+    input.handle,
+    input.vendor,
+    input.productType,
+    ...(input.tags ?? []),
+    ...(input.variantSkus ?? []),
+    ...(input.variantTitles ?? []),
+    ...(input.collections ?? []),
+  ].filter(Boolean).join(' '));
+  const role = inferProductRole(haystack);
+  const category = inferProductCategory(haystack, role);
+  return {
+    family: inferProductFamily(haystack, category),
+    role,
+    category,
+  };
+}
+
+function inferProductRole(text: string): ProductRole {
+  if ([
+    'spare part',
+    'replacement part',
+    'yedek parca',
+    'part for',
+    'parts for',
+    'wiper',
+    'blade',
+    'handle',
+    'nozzle',
+    'damper',
+    'cap top',
+    'printhead',
+    'motherboard',
+    'sensor',
+    'belt',
+    'cable',
+    'tube',
+  ].some((keyword) => text.includes(keyword))) return 'spare_part';
+  if (['ink', 'powder', 'film', 'roll', 'cleaning solution', 'adhesive', 'hot melt', 'supply', 'supplies'].some((keyword) => text.includes(keyword))) return 'consumable';
+  if (['attachment', 'platen', 'cover', 'stand', 'holder', 'accessory'].some((keyword) => text.includes(keyword))) return 'accessory';
+  if ([
+    'heat press',
+    'hydraulic press',
+    'press machine',
+    'printer',
+    'oven',
+    'shaker',
+    'machine',
+    'clamshell',
+    'swing away',
+    'dual station',
+    'auto open',
+  ].some((keyword) => text.includes(keyword))) return 'machine';
+  if (['service', 'training', 'installation', 'setup'].some((keyword) => text.includes(keyword))) return 'service';
+  return 'unknown';
+}
+
+function inferProductCategory(text: string, role: ProductRole): ProductCategory {
+  if (['i3200', 'i1600', 'xp600', 'l1800', 'epson', 'printhead', 'wiper', 'nozzle', 'damper', 'cap top'].some((keyword) => text.includes(keyword))) return 'printer_part';
+  if (['dtf', 'ink', 'powder', 'film', 'pet film', 'cleaning solution', 'adhesive', 'hot melt', 'supply', 'supplies'].some((keyword) => text.includes(keyword))) return 'dtf_supply';
+  if (['gang sheet', 'transfer sheet', 'dtf transfer', 'transfers'].some((keyword) => text.includes(keyword))) return 'transfer';
+  if (['heat press', 'hydro', 'hydraulic press', 'clamshell', 'swing away', 'dual station', 'auto open', 'press machine'].some((keyword) => text.includes(keyword))) return 'heat_press';
+  if (role === 'machine') return 'heat_press';
+  return 'unknown';
+}
+
+function inferProductFamily(text: string, category: ProductCategory) {
+  const hydro = text.match(/\bhydro\s?(\d{3,4})\b/);
+  if (hydro) return `Hydro${hydro[1]}`;
+  const size = text.match(/\b(15x15|16x20|16 x 20|15 x 15)\b/);
+  if (size && category === 'heat_press') return `${size[1].replace(/\s+/g, '')} Heat Press`;
+  if (text.includes('epson i3200') || text.includes('i3200')) return 'Epson I3200';
+  if (text.includes('epson i1600') || text.includes('i1600')) return 'Epson I1600';
+  if (text.includes('xp600')) return 'XP600';
+  if (text.includes('l1800')) return 'Epson L1800';
+  if (category === 'heat_press') return 'Heat Press';
+  if (category === 'dtf_supply') return 'DTF Supplies';
+  if (category === 'transfer') return 'DTF Transfers';
+  return null;
+}
+
+function uniqueProductRoles(values: Array<ProductRole | null | undefined>) {
+  return uniqueStrings(values.filter((value): value is ProductRole => Boolean(value) && value !== 'unknown')) as ProductRole[];
+}
+
+function uniqueProductCategories(values: Array<ProductCategory | null | undefined>) {
+  return uniqueStrings(values.filter((value): value is ProductCategory => Boolean(value) && value !== 'unknown')) as ProductCategory[];
+}
+
+function looksLikeSku(value: string) {
+  const normalized = value.trim();
+  return /^[a-z0-9][a-z0-9._/-]{3,}$/i.test(normalized) && /\d/.test(normalized);
+}
+
+function collectionNames(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return uniqueStrings(value.flatMap((entry) => {
+    if (typeof entry === 'string') return [entry];
+    const record = asRecord(entry);
+    return [record.title, record.name, record.handle].map((item) => typeof item === 'string' ? item : null);
+  }));
 }
 
 function productLanguageAliases(candidates: Array<string | null | undefined>) {
@@ -3614,8 +4079,49 @@ function isUsefulProductAlias(alias: string) {
 }
 
 function mentionsProductLanguage(text: string, intent: WorkflowMcpDraftRuleResponse['detectedIntent']) {
-  if (intent === 'heat_press_purchase_intent' || intent === 'dtf_supply_reorder_signal' || intent === 'product_fit_question' || intent === 'machine_upgrade_interest') return true;
-  return ['heat press', 'dtf', 'powder', 'film', 'ink', 'machine', 'press', 'sku', 'urun', 'product'].some((keyword) => text.includes(keyword));
+  if (intent === 'heat_press_machine_purchase_intent'
+    || intent === 'spare_part_purchase_intent'
+    || intent === 'heat_press_purchase_intent'
+    || intent === 'dtf_supply_reorder_signal'
+    || intent === 'product_fit_question'
+    || intent === 'machine_upgrade_interest') return true;
+  return ['heat press', 'dtf', 'powder', 'film', 'ink', 'machine', 'press', 'sku', 'urun', 'product', 'parca', 'yedek'].some((keyword) => text.includes(keyword));
+}
+
+function detectRequestedProductRole(text: string): ProductRole | null {
+  const role = inferProductRole(text);
+  return role === 'unknown' ? null : role;
+}
+
+function detectRequestedProductCategory(text: string): ProductCategory | null {
+  const role = detectRequestedProductRole(text) ?? 'unknown';
+  const category = inferProductCategory(text, role);
+  return category === 'unknown' ? null : category;
+}
+
+function mentionsOwnedMachineGuard(text: string) {
+  return [
+    'owned machine',
+    'owns machine',
+    'has machine',
+    'bought machine',
+    'previous machine',
+    'daha once makine',
+    'makinesi varsa',
+    'makine aldiysa',
+    'ayni makine',
+    'same machine',
+  ].some((keyword) => text.includes(keyword));
+}
+
+function mentionsHighProductConfidence(text: string) {
+  return [
+    'high confidence product',
+    'product confidence',
+    'emin oldugunda',
+    'kesin urun',
+    'urun eslesmesi guvenli',
+  ].some((keyword) => text.includes(keyword));
 }
 
 function mentionsPreviousPurchase(text: string) {
@@ -4411,6 +4917,18 @@ function productValues(params: Record<string, unknown>, resolverOutput: Record<s
   ]);
 }
 
+function productMatchConfidence(params: Record<string, unknown>, resolverOutput: Record<string, unknown>) {
+  const sources = [
+    ...(recordArray(params.productMentions)),
+    ...(recordArray(params.products)),
+    ...(recordArray(resolverOutput.product_mentions)),
+  ];
+  const values = sources
+    .map((entry) => numberValue(entry.confidence))
+    .filter((value): value is number => value !== null);
+  return values.length > 0 ? Math.max(...values) : 0;
+}
+
 function extractProductValues(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
@@ -4418,6 +4936,8 @@ function extractProductValues(value: unknown) {
     const record = asRecord(entry);
     return [
       record.sku,
+      record.product_id,
+      record.variant_id,
       record.name,
       record.title,
       record.name_hint,
