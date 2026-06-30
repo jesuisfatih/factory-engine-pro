@@ -3292,7 +3292,7 @@ function unsupportedMcpRequests(text: string) {
   if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_SUPPORT_REQUEST_KEYWORDS)) {
     unsupported.push('Automatic support case/ticket/customer request creation is not supported.');
   }
-  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_MAIL_KEYWORDS) || asksForDirectMail(text)) {
+  if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_MAIL_KEYWORDS) || mentionsMailSurface(text)) {
     unsupported.push('Sending mail directly from MCP-authored rules is not enabled in this MVP.');
   }
   if (hasAnyHumanKeyword(text, MCP_UNSUPPORTED_DESTRUCTIVE_KEYWORDS)) {
@@ -3305,11 +3305,9 @@ function hasAnyHumanKeyword(text: string, keywords: readonly string[]) {
   return keywords.some((keyword) => text.includes(normalizeHumanText(keyword)));
 }
 
-function asksForDirectMail(text: string) {
+function mentionsMailSurface(text: string) {
   const normalized = normalizeHumanText(text);
-  const hasMailTarget = ['email', 'mail', 'e posta', 'eposta'].some((keyword) => normalized.includes(keyword));
-  const hasSendVerb = ['send', 'gonder', 'gönder'].some((keyword) => normalized.includes(normalizeHumanText(keyword)));
-  return hasMailTarget && hasSendVerb;
+  return ['email', 'mail', 'e posta', 'eposta'].some((keyword) => normalized.includes(keyword));
 }
 
 function confidenceForDraft(
