@@ -974,7 +974,7 @@ export class ApiClient {
     return this.get<AircallWorkflowCoverageResponse>(`/aircall/calls/workflow-coverage${suffix}`);
   }
 
-  repairAircallWorkflowEvaluations(input: AircallWorkflowRepairInput = { targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 }) {
+  repairAircallWorkflowEvaluations(input: AircallWorkflowRepairInput = { targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, scope: 'recent', recentDays: 7, limit: 1000 }) {
     return this.post<AircallWorkflowRepairResponse>('/aircall/calls/workflow-repair', input);
   }
 

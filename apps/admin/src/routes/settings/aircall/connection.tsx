@@ -139,6 +139,7 @@ function ConnectionView() {
   const repairWorkflow = useMutation({
     mutationFn: () => adminApi.repairAircallWorkflowEvaluations({
       targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+      scope: 'recent',
       recentDays: 7,
       limit: 1000,
     }),

@@ -199,6 +199,7 @@ export class RollingBackfillService {
       const result = await this.aircall.repairWorkflowEvaluations({
         targetVersion: input.targetResolverVersion ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
         limit: input.resolverLimit,
+        scope: 'recent',
         recentDays: input.recentDays,
       });
       return success(`Queued ${result.queued}/${result.scanned} transcript workflow repair job(s).`, result);

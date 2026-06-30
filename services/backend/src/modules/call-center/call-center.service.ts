@@ -105,7 +105,7 @@ export class CallCenterService {
 
   async syncTasks(): Promise<CallCenterSyncResult> {
     const backfill = await this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 });
-    const resolver = await this.aircall.repairWorkflowEvaluations({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, recentDays: 7, limit: 1000 });
+    const resolver = await this.aircall.repairWorkflowEvaluations({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, scope: 'recent', recentDays: 7, limit: 1000 });
     const syncedAt = new Date().toISOString();
     this.logger.log('call_center', 'tasks.sync', 'Call Center task sync requested from admin surface', {
       fetched: backfill.fetched,

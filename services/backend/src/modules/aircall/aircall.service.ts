@@ -697,12 +697,17 @@ export class AircallService {
       });
     }
 
+    const scope = input.scope ?? 'recent';
     const recentDays = input.recentDays ?? 7;
-    const from = input.callEventId ? null : new Date(Date.now() - recentDays * 86_400_000);
+    const from = input.callEventId || scope === 'all' ? null : new Date(Date.now() - recentDays * 86_400_000);
     const rows = await this.prisma.db.aircallCallEvent.findMany({
       where: input.callEventId
         ? { tenantId, id: input.callEventId, transcriptRaw: { not: null } }
-        : { tenantId, eventTimestamp: { gte: from! }, transcriptRaw: { not: null } },
+        : {
+            tenantId,
+            ...(from ? { eventTimestamp: { gte: from } } : {}),
+            transcriptRaw: { not: null },
+          },
       orderBy: { eventTimestamp: 'desc' },
       take: input.limit,
       select: {
@@ -842,7 +847,8 @@ export class AircallService {
       metadata: {
         targetVersion,
         limit: input.limit,
-        recentDays,
+        scope,
+        recentDays: scope === 'all' ? null : recentDays,
         from: from?.toISOString() ?? null,
         callEventId: input.callEventId ?? null,
         scanned: rows.length,
@@ -862,7 +868,8 @@ export class AircallService {
 
     return {
       targetVersion,
-      recentDays: input.callEventId ? null : recentDays,
+      scope,
+      recentDays: input.callEventId || scope === 'all' ? null : recentDays,
       from: from?.toISOString() ?? null,
       scanned: rows.length,
       queued,
@@ -877,7 +884,7 @@ export class AircallService {
       staleResolverVersion,
       unresolved,
       callEvents,
-      coverage: await this.workflowCoverage({ scope: 'recent', recentDays }),
+      coverage: await this.workflowCoverage({ scope, recentDays }),
     };
   }
 

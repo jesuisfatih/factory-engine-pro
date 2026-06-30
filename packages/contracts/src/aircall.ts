@@ -23,7 +23,8 @@ export type AircallResolverReprocessInput = z.infer<typeof aircallResolverReproc
 export const aircallWorkflowRepairSchema = z.object({
   targetVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
   limit: z.coerce.number().int().min(1).max(10000).default(1000),
-  recentDays: z.coerce.number().int().min(1).max(30).default(7),
+  scope: z.enum(['recent', 'all']).default('recent'),
+  recentDays: z.coerce.number().int().min(1).max(365).default(7),
   callEventId: z.string().trim().min(1).optional(),
 });
 export type AircallWorkflowRepairInput = z.infer<typeof aircallWorkflowRepairSchema>;
@@ -295,6 +296,7 @@ export interface AircallResolverReprocessResponse {
 
 export interface AircallWorkflowRepairResponse {
   targetVersion: number;
+  scope: 'recent' | 'all';
   recentDays: number | null;
   from: string | null;
   scanned: number;
