@@ -57,6 +57,7 @@ export type IdPrefix =
   | 'ssync'
   | 'slog'
   | 'wrule'
+  | 'wmd'
   | 'wrex'
   | 'wfev'
   | 'wrcd'

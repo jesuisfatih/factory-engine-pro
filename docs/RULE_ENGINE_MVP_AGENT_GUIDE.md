@@ -60,14 +60,17 @@ The safe authoring sequence is always:
 1. `list_workflow_capabilities`
 2. `read_workflow_agent_guide`
 3. `draft_workflow_rule`
-4. Inspect draft conditions and actions.
-5. `validate_workflow_rule`
-6. `simulate_workflow_rule` against the draft.
-7. `create_workflow_rule_draft`
-8. `simulate_workflow_rule` against the stored draft.
-9. `publish_workflow_rule` only with a fresh matching simulation report.
+4. Store the returned `draftId`.
+5. Inspect draft conditions and actions.
+6. `validate_workflow_rule` with `draftId`.
+7. `simulate_workflow_rule` with `draftId`.
+8. `create_workflow_rule_draft` with `draftId`.
+9. `simulate_workflow_rule` against the stored rule id.
+10. `publish_workflow_rule` only with a fresh matching simulation report.
 
 Never skip validation or simulation for a generated rule.
+
+Prefer stateful `draftId` calls over sending the full rule object repeatedly. If an MCP bridge cannot send nested JSON objects safely, use `ruleJson` as a JSON string fallback.
 
 Runtime binding:
 

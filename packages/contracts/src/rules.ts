@@ -104,24 +104,55 @@ export const workflowMcpDraftRuleSchema = z.object({
 });
 export type WorkflowMcpDraftRuleInput = z.infer<typeof workflowMcpDraftRuleSchema>;
 
-export const workflowMcpValidateRuleSchema = z.object({
-  rule: saveWorkflowRuleSchema,
+const workflowMcpRuleJsonSchema = z.string().trim().min(2).max(250_000);
+const workflowMcpDraftIdSchema = z.string().trim().min(1).max(80);
+const workflowMcpRuleReferenceFields = {
+  draftId: workflowMcpDraftIdSchema.optional(),
+  rule: z.union([saveWorkflowRuleSchema, workflowMcpRuleJsonSchema]).optional(),
+  ruleJson: workflowMcpRuleJsonSchema.optional(),
+};
+const workflowMcpRuleReferenceSchema = z.object(workflowMcpRuleReferenceFields).superRefine((value, ctx) => {
+  const provided = [value.draftId, value.rule, value.ruleJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of draftId, rule, or ruleJson.',
+    });
+  }
 });
+
+export const workflowMcpValidateRuleSchema = workflowMcpRuleReferenceSchema;
 export type WorkflowMcpValidateRuleInput = z.infer<typeof workflowMcpValidateRuleSchema>;
 
 export const workflowMcpSimulateRuleSchema = z.object({
   ruleId: z.string().trim().min(1).optional(),
-  rule: saveWorkflowRuleSchema.optional(),
+  draftId: workflowMcpDraftIdSchema.optional(),
+  rule: z.union([saveWorkflowRuleSchema, workflowMcpRuleJsonSchema]).optional(),
+  ruleJson: workflowMcpRuleJsonSchema.optional(),
   recentDays: z.coerce.number().int().min(1).max(90).default(7),
   limit: z.coerce.number().int().min(1).max(500).default(100),
-}).refine((value) => Boolean(value.ruleId) !== Boolean(value.rule), {
-  message: 'Provide exactly one of ruleId or rule.',
+}).superRefine((value, ctx) => {
+  const provided = [value.ruleId, value.draftId, value.rule, value.ruleJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of ruleId, draftId, rule, or ruleJson.',
+    });
+  }
 });
 export type WorkflowMcpSimulateRuleInput = z.infer<typeof workflowMcpSimulateRuleSchema>;
 
 export const workflowMcpCreateDraftRuleSchema = z.object({
-  rule: saveWorkflowRuleSchema,
+  ...workflowMcpRuleReferenceFields,
   sourceGoal: z.string().trim().max(1200).optional(),
+}).superRefine((value, ctx) => {
+  const provided = [value.draftId, value.rule, value.ruleJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of draftId, rule, or ruleJson.',
+    });
+  }
 });
 export type WorkflowMcpCreateDraftRuleInput = z.infer<typeof workflowMcpCreateDraftRuleSchema>;
 
@@ -379,9 +410,11 @@ export interface WorkflowMcpCapabilitiesResponse {
 }
 
 export interface WorkflowMcpDraftRuleResponse {
+  draftId: string;
   rule: SaveWorkflowRuleInput;
   confidence: number;
   detectedIntent: z.infer<typeof operationalIntentSchema>;
+  guardSummary: string[];
   assumptions: string[];
   warnings: string[];
   unsupported: string[];

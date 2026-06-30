@@ -95,6 +95,15 @@ const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Use Shopify product taxonomy guards for machine, part, supply, and cross-sell splits.',
   'Validate and simulate every draft before storing or publishing it.',
 ] as const;
+const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+type CompiledMcpDraft = Omit<WorkflowMcpDraftRuleResponse, 'draftId'>;
+
+interface ResolvedMcpRuleReference {
+  rule: SaveWorkflowRuleInput;
+  draftId: string | null;
+  sourceGoal: string | null;
+}
 
 const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
   defaultRule(
@@ -2442,16 +2451,20 @@ export class RulesService {
 
   async draftWorkflowRuleFromMcp(input: WorkflowMcpDraftRuleInput): Promise<WorkflowMcpDraftRuleResponse> {
     const parsed = workflowMcpDraftRuleSchema.parse(input);
-    return this.compileNaturalLanguageRule(parsed.naturalLanguageGoal, parsed.preferredStatus);
+    const compiled = await this.compileNaturalLanguageRule(parsed.naturalLanguageGoal, parsed.preferredStatus);
+    const draftId = await this.persistMcpDraft(parsed.naturalLanguageGoal, compiled);
+    return { draftId, ...compiled };
   }
 
-  validateWorkflowRuleFromMcp(input: WorkflowMcpValidateRuleInput): WorkflowMcpValidateRuleResponse {
+  async validateWorkflowRuleFromMcp(input: WorkflowMcpValidateRuleInput): Promise<WorkflowMcpValidateRuleResponse> {
     const parsed = workflowMcpValidateRuleSchema.safeParse(input);
     if (!parsed.success) {
       return { ok: false, issues: parsed.error.issues.map((issue) => issue.message), normalizedRule: null };
     }
-    const issues = this.mcpRuleIssues(parsed.data.rule);
-    return { ok: issues.length === 0, issues, normalizedRule: issues.length === 0 ? parsed.data.rule : null };
+    const resolved = await this.resolveMcpRuleReferenceForValidation(parsed.data);
+    if (!resolved.rule) return { ok: false, issues: resolved.issues, normalizedRule: null };
+    const issues = this.mcpRuleIssues(resolved.rule);
+    return { ok: issues.length === 0, issues, normalizedRule: issues.length === 0 ? resolved.rule : null };
   }
 
   async simulateWorkflowRuleFromMcp(input: WorkflowMcpSimulateRuleInput): Promise<WorkflowMcpSimulateRuleResponse> {
@@ -2470,7 +2483,7 @@ export class RulesService {
         warnings: report.report.actualTasksCreated > 0 ? ['Backfill attempted mutation; report is not publish-safe.'] : [],
       };
     }
-    const rule = saveWorkflowRuleSchema.parse(parsed.rule);
+    const { rule } = await this.resolveMcpRuleReference(parsed);
     const issues = this.mcpRuleIssues(rule);
     if (issues.length > 0) throw new BadRequestException(`MCP rule is not valid: ${issues.join('; ')}`);
     const now = new Date();
@@ -2493,18 +2506,20 @@ export class RulesService {
 
   async createWorkflowRuleDraftFromMcp(input: WorkflowMcpCreateDraftRuleInput): Promise<WorkflowMcpCreateDraftRuleResponse> {
     const parsed = workflowMcpCreateDraftRuleSchema.parse(input);
+    const resolved = await this.resolveMcpRuleReference(parsed);
     const ruleInput: SaveWorkflowRuleInput = {
-      ...parsed.rule,
+      ...resolved.rule,
       definition: {
-        ...parsed.rule.definition,
+        ...resolved.rule.definition,
         status: 'draft',
         metadata: {
-          ...(parsed.rule.definition.metadata ?? {}),
+          ...(resolved.rule.definition.metadata ?? {}),
           authoringSurface: 'mcp',
-          ...(parsed.sourceGoal ? { sourceGoal: parsed.sourceGoal } : {}),
+          ...(parsed.sourceGoal ?? resolved.sourceGoal ? { sourceGoal: parsed.sourceGoal ?? resolved.sourceGoal } : {}),
+          ...(resolved.draftId ? { sourceDraftId: resolved.draftId } : {}),
         },
       },
-      comment: parsed.rule.comment ?? 'Created as MCP workflow draft',
+      comment: resolved.rule.comment ?? 'Created as MCP workflow draft',
     };
     const issues = this.mcpRuleIssues(ruleInput);
     if (issues.length > 0) throw new BadRequestException(`MCP rule is not valid: ${issues.join('; ')}`);
@@ -2550,7 +2565,7 @@ export class RulesService {
   private async compileNaturalLanguageRule(
     naturalLanguageGoal: string,
     preferredStatus: WorkflowRuleDefinition['status'],
-  ): Promise<WorkflowMcpDraftRuleResponse> {
+  ): Promise<CompiledMcpDraft> {
     const text = normalizeHumanText(naturalLanguageGoal);
     const detectedIntent = detectOperationalIntent(text);
     const unsupported = unsupportedMcpRequests(text);
@@ -2620,9 +2635,71 @@ export class RulesService {
       rule,
       confidence: confidenceForDraft(detectedIntent, unsupported, issues),
       detectedIntent,
+      guardSummary: guardSummaryForRule(rule),
       assumptions,
       warnings: [...warnings, ...issues],
       unsupported,
+    };
+  }
+
+  private async persistMcpDraft(sourceGoal: string, compiled: CompiledMcpDraft) {
+    const tenantId = this.tenantId();
+    await this.prisma.db.workflowMcpDraft.deleteMany({
+      where: { tenantId, expiresAt: { lt: new Date() } },
+    });
+    const draft = await this.prisma.db.workflowMcpDraft.create({
+      data: {
+        id: prefixedId('wmd'),
+        tenantId,
+        sourceGoal,
+        rule: compiled.rule as Prisma.InputJsonValue,
+        detectedIntent: compiled.detectedIntent,
+        confidence: compiled.confidence,
+        assumptions: compiled.assumptions,
+        warnings: compiled.warnings,
+        unsupported: compiled.unsupported,
+        createdByMemberId: this.editedByMemberId(),
+        expiresAt: new Date(Date.now() + MCP_DRAFT_TTL_MS),
+      },
+    });
+    return draft.id;
+  }
+
+  private async resolveMcpRuleReferenceForValidation(
+    input: WorkflowMcpValidateRuleInput | WorkflowMcpCreateDraftRuleInput | WorkflowMcpSimulateRuleInput,
+  ): Promise<{ rule: SaveWorkflowRuleInput | null; issues: string[] }> {
+    try {
+      const resolved = await this.resolveMcpRuleReference(input);
+      return { rule: resolved.rule, issues: [] };
+    } catch (error) {
+      return { rule: null, issues: [error instanceof Error ? error.message : String(error)] };
+    }
+  }
+
+  private async resolveMcpRuleReference(
+    input: WorkflowMcpValidateRuleInput | WorkflowMcpCreateDraftRuleInput | WorkflowMcpSimulateRuleInput,
+  ): Promise<ResolvedMcpRuleReference> {
+    if ('draftId' in input && input.draftId) {
+      const draft = await this.prisma.db.workflowMcpDraft.findFirst({
+        where: { id: input.draftId, tenantId: this.tenantId() },
+      });
+      if (!draft) throw new NotFoundException('MCP draft was not found.');
+      if (draft.expiresAt.getTime() < Date.now()) throw new BadRequestException('MCP draft expired; run draft_workflow_rule again.');
+      return {
+        rule: parseMcpRuleObject(draft.rule),
+        draftId: draft.id,
+        sourceGoal: draft.sourceGoal,
+      };
+    }
+
+    const rawRule = 'rule' in input && input.rule !== undefined ? input.rule : undefined;
+    const rawRuleJson = 'ruleJson' in input && input.ruleJson !== undefined ? input.ruleJson : undefined;
+    const raw = rawRule ?? rawRuleJson;
+    if (raw === undefined) throw new BadRequestException('Provide draftId, rule, or ruleJson.');
+    return {
+      rule: parseMcpRuleObject(raw),
+      draftId: null,
+      sourceGoal: null,
     };
   }
 
@@ -3503,7 +3580,7 @@ function compileMcpConditions(
   } else if (previousPurchaseRequested) {
     warnings.push('Previous-purchase wording was detected, but no Shopify catalog product alias matched; previous_purchase_includes was not added.');
   }
-  const ownedMachineFamily = primaryProductMatch?.product.family ?? null;
+  const ownedMachineFamily = primaryProductMatch?.product.family ?? productFamilyFromRoleMismatch ?? null;
   if (ownedMachineFamily && mentionsOwnedMachineGuard(text)) {
     conditions.push(mcpCondition('owned_machine_family', 'owned_machine_family_is', '=', ownedMachineFamily));
     assumptions.push(`Owned-machine guard requires a previous machine purchase in family ${ownedMachineFamily}.`);
@@ -3655,6 +3732,26 @@ function conditionValues(definition: WorkflowRuleDefinition, conditionName: Work
     .flatMap((condition) => condition.value.split(','))
     .map(normalize)
     .filter(Boolean);
+}
+
+function parseMcpRuleObject(raw: unknown): SaveWorkflowRuleInput {
+  let value = raw;
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      throw new BadRequestException('MCP rule JSON string is not valid JSON.');
+    }
+  }
+  const parsed = saveWorkflowRuleSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new BadRequestException(`MCP rule payload is invalid: ${parsed.error.issues.map((issue) => issue.message).join('; ')}`);
+  }
+  return parsed.data;
+}
+
+function guardSummaryForRule(rule: SaveWorkflowRuleInput) {
+  return workflowDefinitionConditions(rule.definition).map((condition) => `${condition.condition} ${condition.operator} ${condition.value}`);
 }
 
 function workflowRulesByOperationalIntent(
@@ -4164,15 +4261,39 @@ function detectRequestedProductCategory(text: string): ProductCategory | null {
 
 function mentionsOwnedMachineGuard(text: string) {
   return [
+    'machine owner',
+    'machine owners',
     'owned machine',
     'owns machine',
     'has machine',
     'bought machine',
     'previous machine',
+    'previously bought machine',
+    'previously purchased machine',
+    'customer owns',
+    'customer has',
     'daha once makine',
+    'daha once makina',
+    'makine sahibi',
+    'makina sahibi',
+    'makine al',
+    'makina al',
+    'makine almis',
+    'makina almis',
+    'makine aldi',
+    'makina aldi',
+    'makine satin al',
+    'makina satin al',
+    'makine satın al',
+    'makina satın al',
     'makinesi varsa',
+    'makinasi varsa',
     'makine aldiysa',
+    'makina aldiysa',
+    'makine almissa',
+    'makina almissa',
     'ayni makine',
+    'ayni makina',
     'same machine',
   ].some((keyword) => text.includes(keyword));
 }

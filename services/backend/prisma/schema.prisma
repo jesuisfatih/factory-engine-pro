@@ -105,6 +105,7 @@ model Tenant {
   shopifySyncStates       ShopifySyncState[]
   syncLogs                SyncLog[]
   workflowRules           WorkflowRule[]
+  workflowMcpDrafts       WorkflowMcpDraft[]
   workflowRuleExecutions  WorkflowRuleExecution[]
   transcriptWorkflowEvaluations TranscriptWorkflowEvaluation[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
@@ -1627,6 +1628,29 @@ model WorkflowRule {
   @@index([tenantId, trigger])
   @@index([tenantId, priority])
   @@map("workflow_rules")
+}
+
+model WorkflowMcpDraft {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  sourceGoal        String   @map("source_goal")
+  rule              Json
+  detectedIntent    String   @map("detected_intent")
+  confidence        Float
+  assumptions       String[] @default([])
+  warnings          String[] @default([])
+  unsupported       String[] @default([])
+  createdByMemberId String?  @map("created_by_member_id")
+  expiresAt         DateTime @map("expires_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, createdByMemberId])
+  @@map("workflow_mcp_drafts")
 }
 
 model WorkflowRuleVersion {
