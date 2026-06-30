@@ -3065,8 +3065,12 @@ function operationalRuleMatchesExpectedOutcome(
 function unsafeOperationalRuleIssues(definition: WorkflowRuleDefinition) {
   const issues: string[] = [];
   if (definition.trigger !== 'call.operational_signal.detected') return issues;
+  const intents = operationalIntentsFromDefinition(definition);
   for (const action of definition.actions) {
     if (action.action !== 'create_task') continue;
+    if (intents.includes('no_action')) {
+      issues.push('no_action operational workflow cannot create tasks.');
+    }
     const axis = createTaskAxisValue(action.axis) ?? normalizeTaskAxis(action.value);
     if (axis === 'support') {
       issues.push('Operational workflow create_task action targets support, which is not allowed.');

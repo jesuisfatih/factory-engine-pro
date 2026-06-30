@@ -955,9 +955,9 @@ function transcriptOperationalSignals(output: TranscriptResolverOutput, options:
 
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return 'failed';
-  if (!signal.action_required) return 'no_action';
   if (response.tasksCreated > 0) return 'task_created';
   if (response.results.some((result) => result.status === 'cooldown_suppressed')) return 'cooldown_suppressed';
+  if (!signal.action_required) return response.matchedRules > 0 ? 'no_action' : 'no_action_unmatched';
   if (response.matchedRules > 0 && signal.intent === 'no_action') return 'no_action';
   if (response.matchedRules > 0) return 'matched_without_task';
   return signal.action_required ? 'no_matching_rule' : 'no_action_unmatched';
@@ -973,6 +973,7 @@ function transcriptEvaluationReason(signal: TranscriptOperationalSignal, respons
   if (response.matchedRules > 0 && signal.intent === 'no_action') return signal.reason;
   if (response.matchedRules > 0) return `Matched rule without creating task: ${signal.reason}`;
   if (signal.action_required) return `No active rule matched operational intent ${signal.intent}. ${signal.reason}`;
+  if (!signal.action_required) return `No active no-action audit rule matched operational intent ${signal.intent}. ${signal.reason}`;
   return signal.reason;
 }
 
