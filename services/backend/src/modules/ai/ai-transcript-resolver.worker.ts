@@ -22,6 +22,7 @@ import { AiService } from './ai.service.js';
 import {
   OPERATIONAL_INTENT_KEYWORDS,
   PURCHASE_SIGNAL_KEYWORDS,
+  isAutomatedOrVoicemailOnlyTranscript,
   keywordMatches,
   normalizedText,
   transcriptOperationalSignals,
@@ -531,6 +532,13 @@ function clipTranscript(transcript: string) {
 
 function localFallbackResolverOutput(transcript: string, targetVersion: number): TranscriptResolverOutput {
   const text = normalizedText(transcript);
+  if (isAutomatedOrVoicemailOnlyTranscript(transcript)) {
+    return localNoActionResolverOutput(
+      transcript,
+      targetVersion,
+      'Automated carrier, recording, voicemail, or agent-only outbound message was captured; no customer sales or account request was detected.',
+    );
+  }
   const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(text, needle));
   const psychTags = new Set<TranscriptResolverOutput['psych_tags'][number]>();
   const productMentions: TranscriptResolverOutput['product_mentions'] = [];
@@ -614,6 +622,52 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
     resolved_with_version: targetVersion,
   };
   output.person_brief = localFallbackPersonBrief(transcript, output, transcriptOperationalSignals(output, { customerMatched: false }));
+  return output;
+}
+
+function localNoActionResolverOutput(transcript: string, targetVersion: number, reason: string): TranscriptResolverOutput {
+  const cleanTranscript = transcript.replace(/\s+/g, ' ').trim();
+  const output: TranscriptResolverOutput = {
+    customer_match: {
+      customer_id: null,
+      phone: null,
+      name_hint: null,
+      confidence: 0,
+    },
+    product_mentions: [],
+    psych_tags: [],
+    call_intent: 'inquiry',
+    shipping_signals: {
+      address_mentioned: false,
+      tracking_asked: false,
+      complaint: false,
+    },
+    payment_signals: {
+      method_mentioned: false,
+      refund_asked: false,
+      complaint: false,
+    },
+    urgency_signal: 'low',
+    operational_signals: [{
+      intent: 'no_action',
+      confidence: 1,
+      action_required: false,
+      recommended_axis: null,
+      reason,
+      suggested_task_title: null,
+    }],
+    person_brief: {
+      why_calling: reason,
+      upset_about: 'No customer complaint or request was captured in the transcript.',
+      call_goal: 'Do not create a follow-up task from this transcript unless a human reviews a real customer request.',
+      suggested_actions: ['No staff follow-up needed from this automated transcript'],
+      transcript_snippet: cleanTranscript.slice(0, 500),
+    },
+    competitor_mentioned: [],
+    summary: reason,
+    language_detected: 'unknown',
+    resolved_with_version: targetVersion,
+  };
   return output;
 }
 

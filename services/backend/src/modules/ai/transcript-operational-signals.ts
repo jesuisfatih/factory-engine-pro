@@ -280,19 +280,24 @@ export const PURCHASE_SIGNAL_KEYWORDS = [
 ] as const;
 
 export function transcriptOperationalSignals(output: TranscriptResolverOutput, options: { customerMatched: boolean }): TranscriptOperationalSignal[] {
-  const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
-    const parsed = transcriptOperationalSignalSchema.safeParse(signal);
-    return parsed.success ? [parsed.data] : [];
-  }));
-
   const derived = new Map<string, TranscriptOperationalSignal>();
-  const text = normalizedText([
+  const sourceText = [
     output.summary,
     output.call_intent,
     output.psych_tags.join(' '),
     output.product_mentions.map((mention) => `${mention.sku ?? ''} ${mention.name_hint ?? ''}`).join(' '),
     output.competitor_mentioned.join(' '),
-  ].join(' '));
+  ].join(' ');
+  if (isAutomatedOrVoicemailOnlyTranscript(sourceText)) {
+    return [noActionSignal('Automated carrier, recording, voicemail, or agent-only outbound message was captured; no customer sales or account request was detected.')];
+  }
+
+  const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
+    const parsed = transcriptOperationalSignalSchema.safeParse(signal);
+    return parsed.success ? [parsed.data] : [];
+  }));
+
+  const text = normalizedText(sourceText);
   const hasTag = (tag: string) => output.psych_tags.includes(tag as TranscriptResolverOutput['psych_tags'][number]);
   const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(text, needle));
   const productText = normalizedText(output.product_mentions.map((mention) => `${mention.sku ?? ''} ${mention.name_hint ?? ''}`).join(' '));
@@ -358,9 +363,35 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
     action('product_fit_question', 0.62, 'sales', 'Product information follow-up', 'Customer asked about a product and may need sales consultation.');
   }
   if (derived.size === 0) {
-    action('no_action', 1, null, '', 'No sales or personnel follow-up signal was detected.');
+    derived.set('no_action', noActionSignal('No sales or personnel follow-up signal was detected.'));
   }
   return dedupeSignals([...provided, ...Array.from(derived.values())]);
+}
+
+export function isAutomatedOrVoicemailOnlyTranscript(value: string) {
+  const text = normalizedText(value);
+  if (!text) return false;
+  const automatedScore = phraseScore(text, AUTOMATED_CALL_BOILERPLATE_PHRASES);
+  const voicemailScore = phraseScore(text, VOICEMAIL_BOILERPLATE_PHRASES);
+  const agentOnlyScore = phraseScore(text, AGENT_OUTBOUND_ONLY_PHRASES);
+  const hasCustomerDemand = CUSTOMER_DEMAND_PATTERNS.some((pattern) => pattern.test(text));
+  return !hasCustomerDemand && (
+    automatedScore >= 2
+    || voicemailScore >= 2
+    || (automatedScore >= 1 && agentOnlyScore >= 1)
+    || (voicemailScore >= 1 && agentOnlyScore >= 1)
+  );
+}
+
+function noActionSignal(reason: string): TranscriptOperationalSignal {
+  return {
+    intent: 'no_action',
+    confidence: 1,
+    action_required: false,
+    recommended_axis: null,
+    reason,
+    suggested_task_title: null,
+  };
 }
 
 export function normalizedText(value: string) {
@@ -383,3 +414,49 @@ function dedupeSignals(signals: TranscriptOperationalSignal[]) {
   const actionable = Array.from(byIntent.values()).filter((signal) => signal.intent !== 'no_action');
   return actionable.length > 0 ? actionable : Array.from(byIntent.values());
 }
+
+function phraseScore(text: string, phrases: readonly string[]) {
+  return phrases.reduce((score, phrase) => score + (text.includes(normalizedText(phrase)) ? 1 : 0), 0);
+}
+
+const AUTOMATED_CALL_BOILERPLATE_PHRASES = [
+  'call may be recorded',
+  'may be recorded',
+  'quality and training purposes',
+  'thank you for choosing roadrunner',
+  'choosing roadrunner',
+  'at roadrunner',
+  'make shipping smarter',
+  'more efficient starting online',
+  'at the end of your call',
+  'brief two question survey',
+  'your feedback helps us',
+  'please listen carefully as our menu options',
+] as const;
+
+const VOICEMAIL_BOILERPLATE_PHRASES = [
+  'your call has been forwarded to voicemail',
+  'person you are trying to reach is not available',
+  'please record your message',
+  'when you have finished recording',
+  'you may hang up',
+  'press 1',
+  'leave it alone',
+] as const;
+
+const AGENT_OUTBOUND_ONLY_PHRASES = [
+  'this is',
+  'from dtfbank',
+  'from dpfbank',
+  'courtesy call',
+  'just reaching out',
+  'see how everything is going',
+  'please feel free to reach out',
+] as const;
+
+const CUSTOMER_DEMAND_PATTERNS = [
+  /\bi\s+(need|want|would like|am looking|m looking|ordered|bought|purchased|have|got)\b/,
+  /\bwe\s+(need|want|would like|are looking|re looking|ordered|bought|purchased|have|got)\b/,
+  /\b(can|could)\s+you\b/,
+  /\b(how much|what is the price|what's the price|quote|refund|tracking|where is my order|order number|need help|not working|broken|error code)\b/,
+] as const;
