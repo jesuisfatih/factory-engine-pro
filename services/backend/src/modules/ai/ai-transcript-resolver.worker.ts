@@ -336,6 +336,8 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           error: reason,
         });
       }
+      const responseTaskIds = workflowResponseTaskIds(response);
+      const responseTaskCount = responseTaskIds.length > 0 ? responseTaskIds.length : response?.tasksCreated ?? 0;
 
       await this.prisma.db.transcriptWorkflowEvaluation.upsert({
         where: {
@@ -359,8 +361,8 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           reason,
           evaluatedRules: response?.evaluatedRules ?? 0,
           matchedRules: response?.matchedRules ?? 0,
-          tasksCreated: response?.tasksCreated ?? 0,
-          taskIds: response?.tasks.map((task) => task.taskId) ?? [],
+          tasksCreated: responseTaskCount,
+          taskIds: responseTaskIds,
           resolverVersion: output.resolved_with_version,
           resolverModel,
           result: {
@@ -382,8 +384,8 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           reason,
           evaluatedRules: response?.evaluatedRules ?? 0,
           matchedRules: response?.matchedRules ?? 0,
-          tasksCreated: response?.tasksCreated ?? 0,
-          taskIds: response?.tasks.map((task) => task.taskId) ?? [],
+          tasksCreated: responseTaskCount,
+          taskIds: responseTaskIds,
           resolverVersion: output.resolved_with_version,
           resolverModel,
           result: {
@@ -600,7 +602,7 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
 
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return 'failed';
-  if (response.tasksCreated > 0) return 'task_created';
+  if (workflowResponseHasTaskOutcome(response)) return 'task_created';
   if (response.results.some((result) => result.status === 'cooldown_suppressed')) return 'cooldown_suppressed';
   if (!signal.action_required) return response.matchedRules > 0 ? 'no_action' : 'no_action_unmatched';
   if (response.matchedRules > 0 && signal.intent === 'no_action') return 'no_action';
@@ -610,7 +612,7 @@ function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, respons
 
 function transcriptEvaluationReason(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return signal.reason;
-  if (response.tasksCreated > 0) return signal.reason;
+  if (workflowResponseHasTaskOutcome(response)) return signal.reason;
   const cooldown = response.results.find((result) => result.status === 'cooldown_suppressed')?.cooldown;
   if (cooldown) {
     return `Workflow matched but task creation was suppressed by cooldown until ${cooldown.nextEligibleAt ?? 'the next eligible window'}. ${signal.reason}`;
@@ -620,6 +622,18 @@ function transcriptEvaluationReason(signal: TranscriptOperationalSignal, respons
   if (signal.action_required) return `No active rule matched operational intent ${signal.intent}. ${signal.reason}`;
   if (!signal.action_required) return `No active no-action audit rule matched operational intent ${signal.intent}. ${signal.reason}`;
   return signal.reason;
+}
+
+function workflowResponseHasTaskOutcome(response: WorkflowTriggerFireResponse) {
+  return response.tasksCreated > 0 || workflowResponseTaskIds(response).length > 0;
+}
+
+function workflowResponseTaskIds(response: WorkflowTriggerFireResponse | null) {
+  if (!response) return [];
+  return uniqueStrings([
+    ...response.tasks.map((task) => task.taskId),
+    ...response.results.flatMap((result) => result.taskIds),
+  ]);
 }
 
 function recoveredExecutionStatus(status: string): WorkflowTriggerFireResponse['results'][number]['status'] {
