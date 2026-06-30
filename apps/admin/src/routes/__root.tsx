@@ -6,8 +6,6 @@ import { Topbar } from '@/components/Topbar';
 import { handOffToPerson, readPersonSession, readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
-  { test: /^\/rules\/shadow-telemetry/, key: 'nav.shadow_telemetry' },
-  { test: /^\/rules\/stats/, key: 'nav.rule_stats' },
   { test: /^\/rules/, key: 'nav.rules' },
   { test: /^\/orders/, key: 'nav.orders' },
   { test: /^\/customers/, key: 'nav.customers' },
@@ -18,8 +16,7 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/call-center/, key: 'nav.call_center' },
   { test: /^\/team\/users\/add/, key: 'team.users.wizard.title' },
   { test: /^\/team/, key: 'nav.team' },
-  { test: /^\/settings\/workspace/, key: 'nav.workspace_settings' },
-  { test: /^\/settings/, key: 'nav.integrations' },
+  { test: /^\/settings/, key: 'nav.workspace_settings' },
   { test: /^\/segments/, key: 'nav.segments' },
   { test: /^\/tasks\/messages/, key: 'messages.title' },
   { test: /^\/tasks\/calendar/, key: 'calendar_view.title' },
@@ -43,7 +40,7 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> 
   { test: /^\/tasks/, permission: MEMBER_PERMISSIONS.taskAssign },
   { test: /^\/rules\/shadow-telemetry/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/rules\/stats/, permission: MEMBER_PERMISSIONS.settingsRead },
-  { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsWrite },
+  { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/mail-marketing/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.settingsRead },

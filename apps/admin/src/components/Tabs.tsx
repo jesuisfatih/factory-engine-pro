@@ -1,7 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-interface Tab { to: string; i18nKey: string; id: string; }
+interface Tab { to: string; i18nKey: string; id: string; exact?: boolean; }
 interface Props { tabs: Tab[]; }
 
 export function Tabs({ tabs }: Props) {
@@ -10,7 +10,7 @@ export function Tabs({ tabs }: Props) {
   return (
     <div className="tabs" role="tablist">
       {tabs.map((tab) => {
-        const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
+        const active = tab.exact ? pathname === tab.to : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
         return (
           <Link
             key={tab.to}

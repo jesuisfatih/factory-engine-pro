@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { WorkflowRuleDto } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
+import { RulesTabs } from '@/components/RulesTabs';
 import { apiErrorMessage } from '@/lib/api';
 import {
   fetchWorkflowRuleBackfills,
@@ -56,7 +57,8 @@ function ShadowTelemetryView() {
 
   return (
     <>
-      <PageHeader titleI18nKey="nav.shadow_telemetry" subtitleI18nKey="rules.shadow_telemetry_subtitle" />
+      <PageHeader titleI18nKey="rules.title" subtitleI18nKey="rules.shadow_telemetry_subtitle" />
+      <RulesTabs />
       <div className="rules-health-strip">
         <Metric label="Shadow rules" value={shadowRules.length} detail={`${rules.length} total rules`} />
         <Metric label="Virtual tasks" value={totalVirtualTasks} detail="from stored shadow reports" />

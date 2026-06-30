@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Activity, AlertTriangle, History, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { RulesTabs } from '@/components/RulesTabs';
 import { apiErrorMessage } from '@/lib/api';
 import {
   fetchWorkflowRuleActiveStats,
@@ -37,7 +38,8 @@ function RuleStatsView() {
 
   return (
     <>
-      <PageHeader titleI18nKey="nav.rule_stats" subtitleI18nKey="rules.rule_stats_subtitle" />
+      <PageHeader titleI18nKey="rules.title" subtitleI18nKey="rules.rule_stats_subtitle" />
+      <RulesTabs />
       <div className="orders-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
         <select value={days} onChange={(event) => setDays(Number(event.target.value))} aria-label="Rule stats window">
           <option value={7}>Last 7 days</option>

@@ -48,6 +48,7 @@ import type {
   WorkflowTrigger,
 } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
+import { RulesTabs } from '@/components/RulesTabs';
 import { apiErrorMessage } from '@/lib/api';
 import {
   defaultOperator,
@@ -758,6 +759,7 @@ function RulesView() {
           </button>
         )}
       />
+      <RulesTabs />
 
       {catalogQuery.isLoading && (
         <div className="rules-empty">

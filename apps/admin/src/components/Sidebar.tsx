@@ -2,8 +2,8 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
-  ShoppingCart, UserSquare2, Workflow, Cable, KeyRound, Store, FileCheck2,
-  Mail, Rocket, BarChart3, Radar,
+  ShoppingCart, UserSquare2, Workflow, KeyRound, FileCheck2,
+  Mail,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { adminApi, clearSurfaceSessions } from '@/lib/api';
@@ -47,9 +47,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_automation',
     children: [
-      { to: '/rules', matchPrefix: '/rules', i18nKey: 'nav.rules', id: 'nav-rules', icon: Workflow, permission: 'settings.write', exact: true },
-      { to: '/rules/shadow-telemetry', matchPrefix: '/rules/shadow-telemetry', i18nKey: 'nav.shadow_telemetry', id: 'nav-shadow-telemetry', icon: Radar, permission: 'settings.read' },
-      { to: '/rules/stats', matchPrefix: '/rules/stats', i18nKey: 'nav.rule_stats', id: 'nav-rule-stats', icon: BarChart3, permission: 'settings.read' },
+      { to: '/rules', matchPrefix: '/rules', i18nKey: 'nav.rules', id: 'nav-rules', icon: Workflow, permission: 'settings.read' },
     ],
   },
   {
@@ -77,10 +75,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_system',
     children: [
-      { to: '/settings/workspace', matchPrefix: '/settings/workspace', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read' },
-      { to: '/settings/aircall', matchPrefix: '/settings/aircall', i18nKey: 'nav.aircall_settings', id: 'nav-aircall', icon: Cable, permission: MEMBER_PERMISSIONS.settingsRead },
-      { to: '/settings/shopify', matchPrefix: '/settings/shopify', i18nKey: 'nav.shopify_settings', id: 'nav-shopify', icon: Store, permission: 'settings.read' },
-      { to: '/settings/initial-setup', matchPrefix: '/settings/initial-setup', i18nKey: 'nav.initial_setup', id: 'nav-initial-setup', icon: Rocket, permission: 'sync.trigger' },
+      { to: '/settings/workspace', matchPrefix: '/settings', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read' },
     ],
   },
 ];
