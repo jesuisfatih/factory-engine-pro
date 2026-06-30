@@ -192,6 +192,14 @@ export interface AircallWorkflowCoverageResponse {
   resolvedEvents: number;
   evaluatedEvents: number;
   flowCompletedEvents: number;
+  expectedSignalCount: number;
+  evaluatedSignalCount: number;
+  flowCompletedSignalCount: number;
+  missingSignalEvaluationCount: number;
+  missingSignalFlowOutcomeCount: number;
+  extraSignalEvaluationCount: number;
+  invalidResolverOutputCount: number;
+  signalInvariantOk: boolean;
   workflowInvariantOk: boolean;
   evaluationRows: number;
   actionableEvaluations: number;
@@ -233,6 +241,13 @@ export interface AircallWorkflowCoverageResponse {
     resolvedWithVersion: number | null;
     resolverOutputPresent: boolean;
     transcriptLength: number;
+    expectedSignals: string[];
+    evaluatedSignals: string[];
+    missingSignals: string[];
+    missingFlowSignals: string[];
+    extraSignals: string[];
+    invalidResolverOutput: boolean;
+    problems: string[];
     repairMode: 'replay_stored_output' | 'rerun_resolver' | 'wait_for_resolver' | 'resolver_failed';
   }>;
 }
@@ -280,6 +295,10 @@ export interface AircallWorkflowRepairResponse {
   skipped: number;
   alreadyEvaluated: number;
   missingEvaluations: number;
+  missingSignalEvaluations: number;
+  missingSignalFlowOutcomes: number;
+  extraSignalEvaluations: number;
+  invalidResolverOutputs: number;
   failedOrUnmatchedEvaluations: number;
   staleResolverVersion: number;
   unresolved: number;
@@ -290,6 +309,12 @@ export interface AircallWorkflowRepairResponse {
     resolverStatus: string | null;
     evaluationCount: number;
     evaluationProblemCount: number;
+    expectedSignals: string[];
+    evaluatedSignals: string[];
+    missingSignals: string[];
+    missingFlowSignals: string[];
+    extraSignals: string[];
+    invalidResolverOutput: boolean;
     repairMode: 'already_evaluated' | 'replay_stored_output' | 'rerun_resolver' | 'wait_for_resolver' | 'resolver_failed';
     queued: boolean;
     skippedReason: string | null;

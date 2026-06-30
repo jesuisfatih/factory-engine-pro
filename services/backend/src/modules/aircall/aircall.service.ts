@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
+import {
+  TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+  transcriptResolverOutputSchema,
+  type TranscriptResolverOutput,
+} from '@factory-engine-pro/contracts';
 import type {
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
@@ -26,6 +30,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallApiError, AircallClient, type AircallCredentials } from './aircall.client.js';
 import { AircallIngestService } from './aircall-ingest.service.js';
 import { AircallRepository } from './aircall.repository.js';
+import { transcriptOperationalSignals } from '../ai/transcript-operational-signals.js';
 
 type AircallUserPayload = {
   id?: string | number;
@@ -66,6 +71,22 @@ type WorkflowEvaluationCoverageRow = {
   recommendedAxis: string | null;
   status: string;
   tasksCreated: number;
+};
+
+type WorkflowSignalCoverageRow = {
+  callEventId: string;
+  signal: string;
+  status: string;
+};
+
+type AircallWorkflowSignalState = {
+  expectedSignals: string[];
+  evaluatedSignals: string[];
+  completedSignals: string[];
+  missingSignals: string[];
+  missingFlowSignals: string[];
+  extraSignals: string[];
+  invalidResolverOutput: boolean;
 };
 
 @Injectable()
@@ -301,6 +322,8 @@ export class AircallService {
         id: true,
         externalCallId: true,
         eventTimestamp: true,
+        contactPhoneE164: true,
+        contactEmail: true,
         transcriptRaw: true,
         resolverStatus: true,
         resolverOutput: true,
@@ -325,6 +348,7 @@ export class AircallService {
           },
         });
     const activeEvaluations = evaluations.filter((row) => row.status !== 'superseded');
+    const signalStates = await this.workflowSignalStates(tenantId, transcriptRows, activeEvaluations);
     const evaluatedIds = new Set(activeEvaluations.map((row) => row.callEventId));
     const completedEvaluationRows = activeEvaluations.filter((row) => isCompletedWorkflowEvaluationStatus(row.status));
     const flowCompletedIds = new Set(completedEvaluationRows.map((row) => row.callEventId));
@@ -338,6 +362,9 @@ export class AircallService {
     const resolverFailed = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
     const failedEvaluations = activeEvaluations.filter((row) => row.status === 'failed').length;
     const unmatchedEvaluations = activeEvaluations.filter((row) => isUnmatchedWorkflowEvaluationStatus(row.status)).length;
+    const signalTotals = workflowSignalTotals(signalStates);
+    const signalProblemRows = transcriptRows.filter((row) => workflowSignalProblems(signalStates.get(row.id)).length > 0);
+    const missingOrProblemRows = uniqueById([...missingRows, ...missingFlowOutcomeRows, ...signalProblemRows]);
 
     return {
       targetVersion,
@@ -348,9 +375,11 @@ export class AircallService {
       resolvedEvents: transcriptRows.filter((row) => Boolean(row.resolvedAt) || row.resolverStatus === 'succeeded').length,
       evaluatedEvents: evaluatedIds.size,
       flowCompletedEvents: flowCompletedIds.size,
+      ...signalTotals,
       workflowInvariantOk: transcriptRows.length === evaluatedIds.size
         && missingRows.length === 0
         && missingFlowOutcomeRows.length === 0
+        && signalTotals.signalInvariantOk
         && staleResolverVersion === 0
         && resolverQueuedOrProcessing === 0
         && resolverFailed === 0
@@ -371,17 +400,27 @@ export class AircallService {
       resolverQueuedOrProcessing,
       resolverFailed,
       signalOutcomes: signalOutcomeRows(activeEvaluations),
-      missing: missingRows.slice(0, 50).map((row) => ({
-        id: row.id,
-        externalCallId: row.externalCallId,
-        eventTimestamp: row.eventTimestamp.toISOString(),
-        resolverStatus: row.resolverStatus,
-        resolvedAt: row.resolvedAt?.toISOString() ?? null,
-        resolvedWithVersion: row.resolvedWithVersion,
-        resolverOutputPresent: Boolean(row.resolverOutput),
-        transcriptLength: row.transcriptRaw?.trim().length ?? 0,
-        repairMode: workflowRepairMode(row, targetVersion),
-      })),
+      missing: missingOrProblemRows.slice(0, 50).map((row) => {
+        const signalState = signalStates.get(row.id) ?? emptyWorkflowSignalState();
+        return {
+          id: row.id,
+          externalCallId: row.externalCallId,
+          eventTimestamp: row.eventTimestamp.toISOString(),
+          resolverStatus: row.resolverStatus,
+          resolvedAt: row.resolvedAt?.toISOString() ?? null,
+          resolvedWithVersion: row.resolvedWithVersion,
+          resolverOutputPresent: Boolean(row.resolverOutput),
+          transcriptLength: row.transcriptRaw?.trim().length ?? 0,
+          expectedSignals: signalState.expectedSignals,
+          evaluatedSignals: signalState.evaluatedSignals,
+          missingSignals: signalState.missingSignals,
+          missingFlowSignals: signalState.missingFlowSignals,
+          extraSignals: signalState.extraSignals,
+          invalidResolverOutput: signalState.invalidResolverOutput,
+          problems: workflowCoverageProblems(row, targetVersion, evaluatedIds, flowCompletedIds, signalState),
+          repairMode: workflowRepairMode(row, targetVersion),
+        };
+      }),
     };
   }
 
@@ -667,6 +706,8 @@ export class AircallService {
         id: true,
         externalCallId: true,
         eventTimestamp: true,
+        contactPhoneE164: true,
+        contactEmail: true,
         transcriptRaw: true,
         resolverStatus: true,
         resolverOutput: true,
@@ -682,9 +723,10 @@ export class AircallService {
       ? []
       : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
           where: { tenantId, callEventId: { in: rows.map((row) => row.id) } },
-          select: { callEventId: true, status: true },
+          select: { callEventId: true, signal: true, status: true },
         });
     const activeEvaluations = evaluations.filter((evaluation) => evaluation.status !== 'superseded');
+    const signalStates = await this.workflowSignalStates(tenantId, rows, activeEvaluations);
     const evaluationCounts = new Map<string, number>();
     const evaluationProblemCounts = new Map<string, number>();
     for (const evaluation of activeEvaluations) {
@@ -698,6 +740,10 @@ export class AircallService {
     let skipped = 0;
     let alreadyEvaluated = 0;
     let missingEvaluations = 0;
+    let missingSignalEvaluations = 0;
+    let missingSignalFlowOutcomes = 0;
+    let extraSignalEvaluations = 0;
+    let invalidResolverOutputs = 0;
     let failedOrUnmatchedEvaluations = 0;
     let staleResolverVersion = 0;
     let unresolved = 0;
@@ -705,10 +751,20 @@ export class AircallService {
 
     for (const row of rows) {
       const evaluationCount = evaluationCounts.get(row.id) ?? 0;
-      const evaluationProblemCount = evaluationProblemCounts.get(row.id) ?? 0;
+      const signalState = signalStates.get(row.id) ?? emptyWorkflowSignalState();
+      const missingFlowOnlySignals = signalState.missingFlowSignals.filter((signal) => !signalState.missingSignals.includes(signal));
+      const signalProblemCount = signalState.missingSignals.length
+        + missingFlowOnlySignals.length
+        + signalState.extraSignals.length
+        + (signalState.invalidResolverOutput ? 1 : 0);
+      const evaluationProblemCount = (evaluationProblemCounts.get(row.id) ?? 0) + signalProblemCount;
       const stale = (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion;
       const hasCurrentEvaluation = evaluationCount > 0 && evaluationProblemCount === 0 && !stale;
       if (evaluationCount === 0) missingEvaluations++;
+      missingSignalEvaluations += signalState.missingSignals.length;
+      missingSignalFlowOutcomes += missingFlowOnlySignals.length;
+      extraSignalEvaluations += signalState.extraSignals.length;
+      if (signalState.invalidResolverOutput) invalidResolverOutputs++;
       if (evaluationProblemCount > 0) failedOrUnmatchedEvaluations += evaluationProblemCount;
       if (stale) staleResolverVersion++;
       if (!row.resolvedAt && row.resolverStatus !== 'succeeded') unresolved++;
@@ -730,6 +786,12 @@ export class AircallService {
           resolverStatus: resolvedWithCurrentVersion ? 'succeeded' : row.resolverStatus,
           evaluationCount,
           evaluationProblemCount,
+          expectedSignals: signalState.expectedSignals,
+          evaluatedSignals: signalState.evaluatedSignals,
+          missingSignals: signalState.missingSignals,
+          missingFlowSignals: signalState.missingFlowSignals,
+          extraSignals: signalState.extraSignals,
+          invalidResolverOutput: signalState.invalidResolverOutput,
           repairMode: 'already_evaluated',
           queued: false,
           skippedReason: 'already_evaluated',
@@ -739,7 +801,7 @@ export class AircallService {
 
       const result = await this.ingest.enqueueTranscriptResolver(row.id, row.transcriptRaw, {
         targetVersion,
-        forceWorkflowEvaluationRepair: evaluationProblemCount > 0,
+        forceWorkflowEvaluationRepair: evaluationProblemCount > 0 || stale,
         source: 'workflow_repair',
       });
       if (result.queued) queued++;
@@ -751,6 +813,12 @@ export class AircallService {
         resolverStatus: row.resolverStatus,
         evaluationCount,
         evaluationProblemCount,
+        expectedSignals: signalState.expectedSignals,
+        evaluatedSignals: signalState.evaluatedSignals,
+        missingSignals: signalState.missingSignals,
+        missingFlowSignals: signalState.missingFlowSignals,
+        extraSignals: signalState.extraSignals,
+        invalidResolverOutput: signalState.invalidResolverOutput,
         repairMode: workflowActionRepairMode(row, targetVersion),
         queued: result.queued,
         skippedReason: result.skippedReason,
@@ -774,6 +842,10 @@ export class AircallService {
         skipped,
         alreadyEvaluated,
         missingEvaluations,
+        missingSignalEvaluations,
+        missingSignalFlowOutcomes,
+        extraSignalEvaluations,
+        invalidResolverOutputs,
         failedOrUnmatchedEvaluations,
         staleResolverVersion,
         unresolved,
@@ -789,6 +861,10 @@ export class AircallService {
       skipped,
       alreadyEvaluated,
       missingEvaluations,
+      missingSignalEvaluations,
+      missingSignalFlowOutcomes,
+      extraSignalEvaluations,
+      invalidResolverOutputs,
       failedOrUnmatchedEvaluations,
       staleResolverVersion,
       unresolved,
@@ -1260,6 +1336,96 @@ export class AircallService {
     return tenant;
   }
 
+  private async workflowSignalStates(
+    tenantId: string,
+    rows: Array<{
+      id: string;
+      contactPhoneE164?: string | null;
+      contactEmail?: string | null;
+      resolverOutput: unknown;
+    }>,
+    evaluations: WorkflowSignalCoverageRow[],
+  ) {
+    const evaluationsByCallEventId = new Map<string, WorkflowSignalCoverageRow[]>();
+    for (const evaluation of evaluations) {
+      const list = evaluationsByCallEventId.get(evaluation.callEventId) ?? [];
+      list.push(evaluation);
+      evaluationsByCallEventId.set(evaluation.callEventId, list);
+    }
+
+    const states = new Map<string, AircallWorkflowSignalState>();
+    for (const row of rows) {
+      const rowEvaluations = evaluationsByCallEventId.get(row.id) ?? [];
+      const evaluatedSignals = uniqueStrings(rowEvaluations.map((evaluation) => evaluation.signal));
+      const completedSignals = uniqueStrings(rowEvaluations
+        .filter((evaluation) => isCompletedWorkflowEvaluationStatus(evaluation.status))
+        .map((evaluation) => evaluation.signal));
+      const parsedOutput = transcriptResolverOutputSchema.safeParse(row.resolverOutput);
+      if (!parsedOutput.success) {
+        states.set(row.id, {
+          expectedSignals: [],
+          evaluatedSignals,
+          completedSignals,
+          missingSignals: [],
+          missingFlowSignals: [],
+          extraSignals: evaluatedSignals,
+          invalidResolverOutput: true,
+        });
+        continue;
+      }
+
+      const customerMatched = await this.workflowCustomerMatched(tenantId, row, parsedOutput.data);
+      const expectedSignals = transcriptOperationalSignals(parsedOutput.data, { customerMatched }).map((signal) => signal.intent);
+      const expectedSet = new Set<string>(expectedSignals);
+      states.set(row.id, {
+        expectedSignals,
+        evaluatedSignals,
+        completedSignals,
+        missingSignals: expectedSignals.filter((signal) => !evaluatedSignals.includes(signal)),
+        missingFlowSignals: expectedSignals.filter((signal) => !completedSignals.includes(signal)),
+        extraSignals: evaluatedSignals.filter((signal) => !expectedSet.has(signal)),
+        invalidResolverOutput: false,
+      });
+    }
+    return states;
+  }
+
+  private async workflowCustomerMatched(
+    tenantId: string,
+    callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
+    output: TranscriptResolverOutput,
+  ) {
+    if (output.customer_match.customer_id) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, id: output.customer_match.customer_id },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+
+    const email = (callEvent.contactEmail ?? '').trim();
+    if (email) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+
+    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
+    if (!phone) return false;
+    const digits = phone.replace(/\D/g, '');
+    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
+    for (const needle of phoneNeedles) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, phone: { contains: needle } },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+    return false;
+  }
+
   private tenantId() {
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new BadRequestException('Tenant context is required');
@@ -1278,6 +1444,92 @@ export class AircallService {
 
 function displayName(member: { firstName: string; lastName: string; email: string }) {
   return [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+}
+
+function emptyWorkflowSignalState(): AircallWorkflowSignalState {
+  return {
+    expectedSignals: [],
+    evaluatedSignals: [],
+    completedSignals: [],
+    missingSignals: [],
+    missingFlowSignals: [],
+    extraSignals: [],
+    invalidResolverOutput: false,
+  };
+}
+
+function workflowSignalTotals(states: Map<string, AircallWorkflowSignalState>) {
+  let expectedSignalCount = 0;
+  let evaluatedSignalCount = 0;
+  let flowCompletedSignalCount = 0;
+  let missingSignalEvaluationCount = 0;
+  let missingSignalFlowOutcomeCount = 0;
+  let extraSignalEvaluationCount = 0;
+  let invalidResolverOutputCount = 0;
+  for (const state of states.values()) {
+    expectedSignalCount += state.expectedSignals.length;
+    evaluatedSignalCount += state.expectedSignals.filter((signal) => state.evaluatedSignals.includes(signal)).length;
+    flowCompletedSignalCount += state.expectedSignals.filter((signal) => state.completedSignals.includes(signal)).length;
+    missingSignalEvaluationCount += state.missingSignals.length;
+    missingSignalFlowOutcomeCount += state.missingFlowSignals.length;
+    extraSignalEvaluationCount += state.extraSignals.length;
+    if (state.invalidResolverOutput) invalidResolverOutputCount += 1;
+  }
+  return {
+    expectedSignalCount,
+    evaluatedSignalCount,
+    flowCompletedSignalCount,
+    missingSignalEvaluationCount,
+    missingSignalFlowOutcomeCount,
+    extraSignalEvaluationCount,
+    invalidResolverOutputCount,
+    signalInvariantOk: missingSignalEvaluationCount === 0
+      && missingSignalFlowOutcomeCount === 0
+      && extraSignalEvaluationCount === 0
+      && invalidResolverOutputCount === 0,
+  };
+}
+
+function workflowSignalProblems(state: AircallWorkflowSignalState | undefined) {
+  if (!state) return ['missing_signal_state'];
+  return [
+    ...(state.invalidResolverOutput ? ['invalid_resolver_output'] : []),
+    ...(state.missingSignals.length > 0 ? ['missing_signal_evaluation'] : []),
+    ...(state.missingFlowSignals.length > 0 ? ['missing_signal_flow_outcome'] : []),
+    ...(state.extraSignals.length > 0 ? ['extra_signal_evaluation'] : []),
+  ];
+}
+
+function workflowCoverageProblems(
+  row: { id: string; resolvedWithVersion: number | null; resolverStatus: string | null; resolvedAt: Date | null },
+  targetVersion: number,
+  evaluatedIds: Set<string>,
+  flowCompletedIds: Set<string>,
+  state: AircallWorkflowSignalState,
+) {
+  return [
+    ...(!evaluatedIds.has(row.id) ? ['missing_event_evaluation'] : []),
+    ...(!flowCompletedIds.has(row.id) ? ['missing_event_flow_outcome'] : []),
+    ...workflowSignalProblems(state),
+    ...((row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < targetVersion ? ['stale_resolver_version'] : []),
+    ...((row.resolverStatus === 'queued' || row.resolverStatus === 'processing') && !(row.resolvedAt && (row.resolvedWithVersion ?? 0) >= targetVersion) ? ['resolver_pending'] : []),
+    ...(row.resolverStatus === 'failed' ? ['resolver_failed'] : []),
+  ];
+}
+
+function uniqueById<T extends { id: string }>(rows: T[]) {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    unique.push(row);
+  }
+  return unique;
 }
 
 function workflowRepairMode(row: {
