@@ -265,7 +265,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
   }
 
   private async fireDerivedWorkflowTriggers(
-    callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null },
+    callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null; transcriptRaw?: string | null },
     output: TranscriptResolverOutput,
     resolverModel: string,
     forceWorkflowEvaluationRepair = false,
@@ -291,14 +291,14 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
   }
 
   private async fireOperationalSignalFlow(
-    callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null },
+    callEvent: { id: string; externalCallId: string; contactPhoneE164?: string | null; contactEmail?: string | null; transcriptRaw?: string | null },
     output: TranscriptResolverOutput,
     baseParams: Record<string, unknown>,
     resolverModel: string,
     customerMatched: boolean,
     forceWorkflowEvaluationRepair: boolean,
   ) {
-    const signals = transcriptOperationalSignals(output, { customerMatched });
+    const signals = transcriptOperationalSignals(output, { customerMatched, sourceTranscript: callEvent.transcriptRaw });
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new Error('Tenant context is required for transcript workflow evaluation');
     const currentSignalIntents = signals.map((signal) => signal.intent);
@@ -629,7 +629,7 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
     language_detected: 'unknown',
     resolved_with_version: targetVersion,
   };
-  output.person_brief = localFallbackPersonBrief(transcript, output, transcriptOperationalSignals(output, { customerMatched: false }));
+  output.person_brief = localFallbackPersonBrief(transcript, output, transcriptOperationalSignals(output, { customerMatched: false, sourceTranscript: transcript }));
   return output;
 }
 

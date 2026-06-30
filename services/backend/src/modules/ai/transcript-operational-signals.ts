@@ -80,11 +80,6 @@ export const OPERATIONAL_INTENT_KEYWORDS = {
     'can someone call',
     'ring me',
     'missed call',
-    'voicemail',
-    'left a message',
-    'follow up',
-    'reach out',
-    'schedule a call',
     'can i speak to',
   ],
   quote_request: [
@@ -95,7 +90,6 @@ export const OPERATIONAL_INTENT_KEYWORDS = {
     'send pricing',
     'send me price',
     'purchase order',
-    'po',
     'bulk pricing',
     'volume pricing',
     'wholesale',
@@ -279,9 +273,10 @@ export const PURCHASE_SIGNAL_KEYWORDS = [
   'availability',
 ] as const;
 
-export function transcriptOperationalSignals(output: TranscriptResolverOutput, options: { customerMatched: boolean }): TranscriptOperationalSignal[] {
+export function transcriptOperationalSignals(output: TranscriptResolverOutput, options: { customerMatched: boolean; sourceTranscript?: string | null }): TranscriptOperationalSignal[] {
   const derived = new Map<string, TranscriptOperationalSignal>();
   const sourceText = [
+    options.sourceTranscript ?? '',
     output.summary,
     output.call_intent,
     output.psych_tags.join(' '),
@@ -373,7 +368,7 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   if (derived.size === 0) {
     derived.set('no_action', noActionSignal('No sales or personnel follow-up signal was detected.'));
   }
-  return dedupeSignals([...provided, ...Array.from(derived.values())]);
+  return selectPrimarySignals([...provided, ...Array.from(derived.values())]);
 }
 
 export function isAutomatedOrVoicemailOnlyTranscript(value: string) {
@@ -441,6 +436,49 @@ function dedupeSignals(signals: TranscriptOperationalSignal[]) {
   return actionable.length > 0 ? actionable : Array.from(byIntent.values());
 }
 
+function selectPrimarySignals(signals: TranscriptOperationalSignal[]) {
+  const deduped = dedupeSignals(signals);
+  const actionable = deduped.filter((signal) => signal.intent !== 'no_action' && signal.action_required);
+  if (actionable.length === 0) return deduped.length > 0 ? deduped : [noActionSignal('No sales or personnel follow-up signal was detected.')];
+
+  const actionableIntents = new Set(actionable.map((signal) => signal.intent));
+  const filtered = actionable.filter((signal) => {
+    if (actionable.length <= 1) return true;
+    if (signal.intent === 'callback_requested') return false;
+    if (signal.intent === 'existing_customer_expansion_signal') return false;
+    if (signal.intent === 'heat_press_purchase_intent' && actionableIntents.has('heat_press_machine_purchase_intent')) return false;
+    return true;
+  });
+  const candidates = filtered.length > 0 ? filtered : actionable;
+  return [candidates.sort((left, right) => {
+    const priorityDiff = operationalIntentPriority(right.intent) - operationalIntentPriority(left.intent);
+    if (priorityDiff !== 0) return priorityDiff;
+    return right.confidence - left.confidence;
+  })[0]];
+}
+
+function operationalIntentPriority(intent: TranscriptOperationalSignal['intent']) {
+  const priorities: Record<TranscriptOperationalSignal['intent'], number> = {
+    no_action: 0,
+    refund_requested: 100,
+    spare_part_purchase_intent: 95,
+    heat_press_machine_purchase_intent: 94,
+    dtf_supply_reorder_signal: 92,
+    heat_press_purchase_intent: 90,
+    quote_request: 85,
+    price_objection: 80,
+    financing_question: 78,
+    machine_upgrade_interest: 75,
+    product_fit_question: 72,
+    sample_request: 70,
+    training_installation_need: 65,
+    shipping_status_question: 60,
+    callback_requested: 45,
+    existing_customer_expansion_signal: 40,
+  };
+  return priorities[intent] ?? 0;
+}
+
 function phraseScore(text: string, phrases: readonly string[]) {
   return phrases.reduce((score, phrase) => score + (text.includes(normalizedText(phrase)) ? 1 : 0), 0);
 }
@@ -462,20 +500,45 @@ const AUTOMATED_CALL_BOILERPLATE_PHRASES = [
 
 const VOICEMAIL_BOILERPLATE_PHRASES = [
   'your call has been forwarded to voicemail',
+  'voice mail',
+  'automated voice messaging system',
   'person you are trying to reach is not available',
+  "can't take your call now",
+  'cannot take your call now',
+  'currently unavailable',
   'please record your message',
+  'please leave your message',
+  'leave your name number and a brief message',
   'when you have finished recording',
   'you may hang up',
   'press 1',
+  'press pound',
+  'at the tone',
+  'please dial the extension',
+  'we are currently closed',
   'leave it alone',
 ] as const;
 
 const AGENT_OUTBOUND_ONLY_PHRASES = [
   'this is',
   'from dtfbank',
+  'from dtfbank.com',
   'from dpfbank',
+  'from dpfbank.com',
+  'from dtsbank.com',
+  'from dpsbank.com',
+  'from dcsbank',
+  'from dtf bank',
+  'from dpf bank',
   'courtesy call',
   'just reaching out',
+  "we're following up",
+  'were following up',
+  'we are following up',
+  'just following up',
+  'we were just reaching out',
+  'following up with your most recent order',
+  'following up about the hydro',
   'see how everything is going',
   'please feel free to reach out',
 ] as const;
@@ -490,6 +553,14 @@ const CARRIER_VENDOR_PHRASES = [
   'schedule a delivery appointment',
   'shipping smarter',
   'freight carrier',
+  'wintrans',
+  'driver of',
+  'i have load',
+  'have load from',
+  'load from california',
+  'freight delivery',
+  'pallets',
+  'carrier',
   'transportation',
 ] as const;
 
