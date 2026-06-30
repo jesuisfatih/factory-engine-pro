@@ -2417,16 +2417,18 @@ export class RulesService {
       ? [mcpAction('audit_no_action', 'no-op', 'No actionable sales or personnel follow-up.')]
       : [mcpAction('create_task', 'create_task', taskTitleForMcpGoal(detectedIntent, text), axis)];
 
-    const member = await this.resolveMentionedMember(naturalLanguageGoal);
-    if (member) {
-      actions.push(mcpAction('route_named_member', 'route_member', member.email));
-      assumptions.push(`Named assignee resolved to ${member.email}.`);
-    } else if (mentionsSegmentOwner(text)) {
-      actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
-      assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
-    } else if (mentionsCallOwner(text)) {
+    const wantsCallOwner = mentionsCallOwner(text);
+    const wantsSegmentOwner = mentionsSegmentOwner(text);
+    const member = wantsCallOwner || wantsSegmentOwner ? null : await this.resolveMentionedMember(naturalLanguageGoal);
+    if (wantsCallOwner) {
       if (detectedIntent !== 'no_action') actions.push(mcpAction('route_call_owner', 'route_call_owner', ''));
       assumptions.push('Assignee will resolve to the Aircall call owner for the transcript event.');
+    } else if (wantsSegmentOwner) {
+      actions.push(mcpAction('route_segment_owner', 'route_segment_owner', ''));
+      assumptions.push('Assignee will be resolved from the customer segment owner at runtime.');
+    } else if (member) {
+      actions.push(mcpAction('route_named_member', 'route_member', member.email));
+      assumptions.push(`Named assignee resolved to ${member.email}.`);
     } else {
       assumptions.push('Assignee will default to call owner, customer axis primary, or axis primary role at runtime.');
     }
