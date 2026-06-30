@@ -122,6 +122,15 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           callEvent.resolverModel ?? 'stored-resolver-output',
           Boolean(job.data?.forceWorkflowEvaluationRepair),
         );
+        await this.prisma.db.aircallCallEvent.updateMany({
+          where: { id: callEvent.id },
+          data: {
+            resolverStatus: 'succeeded',
+            resolverError: null,
+            resolvedAt: callEvent.resolvedAt ?? new Date(),
+            resolvedWithVersion: callEvent.resolvedWithVersion ?? targetVersion,
+          },
+        });
         const repairedEvaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
           where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
         });
