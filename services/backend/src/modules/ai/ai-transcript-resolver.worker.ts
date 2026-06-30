@@ -477,9 +477,6 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     response: WorkflowTriggerFireResponse,
   ): Promise<WorkflowTriggerFireResponse> {
     if (response.matchedRules > 0 || response.tasksCreated > 0) return response;
-    const duplicateOnly = response.results.length > 0
-      && response.results.every((result) => result.status === 'skipped' && result.reason === 'duplicate_event');
-    if (!duplicateOnly) return response;
 
     const executions = await this.prisma.db.workflowRuleExecution.findMany({
       where: {
@@ -503,6 +500,16 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         });
     const taskById = new Map(tasks.map((task) => [task.id, task]));
     const executionByRuleId = new Map(executions.map((execution) => [execution.ruleId, execution]));
+    const resultRuleIds = new Set(response.results.map((result) => result.ruleId));
+    const recoveredResults = executions
+      .filter((execution) => !resultRuleIds.has(execution.ruleId))
+      .map((execution) => ({
+        ruleId: execution.ruleId,
+        ruleName: execution.rule?.name ?? execution.ruleId,
+        status: recoveredExecutionStatus(execution.status),
+        executionMode: 'active' as const,
+        taskIds: execution.taskIds,
+      }));
     return {
       ...response,
       matchedRules: executions.length,
@@ -516,17 +523,20 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         taskId,
         title: taskById.get(taskId)?.title ?? 'Recovered workflow task',
       }))),
-      results: response.results.map((result) => {
-        const execution = executionByRuleId.get(result.ruleId);
-        if (!execution) return result;
-        const { reason, ...rest } = result;
-        void reason;
-        return {
-          ...rest,
-          status: recoveredExecutionStatus(execution.status),
-          taskIds: execution.taskIds,
-        };
-      }),
+      results: [
+        ...response.results.map((result) => {
+          const execution = executionByRuleId.get(result.ruleId);
+          if (!execution) return result;
+          const { reason, ...rest } = result;
+          void reason;
+          return {
+            ...rest,
+            status: recoveredExecutionStatus(execution.status),
+            taskIds: execution.taskIds,
+          };
+        }),
+        ...recoveredResults,
+      ],
     };
   }
 }
@@ -921,6 +931,7 @@ function transcriptOperationalSignals(output: TranscriptResolverOutput, options:
 
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return 'failed';
+  if (!signal.action_required) return 'no_action';
   if (response.tasksCreated > 0) return 'task_created';
   if (response.results.some((result) => result.status === 'cooldown_suppressed')) return 'cooldown_suppressed';
   if (response.matchedRules > 0 && signal.intent === 'no_action') return 'no_action';
@@ -947,6 +958,7 @@ function recoveredExecutionStatus(status: string): WorkflowTriggerFireResponse['
     || status === 'no_op'
     || status === 'shadow_matched'
     || status === 'cooldown_suppressed'
+    || status === 'existing_task'
     || status === 'skipped') {
     return status;
   }
