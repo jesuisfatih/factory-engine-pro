@@ -3132,7 +3132,21 @@ function resolverBriefConfidence(resolver: TranscriptResolverOutput) {
 }
 
 function cleanedActions(values: Array<string | null | undefined>) {
-  return uniqueStrings(values.map((value) => staffBriefText(value, '')).filter(Boolean)).slice(0, 5);
+  const seen = new Set<string>();
+  const actions: string[] = [];
+  for (const value of values) {
+    const action = staffBriefText(value, '');
+    if (!action) continue;
+    const key = action
+      .toLowerCase()
+      .replace(/\b(the|a|an|call)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    actions.push(action);
+  }
+  return actions.slice(0, 5);
 }
 
 function staffBriefText(value: unknown, fallback: string) {
