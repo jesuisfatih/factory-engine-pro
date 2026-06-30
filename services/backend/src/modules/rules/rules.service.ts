@@ -16,6 +16,7 @@ import {
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+  transcriptResolverOutputSchema,
   OPERATIONAL_INTENTS,
   OPERATIONAL_INTENT_REGISTRY,
   createTaskAxisSchema,
@@ -67,6 +68,7 @@ import {
   type WorkflowRuleVersionsResponse,
   type WorkflowRulesResponse,
   type WorkflowTrigger,
+  type TranscriptResolverOutput,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -75,6 +77,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { SupportService } from '../support/support.service.js';
+import { transcriptOperationalSignals } from '../ai/transcript-operational-signals.js';
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
 import { WorkflowPromptService } from './workflow-prompt.service.js';
@@ -2658,10 +2661,14 @@ export class RulesService {
       },
       select: {
         id: true,
+        externalCallId: true,
+        contactPhoneE164: true,
+        contactEmail: true,
         resolverStatus: true,
         resolvedAt: true,
         resolvedWithVersion: true,
         transcriptRaw: true,
+        resolverOutput: true,
       },
     }).then((rows) => rows.filter((row) => Boolean(row.transcriptRaw?.trim())));
     const callEventIds = transcriptRows.map((row) => row.id);
@@ -2671,10 +2678,83 @@ export class RulesService {
           where: { tenantId, callEventId: { in: callEventIds }, status: { not: 'superseded' } },
           select: {
             callEventId: true,
+            signal: true,
             status: true,
             reason: true,
           },
         });
+    const evaluationsByCallEventId = new Map<string, typeof evaluations>();
+    for (const evaluation of evaluations) {
+      const rows = evaluationsByCallEventId.get(evaluation.callEventId) ?? [];
+      rows.push(evaluation);
+      evaluationsByCallEventId.set(evaluation.callEventId, rows);
+    }
+
+    let expectedSignalCount = 0;
+    let evaluatedSignalCount = 0;
+    let flowCompletedSignalCount = 0;
+    let missingSignalEvaluationCount = 0;
+    let missingSignalFlowOutcomeCount = 0;
+    let extraSignalEvaluationCount = 0;
+    let invalidResolverOutputCount = 0;
+    const signalCoverageSamples: WorkflowOperationalContractProbeResponse['transcript']['signalCoverageSamples'] = [];
+
+    for (const row of transcriptRows) {
+      const rowEvaluations = evaluationsByCallEventId.get(row.id) ?? [];
+      const evaluatedSignals = uniqueStrings(rowEvaluations.map((evaluation) => evaluation.signal));
+      const statuses = rowEvaluations.map((evaluation) => ({
+        signal: evaluation.signal,
+        status: evaluation.status,
+      }));
+      const parsedOutput = transcriptResolverOutputSchema.safeParse(row.resolverOutput);
+      if (!parsedOutput.success) {
+        invalidResolverOutputCount += 1;
+        if (signalCoverageSamples.length < 12) {
+          signalCoverageSamples.push({
+            callEventId: row.id,
+            externalCallId: row.externalCallId,
+            expectedSignals: [],
+            evaluatedSignals,
+            missingSignals: [],
+            extraSignals: evaluatedSignals,
+            statuses,
+          });
+        }
+        continue;
+      }
+
+      const customerMatched = await this.auditCustomerMatched(tenantId, row, parsedOutput.data);
+      const expectedSignals = transcriptOperationalSignals(parsedOutput.data, { customerMatched }).map((signal) => signal.intent);
+      const expectedSet = new Set<string>(expectedSignals);
+      const evaluatedExpectedSignals = expectedSignals.filter((signal) => evaluatedSignals.includes(signal));
+      const completedSignals = uniqueStrings(rowEvaluations
+        .filter((evaluation) => isCompletedTranscriptWorkflowStatus(evaluation.status))
+        .map((evaluation) => evaluation.signal));
+      const completedExpectedSignals = expectedSignals.filter((signal) => completedSignals.includes(signal));
+      const missingSignals = expectedSignals.filter((signal) => !evaluatedSignals.includes(signal));
+      const missingFlowSignals = expectedSignals.filter((signal) => !completedSignals.includes(signal));
+      const extraSignals = evaluatedSignals.filter((signal) => !expectedSet.has(signal));
+
+      expectedSignalCount += expectedSignals.length;
+      evaluatedSignalCount += evaluatedExpectedSignals.length;
+      flowCompletedSignalCount += completedExpectedSignals.length;
+      missingSignalEvaluationCount += missingSignals.length;
+      missingSignalFlowOutcomeCount += missingFlowSignals.length;
+      extraSignalEvaluationCount += extraSignals.length;
+
+      if ((missingSignals.length > 0 || missingFlowSignals.length > 0 || extraSignals.length > 0) && signalCoverageSamples.length < 12) {
+        signalCoverageSamples.push({
+          callEventId: row.id,
+          externalCallId: row.externalCallId,
+          expectedSignals,
+          evaluatedSignals,
+          missingSignals,
+          extraSignals,
+          statuses,
+        });
+      }
+    }
+
     const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
     const flowCompletedIds = new Set(evaluations
       .filter((row) => isCompletedTranscriptWorkflowStatus(row.status))
@@ -2691,8 +2771,13 @@ export class RulesService {
     const unmatchedEvaluationCount = evaluations.filter((row) => isUnmatchedTranscriptWorkflowStatus(row.status)).length;
     const missingEvaluationCount = transcriptRows.length - evaluatedIds.size;
     const missingFlowOutcomeCount = transcriptRows.length - flowCompletedIds.size;
+    const signalInvariantOk = invalidResolverOutputCount === 0
+      && missingSignalEvaluationCount === 0
+      && missingSignalFlowOutcomeCount === 0
+      && extraSignalEvaluationCount === 0;
     const workflowInvariantOk = missingEvaluationCount === 0
       && missingFlowOutcomeCount === 0
+      && signalInvariantOk
       && staleResolverVersionCount === 0
       && resolverQueuedOrProcessingCount === 0
       && resolverFailedCount === 0
@@ -2708,12 +2793,24 @@ export class RulesService {
       ...(failedEvaluationCount > 0 ? [`${failedEvaluationCount} workflow evaluation(s) failed.`] : []),
       ...(unmatchedEvaluationCount > 0 ? [`${unmatchedEvaluationCount} workflow evaluation(s) reached no matching rule.`] : []),
       ...(noActionMissingReasonCount > 0 ? [`${noActionMissingReasonCount} no_action evaluation(s) are missing an explicit reason.`] : []),
+      ...(invalidResolverOutputCount > 0 ? [`${invalidResolverOutputCount} transcript resolver output(s) are missing or invalid.`] : []),
+      ...(missingSignalEvaluationCount > 0 ? [`${missingSignalEvaluationCount} expected operational signal evaluation(s) are missing.`] : []),
+      ...(missingSignalFlowOutcomeCount > 0 ? [`${missingSignalFlowOutcomeCount} expected operational signal(s) have no completed workflow outcome.`] : []),
+      ...(extraSignalEvaluationCount > 0 ? [`${extraSignalEvaluationCount} active workflow evaluation signal(s) are not in the current resolver signal set.`] : []),
     ];
     return {
       coverageWindowDays,
       transcriptEvents: transcriptRows.length,
       evaluatedEvents: evaluatedIds.size,
       flowCompletedEvents: flowCompletedIds.size,
+      expectedSignalCount,
+      evaluatedSignalCount,
+      flowCompletedSignalCount,
+      missingSignalEvaluationCount,
+      missingSignalFlowOutcomeCount,
+      extraSignalEvaluationCount,
+      invalidResolverOutputCount,
+      signalInvariantOk,
       workflowInvariantOk,
       missingEvaluationCount,
       missingFlowOutcomeCount,
@@ -2725,8 +2822,45 @@ export class RulesService {
       noActionEvaluationCount: noActionRows.length,
       noActionWithReasonCount: noActionRows.length - noActionMissingReasonCount,
       noActionMissingReasonCount,
+      signalCoverageSamples,
       issues,
     };
+  }
+
+  private async auditCustomerMatched(
+    tenantId: string,
+    callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
+    output: TranscriptResolverOutput,
+  ) {
+    if (output.customer_match.customer_id) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, id: output.customer_match.customer_id },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+
+    const email = (callEvent.contactEmail ?? '').trim();
+    if (email) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+
+    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
+    if (!phone) return false;
+    const digits = phone.replace(/\D/g, '');
+    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
+    for (const needle of phoneNeedles) {
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { tenantId, phone: { contains: needle } },
+        select: { id: true },
+      });
+      if (customer) return true;
+    }
+    return false;
   }
 
   private editedByMemberId() {

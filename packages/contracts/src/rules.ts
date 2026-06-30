@@ -405,6 +405,14 @@ export interface WorkflowOperationalContractProbeResponse {
     transcriptEvents: number;
     evaluatedEvents: number;
     flowCompletedEvents: number;
+    expectedSignalCount: number;
+    evaluatedSignalCount: number;
+    flowCompletedSignalCount: number;
+    missingSignalEvaluationCount: number;
+    missingSignalFlowOutcomeCount: number;
+    extraSignalEvaluationCount: number;
+    invalidResolverOutputCount: number;
+    signalInvariantOk: boolean;
     workflowInvariantOk: boolean;
     missingEvaluationCount: number;
     missingFlowOutcomeCount: number;
@@ -416,6 +424,18 @@ export interface WorkflowOperationalContractProbeResponse {
     noActionEvaluationCount: number;
     noActionWithReasonCount: number;
     noActionMissingReasonCount: number;
+    signalCoverageSamples: Array<{
+      callEventId: string;
+      externalCallId: string | null;
+      expectedSignals: string[];
+      evaluatedSignals: string[];
+      missingSignals: string[];
+      extraSignals: string[];
+      statuses: Array<{
+        signal: string;
+        status: string;
+      }>;
+    }>;
     issues: string[];
     taskCreationTrigger: 'call.operational_signal.detected';
     blockedTaskTriggers: string[];
