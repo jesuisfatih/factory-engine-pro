@@ -16,8 +16,13 @@ import {
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
   OPERATIONAL_INTENTS,
+  OPERATIONAL_INTENT_REGISTRY,
   createTaskAxisSchema,
   operationalIntentSchema,
+  defaultAxisForOperationalIntent,
+  detectOperationalIntentFromText,
+  expectedOutcomeForOperationalIntent,
+  taskTitleForOperationalIntent as registryTaskTitleForOperationalIntent,
   workflowRuleDefinitionSchema,
   workflowEnumProbeValues,
   type ActiveWorkflowRuleStatsQuery,
@@ -2122,7 +2127,11 @@ export class RulesService {
       generatedAt: new Date().toISOString(),
       psychTags: [...WORKFLOW_ENUM_CATALOG.psychTags],
       callIntents: [...WORKFLOW_ENUM_CATALOG.callIntents],
-      operationalIntents: [...WORKFLOW_ENUM_CATALOG.operationalIntents],
+      operationalIntents: WORKFLOW_ENUM_CATALOG.operationalIntents.map((entry) => ({
+        ...entry,
+        keywords: [...entry.keywords],
+        examples: [...entry.examples],
+      })),
       urgencyLevels: [...WORKFLOW_ENUM_CATALOG.urgencyLevels],
       createTaskAxes: [...WORKFLOW_ENUM_CATALOG.createTaskAxes],
       serviceRequestSources: [...WORKFLOW_ENUM_CATALOG.serviceRequestSources],
@@ -2163,6 +2172,19 @@ export class RulesService {
         actions: MCP_ALLOWED_ACTIONS,
         createTaskAxes: WORKFLOW_ENUM_CATALOG.createTaskAxes.map((entry) => entry.value),
         operationalIntents: WORKFLOW_ENUM_CATALOG.operationalIntents.map((entry) => entry.value),
+      },
+      registry: {
+        operationalIntents: OPERATIONAL_INTENT_REGISTRY.map((entry) => ({
+          value: entry.value,
+          label: entry.label,
+          defaultAxis: entry.defaultAxis,
+          expectedOutcome: entry.expectedOutcome,
+          taskTitle: entry.taskTitle,
+          keywords: [...entry.keywords],
+          examples: [...entry.examples],
+        })),
+        conditions: WORKFLOW_ENUM_CATALOG.conditions.map((entry) => ({ ...entry })),
+        actions: WORKFLOW_ENUM_CATALOG.actions.map((entry) => ({ ...entry })),
       },
       examples: [
         'Create a high-priority sales task for customers asking about heat press pricing.',
@@ -2295,7 +2317,7 @@ export class RulesService {
     const priority = priorityFromGoal(text);
     const actions: WorkflowRuleAction[] = detectedIntent === 'no_action'
       ? [mcpAction('audit_no_action', 'no-op', 'No actionable sales or personnel follow-up.')]
-      : [mcpAction('create_task', 'create_task', taskTitleForOperationalIntent(detectedIntent, text), axis)];
+      : [mcpAction('create_task', 'create_task', taskTitleForMcpGoal(detectedIntent, text), axis)];
 
     const member = await this.resolveMentionedMember(naturalLanguageGoal);
     if (member) {
@@ -2683,269 +2705,12 @@ const CALL_DERIVED_TASK_BYPASS_TRIGGERS: WorkflowTrigger[] = [
   'customer.first_call.detected',
 ];
 
-const MCP_OPERATIONAL_INTENT_KEYWORDS: Array<[WorkflowMcpDraftRuleResponse['detectedIntent'], readonly string[]]> = [
-  ['dtf_supply_reorder_signal', [
-    'dtf supply',
-    'dtf supplies',
-    'supplies',
-    'ink',
-    'white ink',
-    'cmyk',
-    'powder',
-    'adhesive powder',
-    'hot melt',
-    'film',
-    'pet film',
-    'roll film',
-    'transfer film',
-    'transfer',
-    'gang sheet',
-    'dtf transfers',
-    'consumable',
-    'cleaning solution',
-    'printhead',
-    'maintenance',
-    'reorder',
-    'restock',
-    'running low',
-    'out of ink',
-    'out of film',
-    'out of powder',
-    'need more',
-    'again',
-  ]],
-  ['heat_press_purchase_intent', [
-    'heat press',
-    'hydro',
-    'hydraulic press',
-    'press machine',
-    'machine purchase',
-    'dual station',
-    'auto open',
-    'clamshell',
-    'swing away',
-    'pneumatic',
-    '16x20',
-    '15x15',
-    'heat platen',
-    'sublimation press',
-    'mug press',
-    'cap press',
-    'rhinestone press',
-  ]],
-  ['quote_request', [
-    'quote',
-    'estimate',
-    'proposal',
-    'invoice',
-    'pricing send',
-    'send pricing',
-    'send me price',
-    'purchase order',
-    'po',
-    'bulk pricing',
-    'volume pricing',
-    'wholesale',
-    'reseller',
-    'net terms',
-  ]],
-  ['callback_requested', [
-    'call back',
-    'callback',
-    'call me',
-    'call me back',
-    'can someone call',
-    'ring me',
-    'missed call',
-    'voicemail',
-    'left a message',
-    'reach out',
-    'follow up',
-    'schedule a call',
-    'tekrar ara',
-  ]],
-  ['financing_question', [
-    'financing',
-    'finance',
-    'lease',
-    'leasing',
-    'timepayment',
-    'monthly payment',
-    'payment plan',
-    'installments',
-    'shop pay',
-    'affirm',
-    'down payment',
-    'credit application',
-    'finans',
-  ]],
-  ['price_objection', [
-    'price',
-    'discount',
-    'expensive',
-    'too much',
-    'cheaper',
-    'price match',
-    'match price',
-    'competitor cheaper',
-    'coupon',
-    'promo',
-    'deal',
-    'budget',
-    'can you do better',
-    'fiyat',
-    'indirim',
-  ]],
-  ['product_fit_question', [
-    'which machine',
-    'which one',
-    'right machine',
-    'what size',
-    'what do i need',
-    'compare',
-    'recommend',
-    'recommendation',
-    'fit my',
-    'beginner',
-    'startup',
-    'starter',
-    'best for shirts',
-    'best for hats',
-    'compatibility',
-    'compatible',
-    'works with',
-    'production volume',
-    'uygun',
-  ]],
-  ['sample_request', [
-    'sample',
-    'samples',
-    'test print',
-    'demo print',
-    'sample pack',
-    'proof',
-    'see quality',
-    'numune',
-  ]],
-  ['machine_upgrade_interest', [
-    'upgrade',
-    'bigger machine',
-    'larger machine',
-    'second machine',
-    'another machine',
-    'replace my machine',
-    'faster machine',
-    'higher volume',
-    'more production',
-    'add station',
-    'dual station upgrade',
-    'new location',
-  ]],
-  ['training_installation_need', [
-    'training',
-    'installation',
-    'install',
-    'setup',
-    'assembly',
-    'how to use',
-    'onboarding',
-    'calibration',
-    'pressure setting',
-    'temperature setting',
-    'time setting',
-    'not heating',
-    'wont heat',
-    "won't heat",
-    'uneven pressure',
-    'peeling',
-    'curing',
-    'error code',
-    'not working',
-    'troubleshoot',
-    'kurulum',
-    'egitim',
-  ]],
-  ['existing_customer_expansion_signal', [
-    'existing customer',
-    'buy more',
-    'add another',
-    'new product',
-    'also need',
-    'upsell',
-    'more locations',
-    'new location',
-    'expanding',
-    'new employee',
-    'new line',
-    'more volume',
-    'second unit',
-  ]],
-  ['refund_requested', [
-    'refund',
-    'return',
-    'chargeback',
-    'cancel order',
-    'cancel my order',
-    'money back',
-    'dispute',
-    'exchange',
-    'return label',
-    'replacement',
-    'iade',
-  ]],
-  ['shipping_status_question', [
-    'shipping',
-    'delivery',
-    'tracking',
-    'freight',
-    'liftgate',
-    'address',
-    'where is my order',
-    'eta',
-    'lost package',
-    'damaged shipment',
-    'dock',
-    'kargo',
-  ]],
-];
-
 function detectOperationalIntent(text: string): WorkflowMcpDraftRuleResponse['detectedIntent'] {
-  return workflowEnumOperationalIntent(text);
-}
-
-function workflowEnumOperationalIntent(text: string) {
-  const matched = MCP_OPERATIONAL_INTENT_KEYWORDS.find(([, keywords]) => keywords.some((keyword) => humanTextHasKeyword(text, keyword)));
-  return matched?.[0] ?? 'no_action';
-}
-
-function humanTextHasKeyword(text: string, keyword: string) {
-  const normalizedKeyword = normalizeHumanText(keyword);
-  if (!normalizedKeyword) return false;
-  const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\b${escaped}\\b`).test(text);
+  return detectOperationalIntentFromText(text);
 }
 
 function axisForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent']): CreateTaskAxis {
-  switch (intent) {
-    case 'refund_requested':
-    case 'shipping_status_question':
-    case 'financing_question':
-    case 'training_installation_need':
-      return 'account';
-    case 'heat_press_purchase_intent':
-    case 'dtf_supply_reorder_signal':
-    case 'quote_request':
-    case 'callback_requested':
-    case 'price_objection':
-    case 'product_fit_question':
-    case 'sample_request':
-    case 'machine_upgrade_interest':
-    case 'existing_customer_expansion_signal':
-    case 'no_action':
-      return 'sales';
-    default:
-      return exhaustiveIntent(intent);
-  }
+  return defaultAxisForOperationalIntent(intent) ?? 'sales';
 }
 
 function axisForActionableOperationalIntent(value: unknown): CreateTaskAxis | null {
@@ -3047,8 +2812,7 @@ function workflowRulesByOperationalIntent(
 }
 
 function expectedOperationalOutcome(intent: (typeof OPERATIONAL_INTENTS)[number]): WorkflowOperationalContractProbeResponse['intents'][number]['expectedOutcome'] {
-  if (intent === 'no_action') return 'no-op';
-  return `task:${axisForOperationalIntent(intent)}`;
+  return expectedOutcomeForOperationalIntent(intent);
 }
 
 function operationalRuleMatchesExpectedOutcome(
@@ -3091,14 +2855,14 @@ function unsafeOperationalRuleIssues(definition: WorkflowRuleDefinition) {
 
 function priorityFromGoal(text: string) {
   if (text.includes('critical') || text.includes('urgent') || text.includes('acil')) return 90;
-  if (text.includes('high') || text.includes('important') || text.includes('yüksek') || text.includes('yuksek')) return 80;
-  if (text.includes('low') || text.includes('dusuk') || text.includes('düşük')) return 30;
+  if (text.includes('high') || text.includes('important') || text.includes('yuksek')) return 80;
+  if (text.includes('low') || text.includes('dusuk')) return 30;
   return 60;
 }
 
-function taskTitleForOperationalIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent'], text: string) {
+function taskTitleForMcpGoal(intent: WorkflowMcpDraftRuleResponse['detectedIntent'], text: string) {
   if (text.includes('callback') || text.includes('call back') || text.includes('tekrar ara')) return `${labelFromIntent(intent)} callback`;
-  return `${labelFromIntent(intent)} follow-up`;
+  return registryTaskTitleForOperationalIntent(intent) ?? `${labelFromIntent(intent)} follow-up`;
 }
 
 function labelFromIntent(intent: WorkflowMcpDraftRuleResponse['detectedIntent']) {
@@ -3234,9 +2998,6 @@ function normalizeHumanText(value: unknown) {
     .trim();
 }
 
-function exhaustiveIntent(value: never): never {
-  throw new Error(`Unhandled operational intent: ${String(value)}`);
-}
 
 function normalizeCooldown(definition: WorkflowRuleDefinition): RuleCooldownConfig {
   const raw = definition.cooldown;

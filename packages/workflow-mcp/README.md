@@ -41,13 +41,13 @@ The server never connects to Postgres or Redis directly.
 
 Use tools in this order:
 
-1. `list_workflow_capabilities`
-2. `draft_workflow_rule`
-3. `validate_workflow_rule`
-4. `simulate_workflow_rule`
-5. `create_workflow_rule_draft`
-6. `simulate_workflow_rule` again using the stored `ruleId`
-7. `publish_workflow_rule` only after explicit user approval
+1. `list_workflow_capabilities` and inspect `registry.operationalIntents`, `registry.conditions`, and `registry.actions`.
+2. `draft_workflow_rule` from the customer natural-language goal.
+3. `validate_workflow_rule` against the deterministic DSL.
+4. `simulate_workflow_rule` as a draft to estimate recent matches.
+5. `create_workflow_rule_draft` only after validation is clean.
+6. `simulate_workflow_rule` again using the stored `ruleId`; this stored report is the publish proof.
+7. `publish_workflow_rule` only after explicit user approval and a completed stored simulation report.
 
 Unsupported actions such as automatic support case creation, raw SQL, destructive segment changes, and direct email sends are rejected by the backend.
 
@@ -55,4 +55,4 @@ MCP-authored rules are limited to `call.operational_signal.detected` with an `op
 
 Create-task assignment is deterministic: explicit member, Aircall call owner, customer axis primary, then axis primary role. Omit an explicit member when the rule should follow the person who handled the call.
 
-Domain goals should be phrased around operational signals such as DTF supply reorder, heat press pricing or purchase intent, quote request, callback, financing, product-fit consultation, sample request, machine upgrade, and training or installation. When a staff decision is required, create a task, note, pin, or route action; staff opens any customer support case manually.
+Domain goals must compile to the operational intent registry returned by `list_workflow_capabilities`. The registry exposes each intent's default axis, expected outcome, task title, matching keywords, and examples. When a staff decision is required, create a task, note, pin, or route action; staff opens any customer support case manually.

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WORKFLOW_ENUM_VERSION = '2026-06-30.1';
+export const WORKFLOW_ENUM_VERSION = '2026-06-30.2';
 
 export const PSYCH_TAGS = [
   'angry',
@@ -187,6 +187,279 @@ export interface WorkflowActionOption extends WorkflowEnumOption<WorkflowAction>
   auditOnly: boolean;
 }
 
+export type WorkflowOperationalIntentExpectedOutcome = `task:${CreateTaskAxis}` | 'no-op';
+
+export interface WorkflowOperationalIntentRegistryEntry extends WorkflowEnumOption<OperationalIntent> {
+  defaultAxis: CreateTaskAxis | null;
+  expectedOutcome: WorkflowOperationalIntentExpectedOutcome;
+  taskTitle: string | null;
+  keywords: readonly string[];
+  examples: readonly string[];
+}
+
+export const OPERATIONAL_INTENT_REGISTRY = [
+  operationalIntentEntry('heat_press_purchase_intent', 'sales', 'Heat press purchase follow-up', [
+    'heat press',
+    'hydro',
+    'hydraulic press',
+    'press machine',
+    'machine purchase',
+    'dual station',
+    'auto open',
+    'clamshell',
+    'swing away',
+    'pneumatic',
+    '16x20',
+    '15x15',
+    'heat platen',
+    'sublimation press',
+    'mug press',
+    'cap press',
+    'rhinestone press',
+  ], [
+    "Heat press fiyati soranlari Linda'ya high priority callback task yap.",
+    'Create a sales follow-up when a caller asks which heat press to buy.',
+  ]),
+  operationalIntentEntry('dtf_supply_reorder_signal', 'sales', 'DTF supply reorder follow-up', [
+    'dtf supply',
+    'dtf supplies',
+    'supplies',
+    'ink',
+    'white ink',
+    'cmyk',
+    'powder',
+    'adhesive powder',
+    'hot melt',
+    'film',
+    'pet film',
+    'roll film',
+    'transfer film',
+    'transfer',
+    'gang sheet',
+    'dtf transfers',
+    'consumable',
+    'cleaning solution',
+    'printhead',
+    'maintenance',
+    'reorder',
+    'restock',
+    'running low',
+    'out of ink',
+    'out of film',
+    'out of powder',
+    'need more',
+    'again',
+  ], [
+    'Route DTF supply reorder signals to the segment owner.',
+    'Create a sales task when an existing customer is running low on film or powder.',
+  ]),
+  operationalIntentEntry('quote_request', 'sales', 'Quote request follow-up', [
+    'quote',
+    'estimate',
+    'proposal',
+    'invoice',
+    'pricing send',
+    'send pricing',
+    'send me price',
+    'purchase order',
+    'po',
+    'bulk pricing',
+    'volume pricing',
+    'wholesale',
+    'reseller',
+    'net terms',
+  ], [
+    'Create a quote follow-up task for bulk pricing requests.',
+  ]),
+  operationalIntentEntry('callback_requested', 'sales', 'Callback requested follow-up', [
+    'call back',
+    'callback',
+    'call me',
+    'call me back',
+    'can someone call',
+    'ring me',
+    'missed call',
+    'voicemail',
+    'left a message',
+    'reach out',
+    'follow up',
+    'schedule a call',
+    'tekrar ara',
+  ], [
+    'Create a same-day callback task when the caller asks to be called back.',
+  ]),
+  operationalIntentEntry('refund_requested', 'account', 'Refund review follow-up', [
+    'refund',
+    'return',
+    'chargeback',
+    'cancel order',
+    'cancel my order',
+    'money back',
+    'dispute',
+    'exchange',
+    'return label',
+    'replacement',
+    'iade',
+  ], [
+    'Create an account follow-up task for refund or return requests.',
+  ]),
+  operationalIntentEntry('shipping_status_question', 'account', 'Shipping status follow-up', [
+    'shipping',
+    'delivery',
+    'tracking',
+    'freight',
+    'liftgate',
+    'address',
+    'where is my order',
+    'eta',
+    'lost package',
+    'damaged shipment',
+    'dock',
+    'kargo',
+  ], [
+    'Create an account follow-up task when a customer asks about freight or tracking.',
+  ]),
+  operationalIntentEntry('financing_question', 'account', 'Financing question follow-up', [
+    'financing',
+    'finance',
+    'lease',
+    'leasing',
+    'timepayment',
+    'monthly payment',
+    'payment plan',
+    'installments',
+    'shop pay',
+    'affirm',
+    'down payment',
+    'credit application',
+    'finans',
+  ], [
+    'Create an account follow-up task for heat press financing questions.',
+  ]),
+  operationalIntentEntry('price_objection', 'sales', 'Price objection follow-up', [
+    'price',
+    'discount',
+    'expensive',
+    'too much',
+    'cheaper',
+    'price match',
+    'match price',
+    'competitor cheaper',
+    'coupon',
+    'promo',
+    'deal',
+    'budget',
+    'can you do better',
+    'fiyat',
+    'indirim',
+  ], [
+    'Create a sales save task when the customer objects to heat press pricing.',
+  ]),
+  operationalIntentEntry('product_fit_question', 'sales', 'Product fit consultation follow-up', [
+    'which machine',
+    'which one',
+    'right machine',
+    'what size',
+    'what do i need',
+    'compare',
+    'recommend',
+    'recommendation',
+    'fit my',
+    'beginner',
+    'startup',
+    'starter',
+    'best for shirts',
+    'best for hats',
+    'compatibility',
+    'compatible',
+    'works with',
+    'production volume',
+    'uygun',
+  ], [
+    'Create a product-fit consultation task for callers comparing machines.',
+  ]),
+  operationalIntentEntry('sample_request', 'sales', 'Sample request follow-up', [
+    'sample',
+    'samples',
+    'test print',
+    'demo print',
+    'sample pack',
+    'proof',
+    'see quality',
+    'numune',
+  ], [
+    'Create a sales task when the caller asks for a sample pack.',
+  ]),
+  operationalIntentEntry('machine_upgrade_interest', 'sales', 'Machine upgrade follow-up', [
+    'upgrade',
+    'bigger machine',
+    'larger machine',
+    'second machine',
+    'another machine',
+    'replace my machine',
+    'faster machine',
+    'higher volume',
+    'more production',
+    'add station',
+    'dual station upgrade',
+    'new location',
+  ], [
+    'Create an upgrade task when an existing customer wants a larger or second press.',
+  ]),
+  operationalIntentEntry('training_installation_need', 'account', 'Training or installation follow-up', [
+    'training',
+    'installation',
+    'install',
+    'setup',
+    'assembly',
+    'how to use',
+    'onboarding',
+    'calibration',
+    'pressure setting',
+    'temperature setting',
+    'time setting',
+    'not heating',
+    'wont heat',
+    "won't heat",
+    'uneven pressure',
+    'peeling',
+    'curing',
+    'error code',
+    'not working',
+    'troubleshoot',
+    'kurulum',
+    'egitim',
+  ], [
+    'Create an account follow-up task for installation, setup, or training needs.',
+  ]),
+  operationalIntentEntry('existing_customer_expansion_signal', 'sales', 'Existing customer expansion follow-up', [
+    'existing customer',
+    'buy more',
+    'add another',
+    'new product',
+    'also need',
+    'upsell',
+    'more locations',
+    'new location',
+    'expanding',
+    'new employee',
+    'new line',
+    'more volume',
+    'second unit',
+  ], [
+    'Create an expansion task when an existing customer is adding capacity.',
+  ]),
+  operationalIntentEntry('no_action', null, null, [
+    'no action',
+    'not actionable',
+    'wrong number',
+    'spam',
+    'silent call',
+  ], [
+    'Audit a transcript as no_action with an explicit reason when no sales or account follow-up exists.',
+  ]),
+] as const satisfies readonly WorkflowOperationalIntentRegistryEntry[];
+
 export const WORKFLOW_TRIGGER_GROUPS: Record<WorkflowTriggerFamily, readonly WorkflowTrigger[]> = {
   system: [
     'aircall.call.created',
@@ -285,7 +558,7 @@ export const WORKFLOW_ENUM_CATALOG = {
   version: WORKFLOW_ENUM_VERSION,
   psychTags: PSYCH_TAGS.map(option),
   callIntents: CALL_INTENTS.map(option),
-  operationalIntents: OPERATIONAL_INTENTS.map(option),
+  operationalIntents: OPERATIONAL_INTENT_REGISTRY,
   urgencyLevels: URGENCY_LEVELS.map(option),
   createTaskAxes: CREATE_TASK_AXIS.map(option),
   serviceRequestSources: SERVICE_REQUEST_SOURCES.map(option),
@@ -301,7 +574,15 @@ export const workflowEnumCatalogResponseSchema = z.object({
   generatedAt: z.string(),
   psychTags: z.array(z.object({ value: psychTagSchema, label: z.string() })),
   callIntents: z.array(z.object({ value: callIntentSchema, label: z.string() })),
-  operationalIntents: z.array(z.object({ value: operationalIntentSchema, label: z.string() })),
+  operationalIntents: z.array(z.object({
+    value: operationalIntentSchema,
+    label: z.string(),
+    defaultAxis: createTaskAxisSchema.nullable(),
+    expectedOutcome: z.union([z.literal('task:sales'), z.literal('task:account'), z.literal('no-op')]),
+    taskTitle: z.string().nullable(),
+    keywords: z.array(z.string()),
+    examples: z.array(z.string()),
+  })),
   urgencyLevels: z.array(z.object({ value: urgencyLevelSchema, label: z.string() })),
   createTaskAxes: z.array(z.object({ value: createTaskAxisSchema, label: z.string() })),
   serviceRequestSources: z.array(z.object({ value: serviceRequestSourceSchema, label: z.string() })),
@@ -384,6 +665,7 @@ export function buildTranscriptResolverPromptFromEnums() {
     `Use only these psych_tags: ${PSYCH_TAGS.join(', ')}`,
     `Use only these call_intents: ${CALL_INTENTS.join(', ')}`,
     `Use only these operational_intents: ${OPERATIONAL_INTENTS.join(', ')}`,
+    `Operational intent registry: ${OPERATIONAL_INTENT_REGISTRY.map((entry) => `${entry.value}=>${entry.expectedOutcome}`).join('; ')}`,
     `Use only these urgency_levels: ${URGENCY_LEVELS.join(', ')}`,
     `Resolver-backed conditions: ${WORKFLOW_CONDITIONS.join(', ')}`,
     'Return JSON only. Do not invent enum values.',
@@ -404,6 +686,68 @@ export function workflowEnumProbeValues() {
 
 function option<T extends string>(value: T): WorkflowEnumOption<T> {
   return { value, label: labelFromEnum(value) };
+}
+
+function operationalIntentEntry(
+  value: OperationalIntent,
+  defaultAxis: CreateTaskAxis | null,
+  taskTitle: string | null,
+  keywords: readonly string[],
+  examples: readonly string[],
+): WorkflowOperationalIntentRegistryEntry {
+  return {
+    value,
+    label: labelFromEnum(value),
+    defaultAxis,
+    expectedOutcome: defaultAxis ? `task:${defaultAxis}` : 'no-op',
+    taskTitle,
+    keywords,
+    examples,
+  };
+}
+
+export function operationalIntentRegistryEntry(intent: OperationalIntent) {
+  const entry = OPERATIONAL_INTENT_REGISTRY.find((candidate) => candidate.value === intent);
+  if (!entry) throw new Error(`Operational intent is not registered: ${intent}`);
+  return entry;
+}
+
+export function defaultAxisForOperationalIntent(intent: OperationalIntent) {
+  return operationalIntentRegistryEntry(intent).defaultAxis;
+}
+
+export function expectedOutcomeForOperationalIntent(intent: OperationalIntent) {
+  return operationalIntentRegistryEntry(intent).expectedOutcome;
+}
+
+export function taskTitleForOperationalIntent(intent: OperationalIntent) {
+  return operationalIntentRegistryEntry(intent).taskTitle;
+}
+
+export function detectOperationalIntentFromText(value: unknown): OperationalIntent {
+  const text = normalizeWorkflowHumanText(value);
+  const matched = OPERATIONAL_INTENT_REGISTRY.find((entry) => {
+    if (entry.value === 'no_action') return false;
+    return entry.keywords.some((keyword) => workflowHumanTextHasKeyword(text, keyword));
+  });
+  return matched?.value ?? 'no_action';
+}
+
+export function normalizeWorkflowHumanText(value: unknown) {
+  return String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function workflowHumanTextHasKeyword(text: string, keyword: string) {
+  const normalizedKeyword = normalizeWorkflowHumanText(keyword);
+  if (!normalizedKeyword) return false;
+  const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`).test(text);
 }
 
 function labelFromEnum(value: string) {

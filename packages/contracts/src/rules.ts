@@ -308,6 +308,32 @@ export interface WorkflowMcpCapabilitiesResponse {
     createTaskAxes: string[];
     operationalIntents: string[];
   };
+  registry: {
+    operationalIntents: Array<{
+      value: string;
+      label: string;
+      defaultAxis: string | null;
+      expectedOutcome: 'task:sales' | 'task:account' | 'no-op';
+      taskTitle: string | null;
+      keywords: readonly string[];
+      examples: readonly string[];
+    }>;
+    conditions: Array<{
+      value: string;
+      label: string;
+      category: string;
+      valueType: string;
+      aiDerived: boolean;
+      optionSource: string;
+    }>;
+    actions: Array<{
+      value: string;
+      label: string;
+      createsTask: boolean;
+      mutatesCustomer: boolean;
+      auditOnly: boolean;
+    }>;
+  };
   examples: string[];
 }
 
