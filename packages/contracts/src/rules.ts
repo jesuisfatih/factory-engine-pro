@@ -401,6 +401,22 @@ export interface WorkflowOperationalContractProbeResponse {
     supportMatchedRuleCount: number;
   };
   transcript: {
+    coverageWindowDays: number;
+    transcriptEvents: number;
+    evaluatedEvents: number;
+    flowCompletedEvents: number;
+    workflowInvariantOk: boolean;
+    missingEvaluationCount: number;
+    missingFlowOutcomeCount: number;
+    staleResolverVersionCount: number;
+    resolverQueuedOrProcessingCount: number;
+    resolverFailedCount: number;
+    failedEvaluationCount: number;
+    unmatchedEvaluationCount: number;
+    noActionEvaluationCount: number;
+    noActionWithReasonCount: number;
+    noActionMissingReasonCount: number;
+    issues: string[];
     taskCreationTrigger: 'call.operational_signal.detected';
     blockedTaskTriggers: string[];
     activeNonOperationalTaskRuleCount: number;

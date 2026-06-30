@@ -15,6 +15,7 @@ import {
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
+  TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   OPERATIONAL_INTENTS,
   OPERATIONAL_INTENT_REGISTRY,
   createTaskAxisSchema,
@@ -2507,6 +2508,7 @@ export class RulesService {
     const supportMatchedRuleCount = await this.prisma.db.serviceRequest.count({
       where: { tenantId, axis: 'support', matchedRuleId: { not: null } },
     });
+    const transcriptAudit = await this.operationalTranscriptAudit(tenantId);
 
     const defaultRulesByIntent = workflowRulesByOperationalIntent(DEFAULT_WORKFLOW_RULES.map((rule) => ({
       id: defaultRuleKeyFromInput(rule),
@@ -2560,7 +2562,8 @@ export class RulesService {
       + (supportAxisAllowed ? 1 : 0)
       + (workflowSourceAllowed ? 1 : 0)
       + activeCallDerivedTaskBypassRules.length
-      + mcpIssues.length;
+      + mcpIssues.length
+      + transcriptAudit.issues.length;
 
     return {
       ok: issueCount === 0,
@@ -2581,6 +2584,7 @@ export class RulesService {
         supportMatchedRuleCount,
       },
       transcript: {
+        ...transcriptAudit,
         taskCreationTrigger: 'call.operational_signal.detected',
         blockedTaskTriggers: CALL_DERIVED_TASK_BYPASS_TRIGGERS,
         activeNonOperationalTaskRuleCount: activeCallDerivedTaskBypassRules.length,
@@ -2595,6 +2599,89 @@ export class RulesService {
         allowedActions: MCP_ALLOWED_ACTIONS,
         issues: mcpIssues,
       },
+    };
+  }
+
+  private async operationalTranscriptAudit(tenantId: string) {
+    const coverageWindowDays = 7;
+    const to = new Date();
+    const from = new Date(to.getTime() - coverageWindowDays * 86_400_000);
+    const transcriptRows = await this.prisma.db.aircallCallEvent.findMany({
+      where: {
+        tenantId,
+        eventTimestamp: { gte: from, lte: to },
+        transcriptRaw: { not: null },
+      },
+      select: {
+        id: true,
+        resolverStatus: true,
+        resolvedAt: true,
+        resolvedWithVersion: true,
+        transcriptRaw: true,
+      },
+    }).then((rows) => rows.filter((row) => Boolean(row.transcriptRaw?.trim())));
+    const callEventIds = transcriptRows.map((row) => row.id);
+    const evaluations = callEventIds.length === 0
+      ? []
+      : await this.prisma.db.transcriptWorkflowEvaluation.findMany({
+          where: { tenantId, callEventId: { in: callEventIds }, status: { not: 'superseded' } },
+          select: {
+            callEventId: true,
+            status: true,
+            reason: true,
+          },
+        });
+    const evaluatedIds = new Set(evaluations.map((row) => row.callEventId));
+    const flowCompletedIds = new Set(evaluations
+      .filter((row) => isCompletedTranscriptWorkflowStatus(row.status))
+      .map((row) => row.callEventId));
+    const noActionRows = evaluations.filter((row) => isNoActionTranscriptWorkflowStatus(row.status));
+    const noActionMissingReasonCount = noActionRows.filter((row) => !row.reason?.trim()).length;
+    const staleResolverVersionCount = transcriptRows.filter((row) => (row.resolvedWithVersion ?? 0) > 0 && (row.resolvedWithVersion ?? 0) < TRANSCRIPT_RESOLVER_SCHEMA_VERSION).length;
+    const resolverQueuedOrProcessingCount = transcriptRows.filter((row) => {
+      const resolvedWithCurrentVersion = Boolean(row.resolvedAt) && (row.resolvedWithVersion ?? 0) >= TRANSCRIPT_RESOLVER_SCHEMA_VERSION;
+      return (row.resolverStatus === 'queued' || row.resolverStatus === 'processing') && !resolvedWithCurrentVersion;
+    }).length;
+    const resolverFailedCount = transcriptRows.filter((row) => row.resolverStatus === 'failed').length;
+    const failedEvaluationCount = evaluations.filter((row) => row.status === 'failed').length;
+    const unmatchedEvaluationCount = evaluations.filter((row) => isUnmatchedTranscriptWorkflowStatus(row.status)).length;
+    const missingEvaluationCount = transcriptRows.length - evaluatedIds.size;
+    const missingFlowOutcomeCount = transcriptRows.length - flowCompletedIds.size;
+    const workflowInvariantOk = missingEvaluationCount === 0
+      && missingFlowOutcomeCount === 0
+      && staleResolverVersionCount === 0
+      && resolverQueuedOrProcessingCount === 0
+      && resolverFailedCount === 0
+      && failedEvaluationCount === 0
+      && unmatchedEvaluationCount === 0
+      && noActionMissingReasonCount === 0;
+    const issues = [
+      ...(missingEvaluationCount > 0 ? [`${missingEvaluationCount} transcript(s) have no workflow evaluation.`] : []),
+      ...(missingFlowOutcomeCount > 0 ? [`${missingFlowOutcomeCount} transcript(s) have no completed workflow outcome.`] : []),
+      ...(staleResolverVersionCount > 0 ? [`${staleResolverVersionCount} transcript(s) were resolved with an older resolver schema version.`] : []),
+      ...(resolverQueuedOrProcessingCount > 0 ? [`${resolverQueuedOrProcessingCount} transcript resolver job(s) are still queued or processing.`] : []),
+      ...(resolverFailedCount > 0 ? [`${resolverFailedCount} transcript resolver job(s) failed.`] : []),
+      ...(failedEvaluationCount > 0 ? [`${failedEvaluationCount} workflow evaluation(s) failed.`] : []),
+      ...(unmatchedEvaluationCount > 0 ? [`${unmatchedEvaluationCount} workflow evaluation(s) reached no matching rule.`] : []),
+      ...(noActionMissingReasonCount > 0 ? [`${noActionMissingReasonCount} no_action evaluation(s) are missing an explicit reason.`] : []),
+    ];
+    return {
+      coverageWindowDays,
+      transcriptEvents: transcriptRows.length,
+      evaluatedEvents: evaluatedIds.size,
+      flowCompletedEvents: flowCompletedIds.size,
+      workflowInvariantOk,
+      missingEvaluationCount,
+      missingFlowOutcomeCount,
+      staleResolverVersionCount,
+      resolverQueuedOrProcessingCount,
+      resolverFailedCount,
+      failedEvaluationCount,
+      unmatchedEvaluationCount,
+      noActionEvaluationCount: noActionRows.length,
+      noActionWithReasonCount: noActionRows.length - noActionMissingReasonCount,
+      noActionMissingReasonCount,
+      issues,
     };
   }
 
@@ -2998,6 +3085,21 @@ function normalizeHumanText(value: unknown) {
     .trim();
 }
 
+function isCompletedTranscriptWorkflowStatus(status: string) {
+  return status === 'task_created'
+    || status === 'matched_without_task'
+    || status === 'cooldown_suppressed'
+    || status === 'no_action'
+    || status === 'no_action_unmatched';
+}
+
+function isNoActionTranscriptWorkflowStatus(status: string) {
+  return status === 'no_action' || status === 'no_action_unmatched';
+}
+
+function isUnmatchedTranscriptWorkflowStatus(status: string) {
+  return status === 'no_matching_rule' || status === 'no_action_unmatched';
+}
 
 function normalizeCooldown(definition: WorkflowRuleDefinition): RuleCooldownConfig {
   const raw = definition.cooldown;
