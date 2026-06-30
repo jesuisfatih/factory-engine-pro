@@ -2466,6 +2466,17 @@ export class RulesService {
       where: { tenantId, trigger: 'call.operational_signal.detected', status: 'active' },
       orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
     });
+    const activeNonOperationalTranscriptTaskRules = await this.prisma.db.workflowRule.findMany({
+      where: {
+        tenantId,
+        status: 'active',
+        trigger: { in: NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS },
+      },
+      orderBy: [{ trigger: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }],
+    }).then((rules) => rules.filter((rule) => {
+      const parsed = workflowRuleDefinitionSchema.safeParse(rule.definition);
+      return parsed.success && parsed.data.actions.some((action) => action.action === 'create_task');
+    }));
     const supportMatchedRuleCount = await this.prisma.db.serviceRequest.count({
       where: { tenantId, axis: 'support', matchedRuleId: { not: null } },
     });
@@ -2521,6 +2532,7 @@ export class RulesService {
       + supportMatchedRuleCount
       + (supportAxisAllowed ? 1 : 0)
       + (workflowSourceAllowed ? 1 : 0)
+      + activeNonOperationalTranscriptTaskRules.length
       + mcpIssues.length;
 
     return {
@@ -2540,6 +2552,16 @@ export class RulesService {
         supportAxisAllowed,
         workflowSourceAllowed,
         supportMatchedRuleCount,
+      },
+      transcript: {
+        taskCreationTrigger: 'call.operational_signal.detected',
+        blockedTaskTriggers: NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS,
+        activeNonOperationalTaskRuleCount: activeNonOperationalTranscriptTaskRules.length,
+        activeNonOperationalTaskRules: activeNonOperationalTranscriptTaskRules.map((rule) => ({
+          id: rule.id,
+          name: rule.name,
+          trigger: rule.trigger,
+        })),
       },
       mcp: {
         allowedTriggers: MCP_ALLOWED_TRIGGERS,
@@ -2640,6 +2662,15 @@ const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
   'route_segment_owner',
   'add_watcher',
   'escalate',
+];
+
+const NON_OPERATIONAL_TRANSCRIPT_TASK_TRIGGERS: WorkflowTrigger[] = [
+  'aircall.transcript.received',
+  'call_intent.classified',
+  'psych.tag.detected',
+  'product.detected_in_transcript',
+  'customer.matched_from_transcript',
+  'psych.analysis.completed',
 ];
 
 const MCP_OPERATIONAL_INTENT_KEYWORDS: Array<[WorkflowMcpDraftRuleResponse['detectedIntent'], readonly string[]]> = [

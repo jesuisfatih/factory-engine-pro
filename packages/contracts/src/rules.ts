@@ -374,6 +374,16 @@ export interface WorkflowOperationalContractProbeResponse {
     workflowSourceAllowed: boolean;
     supportMatchedRuleCount: number;
   };
+  transcript: {
+    taskCreationTrigger: 'call.operational_signal.detected';
+    blockedTaskTriggers: string[];
+    activeNonOperationalTaskRuleCount: number;
+    activeNonOperationalTaskRules: Array<{
+      id: string;
+      name: string;
+      trigger: string;
+    }>;
+  };
   mcp: {
     allowedTriggers: string[];
     allowedActions: string[];
