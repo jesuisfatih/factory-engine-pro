@@ -21,7 +21,7 @@ import { type NavId } from './types';
 const TITLES: Record<NavId, string> = {
   queue: 'Call Queue',
   'daily-archive': 'Daily Archive',
-  customers: 'Customers',
+  customers: 'Routine Call List',
   'customer-archive': 'Customer Archive',
   email: 'E-mail',
   training: 'Training',

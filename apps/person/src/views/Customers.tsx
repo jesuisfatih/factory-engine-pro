@@ -93,7 +93,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const columns = useMemo<ColumnDef<CustomerRow>[]>(() => [
     {
       id: 'name',
-      header: 'Customer',
+      header: archive ? 'Customer' : 'Call contact',
       cell: ({ row }) => (
         <div>
           <div className="cust-name">{row.original.name}</div>
@@ -177,10 +177,10 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   return (
     <>
       <div className="kpis">
-        <div className="kpi"><div className="label">{archive ? 'Shopify customers' : 'Customers'}</div><div className="val">{totalCustomers}</div><div className="sub">{archive ? `${pageStart}-${pageEnd} visible` : 'in your segments'}</div></div>
-        <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'across portfolio'}</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Shopify customers' : 'Call contacts'}</div><div className="val">{totalCustomers}</div><div className="sub">{archive ? `${pageStart}-${pageEnd} visible` : 'assigned calling list'}</div></div>
+        <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'from assigned contacts'}</div></div>
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
-        <div className="kpi"><div className="label">Avg orders</div><div className="val">{avgOrders}</div><div className="sub">per customer</div></div>
+        <div className="kpi"><div className="label">Avg orders</div><div className="val">{avgOrders}</div><div className="sub">{archive ? 'per customer' : 'per contact'}</div></div>
         <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'on this page' : 'owned'}</div></div>
       </div>
 
@@ -200,8 +200,8 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         isLoading={isLoading}
         error={error ? new Error(friendlyError(error)) : null}
         empty={customers.length === 0}
-        emptyTitle={archive ? 'No Shopify customers in archive' : 'No customers in this workspace'}
-        emptyBody={archive ? 'Run Shopify customer sync before the archive can show live customers.' : 'Shopify sync or customer import needs to add customers before this table fills.'}
+        emptyTitle={archive ? 'No Shopify customers in archive' : 'No routine call contacts yet'}
+        emptyBody={archive ? 'Run Shopify customer sync before the archive can show live customers.' : 'Assigned segment contacts will appear here when they enter your regular calling list.'}
       >
       <div className="data-card">
         <table className="data-table">

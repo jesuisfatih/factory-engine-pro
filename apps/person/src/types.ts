@@ -149,7 +149,7 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { id: 'queue', label: 'Call Queue', group: 'Workspace' },
   { id: 'daily-archive', label: 'Daily Archive', group: 'Workspace' },
-  { id: 'customers', label: 'Customers', group: 'Workspace' },
+  { id: 'customers', label: 'Routine Call List', group: 'Workspace' },
   { id: 'customer-archive', label: 'Customer Archive', group: 'Workspace' },
   { id: 'email', label: 'E-mail', group: 'Workspace' },
   { id: 'calendar', label: 'Calendar', group: 'Workspace' },
