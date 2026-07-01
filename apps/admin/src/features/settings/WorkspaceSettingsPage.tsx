@@ -32,6 +32,7 @@ interface McpTokenFormState {
   label: string;
   expiresInDays: number;
   canPublish: boolean;
+  canReadAircallTranscripts: boolean;
 }
 
 const tenantConfigQueryKey = ['identity', 'tenant-config'];
@@ -46,6 +47,7 @@ const emptyMcpForm: McpTokenFormState = {
   label: 'Claude workflow access',
   expiresInDays: 90,
   canPublish: true,
+  canReadAircallTranscripts: true,
 };
 
 const URGENCY_WEIGHT_FIELDS = ['segmentWeight', 'repeatCountWeight', 'intentWeight', 'aiUrgencyWeight', 'waitingHoursWeight'] as const;
@@ -305,6 +307,7 @@ function McpAccessPanel({ canWrite }: { canWrite: boolean }) {
         label: form.label,
         expiresInDays: Number(form.expiresInDays),
         canPublish: form.canPublish,
+        canReadAircallTranscripts: form.canReadAircallTranscripts,
       });
       if (!parsed.success) {
         const message = parsed.error.issues[0]?.message ?? t('settings.workspace.mcp_validation_invalid');
@@ -380,6 +383,18 @@ function McpAccessPanel({ canWrite }: { canWrite: boolean }) {
               <small>{t('settings.workspace.mcp_can_publish_hint')}</small>
             </span>
           </label>
+          <label className="mcp-check">
+            <input
+              type="checkbox"
+              checked={form.canReadAircallTranscripts}
+              onChange={(event) => setForm((current) => ({ ...current, canReadAircallTranscripts: event.target.checked }))}
+              disabled={!canWrite || create.isPending}
+            />
+            <span>
+              <strong>{t('settings.workspace.mcp_can_read_aircall')}</strong>
+              <small>{t('settings.workspace.mcp_can_read_aircall_hint')}</small>
+            </span>
+          </label>
         </div>
         {validationError && <div className="error-state">{validationError}</div>}
         <button type="button" id="btn-create-mcp-token" className="btn primary" disabled={!canWrite || create.isPending} onClick={() => create.mutate()}>
@@ -431,7 +446,7 @@ function McpAccessPanel({ canWrite }: { canWrite: boolean }) {
             <div className="mcp-token-row" key={token.id}>
               <div>
                 <strong>{token.label}</strong>
-                <span>{token.canPublish ? t('settings.workspace.mcp_publish_enabled') : t('settings.workspace.mcp_read_only')}</span>
+                <span>{mcpTokenScopeLabel(token.canPublish, token.canReadAircallTranscripts, t)}</span>
                 <small>{t('settings.workspace.mcp_expires_at')}: {formatDateTime(token.expiresAt)}{token.lastFour ? ` · ...${token.lastFour}` : ''}</small>
               </div>
               <span className={`pill ${token.status === 'active' ? 'success' : token.status === 'revoked' ? 'danger' : 'warn'}`}>{token.status}</span>
@@ -473,16 +488,22 @@ function claudeConfig(token: string, tenantId: string) {
   return {
     mcpServers: {
       'factory-engine-workflow': {
-        command: 'node',
-        args: ['C:/Users/mhmmd/Desktop/factory-engine-pro/packages/workflow-mcp/dist/index.js'],
-        env: {
-          FACTORY_ENGINE_API_URL: ADMIN_API_BASE_URL,
-          FACTORY_ENGINE_ACCESS_TOKEN: token,
-          FACTORY_ENGINE_TENANT_ID: tenantId,
+        type: 'streamable-http',
+        url: `${ADMIN_API_BASE_URL.replace(/\/$/, '')}/mcp/workflow`,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-tenant-id': tenantId,
         },
       },
     },
   };
+}
+
+function mcpTokenScopeLabel(canPublish: boolean, canReadAircallTranscripts: boolean, t: ReturnType<typeof useTranslation>['t']) {
+  if (canPublish && canReadAircallTranscripts) return t('settings.workspace.mcp_full_workflow_aircall');
+  if (canPublish) return t('settings.workspace.mcp_publish_enabled');
+  if (canReadAircallTranscripts) return t('settings.workspace.mcp_aircall_read_only');
+  return t('settings.workspace.mcp_read_only');
 }
 
 async function copyText(value: string, message: string) {

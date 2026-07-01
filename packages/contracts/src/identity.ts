@@ -86,6 +86,7 @@ export const createMcpTokenSchema = z.object({
   label: z.string().trim().min(2, 'Token label is required').max(80),
   expiresInDays: z.number().int().min(1).max(365).default(90),
   canPublish: z.boolean().default(false),
+  canReadAircallTranscripts: z.boolean().default(true),
 });
 export type CreateMcpTokenInput = z.infer<typeof createMcpTokenSchema>;
 
@@ -94,6 +95,7 @@ export interface McpTokenDto {
   label: string;
   permissions: string[];
   canPublish: boolean;
+  canReadAircallTranscripts: boolean;
   status: 'active' | 'expired' | 'revoked';
   lastFour: string | null;
   createdById: string | null;

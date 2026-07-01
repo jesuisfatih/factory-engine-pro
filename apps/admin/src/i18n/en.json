@@ -624,6 +624,8 @@
       "mcp_expires": "Expires in days",
       "mcp_can_publish": "Allow publishing",
       "mcp_can_publish_hint": "Adds settings.write so approved rules can be published after simulation.",
+      "mcp_can_read_aircall": "Allow Aircall transcripts",
+      "mcp_can_read_aircall_hint": "Adds aircall.users.read so the MCP client can list, download, and export call transcripts.",
       "mcp_create": "Create token",
       "mcp_creating": "Creating",
       "mcp_created": "MCP token created",
@@ -646,6 +648,8 @@
       "mcp_active_tokens": "Recent tokens",
       "mcp_expires_at": "Expires",
       "mcp_publish_enabled": "Draft, simulate, and publish",
+      "mcp_full_workflow_aircall": "Rules plus Aircall transcripts",
+      "mcp_aircall_read_only": "Draft, simulate, and transcript read",
       "mcp_read_only": "Draft and simulate only",
       "mcp_validation_invalid": "MCP token settings are invalid"
     },

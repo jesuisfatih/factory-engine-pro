@@ -260,9 +260,11 @@ export class AuthService {
     if (context.principalType !== 'member' || !context.principalId) {
       throw new BadRequestException('MCP tokens can only be created by workspace members');
     }
-    const permissions = input.canPublish
-      ? [MEMBER_PERMISSIONS.settingsRead, MEMBER_PERMISSIONS.settingsWrite]
-      : [MEMBER_PERMISSIONS.settingsRead];
+    const permissions = [
+      MEMBER_PERMISSIONS.settingsRead,
+      ...(input.canPublish ? [MEMBER_PERMISSIONS.settingsWrite] : []),
+      ...(input.canReadAircallTranscripts ? [MEMBER_PERMISSIONS.aircallUsersRead] : []),
+    ];
     const expiresAt = new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000);
     const token = await this.sessions.issueMcpAccessToken({
       tenantId,
@@ -281,6 +283,7 @@ export class AuthService {
       metadata: {
         label: input.label,
         canPublish: input.canPublish,
+        canReadAircallTranscripts: input.canReadAircallTranscripts,
         permissions,
         lastFour: token.slice(-8),
         surface: 'workflow_mcp',
@@ -290,6 +293,7 @@ export class AuthService {
       token_id: row.id,
       principal_id: context.principalId,
       can_publish: input.canPublish,
+      can_read_aircall_transcripts: input.canReadAircallTranscripts,
       expires_at: expiresAt.toISOString(),
     });
     return {
@@ -347,6 +351,7 @@ export class AuthService {
       label: typeof metadata.label === 'string' && metadata.label.trim() ? metadata.label : 'Workflow MCP token',
       permissions,
       canPublish: metadata.canPublish === true,
+      canReadAircallTranscripts: metadata.canReadAircallTranscripts === true || permissions.includes(MEMBER_PERMISSIONS.aircallUsersRead),
       status,
       lastFour: typeof metadata.lastFour === 'string' ? metadata.lastFour : null,
       createdById: row.createdById,
