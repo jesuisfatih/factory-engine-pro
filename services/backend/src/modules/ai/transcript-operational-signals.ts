@@ -275,8 +275,9 @@ export const PURCHASE_SIGNAL_KEYWORDS = [
 
 export function transcriptOperationalSignals(output: TranscriptResolverOutput, options: { customerMatched: boolean; sourceTranscript?: string | null }): TranscriptOperationalSignal[] {
   const derived = new Map<string, TranscriptOperationalSignal>();
+  const rawTranscript = options.sourceTranscript ?? '';
   const sourceText = [
-    options.sourceTranscript ?? '',
+    rawTranscript,
     output.summary,
     output.call_intent,
     output.psych_tags.join(' '),
@@ -289,7 +290,7 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   if (isCarrierVendorOnlyTranscript(sourceText, { customerMatched: options.customerMatched || Boolean(output.customer_match.customer_id) })) {
     return [noActionSignal('Carrier or freight vendor contact was captured without a matched customer, Shopify order, or DTF product request.')];
   }
-  if (isNonCatalogPromoPatchInquiry(sourceText)) {
+  if (isNonCatalogPromoPatchInquiry(rawTranscript || sourceText)) {
     return [noActionSignal('Promotional patch, embroidery, digitizing, or vendor-service talk was captured without a DTF Bank product purchase or account follow-up request.')];
   }
 
