@@ -50,7 +50,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
   const performance = card.performance30d
     ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
     : '30d customer activity pending';
-  const staffSegment = card.source === 'call_analysis' ? actionLabel : personSafeText(card.segment);
+  const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
   return (
     <div
       className="card"
@@ -89,7 +89,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
         <span title="Last 30 days"><Activity size={10} /> {performance}</span>
       </div>
       <div className="row2">
-        <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span>
+        {staffSegment ? <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span> : null}
         <button
           type="button"
           className={`pin-btn${card.pinned ? ' pinned' : ''}`}

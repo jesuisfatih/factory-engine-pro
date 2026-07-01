@@ -57,13 +57,16 @@ type StaffActionInput = {
 
 export function staffActionLabel(input: StaffActionInput) {
   const signal = actionSignal(input);
-  if (signal.includes('refund') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) {
+  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing')) {
+    return 'Payment/refund issue - clarify next step';
+  }
+  if (signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) {
     return 'Customer concern - handle carefully';
   }
   if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('freight')) {
     return 'Delivery issue - give next step';
   }
-  if (signal.includes('callback') || signal.includes('follow_up') || signal.includes('follow up') || signal.includes('call back')) {
+  if (signal.includes('callback') || signal.includes('follow up') || signal.includes('call back')) {
     return 'Callback requested - call back';
   }
   if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('sale')) {
@@ -78,8 +81,8 @@ export function staffActionLabel(input: StaffActionInput) {
 
 export function staffActionTone(input: StaffActionInput) {
   const signal = actionSignal(input);
-  if (signal.includes('refund') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
-  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow_up')) return 'warn';
+  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
+  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow up')) return 'warn';
   if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('sale')) return 'success';
   if ((input.urgencyScore ?? 0) >= 8) return 'danger';
   if ((input.urgencyScore ?? 0) >= 6) return 'warn';
@@ -103,7 +106,32 @@ function actionSignal(input: StaffActionInput) {
     input.upset,
     input.goal,
     input.summary,
-  ].map((value) => normalizeKey(personSafeText(value))).join(' ');
+  ].map((value) => positiveSignalText(value)).filter(Boolean).join(' ');
+}
+
+function positiveSignalText(value: string | null | undefined) {
+  const normalized = normalizeSearchText(value);
+  if (!normalized) return '';
+  if (isNegativeComplaintSignal(normalized)) return normalized
+    .replace(/\bno (explicit )?complaint\b[^.;]*/g, '')
+    .replace(/\bno customer (complaint|request)\b[^.;]*/g, '')
+    .trim();
+  return normalized;
+}
+
+function isNegativeComplaintSignal(value: string) {
+  return value.includes('no explicit complaint')
+    || value.includes('no customer complaint')
+    || value.includes('no complaint')
+    || value.includes('not a complaint');
+}
+
+function normalizeSearchText(value: string | null | undefined) {
+  return personSafeText(value)
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function normalizeKey(value: string | null | undefined) {
