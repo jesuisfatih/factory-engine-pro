@@ -23,7 +23,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const qc = useQueryClient();
   const [archivePage, setArchivePage] = useState(0);
   const [archivePageSize, setArchivePageSize] = useState<ArchivePageSize>(DEFAULT_ARCHIVE_PAGE_SIZE);
-  const [archiveSearchDraft, setArchiveSearchDraft] = useState('');
   const [archiveSearch, setArchiveSearch] = useState('');
   const archiveOffset = archive ? archivePage * archivePageSize : 0;
   const { data, isLoading, isFetching, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
@@ -31,6 +30,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     queryFn: () => archive
       ? fetchCustomerArchive({ limit: archivePageSize, offset: archiveOffset, search: archiveSearch || undefined })
       : fetchCustomers(),
+    placeholderData: (previous) => previous,
   });
   const archiveResult = archive && data && !Array.isArray(data) ? data : null;
   const customers = Array.isArray(data) ? data : archiveResult?.items ?? [];
@@ -56,7 +56,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setArchivePage(0);
     setArchivePageSize(DEFAULT_ARCHIVE_PAGE_SIZE);
     setArchiveSearch('');
-    setArchiveSearchDraft('');
   }, [archive]);
 
   const openCustomerDetail = (customerId: string) => {
@@ -160,15 +159,13 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const pageEnd = Math.min(archiveOffset + customers.length, totalCustomers);
   const hasPrevPage = archive && archivePage > 0;
   const hasNextPage = archive && pageEnd < totalCustomers;
-  const applyArchiveSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const applyArchiveSearch = (value: string) => {
     setArchivePage(0);
-    setArchiveSearch(archiveSearchDraft.trim());
+    setArchiveSearch(value.trim());
   };
   const clearArchiveSearch = () => {
     setArchivePage(0);
     setArchiveSearch('');
-    setArchiveSearchDraft('');
   };
   const changeArchivePageSize = (value: string) => {
     const next = Number(value) as ArchivePageSize;
@@ -188,27 +185,15 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
       </div>
 
       {archive ? (
-        <form className="archive-toolbar" onSubmit={applyArchiveSearch}>
-          <label>
-            Search archive
-            <input
-              value={archiveSearchDraft}
-              onChange={(event) => setArchiveSearchDraft(event.target.value)}
-              placeholder="Customer, email, phone, Shopify ID..."
-            />
-          </label>
-          <label className="archive-page-size">
-            Rows
-            <select value={archivePageSize} onChange={(event) => changeArchivePageSize(event.target.value)}>
-              {ARCHIVE_PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="archive-toolbar-btn">Search</button>
-          {archiveSearch ? <button type="button" className="archive-toolbar-btn" onClick={clearArchiveSearch}>Clear</button> : null}
-          <span>{isFetching ? 'Loading archive...' : `Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}</span>
-        </form>
+        <ArchiveSearchToolbar
+          activeSearch={archiveSearch}
+          pageSize={archivePageSize}
+          isFetching={isFetching}
+          resultLabel={`Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}
+          onSearch={applyArchiveSearch}
+          onClear={clearArchiveSearch}
+          onPageSizeChange={changeArchivePageSize}
+        />
       ) : null}
 
       <QueryState
@@ -284,6 +269,61 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
 
 function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
+}
+
+function ArchiveSearchToolbar({
+  activeSearch,
+  pageSize,
+  isFetching,
+  resultLabel,
+  onSearch,
+  onClear,
+  onPageSizeChange,
+}: {
+  activeSearch: string;
+  pageSize: ArchivePageSize;
+  isFetching: boolean;
+  resultLabel: string;
+  onSearch: (value: string) => void;
+  onClear: () => void;
+  onPageSizeChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(activeSearch);
+
+  useEffect(() => {
+    setDraft(activeSearch);
+  }, [activeSearch]);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSearch(draft);
+  };
+
+  return (
+    <form className="archive-toolbar" onSubmit={submit}>
+      <label>
+        Search archive
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Customer, email, phone, Shopify ID..."
+        />
+      </label>
+      <label className="archive-page-size">
+        Rows
+        <select value={pageSize} onChange={(event) => onPageSizeChange(event.target.value)}>
+          {ARCHIVE_PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>{size}</option>
+          ))}
+        </select>
+      </label>
+      <button type="submit" className="archive-toolbar-btn" disabled={isFetching}>
+        {isFetching ? 'Searching...' : 'Search'}
+      </button>
+      {activeSearch ? <button type="button" className="archive-toolbar-btn" onClick={onClear} disabled={isFetching}>Clear</button> : null}
+      <span>{isFetching ? 'Searching full archive...' : resultLabel}</span>
+    </form>
+  );
 }
 
 
