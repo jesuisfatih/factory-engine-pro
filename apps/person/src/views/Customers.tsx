@@ -7,7 +7,9 @@ import type { CustomerArchivePage, CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
 
-const ARCHIVE_PAGE_SIZE = 100;
+const ARCHIVE_PAGE_SIZE_OPTIONS = [10, 50, 100, 150] as const;
+type ArchivePageSize = (typeof ARCHIVE_PAGE_SIZE_OPTIONS)[number];
+const DEFAULT_ARCHIVE_PAGE_SIZE: ArchivePageSize = 10;
 
 const LIFECYCLE_LABEL: Record<CustomerRow['lifecycle'], string> = {
   lead: 'Lead', engaged: 'Engaged', active: 'Active', at_risk: 'At risk', churned: 'Churned',
@@ -20,13 +22,14 @@ function fmtMoney(value: number) {
 export function CustomersView({ archive = false }: { archive?: boolean }) {
   const qc = useQueryClient();
   const [archivePage, setArchivePage] = useState(0);
+  const [archivePageSize, setArchivePageSize] = useState<ArchivePageSize>(DEFAULT_ARCHIVE_PAGE_SIZE);
   const [archiveSearchDraft, setArchiveSearchDraft] = useState('');
   const [archiveSearch, setArchiveSearch] = useState('');
-  const archiveOffset = archive ? archivePage * ARCHIVE_PAGE_SIZE : 0;
-  const { data, isLoading, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
-    queryKey: ['person', archive ? 'customer-archive' : 'customers', archive ? archivePage : 0, archive ? archiveSearch : ''],
+  const archiveOffset = archive ? archivePage * archivePageSize : 0;
+  const { data, isLoading, isFetching, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
+    queryKey: ['person', archive ? 'customer-archive' : 'customers', archive ? archivePage : 0, archive ? archivePageSize : 0, archive ? archiveSearch : ''],
     queryFn: () => archive
-      ? fetchCustomerArchive({ limit: ARCHIVE_PAGE_SIZE, offset: archiveOffset, search: archiveSearch || undefined })
+      ? fetchCustomerArchive({ limit: archivePageSize, offset: archiveOffset, search: archiveSearch || undefined })
       : fetchCustomers(),
   });
   const archiveResult = archive && data && !Array.isArray(data) ? data : null;
@@ -51,6 +54,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setNoteTarget(null);
     setNoteBody('');
     setArchivePage(0);
+    setArchivePageSize(DEFAULT_ARCHIVE_PAGE_SIZE);
     setArchiveSearch('');
     setArchiveSearchDraft('');
   }, [archive]);
@@ -166,6 +170,12 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setArchiveSearch('');
     setArchiveSearchDraft('');
   };
+  const changeArchivePageSize = (value: string) => {
+    const next = Number(value) as ArchivePageSize;
+    if (!ARCHIVE_PAGE_SIZE_OPTIONS.includes(next)) return;
+    setArchivePage(0);
+    setArchivePageSize(next);
+  };
 
   return (
     <>
@@ -187,9 +197,17 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
               placeholder="Customer, email, phone, Shopify ID..."
             />
           </label>
+          <label className="archive-page-size">
+            Rows
+            <select value={archivePageSize} onChange={(event) => changeArchivePageSize(event.target.value)}>
+              {ARCHIVE_PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
           <button type="submit" className="archive-toolbar-btn">Search</button>
           {archiveSearch ? <button type="button" className="archive-toolbar-btn" onClick={clearArchiveSearch}>Clear</button> : null}
-          <span>{isLoading ? 'Loading archive...' : `Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}</span>
+          <span>{isFetching ? 'Loading archive...' : `Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}</span>
         </form>
       ) : null}
 

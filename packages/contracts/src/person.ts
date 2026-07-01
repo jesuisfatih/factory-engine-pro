@@ -303,7 +303,7 @@ export const personDailyOperationsQuerySchema = z.object({
 export type PersonDailyOperationsQuery = z.infer<typeof personDailyOperationsQuerySchema>;
 
 export const personCustomerArchiveQuerySchema = z.object({
-  limit: z.coerce.number().int().min(25).max(200).default(100),
+  limit: z.coerce.number().int().min(10).max(150).default(10),
   offset: z.coerce.number().int().min(0).default(0),
   search: z.string().trim().max(120).optional().transform((value) => value || undefined),
 });
