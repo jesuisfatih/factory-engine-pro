@@ -110,6 +110,67 @@ Local stdio bridge clients may still run `packages/workflow-mcp/dist/index.js`, 
 
 Agents should discover the markdown through `agentGuide.endpoint` in capabilities and read it through `read_workflow_agent_guide`. Users should not need to paste this markdown into a separate MVP prompt.
 
+### Remote Token Permissions
+
+Remote MCP tokens are scoped. A token that can read this guide is not automatically allowed to inspect transcripts or mutate rules.
+
+Minimum permission map:
+
+- `settings.read`: read guide, list capabilities, list rules, get rules, draft/validate/simulate rules.
+- `settings.write`: create stored drafts, publish rules, archive rules, restore rules.
+- `aircall.users.read`: list, download, and export Aircall transcript evidence.
+
+If an agent gets `You do not have permission to use this MCP tool`, inspect the token permission list before debugging the tool itself. For transcript work, the token must include `aircall.users.read`.
+
+### Aircall Transcript Evidence Workflow
+
+Use transcript tools to fetch only the calls needed for proof or rule design:
+
+```json
+{
+  "tool": "list_aircall_transcripts",
+  "input": {
+    "agent": "Linda",
+    "limit": 10
+  }
+}
+```
+
+`agent` resolves against Factory Engine members by name, email, or Aircall user id, then filters exact `member.aircallUserId`. It is not a fuzzy transcript text search. This prevents Ihsan calls from being treated as Linda calls, or the reverse.
+
+For a specific call, download by `callEventId`:
+
+```json
+{
+  "tool": "download_aircall_transcript",
+  "input": {
+    "callEventId": "aircall_event_id_here"
+  }
+}
+```
+
+For a bounded handoff package, export with a small limit:
+
+```json
+{
+  "tool": "export_aircall_transcripts",
+  "input": {
+    "agent": "Linda",
+    "limit": 10,
+    "format": "jsonl"
+  }
+}
+```
+
+Do not ask an LLM to read every transcript repeatedly. List metadata first, download only the exact call, and reuse stored resolver output before using raw transcript text.
+
+Live proof from the DTF Bank setup:
+
+- Linda resolves to Aircall user id `1831312`.
+- `list_aircall_transcripts` with `agent="Linda"` and `limit=10` returned 10 Linda-only calls.
+- `export_aircall_transcripts` with the same filter returned 10 JSONL rows.
+- `download_aircall_transcript` returned the selected transcript plus resolver output.
+
 ## Staff Brief Contract
 
 Transcript resolver schema v4 includes a `person_brief` JSON object. This object is the source for the staff task modal narrative:
@@ -278,6 +339,47 @@ product_role_is = spare_part
 ```
 
 That must be rejected.
+
+## Shopify Data And MCP
+
+Yes, Shopify data can be connected to MCP, but it must not be exposed as one unbounded "dump all Shopify" tool.
+
+The current rule authoring surface already uses Shopify-derived data in deterministic places:
+
+- live catalog product language for product family, role, category, SKU, aliases, and collections
+- prior purchase guards such as `previous_purchase_includes`, `previous_purchase_family_includes`, and `owned_machine_family_is`
+- customer order context guards such as `customer_ltv_gte`, `order_count_in_window`, and `last_order_age_lte`
+- segment membership guards such as `segment_member`
+
+Future Shopify MCP tools should be read-only, paginated, tenant-scoped, and purpose-built:
+
+- `search_shopify_customers`: search by name, email, phone, company, or Shopify customer id.
+- `get_shopify_customer`: return profile, phones, emails, tags, addresses, segment memberships, LTV, order counts, and recent order summary.
+- `list_shopify_orders`: list orders by customer, date window, status, order number, or product/SKU filter.
+- `get_shopify_order`: return one order with line items, SKU, product family, totals, fulfillments, refunds, and timeline facts.
+- `search_shopify_products`: search synced catalog by title, handle, SKU, family, role, category, vendor, tag, or collection.
+- `get_shopify_product`: return one product with variants, SKUs, taxonomy, aliases, collections, and active status.
+- `list_shopify_segments`: list synced Shopify segments with ownership and membership counts.
+- `get_shopify_segment_members`: page through segment members with cursor and limit.
+- `get_shopify_sync_status`: show last sync state for customers, orders, products, and segments.
+
+Required guardrails:
+
+- Default limit should be small, maximum page size should be capped, and all list tools must use cursor pagination.
+- No Shopify admin token, webhook secret, encrypted credential, or integration secret may be returned.
+- Use local synced database rows first. Use live Shopify API fallback only for a single customer, order, or product detail lookup when the synced row is missing or stale.
+- Do not expose mutation tools for discounts, orders, refunds, customer edits, segment membership edits, or deletion in this MVP.
+- Do not feed full customer archives or full order histories into prompts. Fetch summaries first, then fetch one selected detail object.
+- Tool output must carry enough source metadata to distinguish synced DB data from live Shopify fallback.
+
+Recommended permissions:
+
+- `customers.read`: customer profile, addresses, customer segment memberships.
+- `orders.read`: order list, order detail, refunds/fulfillment facts.
+- `pricing.read` or `settings.read`: catalog/product taxonomy lookup used by rule authoring.
+- `settings.read`: sync status and rule authoring catalog language.
+
+The MCP agent should treat Shopify as business context for rule drafting and staff brief explanation, not as an action surface.
 
 ## Conditions
 
