@@ -53,6 +53,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
+import { isNonCatalogPromoPatchInquiry } from '../ai/transcript-operational-signals.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
@@ -2514,6 +2515,8 @@ export class PersonWorkspaceService {
     const columnId = personColumn(row.status, metadata.personColumnId);
     const source = taskSource(row);
     const header = taskHeader(row, metadata, callContext);
+    const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
+    const suppressLocalFallbackSignals = shouldSuppressLocalFallbackSignals(sourceCall);
     const ticket = ticketNumber(row);
     const workflowTrace = workflowTraceFromMetadata(metadata);
     const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
@@ -2548,8 +2551,8 @@ export class PersonWorkspaceService {
       pinnedAt,
       source,
       createdAt: row.createdAt.toISOString(),
-      callIntent: workflowBadges.callIntent,
-      psychTags: workflowBadges.psychTags,
+      callIntent: suppressLocalFallbackSignals ? 'inquiry' : workflowBadges.callIntent,
+      psychTags: suppressLocalFallbackSignals ? [] : workflowBadges.psychTags,
       phone: header.phone ?? undefined,
       email: header.email ?? undefined,
       ordersCount: row.customer?.ordersCount ?? undefined,
@@ -3096,6 +3099,20 @@ function transcriptPersonBrief(
   resolver: TranscriptResolverOutput,
   sourceCall?: CardCallRow | null,
 ): PersonTaskBrief {
+  if (shouldSuppressLocalFallbackSignals(sourceCall)) {
+    const transcript = sourceCall?.transcriptRaw?.replace(/\s+/g, ' ').trim() ?? '';
+    return {
+      whyCalling: 'Promo patch, embroidery, digitizing, or vendor-service talk was captured; no DTF Bank purchase or account follow-up request is confirmed.',
+      upsetAbout: 'No customer complaint or DTF Bank product request was confirmed in this call.',
+      callGoal: 'Do not treat this as a purchase follow-up unless a person confirms a real DTF Bank product need.',
+      suggestedActions: ['Skim the call excerpt for a real product request', 'If no DTF Bank product need exists, archive this follow-up', 'Do not promise refund, pricing, or reorder steps from this call alone'],
+      promptKey: 'person.workspace.local-fallback-suppressed',
+      promptVersion: String(sourceCall?.resolvedWithVersion ?? resolver.resolved_with_version ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+      modelUsed: sourceCall?.resolverModel ?? 'local-rule-fallback',
+      confidence: 0.35,
+      transcriptSnippet: transcript.slice(0, 500) || row.description?.slice(0, 240),
+    };
+  }
   const personBrief = resolver.person_brief;
   const synthesized = synthesizedResolverBrief(row, resolver, sourceCall);
   const suggestedActions = cleanedActions(personBrief.suggested_actions);
@@ -3191,6 +3208,12 @@ function resolverBriefConfidence(resolver: TranscriptResolverOutput) {
     ...resolver.operational_signals.map((signal) => signal.confidence),
   ].filter((value) => Number.isFinite(value));
   return Math.max(0.1, Math.min(1, values.length > 0 ? Math.max(...values) : 0.7));
+}
+
+function shouldSuppressLocalFallbackSignals(sourceCall?: CardCallRow | null) {
+  return sourceCall?.resolverModel === 'local-rule-fallback'
+    && Boolean(sourceCall.transcriptRaw)
+    && isNonCatalogPromoPatchInquiry(sourceCall.transcriptRaw ?? '');
 }
 
 function cleanedActions(values: Array<string | null | undefined>) {
@@ -3596,11 +3619,27 @@ function taskTimeline(
 function latestAiPsychAnalysis(calls: Array<{
   eventTimestamp: Date;
   resolvedAt: Date | null;
+  resolverModel: string | null;
   resolverOutput: Prisma.JsonValue | null;
   transcriptRaw: string | null;
 }>): PersonAiPsychAnalysis | null {
   const call = calls.find((row) => row.resolverOutput) ?? calls.find((row) => row.transcriptRaw);
   if (!call) return null;
+  if (call.resolverModel === 'local-rule-fallback' && call.transcriptRaw && isNonCatalogPromoPatchInquiry(call.transcriptRaw)) {
+    return {
+      communicationStyle: 'No confirmed follow-up',
+      decisionMakingStyle: 'Low',
+      trustLevel: null,
+      engagementLevel: null,
+      winProbability: null,
+      motivators: [],
+      objections: [],
+      buyingSignals: [],
+      hesitationSignals: ['Promo/vendor-service conversation'],
+      talkTrack: 'The local fallback detected promo patch or vendor-service talk, but no confirmed DTF Bank product purchase or account follow-up request.',
+      generatedAt: call.resolvedAt?.toISOString() ?? call.eventTimestamp.toISOString(),
+    };
+  }
   const output = asRecord(call.resolverOutput);
   const tags = stringArray(output.psych_tags);
   const shipping = asRecord(output.shipping_signals);

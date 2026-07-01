@@ -200,6 +200,21 @@ export function TaskBriefModal({ card, onClose }: Props) {
   const primaryBrief = staffBriefLine(actionInput);
   const directActions = directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions);
   const callSignal = callSignalText(detail);
+  const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
+  const purchaseSummary = latestOrder
+    ? `${latestOrder.orderNumber ?? latestOrder.id} - ${fmtMoney(latestOrder.totalPrice, latestOrder.currency)}`
+    : liveCard.ordersCount
+      ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
+      : 'No linked Shopify order yet';
+  const confidenceLabel = liveCard.aiBrief?.modelUsed === 'local-rule-fallback'
+    ? 'Needs review'
+    : liveCard.aiBrief?.confidence
+      ? `${Math.round(liveCard.aiBrief.confidence * 100)}% confident`
+      : 'Live data';
+  const matchLabel = customerMatched ? 'Matched customer' : 'Caller not matched yet';
+  const matchHint = customerMatched
+    ? 'Use order and note history before calling.'
+    : 'Confirm phone or email before promising order, refund, or pricing details.';
 
   return (
     <div
@@ -254,22 +269,45 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <>
                 {hasBrief ? (
                   <>
-                    <section className={`brief-command tone-${actionTone}`}>
-                      <div className="brief-command-main">
-                        <span>Do this now</span>
-                        <strong>{actionLabel}</strong>
+                    <section className={`brief-showcase tone-${actionTone}`}>
+                      <div className="brief-showcase-main">
+                        <span className="brief-showcase-kicker">Do this now</span>
+                        <h3>{actionLabel}</h3>
                         <p>{primaryBrief}</p>
+                        <div className="brief-showcase-actions">
+                          {directActions.slice(0, 3).map((action, index) => (
+                            <div key={`${action}-${index}`} className="brief-showcase-step">
+                              <span>{index + 1}</span>
+                              <strong>{action}</strong>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="brief-command-score">U{liveCard.urgencyScore}</div>
+                      <div className="brief-showcase-score">
+                        <span>Urgency</span>
+                        <strong>U{liveCard.urgencyScore}</strong>
+                        <em>{confidenceLabel}</em>
+                      </div>
                     </section>
 
-                    <div className="brief-directives">
-                      {directActions.map((action, index) => (
-                        <div key={`${action}-${index}`} className="brief-directive">
-                          <span>{index + 1}</span>
-                          <strong>{action}</strong>
-                        </div>
-                      ))}
+                    <div className="brief-snapshot-grid">
+                      <div className="brief-snapshot-card snapshot-call">
+                        <span>What happened</span>
+                        <strong>{why || primaryBrief}</strong>
+                      </div>
+                      <div className="brief-snapshot-card snapshot-match">
+                        <span>Customer match</span>
+                        <strong>{matchLabel}</strong>
+                        <em>{matchHint}</em>
+                      </div>
+                      <div className="brief-snapshot-card snapshot-order">
+                        <span>Purchase history</span>
+                        <strong>{purchaseSummary}</strong>
+                      </div>
+                      <div className="brief-snapshot-card snapshot-outcome">
+                        <span>Outcome to save</span>
+                        <strong>{goal || 'Save the next accountable result.'}</strong>
+                      </div>
                     </div>
 
                     <NarrativeField label="Reason for this call" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
@@ -485,6 +523,8 @@ export function TaskBriefModal({ card, onClose }: Props) {
 function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined) {
   const normalized = actionLabel.toLowerCase();
   const callStep = phone ? `Call ${phone} now.` : 'Find a valid phone number before closing this follow-up.';
+  const cleaned = (suggestedActions ?? []).map((action) => personSafeText(action).trim()).filter(Boolean);
+  if (cleaned.length >= 2) return [callStep, ...cleaned].slice(0, 3);
   if (normalized.includes('payment') || normalized.includes('refund')) {
     return [
       callStep,
@@ -520,7 +560,6 @@ function directiveActions(actionLabel: string, phone: string | undefined, sugges
       'Repeat the issue back, assign the next owner, and save the exact promise.',
     ];
   }
-  const cleaned = (suggestedActions ?? []).map((action) => personSafeText(action).trim()).filter(Boolean);
   return [callStep, ...cleaned, 'Save the result before leaving this screen.'].slice(0, 4);
 }
 

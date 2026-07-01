@@ -56,7 +56,7 @@ type StaffActionInput = {
 };
 
 export function staffActionLabel(input: StaffActionInput) {
-  const signal = actionSignal(input);
+  const signal = primaryActionSignal(input);
   if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing')) {
     return 'Payment/refund issue - clarify next step';
   }
@@ -80,7 +80,7 @@ export function staffActionLabel(input: StaffActionInput) {
 }
 
 export function staffActionTone(input: StaffActionInput) {
-  const signal = actionSignal(input);
+  const signal = primaryActionSignal(input);
   if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
   if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow up')) return 'warn';
   if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('sale')) return 'success';
@@ -91,22 +91,43 @@ export function staffActionTone(input: StaffActionInput) {
 
 export function staffBriefLine(input: StaffActionInput) {
   const candidates = [
-    input.upset,
     input.goal,
+    input.upset,
     input.summary,
   ].map((value) => personSafeText(value).trim()).filter(Boolean);
   const meaningful = candidates.find((value) => !/^no explicit complaint/i.test(value) && !/^no customer/i.test(value));
   return meaningful ?? candidates[0] ?? 'Review the customer context and record the next step.';
 }
 
+function primaryActionSignal(input: StaffActionInput) {
+  const evidence = actionSignal({
+    upset: input.upset,
+    goal: input.goal,
+    summary: input.summary,
+    urgencyScore: input.urgencyScore,
+  });
+  if (evidence && !isGenericReviewSignal(evidence)) return evidence;
+  return actionSignal(input);
+}
+
 function actionSignal(input: StaffActionInput) {
   return [
-    input.intent,
-    ...(input.tags ?? []),
     input.upset,
     input.goal,
     input.summary,
+    input.intent,
+    ...(input.tags ?? []),
   ].map((value) => positiveSignalText(value)).filter(Boolean).join(' ');
+}
+
+function isGenericReviewSignal(value: string) {
+  return value.includes('review transcript')
+    || value.includes('review call')
+    || value.includes('decide whether')
+    || value.includes('no confirmed follow up')
+    || value.includes('no clear customer follow up')
+    || value.includes('no dtf bank product request')
+    || value.includes('no follow up needed');
 }
 
 function positiveSignalText(value: string | null | undefined) {

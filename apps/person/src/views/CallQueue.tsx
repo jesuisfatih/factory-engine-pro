@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -44,6 +44,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const priority = data?.priorityKanban ?? [];
   const pinned = data?.pinBoard ?? [];
   const groups = data?.segmentGroups ?? [];
+  const actionStats = useMemo(() => dailyActionStats(daily), [daily]);
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
     mutationFn: reorderDailyCalls,
@@ -163,6 +164,30 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         </button>
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
+      {!archive && (
+        <div className="call-action-stats" aria-label="Daily call action summary">
+          <div className="call-action-stat stat-call">
+            <span>Must call</span>
+            <strong>{actionStats.mustCall}</strong>
+            <em>urgent or callback</em>
+          </div>
+          <div className="call-action-stat stat-money">
+            <span>Payment/refund</span>
+            <strong>{actionStats.paymentOrRefund}</strong>
+            <em>needs careful wording</em>
+          </div>
+          <div className="call-action-stat stat-purchase">
+            <span>Purchase intent</span>
+            <strong>{actionStats.purchaseIntent}</strong>
+            <em>quote or order path</em>
+          </div>
+          <div className="call-action-stat stat-match">
+            <span>Unmatched callers</span>
+            <strong>{actionStats.unmatched}</strong>
+            <em>confirm before promise</em>
+          </div>
+        </div>
+      )}
 
       <QueryState
         isLoading={isLoading}
@@ -572,6 +597,28 @@ function priorityUrgencyClass(score: number) {
   if (score >= 6) return 'p7';
   if (score >= 4) return 'p5';
   return 'p3';
+}
+
+function dailyActionStats(cards: CardData[]) {
+  const has = (card: CardData, words: string[]) => {
+    const text = [
+      card.title,
+      card.summary,
+      card.callIntent ?? '',
+      ...(card.psychTags ?? []),
+      card.aiBrief?.whyCalling ?? '',
+      card.aiBrief?.upsetAbout ?? '',
+      card.aiBrief?.callGoal ?? '',
+      ...(card.aiBrief?.suggestedActions ?? []),
+    ].join(' ').toLowerCase().replace(/[_-]+/g, ' ');
+    return words.some((word) => text.includes(word));
+  };
+  return {
+    mustCall: cards.filter((card) => card.urgencyScore >= 8 || has(card, ['callback', 'call back', 'follow up', 'call me'])).length,
+    paymentOrRefund: cards.filter((card) => has(card, ['refund', 'payment', 'chargeback', 'return', 'pricing issue'])).length,
+    purchaseIntent: cards.filter((card) => has(card, ['purchase intent', 'quote', 'order path', 'dtf supply', 'heat press', 'spare part', 'reorder'])).length,
+    unmatched: cards.filter((card) => !card.customerId).length,
+  };
 }
 
 function CustomerNoteModal({

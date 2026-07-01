@@ -289,6 +289,9 @@ export function transcriptOperationalSignals(output: TranscriptResolverOutput, o
   if (isCarrierVendorOnlyTranscript(sourceText, { customerMatched: options.customerMatched || Boolean(output.customer_match.customer_id) })) {
     return [noActionSignal('Carrier or freight vendor contact was captured without a matched customer, Shopify order, or DTF product request.')];
   }
+  if (isNonCatalogPromoPatchInquiry(sourceText)) {
+    return [noActionSignal('Promotional patch, embroidery, digitizing, or vendor-service talk was captured without a DTF Bank product purchase or account follow-up request.')];
+  }
 
   const provided = dedupeSignals(output.operational_signals.flatMap((signal) => {
     const parsed = transcriptOperationalSignalSchema.safeParse(signal);
@@ -402,6 +405,21 @@ export function isCarrierVendorOnlyTranscript(value: string, options: { customer
     carrierScore >= 2
     || (carrierScore >= 1 && !hasDirectCustomerRequest)
   );
+}
+
+export function isNonCatalogPromoPatchInquiry(value: string) {
+  const text = normalizedText(value);
+  if (!text) return false;
+  const hasPromoPatchContext = PROMO_PATCH_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
+  if (!hasPromoPatchContext) return false;
+
+  const hasDtfBuyingContext = DTF_BUYING_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
+  if (hasDtfBuyingContext) return false;
+
+  const hasVendorSolicitation = PROMO_VENDOR_SOLICITATION_PATTERNS.some((pattern) => pattern.test(text));
+  const hasStaffCorrectionOnly = /\b(agent|linda|charlotte|charlette):[^.\n]*(we sell|actually we sell|we take care of our own|we did receive your email)/i.test(value);
+  const hasNonCatalogQuestion = /\b(do you have|about|for)\b[^.]{0,80}\b(patch(es)?|promo(tional)? item(s)?|digitizing|embroidery|key ?chain(s)?)\b/.test(text);
+  return hasVendorSolicitation || hasStaffCorrectionOnly || hasNonCatalogQuestion || hasPromoPatchContext;
 }
 
 function noActionSignal(reason: string): TranscriptOperationalSignal {
@@ -616,4 +634,34 @@ const CARRIER_SCHEDULING_PATTERNS = [
   /\bfour pallets\b/,
   /\bpallets? of\b/,
   /\bfreight delivery\b/,
+] as const;
+
+const PROMO_PATCH_CONTEXT_PATTERNS = [
+  /\b(custom )?patch(es)?\b/,
+  /\bpromo(tional)? item(s)?\b/,
+  /\bkey ?chain(s)?\b/,
+  /\bdigitizing\b/,
+  /\bembroidery\b/,
+  /\bpvc patch(es)?\b/,
+  /\bleather patch(es)?\b/,
+  /\bwoven patch(es)?\b/,
+] as const;
+
+const PROMO_VENDOR_SOLICITATION_PATTERNS = [
+  /\bwe are making\b/,
+  /\bwe make\b/,
+  /\bwe also do\b/,
+  /\bwe do\b/,
+  /\bcan i get your email\b/,
+  /\bsent your email\b/,
+  /\bi sent your email\b/,
+  /\bpartner from\b/,
+  /\bwhenever you need something from\b/,
+  /\boffering all that information\b/,
+] as const;
+
+const DTF_BUYING_CONTEXT_PATTERNS = [
+  /\b(customer|i|we)\s+(need|want|would like|am looking|are looking|m looking|re looking|ordered|bought|purchased|want to buy|ready to order)\b[^.]{0,80}\b(dtf|heat press|hydro|printer|ink|film|powder|transfer|gang sheet|spare part|machine)\b/,
+  /\b(dtf|heat press|hydro|printer|ink|film|powder|transfer|gang sheet|spare part|machine)\b[^.]{0,80}\b(price|quote|order|buy|purchase|availability|in stock|need|want)\b/,
+  /\b(order|quote|buy|purchase|need|want)\b[^.]{0,80}\b(dtf|heat press|hydro|printer|ink|film|powder|transfer|gang sheet|spare part|machine)\b/,
 ] as const;

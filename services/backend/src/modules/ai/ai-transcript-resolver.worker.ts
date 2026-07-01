@@ -24,6 +24,7 @@ import {
   PURCHASE_SIGNAL_KEYWORDS,
   isAutomatedOrVoicemailOnlyTranscript,
   isCarrierVendorOnlyTranscript,
+  isNonCatalogPromoPatchInquiry,
   keywordMatches,
   normalizedText,
   transcriptOperationalSignals,
@@ -547,20 +548,29 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
       'Carrier or freight vendor contact was captured without a matched customer, Shopify order, or DTF product request.',
     );
   }
-  const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(text, needle));
+  if (isNonCatalogPromoPatchInquiry(transcript)) {
+    return localNoActionResolverOutput(
+      transcript,
+      targetVersion,
+      'Promotional patch, embroidery, digitizing, or vendor-service talk was captured without a DTF Bank product purchase or account follow-up request.',
+    );
+  }
+  const customerText = normalizedText(customerUtteranceText(transcript)) || text;
+  const hasAny = (needles: readonly string[]) => needles.some((needle) => keywordMatches(customerText, needle));
   const psychTags = new Set<TranscriptResolverOutput['psych_tags'][number]>();
   const productMentions: TranscriptResolverOutput['product_mentions'] = [];
-  const hasPurchaseSignal = hasAny(PURCHASE_SIGNAL_KEYWORDS);
+  const hasCatalogContext = hasDtfCatalogContext(customerText);
+  const hasPurchaseSignal = hasStrongPurchaseSignal(customerText, hasCatalogContext);
   const hasSparePartSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.spare_part_purchase_intent);
   const hasHeatPressMachineSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_machine_purchase_intent);
   const hasHeatPressSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.heat_press_purchase_intent);
-  const hasDtfSupplySignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.dtf_supply_reorder_signal);
+  const hasDtfSupplySignal = hasDtfSupplyReorderSignal(customerText);
   const hasQuoteSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.quote_request);
   const hasCallbackSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.callback_requested);
   const hasRefundSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.refund_requested);
   const hasShippingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.shipping_status_question);
   const hasFinancingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.financing_question);
-  const hasPriceSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.price_objection);
+  const hasPriceSignal = hasPriceObjectionSignal(customerText, hasCatalogContext);
   const hasFitSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.product_fit_question);
   const hasTrainingSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.training_installation_need);
   const hasSampleSignal = hasAny(OPERATIONAL_INTENT_KEYWORDS.sample_request);
@@ -631,6 +641,93 @@ function localFallbackResolverOutput(transcript: string, targetVersion: number):
   };
   output.person_brief = localFallbackPersonBrief(transcript, output, transcriptOperationalSignals(output, { customerMatched: false, sourceTranscript: transcript }));
   return output;
+}
+
+function customerUtteranceText(transcript: string) {
+  const lines = transcript
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const customerLines = lines.flatMap((line) => {
+    const match = /^(customer|caller|client)\s*:\s*(.+)$/i.exec(line);
+    return match ? [match[2]] : [];
+  });
+  return customerLines.length > 0 ? customerLines.join(' ') : transcript;
+}
+
+function hasStrongPurchaseSignal(text: string, hasCatalogContext: boolean) {
+  const strongKeywords = PURCHASE_SIGNAL_KEYWORDS.filter((keyword) => !['do you have', 'availability', 'looking for'].includes(keyword));
+  const hasStrong = strongKeywords.some((keyword) => keywordMatches(text, keyword));
+  if (hasStrong) return true;
+  return hasCatalogContext && ['do you have', 'availability', 'looking for'].some((keyword) => keywordMatches(text, keyword));
+}
+
+function hasDtfCatalogContext(text: string) {
+  return [
+    'dtf',
+    'dtf supply',
+    'dtf supplies',
+    'heat press',
+    'hydro',
+    'printer',
+    'ink',
+    'white ink',
+    'film',
+    'powder',
+    'gang sheet',
+    'transfer sheet',
+    'spare part',
+    'replacement part',
+    'machine',
+    'printhead',
+  ].some((keyword) => keywordMatches(text, keyword));
+}
+
+function hasDtfSupplyReorderSignal(text: string) {
+  const product = [
+    'dtf supply',
+    'dtf supplies',
+    'ink',
+    'white ink',
+    'cmyk',
+    'powder',
+    'adhesive powder',
+    'hot melt',
+    'film',
+    'pet film',
+    'roll film',
+    'transfer film',
+    'cleaning solution',
+    'consumable',
+  ].some((keyword) => keywordMatches(text, keyword));
+  const request = [
+    'need',
+    'need more',
+    'want',
+    'buy',
+    'purchase',
+    'order',
+    'reorder',
+    'restock',
+    'running low',
+    'out of ink',
+    'out of film',
+    'out of powder',
+    'another roll',
+    'quote',
+    'price',
+    'pricing',
+    'availability',
+  ].some((keyword) => keywordMatches(text, keyword));
+  return product && request;
+}
+
+function hasPriceObjectionSignal(text: string, hasCatalogContext: boolean) {
+  const price = ['price', 'pricing', 'cost', 'discount', 'expensive', 'too much', 'cheaper', 'match price', 'price match', 'competitor cheaper', 'coupon', 'deal', 'budget', 'can you do better']
+    .some((keyword) => keywordMatches(text, keyword));
+  if (!price) return false;
+  const purchaseContext = hasCatalogContext || ['quote', 'order', 'buy', 'purchase', 'need', 'want', 'interested', 'budget'].some((keyword) => keywordMatches(text, keyword));
+  return purchaseContext;
 }
 
 function localNoActionResolverOutput(transcript: string, targetVersion: number, reason: string): TranscriptResolverOutput {
