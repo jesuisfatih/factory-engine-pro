@@ -32,11 +32,11 @@
   --surface: #131826;
   --surface-2: #181F2E;
   --surface-3: #1F2738;
-  --border: #232938;
-  --border-strong: #2E3548;
+  --border: #2A3548;
+  --border-strong: #3B4A64;
   --text: #E5E7EB;
-  --text-muted: #9CA3AF;
-  --text-faint: #6B7280;
+  --text-muted: #CBD5E1;
+  --text-faint: #94A3B8;
   --accent: #60A5FA;
   --accent-soft: #1E293B;
   --warn: #F59E0B;
@@ -1351,6 +1351,194 @@ button { font-family: inherit; }
 }
 .customer-detail-state h3 { margin: 0 0 8px; font-size: 16px; }
 .customer-detail-state p { margin: 0 0 16px; color: var(--muted, var(--text-muted)); }
+
+/* Dark theme: keep staff work surfaces readable instead of mixing white cards into dark pages. */
+:root[data-theme="dark"] .kpi {
+  background: linear-gradient(180deg, #182134 0%, #111827 100%);
+  border-color: var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+
+:root[data-theme="dark"] .ops-panel,
+:root[data-theme="dark"] .modal-card,
+:root[data-theme="dark"] .customer-detail-panel {
+  background: #111827;
+  border-color: var(--border);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .5);
+}
+
+:root[data-theme="dark"] .modal-head,
+:root[data-theme="dark"] .customer-detail-header {
+  background: linear-gradient(180deg, #192235 0%, #111827 100%);
+}
+
+:root[data-theme="dark"] .modal-foot,
+:root[data-theme="dark"] .customer-detail-call-status,
+:root[data-theme="dark"] .customer-detail-tabs {
+  background: #131B2A;
+}
+
+:root[data-theme="dark"] .daily-date-separator,
+:root[data-theme="dark"] .segment-group-toggle {
+  background: #172033;
+  border-color: #2F4161;
+  color: #BFDBFE;
+}
+
+:root[data-theme="dark"] .segment-group-toggle:hover {
+  background: #202B3D;
+}
+
+:root[data-theme="dark"] .daily-card,
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .segment-group,
+:root[data-theme="dark"] .customer-detail-card,
+:root[data-theme="dark"] .brief-block,
+:root[data-theme="dark"] .brief-directive,
+:root[data-theme="dark"] .brief-mini-row,
+:root[data-theme="dark"] .brief-note-row,
+:root[data-theme="dark"] .brief-timeline-row {
+  background: #141C2B;
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .daily-card:hover,
+:root[data-theme="dark"] .card:hover,
+:root[data-theme="dark"] .segment-customer-card:hover,
+:root[data-theme="dark"] .segment-customer-card:focus-visible {
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .38);
+}
+
+:root[data-theme="dark"] .daily-drag-handle,
+:root[data-theme="dark"] .quick-action,
+:root[data-theme="dark"] .pin-btn,
+:root[data-theme="dark"] .transfer-btn,
+:root[data-theme="dark"] .archive-btn,
+:root[data-theme="dark"] .action-btn,
+:root[data-theme="dark"] .customer-detail-icon-btn,
+:root[data-theme="dark"] .modal-card .btn {
+  background: #182134;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .quick-action:hover,
+:root[data-theme="dark"] .pin-btn:hover,
+:root[data-theme="dark"] .transfer-btn:hover,
+:root[data-theme="dark"] .archive-btn:hover,
+:root[data-theme="dark"] .action-btn:hover,
+:root[data-theme="dark"] .customer-detail-icon-btn:hover,
+:root[data-theme="dark"] .modal-card .btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+:root[data-theme="dark"] .card-contact-line span,
+:root[data-theme="dark"] .card-signals span,
+:root[data-theme="dark"] .segment-customer-insights span,
+:root[data-theme="dark"] .brief-identity span,
+:root[data-theme="dark"] .brief-command-score,
+:root[data-theme="dark"] .brief-psych p,
+:root[data-theme="dark"] .customer-detail-summary > div,
+:root[data-theme="dark"] .customer-detail-address-block,
+:root[data-theme="dark"] .customer-detail-tags span {
+  background: #101827;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .segment-customer-insights .insight-order {
+  background: #0E2620;
+  border-color: #1E4D3D;
+  color: #DCFCE7;
+}
+
+:root[data-theme="dark"] .segment-customer-insights .insight-call {
+  background: #0E2433;
+  border-color: #1E4564;
+  color: #DBEAFE;
+}
+
+:root[data-theme="dark"] .priority-brief,
+:root[data-theme="dark"] .staff-brief,
+:root[data-theme="dark"] .brief-command {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .priority-brief.p9,
+:root[data-theme="dark"] .staff-brief.tone-danger,
+:root[data-theme="dark"] .brief-command.tone-danger {
+  background: #2A1414;
+  border-color: #7F1D1D;
+}
+
+:root[data-theme="dark"] .priority-brief.p7,
+:root[data-theme="dark"] .staff-brief.tone-warn,
+:root[data-theme="dark"] .brief-command.tone-warn {
+  background: #2A2113;
+  border-color: #92400E;
+}
+
+:root[data-theme="dark"] .priority-brief.p5,
+:root[data-theme="dark"] .staff-brief.tone-success,
+:root[data-theme="dark"] .brief-command.tone-success {
+  background: #0E2620;
+  border-color: #166534;
+}
+
+:root[data-theme="dark"] .priority-brief.p3,
+:root[data-theme="dark"] .staff-brief.tone-info,
+:root[data-theme="dark"] .brief-command.tone-info {
+  background: #0E2433;
+  border-color: #075985;
+}
+
+:root[data-theme="dark"] .staff-brief.tone-danger,
+:root[data-theme="dark"] .brief-command.tone-danger .brief-command-main strong,
+:root[data-theme="dark"] .brief-command.tone-danger .brief-command-main p {
+  color: #FECACA;
+}
+
+:root[data-theme="dark"] .staff-brief.tone-warn,
+:root[data-theme="dark"] .brief-command.tone-warn .brief-command-main strong,
+:root[data-theme="dark"] .brief-command.tone-warn .brief-command-main p {
+  color: #FDE68A;
+}
+
+:root[data-theme="dark"] .staff-brief.tone-success,
+:root[data-theme="dark"] .brief-command.tone-success .brief-command-main strong,
+:root[data-theme="dark"] .brief-command.tone-success .brief-command-main p {
+  color: #BBF7D0;
+}
+
+:root[data-theme="dark"] .staff-brief.tone-info,
+:root[data-theme="dark"] .brief-command.tone-info .brief-command-main strong,
+:root[data-theme="dark"] .brief-command.tone-info .brief-command-main p {
+  color: #BFDBFE;
+}
+
+:root[data-theme="dark"] .brief-transcript {
+  background: #0D1422;
+  border-left-color: var(--accent);
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .customer-detail-summary {
+  background: var(--border);
+}
+
+:root[data-theme="dark"] .customer-detail-backdrop {
+  background: rgba(2, 6, 23, .72);
+}
+
+:root[data-theme="dark"] .data-card,
+:root[data-theme="dark"] .data-table th,
+:root[data-theme="dark"] .data-table tr:hover td {
+  background: var(--surface);
+}
+
 @media (max-width: 820px) {
   .customer-detail-backdrop { padding: 0; }
   .customer-detail-panel { width: 100vw; height: 100vh; border-radius: 0; }
