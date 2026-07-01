@@ -1,6 +1,5 @@
 import type {
   CreatePersonRequestInput,
-  CommissionRequestDto,
   CustomerDetailPanelDto,
   AircallDialInput,
   AircallDialResponse,
@@ -9,7 +8,6 @@ import type {
   PersonDailyOperationRange,
   PersonTaskSyncResult,
   ReplyPersonNoteInput,
-  SubmitCommissionRequestInput,
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -118,8 +116,6 @@ export interface StaffRequestRow {
   updatedAt: string;
 }
 
-export type CommissionRequestRow = CommissionRequestDto;
-
 export function friendlyError(error: unknown) {
   return apiErrorMessage(error);
 }
@@ -151,9 +147,6 @@ export const fetchCustomerDetail = (customerId: string) => personApi.personCusto
 export const fetchCustomerArchiveDetail = (customerId: string) => personApi.personCustomerArchiveDetail(customerId) as Promise<CustomerDetailPanelDto>;
 export const saveCustomerNote = (customerId: string, input: SavePersonCustomerNoteInput) =>
   personApi.savePersonCustomerNote(customerId, input) as Promise<CustomerDetailPanelDto>;
-export const fetchMyCommissionRequests = () => personApi.myCommissionRequests() as Promise<CommissionRequestRow[]>;
-export const submitCommissionRequest = (input: SubmitCommissionRequestInput) =>
-  personApi.submitCommissionRequest(input) as Promise<CommissionRequestRow>;
 export const fetchCalEvents = () => personApi.personCalendarEvents() as Promise<CalEvent[]>;
 export const fetchTeammates = () => personApi.personTeammates() as Promise<Teammate[]>;
 export const fetchThread = (id: string) => personApi.personThread(id) as Promise<ChatMessage[]>;

@@ -1,8 +1,8 @@
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, fetchMyCommissionRequests, friendlyError, saveCustomerNote, submitCommissionRequest } from '../api/live';
+import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerNote } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -22,10 +22,8 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     queryFn: archive ? fetchCustomerArchive : fetchCustomers,
   });
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
-  const [commissionTarget, setCommissionTarget] = useState<CustomerRow | null>(null);
   const [noteTarget, setNoteTarget] = useState<CustomerRow | null>(null);
   const [noteBody, setNoteBody] = useState('');
-  const { data: commissionRequests = [] } = useQuery({ queryKey: ['person', 'commission-requests'], queryFn: fetchMyCommissionRequests });
   const detailQuery = useQuery({
     queryKey: ['person', archive ? 'customer-archive-detail' : 'customer-detail', detailCustomerId],
     queryFn: () => archive ? fetchCustomerArchiveDetail(detailCustomerId ?? '') : fetchCustomerDetail(detailCustomerId ?? ''),
@@ -38,6 +36,12 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     return () => window.removeEventListener('popstate', syncFromUrl);
   }, []);
 
+  useEffect(() => {
+    setDetailCustomerId(currentCustomerIdFromUrl());
+    setNoteTarget(null);
+    setNoteBody('');
+  }, [archive]);
+
   const openCustomerDetail = (customerId: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set('customerId', customerId);
@@ -47,16 +51,9 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const closeCustomerDetail = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('customerId');
-    window.history.pushState({}, '', url);
+    window.history.replaceState({}, '', url);
     setDetailCustomerId(null);
   };
-  const submitCommission = useMutation({
-    mutationFn: submitCommissionRequest,
-    onSuccess: async () => {
-      setCommissionTarget(null);
-      await qc.invalidateQueries({ queryKey: ['person', 'commission-requests'] });
-    },
-  });
   const customerNote = useMutation({
     mutationFn: (input: { customerId: string; body: string }) => saveCustomerNote(input.customerId, { body: input.body }),
     onSuccess: async (_detail, input) => {
@@ -76,16 +73,8 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
       if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
     },
   });
-  const latestCommissionByCustomer = useMemo(() => {
-    const rows = new Map<string, typeof commissionRequests[number]>();
-    for (const request of commissionRequests) {
-      const current = rows.get(request.customerId);
-      if (!current || request.createdAt > current.createdAt) rows.set(request.customerId, request);
-    }
-    return rows;
-  }, [commissionRequests]);
 
-  const columns: ColumnDef<CustomerRow>[] = [
+  const columns = useMemo<ColumnDef<CustomerRow>[]>(() => [
     {
       id: 'name',
       header: 'Customer',
@@ -107,14 +96,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     { id: 'urgency', header: 'Urgency', cell: ({ row }) => <span className="stat-pill">U{row.original.urgencyScore ?? 0}</span> },
     { id: 'orders', header: 'Orders', cell: ({ row }) => <span>{row.original.ordersCount}</span> },
     { id: 'spent', header: 'Spent', cell: ({ row }) => <span>{fmtMoney(row.original.totalSpent)}</span> },
-    {
-      id: 'commission',
-      header: 'Commission',
-      cell: ({ row }) => {
-        const request = latestCommissionByCustomer.get(row.original.id);
-        return request ? <span className={`stat-pill ${request.status}`}>{request.status.replace(/_/g, ' ')}</span> : <span className="cust-email">No request</span>;
-      },
-    },
     { id: 'phone', header: 'Phone', cell: ({ row }) => <span className="cust-email">{row.original.phone}</span> },
     { id: 'last', header: 'Last contact', cell: ({ row }) => <span className="cust-email">{row.original.lastContact}</span> },
     {
@@ -127,9 +108,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         <div className="actions">
           <button type="button" className="action-btn" title="Open customer detail" onClick={() => openCustomerDetail(customer.id)}>
             <Icon name="customers" size={14} />
-          </button>
-          <button type="button" className="action-btn" title="Submit commission request" onClick={() => setCommissionTarget(customer)}>
-            %
           </button>
           {customer.phone ? (
             <button
@@ -151,7 +129,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         );
       },
     },
-  ];
+  ], [dialCustomer.isPending]);
 
   const table = useReactTable({ data: customers, columns, getCoreRowModel: getCoreRowModel(), getRowId: (row) => row.id });
 
@@ -166,7 +144,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
         <div className="kpi"><div className="label">Avg orders</div><div className="val">{customers.length ? Math.round(customers.reduce((a, c) => a + c.ordersCount, 0) / customers.length) : 0}</div><div className="sub">per customer</div></div>
         <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'matched' : 'owned'}</div></div>
-        <div className="kpi"><div className="label">Commission Requests</div><div className="val">{commissionRequests.filter((item) => item.status === 'pending_admin_approval').length}</div><div className="sub">pending approval</div></div>
       </div>
 
       <QueryState
@@ -211,15 +188,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
       />
-      {commissionTarget ? (
-        <CommissionRequestModal
-          customer={commissionTarget}
-          isSaving={submitCommission.isPending}
-          error={submitCommission.error ? friendlyError(submitCommission.error) : null}
-          onClose={() => setCommissionTarget(null)}
-          onSubmit={(input) => submitCommission.mutate(input)}
-        />
-      ) : null}
       {noteTarget ? (
         <CustomerNoteModal
           customer={noteTarget}
@@ -262,7 +230,7 @@ function CustomerNoteModal({
 }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="customer-note-title" onMouseDown={onClose}>
-      <section className="modal-card commission-request-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <section className="modal-card customer-note-modal" onMouseDown={(event) => event.stopPropagation()}>
         <header className="modal-head">
           <div>
             <h3 id="customer-note-title">Customer note</h3>
@@ -282,74 +250,6 @@ function CustomerNoteModal({
           </button>
         </footer>
       </section>
-    </div>
-  );
-}
-
-function CommissionRequestModal({
-  customer,
-  isSaving,
-  error,
-  onClose,
-  onSubmit,
-}: {
-  customer: CustomerRow;
-  isSaving: boolean;
-  error: string | null;
-  onClose: () => void;
-  onSubmit: (input: { customerId: string; productReference: string; saleReference: string; percent: number; note?: string }) => void;
-}) {
-  const [productReference, setProductReference] = useState('');
-  const [saleReference, setSaleReference] = useState('');
-  const [percent, setPercent] = useState(5);
-  const [note, setNote] = useState('');
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!productReference.trim() || !saleReference.trim()) return;
-    onSubmit({
-      customerId: customer.id,
-      productReference: productReference.trim(),
-      saleReference: saleReference.trim(),
-      percent,
-      note: note.trim() || undefined,
-    });
-  }
-
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="commission-request-title" onMouseDown={onClose}>
-      <form className="modal-card commission-request-modal" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
-        <header className="modal-head">
-          <div>
-            <h3 id="commission-request-title">Commission request</h3>
-            <p>{customer.name} - {customer.email || customer.phone}</p>
-          </div>
-          <button type="button" className="icon-btn" onClick={onClose}>x</button>
-        </header>
-        <label>
-          Product / service reference
-          <input value={productReference} onChange={(event) => setProductReference(event.target.value)} maxLength={240} required />
-        </label>
-        <label>
-          Sale reference
-          <input value={saleReference} onChange={(event) => setSaleReference(event.target.value)} maxLength={240} required />
-        </label>
-        <label>
-          Percent
-          <input type="number" min={0} max={100} step="0.1" value={percent} onChange={(event) => setPercent(Number(event.target.value))} required />
-        </label>
-        <label>
-          Note
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} />
-        </label>
-        {error ? <div className="email-compose-error">{error}</div> : null}
-        <footer className="modal-foot">
-          <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn primary" disabled={isSaving || !productReference.trim() || !saleReference.trim()}>
-            {isSaving ? 'Submitting...' : 'Submit'}
-          </button>
-        </footer>
-      </form>
     </div>
   );
 }

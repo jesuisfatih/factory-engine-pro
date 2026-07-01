@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import type { CustomerDetailPanelDto, CustomerDetailTab } from '@factory-engine-pro/contracts';
 import {
   ClipboardList,
-  DollarSign,
   Headphones,
   Mail,
   MessageSquare,
@@ -29,7 +28,7 @@ export interface CustomerDetailPanelProps {
   staffTerminology?: boolean;
 }
 
-const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }> = {
+const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>> = {
   profile: { label: 'Profile', Icon: UserRound },
   shopify_orders: { label: 'Shopify Orders', Icon: ShoppingBag },
   aircall_calls: { label: 'Aircall Calls', Icon: Phone },
@@ -38,7 +37,6 @@ const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>
   messages: { label: 'Messages', Icon: MessageSquare },
   notes: { label: 'Notes', Icon: NotebookText },
   tasks: { label: 'Tasks', Icon: ClipboardList },
-  commission: { label: 'Commission', Icon: DollarSign },
 };
 
 export function CustomerDetailPanel({
@@ -54,7 +52,10 @@ export function CustomerDetailPanel({
   staffTerminology = false,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
-  const visibleTabs = useMemo<CustomerDetailTab[]>(() => detail?.visibleTabs ?? ['profile'], [visibleKey, detail]);
+  const visibleTabs = useMemo<CustomerDetailTab[]>(
+    () => (detail?.visibleTabs ?? ['profile']).filter((tab) => tab !== 'commission'),
+    [visibleKey, detail],
+  );
   const [activeTab, setActiveTab] = useState<CustomerDetailTab>('profile');
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export function CustomerDetailPanel({
             <nav className="customer-detail-tabs" aria-label="Customer detail tabs">
               {visibleTabs.map((tab) => {
                 const config = TAB_CONFIG[tab];
+                if (!config) return null;
                 return (
                   <button
                     key={tab}
@@ -163,7 +165,6 @@ function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRet
   if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} />;
   if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} />;
   if (tab === 'tasks') return <TasksTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
-  if (tab === 'commission') return <CommissionTab detail={detail} />;
   return null;
 }
 
@@ -376,26 +377,6 @@ function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
           {!staffTerminology && task.matchedRuleName && <div className="customer-detail-muted">Rule: {task.matchedRuleName}</div>}
         </article>
       ))}
-    </div>
-  );
-}
-
-function CommissionTab({ detail }: { detail: CustomerDetailPanelDto }) {
-  const commission = detail.tabs.commission;
-  if (!commission) return <PanelState title="Commission hidden" body="Your role does not expose commission context for this customer." />;
-  return (
-    <div className="customer-detail-grid">
-      <section className="customer-detail-card">
-        <h3>Commission Basis</h3>
-        <KeyValue label="Lifetime revenue" value={money(commission.lifetimeRevenue)} />
-        <KeyValue label="Last 30d revenue" value={money(commission.revenue30d)} />
-        <KeyValue label="Last 30d orders" value={String(commission.orders30d)} />
-        <KeyValue label="Projected commission" value={money(commission.projectedCommission)} />
-      </section>
-      <section className="customer-detail-card">
-        <h3>Status</h3>
-        <p>{commission.note}</p>
-      </section>
     </div>
   );
 }

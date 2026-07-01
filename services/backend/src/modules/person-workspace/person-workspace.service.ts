@@ -1338,7 +1338,7 @@ export class PersonWorkspaceService {
 
   async customerArchive() {
     const rows = await this.prisma.db.customer.findMany({
-      where: { status: 'active', shopifyCustomerId: { not: null } },
+      where: { shopifyCustomerId: { not: null } },
       include: {
         insight: true,
         segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
@@ -1361,7 +1361,7 @@ export class PersonWorkspaceService {
 
   async customerArchiveDetail(id: string) {
     const customer = await this.prisma.db.customer.findFirst({
-      where: { id, status: 'active', shopifyCustomerId: { not: null } },
+      where: { id, shopifyCustomerId: { not: null } },
       select: { id: true },
     });
     if (!customer) throw new NotFoundException('Shopify customer not found');
