@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
+  aircallDialSchema,
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
@@ -15,6 +16,7 @@ import {
   sendPersonMessageSchema,
   togglePersonQueuePinSchema,
   transferPersonTaskSchema,
+  type AircallDialInput,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
   type PersonDailyOperationsQuery,
@@ -85,6 +87,14 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   syncTasks() {
     return this.workspace.syncTasks();
+  }
+
+  @Post('aircall/dial')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  dialCustomer(
+    @Body(new ZodValidationPipe(aircallDialSchema)) body: AircallDialInput,
+  ) {
+    return this.workspace.dialCustomer(body);
   }
 
   @Post('queue/:id/pin')

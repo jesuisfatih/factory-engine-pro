@@ -23,6 +23,9 @@ export interface CustomerDetailPanelProps {
   error?: string | null;
   onClose: () => void;
   onRetry: () => void;
+  onCallCustomer?: (phone: string, customerId: string) => void;
+  isCallingCustomer?: boolean;
+  callMessage?: string | null;
 }
 
 const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }> = {
@@ -37,7 +40,17 @@ const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>
   commission: { label: 'Commission', Icon: DollarSign },
 };
 
-export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, onRetry }: CustomerDetailPanelProps) {
+export function CustomerDetailPanel({
+  open,
+  detail,
+  isLoading,
+  error,
+  onClose,
+  onRetry,
+  onCallCustomer,
+  isCallingCustomer = false,
+  callMessage,
+}: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
   const visibleTabs = useMemo<CustomerDetailTab[]>(() => detail?.visibleTabs ?? ['profile'], [visibleKey, detail]);
   const [activeTab, setActiveTab] = useState<CustomerDetailTab>('profile');
@@ -63,15 +76,30 @@ export function CustomerDetailPanel({ open, detail, isLoading, error, onClose, o
               <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span>
             </div>
           </div>
-          {detail?.customer.phone ? (
-            <a className="btn ghost" href={`tel:${cleanPhone(detail.customer.phone)}`} aria-label={`Call ${detail.customer.phone}`}>
-              <Phone size={14} /> Call
-            </a>
-          ) : null}
-          <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
-            <X size={18} />
-          </button>
+          <div className="customer-detail-header-actions">
+            {detail?.customer.phone ? (
+              onCallCustomer ? (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  aria-label={`Call ${detail.customer.phone}`}
+                  disabled={isCallingCustomer}
+                  onClick={() => onCallCustomer(detail.customer.phone ?? '', detail.customer.id)}
+                >
+                  <Phone size={14} /> {isCallingCustomer ? 'Calling' : 'Call'}
+                </button>
+              ) : (
+                <a className="btn ghost" href={`tel:${cleanPhone(detail.customer.phone)}`} aria-label={`Call ${detail.customer.phone}`}>
+                  <Phone size={14} /> Call
+                </a>
+              )
+            ) : null}
+            <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
+              <X size={18} />
+            </button>
+          </div>
         </header>
+        {callMessage ? <div className="customer-detail-call-status">{callMessage}</div> : null}
 
         {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and task records." />}
         {!isLoading && error && (
@@ -178,8 +206,8 @@ function ProfileTab({ detail }: { detail: CustomerDetailPanelDto }) {
       </section>
       <section className="customer-detail-card">
         <h3>Addresses</h3>
-        <KeyValue label="Billing" value={formatJson(detail.tabs.profile.addresses.billing)} />
-        <KeyValue label="Shipping" value={formatJson(detail.tabs.profile.addresses.shipping)} />
+        <AddressBlock label="Billing" value={detail.tabs.profile.addresses.billing} />
+        <AddressBlock label="Shipping" value={detail.tabs.profile.addresses.shipping} />
       </section>
     </div>
   );
@@ -386,6 +414,29 @@ function KeyValue({ label: keyLabel, value }: { label: string; value: string }) 
   );
 }
 
+function AddressBlock({ label: addressLabel, value }: { label: string; value: unknown }) {
+  const address = normalizeAddress(value);
+  if (address.empty) {
+    return (
+      <div className="customer-detail-address-block empty">
+        <span>{addressLabel}</span>
+        <strong>No address on file</strong>
+      </div>
+    );
+  }
+  return (
+    <div className="customer-detail-address-block">
+      <span>{addressLabel}</span>
+      {address.name ? <strong>{address.name}</strong> : null}
+      {address.company ? <div>{address.company}</div> : null}
+      {address.lines.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
+      {address.cityLine ? <div>{address.cityLine}</div> : null}
+      {address.country ? <div>{address.country}</div> : null}
+      {address.phone ? <div className="customer-detail-address-phone">Phone {address.phone}</div> : null}
+    </div>
+  );
+}
+
 function EmptyTab({ title, body, onRetry }: { title: string; body: string; onRetry: () => void }) {
   return (
     <PanelState
@@ -434,12 +485,67 @@ function label(value: string) {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatJson(value: unknown) {
-  if (!value) return '-';
-  if (typeof value === 'string') return value;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return '-';
+function normalizeAddress(value: unknown) {
+  const record = addressRecord(value);
+  if (!record) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return {
+      empty: !text,
+      name: null,
+      company: null,
+      lines: text ? [text] : [],
+      cityLine: null,
+      country: null,
+      phone: null,
+    };
   }
+
+  const firstName = stringField(record, 'first_name');
+  const lastName = stringField(record, 'last_name');
+  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  const city = stringField(record, 'city');
+  const province = stringField(record, 'province') ?? stringField(record, 'province_code');
+  const zip = stringField(record, 'zip');
+  const cityLine = [
+    city,
+    [province, zip].filter(Boolean).join(' '),
+  ].filter(Boolean).join(', ');
+  const lines = [stringField(record, 'address1'), stringField(record, 'address2')].filter(Boolean) as string[];
+  return {
+    empty: ![
+      stringField(record, 'name'),
+      combinedName,
+      stringField(record, 'company'),
+      ...lines,
+      cityLine,
+      stringField(record, 'country_name') ?? stringField(record, 'country') ?? stringField(record, 'country_code'),
+      stringField(record, 'phone'),
+    ].some(Boolean),
+    name: stringField(record, 'name') ?? (combinedName || null),
+    company: stringField(record, 'company'),
+    lines,
+    cityLine: cityLine || null,
+    country: stringField(record, 'country_name') ?? stringField(record, 'country') ?? stringField(record, 'country_code'),
+    phone: stringField(record, 'phone'),
+  };
+}
+
+function addressRecord(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function stringField(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text || null;
 }

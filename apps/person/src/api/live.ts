@@ -2,6 +2,8 @@ import type {
   CreatePersonRequestInput,
   CommissionRequestDto,
   CustomerDetailPanelDto,
+  AircallDialInput,
+  AircallDialResponse,
   PersonEmailContact,
   PersonNoteRow,
   PersonDailyOperationRange,
@@ -133,6 +135,7 @@ export const reorderDailyCalls = (input: ReorderPersonDailyCallInput) =>
 export const archiveDailyCall = (id: string) =>
   personApi.archivePersonDailyCall(id) as Promise<ArchivePersonDailyCallResult>;
 export const syncPersonTasks = () => personApi.syncPersonTasks() as Promise<PersonTaskSyncResult>;
+export const dialAircall = (input: AircallDialInput) => personApi.dialPersonAircall(input) as Promise<AircallDialResponse>;
 export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
 export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
 export const fetchTransferTargets = () => personApi.personTransferTargets() as Promise<TransferTarget[]>;

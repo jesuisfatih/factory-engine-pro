@@ -5,7 +5,7 @@ import {
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
   GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
-import { fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
 
 interface Props {
@@ -178,6 +178,13 @@ export function TaskBriefModal({ card, onClose }: Props) {
   const [note, setNote] = useState('');
   const [scheduleAt, setScheduleAt] = useState(() => initialScheduleValue());
   const [scheduleNote, setScheduleNote] = useState('');
+  const dialCustomer = useMutation({
+    mutationFn: dialAircall,
+    onSuccess: (result) => {
+      if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
+      void queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+    },
+  });
   const tier = riskTier(liveCard.priority);
   const workflowTrace = liveCard.workflowTrace;
   const traceItems = workflowTrace?.conditionTrace?.length
@@ -190,6 +197,14 @@ export function TaskBriefModal({ card, onClose }: Props) {
   const snapshotSegments = asArray(taskStateSnapshot.segments);
   const latestOrder = liveCard.miniOrder ?? detail?.recentOrders[0];
   const performance = detail?.performance30d ?? liveCard.performance30d;
+  const callCustomer = () => {
+    if (!liveCard.phone) return;
+    dialCustomer.mutate({
+      phone: liveCard.phone,
+      customerId: liveCard.customerId ?? undefined,
+      source: 'task_brief',
+    });
+  };
 
   useEffect(() => {
     setWhy(initial.why);
@@ -516,9 +531,12 @@ export function TaskBriefModal({ card, onClose }: Props) {
             )}
 
             <div className="brief-quick-actions">
-              <a className="btn" href={liveCard.phone ? `tel:${liveCard.phone}` : undefined}><Phone size={12} /> Call</a>
+              <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : 'Call'}</button>
               <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> Email</a>
             </div>
+            {dialCustomer.data?.message || dialCustomer.error ? (
+              <div className="brief-call-status">{dialCustomer.data?.message ?? friendlyError(dialCustomer.error)}</div>
+            ) : null}
             <div className="brief-quick-actions">
               <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> Customer detail</a>
             </div>
@@ -528,7 +546,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
         <footer className="modal-foot">
           <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-          <button type="button" className="btn"><Phone size={13} /> Call now</button>
+          <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> Call now</button>
           <button type="button" className="btn primary" onClick={onClose}>
             <CheckCircle2 size={13} /> Done
           </button>

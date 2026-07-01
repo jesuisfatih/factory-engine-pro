@@ -5,6 +5,8 @@ export interface AircallCredentials {
 
 interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
+  method?: 'GET' | 'POST';
+  body?: Record<string, unknown>;
 }
 
 export class AircallApiError extends Error {
@@ -53,6 +55,13 @@ export class AircallClient {
     return this.request<Record<string, unknown>>(`/calls/${id}/transcription`);
   }
 
+  dialUser(userId: string | number, to: string) {
+    return this.request<Record<string, unknown>>(`/users/${encodeURIComponent(String(userId))}/dial`, {
+      method: 'POST',
+      body: { to },
+    });
+  }
+
   listWebhooks() {
     return this.request<{ webhooks?: unknown[]; meta?: { next_page_link?: string | null } }>('/webhooks');
   }
@@ -69,11 +78,14 @@ export class AircallClient {
           .join('&')}`
       : '';
     const response = await fetch(`${AircallClient.baseUrl}${path}${queryString}`, {
+      method: options.method ?? 'GET',
       headers: {
         accept: 'application/json',
+        ...(options.body ? { 'content-type': 'application/json' } : {}),
         authorization: `Basic ${Buffer.from(`${this.credentials.apiId}:${this.credentials.apiToken}`).toString('base64')}`,
         'user-agent': 'factory-engine-pro/1.0',
       },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     });
     const text = await response.text();
     if (!response.ok) throw new AircallApiError(response.status, text, path);

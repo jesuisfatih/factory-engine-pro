@@ -35,6 +35,24 @@ export const aircallWorkflowCoverageQuerySchema = z.object({
 });
 export type AircallWorkflowCoverageQuery = z.infer<typeof aircallWorkflowCoverageQuerySchema>;
 
+export const aircallDialSchema = z.object({
+  phone: z.string().trim().min(3).max(40),
+  customerId: z.string().trim().min(1).optional(),
+  source: z.enum(['customer_detail', 'task_brief', 'priority_board', 'customer_table', 'calendar']).default('customer_detail'),
+});
+export type AircallDialInput = z.infer<typeof aircallDialSchema>;
+
+export interface AircallDialResponse {
+  ok: boolean;
+  mode: 'aircall_dial' | 'tel_fallback';
+  phone: string;
+  normalizedPhone: string;
+  aircallUserId: string | null;
+  message: string;
+  telHref: string;
+  providerStatus: number | null;
+}
+
 export interface AircallUserDto {
   id: string;
   aircallUserId: string;

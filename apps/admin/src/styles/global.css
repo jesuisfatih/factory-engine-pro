@@ -1938,6 +1938,19 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
 }
+.customer-detail-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.customer-detail-call-status {
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted, var(--text-muted));
+  font-size: 12px;
+}
 .customer-detail-title h2 { margin: 2px 0 4px; font-size: 22px; line-height: 1.2; }
 .customer-detail-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; }
 .customer-detail-sub span { display: inline-flex; min-width: 0; overflow-wrap: anywhere; }
@@ -1995,6 +2008,26 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-row strong, .customer-detail-row span, .customer-detail-kv span, .customer-detail-kv strong { display: block; }
 .customer-detail-row span, .customer-detail-kv span { color: var(--muted, var(--text-muted)); font-size: 12px; margin-top: 3px; }
 .customer-detail-kv strong { overflow-wrap: anywhere; }
+.customer-detail-address-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+  display: grid;
+  gap: 3px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.customer-detail-address-block + .customer-detail-address-block { margin-top: 10px; }
+.customer-detail-address-block span {
+  color: var(--muted, var(--text-muted));
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.customer-detail-address-block strong { font-size: 13px; }
+.customer-detail-address-block.empty strong { color: var(--muted, var(--text-muted)); font-weight: 600; }
+.customer-detail-address-phone { color: var(--muted, var(--text-muted)); }
 .customer-detail-amount { font-weight: 700; white-space: nowrap; }
 .customer-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .customer-detail-tags span { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 8px; font-size: 11px; }

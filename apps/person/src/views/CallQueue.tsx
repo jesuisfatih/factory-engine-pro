@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } from 'lucide-react';
-import { archiveDailyCall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { PinPanel } from '../components/PinPanel';
@@ -27,7 +27,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
   const queryKey = [...QK_BASE, range] as const;
-  const { data, isLoading, error } = useQuery({ queryKey, queryFn: () => fetchDailyOperations(range) });
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchDailyOperations(range),
+    refetchInterval: archive ? false : 15000,
+    refetchIntervalInBackground: false,
+  });
   const customerDetailQuery = useQuery({
     queryKey: ['person', 'customer-detail', detailCustomerId],
     queryFn: () => fetchCustomerDetail(detailCustomerId ?? ''),
@@ -95,6 +100,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK_BASE });
       qc.invalidateQueries({ queryKey: ['person', 'summary'] });
+    },
+  });
+  const dialCustomer = useMutation({
+    mutationFn: dialAircall,
+    onSuccess: (result) => {
+      if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
+      qc.invalidateQueries({ queryKey: QK_BASE });
     },
   });
 
@@ -211,7 +223,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   onTogglePin={(item) => customerPin.mutate(item.customerId)}
                   onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
                   onAddNote={(item) => setNoteCustomer(item)}
+                  onCallCustomer={(item) => {
+                    if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
+                  }}
                   pinDisabled={customerPin.isPending}
+                  callDisabled={dialCustomer.isPending}
                 />
               ))}
             </div>
@@ -231,6 +247,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={customerDetailQuery.error ? friendlyError(customerDetailQuery.error) : null}
         onRetry={() => customerDetailQuery.refetch()}
         onClose={() => setDetailCustomerId(null)}
+        onCallCustomer={(phone, customerId) => dialCustomer.mutate({ phone, customerId, source: 'customer_detail' })}
+        isCallingCustomer={dialCustomer.isPending}
+        callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
       />
       {noteCustomer && (
         <CustomerNoteModal
@@ -378,7 +397,9 @@ function PrioritySegmentGroup({
   onTogglePin,
   onOpenCustomer,
   onAddNote,
+  onCallCustomer,
   pinDisabled,
+  callDisabled,
 }: {
   group: SegmentDailyGroup;
   collapsed: boolean;
@@ -386,7 +407,9 @@ function PrioritySegmentGroup({
   onTogglePin: (item: DailyCallItem) => void;
   onOpenCustomer: (item: DailyCallItem) => void;
   onAddNote: (item: DailyCallItem) => void;
+  onCallCustomer: (item: DailyCallItem) => void;
   pinDisabled: boolean;
+  callDisabled: boolean;
 }) {
   const cap = group.dailyCap ?? group.totalCustomers;
   return (
@@ -408,7 +431,9 @@ function PrioritySegmentGroup({
               onTogglePin={() => onTogglePin(item)}
               onOpen={() => onOpenCustomer(item)}
               onAddNote={() => onAddNote(item)}
+              onCall={() => onCallCustomer(item)}
               disabled={pinDisabled}
+              callDisabled={callDisabled}
             />
           ))}
         </div>
@@ -422,13 +447,17 @@ function SegmentCustomerCard({
   onTogglePin,
   onOpen,
   onAddNote,
+  onCall,
   disabled,
+  callDisabled,
 }: {
   item: DailyCallItem;
   onTogglePin: () => void;
   onOpen: () => void;
   onAddNote: () => void;
+  onCall: () => void;
   disabled: boolean;
+  callDisabled: boolean;
 }) {
   const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
   const latestOrder = item.latestOrder
@@ -471,20 +500,21 @@ function SegmentCustomerCard({
           </span>
         </button>
         <div className="segment-customer-actions" aria-label={`${item.customerName} actions`}>
-          <a
+          <button
+            type="button"
             className={`quick-action${item.phone ? '' : ' disabled'}`}
-            href={item.phone ? `tel:${item.phone}` : undefined}
             aria-disabled={!item.phone}
             title={item.phone ? `Call ${item.phone}` : 'No phone on file'}
+            disabled={!item.phone || callDisabled}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
-              if (!item.phone) event.preventDefault();
               event.stopPropagation();
+              if (item.phone) onCall();
             }}
           >
             <Phone size={12} />
             <span>Call</span>
-          </a>
+          </button>
           <button
             type="button"
             className="quick-action"

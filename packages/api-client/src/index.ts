@@ -6,6 +6,8 @@ import type {
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
   AircallCallEventsResponse,
+  AircallDialInput,
+  AircallDialResponse,
   AssignCustomerAxisPrimaryInput,
   TranscriptResolverTestInput,
   TranscriptResolverTestResponse,
@@ -645,6 +647,10 @@ export class ApiClient {
 
   syncPersonTasks() {
     return this.post<PersonTaskSyncResult>('/person/workspace/tasks/sync', {});
+  }
+
+  dialPersonAircall(input: AircallDialInput) {
+    return this.post<AircallDialResponse>('/person/workspace/aircall/dial', input);
   }
 
   togglePersonQueuePin(id: string, input: TogglePersonQueuePinInput = {}) {

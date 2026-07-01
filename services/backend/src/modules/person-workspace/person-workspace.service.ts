@@ -40,6 +40,8 @@ import type {
   CustomerAssignmentAxis,
   CreateTaskAxis,
   ArchivePersonDailyCallResult,
+  AircallDialInput,
+  AircallDialResponse,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
@@ -732,6 +734,22 @@ export class PersonWorkspaceService {
       },
       syncedAt,
     };
+  }
+
+  async dialCustomer(input: AircallDialInput): Promise<AircallDialResponse> {
+    const member = await this.currentMember();
+    if (input.customerId) await this.assertCustomerInWorkspace(input.customerId, member.id);
+    const result = await this.aircall.dialForMember(member.id, input);
+    this.logger.log('person_workspace', 'aircall.dial', 'Person workspace Aircall dial requested', {
+      member_id: member.id,
+      customer_id: input.customerId ?? null,
+      source: input.source,
+      mode: result.mode,
+      ok: result.ok,
+      provider_status: result.providerStatus,
+    });
+    this.emitCallCenterInvalidate('person.aircall.dial');
+    return result;
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {

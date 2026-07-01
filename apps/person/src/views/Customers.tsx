@@ -2,7 +2,7 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, fetchMyCommissionRequests, friendlyError, saveCustomerNote, submitCommissionRequest } from '../api/live';
+import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, fetchMyCommissionRequests, friendlyError, saveCustomerNote, submitCommissionRequest } from '../api/live';
 import type { CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -70,6 +70,12 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
       ]);
     },
   });
+  const dialCustomer = useMutation({
+    mutationFn: dialAircall,
+    onSuccess: (result) => {
+      if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
+    },
+  });
   const latestCommissionByCustomer = useMemo(() => {
     const rows = new Map<string, typeof commissionRequests[number]>();
     for (const request of commissionRequests) {
@@ -116,7 +122,6 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
       header: '',
       cell: ({ row }) => {
         const customer = row.original;
-        const phoneHref = customer.phone ? `tel:${cleanPhone(customer.phone)}` : undefined;
         const emailHref = customer.email ? `mailto:${customer.email}` : undefined;
         return (
         <div className="actions">
@@ -126,8 +131,16 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
           <button type="button" className="action-btn" title="Submit commission request" onClick={() => setCommissionTarget(customer)}>
             %
           </button>
-          {phoneHref ? (
-            <a className="action-btn" title="Dial" href={phoneHref}><Icon name="phone" size={14} /></a>
+          {customer.phone ? (
+            <button
+              type="button"
+              className="action-btn"
+              title="Dial"
+              disabled={dialCustomer.isPending}
+              onClick={() => dialCustomer.mutate({ phone: customer.phone ?? '', customerId: customer.id, source: 'customer_table' })}
+            >
+              <Icon name="phone" size={14} />
+            </button>
           ) : null}
           {emailHref ? (
             <a className="action-btn" title="Email" href={emailHref}><Icon name="mail-action" size={14} /></a>
@@ -193,6 +206,9 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         error={detailQuery.error ? friendlyError(detailQuery.error) : null}
         onRetry={() => detailQuery.refetch()}
         onClose={closeCustomerDetail}
+        onCallCustomer={(phone, customerId) => dialCustomer.mutate({ phone, customerId, source: 'customer_detail' })}
+        isCallingCustomer={dialCustomer.isPending}
+        callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
       />
       {commissionTarget ? (
         <CommissionRequestModal
@@ -225,9 +241,6 @@ function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
 }
 
-function cleanPhone(value: string) {
-  return value.replace(/[^\d+]/g, '');
-}
 
 function CustomerNoteModal({
   customer,

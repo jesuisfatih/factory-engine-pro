@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, FileText, X, Phone, ExternalLink,
   Clock, AlarmClockOff, Loader2, StickyNote,
 } from 'lucide-react';
-import { fetchCalEvents, friendlyError, saveTaskNote, scheduleTaskFollowUp, type EventSource, type CalEvent } from '../api/live';
+import { dialAircall, fetchCalEvents, friendlyError, saveTaskNote, scheduleTaskFollowUp, type EventSource, type CalEvent } from '../api/live';
 import { QueryState } from '../components/QueryState';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
@@ -83,6 +83,12 @@ export function CalendarView() {
       setScheduleNote('');
       void qc.invalidateQueries({ queryKey: ['person', 'cal', 'events'] });
       void qc.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+    },
+  });
+  const dialCustomer = useMutation({
+    mutationFn: dialAircall,
+    onSuccess: (result) => {
+      if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
     },
   });
 
@@ -205,7 +211,21 @@ export function CalendarView() {
                       </span>
                     )}
                     {selected.customerPhone ? (
-                      <a className="btn" href={`tel:${cleanPhone(selected.customerPhone)}`}><Phone size={12} /> Dial</a>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={dialCustomer.isPending}
+                        onClick={() => dialCustomer.mutate({
+                          phone: selected.customerPhone ?? '',
+                          customerId: selected.customerId ?? undefined,
+                          source: 'calendar',
+                        })}
+                      >
+                        <Phone size={12} /> Dial
+                      </button>
+                    ) : null}
+                    {dialCustomer.data?.message || dialCustomer.error ? (
+                      <span className="meta">{dialCustomer.data?.message ?? friendlyError(dialCustomer.error)}</span>
                     ) : null}
                     {selectedCustomerUrl ? <a className="btn" href={selectedCustomerUrl}><ExternalLink size={12} /> View customer</a> : null}
                     {selectedTaskUrl ? <a className="btn" href={selectedTaskUrl}><FileText size={12} /> Open task</a> : null}
@@ -310,9 +330,6 @@ function taskIdFromEvent(event: CalEvent) {
   return event.id.startsWith('sr-') ? event.id.slice(3) : null;
 }
 
-function cleanPhone(value: string) {
-  return value.replace(/[^\d+]/g, '');
-}
 
 function dateTimeLocal(value: Date) {
   const pad = (num: number) => String(num).padStart(2, '0');

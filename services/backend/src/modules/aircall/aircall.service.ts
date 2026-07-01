@@ -11,6 +11,8 @@ import type {
   AircallBackfillRecentResponse,
   AircallCallEventsResponse,
   AircallConnectionTestResponse,
+  AircallDialInput,
+  AircallDialResponse,
   AircallNumberDto,
   AircallNumbersResponse,
   AircallResolverReprocessInput,
@@ -304,6 +306,85 @@ export class AircallService {
         receivedAt: row.receivedAt.toISOString(),
       })),
     };
+  }
+
+  async dialForMember(memberId: string, input: AircallDialInput): Promise<AircallDialResponse> {
+    const phone = input.phone.trim();
+    const normalizedPhone = normalizeDialPhone(phone);
+    const telHref = `tel:${normalizedPhone}`;
+    const aircallUserId = await this.aircallUserIdForMember(memberId);
+    if (!aircallUserId) {
+      return {
+        ok: false,
+        mode: 'tel_fallback',
+        phone,
+        normalizedPhone,
+        aircallUserId: null,
+        message: 'This staff account is not linked to an Aircall user yet.',
+        telHref,
+        providerStatus: null,
+      };
+    }
+
+    let client: AircallClient;
+    try {
+      client = new AircallClient(await this.resolveCredentials());
+    } catch (error) {
+      this.logger.warn('aircall', 'dial.credentials_missing', 'Aircall dial fell back because credentials are unavailable', {
+        member_id: memberId,
+        aircall_user_id: aircallUserId,
+        error: messageOf(error),
+      });
+      return {
+        ok: false,
+        mode: 'tel_fallback',
+        phone,
+        normalizedPhone,
+        aircallUserId,
+        message: 'Aircall credentials are not configured for this tenant.',
+        telHref,
+        providerStatus: null,
+      };
+    }
+
+    try {
+      await client.dialUser(aircallUserId, normalizedPhone);
+      this.logger.log('aircall', 'dial.user', 'Aircall dial action requested', {
+        member_id: memberId,
+        aircall_user_id: aircallUserId,
+        source: input.source,
+      });
+      return {
+        ok: true,
+        mode: 'aircall_dial',
+        phone,
+        normalizedPhone,
+        aircallUserId,
+        message: 'Aircall Phone is ready with this customer number.',
+        telHref,
+        providerStatus: 200,
+      };
+    } catch (error) {
+      const providerStatus = error instanceof AircallApiError ? error.status : null;
+      this.logger.warn('aircall', 'dial.user_failed', 'Aircall dial action failed; returning phone fallback', {
+        member_id: memberId,
+        aircall_user_id: aircallUserId,
+        provider_status: providerStatus,
+        error: messageOf(error),
+      });
+      return {
+        ok: false,
+        mode: 'tel_fallback',
+        phone,
+        normalizedPhone,
+        aircallUserId,
+        message: providerStatus === 405
+          ? 'Aircall user is unavailable or already on a call.'
+          : 'Aircall could not prepare the call; use the phone fallback.',
+        telHref,
+        providerStatus,
+      };
+    }
   }
 
   async workflowCoverage(input: AircallWorkflowCoverageQuery = { scope: 'recent', recentDays: 7 }): Promise<AircallWorkflowCoverageResponse> {
@@ -1346,6 +1427,20 @@ export class AircallService {
     return { apiId, apiToken };
   }
 
+  private async aircallUserIdForMember(memberId: string) {
+    const member = await this.prisma.db.member.findFirst({
+      where: { id: memberId, status: { not: 'archived' } },
+      select: { aircallUserId: true },
+    });
+    if (member?.aircallUserId?.trim()) return member.aircallUserId.trim();
+
+    const mapping = await this.prisma.db.aircallMemberMap.findFirst({
+      where: { memberId },
+      select: { aircallUserId: true },
+    });
+    return mapping?.aircallUserId?.trim() || null;
+  }
+
   private async credentialState() {
     const config = await this.prisma.db.tenantConfig.findFirst({
       select: {
@@ -1648,6 +1743,25 @@ function signalOutcomeRows(evaluations: WorkflowEvaluationCoverageRow[]): Aircal
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeDialPhone(value: string) {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/[^\d]/g, '');
+  if (!digits) {
+    throw new BadRequestException({
+      message: 'A phone number is required before starting an Aircall dial.',
+      code: 'aircall_phone_required',
+    });
+  }
+  if (trimmed.startsWith('+')) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  if (digits.length >= 7 && digits.length <= 15) return `+${digits}`;
+  throw new BadRequestException({
+    message: 'Phone number must be a valid international dial target.',
+    code: 'aircall_phone_invalid',
+  });
 }
 
 function stringOrNull(value: unknown) {
