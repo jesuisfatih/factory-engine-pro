@@ -1352,6 +1352,84 @@ button { font-family: inherit; }
 .customer-detail-state h3 { margin: 0 0 8px; font-size: 16px; }
 .customer-detail-state p { margin: 0 0 16px; color: var(--muted, var(--text-muted)); }
 
+/* Staff workbench typography: clear and readable without turning every line into a headline. */
+.kpi .val,
+.modal-head h2,
+.customer-detail-title h2,
+.customer-detail-summary strong {
+  font-weight: 700;
+}
+
+.modal-head h2 {
+  font-size: 18px;
+}
+
+.ops-head h2,
+.segment-group-title,
+.daily-title,
+.card .title,
+.customer-detail-card h3 {
+  font-weight: 650;
+}
+
+.daily-date-separator,
+.insight-badge,
+.segment-group-meta,
+.card .priority,
+.card .src-badge,
+.card .action-badge,
+.chip,
+.brief-source,
+.brief-tier,
+.brief-urgency {
+  font-weight: 650;
+}
+
+.priority-brief,
+.staff-brief,
+.card-contact-line,
+.assign-line span {
+  font-weight: 500;
+}
+
+.brief-command-main span,
+.brief-block .lbl,
+.brief-psych span,
+.brief-card-head,
+.brief-stat .lbl,
+.customer-detail-address-block span {
+  font-weight: 650;
+  letter-spacing: .32px;
+}
+
+.brief-command-main strong {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.brief-command-main p,
+.brief-val,
+.brief-actions-list li,
+.brief-psych p,
+.brief-directive strong,
+.brief-mini-row span,
+.brief-card-row .lbl,
+.brief-card-row .val,
+.brief-stat .val,
+.customer-detail-kv strong,
+.customer-detail-row strong,
+.customer-detail-address-block strong,
+.customer-detail-amount {
+  font-weight: 450;
+}
+
+.brief-command-score,
+.brief-directive span,
+.rule-trace-condition span,
+.rule-canvas-link {
+  font-weight: 700;
+}
+
 /* Dark theme: keep staff work surfaces readable instead of mixing white cards into dark pages. */
 :root[data-theme="dark"] .kpi {
   background: linear-gradient(180deg, #182134 0%, #111827 100%);
