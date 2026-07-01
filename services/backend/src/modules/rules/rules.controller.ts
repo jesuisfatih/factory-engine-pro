@@ -9,7 +9,9 @@ import {
   saveWorkflowRuleSchema,
   workflowMcpCreateDraftRuleSchema,
   workflowMcpDraftRuleSchema,
+  workflowMcpListScheduledWorkflowActionsSchema,
   workflowMcpPublishRuleSchema,
+  workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
   workflowMcpValidateRuleSchema,
   type ActiveWorkflowRuleStatsQuery,
@@ -20,7 +22,9 @@ import {
   type WorkflowTriggerFireInput,
   type WorkflowMcpCreateDraftRuleInput,
   type WorkflowMcpDraftRuleInput,
+  type WorkflowMcpListScheduledWorkflowActionsInput,
   type WorkflowMcpPublishRuleInput,
+  type WorkflowMcpSimulateDeferredWorkflowRuleInput,
   type WorkflowMcpSimulateRuleInput,
   type WorkflowMcpValidateRuleInput,
 } from '@factory-engine-pro/contracts';
@@ -114,6 +118,58 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   mcpPublish(@Body(new ZodValidationPipe(workflowMcpPublishRuleSchema)) body: WorkflowMcpPublishRuleInput) {
     return this.rules.publishWorkflowRuleFromMcp(body);
+  }
+
+  @Get('mcp/scheduled-actions')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpScheduledActions(
+    @Query(new ZodValidationPipe(workflowMcpListScheduledWorkflowActionsSchema)) query: WorkflowMcpListScheduledWorkflowActionsInput,
+  ) {
+    return this.rules.listScheduledWorkflowActions(query);
+  }
+
+  @Get('mcp/scheduled-actions/:scheduledActionId')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpScheduledAction(@Param('scheduledActionId') scheduledActionId: string) {
+    return this.rules.getScheduledWorkflowAction({ scheduledActionId });
+  }
+
+  @Post('mcp/scheduled-actions/:scheduledActionId/cancel')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpCancelScheduledAction(@Param('scheduledActionId') scheduledActionId: string) {
+    return this.rules.cancelScheduledWorkflowAction({ scheduledActionId });
+  }
+
+  @Get('mcp/scheduled-actions/:scheduledActionId/explain')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpExplainScheduledAction(@Param('scheduledActionId') scheduledActionId: string) {
+    return this.rules.explainScheduledWorkflowAction({ scheduledActionId });
+  }
+
+  @Post('mcp/simulate-deferred')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpSimulateDeferred(
+    @Body(new ZodValidationPipe(workflowMcpSimulateDeferredWorkflowRuleSchema)) body: WorkflowMcpSimulateDeferredWorkflowRuleInput,
+  ) {
+    return this.rules.simulateDeferredWorkflowRuleFromMcp(body);
+  }
+
+  @Get('mcp/frontend/agent-guide')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpFrontendAgentGuide() {
+    return this.rules.frontendAgentGuide();
+  }
+
+  @Get('mcp/frontend/surfaces')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpFrontendSurfaces() {
+    return this.rules.frontendSurfaces();
+  }
+
+  @Get('mcp/frontend/surfaces/:surfaceId')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpFrontendSurface(@Param('surfaceId') surfaceId: string) {
+    return this.rules.frontendSurfaceContract(surfaceId);
   }
 
   @Get('stats/active')

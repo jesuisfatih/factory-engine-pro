@@ -229,6 +229,113 @@ server.registerTool(
   async (input) => jsonTool(await requestApi('GET', `/aircall/calls/transcripts/export${queryString(input)}`)),
 );
 
+server.registerTool(
+  'list_scheduled_workflow_actions',
+  {
+    title: 'List scheduled workflow actions',
+    description: 'List hidden deferred workflow actions before they materialize into visible staff work.',
+    inputSchema: {
+      status: z.enum(['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed']).optional(),
+      ruleId: z.string().trim().min(1).optional(),
+      customerId: z.string().trim().min(1).optional(),
+      limit: z.number().int().min(1).max(200).default(50),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/scheduled-actions${queryString(input)}`)),
+);
+
+server.registerTool(
+  'get_scheduled_workflow_action',
+  {
+    title: 'Get scheduled workflow action',
+    description: 'Read one deferred workflow action including run time, revalidation policy, and execution state.',
+    inputSchema: {
+      scheduledActionId: z.string().trim().min(1),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/scheduled-actions/${encodeURIComponent(input.scheduledActionId)}`)),
+);
+
+server.registerTool(
+  'cancel_scheduled_workflow_action',
+  {
+    title: 'Cancel scheduled workflow action',
+    description: 'Cancel a pending deferred workflow action before it creates visible staff work.',
+    inputSchema: {
+      scheduledActionId: z.string().trim().min(1),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', `/rules/mcp/scheduled-actions/${encodeURIComponent(input.scheduledActionId)}/cancel`)),
+);
+
+server.registerTool(
+  'simulate_deferred_workflow_rule',
+  {
+    title: 'Simulate deferred workflow rule',
+    description: 'Dry-run a stored or draft rule and summarize deferred materialization actions without creating staff-visible tasks.',
+    inputSchema: {
+      ruleId: z.string().trim().min(1).optional(),
+      draftId: z.string().trim().min(1).optional(),
+      rule: workflowRuleInputSchema.optional(),
+      ruleJson: z.string().trim().min(2).max(250_000).optional(),
+      recentDays: z.number().int().min(1).max(90).default(7),
+      limit: z.number().int().min(1).max(500).default(100),
+      now: z.string().datetime().optional(),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/simulate-deferred', input)),
+);
+
+server.registerTool(
+  'explain_scheduled_workflow_action',
+  {
+    title: 'Explain scheduled workflow action',
+    description: 'Explain when a hidden deferred workflow action will become visible or why it was skipped.',
+    inputSchema: {
+      scheduledActionId: z.string().trim().min(1),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/scheduled-actions/${encodeURIComponent(input.scheduledActionId)}/explain`)),
+);
+
+server.registerTool(
+  'read_frontend_agent_guide',
+  {
+    title: 'Read frontend agent guide',
+    description: 'Read the frontend engineering guide before changing staff or admin UI through MCP.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async () => jsonTool(await requestApi('GET', '/rules/mcp/frontend/agent-guide')),
+);
+
+server.registerTool(
+  'list_frontend_surfaces',
+  {
+    title: 'List frontend surfaces',
+    description: 'List allowlisted frontend surfaces and their high-level boundaries.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async () => jsonTool(await requestApi('GET', '/rules/mcp/frontend/surfaces')),
+);
+
+server.registerTool(
+  'get_frontend_surface_contract',
+  {
+    title: 'Get frontend surface contract',
+    description: 'Read one frontend surface contract including files, endpoints, states, terminology, and smoke checklist.',
+    inputSchema: {
+      surfaceId: z.string().trim().min(1).default('staff.queue'),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/frontend/surfaces/${encodeURIComponent(input.surfaceId)}`)),
+);
+
 server.registerPrompt(
   'workflow_rule_authoring_playbook',
   {
@@ -254,6 +361,10 @@ server.registerPrompt(
             '',
             'Use archive_workflow_rule for removal; never hard-delete rules or audit history.',
             'Use list_aircall_transcripts before download_aircall_transcript so you only fetch the transcript needed for the rule/debug task.',
+            'For "show this to staff after N days" requirements, use deferred materialization on create_task. This creates a hidden scheduled action first, then BullMQ materializes the actual staff task at run time after revalidation.',
+            'Use simulate_deferred_workflow_rule before publishing deferred rules. Use list_scheduled_workflow_actions, get_scheduled_workflow_action, and explain_scheduled_workflow_action to audit hidden pending work.',
+            'Use cancel_scheduled_workflow_action only when the user wants to stop a pending deferred action before it appears to staff.',
+            'For frontend work, read_frontend_agent_guide first, then list_frontend_surfaces and get_frontend_surface_contract. Stay inside allowlisted files, preserve real API data, and avoid internal terminology in staff UI.',
             'Never create support cases, tickets, customer requests, raw SQL, or unsupported actions.',
             'Rules must stay in the deterministic workflow DSL and target sales/account/personnel operations.',
             'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role.',

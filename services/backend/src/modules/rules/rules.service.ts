@@ -12,6 +12,9 @@ import {
   workflowMcpCreateDraftRuleSchema,
   workflowMcpDraftRuleSchema,
   workflowMcpPublishRuleSchema,
+  workflowMcpListScheduledWorkflowActionsSchema,
+  workflowMcpScheduledWorkflowActionIdSchema,
+  workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
   workflowMcpValidateRuleSchema,
   WORKFLOW_ENUM_CATALOG,
@@ -38,6 +41,7 @@ import {
   type SaveWorkflowRuleInput,
   type RollbackWorkflowRuleInput,
   type CreateTaskAxis,
+  type ServiceRequestPriority,
   type TaskAxis,
   type WorkflowConditionTrace,
   type WorkflowEnumCatalogResponse,
@@ -57,6 +61,14 @@ import {
   type WorkflowMcpDraftRuleResponse,
   type WorkflowMcpPublishRuleInput,
   type WorkflowMcpPublishRuleResponse,
+  type WorkflowMcpListScheduledWorkflowActionsInput,
+  type WorkflowMcpListScheduledWorkflowActionsResponse,
+  type WorkflowMcpScheduledWorkflowActionIdInput,
+  type WorkflowMcpScheduledWorkflowActionResponse,
+  type WorkflowMcpCancelScheduledWorkflowActionResponse,
+  type WorkflowMcpExplainScheduledWorkflowActionResponse,
+  type WorkflowMcpSimulateDeferredWorkflowRuleInput,
+  type WorkflowMcpSimulateDeferredWorkflowRuleResponse,
   type WorkflowMcpSimulateRuleInput,
   type WorkflowMcpSimulateRuleResponse,
   type WorkflowMcpValidateRuleInput,
@@ -69,6 +81,12 @@ import {
   type WorkflowRuleBackfillSample,
   type WorkflowRuleExecutionsResponse,
   type WorkflowRuleVersionsResponse,
+  type WorkflowScheduledActionDto,
+  type WorkflowActionRevalidate,
+  type FrontendMcpAgentGuideResponse,
+  type FrontendMcpSurfaceContract,
+  type FrontendMcpSurfaceContractResponse,
+  type FrontendMcpSurfacesResponse,
   type WorkflowRulesResponse,
   type WorkflowTrigger,
   type TranscriptResolverOutput,
@@ -97,7 +115,11 @@ const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Use Shopify product taxonomy guards for machine, part, supply, and cross-sell splits.',
   'Validate and simulate every draft before storing or publishing it.',
 ] as const;
+const FRONTEND_MCP_AGENT_GUIDE_PATH = 'docs/FRONTEND_MCP_AGENT_GUIDE.md';
+const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-02.frontend-mcp-guide.v1';
 const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+const SCHEDULED_ACTION_STATUSES = ['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed'] as const;
+const SCHEDULED_ACTION_CLOSED_TASK_STATUSES = ['closed', 'resolved'] as const;
 
 type CompiledMcpDraft = Omit<WorkflowMcpDraftRuleResponse, 'draftId'>;
 
@@ -778,6 +800,7 @@ export class RulesService {
       }
 
       const taskIds: string[] = [];
+      const scheduledActionIds: string[] = [];
       const actionTrace: WorkflowActionTrace[] = [];
       for (const action of rule.definition.actions) {
         const applied = await this.applyAction(action, {
@@ -792,6 +815,7 @@ export class RulesService {
           whenTrace,
           cooldown: cooldown.trace,
           taskIds,
+          scheduledActionIds,
         });
         actionTrace.push(applied.trace);
         if (applied.task) {
@@ -805,6 +829,7 @@ export class RulesService {
             title: applied.task.title,
           });
         }
+        if (applied.scheduledAction) scheduledActionIds.push(applied.scheduledAction.id);
       }
 
       const actionStatus = resultStatus(taskIds, actionTrace);
@@ -1430,14 +1455,18 @@ export class RulesService {
     whenTrace: WorkflowWhenGroupTrace[];
     cooldown: WorkflowCooldownTrace;
     taskIds: string[];
-  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string } }> {
+    scheduledActionIds: string[];
+  }): Promise<{ trace: WorkflowActionTrace; task?: { id: string; title: string }; scheduledAction?: { id: string; title: string } }> {
     this.executor.recognizeAction(action.action);
-    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string } };
+    let result: { trace: WorkflowActionTrace; task?: { id: string; title: string }; scheduledAction?: { id: string; title: string } };
 
     if (action.action === 'create_task') {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
+      if (action.timing?.mode === 'deferred_materialization') {
+        result = await this.scheduleDeferredCreateTask(action, context, taskStateSnapshot, assignment, sourceCallId);
+      } else {
       const source = this.workflowTaskSource(context, sourceCallId);
       const task = await this.support.create({
         customerId: context.state.customer?.id,
@@ -1475,6 +1504,7 @@ export class RulesService {
           },
         },
       };
+      }
     } else if (action.action === 'pin_customer') {
       result = await this.pinCustomer(action, context);
     } else if (action.action === 'add_note') {
@@ -1538,6 +1568,116 @@ export class RulesService {
       });
     }
     return result;
+  }
+
+  private async scheduleDeferredCreateTask(
+    action: WorkflowRuleAction,
+    context: WorkflowActionContext,
+    taskStateSnapshot: Record<string, unknown>,
+    assignment: TaskAssignment,
+    sourceCallId: string | null,
+  ) {
+    const tenantId = this.tenantId();
+    const sourceCall = sourceCallId ? await this.findWorkflowSourceCall(sourceCallId) : null;
+    const runAt = this.resolveDeferredRunAt(action, context, sourceCall?.eventTimestamp ?? null);
+    const revalidationPolicy = action.revalidate ?? {};
+    const title = action.value?.trim() || `Workflow task: ${context.rule.name}`;
+    const sourceCallAt = sourceCall?.eventTimestamp ?? parseDate(context.occurredAt) ?? new Date();
+    const metadata = this.workflowMetadata(action, context, taskStateSnapshot, assignment);
+    const idempotencyKey = this.deferredTaskIdempotencyKey(action, context, runAt);
+    const existing = await this.prisma.db.workflowScheduledAction.findFirst({
+      where: { tenantId, idempotencyKey },
+      include: scheduledActionInclude(),
+    });
+    if (existing) {
+      return {
+        scheduledAction: { id: existing.id, title: existing.title },
+        trace: {
+          actionId: action.id,
+          action: action.action,
+          status: 'applied' as const,
+          targetType: 'scheduled_action' as const,
+          targetId: existing.id,
+          message: 'Scheduled workflow task materialization already exists.',
+          metadata: {
+            runAt: existing.runAt.toISOString(),
+            status: existing.status,
+            axis: existing.axis,
+            customerId: existing.customerId,
+            assignedMemberId: existing.assignedMemberId,
+            sourceCallId: existing.sourceCallId,
+            idempotencyKey,
+          },
+        },
+      };
+    }
+
+    const row = await this.prisma.db.workflowScheduledAction.create({
+      data: {
+        id: prefixedId('wsa'),
+        tenantId,
+        ruleId: context.rule.id,
+        sourceEventId: context.eventId,
+        sourceCallId,
+        customerId: context.state.customer?.id ?? null,
+        assignedMemberId: assignment.assigneeMemberId,
+        axis: assignment.axis,
+        title,
+        description: `Deferred staff follow-up from previous call on ${sourceCallAt.toISOString().slice(0, 10)}.`,
+        actionPayload: {
+          action,
+          rule: { id: context.rule.id, name: context.rule.name, priority: context.rule.priority },
+          trigger: context.trigger,
+          source: context.source,
+          occurredAt: context.occurredAt,
+          params: context.params,
+          sourceCallAt: sourceCallAt.toISOString(),
+          sourceCallId,
+          conditionTrace: context.conditionTrace,
+          whenTrace: context.whenTrace,
+          cooldown: context.cooldown,
+          assignment,
+          metadata,
+          taskStateSnapshot,
+          priority: priorityForRule(context.rule.priority),
+        } as Prisma.InputJsonValue,
+        briefPayload: {
+          visibleCopy: {
+            headline: 'Call now',
+            context: `From previous call on ${sourceCallAt.toISOString().slice(0, 10)}`,
+            revalidation: 'No purchase since that call',
+          },
+          sourceCallAt: sourceCallAt.toISOString(),
+        } as Prisma.InputJsonValue,
+        revalidationPolicy: revalidationPolicy as Prisma.InputJsonValue,
+        runAt,
+        status: 'pending',
+        idempotencyKey,
+      },
+      include: scheduledActionInclude(),
+    });
+
+    return {
+      scheduledAction: { id: row.id, title: row.title },
+      trace: {
+        actionId: action.id,
+        action: action.action,
+        status: 'applied' as const,
+        targetType: 'scheduled_action' as const,
+        targetId: row.id,
+        message: 'Scheduled workflow task materialization.',
+        metadata: {
+          runAt: row.runAt.toISOString(),
+          axis: row.axis,
+          customerId: row.customerId,
+          assignedMemberId: row.assignedMemberId,
+          sourceCallId: row.sourceCallId,
+          ruleId: context.rule.id,
+          idempotencyKey,
+          revalidationPolicy,
+        },
+      },
+    };
   }
 
   private async sendMail(action: WorkflowRuleAction, context: WorkflowActionContext) {
@@ -1825,9 +1965,29 @@ export class RulesService {
 
   private async routeTaskToMember(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
-    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_member.');
     const member = await this.findMember(action.value || stringParam(context.params, 'memberId') || stringParam(context.params, 'assignedMemberId'));
     if (!member) return skippedTrace(action, 'member', 'Member target was not found.');
+    if (!taskId) {
+      const scheduledActionId = this.targetScheduledActionId(context);
+      if (!scheduledActionId) return skippedTrace(action, 'service_request', 'No service request target was available for route_member.');
+      const updated = await this.updateScheduledActionAssignment(scheduledActionId, member.id, {
+        source: 'route_member',
+        email: member.email,
+        eventId: context.eventId,
+      });
+      if (!updated) return skippedTrace(action, 'scheduled_action', 'Scheduled action target was not found for route_member.');
+      return {
+        trace: {
+          actionId: action.id,
+          action: action.action,
+          status: 'applied' as const,
+          targetType: 'scheduled_action' as const,
+          targetId: scheduledActionId,
+          message: 'Routed scheduled workflow task to member.',
+          metadata: { memberId: member.id, email: member.email },
+        },
+      };
+    }
     const updated = await this.prisma.db.serviceRequest.updateMany({ where: { id: taskId }, data: { assignedMemberId: member.id } });
     if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_member.');
     return {
@@ -2100,6 +2260,76 @@ export class RulesService {
       ?? null;
   }
 
+  private findWorkflowSourceCall(sourceCallId: string) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.aircallCallEvent.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { id: sourceCallId },
+          { externalCallId: sourceCallId },
+        ],
+      },
+      select: {
+        id: true,
+        externalCallId: true,
+        eventTimestamp: true,
+        contactPhone: true,
+        contactPhoneE164: true,
+        contactEmail: true,
+        aircallUserId: true,
+      },
+      orderBy: { eventTimestamp: 'desc' },
+    });
+  }
+
+  private resolveDeferredRunAt(action: WorkflowRuleAction, context: WorkflowActionContext, sourceCallAt: Date | null) {
+    const timing = action.timing;
+    if (!timing || timing.mode !== 'deferred_materialization') {
+      throw new BadRequestException('Deferred task materialization requires timing.mode=deferred_materialization.');
+    }
+    if (timing.runAt) {
+      const runAt = parseDate(timing.runAt);
+      if (!runAt || runAt.getTime() <= Date.now()) throw new BadRequestException('Deferred task materialization runAt must be a future ISO datetime.');
+      return runAt;
+    }
+    const base = timing.base === 'now'
+      ? new Date()
+      : timing.base === 'source_call_time'
+        ? sourceCallAt ?? parseDate(context.occurredAt) ?? new Date()
+        : parseDate(context.occurredAt) ?? sourceCallAt ?? new Date();
+    const delayMs = ((timing.delayDays ?? 0) * 24 + (timing.delayHours ?? 0)) * 60 * 60 * 1000;
+    if (delayMs <= 0) throw new BadRequestException('Deferred task materialization requires a positive delay.');
+    return new Date(base.getTime() + delayMs);
+  }
+
+  private deferredTaskIdempotencyKey(action: WorkflowRuleAction, context: WorkflowActionContext, runAt: Date) {
+    const intent = this.operationalIntentFromContext(context) ?? 'unknown_intent';
+    const sourceCallId = this.workflowSourceCallId(context) ?? 'no_call';
+    const customerId = context.state.customer?.id ?? stringParam(context.params, 'customerId') ?? 'no_customer';
+    return createHash('sha256')
+      .update([
+        this.tenantId(),
+        context.rule.id,
+        action.id,
+        context.eventId,
+        sourceCallId,
+        customerId,
+        intent,
+        runAt.toISOString(),
+      ].join('|'))
+      .digest('hex');
+  }
+
+  private operationalIntentFromContext(context: WorkflowActionContext) {
+    const direct = stringParam(context.params, 'operationalIntent')
+      ?? stringParam(context.params, 'intent')
+      ?? stringParam(context.params, 'taskIntent');
+    if (direct) return direct;
+    const trace = context.conditionTrace.find((entry) => entry.condition === 'operational_intent' && entry.matched);
+    return typeof trace?.expected === 'string' ? trace.expected : null;
+  }
+
   private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null): 'admin_created' {
     void context;
     void sourceCallId;
@@ -2132,6 +2362,12 @@ export class RulesService {
     return context.taskIds.at(-1)
       ?? stringParam(context.params, 'taskId')
       ?? stringParam(context.params, 'serviceRequestId')
+      ?? null;
+  }
+
+  private targetScheduledActionId(context: WorkflowActionContext) {
+    return context.scheduledActionIds.at(-1)
+      ?? stringParam(context.params, 'scheduledActionId')
       ?? null;
   }
 
@@ -2183,6 +2419,52 @@ export class RulesService {
         metadata: {
           ...metadata,
           workflow: update(workflow),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return true;
+  }
+
+  private async updateScheduledActionAssignment(
+    scheduledActionId: string,
+    memberId: string,
+    routeEvent: Record<string, unknown>,
+  ) {
+    const row = await this.prisma.db.workflowScheduledAction.findFirst({
+      where: { id: scheduledActionId, tenantId: this.tenantId(), status: 'pending' },
+      select: { actionPayload: true },
+    });
+    if (!row) return false;
+    const payload = asRecord(row.actionPayload);
+    const assignment = asRecord(payload.assignment);
+    const metadata = asRecord(payload.metadata);
+    const workflow = asRecord(metadata.workflow);
+    await this.prisma.db.workflowScheduledAction.updateMany({
+      where: { id: scheduledActionId, tenantId: this.tenantId(), status: 'pending' },
+      data: {
+        assignedMemberId: memberId,
+        actionPayload: {
+          ...payload,
+          assignment: {
+            ...assignment,
+            assigneeMemberId: memberId,
+            resolutionSource: routeEvent.source ?? 'route_member',
+          },
+          metadata: {
+            ...metadata,
+            workflow: {
+              ...workflow,
+              assigneeResolution: {
+                ...asRecord(workflow.assigneeResolution),
+                source: routeEvent.source ?? 'route_member',
+                assigneeMemberId: memberId,
+              },
+              routeEvents: [
+                ...recordArray(workflow.routeEvents),
+                { ...routeEvent, memberId, at: new Date().toISOString() },
+              ],
+            },
+          },
         } as Prisma.InputJsonValue,
       },
     });
@@ -2287,6 +2569,14 @@ export class RulesService {
         { name: 'list_aircall_transcripts', description: 'List Aircall transcript metadata without returning the full transcript text.', mutates: false, requiresPermission: 'aircall.users.read' },
         { name: 'download_aircall_transcript', description: 'Download one Aircall transcript and resolver output by call event id.', mutates: false, requiresPermission: 'aircall.users.read' },
         { name: 'export_aircall_transcripts', description: 'Export a bounded set of Aircall transcripts as markdown or jsonl for offline review.', mutates: false, requiresPermission: 'aircall.users.read' },
+        { name: 'list_scheduled_workflow_actions', description: 'List hidden deferred workflow actions before they materialize into staff work.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'get_scheduled_workflow_action', description: 'Inspect one deferred workflow action, revalidation policy, and materialization state.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'cancel_scheduled_workflow_action', description: 'Cancel a pending deferred workflow action before it creates staff-visible work.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'simulate_deferred_workflow_rule', description: 'Dry-run a rule and summarize deferred materialization actions without creating tasks.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'explain_scheduled_workflow_action', description: 'Explain when and why a deferred workflow action will or will not become visible staff work.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'read_frontend_agent_guide', description: 'Read the frontend engineering guide before asking an MCP agent to change staff/admin UI.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'list_frontend_surfaces', description: 'List allowlisted frontend surfaces that an engineering agent may inspect.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'get_frontend_surface_contract', description: 'Read the file, API, state, terminology, and smoke-test contract for one frontend surface.', mutates: false, requiresPermission: 'settings.read' },
       ],
       safeguards: [
         'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
@@ -2344,6 +2634,37 @@ export class RulesService {
     };
   }
 
+  async frontendAgentGuide(): Promise<FrontendMcpAgentGuideResponse> {
+    const { markdown, fileStat } = await this.readFrontendAgentGuideFile();
+    return {
+      version: FRONTEND_MCP_AGENT_GUIDE_VERSION,
+      title: 'Frontend MCP Agent Guide',
+      path: FRONTEND_MCP_AGENT_GUIDE_PATH,
+      sha256: createHash('sha256').update(markdown).digest('hex'),
+      lineCount: markdown.split(/\r\n|\r|\n/).length,
+      updatedAt: fileStat ? fileStat.mtime.toISOString() : null,
+      markdown,
+    };
+  }
+
+  frontendSurfaces(): FrontendMcpSurfacesResponse {
+    return {
+      surfaces: FRONTEND_MCP_SURFACES.map((surface) => ({
+        id: surface.id,
+        label: surface.label,
+        route: surface.route,
+        purpose: surface.purpose,
+        allowedPaths: surface.allowedPaths,
+      })),
+    };
+  }
+
+  frontendSurfaceContract(surfaceId: string): FrontendMcpSurfaceContractResponse {
+    const surface = FRONTEND_MCP_SURFACES.find((entry) => entry.id === surfaceId);
+    if (!surface) throw new NotFoundException(`Frontend surface contract was not found: ${surfaceId}`);
+    return { surface };
+  }
+
   private async readAgentGuideFile() {
     const candidates = [
       resolve(process.cwd(), RULE_ENGINE_AGENT_GUIDE_PATH),
@@ -2365,6 +2686,29 @@ export class RulesService {
     }
 
     throw lastError ?? new Error(`Rule Engine agent guide not found at ${RULE_ENGINE_AGENT_GUIDE_PATH}`);
+  }
+
+  private async readFrontendAgentGuideFile() {
+    const candidates = [
+      resolve(process.cwd(), FRONTEND_MCP_AGENT_GUIDE_PATH),
+      resolve(process.cwd(), '..', '..', FRONTEND_MCP_AGENT_GUIDE_PATH),
+      resolve(process.cwd(), '..', '..', '..', FRONTEND_MCP_AGENT_GUIDE_PATH),
+    ];
+    let lastError: unknown = null;
+
+    for (const absolutePath of candidates) {
+      try {
+        const [markdown, fileStat] = await Promise.all([
+          readFile(absolutePath, 'utf8'),
+          stat(absolutePath).catch(() => null),
+        ]);
+        return { markdown, fileStat };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error(`Frontend MCP agent guide not found at ${FRONTEND_MCP_AGENT_GUIDE_PATH}`);
   }
 
   private async shopifyProductLanguage(): Promise<WorkflowMcpCapabilitiesResponse['registry']['productLanguage']> {
@@ -2571,6 +2915,296 @@ export class RulesService {
     return { rule: toDto(updated), reportId: report.id, publishedAt: new Date().toISOString() };
   }
 
+  async listScheduledWorkflowActions(
+    input: WorkflowMcpListScheduledWorkflowActionsInput = { limit: 50 },
+  ): Promise<WorkflowMcpListScheduledWorkflowActionsResponse> {
+    const parsed = workflowMcpListScheduledWorkflowActionsSchema.parse(input);
+    const tenantId = this.tenantId();
+    const where: Prisma.WorkflowScheduledActionWhereInput = {
+      tenantId,
+      ...(parsed.status ? { status: parsed.status } : {}),
+      ...(parsed.ruleId ? { ruleId: parsed.ruleId } : {}),
+      ...(parsed.customerId ? { customerId: parsed.customerId } : {}),
+    };
+    const [items, total] = await Promise.all([
+      this.prisma.db.workflowScheduledAction.findMany({
+        where,
+        include: scheduledActionInclude(),
+        orderBy: [{ runAt: 'asc' }, { createdAt: 'desc' }],
+        take: parsed.limit,
+      }),
+      this.prisma.db.workflowScheduledAction.count({ where }),
+    ]);
+    return {
+      items: items.map((row) => this.scheduledActionDto(row)),
+      total,
+      limit: parsed.limit,
+      status: parsed.status ?? null,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  async getScheduledWorkflowAction(input: WorkflowMcpScheduledWorkflowActionIdInput): Promise<WorkflowMcpScheduledWorkflowActionResponse> {
+    const parsed = workflowMcpScheduledWorkflowActionIdSchema.parse(input);
+    const row = await this.findScheduledActionOrThrow(parsed.scheduledActionId);
+    return { item: this.scheduledActionDto(row) };
+  }
+
+  async cancelScheduledWorkflowAction(input: WorkflowMcpScheduledWorkflowActionIdInput): Promise<WorkflowMcpCancelScheduledWorkflowActionResponse> {
+    const parsed = workflowMcpScheduledWorkflowActionIdSchema.parse(input);
+    const current = await this.findScheduledActionOrThrow(parsed.scheduledActionId);
+    const cancellable = current.status === 'pending' || current.status === 'failed';
+    if (cancellable) {
+      await this.prisma.db.workflowScheduledAction.updateMany({
+        where: { id: current.id, tenantId: this.tenantId(), status: { in: ['pending', 'failed'] } },
+        data: { status: 'cancelled', skipReason: 'Cancelled through MCP.' },
+      });
+    }
+    const row = await this.findScheduledActionOrThrow(parsed.scheduledActionId);
+    return { item: this.scheduledActionDto(row), cancelled: cancellable };
+  }
+
+  async explainScheduledWorkflowAction(input: WorkflowMcpScheduledWorkflowActionIdInput): Promise<WorkflowMcpExplainScheduledWorkflowActionResponse> {
+    const parsed = workflowMcpScheduledWorkflowActionIdSchema.parse(input);
+    const row = await this.findScheduledActionOrThrow(parsed.scheduledActionId);
+    const policy = asRecord(row.revalidationPolicy);
+    const revalidation = Object.entries(policy)
+      .filter(([, enabled]) => enabled === true)
+      .map(([key]) => key);
+    return {
+      item: this.scheduledActionDto(row),
+      explanation: {
+        visibleNow: row.status === 'executed' && Boolean(row.executedServiceRequestId),
+        runAt: row.runAt.toISOString(),
+        status: row.status as WorkflowMcpExplainScheduledWorkflowActionResponse['explanation']['status'],
+        revalidation,
+        nextOutcome: scheduledActionNextOutcome(row.status, row.runAt),
+      },
+    };
+  }
+
+  async simulateDeferredWorkflowRuleFromMcp(
+    input: WorkflowMcpSimulateDeferredWorkflowRuleInput,
+  ): Promise<WorkflowMcpSimulateDeferredWorkflowRuleResponse> {
+    const parsed = workflowMcpSimulateDeferredWorkflowRuleSchema.parse(input);
+    const simulation = await this.simulateWorkflowRuleFromMcp(parsed);
+    const { rule } = await this.resolveMcpRuleReference(parsed);
+    const now = parsed.now ? new Date(parsed.now) : new Date();
+    const deferredActions = rule.definition.actions
+      .filter((action) => action.action === 'create_task' && action.timing?.mode === 'deferred_materialization')
+      .map((action) => ({
+        actionId: action.id,
+        title: action.value,
+        axis: createTaskAxisSchema.parse(action.axis ?? axisForOperationalIntent(detectOperationalIntentFromText(action.value))),
+        runAtPreview: previewDeferredRunAt(action, now),
+        revalidationPolicy: action.revalidate ?? {},
+      }));
+    return { ...simulation, deferredActions };
+  }
+
+  async processDueScheduledActions(limit = 100) {
+    const tenantId = this.tenantId();
+    const now = new Date();
+    const rows = await this.prisma.db.workflowScheduledAction.findMany({
+      where: { tenantId, status: 'pending', runAt: { lte: now } },
+      select: { id: true },
+      orderBy: [{ runAt: 'asc' }, { createdAt: 'asc' }],
+      take: limit,
+    });
+    const results = [];
+    for (const row of rows) results.push(await this.processScheduledWorkflowAction(row.id, now));
+    return { checkedAt: now.toISOString(), scanned: rows.length, results };
+  }
+
+  async processScheduledWorkflowAction(id: string, now = new Date()) {
+    const tenantId = this.tenantId();
+    const claimed = await this.prisma.db.workflowScheduledAction.updateMany({
+      where: { id, tenantId, status: 'pending', runAt: { lte: now } },
+      data: { status: 'executing', errorMessage: null },
+    });
+    if (claimed.count === 0) {
+      const row = await this.prisma.db.workflowScheduledAction.findFirst({ where: { id, tenantId }, select: { id: true, status: true } });
+      return { id, status: row?.status ?? 'missing', skipped: true };
+    }
+    const row = await this.findScheduledActionOrThrow(id);
+    try {
+      const skipReason = await this.scheduledActionSkipReason(row);
+      if (skipReason) {
+        await this.prisma.db.workflowScheduledAction.updateMany({
+          where: { id, tenantId },
+          data: { status: 'skipped', skipReason },
+        });
+        return { id, status: 'skipped', skipReason };
+      }
+      const task = await this.materializeScheduledAction(row, now);
+      await this.prisma.db.workflowScheduledAction.updateMany({
+        where: { id, tenantId },
+        data: { status: 'executed', executedServiceRequestId: task.id, skipReason: null },
+      });
+      this.logger.log('rules', 'workflow_scheduled_action_executed', 'Deferred workflow task materialized', {
+        scheduled_action_id: id,
+        service_request_id: task.id,
+        rule_id: row.ruleId,
+        customer_id: row.customerId,
+        assigned_member_id: row.assignedMemberId,
+      });
+      return { id, status: 'executed', serviceRequestId: task.id };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.prisma.db.workflowScheduledAction.updateMany({
+        where: { id, tenantId },
+        data: { status: 'failed', errorMessage: message },
+      });
+      this.logger.error('rules', 'workflow_scheduled_action_failed', message, { scheduled_action_id: id });
+      return { id, status: 'failed', errorMessage: message };
+    }
+  }
+
+  private async findScheduledActionOrThrow(id: string) {
+    const row = await this.prisma.db.workflowScheduledAction.findFirst({
+      where: { id, tenantId: this.tenantId() },
+      include: scheduledActionInclude(),
+    });
+    if (!row) throw new NotFoundException('Scheduled workflow action was not found.');
+    return row;
+  }
+
+  private scheduledActionDto(row: ScheduledActionRow): WorkflowScheduledActionDto {
+    return {
+      id: row.id,
+      ruleId: row.ruleId,
+      ruleName: row.rule?.name ?? null,
+      sourceEventId: row.sourceEventId,
+      sourceCallId: row.sourceCallId,
+      customerId: row.customerId,
+      customerName: row.customer?.companyName ?? null,
+      assignedMemberId: row.assignedMemberId,
+      assignedMemberName: row.assignedMember ? `${row.assignedMember.firstName} ${row.assignedMember.lastName}`.trim() : null,
+      axis: createTaskAxisSchema.parse(row.axis),
+      title: row.title,
+      description: row.description,
+      actionPayload: row.actionPayload,
+      briefPayload: row.briefPayload,
+      revalidationPolicy: row.revalidationPolicy,
+      runAt: row.runAt.toISOString(),
+      status: scheduledActionStatus(row.status),
+      idempotencyKey: row.idempotencyKey,
+      skipReason: row.skipReason,
+      errorMessage: row.errorMessage,
+      executedServiceRequestId: row.executedServiceRequestId,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private async scheduledActionSkipReason(row: ScheduledActionRow) {
+    const policy = asRecord(row.revalidationPolicy) as WorkflowActionRevalidate;
+    const sourceCallAt = scheduledSourceCallAt(row);
+    if (policy.skipIfNoCustomerMatch && !row.customerId) return 'No matched customer remained available.';
+
+    if (policy.skipIfOpenTaskExistsForIntent && row.customerId) {
+      const intent = scheduledOperationalIntent(row);
+      if (intent) {
+        const openRows = await this.prisma.db.serviceRequest.findMany({
+          where: {
+            tenantId: this.tenantId(),
+            customerId: row.customerId,
+            status: { notIn: [...SCHEDULED_ACTION_CLOSED_TASK_STATUSES] },
+            id: row.executedServiceRequestId ? { not: row.executedServiceRequestId } : undefined,
+          },
+          select: { id: true, metadata: true, conditionTrace: true },
+          take: 100,
+        });
+        if (openRows.some((task) => JSON.stringify([task.metadata, task.conditionTrace]).includes(intent))) {
+          return `Open task already exists for intent ${intent}.`;
+        }
+      }
+    }
+
+    if (policy.skipIfCustomerPurchasedSinceSourceCall && row.customerId && sourceCallAt) {
+      const purchases = await this.prisma.db.commerceOrder.count({
+        where: {
+          tenantId: this.tenantId(),
+          customerId: row.customerId,
+          OR: [
+            { processedAt: { gt: sourceCallAt } },
+            { createdAt: { gt: sourceCallAt } },
+          ],
+        },
+      });
+      if (purchases > 0) return 'Customer purchased after the source call.';
+    }
+
+    if (policy.skipIfCustomerCalledSinceSourceCall && sourceCallAt) {
+      const customer = row.customer;
+      const contactValues = uniqueStrings([customer?.phone, customer?.email]);
+      if (contactValues.length > 0) {
+        const laterCalls = await this.prisma.db.aircallCallEvent.count({
+          where: {
+            tenantId: this.tenantId(),
+            eventTimestamp: { gt: sourceCallAt },
+            OR: [
+              { contactPhone: { in: contactValues } },
+              { contactPhoneE164: { in: contactValues } },
+              { contactEmail: { in: contactValues } },
+            ],
+          },
+        });
+        if (laterCalls > 0) return 'Customer called again after the source call.';
+      }
+    }
+
+    return null;
+  }
+
+  private async materializeScheduledAction(row: ScheduledActionRow, now: Date) {
+    const payload = asRecord(row.actionPayload);
+    const metadata = asRecord(payload.metadata);
+    const workflow = asRecord(metadata.workflow);
+    const assignment = asRecord(payload.assignment);
+    const sourceCallAt = scheduledSourceCallAt(row);
+    const conditionTrace = Array.isArray(payload.conditionTrace) ? payload.conditionTrace as WorkflowConditionTrace[] : [];
+    const taskStateSnapshot = asRecord(payload.taskStateSnapshot);
+    const priority = serviceRequestPriority(payload.priority, row.rule?.priority ?? 50);
+    const visibleCopy = asRecord(asRecord(row.briefPayload).visibleCopy);
+    return this.support.create({
+      customerId: row.customerId ?? undefined,
+      title: row.title,
+      description: row.description
+        ?? [
+          visibleCopy.headline ?? 'Call now',
+          sourceCallAt ? `From previous call on ${sourceCallAt.toISOString().slice(0, 10)}.` : null,
+          'No purchase since that call.',
+        ].filter(Boolean).join(' '),
+      source: 'admin_created',
+      surface: 'internal',
+      priority,
+      axis: createTaskAxisSchema.parse(row.axis),
+      assignedMemberId: row.assignedMemberId ?? stringOrNull(assignment.assigneeMemberId) ?? undefined,
+      watcherMemberIds: arrayParam(assignment, 'watcherMemberIds'),
+      matchedRuleId: row.ruleId,
+      sourceCallId: row.sourceCallId ?? undefined,
+      conditionTrace,
+      metadata: {
+        ...metadata,
+        personQueueVisible: true,
+        workflow: {
+          ...workflow,
+          scheduledActionId: row.id,
+          scheduledFromRuleId: row.ruleId,
+          sourceCallId: row.sourceCallId,
+          sourceCallAt: sourceCallAt?.toISOString() ?? null,
+          scheduledRunAt: row.runAt.toISOString(),
+          deferredMaterializedAt: now.toISOString(),
+          deferredReason: 'Visible staff work is created only after the scheduled revalidation window.',
+          actionId: stringOrNull(workflow.actionId) ?? stringOrNull(asRecord(payload.action).id),
+          action: 'create_task',
+        },
+      },
+      taskStateSnapshot,
+    });
+  }
+
   private async compileNaturalLanguageRule(
     naturalLanguageGoal: string,
     preferredStatus: WorkflowRuleDefinition['status'],
@@ -2592,6 +3226,25 @@ export class RulesService {
     const actions: WorkflowRuleAction[] = detectedIntent === 'no_action'
       ? [mcpAction('audit_no_action', 'no-op', 'No actionable sales or personnel follow-up.')]
       : [mcpAction('create_task', 'create_task', taskTitleForMcpGoal(detectedIntent, text), axis)];
+    const deferredTiming = detectDeferredMaterialization(text);
+    if (deferredTiming && detectedIntent !== 'no_action' && actions[0]?.action === 'create_task') {
+      actions[0] = {
+        ...actions[0],
+        timing: {
+          mode: 'deferred_materialization',
+          delayDays: deferredTiming.delayDays,
+          delayHours: deferredTiming.delayHours,
+          base: deferredTiming.base,
+        },
+        revalidate: {
+          skipIfOpenTaskExistsForIntent: true,
+          skipIfCustomerPurchasedSinceSourceCall: deferredTiming.skipIfPurchasedSinceSourceCall,
+          skipIfCustomerCalledSinceSourceCall: deferredTiming.skipIfCustomerCalledSinceSourceCall,
+          skipIfNoCustomerMatch: true,
+        },
+      };
+      assumptions.push(`Task will not be visible immediately; it will materialize after ${deferredTiming.label} if revalidation still passes.`);
+    }
 
     const wantsCallOwner = mentionsCallOwner(text);
     const wantsSegmentOwner = mentionsSegmentOwner(text);
@@ -3229,6 +3882,7 @@ type WorkflowActionContext = {
   whenTrace: WorkflowWhenGroupTrace[];
   cooldown: WorkflowCooldownTrace;
   taskIds: string[];
+  scheduledActionIds: string[];
 };
 
 type TaskAssignment = {
@@ -3269,6 +3923,19 @@ type RuleCooldownDecision = {
   trace: WorkflowCooldownTrace;
 };
 
+type ScheduledActionRow = Prisma.WorkflowScheduledActionGetPayload<{
+  include: ReturnType<typeof scheduledActionInclude>;
+}>;
+
+function scheduledActionInclude() {
+  return {
+    rule: { select: { id: true, name: true, priority: true } },
+    customer: { select: { id: true, companyName: true, email: true, phone: true } },
+    assignedMember: { select: { id: true, firstName: true, lastName: true, email: true } },
+    executedServiceRequest: { select: { id: true, title: true, createdAt: true } },
+  } as const;
+}
+
 function conditionGroups(definition: WorkflowRuleDefinition): WorkflowRuleWhenGroup[] {
   if (definition.whenGroups?.length) return definition.whenGroups;
   if (definition.when.length > 0) return [{ id: 'default', conditions: definition.when }];
@@ -3306,6 +3973,14 @@ const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name
   'list_aircall_transcripts',
   'download_aircall_transcript',
   'export_aircall_transcripts',
+  'list_scheduled_workflow_actions',
+  'get_scheduled_workflow_action',
+  'cancel_scheduled_workflow_action',
+  'simulate_deferred_workflow_rule',
+  'explain_scheduled_workflow_action',
+  'read_frontend_agent_guide',
+  'list_frontend_surfaces',
+  'get_frontend_surface_contract',
 ];
 
 const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [
@@ -3323,6 +3998,68 @@ const MCP_OUTCOME_ACTIONS: WorkflowRuleAction['action'][] = [
   'add_note',
   'pin_customer',
   'no-op',
+];
+
+const FRONTEND_MCP_FORBIDDEN_STAFF_TERMS = [
+  'AI',
+  'workflow rule',
+  'sales axis',
+  'support axis',
+  'internal resolver',
+] as const;
+
+const FRONTEND_MCP_PREFERRED_STAFF_TERMS = [
+  'Call summary',
+  'Purchase intent',
+  'Customer concern',
+  'Account follow-up',
+  'Call now',
+  'Needs attention',
+  'Previous call',
+  'No purchase since last call',
+] as const;
+
+const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
+  {
+    id: 'staff.queue',
+    label: 'Staff Call Queue',
+    route: 'https://app.dtfbank.com/staff/queue',
+    purpose: 'Personnel-facing daily calls, priority customers, pinned customers, and call-detail modal.',
+    allowedPaths: [
+      'apps/person/src/**',
+      'apps/person/src/styles/**',
+      'packages/contracts/src/person.ts',
+    ],
+    sourceFiles: [
+      'apps/person/src/routes/queue.tsx',
+      'apps/person/src/components/TaskBriefModal.tsx',
+      'apps/person/src/components/CustomerDetailModal.tsx',
+      'apps/person/src/lib/api.ts',
+      'packages/contracts/src/person.ts',
+    ],
+    apiEndpoints: [
+      'GET /api/v1/person/workspace/daily-operations',
+      'POST /api/v1/person/workspace/daily-calls/reorder',
+      'POST /api/v1/person/workspace/daily-calls/:id/archive',
+      'GET /api/v1/person/workspace/tasks/:id',
+      'POST /api/v1/person/workspace/tasks/:id/notes',
+    ],
+    requiredStates: ['loading', 'empty', 'error', 'populated'],
+    forbiddenTerms: [...FRONTEND_MCP_FORBIDDEN_STAFF_TERMS],
+    preferredTerms: [...FRONTEND_MCP_PREFERRED_STAFF_TERMS],
+    themeChecklist: [
+      'Light and dark themes must preserve readable contrast for phone numbers, order chips, and action banners.',
+      'Do not use white-only cards inside dark mode surfaces.',
+      'Use intent color only as supporting emphasis, not as the only meaning carrier.',
+    ],
+    smokeChecklist: [
+      'Open /staff/queue with a staff token.',
+      'Verify Daily Call List and Priority Kanban have distinct content.',
+      'Open a call card modal and confirm first viewport shows phone, call reason, issue, outcome, and next steps.',
+      'Toggle light/dark mode and capture screenshots.',
+      'Confirm no forbidden staff terminology appears.',
+    ],
+  },
 ];
 
 const MCP_TASK_TARGETED_ACTIONS: WorkflowRuleAction['action'][] = [
@@ -3707,6 +4444,18 @@ function mcpDefinitionIssues(definition: WorkflowRuleDefinition) {
     if (MCP_TASK_TARGETED_ACTIONS.includes(action.action) && createTaskIndex > index) {
       issues.push(`Action ${action.action} must come after create_task so it has a service request target.`);
     }
+    if (action.timing?.mode === 'deferred_materialization') {
+      if (action.action !== 'create_task') {
+        issues.push('Deferred task materialization is only supported on create_task actions.');
+      }
+      const delayMs = ((action.timing.delayDays ?? 0) * 24 + (action.timing.delayHours ?? 0)) * 60 * 60 * 1000;
+      if (!action.timing.runAt && delayMs <= 0) {
+        issues.push('Deferred create_task actions must provide delayDays, delayHours, or runAt.');
+      }
+      if (action.timing.runAt && new Date(action.timing.runAt).getTime() <= Date.now()) {
+        issues.push('Deferred create_task runAt must be in the future.');
+      }
+    }
   }
   if (onlyNoAction) {
     if (hasCreateTask || hasTaskTargetedAction) {
@@ -3979,6 +4728,48 @@ function detectWindowDays(text: string) {
   if (text.includes('bu hafta') || text.includes('this week')) return 7;
   if (text.includes('bu ay') || text.includes('this month')) return 30;
   return null;
+}
+
+function detectDeferredMaterialization(text: string) {
+  const after = text.match(/\b(\d+)\s*(gun|days?|saat|hours?|hafta|weeks?|ay|months?)\s*(sonra|after|later)\b/)
+    ?? text.match(/\b(after|in)\s+(\d+)\s*(days?|hours?|weeks?|months?)\b/);
+  if (!after) return null;
+  const count = Number(after[1] === 'after' || after[1] === 'in' ? after[2] : after[1]);
+  const unit = String(after[1] === 'after' || after[1] === 'in' ? after[3] : after[2]);
+  if (!Number.isFinite(count) || count <= 0) return null;
+  const delayHours = unit.includes('saat') || unit.includes('hour') ? count : 0;
+  const delayDays = delayHours > 0 ? 0 : unitToDays(count, unit);
+  const deferredLanguage = [
+    'sonra',
+    'after',
+    'later',
+    'hemen aratma',
+    'hemen arama',
+    'not immediately',
+    'do not call immediately',
+    'daily call list',
+    'arama gorevi',
+  ].some((keyword) => text.includes(keyword));
+  if (!deferredLanguage) return null;
+  return {
+    delayDays,
+    delayHours,
+    base: 'source_call_time' as const,
+    label: delayHours > 0 ? `${delayHours} hour(s)` : `${delayDays} day(s)`,
+    skipIfPurchasedSinceSourceCall: [
+      'hala siparis vermediyse',
+      'siparis vermediyse',
+      'no purchase',
+      'if they have not purchased',
+      'if customer has not purchased',
+      'still no order',
+    ].some((keyword) => text.includes(keyword)),
+    skipIfCustomerCalledSinceSourceCall: [
+      'tekrar aramadiysa',
+      'did not call again',
+      'no later call',
+    ].some((keyword) => text.includes(keyword)),
+  };
 }
 
 function unitToDays(count: number, unit: string) {
@@ -4638,6 +5429,51 @@ function resultStatus(taskIds: string[], actionTrace: WorkflowActionTrace[]): Wo
   return 'actions_applied';
 }
 
+function scheduledActionStatus(value: string) {
+  const parsed = SCHEDULED_ACTION_STATUSES.find((status) => status === value);
+  return parsed ?? 'failed';
+}
+
+function scheduledActionNextOutcome(status: string, runAt: Date) {
+  if (status === 'executed') return 'Task is visible in the staff queue.';
+  if (status === 'skipped') return 'Task will not be created because revalidation skipped it.';
+  if (status === 'cancelled') return 'Task will not be created because it was cancelled.';
+  if (status === 'failed') return 'Worker will need retry or operator review.';
+  if (runAt.getTime() > Date.now()) return 'Task is hidden until runAt; worker will revalidate before creating staff work.';
+  return 'Task is due; worker will claim and revalidate it.';
+}
+
+function scheduledSourceCallAt(row: ScheduledActionRow) {
+  const brief = asRecord(row.briefPayload);
+  const payload = asRecord(row.actionPayload);
+  return parseDate(brief.sourceCallAt) ?? parseDate(payload.sourceCallAt);
+}
+
+function scheduledOperationalIntent(row: ScheduledActionRow) {
+  const payload = asRecord(row.actionPayload);
+  const params = asRecord(payload.params);
+  const fromParams = stringOrNull(params.operationalIntent)
+    ?? stringOrNull(params.intent)
+    ?? stringOrNull(params.taskIntent);
+  if (fromParams) return fromParams;
+  const traces = Array.isArray(payload.conditionTrace) ? payload.conditionTrace : [];
+  for (const trace of traces) {
+    const record = asRecord(trace);
+    if (record.condition === 'operational_intent' && record.matched === true) {
+      return stringOrNull(record.expected) ?? stringOrNull(record.actual);
+    }
+  }
+  return null;
+}
+
+function previewDeferredRunAt(action: WorkflowRuleAction, now: Date) {
+  if (action.timing?.mode !== 'deferred_materialization') return null;
+  if (action.timing.runAt) return action.timing.runAt;
+  const delayMs = ((action.timing.delayDays ?? 0) * 24 + (action.timing.delayHours ?? 0)) * 60 * 60 * 1000;
+  if (delayMs <= 0) return null;
+  return new Date(now.getTime() + delayMs).toISOString();
+}
+
 function skippedTrace(
   action: WorkflowRuleAction,
   targetType: WorkflowActionTrace['targetType'],
@@ -4929,6 +5765,12 @@ function priorityForRule(priority: number): 'critical' | 'high' | 'medium' | 'lo
   return 'low';
 }
 
+function serviceRequestPriority(value: unknown, fallbackRulePriority: number): ServiceRequestPriority {
+  const normalized = normalize(value);
+  if (['critical', 'urgent', 'high', 'medium', 'low'].includes(normalized)) return normalized as ServiceRequestPriority;
+  return priorityForRule(fallbackRulePriority);
+}
+
 function averageMs(values: number[]) {
   if (values.length === 0) return null;
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
@@ -5057,6 +5899,10 @@ function stringParam(params: Record<string, unknown>, key: string) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function stringOrNull(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function numberParam(params: Record<string, unknown>, key: string) {
   const value = params[key];
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -5074,7 +5920,12 @@ function booleanParam(params: Record<string, unknown>, key: string) {
 
 function dateParam(params: Record<string, unknown>, key: string) {
   const value = params[key];
-  if (typeof value !== 'string') return null;
+  return parseDate(value);
+}
+
+function parseDate(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }

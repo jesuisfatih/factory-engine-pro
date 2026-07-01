@@ -8,6 +8,7 @@ import { RulesService } from './rules.service.js';
 import { RULES_RUNTIME } from './rules.tokens.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
 import { WorkflowPromptService } from './workflow-prompt.service.js';
+import { WorkflowScheduledActionsWorker } from './workflow-scheduled-actions.worker.js';
 
 @Module({
   imports: [CustomersModule, MailModule, SupportModule],
@@ -18,6 +19,7 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
     { provide: RULES_RUNTIME, useExisting: RulesService },
     WorkflowExecutorService,
     WorkflowPromptService,
+    WorkflowScheduledActionsWorker,
   ],
   exports: [RulesService, RULES_RUNTIME, WorkflowPromptService, WorkflowExecutorService],
 })

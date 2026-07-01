@@ -12,8 +12,9 @@ FACTORY_ENGINE_TENANT_ID=ten_dtfbank
 
 The token must belong to a member with:
 
-- `settings.read` for capabilities, draft, validate, and simulate.
-- `settings.write` for creating drafts and publishing.
+- `settings.read` for capabilities, guide reads, frontend contracts, draft, validate, simulate, and scheduled-action inspection.
+- `settings.write` for creating drafts, publishing, and cancelling pending scheduled actions.
+- `aircall.users.read` for transcript listing, download, and export tools.
 
 The server never connects to Postgres or Redis directly.
 
@@ -48,6 +49,21 @@ Use tools in this order:
 5. `create_workflow_rule_draft` only after validation is clean.
 6. `simulate_workflow_rule` again using the stored `ruleId`; this stored report is the publish proof.
 7. `publish_workflow_rule` only after explicit user approval and a completed stored simulation report.
+
+For delayed staff work:
+
+1. Use natural-language goals like: "If a customer asks for Hydro1620 spare parts and still has not purchased after 15 days, show a follow-up task to Ihsan on that day."
+2. `draft_workflow_rule` should compile this into `create_task.timing.mode = deferred_materialization`.
+3. `simulate_deferred_workflow_rule` must show hidden scheduled actions and projected run times before publish.
+4. `list_scheduled_workflow_actions`, `get_scheduled_workflow_action`, and `explain_scheduled_workflow_action` inspect hidden pending work.
+5. `cancel_scheduled_workflow_action` cancels pending hidden work before it appears to staff.
+
+For frontend work:
+
+1. `read_frontend_agent_guide` first.
+2. `list_frontend_surfaces`.
+3. `get_frontend_surface_contract` for the exact surface, currently `staff.queue`.
+4. Keep edits inside allowlisted files, preserve live API data, remove internal staff-facing terms, and verify loading/empty/error/populated states.
 
 Unsupported actions such as automatic support case creation, raw SQL, destructive segment changes, and direct email sends are rejected by the backend.
 

@@ -106,6 +106,7 @@ model Tenant {
   syncLogs                SyncLog[]
   workflowRules           WorkflowRule[]
   workflowMcpDrafts       WorkflowMcpDraft[]
+  workflowScheduledActions WorkflowScheduledAction[]
   workflowRuleExecutions  WorkflowRuleExecution[]
   transcriptWorkflowEvaluations TranscriptWorkflowEvaluation[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
@@ -173,6 +174,7 @@ model Member {
   aircallMemberMaps AircallMemberMap[]
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
+  workflowScheduledActions WorkflowScheduledAction[]
   dailyCallOrders PersonDailyCallOrder[]
   dailyTaskOrders PersonDailyTaskOrder[]
   commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
@@ -260,6 +262,7 @@ model Customer {
   segmentAssignments SegmentCustomerAssignment[]
   serviceRequests ServiceRequest[]
   workflowRuleCooldowns WorkflowRuleCooldown[]
+  workflowScheduledActions WorkflowScheduledAction[]
   dailyCallOrders PersonDailyCallOrder[]
   commissionRequests CommissionRequest[]
 
@@ -1038,6 +1041,7 @@ model ServiceRequest {
   comments     ServiceRequestComment[]
   participants TaskParticipant[]
   dailyTaskOrders PersonDailyTaskOrder[]
+  materializedWorkflowScheduledActions WorkflowScheduledAction[]
 
   @@index([tenantId, customerId])
   @@index([tenantId, customerUserId])
@@ -1623,11 +1627,50 @@ model WorkflowRule {
   cooldowns  WorkflowRuleCooldown[]
   versions   WorkflowRuleVersion[]
   backfillReports WorkflowRuleBackfillReport[]
+  scheduledActions WorkflowScheduledAction[]
 
   @@index([tenantId, status])
   @@index([tenantId, trigger])
   @@index([tenantId, priority])
   @@map("workflow_rules")
+}
+
+model WorkflowScheduledAction {
+  id                       String   @id
+  tenantId                 String   @map("tenant_id")
+  ruleId                   String   @map("rule_id")
+  sourceEventId            String?  @map("source_event_id")
+  sourceCallId             String?  @map("source_call_id")
+  customerId               String?  @map("customer_id")
+  assignedMemberId         String?  @map("assigned_member_id")
+  axis                     String
+  title                    String
+  description              String?
+  actionPayload            Json     @map("action_payload")
+  briefPayload             Json     @default("{}") @map("brief_payload")
+  revalidationPolicy       Json     @default("{}") @map("revalidation_policy")
+  runAt                    DateTime @map("run_at")
+  status                   String   @default("pending")
+  idempotencyKey           String   @map("idempotency_key")
+  skipReason               String?  @map("skip_reason")
+  errorMessage             String?  @map("error_message") @db.Text
+  executedServiceRequestId String?  @map("executed_service_request_id")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  tenant                 Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule                   WorkflowRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  customer               Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedMember         Member?         @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  executedServiceRequest ServiceRequest? @relation(fields: [executedServiceRequestId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, status, runAt])
+  @@index([tenantId, ruleId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, assignedMemberId])
+  @@index([tenantId, executedServiceRequestId])
+  @@map("workflow_scheduled_actions")
 }
 
 model WorkflowMcpDraft {

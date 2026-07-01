@@ -61,6 +61,14 @@ The MCP surface exposes these tool concepts:
 - `list_aircall_transcripts`
 - `download_aircall_transcript`
 - `export_aircall_transcripts`
+- `list_scheduled_workflow_actions`
+- `get_scheduled_workflow_action`
+- `cancel_scheduled_workflow_action`
+- `simulate_deferred_workflow_rule`
+- `explain_scheduled_workflow_action`
+- `read_frontend_agent_guide`
+- `list_frontend_surfaces`
+- `get_frontend_surface_contract`
 
 The safe authoring sequence is always:
 
@@ -1085,6 +1093,85 @@ The MVP does not yet support:
 - executing actions without deterministic validation
 
 Future versions may add controlled template rendering or richer modal variables, but that must be a separate safe rendering system with allowlisted variables and sanitization. It must not be mixed into rule execution silently.
+
+## Deferred Visible Work
+
+Deferred visible work is for prompts such as:
+
+```text
+Do not call the customer immediately. Put the customer in Ihsan's Daily Call List 15 days later if they still have not purchased.
+```
+
+This is not a due date.
+
+Wrong implementation:
+
+```text
+Create a task today and set dueAt to 15 days later.
+```
+
+Correct implementation:
+
+1. The rule matches today.
+2. No ServiceRequest is created today.
+3. A `workflow_scheduled_actions` row is written with `status=pending` and `runAt`.
+4. BullMQ only wakes the worker. The database row is the source of truth.
+5. At `runAt`, the worker revalidates the customer state.
+6. If the rule is still valid, the worker creates the ServiceRequest at that time.
+7. The task appears in the staff Daily Call List only after materialization.
+
+Supported create_task timing:
+
+```json
+{
+  "timing": {
+    "mode": "deferred_materialization",
+    "delayDays": 15,
+    "base": "source_call_time"
+  },
+  "revalidate": {
+    "skipIfOpenTaskExistsForIntent": true,
+    "skipIfCustomerPurchasedSinceSourceCall": true,
+    "skipIfNoCustomerMatch": true
+  }
+}
+```
+
+Rules:
+
+- Deferred timing is allowed only on `create_task`.
+- `support` is still forbidden.
+- Use only `sales` or `account`.
+- `runAt` must be future dated.
+- `delayDays` is capped at 365.
+- Revalidation must be explicit.
+- Publish only after `simulate_deferred_workflow_rule` and normal validation/simulation.
+
+Use these MCP tools for deferred work:
+
+- `simulate_deferred_workflow_rule`: prove which actions will be hidden and when they would materialize.
+- `list_scheduled_workflow_actions`: inspect pending/deferred work.
+- `get_scheduled_workflow_action`: inspect one scheduled action.
+- `explain_scheduled_workflow_action`: explain runAt, status, and revalidation.
+- `cancel_scheduled_workflow_action`: cancel pending hidden work before it becomes staff-visible.
+
+Staff UI text must stay business-facing. Prefer:
+
+```text
+Call now
+From previous call on <date>
+No purchase since last call
+```
+
+Do not show:
+
+```text
+AI
+workflow rule
+sales axis
+support axis
+internal resolver
+```
 
 ## Agent Instruction Summary
 

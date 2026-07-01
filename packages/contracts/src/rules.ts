@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTaskAxisSchema, operationalIntentSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type WorkflowTrigger } from './enums.js';
+import { createTaskAxisSchema, operationalIntentSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type CreateTaskAxis, type WorkflowTrigger } from './enums.js';
 
 export const workflowRuleStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
 export type WorkflowRuleStatus = z.infer<typeof workflowRuleStatusSchema>;
@@ -22,19 +22,69 @@ export const workflowRuleWhenGroupSchema = z.object({
 });
 export type WorkflowRuleWhenGroup = z.infer<typeof workflowRuleWhenGroupSchema>;
 
+export const workflowActionTimingSchema = z.object({
+  mode: z.enum(['immediate', 'deferred_materialization']).default('immediate'),
+  delayDays: z.coerce.number().int().min(0).max(365).optional(),
+  delayHours: z.coerce.number().int().min(0).max(8760).optional(),
+  runAt: z.string().datetime().optional(),
+  base: z.enum(['source_event_time', 'source_call_time', 'now']).default('source_event_time'),
+}).superRefine((timing, ctx) => {
+  if (timing.mode !== 'deferred_materialization') return;
+  const hasDelay = (timing.delayDays ?? 0) > 0 || (timing.delayHours ?? 0) > 0;
+  if (!hasDelay && !timing.runAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Deferred task materialization requires delayDays, delayHours, or runAt.',
+    });
+  }
+  if (timing.runAt && new Date(timing.runAt).getTime() <= Date.now()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['runAt'],
+      message: 'Deferred task materialization runAt must be in the future.',
+    });
+  }
+});
+export type WorkflowActionTiming = z.infer<typeof workflowActionTimingSchema>;
+
+export const workflowActionRevalidateSchema = z.object({
+  skipIfOpenTaskExistsForIntent: z.boolean().optional(),
+  skipIfCustomerPurchasedSinceSourceCall: z.boolean().optional(),
+  skipIfCustomerCalledSinceSourceCall: z.boolean().optional(),
+  skipIfNoCustomerMatch: z.boolean().optional(),
+});
+export type WorkflowActionRevalidate = z.infer<typeof workflowActionRevalidateSchema>;
+
 export const workflowRuleActionSchema = z.object({
   id: z.string().trim().min(1),
   action: workflowActionSchema,
   value: z.string(),
   axis: createTaskAxisSchema.optional(),
+  timing: workflowActionTimingSchema.optional(),
+  revalidate: workflowActionRevalidateSchema.optional(),
 }).superRefine((action, ctx) => {
-  if (action.action !== 'create_task') return;
-  if (/^\s*support\s*:/i.test(action.value)) {
+  if (action.timing?.mode === 'deferred_materialization' && action.action !== 'create_task') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ['value'],
-      message: 'Rule-created tasks cannot target customer requests. Customer service must open customer requests manually.',
+      path: ['timing', 'mode'],
+      message: 'Deferred task materialization is only supported on create_task actions.',
     });
+  }
+  if (action.revalidate && action.action !== 'create_task') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['revalidate'],
+      message: 'Revalidation policy is only supported on create_task actions.',
+    });
+  }
+  if (action.action === 'create_task') {
+    if (/^\s*support\s*:/i.test(action.value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['value'],
+        message: 'Rule-created tasks cannot target customer requests. Customer service must open customer requests manually.',
+      });
+    }
   }
 });
 export type WorkflowRuleAction = z.infer<typeof workflowRuleActionSchema>;
@@ -162,6 +212,41 @@ export const workflowMcpPublishRuleSchema = z.object({
   comment: z.string().trim().max(500).optional(),
 });
 export type WorkflowMcpPublishRuleInput = z.infer<typeof workflowMcpPublishRuleSchema>;
+
+export const workflowScheduledActionStatusSchema = z.enum(['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed']);
+export type WorkflowScheduledActionStatus = z.infer<typeof workflowScheduledActionStatusSchema>;
+
+export const workflowMcpListScheduledWorkflowActionsSchema = z.object({
+  status: workflowScheduledActionStatusSchema.optional(),
+  ruleId: z.string().trim().min(1).optional(),
+  customerId: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type WorkflowMcpListScheduledWorkflowActionsInput = z.infer<typeof workflowMcpListScheduledWorkflowActionsSchema>;
+
+export const workflowMcpScheduledWorkflowActionIdSchema = z.object({
+  scheduledActionId: z.string().trim().min(1),
+});
+export type WorkflowMcpScheduledWorkflowActionIdInput = z.infer<typeof workflowMcpScheduledWorkflowActionIdSchema>;
+
+export const workflowMcpSimulateDeferredWorkflowRuleSchema = z.object({
+  ruleId: z.string().trim().min(1).optional(),
+  draftId: workflowMcpDraftIdSchema.optional(),
+  rule: z.union([saveWorkflowRuleSchema, workflowMcpRuleJsonSchema]).optional(),
+  ruleJson: workflowMcpRuleJsonSchema.optional(),
+  recentDays: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  now: z.string().datetime().optional(),
+}).superRefine((value, ctx) => {
+  const provided = [value.ruleId, value.draftId, value.rule, value.ruleJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of ruleId, draftId, rule, or ruleJson.',
+    });
+  }
+});
+export type WorkflowMcpSimulateDeferredWorkflowRuleInput = z.infer<typeof workflowMcpSimulateDeferredWorkflowRuleSchema>;
 
 export interface WorkflowRuleDto {
   id: string;
@@ -336,7 +421,15 @@ export interface WorkflowMcpCapabilityTool {
     | 'publish_workflow_rule'
     | 'list_aircall_transcripts'
     | 'download_aircall_transcript'
-    | 'export_aircall_transcripts';
+    | 'export_aircall_transcripts'
+    | 'list_scheduled_workflow_actions'
+    | 'get_scheduled_workflow_action'
+    | 'cancel_scheduled_workflow_action'
+    | 'simulate_deferred_workflow_rule'
+    | 'explain_scheduled_workflow_action'
+    | 'read_frontend_agent_guide'
+    | 'list_frontend_surfaces'
+    | 'get_frontend_surface_contract';
   description: string;
   mutates: boolean;
   requiresPermission: string;
@@ -456,6 +549,106 @@ export interface WorkflowMcpPublishRuleResponse {
   publishedAt: string;
 }
 
+export interface WorkflowScheduledActionDto {
+  id: string;
+  ruleId: string;
+  ruleName: string | null;
+  sourceEventId: string | null;
+  sourceCallId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  assignedMemberId: string | null;
+  assignedMemberName: string | null;
+  axis: CreateTaskAxis;
+  title: string;
+  description: string | null;
+  actionPayload: unknown;
+  briefPayload: unknown;
+  revalidationPolicy: unknown;
+  runAt: string;
+  status: WorkflowScheduledActionStatus;
+  idempotencyKey: string;
+  skipReason: string | null;
+  errorMessage: string | null;
+  executedServiceRequestId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowMcpListScheduledWorkflowActionsResponse {
+  items: WorkflowScheduledActionDto[];
+  total: number;
+  limit: number;
+  status: WorkflowScheduledActionStatus | null;
+  checkedAt: string;
+}
+
+export interface WorkflowMcpScheduledWorkflowActionResponse {
+  item: WorkflowScheduledActionDto;
+}
+
+export interface WorkflowMcpCancelScheduledWorkflowActionResponse {
+  item: WorkflowScheduledActionDto;
+  cancelled: boolean;
+}
+
+export interface WorkflowMcpExplainScheduledWorkflowActionResponse {
+  item: WorkflowScheduledActionDto;
+  explanation: {
+    visibleNow: boolean;
+    runAt: string;
+    status: WorkflowScheduledActionStatus;
+    revalidation: string[];
+    nextOutcome: string;
+  };
+}
+
+export interface WorkflowMcpSimulateDeferredWorkflowRuleResponse extends WorkflowMcpSimulateRuleResponse {
+  deferredActions: Array<{
+    actionId: string;
+    title: string;
+    axis: CreateTaskAxis;
+    runAtPreview: string | null;
+    revalidationPolicy: WorkflowActionRevalidate;
+  }>;
+}
+
+export interface FrontendMcpAgentGuideResponse {
+  version: string;
+  title: string;
+  path: string;
+  sha256: string;
+  lineCount: number;
+  updatedAt: string | null;
+  markdown: string;
+}
+
+export interface FrontendMcpSurfaceSummary {
+  id: string;
+  label: string;
+  route: string;
+  purpose: string;
+  allowedPaths: string[];
+}
+
+export interface FrontendMcpSurfaceContract extends FrontendMcpSurfaceSummary {
+  sourceFiles: string[];
+  apiEndpoints: string[];
+  requiredStates: string[];
+  forbiddenTerms: string[];
+  preferredTerms: string[];
+  themeChecklist: string[];
+  smokeChecklist: string[];
+}
+
+export interface FrontendMcpSurfacesResponse {
+  surfaces: FrontendMcpSurfaceSummary[];
+}
+
+export interface FrontendMcpSurfaceContractResponse {
+  surface: FrontendMcpSurfaceContract;
+}
+
 export interface WorkflowOperationalContractProbeResponse {
   ok: boolean;
   checkedAt: string;
@@ -569,7 +762,7 @@ export interface WorkflowActionTrace {
   actionId: string;
   action: string;
   status: 'applied' | 'skipped';
-  targetType: 'service_request' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
+  targetType: 'service_request' | 'scheduled_action' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
   targetId?: string;
   message: string;
   metadata?: Record<string, unknown>;

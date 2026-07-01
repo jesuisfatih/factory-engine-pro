@@ -9,6 +9,7 @@ import {
   MEMBER_PERMISSIONS,
   type WorkflowMcpCreateDraftRuleInput,
   type WorkflowMcpDraftRuleInput,
+  type WorkflowMcpSimulateDeferredWorkflowRuleInput,
   type WorkflowMcpSimulateRuleInput,
   type WorkflowMcpValidateRuleInput,
   type WorkflowRuleDto,
@@ -324,6 +325,112 @@ export class WorkflowMcpHttpService implements OnModuleDestroy {
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
       async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.aircallUsersRead, () => this.aircall.exportTranscripts(input))),
+    );
+
+    server.registerTool(
+      'list_scheduled_workflow_actions',
+      {
+        title: 'List scheduled workflow actions',
+        description: 'List hidden deferred workflow actions before they materialize into visible staff work.',
+        inputSchema: {
+          status: z.enum(['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed']).optional(),
+          ruleId: z.string().trim().min(1).optional(),
+          customerId: z.string().trim().min(1).optional(),
+          limit: z.number().int().min(1).max(200).default(50),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.listScheduledWorkflowActions(input))),
+    );
+
+    server.registerTool(
+      'get_scheduled_workflow_action',
+      {
+        title: 'Get scheduled workflow action',
+        description: 'Read one deferred workflow action including runAt, revalidation policy, and execution state.',
+        inputSchema: { scheduledActionId: z.string().trim().min(1) },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.getScheduledWorkflowAction(input))),
+    );
+
+    server.registerTool(
+      'cancel_scheduled_workflow_action',
+      {
+        title: 'Cancel scheduled workflow action',
+        description: 'Cancel a pending deferred workflow action before it creates visible staff work.',
+        inputSchema: { scheduledActionId: z.string().trim().min(1) },
+        annotations: { readOnlyHint: false, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsWrite, () => this.rules.cancelScheduledWorkflowAction(input))),
+    );
+
+    server.registerTool(
+      'simulate_deferred_workflow_rule',
+      {
+        title: 'Simulate deferred workflow rule',
+        description: 'Dry-run a stored or draft rule and summarize deferred materialization actions.',
+        inputSchema: {
+          ruleId: z.string().trim().min(1).optional(),
+          draftId: z.string().trim().min(1).optional(),
+          rule: workflowRuleInputSchema.optional(),
+          ruleJson: z.string().trim().min(2).max(250_000).optional(),
+          recentDays: z.number().int().min(1).max(90).optional(),
+          limit: z.number().int().min(1).max(500).optional(),
+          now: z.string().datetime().optional(),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsRead,
+        () => this.rules.simulateDeferredWorkflowRuleFromMcp({
+          ...input,
+          recentDays: input.recentDays ?? 7,
+          limit: input.limit ?? 100,
+        } as WorkflowMcpSimulateDeferredWorkflowRuleInput),
+      )),
+    );
+
+    server.registerTool(
+      'explain_scheduled_workflow_action',
+      {
+        title: 'Explain scheduled workflow action',
+        description: 'Explain when a hidden deferred workflow action will become visible or why it was skipped.',
+        inputSchema: { scheduledActionId: z.string().trim().min(1) },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.explainScheduledWorkflowAction(input))),
+    );
+
+    server.registerTool(
+      'read_frontend_agent_guide',
+      {
+        title: 'Read frontend agent guide',
+        description: 'Read the frontend engineering MCP guide before changing staff or admin UI.',
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async () => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.frontendAgentGuide())),
+    );
+
+    server.registerTool(
+      'list_frontend_surfaces',
+      {
+        title: 'List frontend surfaces',
+        description: 'List allowlisted frontend surfaces and their high-level boundaries.',
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async () => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.frontendSurfaces())),
+    );
+
+    server.registerTool(
+      'get_frontend_surface_contract',
+      {
+        title: 'Get frontend surface contract',
+        description: 'Read one frontend surface contract including files, endpoints, states, terminology, and smoke checklist.',
+        inputSchema: { surfaceId: z.string().trim().min(1).default('staff.queue') },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.frontendSurfaceContract(input.surfaceId))),
     );
 
     server.registerPrompt(

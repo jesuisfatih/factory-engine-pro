@@ -12,6 +12,7 @@ export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE
 export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
 export const ROLLING_BACKFILL_QUEUE = Symbol('ROLLING_BACKFILL_QUEUE');
+export const WORKFLOW_SCHEDULED_ACTION_QUEUE = Symbol('WORKFLOW_SCHEDULED_ACTION_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
 export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
 export const AIRCALL_ROLLING_SYNC_QUEUE_NAME = 'aircall-rolling-sync';
@@ -20,6 +21,8 @@ export const SEGMENT_EVALUATION_QUEUE_NAME = 'segment-evaluation';
 export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
 export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
 export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
+export const WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME = 'workflow-scheduled-actions';
+export const WORKFLOW_SCHEDULED_ACTION_JOB = 'workflow_scheduled_actions_sweep';
 
 @Global()
 @Module({
@@ -105,6 +108,14 @@ export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
         return new Queue(ROLLING_BACKFILL_QUEUE_NAME, { connection });
       },
     },
+    {
+      provide: WORKFLOW_SCHEDULED_ACTION_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME, { connection });
+      },
+    },
   ],
   exports: [
     REDIS_CONNECTION,
@@ -117,6 +128,7 @@ export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
     SHOPIFY_SYNC_QUEUE,
     SEGMENT_EVALUATION_QUEUE,
     ROLLING_BACKFILL_QUEUE,
+    WORKFLOW_SCHEDULED_ACTION_QUEUE,
   ],
 })
 export class QueueModule {}
