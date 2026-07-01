@@ -1,7 +1,7 @@
-import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, ShoppingBag, Tags } from 'lucide-react';
+import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, Mail, Phone, ShoppingBag, Tags } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
-import { focusLabel, personSafeText, taskSourceLabel } from '../lib/personTerminology';
+import { focusLabel, personSafeText, staffActionLabel, staffActionTone, staffBriefLine, taskSourceLabel } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
@@ -31,12 +31,26 @@ function fmtMoney(value: number, currency = 'USD') {
 
 export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
+  const actionInput = {
+    intent: card.callIntent ?? card.urgencyBreakdown.intent,
+    tags: card.psychTags,
+    upset: card.aiBrief?.upsetAbout,
+    goal: card.aiBrief?.callGoal,
+    summary: card.aiBrief?.whyCalling ?? card.summary,
+    urgencyScore: card.urgencyScore,
+  };
+  const actionLabel = staffActionLabel(actionInput);
+  const actionTone = staffActionTone(actionInput);
+  const briefLine = staffBriefLine(actionInput);
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
-    : 'No Shopify order';
+    : card.ordersCount
+      ? `${card.ordersCount} orders ${fmtMoney(card.totalSpent ?? 0)}`
+      : 'No linked order';
   const performance = card.performance30d
     ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
     : '30d customer activity pending';
+  const staffSegment = card.source === 'call_analysis' ? actionLabel : personSafeText(card.segment);
   return (
     <div
       className="card"
@@ -47,18 +61,24 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
       <div className="row1">
         <span className="title">{personSafeText(card.title)}</span>
         {meta ? (
-          <span className={`src-badge src-${card.source}`} title={meta.label}>
+          <span className={`action-badge tone-${actionTone}`} title={meta.label}>
             <meta.icon size={9} />
-            <span>{meta.label}</span>
+            <span>{actionLabel}</span>
           </span>
         ) : null}
         <span className={priorityClass(card.priority)} title={card.urgencyBreakdown.intent ?? 'urgency score'}>
           U{card.urgencyScore}
         </span>
       </div>
-      <div className="summary">{personSafeText(card.summary)}</div>
+      <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div>
+      {(card.phone || card.email) ? (
+        <div className="card-contact-line">
+          {card.phone ? <span><Phone size={12} /> {card.phone}</span> : null}
+          {card.email ? <span><Mail size={12} /> {card.email}</span> : null}
+        </div>
+      ) : null}
       <div className="assign-line">
-        <span>{card.assignedMemberName ? `Assigned to ${card.assignedMemberName}` : 'Unassigned'}</span>
+        <span>{card.assignedMemberName ? card.assignedMemberName : 'Unassigned'}</span>
         <span>{focusLabel(card.axis)}</span>
         {card.segmentPriority !== null && card.segmentPriority !== undefined ? (
           <span>{`Customer group P${card.segmentPriority}`}</span>
@@ -69,7 +89,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
         <span title="Last 30 days"><Activity size={10} /> {performance}</span>
       </div>
       <div className="row2">
-        <span className="chip" style={{ background: card.segmentColor }}>{card.segment}</span>
+        <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span>
         <button
           type="button"
           className={`pin-btn${card.pinned ? ' pinned' : ''}`}

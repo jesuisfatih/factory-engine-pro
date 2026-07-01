@@ -46,6 +46,66 @@ export function humanize(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+type StaffActionInput = {
+  intent?: string | null;
+  tags?: string[] | null;
+  upset?: string | null;
+  goal?: string | null;
+  summary?: string | null;
+  urgencyScore?: number | null;
+};
+
+export function staffActionLabel(input: StaffActionInput) {
+  const signal = actionSignal(input);
+  if (signal.includes('refund') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) {
+    return 'Customer concern - handle carefully';
+  }
+  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('freight')) {
+    return 'Delivery issue - give next step';
+  }
+  if (signal.includes('callback') || signal.includes('follow_up') || signal.includes('follow up') || signal.includes('call back')) {
+    return 'Callback requested - call back';
+  }
+  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('sale')) {
+    return 'Purchase intent - qualify next step';
+  }
+  if (signal.includes('product') || signal.includes('fit') || signal.includes('information') || signal.includes('inquiry')) {
+    return 'Product question - guide the customer';
+  }
+  if ((input.urgencyScore ?? 0) >= 8) return 'High priority - act today';
+  return 'Customer follow-up';
+}
+
+export function staffActionTone(input: StaffActionInput) {
+  const signal = actionSignal(input);
+  if (signal.includes('refund') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
+  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow_up')) return 'warn';
+  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('sale')) return 'success';
+  if ((input.urgencyScore ?? 0) >= 8) return 'danger';
+  if ((input.urgencyScore ?? 0) >= 6) return 'warn';
+  return 'info';
+}
+
+export function staffBriefLine(input: StaffActionInput) {
+  const candidates = [
+    input.upset,
+    input.goal,
+    input.summary,
+  ].map((value) => personSafeText(value).trim()).filter(Boolean);
+  const meaningful = candidates.find((value) => !/^no explicit complaint/i.test(value) && !/^no customer/i.test(value));
+  return meaningful ?? candidates[0] ?? 'Review the customer context and record the next step.';
+}
+
+function actionSignal(input: StaffActionInput) {
+  return [
+    input.intent,
+    ...(input.tags ?? []),
+    input.upset,
+    input.goal,
+    input.summary,
+  ].map((value) => normalizeKey(personSafeText(value))).join(' ');
+}
+
 function normalizeKey(value: string | null | undefined) {
   return value?.trim().toLowerCase().replace(/[\s-]+/g, '_') ?? '';
 }

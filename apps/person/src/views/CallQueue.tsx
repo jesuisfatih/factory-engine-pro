@@ -448,13 +448,15 @@ function SegmentCustomerCard({
   disabled: boolean;
   callDisabled: boolean;
 }) {
-  const orderSummary = `${item.ordersCount} orders | $${Math.round(item.totalSpent).toLocaleString()}`;
+  const orderSummary = `${item.ordersCount} orders | ${formatCurrency(item.totalSpent)}`;
   const latestOrder = item.latestOrder
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
-    : 'No linked Shopify order';
+    : 'No linked order';
   const latestCall = item.latestCall
     ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'linked call'}`
     : 'No linked call yet';
+  const customerBrief = priorityCustomerBrief(item);
+  const urgencyClass = priorityUrgencyClass(item.urgencyScore);
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -531,12 +533,13 @@ function SegmentCustomerCard({
             {item.pinned ? 'Pinned' : 'Pin'}
           </button>
         </div>
-        <span className="priority p7">U{item.urgencyScore}</span>
+        <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span>
       </div>
+      <div className={`priority-brief ${urgencyClass}`}>{customerBrief}</div>
       <div className="daily-meta">{personSafeText(item.reason)}</div>
       <div className="segment-customer-insights">
-        <span><strong>Latest order</strong>{latestOrder}</span>
-        <span><strong>Latest call</strong>{latestCall}</span>
+        <span className="insight-order"><strong>Latest order</strong>{latestOrder}</span>
+        <span className="insight-call"><strong>Latest call</strong>{latestCall}</span>
         <span><strong>Open follow-up</strong>{item.openTasksCount} items | {item.openRequestsCount} customer requests | {item.notesCount} notes</span>
         {item.latestNote ? (
           <span className="segment-customer-latest-note">
@@ -553,6 +556,22 @@ function SegmentCustomerCard({
       </div>
     </article>
   );
+}
+
+function priorityCustomerBrief(item: DailyCallItem) {
+  const recentCall = item.latestCall ? `Last call ${relativeTime(item.latestCall.at)}` : 'No recent call captured';
+  if (item.openRequestsCount > 0) return `${item.openRequestsCount} customer request${item.openRequestsCount === 1 ? '' : 's'} open - review before outreach.`;
+  if (item.ordersCount > 0 && item.latestCall) return `${recentCall} - check order context before calling.`;
+  if (item.ordersCount > 0) return `${item.ordersCount} previous orders - good purchase follow-up candidate.`;
+  if (item.latestCall) return `${recentCall} - call history needs a human next step.`;
+  return 'Assigned priority customer - review history and choose the next outreach.';
+}
+
+function priorityUrgencyClass(score: number) {
+  if (score >= 8) return 'p9';
+  if (score >= 6) return 'p7';
+  if (score >= 4) return 'p5';
+  return 'p3';
 }
 
 function CustomerNoteModal({
