@@ -1,32 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  X, Phone, Mail, ExternalLink, FileText, AlarmClockOff, CheckCircle2,
+  X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
-import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
-import { humanize, personSafeText, taskSourceLabel } from '../lib/personTerminology';
+import type { Card as CardData, TaskBriefDetail } from '../types';
+import { humanize, personSafeText, staffActionLabel, staffActionTone, staffBriefLine } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
   onClose: () => void;
-}
-
-const SOURCE_LABEL: Record<TaskSource, string> = {
-  manual: taskSourceLabel('manual'),
-  call_analysis: taskSourceLabel('call_analysis'),
-  segment_priority: taskSourceLabel('segment_priority'),
-  stale_follow_up: taskSourceLabel('stale_follow_up'),
-  admin_transfer: taskSourceLabel('admin_transfer'),
-};
-
-function riskTier(priority: number) {
-  if (priority >= 9) return { label: 'High risk', tone: 'danger' as const };
-  if (priority >= 7) return { label: 'Watch', tone: 'warn' as const };
-  if (priority >= 5) return { label: 'Steady', tone: 'success' as const };
-  return { label: 'Routine', tone: 'info' as const };
 }
 
 function labelize(value: string | null | undefined) {
@@ -140,7 +125,6 @@ export function TaskBriefModal({ card, onClose }: Props) {
       void queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
     },
   });
-  const tier = riskTier(liveCard.priority);
   const latestOrder = liveCard.miniOrder ?? detail?.recentOrders[0];
   const performance = detail?.performance30d ?? liveCard.performance30d;
   const callCustomer = () => {
@@ -203,6 +187,19 @@ export function TaskBriefModal({ card, onClose }: Props) {
     if (!scheduleAt) return;
     scheduleMutation.mutate();
   };
+  const actionInput = {
+    intent: liveCard.callIntent ?? liveCard.urgencyBreakdown.intent,
+    tags: liveCard.psychTags,
+    upset,
+    goal,
+    summary: why || liveCard.summary,
+    urgencyScore: liveCard.urgencyScore,
+  };
+  const actionTone = staffActionTone(actionInput);
+  const actionLabel = staffActionLabel(actionInput);
+  const primaryBrief = staffBriefLine(actionInput);
+  const directActions = directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions);
+  const callSignal = callSignalText(detail);
 
   return (
     <div
@@ -215,15 +212,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
       <div className="modal-card brief-modal" role="document">
         <header className="modal-head">
           <div>
-            <div className="brief-eyebrow">
-              <span className={`brief-source brief-source-${liveCard.source}`}>
-                {liveCard.source === 'manual' ? null : liveCard.source === 'admin_transfer' ? <Activity size={10} /> : <FileText size={10} />} {SOURCE_LABEL[liveCard.source]}
-              </span>
-              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{liveCard.priority}</span>
-              <span className="chip" style={{ background: liveCard.segmentColor }}>{liveCard.segment}</span>
-              <span className="brief-urgency">U{liveCard.urgencyScore}</span>
-            </div>
-            <h2 id="task-brief-title" style={{ marginTop: 6 }}>{personSafeText(liveCard.title)}</h2>
+            <h2 id="task-brief-title">{personSafeText(liveCard.title)}</h2>
             <div className="brief-identity">
               {liveCard.phone && <span><Phone size={11} /> {liveCard.phone}</span>}
               {liveCard.email && <span><Mail size={11} /> {liveCard.email}</span>}
@@ -265,14 +254,32 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <>
                 {hasBrief ? (
                   <>
-                    <NarrativeField label="Why you're calling" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
-                    <NarrativeField label="What they're upset about" suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine />
-                    <NarrativeField label="Your goal" suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine />
+                    <section className={`brief-command tone-${actionTone}`}>
+                      <div className="brief-command-main">
+                        <span>Do this now</span>
+                        <strong>{actionLabel}</strong>
+                        <p>{primaryBrief}</p>
+                      </div>
+                      <div className="brief-command-score">U{liveCard.urgencyScore}</div>
+                    </section>
+
+                    <div className="brief-directives">
+                      {directActions.map((action, index) => (
+                        <div key={`${action}-${index}`} className="brief-directive">
+                          <span>{index + 1}</span>
+                          <strong>{action}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    <NarrativeField label="Reason for this call" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
+                    <NarrativeField label="Customer mood or issue" suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine />
+                    <NarrativeField label="Outcome required" suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine />
 
                     {liveCard.aiBrief?.suggestedActions?.length ? (
                       <div className="brief-block">
                         <div className="brief-block-head">
-                          <span className="lbl">Suggested actions</span>
+                          <span className="lbl">Extra checks</span>
                         </div>
                         <ul className="brief-actions-list">
                           {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
@@ -339,7 +346,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                         <div><span>Urgency</span><strong>{labelize(detail.aiPsychAnalysis.decisionMakingStyle)}</strong></div>
                         <div><span>Motivators</span><strong>{detail.aiPsychAnalysis.motivators.join(', ') || 'None'}</strong></div>
                         <div><span>Objections</span><strong>{detail.aiPsychAnalysis.objections.join(', ') || 'None'}</strong></div>
-                        {detail.aiPsychAnalysis.talkTrack && <p>{detail.aiPsychAnalysis.talkTrack}</p>}
+                        <p>{callSignal}</p>
                       </div>
                     ) : (
                       <div className="brief-val brief-val-muted">No call summary is attached to this customer yet.</div>
@@ -473,4 +480,56 @@ export function TaskBriefModal({ card, onClose }: Props) {
       </div>
     </div>
   );
+}
+
+function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined) {
+  const normalized = actionLabel.toLowerCase();
+  const callStep = phone ? `Call ${phone} now.` : 'Find a valid phone number before closing this follow-up.';
+  if (normalized.includes('payment') || normalized.includes('refund')) {
+    return [
+      callStep,
+      'Ask for the order number and the exact refund, payment, or pricing issue.',
+      'Tell the customer the next accountable step and save the outcome note.',
+    ];
+  }
+  if (normalized.includes('delivery')) {
+    return [
+      callStep,
+      'Ask for the order or tracking number first.',
+      'Give one clear shipping update path, then save what you promised.',
+    ];
+  }
+  if (normalized.includes('callback')) {
+    return [
+      callStep,
+      'Ask what decision, order, or question is still pending.',
+      'Do not close this until the answer or next callback time is saved.',
+    ];
+  }
+  if (normalized.includes('purchase')) {
+    return [
+      callStep,
+      'Ask product need, quantity, timing, and budget.',
+      'Set the next purchase step: quote, order, sample, or scheduled follow-up.',
+    ];
+  }
+  if (normalized.includes('concern')) {
+    return [
+      callStep,
+      'Let the customer explain the issue without arguing.',
+      'Repeat the issue back, assign the next owner, and save the exact promise.',
+    ];
+  }
+  const cleaned = (suggestedActions ?? []).map((action) => personSafeText(action).trim()).filter(Boolean);
+  return [callStep, ...cleaned, 'Save the result before leaving this screen.'].slice(0, 4);
+}
+
+function callSignalText(detail: TaskBriefDetail | undefined) {
+  const analysis = detail?.aiPsychAnalysis;
+  if (!analysis) return 'No call signal is attached yet. Use the action plan above and save the result.';
+  const parts = [
+    analysis.motivators.length ? `Motivators: ${analysis.motivators.map(personSafeText).join(', ')}.` : null,
+    analysis.objections.length ? `Objections: ${analysis.objections.map(personSafeText).join(', ')}.` : null,
+  ].filter(Boolean);
+  return parts.join(' ') || 'No strong motivator or objection was captured. Use the action plan above.';
 }
