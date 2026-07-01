@@ -319,7 +319,8 @@ export class AircallService {
 
   async listTranscripts(query: AircallTranscriptListQuery): Promise<AircallTranscriptListResponse> {
     const parsed = aircallTranscriptListQuerySchema.parse(query);
-    const where = transcriptWhere(this.tenantId(), parsed);
+    const agentAircallUserIds = parsed.agent ? await this.resolveTranscriptAgentAircallUserIds(parsed.agent) : null;
+    const where = transcriptWhere(this.tenantId(), parsed, agentAircallUserIds);
     const [totalWithTranscript, rows] = await Promise.all([
       this.prisma.db.aircallCallEvent.count({ where }),
       this.prisma.db.aircallCallEvent.findMany({
@@ -354,7 +355,8 @@ export class AircallService {
 
   async exportTranscripts(query: AircallTranscriptExportQuery): Promise<AircallTranscriptExportResponse> {
     const parsed = aircallTranscriptExportQuerySchema.parse(query);
-    const where = transcriptWhere(this.tenantId(), parsed);
+    const agentAircallUserIds = parsed.agent ? await this.resolveTranscriptAgentAircallUserIds(parsed.agent) : null;
+    const where = transcriptWhere(this.tenantId(), parsed, agentAircallUserIds);
     const rows = await this.prisma.db.aircallCallEvent.findMany({
       where,
       orderBy: { eventTimestamp: 'desc' },
@@ -368,6 +370,43 @@ export class AircallService {
       count: transcripts.length,
       content: formatTranscriptExport(transcripts, parsed.format),
     };
+  }
+
+  private async resolveTranscriptAgentAircallUserIds(agent: string) {
+    const normalized = agent.trim().toLowerCase();
+    const terms = normalized.split(/\s+/).filter(Boolean);
+    const insensitive = 'insensitive' as const;
+    const rows = await this.prisma.db.member.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        OR: [
+          { aircallUserId: { contains: agent, mode: insensitive } },
+          { email: { contains: agent, mode: insensitive } },
+          { firstName: { contains: agent, mode: insensitive } },
+          { lastName: { contains: agent, mode: insensitive } },
+          ...terms.flatMap((term) => [
+            { email: { contains: term, mode: insensitive } },
+            { firstName: { contains: term, mode: insensitive } },
+            { lastName: { contains: term, mode: insensitive } },
+          ]),
+        ],
+      },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        aircallUserId: true,
+      },
+      take: 50,
+    });
+    return [...new Set(rows
+      .filter((row) => {
+        if (!row.aircallUserId) return false;
+        const haystack = `${row.firstName} ${row.lastName} ${row.email} ${row.aircallUserId}`.toLowerCase();
+        return terms.every((term) => haystack.includes(term));
+      })
+      .map((row) => row.aircallUserId!)
+    )];
   }
 
   async dialForMember(memberId: string, input: AircallDialInput): Promise<AircallDialResponse> {
@@ -1845,6 +1884,7 @@ type AircallTranscriptDetailRow = Prisma.AircallCallEventGetPayload<{ select: ty
 function transcriptWhere(
   tenantId: string,
   query: Pick<AircallTranscriptListQuery, 'q' | 'recentDays'>,
+  agentAircallUserIds: string[] | null = null,
 ): Prisma.AircallCallEventWhereInput {
   const and: Prisma.AircallCallEventWhereInput[] = [...TRANSCRIPT_PRESENT_FILTER];
   if (query.recentDays) {
@@ -1856,12 +1896,18 @@ function transcriptWhere(
       OR: [
         { id: { contains: q, mode: 'insensitive' } },
         { externalCallId: { contains: q, mode: 'insensitive' } },
+        { aircallUserId: { contains: q, mode: 'insensitive' } },
         { contactPhone: { contains: q, mode: 'insensitive' } },
         { contactPhoneE164: { contains: q, mode: 'insensitive' } },
         { contactEmail: { contains: q, mode: 'insensitive' } },
         { transcriptRaw: { contains: q, mode: 'insensitive' } },
       ],
     });
+  }
+  if (agentAircallUserIds) {
+    and.push(agentAircallUserIds.length > 0
+      ? { aircallUserId: { in: agentAircallUserIds } }
+      : { aircallUserId: '__no_agent_match__' });
   }
   return { tenantId, AND: and };
 }

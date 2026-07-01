@@ -39,6 +39,7 @@ export const aircallTranscriptListQuerySchema = z.object({
   recentDays: z.coerce.number().int().min(1).max(365).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(50),
   q: z.string().trim().min(1).max(160).optional(),
+  agent: z.string().trim().min(1).max(160).optional(),
 });
 export type AircallTranscriptListQuery = z.infer<typeof aircallTranscriptListQuerySchema>;
 
