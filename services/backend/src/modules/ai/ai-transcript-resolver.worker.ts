@@ -526,10 +526,16 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
 }
 
 function clipTranscript(transcript: string) {
-  const maxLength = 12_000;
+  const maxLength = positiveInt(process.env.ANTHROPIC_TRANSCRIPT_MAX_CHARS, 6_000, { min: 1_000, max: 12_000 });
   return transcript.length > maxLength
     ? { transcript: transcript.slice(0, maxLength), truncated: true }
     : { transcript, truncated: false };
+}
+
+function positiveInt(value: string | undefined, fallback: number, bounds: { min: number; max: number }) {
+  const parsed = Number(value ?? '');
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.min(bounds.max, Math.max(bounds.min, parsed));
 }
 
 function localFallbackResolverOutput(transcript: string, targetVersion: number): TranscriptResolverOutput {

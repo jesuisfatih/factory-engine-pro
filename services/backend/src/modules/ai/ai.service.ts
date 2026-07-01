@@ -135,6 +135,7 @@ export class AiService {
 
   async resolveTranscript(input: TranscriptResolverTestInput): Promise<TranscriptResolverTestResponse> {
     const startedAt = Date.now();
+    await this.ensureResolverBudgetAvailable();
     const credentials = await this.resolveAnthropicKey();
     if (!credentials.key) {
       throw new BadRequestException('Anthropic API key is not configured for this tenant.');
@@ -169,8 +170,14 @@ export class AiService {
     const configured = this.config.get<string>('ANTHROPIC_RESOLVER_MODEL')?.trim()
       || this.config.get<string>('ANTHROPIC_MODEL')?.trim();
     if (configured) return configured;
-    const fallback = 'claude-3-5-haiku-latest';
-    if (knownModelIds.length) return knownModelIds.find((id) => id.includes('haiku')) ?? knownModelIds[0] ?? fallback;
+    const fallback = 'claude-haiku-4-5-20251001';
+    if (knownModelIds.length) {
+      return knownModelIds.find((id) => id === fallback)
+        ?? knownModelIds.find((id) => id.includes('haiku-4-5'))
+        ?? knownModelIds.find((id) => id.includes('haiku'))
+        ?? knownModelIds[0]
+        ?? fallback;
+    }
     try {
       const response = await fetch('https://api.anthropic.com/v1/models?limit=20', {
         headers: {
@@ -181,9 +188,46 @@ export class AiService {
       });
       const body = parseJson(await response.text()) as { data?: Array<{ id?: string }> } | null;
       const ids = Array.isArray(body?.data) ? body.data.map((item) => item.id).filter((id): id is string => Boolean(id)) : [];
-      return ids.find((id) => id.includes('haiku')) ?? ids[0] ?? fallback;
+      return ids.find((id) => id === fallback)
+        ?? ids.find((id) => id.includes('haiku-4-5'))
+        ?? ids.find((id) => id.includes('haiku'))
+        ?? ids[0]
+        ?? fallback;
     } catch {
       return fallback;
+    }
+  }
+
+  private async ensureResolverBudgetAvailable() {
+    if (this.config.get<string>('ANTHROPIC_RESOLVER_ENABLED')?.trim().toLowerCase() === 'false') {
+      throw new BadRequestException({
+        message: 'Anthropic transcript resolver is disabled by budget control.',
+        code: 'anthropic_resolver_disabled',
+      });
+    }
+
+    const dailyLimit = positiveInt(this.config.get<string>('ANTHROPIC_RESOLVER_DAILY_LIMIT'), 0);
+    if (dailyLimit <= 0) return;
+
+    const since = startOfUtcDay(new Date());
+    const used = await this.prisma.db.aircallCallEvent.count({
+      where: {
+        resolvedAt: { gte: since },
+        resolverModel: { not: 'local-rule-fallback' },
+      },
+    });
+    if (used >= dailyLimit) {
+      this.logger.warn('ai', 'resolver_budget_exceeded', 'Anthropic transcript resolver daily cap reached; local fallback will be used', {
+        daily_limit: dailyLimit,
+        used_today: used,
+        since: since.toISOString(),
+      });
+      throw new BadRequestException({
+        message: `Anthropic transcript resolver daily cap reached (${used}/${dailyLimit}).`,
+        code: 'anthropic_resolver_daily_cap_reached',
+        dailyLimit,
+        usedToday: used,
+      });
     }
   }
 
@@ -325,6 +369,15 @@ function parseJson(text: string): { data?: unknown; error?: { message?: unknown 
 function providerMessage(body: { error?: { message?: unknown } } | null, fallback: string) {
   if (typeof body?.error?.message === 'string' && body.error.message.trim()) return body.error.message.slice(0, 300);
   return fallback.trim().slice(0, 300) || null;
+}
+
+function positiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value ?? '');
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function startOfUtcDay(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 }
 
 function resolverSystemPrompt() {
