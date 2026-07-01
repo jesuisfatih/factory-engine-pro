@@ -189,9 +189,9 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     });
 
     try {
-      const clipped = clipTranscript(transcript);
+      const preparedTranscript = prepareResolverTranscript(transcript);
       const result = await this.ai.resolveTranscript({
-        transcript: clipped.transcript,
+        transcript: preparedTranscript.transcript,
         metadata: {
           aircallCallEventId: callEvent.id,
           externalCallId: callEvent.externalCallId,
@@ -205,7 +205,11 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
           contactEmail: callEvent.contactEmail,
           transcriptSource: callEvent.transcriptSource,
           transcriptPulledAt: callEvent.transcriptPulledAt?.toISOString() ?? null,
-          transcriptTruncated: clipped.truncated,
+          transcriptPreparedMode: preparedTranscript.mode,
+          transcriptCompressed: preparedTranscript.compressed,
+          transcriptTruncated: preparedTranscript.truncated,
+          transcriptRawLength: preparedTranscript.rawLength,
+          transcriptPreparedLength: preparedTranscript.preparedLength,
           queueJobId: job.id,
         },
       });
@@ -525,11 +529,85 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
   }
 }
 
-function clipTranscript(transcript: string) {
+function prepareResolverTranscript(transcript: string) {
   const maxLength = positiveInt(process.env.ANTHROPIC_TRANSCRIPT_MAX_CHARS, 6_000, { min: 1_000, max: 12_000 });
-  return transcript.length > maxLength
-    ? { transcript: transcript.slice(0, maxLength), truncated: true }
-    : { transcript, truncated: false };
+  const focusedLength = positiveInt(
+    process.env.ANTHROPIC_TRANSCRIPT_FOCUSED_MAX_CHARS,
+    Math.min(maxLength, 2_800),
+    { min: 800, max: maxLength },
+  );
+  const normalized = transcript.replace(/\r/g, '').replace(/[ \t]+/g, ' ').trim();
+  const focused = customerFocusedTranscript(normalized);
+  const prepared = focused.length >= 240 ? focused : normalized;
+  const limit = focused.length >= 240 ? focusedLength : maxLength;
+  const clipped = prepared.length > limit ? prepared.slice(0, limit) : prepared;
+  return {
+    transcript: clipped,
+    mode: focused.length >= 240 ? 'customer_focused_excerpt' : 'raw_clipped',
+    compressed: clipped.length < normalized.length,
+    truncated: prepared.length > clipped.length || normalized.length > clipped.length,
+    rawLength: normalized.length,
+    preparedLength: clipped.length,
+  };
+}
+
+function customerFocusedTranscript(transcript: string) {
+  const turns = splitSpeakerTurns(transcript);
+  if (turns.length < 3) return '';
+  const selected: string[] = [];
+  const seen = new Set<number>();
+  const add = (index: number) => {
+    if (index < 0 || index >= turns.length || seen.has(index)) return;
+    const line = turns[index];
+    if (isResolverBoilerplateLine(line)) return;
+    seen.add(index);
+    selected.push(line);
+  };
+
+  for (let index = 0; index < turns.length; index += 1) {
+    const line = turns[index];
+    if (isCustomerTurn(line)) {
+      if (isResolverBoilerplateLine(line)) continue;
+      add(index - 1);
+      add(index);
+      add(index + 1);
+      continue;
+    }
+    if (isActionableAgentTurn(line)) add(index);
+  }
+
+  return selected.join('\n');
+}
+
+function splitSpeakerTurns(transcript: string) {
+  return transcript
+    .replace(/\s+(?=(?:Agent|Customer|Caller|Client|User|Linda|Charlotte|Charlette|Ihsan):)/gi, '\n')
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function isCustomerTurn(line: string) {
+  return /^(customer|caller|client|user):/i.test(line);
+}
+
+function isActionableAgentTurn(line: string) {
+  if (!/^(agent|linda|charlotte|charlette|ihsan):/i.test(line)) return false;
+  const text = normalizedText(line);
+  return /(\?|order|quote|price|refund|return|tracking|shipping|delivery|heat press|dtf|ink|film|powder|part|model|call back|follow up|we sell|we do not|we don't|actually we sell)/i.test(text);
+}
+
+function isResolverBoilerplateLine(line: string) {
+  const text = normalizedText(line);
+  return [
+    'this call may be recorded',
+    'quality and training',
+    'your call may be monitored',
+    'at the end of your call',
+    'take a brief survey',
+    'press 1',
+    'voicemail',
+  ].some((phrase) => text.includes(phrase));
 }
 
 function positiveInt(value: string | undefined, fallback: number, bounds: { min: number; max: number }) {

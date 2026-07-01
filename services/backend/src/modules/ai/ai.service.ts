@@ -298,7 +298,7 @@ export class AiService {
         signal: this.anthropicTimeoutSignal(),
         body: JSON.stringify({
           model,
-          max_tokens: 1000,
+          max_tokens: this.anthropicResolverMaxTokens(),
           temperature: 0,
           system: resolverSystemPrompt(),
           messages: [
@@ -356,6 +356,10 @@ export class AiService {
   private anthropicTimeoutSignal() {
     return AbortSignal.timeout(this.anthropicTimeoutMs());
   }
+
+  private anthropicResolverMaxTokens() {
+    return boundedPositiveInt(this.config.get<string>('ANTHROPIC_RESOLVER_MAX_TOKENS'), 750, { min: 300, max: 1000 });
+  }
 }
 
 function parseJson(text: string): { data?: unknown; error?: { message?: unknown } } | null {
@@ -374,6 +378,12 @@ function providerMessage(body: { error?: { message?: unknown } } | null, fallbac
 function positiveInt(value: string | undefined, fallback: number) {
   const parsed = Number(value ?? '');
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function boundedPositiveInt(value: string | undefined, fallback: number, bounds: { min: number; max: number }) {
+  const parsed = Number(value ?? '');
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.min(bounds.max, Math.max(bounds.min, parsed));
 }
 
 function startOfUtcDay(value: Date) {
