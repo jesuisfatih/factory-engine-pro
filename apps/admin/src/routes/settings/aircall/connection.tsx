@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION, type AircallWorkflowCoverageResponse } from '@factory-engine-pro/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, Key, RefreshCw, Save, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Key, RefreshCw, Save, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
@@ -36,6 +36,7 @@ function ConnectionView() {
   const qc = useQueryClient();
   const canWrite = useCan('settings.write');
   const canSyncDirectory = useCan('aircall.users.write');
+  const [downloadingTranscriptId, setDownloadingTranscriptId] = useState<string | null>(null);
   const [form, setForm] = useState<CredentialForm>({
     aircallApiId: '',
     aircallApiToken: '',
@@ -78,6 +79,31 @@ function ConnectionView() {
     queryKey: ['aircall', 'calls'],
     queryFn: () => adminApi.aircallCallEvents(),
   });
+
+  async function downloadTranscript(callEventId: string) {
+    setDownloadingTranscriptId(callEventId);
+    try {
+      const response = await adminApi.aircallTranscript(callEventId);
+      const transcript = response.transcript;
+      downloadTextFile(
+        `aircall-transcript-${transcript.externalCallId}.txt`,
+        [
+          `Aircall transcript ${transcript.externalCallId}`,
+          `Call event id: ${transcript.id}`,
+          `Time: ${transcript.eventTimestamp}`,
+          `Phone: ${transcript.contactPhoneE164 ?? transcript.contactPhone ?? '-'}`,
+          `Email: ${transcript.contactEmail ?? '-'}`,
+          '',
+          transcript.transcriptRaw,
+        ].join('\n'),
+      );
+      toast.success('Transcript downloaded');
+    } catch (error) {
+      toast.error('Transcript download failed', { description: apiErrorMessage(error) });
+    } finally {
+      setDownloadingTranscriptId(null);
+    }
+  }
 
   const workflowCoverage = useQuery({
     queryKey: ['aircall', 'workflow-coverage'],
@@ -570,6 +596,15 @@ function ConnectionView() {
                             ? t('aircall_hub.connection.transcript_present', { count: call.transcriptLength })
                             : t('aircall_hub.connection.transcript_missing')}
                         </span>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          style={{ marginLeft: 8, padding: '4px 8px' }}
+                          disabled={!call.transcriptPresent || downloadingTranscriptId === call.id}
+                          onClick={() => downloadTranscript(call.id)}
+                        >
+                          <Download size={12} /> Download
+                        </button>
                       </td>
                       <td>
                         <span className={call.resolverQueuedAt ? 'pill success dot' : 'pill warning dot'}>
@@ -631,6 +666,18 @@ function resolverStatusLabel(call: { resolverStatus: string | null; resolvedWith
     return call.resolvedWithVersion ? `v${call.resolvedWithVersion} / ${formatDate(call.resolvedAt)}` : 'Resolved';
   }
   return call.resolverStatus ?? 'Not resolved';
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export const Route = createFileRoute('/settings/aircall/connection')({ component: ConnectionView });

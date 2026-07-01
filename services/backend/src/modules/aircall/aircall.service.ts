@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import {
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+  aircallTranscriptExportQuerySchema,
+  aircallTranscriptListQuerySchema,
   transcriptResolverOutputSchema,
   type TranscriptResolverOutput,
 } from '@factory-engine-pro/contracts';
@@ -17,6 +19,13 @@ import type {
   AircallNumbersResponse,
   AircallResolverReprocessInput,
   AircallResolverReprocessResponse,
+  AircallTranscriptDto,
+  AircallTranscriptExportQuery,
+  AircallTranscriptExportResponse,
+  AircallTranscriptListQuery,
+  AircallTranscriptListResponse,
+  AircallTranscriptResponse,
+  AircallTranscriptSummaryDto,
   AircallSyncLogsResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
@@ -305,6 +314,59 @@ export class AircallService {
         resolvedWithVersion: row.resolvedWithVersion,
         receivedAt: row.receivedAt.toISOString(),
       })),
+    };
+  }
+
+  async listTranscripts(query: AircallTranscriptListQuery): Promise<AircallTranscriptListResponse> {
+    const parsed = aircallTranscriptListQuerySchema.parse(query);
+    const where = transcriptWhere(this.tenantId(), parsed);
+    const [totalWithTranscript, rows] = await Promise.all([
+      this.prisma.db.aircallCallEvent.count({ where }),
+      this.prisma.db.aircallCallEvent.findMany({
+        where,
+        orderBy: { eventTimestamp: 'desc' },
+        take: parsed.limit + 1,
+        select: AIRCALL_TRANSCRIPT_SUMMARY_SELECT,
+      }),
+    ]);
+    const hasMore = rows.length > parsed.limit;
+    const transcripts = rows.slice(0, parsed.limit).map(toAircallTranscriptSummaryDto);
+    return {
+      transcripts,
+      count: transcripts.length,
+      totalWithTranscript,
+      hasMore,
+    };
+  }
+
+  async getTranscript(id: string): Promise<AircallTranscriptResponse> {
+    const row = await this.prisma.db.aircallCallEvent.findFirst({
+      where: {
+        tenantId: this.tenantId(),
+        id,
+        AND: TRANSCRIPT_PRESENT_FILTER,
+      },
+      select: AIRCALL_TRANSCRIPT_DETAIL_SELECT,
+    });
+    if (!row) throw new NotFoundException('Aircall transcript was not found.');
+    return { transcript: toAircallTranscriptDto(row) };
+  }
+
+  async exportTranscripts(query: AircallTranscriptExportQuery): Promise<AircallTranscriptExportResponse> {
+    const parsed = aircallTranscriptExportQuerySchema.parse(query);
+    const where = transcriptWhere(this.tenantId(), parsed);
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      where,
+      orderBy: { eventTimestamp: 'desc' },
+      take: parsed.limit,
+      select: AIRCALL_TRANSCRIPT_DETAIL_SELECT,
+    });
+    const transcripts = rows.map(toAircallTranscriptDto);
+    return {
+      format: parsed.format,
+      filename: transcriptExportFilename(parsed.format),
+      count: transcripts.length,
+      content: formatTranscriptExport(transcripts, parsed.format),
     };
   }
 
@@ -1743,6 +1805,129 @@ function signalOutcomeRows(evaluations: WorkflowEvaluationCoverageRow[]): Aircal
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+const TRANSCRIPT_PRESENT_FILTER: Prisma.AircallCallEventWhereInput[] = [
+  { transcriptRaw: { not: null } },
+  { transcriptRaw: { not: '' } },
+];
+
+const AIRCALL_TRANSCRIPT_SUMMARY_SELECT = {
+  id: true,
+  externalCallId: true,
+  eventType: true,
+  eventTimestamp: true,
+  direction: true,
+  status: true,
+  aircallUserId: true,
+  contactPhone: true,
+  contactPhoneE164: true,
+  contactEmail: true,
+  transcriptRaw: true,
+  transcriptSource: true,
+  transcriptPulledAt: true,
+  resolverStatus: true,
+  resolverModel: true,
+  resolvedAt: true,
+  receivedAt: true,
+} satisfies Prisma.AircallCallEventSelect;
+
+const AIRCALL_TRANSCRIPT_DETAIL_SELECT = {
+  ...AIRCALL_TRANSCRIPT_SUMMARY_SELECT,
+  resolverOutput: true,
+  resolverError: true,
+  resolvedWithVersion: true,
+} satisfies Prisma.AircallCallEventSelect;
+
+type AircallTranscriptSummaryRow = Prisma.AircallCallEventGetPayload<{ select: typeof AIRCALL_TRANSCRIPT_SUMMARY_SELECT }>;
+type AircallTranscriptDetailRow = Prisma.AircallCallEventGetPayload<{ select: typeof AIRCALL_TRANSCRIPT_DETAIL_SELECT }>;
+
+function transcriptWhere(
+  tenantId: string,
+  query: Pick<AircallTranscriptListQuery, 'q' | 'recentDays'>,
+): Prisma.AircallCallEventWhereInput {
+  const and: Prisma.AircallCallEventWhereInput[] = [...TRANSCRIPT_PRESENT_FILTER];
+  if (query.recentDays) {
+    and.push({ eventTimestamp: { gte: new Date(Date.now() - query.recentDays * 86_400_000) } });
+  }
+  if (query.q) {
+    const q = query.q.trim();
+    and.push({
+      OR: [
+        { id: { contains: q, mode: 'insensitive' } },
+        { externalCallId: { contains: q, mode: 'insensitive' } },
+        { contactPhone: { contains: q, mode: 'insensitive' } },
+        { contactPhoneE164: { contains: q, mode: 'insensitive' } },
+        { contactEmail: { contains: q, mode: 'insensitive' } },
+        { transcriptRaw: { contains: q, mode: 'insensitive' } },
+      ],
+    });
+  }
+  return { tenantId, AND: and };
+}
+
+function toAircallTranscriptSummaryDto(row: AircallTranscriptSummaryRow): AircallTranscriptSummaryDto {
+  return {
+    id: row.id,
+    externalCallId: row.externalCallId,
+    eventType: row.eventType,
+    eventTimestamp: row.eventTimestamp.toISOString(),
+    direction: row.direction,
+    status: row.status,
+    aircallUserId: row.aircallUserId,
+    contactPhone: row.contactPhone,
+    contactPhoneE164: row.contactPhoneE164,
+    contactEmail: row.contactEmail,
+    transcriptLength: row.transcriptRaw?.length ?? 0,
+    transcriptSource: row.transcriptSource,
+    transcriptPulledAt: row.transcriptPulledAt?.toISOString() ?? null,
+    resolverStatus: row.resolverStatus,
+    resolverModel: row.resolverModel,
+    resolvedAt: row.resolvedAt?.toISOString() ?? null,
+    receivedAt: row.receivedAt.toISOString(),
+  };
+}
+
+function toAircallTranscriptDto(row: AircallTranscriptDetailRow): AircallTranscriptDto {
+  return {
+    ...toAircallTranscriptSummaryDto(row),
+    transcriptRaw: row.transcriptRaw ?? '',
+    resolverOutput: parseTranscriptResolverOutput(row.resolverOutput),
+    resolverError: row.resolverError,
+    resolvedWithVersion: row.resolvedWithVersion,
+  };
+}
+
+function parseTranscriptResolverOutput(value: unknown): TranscriptResolverOutput | null {
+  const parsed = transcriptResolverOutputSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function transcriptExportFilename(format: AircallTranscriptExportQuery['format']) {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+  return `aircall-transcripts-${stamp}.${format === 'jsonl' ? 'jsonl' : 'md'}`;
+}
+
+function formatTranscriptExport(transcripts: AircallTranscriptDto[], format: AircallTranscriptExportQuery['format']) {
+  if (format === 'jsonl') {
+    return transcripts.map((transcript) => JSON.stringify(transcript)).join('\n');
+  }
+  return transcripts.map((transcript) => [
+    `# ${transcript.contactPhoneE164 ?? transcript.contactPhone ?? transcript.externalCallId}`,
+    '',
+    `- Call event id: ${transcript.id}`,
+    `- External call id: ${transcript.externalCallId}`,
+    `- Event: ${transcript.eventType}`,
+    `- Time: ${transcript.eventTimestamp}`,
+    `- Direction: ${transcript.direction ?? 'unknown'}`,
+    `- Aircall user: ${transcript.aircallUserId ?? 'unknown'}`,
+    `- Contact email: ${transcript.contactEmail ?? 'unknown'}`,
+    `- Resolver: ${transcript.resolverStatus ?? 'not_queued'}${transcript.resolverModel ? ` (${transcript.resolverModel})` : ''}`,
+    '',
+    '```text',
+    transcript.transcriptRaw.replace(/```/g, "'''"),
+    '```',
+  ].join('\n')).join('\n\n---\n\n');
 }
 
 function normalizeDialPhone(value: string) {

@@ -87,9 +87,11 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
 
 const RULE_ENGINE_AGENT_GUIDE_PATH = 'docs/RULE_ENGINE_MVP_AGENT_GUIDE.md';
 const RULE_ENGINE_AGENT_GUIDE_ENDPOINT = '/api/v1/rules/mcp/agent-guide';
-const RULE_ENGINE_AGENT_GUIDE_VERSION = '2026-06-30.rule-engine-mcp-guide.v1';
+const RULE_ENGINE_AGENT_GUIDE_VERSION = '2026-07-01.rule-engine-mcp-guide.v2';
 const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Read this guide before drafting complex workflow rules.',
+  'List existing rules before creating or archiving workflow rules.',
+  'Use transcript list/download tools for exact call evidence instead of bulk prompt stuffing.',
   'Draft deterministic call operational signal rules only.',
   'Use sales/account tasks; never create support cases automatically.',
   'Use Shopify product taxonomy guards for machine, part, supply, and cross-sell splits.',
@@ -2273,11 +2275,18 @@ export class RulesService {
       tools: [
         { name: 'list_workflow_capabilities', description: 'List allowed triggers, conditions, actions, axes, and operational intents.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'read_workflow_agent_guide', description: 'Read the Rule Engine authoring guide markdown before drafting complex workflow rules.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'list_workflow_rules', description: 'List stored workflow rules with status/search filters before editing or archiving.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'get_workflow_rule', description: 'Read one stored workflow rule by id including its deterministic DSL definition.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'archive_workflow_rule', description: 'Safely remove a stored workflow rule from runtime by changing its status to archived.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'restore_workflow_rule', description: 'Restore an archived workflow rule to draft or shadow for review before publishing.', mutates: true, requiresPermission: 'settings.write' },
         { name: 'draft_workflow_rule', description: 'Compile a natural-language sales/personnel goal into a draft workflow rule.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'validate_workflow_rule', description: 'Validate a workflow rule against the safe deterministic DSL.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'simulate_workflow_rule', description: 'Dry-run a stored or draft workflow rule against recent operational signals.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'create_workflow_rule_draft', description: 'Persist a validated rule as draft only.', mutates: true, requiresPermission: 'settings.write' },
         { name: 'publish_workflow_rule', description: 'Publish a stored rule only after an attached successful simulation report.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'list_aircall_transcripts', description: 'List Aircall transcript metadata without returning the full transcript text.', mutates: false, requiresPermission: 'aircall.users.read' },
+        { name: 'download_aircall_transcript', description: 'Download one Aircall transcript and resolver output by call event id.', mutates: false, requiresPermission: 'aircall.users.read' },
+        { name: 'export_aircall_transcripts', description: 'Export a bounded set of Aircall transcripts as markdown or jsonl for offline review.', mutates: false, requiresPermission: 'aircall.users.read' },
       ],
       safeguards: [
         'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
@@ -3285,11 +3294,18 @@ const MCP_ALLOWED_TRIGGERS: WorkflowTrigger[] = [
 const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name'][] = [
   'list_workflow_capabilities',
   'read_workflow_agent_guide',
+  'list_workflow_rules',
+  'get_workflow_rule',
+  'archive_workflow_rule',
+  'restore_workflow_rule',
   'draft_workflow_rule',
   'validate_workflow_rule',
   'simulate_workflow_rule',
   'create_workflow_rule_draft',
   'publish_workflow_rule',
+  'list_aircall_transcripts',
+  'download_aircall_transcript',
+  'export_aircall_transcripts',
 ];
 
 const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [

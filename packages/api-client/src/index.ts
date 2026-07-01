@@ -17,6 +17,11 @@ import type {
   AircallResolverReprocessInput,
   AircallResolverReprocessResponse,
   AircallSyncLogsResponse,
+  AircallTranscriptExportQuery,
+  AircallTranscriptExportResponse,
+  AircallTranscriptListQuery,
+  AircallTranscriptListResponse,
+  AircallTranscriptResponse,
   AircallUsersResponse,
   AircallWebhookStatusResponse,
   AircallWorkflowCoverageQuery,
@@ -178,6 +183,16 @@ export class ApiClientError extends Error {
   ) {
     super(message);
   }
+}
+
+function queryString(params: Record<string, unknown>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : '';
 }
 
 export class ApiClient {
@@ -991,6 +1006,20 @@ export class ApiClient {
 
   aircallCallEvents() {
     return this.get<AircallCallEventsResponse>('/aircall/calls');
+  }
+
+  aircallTranscripts(query: Partial<AircallTranscriptListQuery> = {}) {
+    const suffix = queryString(query);
+    return this.get<AircallTranscriptListResponse>(`/aircall/calls/transcripts${suffix}`);
+  }
+
+  aircallTranscript(id: string) {
+    return this.get<AircallTranscriptResponse>(`/aircall/calls/${encodeURIComponent(id)}/transcript`);
+  }
+
+  exportAircallTranscripts(query: Partial<AircallTranscriptExportQuery> = {}) {
+    const suffix = queryString(query);
+    return this.get<AircallTranscriptExportResponse>(`/aircall/calls/transcripts/export${suffix}`);
   }
 
   aircallWorkflowCoverage(query: Partial<AircallWorkflowCoverageQuery> = {}) {

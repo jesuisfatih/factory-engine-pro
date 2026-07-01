@@ -35,6 +35,18 @@ export const aircallWorkflowCoverageQuerySchema = z.object({
 });
 export type AircallWorkflowCoverageQuery = z.infer<typeof aircallWorkflowCoverageQuerySchema>;
 
+export const aircallTranscriptListQuerySchema = z.object({
+  recentDays: z.coerce.number().int().min(1).max(365).optional(),
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+  q: z.string().trim().min(1).max(160).optional(),
+});
+export type AircallTranscriptListQuery = z.infer<typeof aircallTranscriptListQuerySchema>;
+
+export const aircallTranscriptExportQuerySchema = aircallTranscriptListQuerySchema.extend({
+  format: z.enum(['markdown', 'jsonl']).default('markdown'),
+});
+export type AircallTranscriptExportQuery = z.infer<typeof aircallTranscriptExportQuerySchema>;
+
 export const aircallDialSchema = z.object({
   phone: z.string().trim().min(3).max(40),
   customerId: z.string().trim().min(1).optional(),
@@ -206,6 +218,51 @@ export interface AircallCallEventsResponse {
     lastReceivedAt: string | null;
   };
   calls: AircallCallEventDto[];
+}
+
+export interface AircallTranscriptSummaryDto {
+  id: string;
+  externalCallId: string;
+  eventType: string;
+  eventTimestamp: string;
+  direction: string | null;
+  status: string | null;
+  aircallUserId: string | null;
+  contactPhone: string | null;
+  contactPhoneE164: string | null;
+  contactEmail: string | null;
+  transcriptLength: number;
+  transcriptSource: string | null;
+  transcriptPulledAt: string | null;
+  resolverStatus: string | null;
+  resolverModel: string | null;
+  resolvedAt: string | null;
+  receivedAt: string;
+}
+
+export interface AircallTranscriptDto extends AircallTranscriptSummaryDto {
+  transcriptRaw: string;
+  resolverOutput: TranscriptResolverOutput | null;
+  resolverError: string | null;
+  resolvedWithVersion: number | null;
+}
+
+export interface AircallTranscriptListResponse {
+  transcripts: AircallTranscriptSummaryDto[];
+  count: number;
+  totalWithTranscript: number;
+  hasMore: boolean;
+}
+
+export interface AircallTranscriptResponse {
+  transcript: AircallTranscriptDto;
+}
+
+export interface AircallTranscriptExportResponse {
+  format: 'markdown' | 'jsonl';
+  filename: string;
+  count: number;
+  content: string;
 }
 
 export interface AircallWorkflowCoverageResponse {

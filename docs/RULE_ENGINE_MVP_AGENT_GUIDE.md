@@ -49,28 +49,41 @@ The MCP surface exposes these tool concepts:
 
 - `list_workflow_capabilities`
 - `read_workflow_agent_guide`
+- `list_workflow_rules`
+- `get_workflow_rule`
+- `archive_workflow_rule`
+- `restore_workflow_rule`
 - `draft_workflow_rule`
 - `validate_workflow_rule`
 - `simulate_workflow_rule`
 - `create_workflow_rule_draft`
 - `publish_workflow_rule`
+- `list_aircall_transcripts`
+- `download_aircall_transcript`
+- `export_aircall_transcripts`
 
 The safe authoring sequence is always:
 
-1. `list_workflow_capabilities`
-2. `read_workflow_agent_guide`
-3. `draft_workflow_rule`
-4. Store the returned `draftId`.
-5. Inspect draft conditions and actions.
-6. `validate_workflow_rule` with `draftId`.
-7. `simulate_workflow_rule` with `draftId`.
-8. `create_workflow_rule_draft` with `draftId`.
-9. `simulate_workflow_rule` against the stored rule id.
-10. `publish_workflow_rule` only with a fresh matching simulation report.
+1. `read_workflow_agent_guide`
+2. `list_workflow_capabilities`
+3. `list_workflow_rules` to avoid duplicate or conflicting rules.
+4. If the task depends on a real call, `list_aircall_transcripts` first, then `download_aircall_transcript` only for the exact call event needed.
+5. `draft_workflow_rule`
+6. Store the returned `draftId`.
+7. Inspect draft conditions and actions.
+8. `validate_workflow_rule` with `draftId`.
+9. `simulate_workflow_rule` with `draftId`.
+10. `create_workflow_rule_draft` with `draftId`.
+11. `simulate_workflow_rule` against the stored rule id.
+12. `publish_workflow_rule` only with a fresh matching simulation report.
 
 Never skip validation or simulation for a generated rule.
 
 Prefer stateful `draftId` calls over sending the full rule object repeatedly. If an MCP bridge cannot send nested JSON objects safely, use `ruleJson` as a JSON string fallback.
+
+Use `archive_workflow_rule` for removal. Hard delete is intentionally not exposed because rule history, simulations, and task audit evidence must remain inspectable. Use `restore_workflow_rule` only to bring an archived rule back as `draft` or `shadow`; publishing still requires the normal simulation gate.
+
+Transcript tools are for evidence and debugging, not for bulk prompt stuffing. `list_aircall_transcripts` returns metadata only. `download_aircall_transcript` returns one transcript. `export_aircall_transcripts` should be bounded with a small `limit`, `recentDays`, or `q` filter.
 
 Runtime binding:
 

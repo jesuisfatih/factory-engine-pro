@@ -325,11 +325,18 @@ export interface WorkflowMcpCapabilityTool {
   name:
     | 'list_workflow_capabilities'
     | 'read_workflow_agent_guide'
+    | 'list_workflow_rules'
+    | 'get_workflow_rule'
+    | 'archive_workflow_rule'
+    | 'restore_workflow_rule'
     | 'draft_workflow_rule'
     | 'validate_workflow_rule'
     | 'simulate_workflow_rule'
     | 'create_workflow_rule_draft'
-    | 'publish_workflow_rule';
+    | 'publish_workflow_rule'
+    | 'list_aircall_transcripts'
+    | 'download_aircall_transcript'
+    | 'export_aircall_transcripts';
   description: string;
   mutates: boolean;
   requiresPermission: string;

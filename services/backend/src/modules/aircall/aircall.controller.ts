@@ -3,12 +3,16 @@ import {
   aircallBackfillRecentSchema,
   aircallLinkUserSchema,
   aircallResolverReprocessSchema,
+  aircallTranscriptExportQuerySchema,
+  aircallTranscriptListQuerySchema,
   aircallWorkflowCoverageQuerySchema,
   aircallWorkflowRepairSchema,
   MEMBER_PERMISSIONS,
   type AircallBackfillRecentInput,
   type AircallLinkUserInput,
   type AircallResolverReprocessInput,
+  type AircallTranscriptExportQuery,
+  type AircallTranscriptListQuery,
   type AircallWorkflowCoverageQuery,
   type AircallWorkflowRepairInput,
 } from '@factory-engine-pro/contracts';
@@ -66,6 +70,28 @@ export class AircallController {
   @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
   calls() {
     return this.aircall.callEvents();
+  }
+
+  @Get('calls/transcripts')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  transcripts(
+    @Query(new ZodValidationPipe(aircallTranscriptListQuerySchema)) query: AircallTranscriptListQuery,
+  ) {
+    return this.aircall.listTranscripts(query);
+  }
+
+  @Get('calls/transcripts/export')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  exportTranscripts(
+    @Query(new ZodValidationPipe(aircallTranscriptExportQuerySchema)) query: AircallTranscriptExportQuery,
+  ) {
+    return this.aircall.exportTranscripts(query);
+  }
+
+  @Get('calls/:id/transcript')
+  @RequirePermission(MEMBER_PERMISSIONS.aircallUsersRead)
+  transcript(@Param('id') id: string) {
+    return this.aircall.getTranscript(id);
   }
 
   @Get('calls/workflow-coverage')
