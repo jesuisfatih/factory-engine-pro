@@ -16,8 +16,8 @@ async function bootstrap() {
       process.env.PERSON_APP_URL ?? 'http://127.0.0.1:5188',
     ],
     credentials: true,
-    allowedHeaders: ['content-type', 'authorization', 'x-tenant-id', 'x-request-id', 'x-bootstrap-token'],
-    exposedHeaders: ['x-request-id'],
+    allowedHeaders: ['content-type', 'authorization', 'x-tenant-id', 'x-request-id', 'x-bootstrap-token', 'mcp-session-id', 'mcp-protocol-version', 'last-event-id'],
+    exposedHeaders: ['x-request-id', 'mcp-session-id'],
   });
 
   const port = Number(process.env.PORT ?? 4100);

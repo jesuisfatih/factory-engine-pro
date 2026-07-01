@@ -13,6 +13,7 @@ import { CommissionsModule } from './modules/commissions/commissions.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { MailModule } from './modules/mail/mail.module.js';
+import { McpModule } from './modules/mcp/mcp.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { PersonWorkspaceModule } from './modules/person-workspace/person-workspace.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
@@ -39,6 +40,7 @@ import { HealthController } from './health.controller.js';
     AircallModule,
     IdentityModule,
     MailModule,
+    McpModule,
     AuthModule,
     OrdersModule,
     PersonWorkspaceModule,

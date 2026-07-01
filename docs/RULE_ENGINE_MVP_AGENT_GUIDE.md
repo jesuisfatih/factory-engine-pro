@@ -88,9 +88,25 @@ Transcript tools are for evidence and debugging, not for bulk prompt stuffing. `
 Runtime binding:
 
 ```text
+POST/GET/DELETE /api/v1/mcp/workflow
 GET /api/v1/rules/mcp/capabilities
 GET /api/v1/rules/mcp/agent-guide
 ```
+
+Remote MCP clients should connect to:
+
+```json
+{
+  "type": "streamable-http",
+  "url": "https://api.dtfbank.com/api/v1/mcp/workflow",
+  "headers": {
+    "Authorization": "Bearer <member-or-mcp-access-token>",
+    "x-tenant-id": "ten_dtfbank"
+  }
+}
+```
+
+Local stdio bridge clients may still run `packages/workflow-mcp/dist/index.js`, but they are no longer required for machines that support Streamable HTTP MCP.
 
 Agents should discover the markdown through `agentGuide.endpoint` in capabilities and read it through `read_workflow_agent_guide`. Users should not need to paste this markdown into a separate MVP prompt.
 
