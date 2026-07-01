@@ -5,6 +5,7 @@ import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
+  PersonCustomerArchiveQuery,
   PersonDailyCallItem,
   PersonEmailContact,
   PersonDailyOperationRange,
@@ -1336,21 +1337,64 @@ export class PersonWorkspaceService {
       .sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
   }
 
-  async customerArchive() {
-    const rows = await this.prisma.db.customer.findMany({
-      where: { shopifyCustomerId: { not: null } },
-      include: {
-        insight: true,
-        segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
-      },
-      orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
-      take: 1000,
-    });
+  async customerArchive(query: PersonCustomerArchiveQuery) {
+    const limit = query.limit;
+    const offset = query.offset;
+    const search = query.search?.trim();
+    const where: Prisma.CustomerWhereInput = {
+      shopifyCustomerId: { not: null },
+      ...(search ? {
+        OR: [
+          { companyName: { contains: search, mode: 'insensitive' } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+          { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+        ],
+      } : {}),
+    };
+    const [rows, total, aggregate, atRisk] = await Promise.all([
+      this.prisma.db.customer.findMany({
+        where,
+        include: {
+          insight: true,
+          segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
+        },
+        orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.db.customer.count({ where }),
+      this.prisma.db.customer.aggregate({
+        where,
+        _sum: { totalSpent: true, ordersCount: true },
+        _avg: { ordersCount: true },
+      }),
+      this.prisma.db.customer.count({
+        where: {
+          ...where,
+          insight: { churnRisk: { in: ['critical', 'high'] } },
+        },
+      }),
+    ]);
     const [config, repeatCounts] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(rows.map((row) => row.id)),
     ]);
-    return rows.map((customer, index) => this.customerRow(customer, index, config, repeatCounts));
+    return {
+      items: rows.map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts)),
+      total,
+      limit,
+      offset,
+      search: search ?? null,
+      summary: {
+        totalSpent: money(aggregate._sum.totalSpent),
+        avgOrders: Math.round(aggregate._avg.ordersCount ?? 0),
+        totalOrders: aggregate._sum.ordersCount ?? 0,
+        atRisk,
+      },
+    };
   }
 
   async customerDetail(id: string) {

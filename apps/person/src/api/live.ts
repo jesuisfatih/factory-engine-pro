@@ -20,7 +20,7 @@ import type {
   TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
-import type { Card, ColumnId, CustomerRow, DailyOperations, TaskBrief, TaskBriefDetail, TransferTarget, TransferTaskResult } from '../types';
+import type { Card, ColumnId, CustomerArchivePage, CustomerRow, DailyOperations, TaskBrief, TaskBriefDetail, TransferTarget, TransferTaskResult } from '../types';
 
 export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
 export interface PersonSummary {
@@ -142,7 +142,8 @@ export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => pers
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
 export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
-export const fetchCustomerArchive = () => personApi.personCustomerArchive() as Promise<CustomerRow[]>;
+export const fetchCustomerArchive = (query: { limit: number; offset: number; search?: string }) =>
+  personApi.personCustomerArchive(query) as Promise<CustomerArchivePage>;
 export const fetchCustomerDetail = (customerId: string) => personApi.personCustomerDetail(customerId) as Promise<CustomerDetailPanelDto>;
 export const fetchCustomerArchiveDetail = (customerId: string) => personApi.personCustomerArchiveDetail(customerId) as Promise<CustomerDetailPanelDto>;
 export const saveCustomerNote = (customerId: string, input: SavePersonCustomerNoteInput) =>

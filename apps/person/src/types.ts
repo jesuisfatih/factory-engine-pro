@@ -111,6 +111,20 @@ export interface CustomerRow {
   urgencyBreakdown?: PersonUrgencyBreakdown;
 }
 
+export interface CustomerArchivePage {
+  items: CustomerRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  search: string | null;
+  summary: {
+    totalSpent: number;
+    avgOrders: number;
+    totalOrders: number;
+    atRisk: number;
+  };
+}
+
 export type NavId =
   | 'queue'
   | 'daily-archive'

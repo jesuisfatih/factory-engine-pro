@@ -4,6 +4,7 @@ import {
   createPersonRequestSchema,
   MEMBER_PERMISSIONS,
   movePersonQueueCardSchema,
+  personCustomerArchiveQuerySchema,
   personDailyOperationsQuerySchema,
   reorderPersonDailyCallSchema,
   savePersonCustomerNoteSchema,
@@ -19,6 +20,7 @@ import {
   type AircallDialInput,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
+  type PersonCustomerArchiveQuery,
   type PersonDailyOperationsQuery,
   type ReorderPersonDailyCallInput,
   type ReplyPersonNoteInput,
@@ -177,8 +179,10 @@ export class PersonWorkspaceController {
 
   @Get('customer-archive')
   @RequirePermission(MEMBER_PERMISSIONS.customersRead)
-  customerArchive() {
-    return this.workspace.customerArchive();
+  customerArchive(
+    @Query(new ZodValidationPipe(personCustomerArchiveQuerySchema)) query: PersonCustomerArchiveQuery,
+  ) {
+    return this.workspace.customerArchive(query);
   }
 
   @Get('calendar')

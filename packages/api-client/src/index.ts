@@ -120,6 +120,7 @@ import type {
   PatchMailFlowInput,
   MovePersonQueueCardInput,
   PersonDailyOperationRange,
+  PersonCustomerArchiveQuery,
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
@@ -685,8 +686,13 @@ export class ApiClient {
     return this.get('/person/workspace/customers');
   }
 
-  personCustomerArchive() {
-    return this.get('/person/workspace/customer-archive');
+  personCustomerArchive(query: Partial<PersonCustomerArchiveQuery> = {}) {
+    const params = new URLSearchParams();
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.offset) params.set('offset', String(query.offset));
+    if (query.search) params.set('search', query.search);
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.get(`/person/workspace/customer-archive${suffix}`);
   }
 
   personCustomerDetail(customerId: string) {

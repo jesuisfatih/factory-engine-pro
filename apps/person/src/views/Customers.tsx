@@ -1,11 +1,13 @@
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerNote } from '../api/live';
-import type { CustomerRow } from '../types';
+import type { CustomerArchivePage, CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
+
+const ARCHIVE_PAGE_SIZE = 100;
 
 const LIFECYCLE_LABEL: Record<CustomerRow['lifecycle'], string> = {
   lead: 'Lead', engaged: 'Engaged', active: 'Active', at_risk: 'At risk', churned: 'Churned',
@@ -17,10 +19,18 @@ function fmtMoney(value: number) {
 
 export function CustomersView({ archive = false }: { archive?: boolean }) {
   const qc = useQueryClient();
-  const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ['person', archive ? 'customer-archive' : 'customers'],
-    queryFn: archive ? fetchCustomerArchive : fetchCustomers,
+  const [archivePage, setArchivePage] = useState(0);
+  const [archiveSearchDraft, setArchiveSearchDraft] = useState('');
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const archiveOffset = archive ? archivePage * ARCHIVE_PAGE_SIZE : 0;
+  const { data, isLoading, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
+    queryKey: ['person', archive ? 'customer-archive' : 'customers', archive ? archivePage : 0, archive ? archiveSearch : ''],
+    queryFn: () => archive
+      ? fetchCustomerArchive({ limit: ARCHIVE_PAGE_SIZE, offset: archiveOffset, search: archiveSearch || undefined })
+      : fetchCustomers(),
   });
+  const archiveResult = archive && data && !Array.isArray(data) ? data : null;
+  const customers = Array.isArray(data) ? data : archiveResult?.items ?? [];
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
   const [noteTarget, setNoteTarget] = useState<CustomerRow | null>(null);
   const [noteBody, setNoteBody] = useState('');
@@ -40,6 +50,9 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setDetailCustomerId(currentCustomerIdFromUrl());
     setNoteTarget(null);
     setNoteBody('');
+    setArchivePage(0);
+    setArchiveSearch('');
+    setArchiveSearchDraft('');
   }, [archive]);
 
   const openCustomerDetail = (customerId: string) => {
@@ -133,18 +146,52 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
 
   const table = useReactTable({ data: customers, columns, getCoreRowModel: getCoreRowModel(), getRowId: (row) => row.id });
 
-  const totalSpent = customers.reduce((acc, c) => acc + c.totalSpent, 0);
-  const atRisk = customers.filter((c) => c.lifecycle === 'at_risk').length;
+  const totalCustomers = archive ? archiveResult?.total ?? customers.length : customers.length;
+  const totalSpent = archive ? archiveResult?.summary.totalSpent ?? 0 : customers.reduce((acc, c) => acc + c.totalSpent, 0);
+  const atRisk = archive ? archiveResult?.summary.atRisk ?? 0 : customers.filter((c) => c.lifecycle === 'at_risk').length;
+  const avgOrders = archive
+    ? archiveResult?.summary.avgOrders ?? 0
+    : customers.length ? Math.round(customers.reduce((a, c) => a + c.ordersCount, 0) / customers.length) : 0;
+  const pageStart = totalCustomers === 0 ? 0 : archiveOffset + 1;
+  const pageEnd = Math.min(archiveOffset + customers.length, totalCustomers);
+  const hasPrevPage = archive && archivePage > 0;
+  const hasNextPage = archive && pageEnd < totalCustomers;
+  const applyArchiveSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setArchivePage(0);
+    setArchiveSearch(archiveSearchDraft.trim());
+  };
+  const clearArchiveSearch = () => {
+    setArchivePage(0);
+    setArchiveSearch('');
+    setArchiveSearchDraft('');
+  };
 
   return (
     <>
       <div className="kpis">
-        <div className="kpi"><div className="label">{archive ? 'Shopify customers' : 'Customers'}</div><div className="val">{customers.length}</div><div className="sub">{archive ? 'active archive' : 'in your segments'}</div></div>
+        <div className="kpi"><div className="label">{archive ? 'Shopify customers' : 'Customers'}</div><div className="val">{totalCustomers}</div><div className="sub">{archive ? `${pageStart}-${pageEnd} visible` : 'in your segments'}</div></div>
         <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'across portfolio'}</div></div>
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
-        <div className="kpi"><div className="label">Avg orders</div><div className="val">{customers.length ? Math.round(customers.reduce((a, c) => a + c.ordersCount, 0) / customers.length) : 0}</div><div className="sub">per customer</div></div>
-        <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'matched' : 'owned'}</div></div>
+        <div className="kpi"><div className="label">Avg orders</div><div className="val">{avgOrders}</div><div className="sub">per customer</div></div>
+        <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'on this page' : 'owned'}</div></div>
       </div>
+
+      {archive ? (
+        <form className="archive-toolbar" onSubmit={applyArchiveSearch}>
+          <label>
+            Search archive
+            <input
+              value={archiveSearchDraft}
+              onChange={(event) => setArchiveSearchDraft(event.target.value)}
+              placeholder="Customer, email, phone, Shopify ID..."
+            />
+          </label>
+          <button type="submit" className="archive-toolbar-btn">Search</button>
+          {archiveSearch ? <button type="button" className="archive-toolbar-btn" onClick={clearArchiveSearch}>Clear</button> : null}
+          <span>{isLoading ? 'Loading archive...' : `Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}</span>
+        </form>
+      ) : null}
 
       <QueryState
         isLoading={isLoading}
@@ -175,6 +222,17 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
           </tbody>
         </table>
       </div>
+      {archive ? (
+        <div className="archive-pagination">
+          <button type="button" disabled={!hasPrevPage || isLoading} onClick={() => setArchivePage((page) => Math.max(0, page - 1))}>
+            Previous
+          </button>
+          <span>Page {archivePage + 1}</span>
+          <button type="button" disabled={!hasNextPage || isLoading} onClick={() => setArchivePage((page) => page + 1)}>
+            Next
+          </button>
+        </div>
+      ) : null}
       </QueryState>
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
