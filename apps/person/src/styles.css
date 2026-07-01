@@ -538,7 +538,7 @@ button { font-family: inherit; }
 .axis-options button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .transfer-error { margin-right: auto; color: var(--danger); font-size: 11px; align-self: center; }
 
-.brief-modal { max-width: 1080px; }
+.brief-modal { max-width: 1080px; max-height: min(92vh, calc(100vh - 40px)); }
 .brief-eyebrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10px; }
 .brief-source { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-weight: 700; letter-spacing: .25px; }
 .brief-source-manual { background: var(--surface-3); color: var(--text-muted); }
@@ -559,7 +559,7 @@ button { font-family: inherit; }
 .brief-identity { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
 .brief-identity span { display: inline-flex; align-items: center; gap: 5px; }
 
-.brief-body { grid-template-columns: 1.5fr 1fr; gap: 18px; }
+.brief-body { grid-template-columns: 1fr; gap: 14px; align-content: start; }
 .brief-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .brief-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .brief-block .lbl { font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
@@ -612,7 +612,10 @@ button { font-family: inherit; }
 .rule-trace-values strong { color: var(--text); font-weight: 700; }
 .rule-trace-source { font-size: 10px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.brief-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.brief-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; }
+.brief-side .brief-stats,
+.brief-side .brief-quick-actions { grid-column: 1 / -1; }
+.brief-side .brief-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .brief-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .brief-card-head { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
 .brief-card-row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 12px; }
@@ -674,6 +677,8 @@ button { font-family: inherit; }
 @media (max-width: 880px) {
   .brief-body, .transfer-body { grid-template-columns: 1fr; }
   .brief-grid-two, .brief-schedule-grid { grid-template-columns: 1fr; }
+  .brief-side { grid-template-columns: 1fr; }
+  .brief-side .brief-stats { grid-template-columns: 1fr 1fr; }
   .card-signals { grid-template-columns: 1fr; }
   .modal-foot { flex-wrap: wrap; justify-content: stretch; }
   .modal-foot .btn { flex: 1 1 140px; justify-content: center; }
