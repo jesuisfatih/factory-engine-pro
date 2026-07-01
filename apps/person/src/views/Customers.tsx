@@ -209,6 +209,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         onCallCustomer={(phone, customerId) => dialCustomer.mutate({ phone, customerId, source: 'customer_detail' })}
         isCallingCustomer={dialCustomer.isPending}
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
+        staffTerminology
       />
       {commissionTarget ? (
         <CommissionRequestModal

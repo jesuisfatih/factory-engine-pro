@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowRightLeft, X } from 'lucide-react';
 import { fetchTransferTargets, friendlyError, transferTask } from '../api/live';
 import type { Card as CardData, TransferTaskResult } from '../types';
+import { focusLabel, personSafeText } from '../lib/personTerminology';
 
 type TransferAxis = 'sales' | 'account';
 
@@ -55,10 +56,10 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
       >
         <header className="modal-head">
           <div>
-            <h2 id="transfer-task-title">Transfer task</h2>
+            <h2 id="transfer-task-title">Transfer follow-up</h2>
             <div className="sub">
-              <span>{card.title}</span>
-              <span>{card.axis ?? 'no axis'}</span>
+              <span>{personSafeText(card.title)}</span>
+              <span>{focusLabel(card.axis)}</span>
               <span>{card.assignedMemberName ?? 'unassigned'}</span>
             </div>
           </div>
@@ -72,12 +73,12 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
               <strong>{card.assignedMemberName ?? 'Unassigned'}</strong>
             </div>
             <div className="transfer-row">
-              <span>Current axis</span>
-              <strong>{card.axis ?? 'None'}</strong>
+              <span>Current focus</span>
+              <strong>{focusLabel(card.axis)}</strong>
             </div>
             <div className="transfer-row">
               <span>Customer</span>
-              <strong>{card.customerId ? card.title : 'No linked customer'}</strong>
+              <strong>{card.customerId ? personSafeText(card.title) : 'No linked customer'}</strong>
             </div>
           </section>
 
@@ -98,14 +99,14 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
                   <select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>
                     {targets.map((target) => (
                       <option key={target.id} value={target.id}>
-                        {target.name} - {target.roleNames.join(', ') || target.email}
+                        {target.name} - {target.email}
                       </option>
                     ))}
                   </select>
                 </label>
 
                 <div className="field">
-                  <span>Target axis</span>
+                  <span>Follow-up focus</span>
                   <div className="axis-options">
                     {(selectedTarget?.axes ?? []).map((axis) => (
                       <button
@@ -114,7 +115,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
                         className={axis === targetAxis ? 'active' : ''}
                         onClick={() => setTargetAxis(axis)}
                       >
-                        {axis}
+                        {focusLabel(axis)}
                       </button>
                     ))}
                   </div>

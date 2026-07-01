@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   X, Phone, Mail, ExternalLink, FileText, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
-  GitBranch, XCircle, Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
+  Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import type { Card as CardData, TaskBriefDetail, TaskSource } from '../types';
+import { humanize, personSafeText, taskSourceLabel } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
@@ -14,11 +15,11 @@ interface Props {
 }
 
 const SOURCE_LABEL: Record<TaskSource, string> = {
-  manual: 'Manual',
-  call_analysis: 'Transcript',
-  segment_priority: 'Segment',
-  stale_follow_up: 'Stale follow-up',
-  admin_transfer: 'Admin transfer',
+  manual: taskSourceLabel('manual'),
+  call_analysis: taskSourceLabel('call_analysis'),
+  segment_priority: taskSourceLabel('segment_priority'),
+  stale_follow_up: taskSourceLabel('stale_follow_up'),
+  admin_transfer: taskSourceLabel('admin_transfer'),
 };
 
 function riskTier(priority: number) {
@@ -30,51 +31,11 @@ function riskTier(priority: number) {
 
 function labelize(value: string | null | undefined) {
   if (!value) return 'Not captured';
-  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function workflowSourceLabel(value: string | null | undefined) {
-  if (!value) return 'Automation';
-  const normalized = value.toLowerCase();
-  if (normalized.includes('transcript') || normalized.includes('resolver')) return 'Transcript resolver';
-  if (normalized.includes('aircall')) return 'Aircall';
-  if (normalized.includes('workflow') || normalized.includes('rule')) return 'Rule engine';
-  return labelize(value.replace(/\bai\b/gi, 'resolver'));
-}
-
-function traceValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') return 'empty';
-  if (Array.isArray(value)) return value.length ? value.map((item) => traceValue(item)).join(', ') : '[]';
-  if (typeof value === 'object') {
-    try {
-      const serialized = JSON.stringify(value);
-      return serialized.length > 160 ? `${serialized.slice(0, 157)}...` : serialized;
-    } catch {
-      return 'object';
-    }
-  }
-  const text = String(value);
-  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
+  return humanize(value);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function snapshotSegmentName(snapshot: Record<string, unknown>) {
-  const segment = asRecord(snapshot.segment);
-  if (typeof segment.name === 'string' && segment.name.trim()) return segment.name;
-  const first = asRecord(asArray(snapshot.segments)[0]);
-  return typeof first.name === 'string' && first.name.trim() ? first.name : 'None';
-}
-
-function snapshotCustomerId(snapshot: Record<string, unknown>) {
-  const customer = asRecord(snapshot.customer);
-  return typeof customer.id === 'string' ? customer.id : 'Not captured';
 }
 
 function fmtMoney(value: number, currency = 'USD') {
@@ -86,12 +47,6 @@ function fmtDate(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
-}
-
-function briefSourceLabel(promptKey: string, promptVersion: string) {
-  if (promptKey.includes('transcript')) return `Transcript resolver v${promptVersion}`;
-  if (promptKey.includes('segment')) return `Segment context v${promptVersion}`;
-  return `Live context v${promptVersion}`;
 }
 
 function dateTimeLocal(value: Date) {
@@ -168,9 +123,9 @@ export function TaskBriefModal({ card, onClose }: Props) {
   const hasBrief = liveCard.source !== 'manual' && liveCard.aiBrief;
   const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
-    why: liveCard.aiBrief?.whyCalling ?? '',
-    upset: liveCard.aiBrief?.upsetAbout ?? '',
-    goal: liveCard.aiBrief?.callGoal ?? '',
+    why: personSafeText(liveCard.aiBrief?.whyCalling),
+    upset: personSafeText(liveCard.aiBrief?.upsetAbout),
+    goal: personSafeText(liveCard.aiBrief?.callGoal),
   }), [liveCard.aiBrief]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
@@ -186,15 +141,6 @@ export function TaskBriefModal({ card, onClose }: Props) {
     },
   });
   const tier = riskTier(liveCard.priority);
-  const workflowTrace = liveCard.workflowTrace;
-  const traceItems = workflowTrace?.conditionTrace?.length
-    ? workflowTrace.conditionTrace
-    : workflowTrace?.whenTrace.flatMap((group) => group.conditionTrace) ?? [];
-  const matchedCount = traceItems.filter((item) => item.matched).length;
-  const taskStateSnapshot = asRecord(liveCard.taskStateSnapshot);
-  const hasTaskStateSnapshot = Object.keys(taskStateSnapshot).length > 0;
-  const snapshotOrders = asArray(taskStateSnapshot.recent_orders);
-  const snapshotSegments = asArray(taskStateSnapshot.segments);
   const latestOrder = liveCard.miniOrder ?? detail?.recentOrders[0];
   const performance = detail?.performance30d ?? liveCard.performance30d;
   const callCustomer = () => {
@@ -277,7 +223,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
               <span className="chip" style={{ background: liveCard.segmentColor }}>{liveCard.segment}</span>
               <span className="brief-urgency">U{liveCard.urgencyScore}</span>
             </div>
-            <h2 id="task-brief-title" style={{ marginTop: 6 }}>{liveCard.title}</h2>
+            <h2 id="task-brief-title" style={{ marginTop: 6 }}>{personSafeText(liveCard.title)}</h2>
             <div className="brief-identity">
               {liveCard.phone && <span><Phone size={11} /> {liveCard.phone}</span>}
               {liveCard.email && <span><Mail size={11} /> {liveCard.email}</span>}
@@ -294,15 +240,15 @@ export function TaskBriefModal({ card, onClose }: Props) {
             {loadingTaskBrief && (
               <div className="brief-state">
                 <Loader2 size={16} className="spin" />
-                <strong>Loading live task brief</strong>
-                <span>Shopify orders, call resolver output, timeline, and rule trace are being read from the API.</span>
+                <strong>Loading live call plan</strong>
+                <span>Customer orders, call notes, and timeline are being read from the API.</span>
               </div>
             )}
 
             {taskBriefError && (
               <div className="brief-state danger-text">
                 <AlertTriangle size={16} />
-                <strong>Task brief could not be loaded</strong>
+                <strong>Call plan could not be loaded</strong>
                 <span>{friendlyError(error)}</span>
               </div>
             )}
@@ -310,8 +256,8 @@ export function TaskBriefModal({ card, onClose }: Props) {
             {isTaskCard && !isLoading && !isError && !detail && (
               <div className="brief-state">
                 <StickyNote size={16} />
-                <strong>No task brief data</strong>
-                <span>This task exists on the board, but the live brief endpoint returned no detail payload.</span>
+                <strong>No call plan data</strong>
+                <span>This follow-up exists on the board, but the live detail endpoint returned no context payload.</span>
               </div>
             )}
 
@@ -329,7 +275,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                           <span className="lbl">Suggested actions</span>
                         </div>
                         <ul className="brief-actions-list">
-                          {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{action}</li>)}
+                          {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
                         </ul>
                       </div>
                     ) : null}
@@ -337,7 +283,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                     {liveCard.aiBrief?.transcriptSnippet ? (
                       <div className="brief-block">
                         <div className="brief-block-head">
-                          <span className="lbl">Transcript snippet</span>
+                          <span className="lbl">Call excerpt</span>
                         </div>
                         <div className="brief-transcript">{liveCard.aiBrief.transcriptSnippet}</div>
                       </div>
@@ -346,7 +292,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                 ) : (
                   <div className="brief-block">
                     <div className="brief-block-head">
-                      <span className="lbl">Manual task</span>
+                      <span className="lbl">Manual follow-up</span>
                     </div>
                     <div className="brief-val brief-val-muted">
                       Created by an operator. Add a task note or schedule a follow-up to enrich the customer history.
@@ -354,27 +300,20 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   </div>
                 )}
 
-                <RuleTraceBlock
-                  workflowTrace={workflowTrace}
-                  traceItems={traceItems}
-                  matchedCount={matchedCount}
-                  rule={detail?.rule ?? null}
-                />
-
                 <div className="brief-grid-two">
                   <div className="brief-block">
                     <div className="brief-block-head">
-                      <span className="lbl">Shopify detail</span>
-                      {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="rule-trace-count">matched</span> : null}
+                      <span className="lbl">Customer purchase history</span>
+                      {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="rule-trace-count">linked</span> : null}
                     </div>
                     {detail ? (
                       <>
-                        <div className="brief-card-row"><span className="lbl">Customer id</span><span className="val">{detail.shopifyCustomer.customerId ?? 'Not matched'}</span></div>
-                        <div className="brief-card-row"><span className="lbl">Shopify id</span><span className="val">{detail.shopifyCustomer.shopifyCustomerId ?? 'Not synced'}</span></div>
-                        <div className="brief-card-row"><span className="lbl">Phone match</span><span className="val">{detail.shopifyCustomer.phoneMatched ? 'Yes' : 'No'}</span></div>
-                        <div className="brief-card-row"><span className="lbl">Email match</span><span className="val">{detail.shopifyCustomer.emailMatched ? 'Yes' : 'No'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Customer record</span><span className="val">{detail.shopifyCustomer.customerId ?? 'Not linked'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Shopify customer</span><span className="val">{detail.shopifyCustomer.shopifyCustomerId ?? 'Not synced'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Phone linked</span><span className="val">{detail.shopifyCustomer.phoneMatched ? 'Yes' : 'No'}</span></div>
+                        <div className="brief-card-row"><span className="lbl">Email linked</span><span className="val">{detail.shopifyCustomer.emailMatched ? 'Yes' : 'No'}</span></div>
                         {detail.recentOrders.length === 0 ? (
-                          <div className="brief-val brief-val-muted">No Shopify orders for this matched customer.</div>
+                          <div className="brief-val brief-val-muted">No Shopify orders are linked to this customer.</div>
                         ) : (
                           <div className="brief-mini-list">
                             {detail.recentOrders.map((order) => (
@@ -393,9 +332,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   </div>
 
                   <div className="brief-block">
-                    <div className="brief-block-head">
-                      <span className="lbl">Call analysis</span>
-                    </div>
+                    <div className="brief-block-head"><span className="lbl">Call summary</span></div>
                     {detail?.aiPsychAnalysis ? (
                       <div className="brief-psych">
                         <div><span>Intent</span><strong>{labelize(detail.aiPsychAnalysis.communicationStyle)}</strong></div>
@@ -405,7 +342,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                         {detail.aiPsychAnalysis.talkTrack && <p>{detail.aiPsychAnalysis.talkTrack}</p>}
                       </div>
                     ) : (
-                      <div className="brief-val brief-val-muted">No resolved Aircall psych analysis is attached to this customer yet.</div>
+                      <div className="brief-val brief-val-muted">No call summary is attached to this customer yet.</div>
                     )}
                   </div>
                 </div>
@@ -418,14 +355,14 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   {detail?.timeline.length ? (
                     <div className="brief-timeline">
                       {detail.timeline.map((item) => (
-                        <div key={item.id} className={`brief-timeline-row kind-${item.kind}`}>
-                          <span>{labelize(item.kind)}</span>
-                          <div>
-                            <strong>{item.title}</strong>
-                            <p>{item.summary ?? 'No summary'}</p>
-                            <em>{fmtDate(item.at)}</em>
-                          </div>
-                        </div>
+                            <div key={item.id} className={`brief-timeline-row kind-${item.kind}`}>
+                              <span>{labelize(item.kind)}</span>
+                              <div>
+                                <strong>{personSafeText(item.title)}</strong>
+                                <p>{personSafeText(item.summary) || 'No summary'}</p>
+                                <em>{fmtDate(item.at)}</em>
+                              </div>
+                            </div>
                       ))}
                     </div>
                   ) : (
@@ -437,7 +374,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                   <>
                     <form className="brief-block" onSubmit={submitNote}>
                       <div className="brief-block-head">
-                        <span className="lbl">Task note</span>
+                        <span className="lbl">Follow-up note</span>
                         {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
                       </div>
                       <textarea
@@ -458,7 +395,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                           {detail.notes.slice(0, 3).map((item) => (
                             <div key={item.id} className="brief-note-row">
                               <span>{fmtDate(item.createdAt)}</span>
-                              <p>{item.body}</p>
+                              <p>{personSafeText(item.body)}</p>
                             </div>
                           ))}
                         </div>
@@ -487,7 +424,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
           <aside className="brief-side">
             <div className="brief-card">
               <div className="brief-card-head"><Tags size={12} /> Customer</div>
-              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{liveCard.title}</span></div>
+              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{personSafeText(liveCard.title)}</span></div>
               {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
               {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
               <div className="brief-card-row"><span className="lbl">Segment</span><span className="val">{liveCard.segment}</span></div>
@@ -512,24 +449,6 @@ export function TaskBriefModal({ card, onClose }: Props) {
               </div>
             </div>
 
-            {hasTaskStateSnapshot && (
-              <div className="brief-card brief-card-meta">
-                <div className="brief-card-head"><GitBranch size={12} /> Fire-time snapshot</div>
-                <div className="brief-card-row"><span className="lbl">Customer</span><span className="val">{snapshotCustomerId(taskStateSnapshot)}</span></div>
-                <div className="brief-card-row"><span className="lbl">Segment</span><span className="val">{snapshotSegmentName(taskStateSnapshot)}</span></div>
-                <div className="brief-card-row"><span className="lbl">Segments</span><span className="val">{snapshotSegments.length}</span></div>
-                <div className="brief-card-row"><span className="lbl">Recent orders</span><span className="val">{snapshotOrders.length}</span></div>
-              </div>
-            )}
-
-            {hasBrief && liveCard.aiBrief && (
-              <div className="brief-card brief-card-meta">
-                <div className="brief-card-head"><FileText size={12} /> Brief metadata</div>
-                <div className="brief-card-row"><span className="lbl">Source</span><span className="val">{briefSourceLabel(liveCard.aiBrief.promptKey, liveCard.aiBrief.promptVersion)}</span></div>
-                <div className="brief-card-row"><span className="lbl">Confidence</span><span className="val">{Math.round(liveCard.aiBrief.confidence * 100)}%</span></div>
-              </div>
-            )}
-
             <div className="brief-quick-actions">
               <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : 'Call'}</button>
               <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> Email</a>
@@ -552,67 +471,6 @@ export function TaskBriefModal({ card, onClose }: Props) {
           </button>
         </footer>
       </div>
-    </div>
-  );
-}
-
-function RuleTraceBlock({
-  workflowTrace,
-  traceItems,
-  matchedCount,
-  rule,
-}: {
-  workflowTrace: CardData['workflowTrace'];
-  traceItems: NonNullable<CardData['workflowTrace']>['conditionTrace'];
-  matchedCount: number;
-  rule: TaskBriefDetail['rule'];
-}) {
-  return (
-    <div className="brief-block rule-trace-block">
-      <div className="brief-block-head">
-        <span className="lbl">Why this task</span>
-        {workflowTrace ? <span className="rule-trace-count">{matchedCount}/{traceItems.length} matched</span> : null}
-      </div>
-      {workflowTrace ? (
-        <>
-          <div className="rule-trace-meta">
-            <span><GitBranch size={11} /> {rule?.name ?? workflowTrace.ruleName ?? workflowTrace.matchedRuleId ?? workflowTrace.ruleId}</span>
-            <span>{labelize(workflowTrace.trigger)}</span>
-            <span>{workflowSourceLabel(workflowTrace.source)}</span>
-            {rule ? (
-              <a href={rule.canvasUrl} className="rule-canvas-link">
-                <ExternalLink size={11} /> Open rule canvas
-              </a>
-            ) : null}
-          </div>
-          {traceItems.length ? (
-            <div className="rule-trace-list">
-              {traceItems.map((trace, index) => (
-                <div className={`rule-trace-row${trace.matched ? ' matched' : ' missed'}`} key={`${trace.id}-${index}`}>
-                  <div className="rule-trace-status" title={trace.matched ? 'Matched' : 'Not matched'}>
-                    {trace.matched ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
-                  </div>
-                  <div className="rule-trace-content">
-                    <div className="rule-trace-condition">
-                      <strong>{labelize(trace.condition)}</strong>
-                      <span>{trace.operator}</span>
-                    </div>
-                    <div className="rule-trace-values">
-                      <span>Expected <strong>{traceValue(trace.expected)}</strong></span>
-                      <span>Actual <strong>{traceValue(trace.actual)}</strong></span>
-                    </div>
-                    <div className="rule-trace-source">{workflowSourceLabel(trace.source)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="brief-val brief-val-muted">Rule metadata is present, but condition-level trace entries are not saved.</div>
-          )}
-        </>
-      ) : (
-        <div className="brief-val brief-val-muted">No rule trace is saved for this task.</div>
-      )}
     </div>
   );
 }

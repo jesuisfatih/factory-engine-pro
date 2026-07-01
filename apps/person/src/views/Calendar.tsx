@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import { dialAircall, fetchCalEvents, friendlyError, saveTaskNote, scheduleTaskFollowUp, type EventSource, type CalEvent } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText, taskSourceLabel } from '../lib/personTerminology';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
-  manual: 'Manual',
-  call_analysis: 'Transcript',
-  segment_priority: 'Segment',
-  stale_follow_up: 'Stale follow-up',
-  admin_transfer: 'Admin transfer',
+  manual: taskSourceLabel('manual'),
+  call_analysis: taskSourceLabel('call_analysis'),
+  segment_priority: taskSourceLabel('segment_priority'),
+  stale_follow_up: taskSourceLabel('stale_follow_up'),
+  admin_transfer: taskSourceLabel('admin_transfer'),
 };
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -114,7 +115,7 @@ export function CalendarView() {
     <>
       <div className="page-head">
         <h2>Calendar</h2>
-        <div className="sub">Your week - call context items open their brief on click</div>
+        <div className="sub">Your week - customer calls and follow-ups open their brief on click</div>
       </div>
 
       <div className="cal-shell">
@@ -139,7 +140,7 @@ export function CalendarView() {
           error={error ? new Error(friendlyError(error)) : null}
           empty={events.length === 0}
           emptyTitle="No calendar items"
-          emptyBody="Open customer tasks, Aircall activity and failed delivery tasks will appear here."
+          emptyBody="Customer follow-ups, Aircall activity and failed delivery items will appear here."
         >
         <div className="cal-grid">
           <div className="cal-col-head" />
@@ -165,7 +166,7 @@ export function CalendarView() {
                           onClick={() => setSelectedId(event.id)}
                           style={{ top: 2, height: eventHeight, zIndex: 1 }}>
                           <span className="src-badge">{SOURCE_LABEL[event.source]}</span>
-                          <div className="title">{event.title}</div>
+                          <div className="title">{personSafeText(event.title)}</div>
                           <div className="who">{event.customer ?? ''}</div>
                         </button>
                       );
@@ -185,7 +186,7 @@ export function CalendarView() {
             <header className="modal-head">
               <div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4 }}>Event details</div>
-                <h2 style={{ marginTop: 4 }}>{selected.title}</h2>
+                <h2 style={{ marginTop: 4 }}>{personSafeText(selected.title)}</h2>
                   <div className="sub">
                   <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
                     <FileText size={10} style={{ verticalAlign: 'text-top', marginRight: 4 }} /> {SOURCE_LABEL[selected.source]}
@@ -235,7 +236,7 @@ export function CalendarView() {
                   <>
                     <form style={{ marginTop: 12 }} onSubmit={submitNote}>
                       <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4, display: 'block', marginBottom: 6 }}>
-                        Task note
+                        Follow-up note
                       </label>
                       <textarea
                         rows={3}
@@ -272,40 +273,36 @@ export function CalendarView() {
                 <div className="generated-brief">
                   <div className="head">
                     <FileText size={14} style={{ color: '#1d4ed8' }} />
-                    <h4>Task Brief</h4>
+                    <h4>Call plan</h4>
                     <span className="badge">live</span>
                   </div>
                   <div className="row">
                     <div className="lbl">Why calling</div>
-                    <div className="val">{selected.aiBrief.whyCalling}</div>
+                    <div className="val">{personSafeText(selected.aiBrief.whyCalling)}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Concern</div>
-                    <div className="val">{selected.aiBrief.upsetAbout}</div>
+                    <div className="val">{personSafeText(selected.aiBrief.upsetAbout)}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Goal</div>
-                    <div className="val"><strong>{selected.aiBrief.callGoal}</strong></div>
+                    <div className="val"><strong>{personSafeText(selected.aiBrief.callGoal)}</strong></div>
                   </div>
                   {selected.aiBrief.transcriptSnippet && (
                     <div className="row">
-                      <div className="lbl">Transcript snippet</div>
+                      <div className="lbl">Call excerpt</div>
                       <div className="transcript">{selected.aiBrief.transcriptSnippet}</div>
                     </div>
                   )}
                   <div className="row">
                     <div className="lbl">Suggested actions</div>
-                    <ul>{selected.aiBrief.suggestedActions.map((action) => <li key={action}>{action}</li>)}</ul>
-                  </div>
-                  <div className="footer-meta">
-                    <span>Source: call context v{selected.aiBrief.promptVersion}</span>
-                    <span>Confidence: {Math.round(selected.aiBrief.confidence * 100)}%</span>
+                    <ul>{selected.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}</ul>
                   </div>
                 </div>
               ) : (
                 <section className="event-summary">
                   <h4>Manual event</h4>
-                  <div className="meta">No generated brief for manually-created events. Add notes during the call to feed future context.</div>
+                  <div className="meta">No call plan for manually-created events. Add notes during the call to improve future context.</div>
                 </section>
               )}
             </div>

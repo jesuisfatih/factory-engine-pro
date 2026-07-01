@@ -26,6 +26,7 @@ export interface CustomerDetailPanelProps {
   onCallCustomer?: (phone: string, customerId: string) => void;
   isCallingCustomer?: boolean;
   callMessage?: string | null;
+  staffTerminology?: boolean;
 }
 
 const TAB_CONFIG: Record<CustomerDetailTab, { label: string; Icon: LucideIcon }> = {
@@ -50,6 +51,7 @@ export function CustomerDetailPanel({
   onCallCustomer,
   isCallingCustomer = false,
   callMessage,
+  staffTerminology = false,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
   const visibleTabs = useMemo<CustomerDetailTab[]>(() => detail?.visibleTabs ?? ['profile'], [visibleKey, detail]);
@@ -143,7 +145,7 @@ export function CustomerDetailPanel({
             </nav>
 
             <main className="customer-detail-body">
-              {renderTab(detail, activeTab, onRetry)}
+              {renderTab(detail, activeTab, onRetry, staffTerminology)}
             </main>
           </>
         )}
@@ -152,20 +154,20 @@ export function CustomerDetailPanel({
   );
 }
 
-function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRetry: () => void) {
-  if (tab === 'profile') return <ProfileTab detail={detail} />;
+function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRetry: () => void, staffTerminology: boolean) {
+  if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} />;
   if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} />;
   if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} />;
   if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} />;
   if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} />;
   if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} />;
   if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} />;
-  if (tab === 'tasks') return <TasksTab detail={detail} onRetry={onRetry} />;
+  if (tab === 'tasks') return <TasksTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'commission') return <CommissionTab detail={detail} />;
   return null;
 }
 
-function ProfileTab({ detail }: { detail: CustomerDetailPanelDto }) {
+function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelDto; staffTerminology: boolean }) {
   const customer = detail.customer;
   return (
     <div className="customer-detail-grid">
@@ -180,11 +182,13 @@ function ProfileTab({ detail }: { detail: CustomerDetailPanelDto }) {
       </section>
       <section className="customer-detail-card">
         <h3>Ownership</h3>
-        {customer.assignments.length === 0 && <div className="customer-detail-muted">No axis owner assigned.</div>}
+        {customer.assignments.length === 0 && (
+          <div className="customer-detail-muted">{staffTerminology ? 'No customer focus owner assigned.' : 'No axis owner assigned.'}</div>
+        )}
         {customer.assignments.map((assignment) => (
           <div key={assignment.id} className="customer-detail-row">
             <div>
-              <strong>{label(assignment.axis)}</strong>
+              <strong>{staffTerminology ? customerFocusLabel(assignment.axis) : label(assignment.axis)}</strong>
               <span>{assignment.memberName}</span>
             </div>
             <small>{label(assignment.source)}</small>
@@ -257,7 +261,7 @@ function AircallTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRet
             </div>
             <small>{dateTime(call.eventTimestamp)}</small>
           </div>
-          <p>{call.resolverSummary ?? call.transcriptPreview ?? 'Transcript or resolver output is not attached yet.'}</p>
+          <p>{call.resolverSummary ?? call.transcriptPreview ?? 'Call notes or summary are not attached yet.'}</p>
           {call.psychTags.length > 0 && <div className="customer-detail-tags">{call.psychTags.map((tag) => <span key={tag}>{label(tag)}</span>)}</div>}
         </article>
       ))}
@@ -354,7 +358,7 @@ function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
   );
 }
 
-function TasksTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.tasks;
   if (rows.length === 0) return <EmptyTab title="No tasks" body="No call or manual task is linked to this customer." onRetry={onRetry} />;
   return (
@@ -369,7 +373,7 @@ function TasksTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
             <small>{dateTime(task.dueAt ?? task.updatedAt)}</small>
           </div>
           <p>{task.description ?? 'No task description captured.'}</p>
-          {task.matchedRuleName && <div className="customer-detail-muted">Rule: {task.matchedRuleName}</div>}
+          {!staffTerminology && task.matchedRuleName && <div className="customer-detail-muted">Rule: {task.matchedRuleName}</div>}
         </article>
       ))}
     </div>
@@ -483,6 +487,14 @@ function cleanPhone(value: string) {
 
 function label(value: string) {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function customerFocusLabel(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'sales' || normalized === 'sale') return 'Purchase intent';
+  if (normalized === 'account') return 'Customer care';
+  if (normalized === 'support') return 'Customer request';
+  return label(value);
 }
 
 function normalizeAddress(value: unknown) {

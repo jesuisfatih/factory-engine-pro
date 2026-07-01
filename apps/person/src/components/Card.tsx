@@ -1,6 +1,7 @@
 import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, ShoppingBag, Tags } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Card as CardData, TaskSource } from '../types';
+import { focusLabel, personSafeText, taskSourceLabel } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
@@ -18,10 +19,10 @@ function priorityClass(priority: number) {
 }
 
 const SOURCE_META: Record<Exclude<TaskSource, 'manual'>, { label: string; icon: LucideIcon }> = {
-  call_analysis: { label: 'Transcript', icon: FileText },
-  segment_priority: { label: 'Segment', icon: Tags },
-  stale_follow_up: { label: 'Stale follow-up', icon: AlarmClockOff },
-  admin_transfer: { label: 'Admin transfer', icon: ArrowRightLeft },
+  call_analysis: { label: taskSourceLabel('call_analysis'), icon: FileText },
+  segment_priority: { label: taskSourceLabel('segment_priority'), icon: Tags },
+  stale_follow_up: { label: taskSourceLabel('stale_follow_up'), icon: AlarmClockOff },
+  admin_transfer: { label: taskSourceLabel('admin_transfer'), icon: ArrowRightLeft },
 };
 
 function fmtMoney(value: number, currency = 'USD') {
@@ -34,8 +35,8 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
     : 'No Shopify order';
   const performance = card.performance30d
-    ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} tasks`
-    : '30d performance pending';
+    ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
+    : '30d customer activity pending';
   return (
     <div
       className="card"
@@ -44,7 +45,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
       }}
     >
       <div className="row1">
-        <span className="title">{card.title}</span>
+        <span className="title">{personSafeText(card.title)}</span>
         {meta ? (
           <span className={`src-badge src-${card.source}`} title={meta.label}>
             <meta.icon size={9} />
@@ -55,12 +56,12 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
           U{card.urgencyScore}
         </span>
       </div>
-      <div className="summary">{card.summary}</div>
+      <div className="summary">{personSafeText(card.summary)}</div>
       <div className="assign-line">
-        <span>{card.assignedMemberName ? `Owner: ${card.assignedMemberName}` : 'Owner: unassigned'}</span>
-        <span>{card.axis ? `Axis: ${card.axis}` : 'Axis: none'}</span>
+        <span>{card.assignedMemberName ? `Assigned to ${card.assignedMemberName}` : 'Unassigned'}</span>
+        <span>{focusLabel(card.axis)}</span>
         {card.segmentPriority !== null && card.segmentPriority !== undefined ? (
-          <span>{`Segment P${card.segmentPriority}`}</span>
+          <span>{`Customer group P${card.segmentPriority}`}</span>
         ) : null}
       </div>
       <div className="card-signals">
@@ -100,7 +101,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
           <button
             type="button"
             className="transfer-btn"
-            title="Transfer task"
+            title="Transfer follow-up"
             aria-label={`Transfer ${card.title}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {

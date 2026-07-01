@@ -12,6 +12,7 @@ import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
+import { personSafeText } from '../lib/personTerminology';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
 
@@ -154,8 +155,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days calls'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
-        {!archive && <div className="kpi"><div className="label">U80+</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">same formula</div></div>}
-        <div className="kpi"><div className="label">Axes</div><div className="val">{summary?.visibleAxes.length ?? 0}</div><div className="sub">{summary?.visibleAxes.join(', ') || 'none'}</div></div>
+        {!archive && <div className="kpi"><div className="label">High intent</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">needs fast follow-up</div></div>}
         <button type="button" className="kpi queue-sync-card" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
           <div className="label">Sync</div>
           <div className="val">{syncTasks.isPending ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</div>
@@ -169,14 +169,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={error ? new Error(friendlyError(error)) : null}
         empty={empty}
         emptyTitle={archive ? 'No archived daily calls' : 'No call work assigned yet'}
-        emptyBody={archive ? 'Call tasks older than 7 days, or tasks you archived manually, will appear here.' : 'Recent call tasks and assigned Shopify segment customers will appear here.'}
+        emptyBody={archive ? 'Calls older than 7 days, or calls you archived manually, will appear here.' : 'Recent customer calls and assigned customer groups will appear here.'}
       >
         <div className={`ops-grid${archive ? ' archive' : ''}`}>
           <section className="ops-panel">
             <div className="ops-head">
               <div>
                 <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
-                <p>{archive ? 'Archived call tasks for this staff member.' : 'Live call tasks grouped by day.'}</p>
+                <p>{archive ? 'Older customer call follow-ups for this staff member.' : 'Recent customer calls grouped by day.'}</p>
               </div>
               <div className="ops-head-actions">
                 {!archive && (
@@ -185,7 +185,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                     <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
                   </div>
                 )}
-                <span className="ops-count">{daily.length} tasks</span>
+                <span className="ops-count">{daily.length} follow-ups</span>
               </div>
             </div>
             {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
@@ -206,14 +206,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <div className="ops-head">
               <div>
                 <h2>Priority kanban</h2>
-                <p>Assigned Shopify segment customers grouped by owner scope.</p>
+                <p>Assigned customer groups for purchase and follow-up focus.</p>
               </div>
               <span className="ops-count">{groups.length} segments</span>
             </div>
             <div className="segment-groups">
               {deepLinkError ? <div className="ops-empty">{deepLinkError}</div> : null}
               {groups.length === 0 ? (
-                <div className="ops-empty">No Shopify segment ownership is assigned to this workspace.</div>
+                <div className="ops-empty">No customer group is assigned to this workspace.</div>
               ) : groups.map((group) => (
                 <PrioritySegmentGroup
                   key={group.segmentId}
@@ -250,6 +250,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         onCallCustomer={(phone, customerId) => dialCustomer.mutate({ phone, customerId, source: 'customer_detail' })}
         isCallingCustomer={dialCustomer.isPending}
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
+        staffTerminology
       />
       {noteCustomer && (
         <CustomerNoteModal
@@ -372,20 +373,8 @@ function SortableDailyTaskCard({
         <GripVertical size={13} />
       </button>
       <div className="daily-task-main">
-        <DailyTaskBadges card={card} />
         <Card card={card} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
       </div>
-    </div>
-  );
-}
-
-function DailyTaskBadges({ card }: { card: CardData }) {
-  const tags = (card.psychTags ?? []).filter(Boolean).slice(0, 3);
-  if (!card.callIntent && tags.length === 0) return null;
-  return (
-    <div className="daily-task-badges" aria-label="Call analysis">
-      {card.callIntent ? <span className="insight-badge">intent: {card.callIntent}</span> : null}
-      {tags.map((tag) => <span key={tag} className="insight-badge">tag: {tag}</span>)}
     </div>
   );
 }
@@ -464,8 +453,8 @@ function SegmentCustomerCard({
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
     : 'No linked Shopify order';
   const latestCall = item.latestCall
-    ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'matched call'}`
-    : 'No matched call yet';
+    ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'linked call'}`
+    : 'No linked call yet';
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -544,11 +533,11 @@ function SegmentCustomerCard({
         </div>
         <span className="priority p7">U{item.urgencyScore}</span>
       </div>
-      <div className="daily-meta">{item.reason}</div>
+      <div className="daily-meta">{personSafeText(item.reason)}</div>
       <div className="segment-customer-insights">
         <span><strong>Latest order</strong>{latestOrder}</span>
         <span><strong>Latest call</strong>{latestCall}</span>
-        <span><strong>Open work</strong>{item.openTasksCount} tasks | {item.openRequestsCount} requests | {item.notesCount} notes</span>
+        <span><strong>Open follow-up</strong>{item.openTasksCount} items | {item.openRequestsCount} customer requests | {item.notesCount} notes</span>
         {item.latestNote ? (
           <span className="segment-customer-latest-note">
             <strong>{item.latestNote.authorName}</strong>
