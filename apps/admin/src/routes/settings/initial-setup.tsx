@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import type { RollingBackfillRunResponse, ShopifySyncResource } from '@factory-engine-pro/contracts';
 import { AlertTriangle, CalendarClock, CheckCircle2, Database, GitBranch, PhoneCall, RefreshCw, UsersRound, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -92,17 +91,15 @@ function InitialSetupView() {
 
       await runStep(setStep, 'segments', () => adminApi.evaluateAllSegments(), (result) => summarizeUnknown(result));
 
-      await runStep(setStep, 'aircall', () => adminApi.repairAircallWorkflowEvaluations({
-        targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-        scope: 'recent',
+      await runStep(setStep, 'aircall', () => adminApi.backfillRecentAircallCalls({
         recentDays: 7,
-        limit: 1000,
+        maxPages: 20,
       }), (result) => (
         t('settings.initial_setup.aircall_summary', {
-          queued: result.queued,
-          scanned: result.scanned,
-          skipped: result.skipped,
-          version: result.targetVersion,
+          ingested: result.ingested,
+          fetched: result.fetched,
+          queued: result.resolverQueued,
+          errors: result.errors,
         })
       ));
 
@@ -138,8 +135,6 @@ function InitialSetupView() {
       shopifyResources: [...ROLLING_RESOURCES],
       shopifySegmentLimit: 100,
       aircallMaxPages: 40,
-      resolverLimit: 1000,
-      targetResolverVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
     }),
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ROLLING_BACKFILL_QUERY_KEY });

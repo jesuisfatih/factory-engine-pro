@@ -657,12 +657,7 @@ export class AircallService {
             where: { tenantId: tenant.id, externalCallId, eventType: 'call.ended' },
             select: { id: true, transcriptRaw: true, resolverQueuedAt: true, resolverStatus: true },
           });
-          if (existing?.transcriptRaw && existing.resolverQueuedAt && existing.resolverStatus !== 'failed') {
-            const repair = await this.ingest.enqueueTranscriptResolver(existing.id, existing.transcriptRaw, {
-              targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-              source: 'rolling_backfill',
-            });
-            if (repair.queued) resolverQueued++;
+          if (existing?.transcriptRaw) {
             skipped++;
             continue;
           }

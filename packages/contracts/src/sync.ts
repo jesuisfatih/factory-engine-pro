@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from './ai.js';
-
 export const shopifySyncResourceSchema = z.enum(['customers', 'products', 'orders']);
 export type ShopifySyncResource = z.infer<typeof shopifySyncResourceSchema>;
 
@@ -58,8 +56,6 @@ export const rollingBackfillTriggerSchema = z.object({
   shopifyResources: z.array(shopifySyncResourceSchema).min(1).default(['customers', 'orders']),
   shopifySegmentLimit: z.coerce.number().int().min(1).max(100).default(100),
   aircallMaxPages: z.coerce.number().int().min(1).max(40).default(40),
-  resolverLimit: z.coerce.number().int().min(1).max(10000).default(1000),
-  targetResolverVersion: z.coerce.number().int().min(1).default(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
 });
 export type RollingBackfillTriggerInput = z.infer<typeof rollingBackfillTriggerSchema>;
 
@@ -68,7 +64,7 @@ export type RollingBackfillStatus = 'queued' | 'running' | 'success' | 'partial_
 export type RollingBackfillStepStatus = 'success' | 'failed' | 'skipped';
 
 export interface RollingBackfillStepDto {
-  key: 'shopify_sync' | 'shopify_segments' | 'segment_evaluation' | 'aircall_recent_calls' | 'aircall_resolver' | 'customer_axis';
+  key: 'shopify_sync' | 'shopify_segments' | 'segment_evaluation' | 'aircall_recent_calls' | 'customer_axis';
   status: RollingBackfillStepStatus;
   message: string;
   detail: unknown;

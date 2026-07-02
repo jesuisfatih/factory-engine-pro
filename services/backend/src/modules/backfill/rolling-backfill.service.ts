@@ -2,7 +2,6 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
   rollingBackfillTriggerSchema,
-  TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   type RollingBackfillRunResponse,
   type RollingBackfillSource,
   type RollingBackfillStatus,
@@ -194,15 +193,6 @@ export class RollingBackfillService {
     steps.push(await this.captureStep('aircall_recent_calls', async () => {
       const result = await this.aircall.backfillRecentCalls({ recentDays: input.recentDays, maxPages: input.aircallMaxPages });
       return success(`Backfilled ${result.ingested}/${result.fetched} Aircall call(s) from the last ${input.recentDays} day(s).`, result);
-    }));
-    steps.push(await this.captureStep('aircall_resolver', async () => {
-      const result = await this.aircall.repairWorkflowEvaluations({
-        targetVersion: input.targetResolverVersion ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-        limit: input.resolverLimit,
-        scope: 'recent',
-        recentDays: input.recentDays,
-      });
-      return success(`Queued ${result.queued}/${result.scanned} transcript workflow repair job(s).`, result);
     }));
     steps.push(await this.captureStep('customer_axis', async () => {
       const result = await this.customers.assignDefaultAxis({

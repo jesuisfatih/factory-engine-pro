@@ -1,6 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -101,15 +100,8 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
   private async syncTenant(tenantId: string) {
     const recentDays = positiveInt(this.config.get<string>('AIRCALL_ROLLING_SYNC_RECENT_DAYS'), 7);
     const maxPages = positiveInt(this.config.get<string>('AIRCALL_ROLLING_SYNC_MAX_PAGES'), 5);
-    const resolverLimit = positiveInt(this.config.get<string>('AIRCALL_ROLLING_SYNC_RESOLVER_LIMIT'), 200);
 
     const backfill = await this.aircall.backfillRecentCalls({ recentDays, maxPages });
-    const resolver = await this.aircall.repairWorkflowEvaluations({
-      targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-      scope: 'recent',
-      recentDays,
-      limit: resolverLimit,
-    });
 
     this.realtime.emitTenantInvalidate(tenantId, {
       module: 'call_center',
@@ -121,15 +113,12 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
       recent_days: recentDays,
       fetched: backfill.fetched,
       ingested: backfill.ingested,
-      workflow_repair_queued: resolver.queued,
-      workflow_repair_scanned: resolver.scanned,
+      new_transcript_resolver_queued: backfill.resolverQueued,
     });
     return {
       recentDays,
       maxPages,
-      resolverLimit,
       backfill,
-      resolver,
     };
   }
 }

@@ -713,13 +713,11 @@ export class PersonWorkspaceService {
 
   async syncTasks(): Promise<PersonTaskSyncResult> {
     const backfill = await this.aircall.backfillRecentCalls({ recentDays: 7, maxPages: 20 });
-    const resolver = await this.aircall.repairWorkflowEvaluations({ targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION, scope: 'recent', recentDays: 7, limit: 1000 });
     const syncedAt = new Date().toISOString();
     this.logger.log('person_workspace', 'tasks.sync', 'Person workspace task sync requested', {
       fetched: backfill.fetched,
       ingested: backfill.ingested,
-      workflow_repair_queued: resolver.queued,
-      workflow_missing_evaluations: resolver.missingEvaluations,
+      new_transcript_resolver_queued: backfill.resolverQueued,
     });
     this.emitCallCenterInvalidate('person.tasks.sync');
     return {
@@ -733,10 +731,10 @@ export class PersonWorkspaceService {
         errors: backfill.errors,
       },
       resolver: {
-        scanned: resolver.scanned,
-        queued: resolver.queued,
-        skipped: resolver.skipped,
-        targetVersion: resolver.targetVersion,
+        scanned: 0,
+        queued: backfill.resolverQueued,
+        skipped: backfill.skipped,
+        targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
       },
       syncedAt,
     };
