@@ -14,6 +14,12 @@ import {
   workflowMcpPublishRuleSchema,
   workflowMcpListScheduledWorkflowActionsSchema,
   workflowMcpScheduledWorkflowActionIdSchema,
+  frontendMcpApplyCustomizationSchema,
+  frontendMcpCustomizationIdSchema,
+  frontendMcpListCustomizationsSchema,
+  frontendMcpPreviewCustomizationSchema,
+  frontendMcpRollbackCustomizationSchema,
+  frontendCustomizationDefinitionSchema,
   workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
   workflowMcpValidateRuleSchema,
@@ -83,7 +89,22 @@ import {
   type WorkflowRuleVersionsResponse,
   type WorkflowScheduledActionDto,
   type WorkflowActionRevalidate,
+  type FrontendCustomizationDefinition,
+  type FrontendCustomizationDto,
+  type FrontendCustomizationRuntimeDto,
+  type FrontendCustomizationSlot,
   type FrontendMcpAgentGuideResponse,
+  type FrontendMcpApplyCustomizationInput,
+  type FrontendMcpApplyCustomizationResponse,
+  type FrontendMcpCustomizationIdInput,
+  type FrontendMcpCustomizationResponse,
+  type FrontendMcpListCustomizationsInput,
+  type FrontendMcpListCustomizationsResponse,
+  type FrontendMcpPreviewCustomizationInput,
+  type FrontendMcpPreviewCustomizationResponse,
+  type FrontendMcpRollbackCustomizationInput,
+  type FrontendMcpRollbackCustomizationResponse,
+  type FrontendMcpSurfaceId,
   type FrontendMcpSurfaceContract,
   type FrontendMcpSurfaceContractResponse,
   type FrontendMcpSurfacesResponse,
@@ -2577,6 +2598,11 @@ export class RulesService {
         { name: 'read_frontend_agent_guide', description: 'Read the frontend engineering guide before asking an MCP agent to change staff/admin UI.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'list_frontend_surfaces', description: 'List allowlisted frontend surfaces that an engineering agent may inspect.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'get_frontend_surface_contract', description: 'Read the file, API, state, terminology, and smoke-test contract for one frontend surface.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'preview_frontend_customization', description: 'Validate and preview a tenant UI customization DSL without changing staff UI.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'apply_frontend_customization', description: 'Store a tenant UI customization as draft or activate it for the allowlisted surface.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'list_frontend_customizations', description: 'List stored tenant UI customizations for audit and rollback.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'get_frontend_customization', description: 'Read one stored tenant UI customization.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'rollback_frontend_customization', description: 'Archive the current active UI customization or reactivate a previous one.', mutates: true, requiresPermission: 'settings.write' },
       ],
       safeguards: [
         'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
@@ -2663,6 +2689,224 @@ export class RulesService {
     const surface = FRONTEND_MCP_SURFACES.find((entry) => entry.id === surfaceId);
     if (!surface) throw new NotFoundException(`Frontend surface contract was not found: ${surfaceId}`);
     return { surface };
+  }
+
+  async frontendRuntimeCustomization(surfaceId: FrontendMcpSurfaceId): Promise<FrontendCustomizationRuntimeDto> {
+    this.frontendSurfaceContract(surfaceId);
+    const active = await this.prisma.db.frontendCustomization.findFirst({
+      where: { tenantId: this.tenantId(), surfaceId, status: 'active' },
+      include: frontendCustomizationInclude(),
+      orderBy: [{ activatedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+    if (!active) return this.frontendRuntimeDto(surfaceId, null, EMPTY_FRONTEND_CUSTOMIZATION, []);
+    return this.frontendRuntimeDto(surfaceId, active, this.parseFrontendDefinition(active.definition), active.warnings);
+  }
+
+  async previewFrontendCustomization(input: FrontendMcpPreviewCustomizationInput): Promise<FrontendMcpPreviewCustomizationResponse> {
+    const parsed = frontendMcpPreviewCustomizationSchema.parse(input);
+    const surface = this.frontendSurfaceContract(parsed.surfaceId).surface;
+    const warnings = this.frontendCustomizationWarnings(parsed.definition);
+    return {
+      ok: warnings.length === 0,
+      surface,
+      preview: this.frontendRuntimeDto(parsed.surfaceId, null, parsed.definition, warnings),
+      warnings,
+    };
+  }
+
+  async applyFrontendCustomization(input: FrontendMcpApplyCustomizationInput): Promise<FrontendMcpApplyCustomizationResponse> {
+    const parsed = frontendMcpApplyCustomizationSchema.parse(input);
+    const warnings = this.frontendCustomizationWarnings(parsed.definition);
+    if (warnings.some((warning) => warning.startsWith('blocked:'))) {
+      throw new BadRequestException(`Frontend customization rejected: ${warnings.join('; ')}`);
+    }
+    const tenantId = this.tenantId();
+    const now = new Date();
+    const deactivatedIds: string[] = [];
+
+    const created = await this.prisma.db.$transaction(async (tx) => {
+      if (parsed.status === 'active') {
+        const previous = await tx.frontendCustomization.findMany({
+          where: { tenantId, surfaceId: parsed.surfaceId, status: 'active' },
+          select: { id: true },
+        });
+        deactivatedIds.push(...previous.map((row) => row.id));
+        if (previous.length > 0) {
+          await tx.frontendCustomization.updateMany({
+            where: { tenantId, surfaceId: parsed.surfaceId, status: 'active' },
+            data: { status: 'archived' },
+          });
+        }
+      }
+      return tx.frontendCustomization.create({
+        data: {
+          id: prefixedId('fcus'),
+          tenantId,
+          surfaceId: parsed.surfaceId,
+          name: parsed.name,
+          status: parsed.status,
+          definition: parsed.definition as Prisma.InputJsonValue,
+          reason: parsed.reason ?? null,
+          warnings,
+          createdByMemberId: this.editedByMemberId(),
+          activatedAt: parsed.status === 'active' ? now : null,
+        },
+        include: frontendCustomizationInclude(),
+      });
+    });
+
+    this.logger.log('rules', 'frontend_customization.applied', 'Frontend customization persisted through MCP', {
+      customization_id: created.id,
+      surface_id: created.surfaceId,
+      status: created.status,
+      deactivated_count: deactivatedIds.length,
+    });
+
+    return {
+      customization: this.frontendCustomizationDto(created),
+      activeRuntime: await this.frontendRuntimeCustomization(parsed.surfaceId),
+      deactivatedIds,
+    };
+  }
+
+  async listFrontendCustomizations(input: Partial<FrontendMcpListCustomizationsInput> = {}): Promise<FrontendMcpListCustomizationsResponse> {
+    const parsed = frontendMcpListCustomizationsSchema.parse(input);
+    const where: Prisma.FrontendCustomizationWhereInput = {
+      tenantId: this.tenantId(),
+      ...(parsed.surfaceId ? { surfaceId: parsed.surfaceId } : {}),
+      ...(parsed.status ? { status: parsed.status } : {}),
+    };
+    const [items, total] = await Promise.all([
+      this.prisma.db.frontendCustomization.findMany({
+        where,
+        include: frontendCustomizationInclude(),
+        orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
+        take: parsed.limit,
+      }),
+      this.prisma.db.frontendCustomization.count({ where }),
+    ]);
+    return { items: items.map((row) => this.frontendCustomizationDto(row)), total, limit: parsed.limit };
+  }
+
+  async getFrontendCustomization(input: FrontendMcpCustomizationIdInput): Promise<FrontendMcpCustomizationResponse> {
+    const parsed = frontendMcpCustomizationIdSchema.parse(input);
+    const row = await this.prisma.db.frontendCustomization.findFirst({
+      where: { id: parsed.customizationId, tenantId: this.tenantId() },
+      include: frontendCustomizationInclude(),
+    });
+    if (!row) throw new NotFoundException('Frontend customization was not found.');
+    return { customization: this.frontendCustomizationDto(row) };
+  }
+
+  async rollbackFrontendCustomization(input: FrontendMcpRollbackCustomizationInput): Promise<FrontendMcpRollbackCustomizationResponse> {
+    const parsed = frontendMcpRollbackCustomizationSchema.parse(input);
+    this.frontendSurfaceContract(parsed.surfaceId);
+    const tenantId = this.tenantId();
+    const archivedCustomizationIds: string[] = [];
+    const now = new Date();
+
+    const activated = await this.prisma.db.$transaction(async (tx) => {
+      const current = await tx.frontendCustomization.findMany({
+        where: { tenantId, surfaceId: parsed.surfaceId, status: 'active' },
+        select: { id: true },
+      });
+      archivedCustomizationIds.push(...current.map((row) => row.id));
+      if (current.length > 0) {
+        await tx.frontendCustomization.updateMany({
+          where: { tenantId, surfaceId: parsed.surfaceId, status: 'active' },
+          data: { status: 'archived' },
+        });
+      }
+      if (!parsed.targetCustomizationId) return null;
+      const target = await tx.frontendCustomization.findFirst({
+        where: { id: parsed.targetCustomizationId, tenantId, surfaceId: parsed.surfaceId },
+        include: frontendCustomizationInclude(),
+      });
+      if (!target) throw new NotFoundException('Rollback target frontend customization was not found.');
+      return tx.frontendCustomization.update({
+        where: { id: target.id },
+        data: {
+          status: 'active',
+          activatedAt: now,
+          reason: parsed.reason ?? target.reason,
+        },
+        include: frontendCustomizationInclude(),
+      });
+    });
+
+    this.logger.log('rules', 'frontend_customization.rollback', 'Frontend customization rollback completed', {
+      surface_id: parsed.surfaceId,
+      target_customization_id: parsed.targetCustomizationId ?? null,
+      archived_count: archivedCustomizationIds.length,
+    });
+
+    return {
+      activeRuntime: await this.frontendRuntimeCustomization(parsed.surfaceId),
+      activatedCustomization: activated ? this.frontendCustomizationDto(activated) : null,
+      archivedCustomizationIds,
+    };
+  }
+
+  private parseFrontendDefinition(value: unknown): FrontendCustomizationDefinition {
+    const parsed = frontendCustomizationDefinitionSchema.safeParse(value);
+    return parsed.success ? parsed.data : EMPTY_FRONTEND_CUSTOMIZATION;
+  }
+
+  private frontendRuntimeDto(
+    surfaceId: FrontendMcpSurfaceId,
+    row: FrontendCustomizationRow | null,
+    definition: FrontendCustomizationDefinition,
+    warnings: string[],
+  ): FrontendCustomizationRuntimeDto {
+    return {
+      surfaceId,
+      customizationId: row?.id ?? null,
+      name: row?.name ?? null,
+      definition,
+      warnings,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  private frontendCustomizationDto(row: FrontendCustomizationRow): FrontendCustomizationDto {
+    const creatorName = row.creator
+      ? [row.creator.firstName, row.creator.lastName].filter(Boolean).join(' ') || row.creator.email
+      : null;
+    return {
+      id: row.id,
+      surfaceId: row.surfaceId as FrontendMcpSurfaceId,
+      name: row.name,
+      status: row.status as FrontendCustomizationDto['status'],
+      definition: this.parseFrontendDefinition(row.definition),
+      reason: row.reason,
+      warnings: row.warnings,
+      createdByMemberId: row.createdByMemberId,
+      createdByMemberName: creatorName,
+      activatedAt: row.activatedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private frontendCustomizationWarnings(definition: FrontendCustomizationDefinition) {
+    const warnings: string[] = [];
+    const parsed = frontendCustomizationDefinitionSchema.safeParse(definition);
+    if (!parsed.success) return [`blocked: ${parsed.error.issues.map((issue) => issue.message).join('; ')}`];
+    if (!FRONTEND_MCP_SURFACES.some((surface) => surface.id === definition.surfaceId)) {
+      warnings.push(`blocked: unsupported surface ${definition.surfaceId}`);
+    }
+    if (definition.blocks.length === 0) {
+      warnings.push('warning: customization has no blocks and will not change the UI.');
+    }
+    for (const block of definition.blocks) {
+      if (!FRONTEND_MCP_ALLOWED_SLOTS.includes(block.slot)) {
+        warnings.push(`blocked: slot ${block.slot} is not allowed.`);
+      }
+      const text = [block.label, block.title, block.text, block.template, ...block.items].filter(Boolean).join(' ');
+      const forbidden = FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => text.toLowerCase().includes(term.toLowerCase()));
+      if (forbidden) warnings.push(`blocked: block ${block.id} contains forbidden staff term "${forbidden}".`);
+    }
+    return warnings;
   }
 
   private async readAgentGuideFile() {
@@ -3927,12 +4171,22 @@ type ScheduledActionRow = Prisma.WorkflowScheduledActionGetPayload<{
   include: ReturnType<typeof scheduledActionInclude>;
 }>;
 
+type FrontendCustomizationRow = Prisma.FrontendCustomizationGetPayload<{
+  include: ReturnType<typeof frontendCustomizationInclude>;
+}>;
+
 function scheduledActionInclude() {
   return {
     rule: { select: { id: true, name: true, priority: true } },
     customer: { select: { id: true, companyName: true, email: true, phone: true } },
     assignedMember: { select: { id: true, firstName: true, lastName: true, email: true } },
     executedServiceRequest: { select: { id: true, title: true, createdAt: true } },
+  } as const;
+}
+
+function frontendCustomizationInclude() {
+  return {
+    creator: { select: { id: true, firstName: true, lastName: true, email: true } },
   } as const;
 }
 
@@ -3981,6 +4235,11 @@ const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name
   'read_frontend_agent_guide',
   'list_frontend_surfaces',
   'get_frontend_surface_contract',
+  'preview_frontend_customization',
+  'apply_frontend_customization',
+  'list_frontend_customizations',
+  'get_frontend_customization',
+  'rollback_frontend_customization',
 ];
 
 const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [
@@ -4018,6 +4277,30 @@ const FRONTEND_MCP_PREFERRED_STAFF_TERMS = [
   'Previous call',
   'No purchase since last call',
 ] as const;
+
+const FRONTEND_MCP_ALLOWED_SLOTS: FrontendCustomizationSlot[] = [
+  'kpi.before',
+  'kpi.after',
+  'daily.header',
+  'daily.before_list',
+  'daily.card.after_brief',
+  'daily.card.footer',
+  'priority.header',
+  'priority.group.header',
+  'priority.card.after_summary',
+  'priority.card.footer',
+  'modal.hero',
+  'modal.after_steps',
+  'modal.customer_context',
+];
+
+const EMPTY_FRONTEND_CUSTOMIZATION: FrontendCustomizationDefinition = {
+  surfaceId: 'staff.queue',
+  schemaVersion: 1,
+  description: 'Default staff queue layout without tenant MCP overlays.',
+  blocks: [],
+  theme: { density: 'comfortable', accent: 'accent' },
+};
 
 const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
   {

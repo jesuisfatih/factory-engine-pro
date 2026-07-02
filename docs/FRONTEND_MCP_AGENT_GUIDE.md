@@ -9,13 +9,145 @@ The agent may help improve allowed frontend surfaces, but it must work inside ex
 1. Read this guide.
 2. List frontend surfaces.
 3. Read the target surface contract.
-4. Read only relevant allowlisted files.
-5. Prepare a small patch.
-6. Validate state coverage, terminology, light mode, dark mode, and responsive layout.
-7. Run typecheck/build/smoke tools when those tools are enabled.
-8. Capture screenshots before asking a human to publish.
+4. For runtime UI changes, use the frontend customization DSL first.
+5. Preview the customization.
+6. Apply it only after preview warnings are clean and the user approves activation.
+7. Use list/get/rollback tools for audit and recovery.
+8. Source-file patching is a later, separate capability and must stay behind stricter allowlists.
 
-The agent must not directly edit production or deploy without a separate publish tool and human approval.
+The agent must not directly edit production source files or deploy without a separate publish tool and human approval.
+
+## MCP Frontend Tools
+
+- `read_frontend_agent_guide`
+- `list_frontend_surfaces`
+- `get_frontend_surface_contract`
+- `preview_frontend_customization`
+- `apply_frontend_customization`
+- `list_frontend_customizations`
+- `get_frontend_customization`
+- `rollback_frontend_customization`
+
+Required order:
+
+1. Read this guide.
+2. Read the target surface contract.
+3. Preview the customization.
+4. Explain warnings and expected UI effect.
+5. Apply as `draft` for review or `active` with explicit approval.
+6. Verify through the staff UI.
+
+## Runtime Customization DSL
+
+Runtime customization is the preferred MVP mechanism. It does not edit React files. It stores a tenant-scoped layout overlay in the database and the staff UI renders it from the live API response.
+
+Allowed surface:
+
+```json
+"staff.queue"
+```
+
+Allowed slots:
+
+```json
+[
+  "kpi.before",
+  "kpi.after",
+  "daily.header",
+  "daily.before_list",
+  "daily.card.after_brief",
+  "daily.card.footer",
+  "priority.header",
+  "priority.group.header",
+  "priority.card.after_summary",
+  "priority.card.footer",
+  "modal.hero",
+  "modal.after_steps",
+  "modal.customer_context"
+]
+```
+
+Allowed block types:
+
+- `stat_tile`
+- `message`
+- `field`
+- `badge`
+- `checklist`
+- `section`
+
+Allowed data sources:
+
+- `summary`
+- `dailyCall`
+- `priorityCustomer`
+- `taskBrief`
+- `customerDetail`
+
+Allowed visibility operators:
+
+- `exists`
+- `not_exists`
+- `eq`
+- `neq`
+- `gte`
+- `lte`
+- `contains`
+- `in`
+
+Templates may use live data tokens:
+
+```text
+Call {{dailyCall.phone}} now. Customer has {{dailyCall.performance30d.orders}} orders in 30 days.
+```
+
+Do not use raw HTML, script tags, arbitrary CSS, iframe embeds, or remote assets.
+
+## Example Customization
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "name": "Show urgent payment/refund calls",
+  "definition": {
+    "surfaceId": "staff.queue",
+    "schemaVersion": 1,
+    "description": "Highlight payment and refund follow-ups on daily call cards.",
+    "theme": { "density": "comfortable", "accent": "warning" },
+    "blocks": [
+      {
+        "id": "payment_call_banner",
+        "slot": "daily.card.after_brief",
+        "type": "message",
+        "label": "Payment or refund",
+        "template": "Clarify the exact payment, pricing, or refund issue before promising a next step.",
+        "tone": "danger",
+        "priority": 10,
+        "visibility": {
+          "any": [
+            { "source": "dailyCall", "path": "summary", "operator": "contains", "value": "refund" },
+            { "source": "dailyCall", "path": "summary", "operator": "contains", "value": "payment" }
+          ],
+          "all": []
+        }
+      },
+      {
+        "id": "high_intent_kpi",
+        "slot": "kpi.after",
+        "type": "stat_tile",
+        "label": "Needs fast call",
+        "value": { "source": "summary", "path": "highUrgencyCount", "format": "count", "fallback": "0" },
+        "text": "high priority follow-ups",
+        "tone": "warning",
+        "priority": 20
+      }
+    ]
+  },
+  "reason": "Make urgent customer follow-up intent visible without exposing internal system terms."
+}
+```
+
+Use `preview_frontend_customization` with that payload first. Use `apply_frontend_customization` only after review.
 
 ## Allowed Surfaces
 

@@ -3,7 +3,12 @@ import { emailSchema } from './common.js';
 import { serviceRequestPrioritySchema } from './operations.js';
 import { customerAssignmentAxisSchema } from './commerce.js';
 import { createTaskAxisSchema } from './enums.js';
-import { workflowConditionTraceSchema, workflowWhenGroupTraceSchema } from './rules.js';
+import {
+  frontendCustomizationDefinitionSchema,
+  frontendMcpSurfaceIdSchema,
+  workflowConditionTraceSchema,
+  workflowWhenGroupTraceSchema,
+} from './rules.js';
 
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
 export type PersonQueueColumn = z.infer<typeof personQueueColumnSchema>;
@@ -278,6 +283,16 @@ export const personSegmentDailyGroupSchema = z.object({
 });
 export type PersonSegmentDailyGroup = z.infer<typeof personSegmentDailyGroupSchema>;
 
+export const personFrontendCustomizationRuntimeSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema,
+  customizationId: z.string().nullable(),
+  name: z.string().nullable(),
+  definition: frontendCustomizationDefinitionSchema,
+  warnings: z.array(z.string()).default([]),
+  checkedAt: z.string(),
+});
+export type PersonFrontendCustomizationRuntime = z.infer<typeof personFrontendCustomizationRuntimeSchema>;
+
 export const personDailyOperationsSchema = z.object({
   summary: z.object({
     dailyCount: z.number(),
@@ -291,6 +306,7 @@ export const personDailyOperationsSchema = z.object({
   priorityKanban: z.array(personQueueCardSchema),
   pinBoard: z.array(personQueueCardSchema),
   segmentGroups: z.array(personSegmentDailyGroupSchema),
+  frontendCustomization: personFrontendCustomizationRuntimeSchema,
 });
 export type PersonDailyOperationsDto = z.infer<typeof personDailyOperationsSchema>;
 

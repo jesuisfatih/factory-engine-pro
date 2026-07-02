@@ -3,11 +3,13 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
+import { FrontendCustomizationSlotView } from '../components/FrontendCustomization';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
@@ -44,6 +46,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const priority = data?.priorityKanban ?? [];
   const pinned = data?.pinBoard ?? [];
   const groups = data?.segmentGroups ?? [];
+  const frontendCustomization = data?.frontendCustomization ?? null;
   const actionStats = useMemo(() => dailyActionStats(daily), [daily]);
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
@@ -153,6 +156,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       <div className="kpis">
+        <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.before" context={{ summary }} />
         <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days calls'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
@@ -162,6 +166,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           <div className="val">{syncTasks.isPending ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</div>
           <div className="sub">{syncTasks.data ? `${syncTasks.data.backfill.ingested} calls updated` : 'pull latest calls'}</div>
         </button>
+        <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
       {!archive && (
@@ -202,6 +207,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <div>
                 <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
                 <p>{archive ? 'Older customer call follow-ups for this staff member.' : 'Recent customer calls grouped by day.'}</p>
+                <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
               </div>
               <div className="ops-head-actions">
                 {!archive && (
@@ -215,8 +221,10 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             </div>
             {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
             {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
+            <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
             <DailyWorkflowList
               cards={daily}
+              customization={frontendCustomization}
               emptyLabel={archive ? 'No archived call tasks.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
               reorderDisabled={reorderDaily.isPending}
               onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
@@ -232,6 +240,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <div>
                 <h2>Priority kanban</h2>
                 <p>Assigned customer groups for purchase and follow-up focus.</p>
+                <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
               </div>
               <span className="ops-count">{groups.length} segments</span>
             </div>
@@ -243,6 +252,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 <PrioritySegmentGroup
                   key={group.segmentId}
                   group={group}
+                  customization={frontendCustomization}
                   collapsed={Boolean(collapsedGroups[group.segmentId])}
                   onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
                   onTogglePin={(item) => customerPin.mutate(item.customerId)}
@@ -264,7 +274,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         </div>
       </QueryState>
 
-      {selectedCard && <TaskBriefModal card={selectedCard} onClose={closeTaskModal} />}
+      {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} onClose={closeTaskModal} />}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}
@@ -311,6 +321,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
 
 function DailyWorkflowList({
   cards,
+  customization,
   emptyLabel,
   reorderDisabled,
   onReorder,
@@ -320,6 +331,7 @@ function DailyWorkflowList({
   onTransfer,
 }: {
   cards: CardData[];
+  customization: FrontendCustomizationRuntimeDto | null;
   emptyLabel: string;
   reorderDisabled: boolean;
   onReorder: (orderedItemIds: string[]) => void;
@@ -351,6 +363,7 @@ function DailyWorkflowList({
             <SortableDailyTaskCard
               key={row.card.id}
               card={row.card}
+              customization={customization}
               disabled={reorderDisabled}
               onTogglePin={() => onTogglePin(row.card)}
               onArchive={() => onArchive(row.card)}
@@ -366,6 +379,7 @@ function DailyWorkflowList({
 
 function SortableDailyTaskCard({
   card,
+  customization,
   disabled,
   onTogglePin,
   onArchive,
@@ -373,6 +387,7 @@ function SortableDailyTaskCard({
   onTransfer,
 }: {
   card: CardData;
+  customization: FrontendCustomizationRuntimeDto | null;
   disabled: boolean;
   onTogglePin: () => void;
   onArchive: () => void;
@@ -399,6 +414,8 @@ function SortableDailyTaskCard({
       </button>
       <div className="daily-task-main">
         <Card card={card} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
+        <FrontendCustomizationSlotView customization={customization} slot="daily.card.after_brief" context={{ dailyCall: card }} />
+        <FrontendCustomizationSlotView customization={customization} slot="daily.card.footer" context={{ dailyCall: card }} />
       </div>
     </div>
   );
@@ -406,6 +423,7 @@ function SortableDailyTaskCard({
 
 function PrioritySegmentGroup({
   group,
+  customization,
   collapsed,
   onToggle,
   onTogglePin,
@@ -416,6 +434,7 @@ function PrioritySegmentGroup({
   callDisabled,
 }: {
   group: SegmentDailyGroup;
+  customization: FrontendCustomizationRuntimeDto | null;
   collapsed: boolean;
   onToggle: () => void;
   onTogglePin: (item: DailyCallItem) => void;
@@ -434,6 +453,7 @@ function PrioritySegmentGroup({
         <span className="segment-group-title">{group.segmentName}</span>
         <span className="segment-group-meta">{group.items.length}/{cap}</span>
       </button>
+      <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: { groupName: group.segmentName, groupCount: group.items.length, groupCap: cap } }} />
       {!collapsed && (
         <div className="segment-group-items">
           {group.items.length === 0 ? (
@@ -442,6 +462,7 @@ function PrioritySegmentGroup({
             <SegmentCustomerCard
               key={item.id}
               item={item}
+              customization={customization}
               onTogglePin={() => onTogglePin(item)}
               onOpen={() => onOpenCustomer(item)}
               onAddNote={() => onAddNote(item)}
@@ -458,6 +479,7 @@ function PrioritySegmentGroup({
 
 function SegmentCustomerCard({
   item,
+  customization,
   onTogglePin,
   onOpen,
   onAddNote,
@@ -466,6 +488,7 @@ function SegmentCustomerCard({
   callDisabled,
 }: {
   item: DailyCallItem;
+  customization: FrontendCustomizationRuntimeDto | null;
   onTogglePin: () => void;
   onOpen: () => void;
   onAddNote: () => void;
@@ -561,6 +584,7 @@ function SegmentCustomerCard({
         <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span>
       </div>
       <div className={`priority-brief ${urgencyClass}`}>{customerBrief}</div>
+      <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item }} />
       <div className="daily-meta">{personSafeText(item.reason)}</div>
       <div className="segment-customer-insights">
         <span className="insight-order"><strong>Latest order</strong>{latestOrder}</span>
@@ -579,6 +603,7 @@ function SegmentCustomerCard({
         <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
         <span className="segment-customer-orders">{orderSummary}</span>
       </div>
+      <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item }} />
     </article>
   );
 }

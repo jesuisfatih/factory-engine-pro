@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { FrontendCustomizationSlotView } from './FrontendCustomization';
 import type { Card as CardData, TaskBriefDetail } from '../types';
 import { humanize, personSafeText, staffActionLabel, staffActionTone, staffBriefLine } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
+  customization?: FrontendCustomizationRuntimeDto | null;
   onClose: () => void;
 }
 
@@ -91,7 +94,7 @@ function NarrativeField({ label, suggestedValue, value, onChange, multiLine }: N
   );
 }
 
-export function TaskBriefModal({ card, onClose }: Props) {
+export function TaskBriefModal({ card, customization, onClose }: Props) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
   const isTaskCard = card.kind === 'task';
@@ -289,6 +292,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                         <em>{confidenceLabel}</em>
                       </div>
                     </section>
+                    <FrontendCustomizationSlotView customization={customization} slot="modal.hero" context={{ dailyCall: liveCard, taskBrief: detail }} />
 
                     <div className="brief-snapshot-grid">
                       <div className="brief-snapshot-card snapshot-call">
@@ -309,6 +313,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                         <strong>{goal || 'Save the next accountable result.'}</strong>
                       </div>
                     </div>
+                    <FrontendCustomizationSlotView customization={customization} slot="modal.after_steps" context={{ dailyCall: liveCard, taskBrief: detail }} />
 
                     <NarrativeField label="Reason for this call" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
                     <NarrativeField label="Customer mood or issue" suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine />
@@ -391,6 +396,7 @@ export function TaskBriefModal({ card, onClose }: Props) {
                     )}
                   </div>
                 </div>
+                <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={{ dailyCall: liveCard, taskBrief: detail }} />
 
                 <div className="brief-block">
                   <div className="brief-block-head">

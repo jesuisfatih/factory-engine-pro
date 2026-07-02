@@ -7,6 +7,10 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import {
   MEMBER_PERMISSIONS,
+  type FrontendMcpApplyCustomizationInput,
+  type FrontendMcpListCustomizationsInput,
+  type FrontendMcpPreviewCustomizationInput,
+  type FrontendMcpRollbackCustomizationInput,
   type WorkflowMcpCreateDraftRuleInput,
   type WorkflowMcpDraftRuleInput,
   type WorkflowMcpSimulateDeferredWorkflowRuleInput,
@@ -431,6 +435,92 @@ export class WorkflowMcpHttpService implements OnModuleDestroy {
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
       async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.frontendSurfaceContract(input.surfaceId))),
+    );
+
+    server.registerTool(
+      'preview_frontend_customization',
+      {
+        title: 'Preview frontend customization',
+        description: 'Validate and preview a tenant UI customization DSL without changing staff UI.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue'),
+          name: z.string().trim().min(2).max(120),
+          definition: z.object({}).passthrough(),
+          reason: z.string().trim().max(800).optional(),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsRead,
+        () => this.rules.previewFrontendCustomization(input as FrontendMcpPreviewCustomizationInput),
+      )),
+    );
+
+    server.registerTool(
+      'apply_frontend_customization',
+      {
+        title: 'Apply frontend customization',
+        description: 'Store a tenant UI customization as draft or activate it for the allowlisted staff surface.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue'),
+          name: z.string().trim().min(2).max(120),
+          definition: z.object({}).passthrough(),
+          reason: z.string().trim().max(800).optional(),
+          status: z.enum(['draft', 'active', 'archived']).default('active'),
+        },
+        annotations: { readOnlyHint: false, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsWrite,
+        () => this.rules.applyFrontendCustomization(input as FrontendMcpApplyCustomizationInput),
+      )),
+    );
+
+    server.registerTool(
+      'list_frontend_customizations',
+      {
+        title: 'List frontend customizations',
+        description: 'List stored tenant UI customizations for audit and rollback.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue').optional(),
+          status: z.enum(['draft', 'active', 'archived']).optional(),
+          limit: z.number().int().min(1).max(100).default(25),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsRead,
+        () => this.rules.listFrontendCustomizations(input as FrontendMcpListCustomizationsInput),
+      )),
+    );
+
+    server.registerTool(
+      'get_frontend_customization',
+      {
+        title: 'Get frontend customization',
+        description: 'Read one stored tenant UI customization by id.',
+        inputSchema: { customizationId: z.string().trim().min(1) },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(MEMBER_PERMISSIONS.settingsRead, () => this.rules.getFrontendCustomization(input))),
+    );
+
+    server.registerTool(
+      'rollback_frontend_customization',
+      {
+        title: 'Rollback frontend customization',
+        description: 'Archive the current active UI customization or reactivate a previous one.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue'),
+          targetCustomizationId: z.string().trim().min(1).optional(),
+          reason: z.string().trim().max(800).optional(),
+        },
+        annotations: { readOnlyHint: false, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsWrite,
+        () => this.rules.rollbackFrontendCustomization(input as FrontendMcpRollbackCustomizationInput),
+      )),
     );
 
     server.registerPrompt(

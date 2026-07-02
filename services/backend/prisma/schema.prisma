@@ -107,6 +107,7 @@ model Tenant {
   workflowRules           WorkflowRule[]
   workflowMcpDrafts       WorkflowMcpDraft[]
   workflowScheduledActions WorkflowScheduledAction[]
+  frontendCustomizations  FrontendCustomization[]
   workflowRuleExecutions  WorkflowRuleExecution[]
   transcriptWorkflowEvaluations TranscriptWorkflowEvaluation[]
   workflowRuleCooldowns   WorkflowRuleCooldown[]
@@ -175,6 +176,7 @@ model Member {
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   workflowScheduledActions WorkflowScheduledAction[]
+  frontendCustomizations FrontendCustomization[]
   dailyCallOrders PersonDailyCallOrder[]
   dailyTaskOrders PersonDailyTaskOrder[]
   commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
@@ -1694,6 +1696,29 @@ model WorkflowMcpDraft {
   @@index([tenantId, expiresAt])
   @@index([tenantId, createdByMemberId])
   @@map("workflow_mcp_drafts")
+}
+
+model FrontendCustomization {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  surfaceId         String   @map("surface_id")
+  name              String
+  status            String   @default("draft")
+  definition        Json
+  reason            String?
+  warnings          String[] @default([])
+  createdByMemberId String?  @map("created_by_member_id")
+  activatedAt       DateTime? @map("activated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, surfaceId, status])
+  @@index([tenantId, createdByMemberId])
+  @@index([tenantId, activatedAt])
+  @@map("frontend_customizations")
 }
 
 model WorkflowRuleVersion {

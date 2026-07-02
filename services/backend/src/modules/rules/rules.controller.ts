@@ -4,6 +4,10 @@ import {
   backfillWorkflowRuleSchema,
   bootstrapWorkflowDefaultsSchema,
   fireWorkflowTriggerSchema,
+  frontendMcpApplyCustomizationSchema,
+  frontendMcpListCustomizationsSchema,
+  frontendMcpPreviewCustomizationSchema,
+  frontendMcpRollbackCustomizationSchema,
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
@@ -17,6 +21,10 @@ import {
   type ActiveWorkflowRuleStatsQuery,
   type BackfillWorkflowRuleInput,
   type BootstrapWorkflowDefaultsInput,
+  type FrontendMcpApplyCustomizationInput,
+  type FrontendMcpListCustomizationsInput,
+  type FrontendMcpPreviewCustomizationInput,
+  type FrontendMcpRollbackCustomizationInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
@@ -170,6 +178,44 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
   mcpFrontendSurface(@Param('surfaceId') surfaceId: string) {
     return this.rules.frontendSurfaceContract(surfaceId);
+  }
+
+  @Post('mcp/frontend/customizations/preview')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpPreviewFrontendCustomization(
+    @Body(new ZodValidationPipe(frontendMcpPreviewCustomizationSchema)) body: FrontendMcpPreviewCustomizationInput,
+  ) {
+    return this.rules.previewFrontendCustomization(body);
+  }
+
+  @Post('mcp/frontend/customizations')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpApplyFrontendCustomization(
+    @Body(new ZodValidationPipe(frontendMcpApplyCustomizationSchema)) body: FrontendMcpApplyCustomizationInput,
+  ) {
+    return this.rules.applyFrontendCustomization(body);
+  }
+
+  @Get('mcp/frontend/customizations')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpListFrontendCustomizations(
+    @Query(new ZodValidationPipe(frontendMcpListCustomizationsSchema)) query: FrontendMcpListCustomizationsInput,
+  ) {
+    return this.rules.listFrontendCustomizations(query);
+  }
+
+  @Get('mcp/frontend/customizations/:customizationId')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpGetFrontendCustomization(@Param('customizationId') customizationId: string) {
+    return this.rules.getFrontendCustomization({ customizationId });
+  }
+
+  @Post('mcp/frontend/customizations/rollback')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpRollbackFrontendCustomization(
+    @Body(new ZodValidationPipe(frontendMcpRollbackCustomizationSchema)) body: FrontendMcpRollbackCustomizationInput,
+  ) {
+    return this.rules.rollbackFrontendCustomization(body);
   }
 
   @Get('stats/active')

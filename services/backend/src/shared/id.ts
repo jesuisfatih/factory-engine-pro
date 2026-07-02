@@ -59,6 +59,7 @@ export type IdPrefix =
   | 'wrule'
   | 'wsa'
   | 'wmd'
+  | 'fcus'
   | 'wrex'
   | 'wfev'
   | 'wrcd'

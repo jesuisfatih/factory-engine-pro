@@ -248,6 +248,149 @@ export const workflowMcpSimulateDeferredWorkflowRuleSchema = z.object({
 });
 export type WorkflowMcpSimulateDeferredWorkflowRuleInput = z.infer<typeof workflowMcpSimulateDeferredWorkflowRuleSchema>;
 
+export const frontendMcpSurfaceIdSchema = z.enum(['staff.queue']);
+export type FrontendMcpSurfaceId = z.infer<typeof frontendMcpSurfaceIdSchema>;
+
+export const frontendCustomizationStatusSchema = z.enum(['draft', 'active', 'archived']);
+export type FrontendCustomizationStatus = z.infer<typeof frontendCustomizationStatusSchema>;
+
+export const frontendCustomizationSlotSchema = z.enum([
+  'kpi.before',
+  'kpi.after',
+  'daily.header',
+  'daily.before_list',
+  'daily.card.after_brief',
+  'daily.card.footer',
+  'priority.header',
+  'priority.group.header',
+  'priority.card.after_summary',
+  'priority.card.footer',
+  'modal.hero',
+  'modal.after_steps',
+  'modal.customer_context',
+]);
+export type FrontendCustomizationSlot = z.infer<typeof frontendCustomizationSlotSchema>;
+
+export const frontendCustomizationDataSourceSchema = z.enum([
+  'summary',
+  'dailyCall',
+  'priorityCustomer',
+  'taskBrief',
+  'customerDetail',
+]);
+export type FrontendCustomizationDataSource = z.infer<typeof frontendCustomizationDataSourceSchema>;
+
+export const frontendCustomizationDataPathSchema = z.string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(/^[a-zA-Z0-9_.]+$/, 'Data path may contain only letters, numbers, underscores, and dots.');
+
+export const frontendCustomizationBindingSchema = z.object({
+  source: frontendCustomizationDataSourceSchema,
+  path: frontendCustomizationDataPathSchema,
+  fallback: z.string().trim().max(160).optional(),
+  format: z.enum(['text', 'number', 'currency', 'relative_time', 'count']).default('text'),
+});
+export type FrontendCustomizationBinding = z.infer<typeof frontendCustomizationBindingSchema>;
+
+export const frontendCustomizationConditionSchema = z.object({
+  source: frontendCustomizationDataSourceSchema,
+  path: frontendCustomizationDataPathSchema,
+  operator: z.enum(['exists', 'not_exists', 'eq', 'neq', 'gte', 'lte', 'contains', 'in']),
+  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number(), z.boolean()]))]).optional(),
+});
+export type FrontendCustomizationCondition = z.infer<typeof frontendCustomizationConditionSchema>;
+
+export const frontendCustomizationVisibilitySchema = z.object({
+  all: z.array(frontendCustomizationConditionSchema).max(12).default([]),
+  any: z.array(frontendCustomizationConditionSchema).max(12).default([]),
+});
+export type FrontendCustomizationVisibility = z.infer<typeof frontendCustomizationVisibilitySchema>;
+
+export const frontendCustomizationToneSchema = z.enum(['neutral', 'info', 'success', 'warning', 'danger', 'accent']);
+export type FrontendCustomizationTone = z.infer<typeof frontendCustomizationToneSchema>;
+
+export const frontendCustomizationBlockSchema = z.object({
+  id: z.string().trim().min(2).max(80).regex(/^[a-zA-Z0-9_-]+$/),
+  slot: frontendCustomizationSlotSchema,
+  type: z.enum(['stat_tile', 'message', 'field', 'badge', 'checklist', 'section']),
+  label: z.string().trim().min(1).max(80),
+  title: z.string().trim().max(140).optional(),
+  text: z.string().trim().max(500).optional(),
+  template: z.string().trim().max(800).optional(),
+  value: frontendCustomizationBindingSchema.optional(),
+  items: z.array(z.string().trim().min(1).max(180)).max(8).default([]),
+  visibility: frontendCustomizationVisibilitySchema.default({ all: [], any: [] }),
+  tone: frontendCustomizationToneSchema.default('neutral'),
+  priority: z.coerce.number().int().min(0).max(1000).default(100),
+  compact: z.boolean().default(false),
+}).superRefine((value, ctx) => {
+  if (!value.text && !value.template && !value.value && value.items.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A frontend block must provide text, template, value, or checklist items.',
+    });
+  }
+});
+export type FrontendCustomizationBlock = z.infer<typeof frontendCustomizationBlockSchema>;
+
+export const frontendCustomizationDefinitionSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema,
+  schemaVersion: z.literal(1).default(1),
+  description: z.string().trim().max(500).optional(),
+  blocks: z.array(frontendCustomizationBlockSchema).max(60),
+  theme: z.object({
+    density: z.enum(['comfortable', 'compact']).default('comfortable'),
+    accent: frontendCustomizationToneSchema.default('accent'),
+  }).default({ density: 'comfortable', accent: 'accent' }),
+}).superRefine((value, ctx) => {
+  const ids = new Set<string>();
+  for (const block of value.blocks) {
+    if (ids.has(block.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['blocks'],
+        message: `Duplicate frontend block id: ${block.id}`,
+      });
+    }
+    ids.add(block.id);
+  }
+});
+export type FrontendCustomizationDefinition = z.infer<typeof frontendCustomizationDefinitionSchema>;
+
+export const frontendMcpPreviewCustomizationSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema,
+  name: z.string().trim().min(2).max(120),
+  definition: frontendCustomizationDefinitionSchema,
+  reason: z.string().trim().max(800).optional(),
+});
+export type FrontendMcpPreviewCustomizationInput = z.infer<typeof frontendMcpPreviewCustomizationSchema>;
+
+export const frontendMcpApplyCustomizationSchema = frontendMcpPreviewCustomizationSchema.extend({
+  status: frontendCustomizationStatusSchema.default('active'),
+});
+export type FrontendMcpApplyCustomizationInput = z.infer<typeof frontendMcpApplyCustomizationSchema>;
+
+export const frontendMcpListCustomizationsSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema.optional(),
+  status: frontendCustomizationStatusSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+export type FrontendMcpListCustomizationsInput = z.infer<typeof frontendMcpListCustomizationsSchema>;
+
+export const frontendMcpCustomizationIdSchema = z.object({
+  customizationId: z.string().trim().min(1),
+});
+export type FrontendMcpCustomizationIdInput = z.infer<typeof frontendMcpCustomizationIdSchema>;
+
+export const frontendMcpRollbackCustomizationSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema,
+  targetCustomizationId: z.string().trim().min(1).optional(),
+  reason: z.string().trim().max(800).optional(),
+});
+export type FrontendMcpRollbackCustomizationInput = z.infer<typeof frontendMcpRollbackCustomizationSchema>;
+
 export interface WorkflowRuleDto {
   id: string;
   name: string;
@@ -429,7 +572,12 @@ export interface WorkflowMcpCapabilityTool {
     | 'explain_scheduled_workflow_action'
     | 'read_frontend_agent_guide'
     | 'list_frontend_surfaces'
-    | 'get_frontend_surface_contract';
+    | 'get_frontend_surface_contract'
+    | 'preview_frontend_customization'
+    | 'apply_frontend_customization'
+    | 'list_frontend_customizations'
+    | 'get_frontend_customization'
+    | 'rollback_frontend_customization';
   description: string;
   mutates: boolean;
   requiresPermission: string;
@@ -647,6 +795,59 @@ export interface FrontendMcpSurfacesResponse {
 
 export interface FrontendMcpSurfaceContractResponse {
   surface: FrontendMcpSurfaceContract;
+}
+
+export interface FrontendCustomizationDto {
+  id: string;
+  surfaceId: FrontendMcpSurfaceId;
+  name: string;
+  status: FrontendCustomizationStatus;
+  definition: FrontendCustomizationDefinition;
+  reason: string | null;
+  warnings: string[];
+  createdByMemberId: string | null;
+  createdByMemberName: string | null;
+  activatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FrontendCustomizationRuntimeDto {
+  surfaceId: FrontendMcpSurfaceId;
+  customizationId: string | null;
+  name: string | null;
+  definition: FrontendCustomizationDefinition;
+  warnings: string[];
+  checkedAt: string;
+}
+
+export interface FrontendMcpPreviewCustomizationResponse {
+  ok: boolean;
+  surface: FrontendMcpSurfaceContract;
+  preview: FrontendCustomizationRuntimeDto;
+  warnings: string[];
+}
+
+export interface FrontendMcpApplyCustomizationResponse {
+  customization: FrontendCustomizationDto;
+  activeRuntime: FrontendCustomizationRuntimeDto;
+  deactivatedIds: string[];
+}
+
+export interface FrontendMcpListCustomizationsResponse {
+  items: FrontendCustomizationDto[];
+  total: number;
+  limit: number;
+}
+
+export interface FrontendMcpCustomizationResponse {
+  customization: FrontendCustomizationDto;
+}
+
+export interface FrontendMcpRollbackCustomizationResponse {
+  activeRuntime: FrontendCustomizationRuntimeDto;
+  activatedCustomization: FrontendCustomizationDto | null;
+  archivedCustomizationIds: string[];
 }
 
 export interface WorkflowOperationalContractProbeResponse {

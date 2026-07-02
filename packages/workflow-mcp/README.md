@@ -63,7 +63,11 @@ For frontend work:
 1. `read_frontend_agent_guide` first.
 2. `list_frontend_surfaces`.
 3. `get_frontend_surface_contract` for the exact surface, currently `staff.queue`.
-4. Keep edits inside allowlisted files, preserve live API data, remove internal staff-facing terms, and verify loading/empty/error/populated states.
+4. `preview_frontend_customization` with a safe slot/block/data-binding definition.
+5. `apply_frontend_customization` only after preview warnings are clean and the user approves activation.
+6. `list_frontend_customizations`, `get_frontend_customization`, and `rollback_frontend_customization` provide audit and rollback.
+
+Frontend customization does not accept raw HTML, scripts, arbitrary CSS, or source-file writes. It changes the staff UI through controlled slots such as `kpi.after`, `daily.card.after_brief`, `priority.card.after_summary`, and `modal.hero`. Blocks can bind to live response data and use visibility conditions, so agents can express "show this field only when open requests are greater than zero" without editing React code.
 
 Unsupported actions such as automatic support case creation, raw SQL, destructive segment changes, and direct email sends are rejected by the backend.
 

@@ -53,6 +53,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
+import { RulesService } from '../rules/rules.service.js';
 import { isNonCatalogPromoPatchInquiry } from '../ai/transcript-operational-signals.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 
@@ -211,6 +212,7 @@ export class PersonWorkspaceService {
     private readonly customersService: CustomersService,
     private readonly aircall: AircallService,
     private readonly mail: MailService,
+    private readonly rules: RulesService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
   ) {}
@@ -253,7 +255,7 @@ export class PersonWorkspaceService {
     const today = istanbulDayRange();
     const dailyWindow = dailyWorkflowRange(range, today);
 
-    const [config, rawSegmentOwnerships] = await Promise.all([
+    const [config, rawSegmentOwnerships, frontendCustomization] = await Promise.all([
       this.urgencyConfig(),
       this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
@@ -261,6 +263,7 @@ export class PersonWorkspaceService {
         orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
         take: 100,
       }),
+      this.rules.frontendRuntimeCustomization('staff.queue'),
     ]);
     const segmentOwnerships = rawSegmentOwnerships.filter((ownership) => isShopifyNativeSegment(ownership.segment));
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
@@ -395,6 +398,7 @@ export class PersonWorkspaceService {
       priorityKanban: segmentPriorityCards,
       pinBoard,
       segmentGroups,
+      frontendCustomization,
     };
   }
 

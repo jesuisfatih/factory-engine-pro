@@ -336,6 +336,82 @@ server.registerTool(
   async (input) => jsonTool(await requestApi('GET', `/rules/mcp/frontend/surfaces/${encodeURIComponent(input.surfaceId)}`)),
 );
 
+server.registerTool(
+  'preview_frontend_customization',
+  {
+    title: 'Preview frontend customization',
+    description: 'Validate and preview a tenant UI customization DSL without changing staff UI.',
+    inputSchema: {
+      surfaceId: z.literal('staff.queue'),
+      name: z.string().trim().min(2).max(120),
+      definition: z.object({}).passthrough(),
+      reason: z.string().trim().max(800).optional(),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/frontend/customizations/preview', input)),
+);
+
+server.registerTool(
+  'apply_frontend_customization',
+  {
+    title: 'Apply frontend customization',
+    description: 'Store a tenant UI customization as draft or activate it for the allowlisted staff surface.',
+    inputSchema: {
+      surfaceId: z.literal('staff.queue'),
+      name: z.string().trim().min(2).max(120),
+      definition: z.object({}).passthrough(),
+      reason: z.string().trim().max(800).optional(),
+      status: z.enum(['draft', 'active', 'archived']).default('active'),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/frontend/customizations', input)),
+);
+
+server.registerTool(
+  'list_frontend_customizations',
+  {
+    title: 'List frontend customizations',
+    description: 'List stored tenant UI customizations for audit and rollback.',
+    inputSchema: {
+      surfaceId: z.literal('staff.queue').optional(),
+      status: z.enum(['draft', 'active', 'archived']).optional(),
+      limit: z.number().int().min(1).max(100).default(25),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/frontend/customizations${queryString(input)}`)),
+);
+
+server.registerTool(
+  'get_frontend_customization',
+  {
+    title: 'Get frontend customization',
+    description: 'Read one stored tenant UI customization by id.',
+    inputSchema: {
+      customizationId: z.string().trim().min(1),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/frontend/customizations/${encodeURIComponent(input.customizationId)}`)),
+);
+
+server.registerTool(
+  'rollback_frontend_customization',
+  {
+    title: 'Rollback frontend customization',
+    description: 'Archive the current active UI customization or reactivate a previous one.',
+    inputSchema: {
+      surfaceId: z.literal('staff.queue'),
+      targetCustomizationId: z.string().trim().min(1).optional(),
+      reason: z.string().trim().max(800).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/frontend/customizations/rollback', input)),
+);
+
 server.registerPrompt(
   'workflow_rule_authoring_playbook',
   {
@@ -364,7 +440,10 @@ server.registerPrompt(
             'For "show this to staff after N days" requirements, use deferred materialization on create_task. This creates a hidden scheduled action first, then BullMQ materializes the actual staff task at run time after revalidation.',
             'Use simulate_deferred_workflow_rule before publishing deferred rules. Use list_scheduled_workflow_actions, get_scheduled_workflow_action, and explain_scheduled_workflow_action to audit hidden pending work.',
             'Use cancel_scheduled_workflow_action only when the user wants to stop a pending deferred action before it appears to staff.',
-            'For frontend work, read_frontend_agent_guide first, then list_frontend_surfaces and get_frontend_surface_contract. Stay inside allowlisted files, preserve real API data, and avoid internal terminology in staff UI.',
+            'For frontend work, read_frontend_agent_guide first, then list_frontend_surfaces and get_frontend_surface_contract.',
+            'Use preview_frontend_customization before apply_frontend_customization. The customization DSL changes staff UI through safe slots, blocks, data bindings, and visibility conditions; it never accepts raw HTML, scripts, secrets, or arbitrary source edits.',
+            'Use list_frontend_customizations and get_frontend_customization for audit. Use rollback_frontend_customization to archive current UI overlays or reactivate a previous one.',
+            'Staff UI customizations must preserve real API data, loading/empty/error/populated states, light/dark readability, and business terminology.',
             'Never create support cases, tickets, customer requests, raw SQL, or unsupported actions.',
             'Rules must stay in the deterministic workflow DSL and target sales/account/personnel operations.',
             'Create-task assignment resolves explicit member, Aircall call owner, customer axis primary, then axis primary role.',

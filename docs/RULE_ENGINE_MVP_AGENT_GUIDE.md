@@ -69,6 +69,11 @@ The MCP surface exposes these tool concepts:
 - `read_frontend_agent_guide`
 - `list_frontend_surfaces`
 - `get_frontend_surface_contract`
+- `preview_frontend_customization`
+- `apply_frontend_customization`
+- `list_frontend_customizations`
+- `get_frontend_customization`
+- `rollback_frontend_customization`
 
 The safe authoring sequence is always:
 
@@ -1154,6 +1159,21 @@ Use these MCP tools for deferred work:
 - `get_scheduled_workflow_action`: inspect one scheduled action.
 - `explain_scheduled_workflow_action`: explain runAt, status, and revalidation.
 - `cancel_scheduled_workflow_action`: cancel pending hidden work before it becomes staff-visible.
+
+### Frontend runtime customization tools
+
+Frontend MCP changes use a safe runtime customization DSL before source-file patching.
+
+- `read_frontend_agent_guide`: read the full staff UI engineering guide.
+- `list_frontend_surfaces`: list allowlisted surfaces.
+- `get_frontend_surface_contract`: read the exact surface files, endpoints, states, terminology, and smoke checklist.
+- `preview_frontend_customization`: validate a slot/block/data-binding UI overlay without changing staff UI.
+- `apply_frontend_customization`: store the overlay as draft or activate it for the tenant.
+- `list_frontend_customizations`: audit current and historical overlays.
+- `get_frontend_customization`: inspect one overlay.
+- `rollback_frontend_customization`: archive current active overlay or reactivate a previous overlay.
+
+The DSL supports slots, block types, live data bindings, and visibility conditions. It must not include raw HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes.
 
 Staff UI text must stay business-facing. Prefer:
 

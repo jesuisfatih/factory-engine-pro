@@ -86,6 +86,15 @@ import type {
   UpdatePricingRuleInput,
   UpsertCommissionProfileInput,
   UpsertSegmentOwnershipInput,
+  FrontendMcpApplyCustomizationInput,
+  FrontendMcpApplyCustomizationResponse,
+  FrontendMcpCustomizationResponse,
+  FrontendMcpListCustomizationsInput,
+  FrontendMcpListCustomizationsResponse,
+  FrontendMcpPreviewCustomizationInput,
+  FrontendMcpPreviewCustomizationResponse,
+  FrontendMcpRollbackCustomizationInput,
+  FrontendMcpRollbackCustomizationResponse,
   WorkflowEnumCatalogResponse,
   WorkflowEnumChainProbeResponse,
   WorkflowMcpCapabilitiesResponse,
@@ -1136,6 +1145,26 @@ export class ApiClient {
 
   publishWorkflowRuleFromMcp(input: WorkflowMcpPublishRuleInput) {
     return this.post<WorkflowMcpPublishRuleResponse>('/rules/mcp/publish', input);
+  }
+
+  previewFrontendCustomizationFromMcp(input: FrontendMcpPreviewCustomizationInput) {
+    return this.post<FrontendMcpPreviewCustomizationResponse>('/rules/mcp/frontend/customizations/preview', input);
+  }
+
+  applyFrontendCustomizationFromMcp(input: FrontendMcpApplyCustomizationInput) {
+    return this.post<FrontendMcpApplyCustomizationResponse>('/rules/mcp/frontend/customizations', input);
+  }
+
+  listFrontendCustomizationsFromMcp(input: Partial<FrontendMcpListCustomizationsInput> = {}) {
+    return this.get<FrontendMcpListCustomizationsResponse>(`/rules/mcp/frontend/customizations${queryString(input)}`);
+  }
+
+  getFrontendCustomizationFromMcp(customizationId: string) {
+    return this.get<FrontendMcpCustomizationResponse>(`/rules/mcp/frontend/customizations/${encodeURIComponent(customizationId)}`);
+  }
+
+  rollbackFrontendCustomizationFromMcp(input: FrontendMcpRollbackCustomizationInput) {
+    return this.post<FrontendMcpRollbackCustomizationResponse>('/rules/mcp/frontend/customizations/rollback', input);
   }
 
   fireWorkflowTrigger(input: WorkflowTriggerFireInput) {
