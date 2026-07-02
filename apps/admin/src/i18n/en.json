@@ -571,7 +571,7 @@
       "step_axis_title": "Default customer axis assignment",
       "step_axis_body": "Assigns sales, support, and account primary owners to customers missing an owner.",
       "shopify_summary": "Queued={{queued}} resources={{resources}} batch={{batchId}}",
-      "aircall_summary": "{{queued}}/{{scanned}} transcript(s) queued for resolver v{{version}}; skipped {{skipped}}.",
+      "aircall_summary": "{{queued}}/{{scanned}} transcript workflow repair job(s) queued for v{{version}}; skipped {{skipped}}.",
       "axis_summary": "{{assigned}} assignment(s) written across {{scanned}} customer(s); existing {{skipped}}, no owner {{noOwner}}.",
       "completed_toast": "Initial setup completed",
       "failed_toast": "Initial setup failed",

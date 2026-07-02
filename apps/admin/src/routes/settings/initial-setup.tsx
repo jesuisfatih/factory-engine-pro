@@ -92,8 +92,10 @@ function InitialSetupView() {
 
       await runStep(setStep, 'segments', () => adminApi.evaluateAllSegments(), (result) => summarizeUnknown(result));
 
-      await runStep(setStep, 'aircall', () => adminApi.reprocessResolvedAircall({
+      await runStep(setStep, 'aircall', () => adminApi.repairAircallWorkflowEvaluations({
         targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+        scope: 'recent',
+        recentDays: 7,
         limit: 1000,
       }), (result) => (
         t('settings.initial_setup.aircall_summary', {

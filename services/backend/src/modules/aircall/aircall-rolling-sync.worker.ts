@@ -104,8 +104,9 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
     const resolverLimit = positiveInt(this.config.get<string>('AIRCALL_ROLLING_SYNC_RESOLVER_LIMIT'), 200);
 
     const backfill = await this.aircall.backfillRecentCalls({ recentDays, maxPages });
-    const resolver = await this.aircall.reprocessResolver({
+    const resolver = await this.aircall.repairWorkflowEvaluations({
       targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+      scope: 'recent',
       recentDays,
       limit: resolverLimit,
     });
@@ -120,7 +121,8 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
       recent_days: recentDays,
       fetched: backfill.fetched,
       ingested: backfill.ingested,
-      resolver_queued: resolver.queued,
+      workflow_repair_queued: resolver.queued,
+      workflow_repair_scanned: resolver.scanned,
     });
     return {
       recentDays,
