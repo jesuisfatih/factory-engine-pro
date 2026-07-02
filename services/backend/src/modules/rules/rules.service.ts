@@ -137,7 +137,7 @@ const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Validate and simulate every draft before storing or publishing it.',
 ] as const;
 const FRONTEND_MCP_AGENT_GUIDE_PATH = 'docs/FRONTEND_MCP_AGENT_GUIDE.md';
-const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-02.frontend-mcp-guide.v1';
+const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-02.frontend-mcp-guide.v2';
 const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const SCHEDULED_ACTION_STATUSES = ['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed'] as const;
 const SCHEDULED_ACTION_CLOSED_TASK_STATUSES = ['closed', 'resolved'] as const;
@@ -4314,10 +4314,13 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
       'packages/contracts/src/person.ts',
     ],
     sourceFiles: [
-      'apps/person/src/routes/queue.tsx',
+      'apps/person/src/views/CallQueue.tsx',
+      'apps/person/src/components/Card.tsx',
       'apps/person/src/components/TaskBriefModal.tsx',
-      'apps/person/src/components/CustomerDetailModal.tsx',
+      'apps/person/src/components/FrontendCustomization.tsx',
       'apps/person/src/lib/api.ts',
+      'apps/person/src/styles.css',
+      'packages/ui/src/customer-detail-panel.tsx',
       'packages/contracts/src/person.ts',
     ],
     apiEndpoints: [
@@ -4330,15 +4333,61 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
     requiredStates: ['loading', 'empty', 'error', 'populated'],
     forbiddenTerms: [...FRONTEND_MCP_FORBIDDEN_STAFF_TERMS],
     preferredTerms: [...FRONTEND_MCP_PREFERRED_STAFF_TERMS],
+    customizationSlots: [...FRONTEND_MCP_ALLOWED_SLOTS],
+    elementMap: [
+      {
+        elementId: 'kpi.row',
+        label: 'KPI row',
+        slots: ['kpi.before', 'kpi.after'],
+        currentSupport: 'Add safe KPI/stat/message blocks before or after native KPI tiles.',
+        nextSafeSupport: 'Typed element override for KPI order, labels, density, and field visibility.',
+      },
+      {
+        elementId: 'daily.card',
+        label: 'Daily call card',
+        slots: ['daily.card.after_brief', 'daily.card.footer'],
+        currentSupport: 'Add call instruction, warning, badge, field, or checklist blocks using live dailyCall data.',
+        nextSafeSupport: 'Typed override for visible fields, business copy, urgency emphasis, and card density.',
+      },
+      {
+        elementId: 'priority.card',
+        label: 'Priority customer card',
+        slots: ['priority.card.after_summary', 'priority.card.footer'],
+        currentSupport: 'Add customer opportunity, risk, or note reminder blocks using live priorityCustomer data.',
+        nextSafeSupport: 'Typed override for order/call/note field layout and customer opportunity labels.',
+      },
+      {
+        elementId: 'task.modal',
+        label: 'Call detail modal',
+        slots: ['modal.hero', 'modal.after_steps', 'modal.customer_context'],
+        currentSupport: 'Add first-viewport guidance, operator checklists, and customer context blocks.',
+        nextSafeSupport: 'Typed override for modal section order, first-screen emphasis, and long-history placement.',
+      },
+      {
+        elementId: 'customer.detail.popup',
+        label: 'Customer detail popup',
+        slots: [],
+        currentSupport: 'No runtime overlay slot yet; centered popup must stay centered and source patching requires stricter lane.',
+        nextSafeSupport: 'Add typed slots for profile header, order tab summary, call tab summary, and notes tab helper blocks.',
+      },
+    ],
+    extensionRoadmap: [
+      'Add typed elementOverrides for field visibility, copy overrides, density, emphasis, and tone rules.',
+      'Add role/person variants so Linda and Ihsan can see different safe emphasis without branching source files.',
+      'Add screenshot preview proof for light, dark, desktop, and mobile before activation.',
+      'Keep arbitrary HTML/CSS and source-file edits behind a separate maintainer-only patch lane.',
+    ],
     themeChecklist: [
       'Light and dark themes must preserve readable contrast for phone numbers, order chips, and action banners.',
       'Do not use white-only cards inside dark mode surfaces.',
       'Use intent color only as supporting emphasis, not as the only meaning carrier.',
+      'Do not hide phone, required action, latest order, latest call, open follow-up, or notes.',
     ],
     smokeChecklist: [
       'Open /staff/queue with a staff token.',
       'Verify Daily Call List and Priority Kanban have distinct content.',
       'Open a call card modal and confirm first viewport shows phone, call reason, issue, outcome, and next steps.',
+      'Open a Priority Kanban customer and confirm customer history opens as a centered popup, not a right drawer.',
       'Toggle light/dark mode and capture screenshots.',
       'Confirm no forbidden staff terminology appears.',
     ],

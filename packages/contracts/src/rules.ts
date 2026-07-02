@@ -785,6 +785,15 @@ export interface FrontendMcpSurfaceContract extends FrontendMcpSurfaceSummary {
   requiredStates: string[];
   forbiddenTerms: string[];
   preferredTerms: string[];
+  customizationSlots: FrontendCustomizationSlot[];
+  elementMap: Array<{
+    elementId: string;
+    label: string;
+    slots: FrontendCustomizationSlot[];
+    currentSupport: string;
+    nextSafeSupport: string;
+  }>;
+  extensionRoadmap: string[];
   themeChecklist: string[];
   smokeChecklist: string[];
 }

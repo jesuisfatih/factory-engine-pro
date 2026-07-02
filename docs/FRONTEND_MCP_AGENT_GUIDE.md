@@ -9,11 +9,12 @@ The agent may help improve allowed frontend surfaces, but it must work inside ex
 1. Read this guide.
 2. List frontend surfaces.
 3. Read the target surface contract.
-4. For runtime UI changes, use the frontend customization DSL first.
-5. Preview the customization.
-6. Apply it only after preview warnings are clean and the user approves activation.
-7. Use list/get/rollback tools for audit and recovery.
-8. Source-file patching is a later, separate capability and must stay behind stricter allowlists.
+4. List existing frontend customizations for the surface.
+5. For runtime UI changes, use the frontend customization DSL first.
+6. Preview the customization.
+7. Apply it only after preview warnings are clean and the user approves activation.
+8. Use list/get/rollback tools for audit and recovery.
+9. Source-file patching is a later, separate capability and must stay behind stricter allowlists.
 
 The agent must not directly edit production source files or deploy without a separate publish tool and human approval.
 
@@ -103,6 +104,108 @@ Call {{dailyCall.phone}} now. Customer has {{dailyCall.performance30d.orders}} o
 
 Do not use raw HTML, script tags, arbitrary CSS, iframe embeds, or remote assets.
 
+## What The Patron Can Change Now
+
+The current MCP frontend system is an overlay system. It can add safe, data-bound blocks into approved slots. It cannot freely restyle every existing React element yet.
+
+Allowed now:
+
+- add KPI tiles before or after the native KPI row
+- add call action banners above the Daily Call List
+- add business-language explanations to daily call cards
+- add customer warning or opportunity blocks inside priority customer cards
+- add checklist steps to the call-detail modal
+- add customer context blocks inside the modal
+- use live API data tokens in text
+- show or hide an overlay block based on live data conditions
+- set block tone: `neutral`, `info`, `success`, `warning`, `danger`, `accent`
+- keep changes as `draft`, activate them, list history, and rollback
+
+Not allowed in the current overlay DSL:
+
+- arbitrary HTML from prompts
+- arbitrary CSS from prompts
+- changing auth, tenant, RBAC, API, or backend behavior
+- hiding required business fields such as phone, action, latest order, latest call, open follow-up, or notes
+- replacing the real API response with invented content
+- adding remote scripts, tracking pixels, iframes, or external assets
+- changing source files through the runtime customization tools
+
+When the patron asks for "CSS" or "HTML", translate the request into safe blocks, tones, density, copy, and visibility rules. If the requested result needs true source-file editing, say that it requires the separate source patch lane and must include build plus screenshot verification.
+
+## Staff Queue Element Map
+
+Surface id:
+
+```text
+staff.queue
+```
+
+Main files:
+
+- `apps/person/src/views/CallQueue.tsx`
+- `apps/person/src/components/Card.tsx`
+- `apps/person/src/components/TaskBriefModal.tsx`
+- `apps/person/src/components/FrontendCustomization.tsx`
+- `apps/person/src/styles.css`
+- `packages/ui/src/customer-detail-panel.tsx`
+- `packages/contracts/src/person.ts`
+
+Element map:
+
+| Element | Native class or slot | Current MCP action | Notes |
+| --- | --- | --- | --- |
+| KPI row | `kpi.before`, `kpi.after` | add `stat_tile`, `message`, `badge`, `field`, `section` | Good for "must call", refund, purchase intent, unmatched caller stats. |
+| Daily header | `daily.header`, `daily.before_list` | add guidance or filters explanation | Do not add segment grouping here. Daily list remains recent call work. |
+| Daily call card | `daily.card.after_brief`, `daily.card.footer` | add short instruction, warning, badge, checklist | Keep phone/action visible. Do not expose internal rule names. |
+| Priority group header | `priority.group.header` | add owner/group context | Priority is assigned customer groups, not recent calls. |
+| Priority customer card | `priority.card.after_summary`, `priority.card.footer` | add customer opportunity, risk, note reminders | Use customer/order/call facts only. |
+| Call modal top | `modal.hero` | add the strongest "do this now" block | First viewport must tell staff what happened and what to do. |
+| Call modal steps | `modal.after_steps` | add checklist or decision path | Keep it short enough for a call center operator. |
+| Modal customer context | `modal.customer_context` | add customer/order/call context | Do not duplicate long transcript text. |
+| Customer detail popup | native popup, no overlay slot yet | source patch lane only | Keep centered popup; never reintroduce right drawer. |
+
+## Recommended Next Expansion
+
+To let the patron control more of the staff panel without unsafe raw CSS, add a second MCP layer called element overrides. This should be typed, allowlisted, and previewed before activation.
+
+Recommended schema direction:
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "elementOverrides": [
+    {
+      "elementId": "daily.card",
+      "label": "Daily call card",
+      "density": "comfortable",
+      "emphasis": "high",
+      "toneRule": "urgency",
+      "visibleFields": ["phone", "requiredAction", "assignee", "purchaseIntent", "latestOrder"],
+      "hiddenFields": ["internalSource", "ruleName", "axis"],
+      "copyOverrides": {
+        "callSummary": "Call summary",
+        "purchaseIntent": "Purchase intent",
+        "customerConcern": "Customer concern"
+      }
+    }
+  ]
+}
+```
+
+That next layer should support:
+
+- safe design tokens instead of raw CSS
+- per-element field visibility
+- per-element label/copy overrides
+- per-element density and emphasis
+- role/person variants, for example Linda versus Ihsan
+- light/dark preview checks
+- screenshot proof before publish
+- rollback to the previous active customization
+
+Do not implement arbitrary freeform CSS as the main path. It will let agents break readability, hide business fields, or inject unsafe content. Use source patch tools only for maintainers, not routine patron styling.
+
 ## Example Customization
 
 ```json
@@ -148,6 +251,79 @@ Do not use raw HTML, script tags, arbitrary CSS, iframe embeds, or remote assets
 ```
 
 Use `preview_frontend_customization` with that payload first. Use `apply_frontend_customization` only after review.
+
+## High Value Staff Queue Examples
+
+Show a stronger daily call warning only when the call summary mentions refund or payment:
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "name": "Refund calls need exact next step",
+  "definition": {
+    "surfaceId": "staff.queue",
+    "schemaVersion": 1,
+    "description": "Make payment and refund calls harder to miss.",
+    "theme": { "density": "comfortable", "accent": "warning" },
+    "blocks": [
+      {
+        "id": "refund_next_step",
+        "slot": "daily.card.after_brief",
+        "type": "message",
+        "label": "Payment/refund",
+        "title": "Payment or refund - clarify next step",
+        "template": "Ask for the order number and exact issue. Save the promised next step before closing.",
+        "tone": "danger",
+        "priority": 10,
+        "visibility": {
+          "any": [
+            { "source": "dailyCall", "path": "summary", "operator": "contains", "value": "refund" },
+            { "source": "dailyCall", "path": "summary", "operator": "contains", "value": "payment" }
+          ],
+          "all": []
+        }
+      }
+    ]
+  },
+  "reason": "Help staff handle money-sensitive calls without internal terminology."
+}
+```
+
+Add a modal checklist for high urgency calls:
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "name": "High urgency call checklist",
+  "definition": {
+    "surfaceId": "staff.queue",
+    "schemaVersion": 1,
+    "blocks": [
+      {
+        "id": "urgent_call_steps",
+        "slot": "modal.after_steps",
+        "type": "checklist",
+        "label": "Call steps",
+        "title": "Before closing this call",
+        "items": [
+          "Confirm the customer question in one sentence.",
+          "Check latest order and latest call before promising a date.",
+          "Save the outcome note and next callback time."
+        ],
+        "tone": "warning",
+        "priority": 20,
+        "visibility": {
+          "all": [
+            { "source": "dailyCall", "path": "urgencyScore", "operator": "gte", "value": 7 }
+          ],
+          "any": []
+        }
+      }
+    ]
+  },
+  "reason": "High urgency calls need a consistent operator checklist."
+}
+```
 
 ## Allowed Surfaces
 
@@ -265,10 +441,13 @@ https://app.dtfbank.com/staff/queue
 
 Main source files:
 
-- `apps/person/src/routes/queue.tsx`
+- `apps/person/src/views/CallQueue.tsx`
+- `apps/person/src/components/Card.tsx`
 - `apps/person/src/components/TaskBriefModal.tsx`
-- `apps/person/src/components/CustomerDetailModal.tsx`
+- `apps/person/src/components/FrontendCustomization.tsx`
 - `apps/person/src/lib/api.ts`
+- `apps/person/src/styles.css`
+- `packages/ui/src/customer-detail-panel.tsx`
 - `packages/contracts/src/person.ts`
 
 Primary endpoints:
