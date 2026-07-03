@@ -10,7 +10,9 @@ import {
   type FrontendMcpApplyCustomizationInput,
   type FrontendMcpListCustomizationsInput,
   type FrontendMcpPreviewCustomizationInput,
+  type FrontendMcpPreviewSourcePatchInput,
   type FrontendMcpRollbackCustomizationInput,
+  type FrontendMcpValidateSourcePatchProofInput,
   type WorkflowMcpCreateDraftRuleInput,
   type WorkflowMcpDraftRuleInput,
   type WorkflowMcpSimulateDeferredWorkflowRuleInput,
@@ -32,6 +34,12 @@ const workflowRuleInputSchema = z.union([
   }).passthrough(),
   z.string().trim().min(2).max(250_000),
 ]);
+
+const frontendSourcePatchFileInput = z.object({
+  path: z.string().trim().min(1).max(220),
+  purpose: z.string().trim().min(1).max(240),
+  patch: z.string().trim().min(1).max(16000),
+});
 
 @Injectable()
 export class WorkflowMcpHttpService implements OnModuleDestroy {
@@ -523,6 +531,53 @@ export class WorkflowMcpHttpService implements OnModuleDestroy {
       )),
     );
 
+    server.registerTool(
+      'preview_frontend_source_patch',
+      {
+        title: 'Preview frontend source patch',
+        description: 'Validate a maintainer-only React/CSS source patch plan against allowlists without applying it.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue'),
+          name: z.string().trim().min(2).max(120),
+          files: z.array(frontendSourcePatchFileInput).min(1).max(12),
+          reason: z.string().trim().min(1).max(800),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsRead,
+        () => this.rules.previewFrontendSourcePatch(input as FrontendMcpPreviewSourcePatchInput),
+      )),
+    );
+
+    server.registerTool(
+      'validate_frontend_source_patch_proof',
+      {
+        title: 'Validate frontend source patch proof',
+        description: 'Validate typecheck/build/screenshot proof for a source patch plan before human-approved deploy.',
+        inputSchema: {
+          surfaceId: z.literal('staff.queue'),
+          name: z.string().trim().min(2).max(120),
+          files: z.array(frontendSourcePatchFileInput).min(1).max(12),
+          reason: z.string().trim().min(1).max(800),
+          typecheckCommand: z.string().trim().min(1).max(220),
+          typecheckPassed: z.boolean(),
+          buildCommand: z.string().trim().min(1).max(220),
+          buildPassed: z.boolean(),
+          screenshots: z.array(z.object({
+            viewport: z.enum(['desktop-light', 'desktop-dark', 'mobile-light', 'mobile-dark']),
+            path: z.string().trim().min(1).max(260),
+          })).min(3).max(8),
+          humanApproval: z.boolean().default(false),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsRead,
+        () => this.rules.validateFrontendSourcePatchProof(input as FrontendMcpValidateSourcePatchProofInput),
+      )),
+    );
+
     server.registerPrompt(
       'workflow_rule_authoring_playbook',
       {
@@ -550,9 +605,11 @@ export class WorkflowMcpHttpService implements OnModuleDestroy {
                 'Use list_aircall_transcripts before download_aircall_transcript so you only fetch the transcript needed for the rule/debug task.',
                 'For frontend work, read_frontend_agent_guide first, then list_frontend_surfaces and get_frontend_surface_contract.',
                 'Before proposing a frontend change, list_frontend_customizations for the target surface so you know whether an active tenant overlay already exists.',
-                'Use preview_frontend_customization before apply_frontend_customization. The customization DSL changes staff UI through safe slots, blocks, data bindings, visibility conditions, and typed elementOverrides; it never accepts raw HTML, scripts, secrets, or arbitrary source edits.',
-                'If the user asks for HTML or CSS, translate the intent into safe blocks, tones, density, copy, and visibility rules. If true source-file editing is required, state that it needs the separate maintainer-only source patch lane with build and screenshot proof.',
-                'Use the staff.queue element map from get_frontend_surface_contract: current MVP supports overlay slots and typed elementOverrides for native element changes, not raw CSS.',
+                'Use preview_frontend_customization before apply_frontend_customization. The customization DSL changes staff UI through safe slots, blocks, sanitized contentBlocks, bounded themeOverrides, data bindings, visibility conditions, typed elementOverrides, and typed navigationOverrides; it never accepts scripts, secrets, arbitrary CSS, or source edits.',
+                'If the user asks for HTML or CSS, translate HTML/Markdown into sanitized contentBlocks and CSS intent into themeOverrides, tones, density, copy, and visibility rules. Reject scripts, iframes, inline style, event handlers, external assets, and hidden auth/data access.',
+                'Use the staff.queue element map from get_frontend_surface_contract: current MVP supports overlay slots, contentBlocks, themeOverrides, typed elementOverrides, and typed navigationOverrides for known sidebar nav ids.',
+                'If the user asks to change the staff sidebar, nav item names, nav order, groups, badges, or default route, use navigationOverrides with known nav ids and screenshot proof. Do not fake navigation changes with CSS or overlay blocks, and never change routes or permissions through runtime customization.',
+                'If the user asks to patch React/CSS source directly, use preview_frontend_source_patch first. Source patch lane is maintainer-only, limited to apps/person/src/** and packages/ui/src/**, and needs typecheck/build/light-dark-mobile screenshots plus validate_frontend_source_patch_proof before human-approved deploy.',
                 'Staff UI customizations must preserve real API data, loading/empty/error/populated states, light/dark readability, and business terminology. Never hide phone, required action, latest order, latest call, open follow-up, or notes.',
                 'Never create support cases, tickets, customer requests, raw SQL, or unsupported actions.',
               ].join('\n'),
