@@ -138,7 +138,7 @@ const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Validate and simulate every draft before storing or publishing it.',
 ] as const;
 const FRONTEND_MCP_AGENT_GUIDE_PATH = 'docs/FRONTEND_MCP_AGENT_GUIDE.md';
-const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-02.frontend-mcp-guide.v2';
+const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-03.frontend-mcp-guide.v3';
 const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const SCHEDULED_ACTION_STATUSES = ['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed'] as const;
 const SCHEDULED_ACTION_CLOSED_TASK_STATUSES = ['closed', 'resolved'] as const;
@@ -4421,6 +4421,9 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
       'apps/person/src/components/Card.tsx',
       'apps/person/src/components/TaskBriefModal.tsx',
       'apps/person/src/components/FrontendCustomization.tsx',
+      'apps/person/src/components/Sidebar.tsx',
+      'apps/person/src/App.tsx',
+      'apps/person/src/types.ts',
       'apps/person/src/lib/api.ts',
       'apps/person/src/styles.css',
       'packages/ui/src/customer-detail-panel.tsx',
@@ -4483,10 +4486,20 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
         currentSupport: 'Typed field contract is exposed; centered popup must stay centered and source patching requires stricter lane.',
         nextSafeSupport: 'Add typed slots for profile header, order tab summary, call tab summary, and notes tab helper blocks.',
       },
+      {
+        elementId: 'staff.sidebar',
+        label: 'Staff sidebar navigation',
+        slots: [],
+        fields: [],
+        requiredFields: [],
+        currentSupport: 'Source patch lane only today. Runtime customization cannot rename, reorder, group, hide, or retarget sidebar items yet.',
+        nextSafeSupport: 'Add typed navigationOverrides for known nav ids, safe labels, group order, badge mode, default route, role/person variants, and screenshot proof.',
+      },
     ],
     extensionRoadmap: [
       'Use typed elementOverrides for field visibility, copy overrides, density, emphasis, and tone rules.',
       'Use role/person variants so Linda and Ihsan can see different safe emphasis without branching source files.',
+      'Use a future typed navigationOverrides layer for staff sidebar labels, order, groups, badges, and default route; do not fake navigation changes with CSS or overlay blocks.',
       'Keep screenshot preview proof for light, dark, desktop, and mobile before activation.',
       'Keep arbitrary HTML/CSS and source-file edits behind a separate maintainer-only patch lane.',
     ],

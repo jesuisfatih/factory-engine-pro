@@ -75,7 +75,35 @@ The staff UI contract includes an element map. Treat it as the source of truth f
 
 - current MVP: add safe overlay blocks into approved slots;
 - current MVP: use typed `elementOverrides` for field visibility, copy overrides, density, emphasis, tone rules, modal section order, and role/person variants;
+- current sidebar/navigation names, order, groups, badges, and default route are source-defined, not runtime-overridable yet;
 - not allowed: raw prompted HTML, raw CSS, hidden required business fields, scripts, external assets, auth changes, backend changes, or source-file edits through the runtime customization tools.
+
+Sidebar and navigation requests must be handled separately from `staff.queue` card/modal overlays. Today, rename/reorder/group changes for the staff sidebar require the maintainer-only source patch lane with build plus screenshot proof. Do not fake sidebar changes with CSS or overlay blocks. A future safe runtime layer should be a typed `navigationOverrides` contract with known `navId` values, allowed labels, group order, badge mode, audience targeting, and `requireScreenshotProof: true`.
+
+Known staff nav ids:
+
+- `queue` -> `Call Queue` -> `/staff/queue`
+- `daily-archive` -> `Daily Archive` -> `/staff/daily-archive`
+- `customers` -> `Routine Call List` -> `/staff/customers`
+- `customer-archive` -> `Customer Archive` -> `/staff/customer-archive`
+- `email` -> `E-mail` -> `/staff/email`
+- `calendar` -> `Calendar` -> `/staff/calendar`
+- `notes` -> `Notes` -> `/staff/notes`
+- `training` -> `Training` -> `/staff/training`
+- `announcements` -> `Announcements` -> `/staff/announcements`
+- `messaging` -> `Messaging` -> `/staff/messaging`
+- `requests` -> `Submit Request` -> `/staff/requests`
+- `notifications` -> `Notifications` -> `/staff/notifications`
+
+Navigation safety rules:
+
+- keep `navId` and `/staff/*` routes stable unless source code is intentionally patched;
+- never hide `queue` from users with active queue work;
+- never hide `customer-archive` when staff use it for Shopify customer lookup;
+- keep `queue`, `customers`, and `notifications` badges visible unless the product owner explicitly approves a badge move/removal;
+- avoid implementation terms in staff labels: `workflow`, `rule`, `axis`, `AI`, `support case`, `ticket`, `commission`, `debug`;
+- do not rename `Submit Request` into commission language unless commissions are intentionally reintroduced;
+- verify desktop light, desktop dark, mobile/collapsed, active item, badge overflow, and route click behavior.
 
 Example `elementOverrides` payload:
 

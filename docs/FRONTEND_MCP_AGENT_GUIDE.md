@@ -145,6 +145,264 @@ Not allowed in the current overlay DSL:
 
 When the patron asks for "CSS" or "HTML", translate the request into safe blocks, typed `elementOverrides`, tones, density, copy, visibility, and section ordering. If the requested result needs true source-file editing, say that it requires the separate source patch lane and must include build plus screenshot verification.
 
+## Agent Decision Tree
+
+Use this decision tree before answering any staff UI request.
+
+| Patron request | Correct lane | Current MCP action | Do not do |
+| --- | --- | --- | --- |
+| "Add a warning, KPI, instruction, checklist, or customer context" | Runtime overlay | Use `blocks` in an approved slot. | Do not edit React files for simple informational blocks. |
+| "Hide/show a field on Daily cards, Priority cards, or call modal" | Runtime native override | Use typed `elementOverrides` if the field is listed in the surface contract and is not required. | Do not hide phone, required action, latest order, latest call, open follow-up, latest note, or modal hero. |
+| "Rename short labels or button text" | Runtime native override | Use `copyOverrides` on an approved element. | Do not expose internal words such as rule, workflow, axis, support case, ticket, AI, or raw tag names to staff. |
+| "Make Linda see a different layout than Ihsan" | Runtime audience variant | Use `audience.memberEmails`, `audience.memberIds`, or `audience.roleNames`. | Do not fork source files per person. |
+| "Change Daily card density, emphasis, urgency tone" | Runtime native override | Use `density`, `emphasis`, and `toneRule`. | Do not ship unreadable dark-mode cards or color-only meaning. |
+| "Move sections inside the call modal" | Runtime native override | Use `sectionOrder` on `task.modal`. | Do not remove the phone, main action, steps, or history from reachable modal content. |
+| "Change sidebar names, order, groups, badges, or default landing page" | Navigation lane | Current runtime tools cannot apply this yet. Use source patch lane today, or implement the typed `navigationOverrides` contract described below. | Do not fake this with overlay blocks or arbitrary CSS. Do not change route ids casually. |
+| "Insert raw HTML/CSS from a prompt" | Reject or translate | Translate to blocks, tones, density, copy, and safe fields. | Do not store prompted HTML, scripts, inline CSS, iframes, remote assets, or tracking pixels. |
+| "Change backend data, Aircall behavior, Shopify sync, tokens, RBAC, or task generation" | Backend/product lane | Explain that frontend MCP cannot do this. | Do not mask backend bugs with UI-only copy. |
+
+If the request touches navigation, first decide whether it is only a label/order/group request or a real route/permission/product behavior change. Label/order/group changes can become a typed navigation override. Route, permission, data, or workflow changes are not frontend customization.
+
+## Sidebar / Navigation Requests
+
+The patron often asks to change the staff sidebar: names, order, grouping, badges, and which item opens first. This is a real product control, but it is separate from `staff.queue` card/modal customization.
+
+Current truth:
+
+- Sidebar items are source-defined in `apps/person/src/types.ts` as `NAV`.
+- Sidebar rendering is source-defined in `apps/person/src/components/Sidebar.tsx`.
+- Page titles and route switching are source-defined in `apps/person/src/App.tsx`.
+- Current runtime `preview_frontend_customization` accepts only `blocks` and `elementOverrides`.
+- Current runtime tools will reject unknown fields, so do not send `navigationOverrides` until the contract exposes it.
+
+### Current Staff Sidebar Inventory
+
+Keep `navId` stable unless a maintainer intentionally changes source code, routes, and analytics together.
+
+| navId | Current label | Route | Group | Badge source | Can rename safely? | Can hide safely? | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `queue` | `Call Queue` | `/staff/queue` | `Workspace` | `summary.queue` | Yes, source patch today; typed nav override later. | No, except explicit maintenance mode. | Primary staff workbench. Must stay easy to find. |
+| `daily-archive` | `Daily Archive` | `/staff/daily-archive` | `Workspace` | none | Yes. | Usually yes, if archive is reachable elsewhere. | Old call work beyond active window. |
+| `customers` | `Routine Call List` | `/staff/customers` | `Workspace` | `summary.customers` | Yes. | Usually no for purchase/follow-up staff. | This is the assigned calling portfolio, not generic CRM browsing. |
+| `customer-archive` | `Customer Archive` | `/staff/customer-archive` | `Workspace` | none | Yes. | Usually no for staff who need Shopify customer lookup. | Must stay paginated/searchable; do not preload all customers. |
+| `email` | `E-mail` | `/staff/email` | `Workspace` | none | Yes. | Role-dependent. | Must not imply marketing blast tools. |
+| `calendar` | `Calendar` | `/staff/calendar` | `Workspace` | none | Yes. | Role-dependent. | Staff follow-up scheduling surface. |
+| `notes` | `Notes` | `/staff/notes` | `Workspace` | none | Yes. | Role-dependent. | Personnel notes, not internal engineering notes. |
+| `training` | `Training` | `/staff/training` | `Knowledge` | none | Yes. | Yes for roles that do not use training. | Knowledge surface. |
+| `announcements` | `Announcements` | `/staff/announcements` | `Knowledge` | none | Yes. | Yes for roles that do not use announcements. | Internal announcements only. |
+| `messaging` | `Messaging` | `/staff/messaging` | `Knowledge` | none | Yes. | Role-dependent. | Staff messaging; not customer support case automation. |
+| `requests` | `Submit Request` | `/staff/requests` | `Account` | none | Yes. | Role-dependent. | Internal personnel request. Do not rename to commission request unless product explicitly reintroduces commissions. |
+| `notifications` | `Notifications` | `/staff/notifications` | `Account` | `summary.notifications` | Yes. | Usually no if unread notifications exist. | Keep badge readable in light and dark mode. |
+
+### Sidebar Language Rules
+
+Use customer-facing and staff-action language, not implementation language.
+
+Allowed examples:
+
+- `Call Queue`
+- `Daily Archive`
+- `Routine Call List`
+- `Customer Archive`
+- `E-mail`
+- `Calendar`
+- `Notes`
+- `Training`
+- `Announcements`
+- `Messaging`
+- `Submit Request`
+- `Notifications`
+- `Purchase Intent`
+- `Customer Request`
+- `Customer Care`
+- `Follow-up`
+
+Avoid in the staff sidebar:
+
+- `Sales`
+- `Support`
+- `Workflow`
+- `Rule`
+- `Axis`
+- `AI`
+- `Transcript resolver`
+- `Commission`
+- `Ticket`
+- `Support Case`
+- `Debug`
+- `Internal source`
+
+If the patron asks "Customers should be named something else because this is the list staff must call", use `Routine Call List` or another action-oriented label. Do not use a generic CRM label when the page is a work list.
+
+### Sidebar Change Safety Rules
+
+For navigation changes, the agent must preserve these rules:
+
+- Do not change `navId` strings through MCP runtime customization.
+- Do not change routes through runtime customization.
+- Do not create arbitrary external links in the staff sidebar.
+- Do not move staff out of `/staff/*` routes with a nav click.
+- Do not hide `queue` from a person who has active queue work.
+- Do not hide `customer-archive` if the user specifically uses it to search Shopify customers.
+- Do not hide notification badges unless there is a product rule for where they move.
+- Do not make one long ungrouped sidebar unless desktop and mobile screenshots prove it remains scannable.
+- Do not rename `requests` into commission language. Commission UI is not part of the staff surface unless the product owner explicitly reintroduces it.
+- Do not use source labels that imply automatic support case creation. Customer service opens customer requests manually when the customer actually asks.
+- Keep the active item visually obvious in light and dark mode.
+- Keep long labels from clipping on collapsed and expanded sidebar states.
+
+### Maintainer Source Patch Lane For Sidebar
+
+Use this lane only when the current runtime tools cannot satisfy the request and a maintainer has permission to change source code.
+
+Files that usually change together:
+
+- `apps/person/src/types.ts`: `NavId`, `NavItem`, and `NAV` labels/order/groups.
+- `apps/person/src/App.tsx`: page titles, route selection, initial route behavior, and `renderView`.
+- `apps/person/src/components/Sidebar.tsx`: icons, badge mapping, grouping, collapsed labels, and account card behavior.
+- `apps/person/src/styles.css`: sidebar spacing, readable light/dark colors, badge contrast, and long-label handling.
+
+Patch rules:
+
+- Change the smallest set of files.
+- Keep route ids stable unless the route itself is intentionally migrated.
+- Update `TITLES` when a visible label changes.
+- Update icon mapping only when the new label meaning changes.
+- Keep badge sources tied to real summary data.
+- Do not create mock counts.
+- Do not create a fake sidebar link that opens a modal instead of the real route.
+- Preserve `loading`, `empty`, `error`, and `populated` states for the target pages.
+- Build before shipping.
+- Capture screenshots after build, not before build.
+
+Source patch proof package:
+
+- route table: old label/order/group -> new label/order/group
+- code diff summary with touched files
+- build result
+- desktop light screenshot
+- desktop dark screenshot
+- mobile or narrow screenshot
+- click proof for each changed route
+- badge proof for each changed badge
+- rollback plan
+
+Example source patch report:
+
+```text
+Changed staff sidebar wording only.
+- `customers`: "Customers" -> "Routine Call List"; route stayed `/staff/customers`; badge stayed `summary.customers`.
+- Workspace order: Call Queue, Routine Call List, Daily Archive, Customer Archive, E-mail, Calendar, Notes.
+- No routes, permissions, API calls, or task logic changed.
+- Verified light, dark, collapsed sidebar, and route clicks.
+```
+
+### Navigation Overrides: Intended Typed Contract
+
+This is the next safe schema if the product wants remote agents to change sidebar labels/order/groups without source-file edits.
+
+Important: the current backend does not accept `navigationOverrides` yet. Until this appears in `get_frontend_surface_contract`, the agent must treat this as a documented implementation target, not a callable runtime feature.
+
+```json
+{
+  "surfaceId": "staff.shell",
+  "schemaVersion": 1,
+  "navigationOverrides": [
+    {
+      "id": "staff_sidebar_purchase_team",
+      "target": "sidebar",
+      "audience": {
+        "memberEmails": ["linda@dtfbank.com"],
+        "roleNames": ["Customer Service"]
+      },
+      "defaultNavId": "queue",
+      "groups": [
+        { "id": "workspace", "label": "Workspace", "order": 10 },
+        { "id": "knowledge", "label": "Knowledge", "order": 20 },
+        { "id": "account", "label": "Account", "order": 30 }
+      ],
+      "items": [
+        { "navId": "queue", "label": "Call Queue", "group": "workspace", "order": 10, "hidden": false, "badgeMode": "count", "emphasis": "high", "required": true },
+        { "navId": "customers", "label": "Routine Call List", "group": "workspace", "order": 20, "hidden": false, "badgeMode": "count", "emphasis": "normal", "required": true },
+        { "navId": "daily-archive", "label": "Daily Archive", "group": "workspace", "order": 30, "hidden": false, "badgeMode": "none", "emphasis": "quiet" },
+        { "navId": "customer-archive", "label": "Customer Archive", "group": "workspace", "order": 40, "hidden": false, "badgeMode": "none", "emphasis": "normal" }
+      ],
+      "requireScreenshotProof": true
+    }
+  ]
+}
+```
+
+Allowed typed navigation fields:
+
+- `target`: currently only `sidebar`.
+- `audience.memberIds`, `audience.memberEmails`, `audience.roleNames`.
+- `defaultNavId`: first route after login or refresh, only from known `navId` values.
+- `groups[].id`: stable override group id.
+- `groups[].label`: visible group label.
+- `groups[].order`: numeric sort.
+- `items[].navId`: must be one of the existing nav ids.
+- `items[].label`: visible label.
+- `items[].group`: override group id.
+- `items[].order`: numeric sort inside group.
+- `items[].hidden`: hide the item only when the safety rules allow it.
+- `items[].badgeMode`: `count`, `dot`, or `none`.
+- `items[].emphasis`: `high`, `normal`, or `quiet`.
+- `items[].required`: blocks accidental hiding of primary work routes.
+- `requireScreenshotProof`: must be `true`.
+
+Validation rules for a future `navigationOverrides` implementation:
+
+- Reject unknown `navId`.
+- Reject duplicate `navId` entries in one override.
+- Reject duplicate group ids in one override.
+- Reject `defaultNavId` when the referenced item is hidden.
+- Reject hiding `queue` when the audience includes active call-queue users.
+- Reject hiding all items in a group unless the group itself is removed.
+- Reject labels containing forbidden implementation terms.
+- Reject labels longer than the sidebar can display without clipping.
+- Reject `badgeMode: "none"` for `queue`, `customers`, or `notifications` unless the product owner explicitly approves the badge removal.
+- Reject changes with `requireScreenshotProof: false`.
+
+### Sidebar Examples
+
+Good source-patch request today:
+
+```text
+Rename the `customers` sidebar item and page title to "Routine Call List", keep route `/staff/customers`, keep badge `summary.customers`, and capture light/dark screenshots.
+```
+
+Good future typed navigation request:
+
+```text
+For Customer Service, order Workspace as Call Queue, Routine Call List, Daily Archive, Customer Archive, E-mail, Calendar, Notes. Keep Call Queue and Routine Call List badges visible.
+```
+
+Bad request:
+
+```text
+Hide Call Queue with CSS and make Customers link to an external CRM page.
+```
+
+Correct answer:
+
+```text
+That is not allowed through frontend MCP. Call Queue is a primary work route, and the staff sidebar cannot navigate to arbitrary external pages. I can draft a safe label/order change or a maintainer source patch with screenshots.
+```
+
+### Sidebar Screenshot Proof
+
+Any sidebar source patch or future navigation override must include:
+
+- desktop light mode, expanded sidebar
+- desktop dark mode, expanded sidebar
+- mobile or narrow viewport with collapsed behavior
+- active item state
+- badge state with nonzero counts
+- long-label overflow check
+- account/user card visible at the bottom
+- route click proof for every moved or renamed item
+
 ## Staff Queue Element Map
 
 Surface id:
@@ -167,8 +425,6 @@ Element map:
 
 | Element | Native class or slot | Current MCP action | Notes |
 | --- | --- | --- | --- |
-| Element | Native class or slot | Current MCP action | Notes |
-| --- | --- | --- | --- |
 | KPI row | `kpi.before`, `kpi.after`, `elementId: "kpi.row"` | add blocks; override density/copy | Good for "must call", refund, purchase intent, unmatched caller stats. |
 | Daily header | `daily.header`, `daily.before_list` | add guidance or filters explanation | Do not add segment grouping here. Daily list remains recent call work. |
 | Daily call card | `daily.card.after_brief`, `daily.card.footer`, `elementId: "daily.card"` | add short blocks; override fields, copy, density, emphasis, urgency tone | Required fields: `title`, `requiredAction`, `phone`. Do not expose internal rule names. |
@@ -176,6 +432,7 @@ Element map:
 | Priority customer card | `priority.card.after_summary`, `priority.card.footer`, `elementId: "priority.card"` | add customer blocks; override fields, copy, density, urgency tone | Required fields: `customerName`, `phone`, `latestOrder`, `latestCall`, `openFollowUp`, `latestNote`. |
 | Call modal | `modal.hero`, `modal.after_steps`, `modal.customer_context`, `elementId: "task.modal"` | add modal blocks; override labels and approved section order | Required fields: `title`, `phone`, `hero`, `steps`. |
 | Customer detail popup | `elementId: "customer.detail.popup"` | source patch lane for now; contract exposes required fields | Keep centered popup; never reintroduce right drawer. |
+| Staff sidebar | source: `NAV`, `Sidebar.tsx`, `App.tsx` | source patch lane today; future typed `navigationOverrides` | Rename/order/group requests are valid product requests, but not part of current `staff.queue` runtime overlay. |
 
 ## Element Overrides
 
