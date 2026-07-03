@@ -2,6 +2,7 @@ import type {
   FrontendCustomizationBinding,
   FrontendCustomizationBlock,
   FrontendCustomizationCondition,
+  FrontendCustomizationContentBlock,
   FrontendCustomizationElementField,
   FrontendCustomizationElementId,
   FrontendCustomizationElementOverride,
@@ -9,7 +10,11 @@ import type {
   FrontendCustomizationRuntimeDto,
   FrontendCustomizationSlot,
   FrontendCustomizationTone,
+  FrontendNavigationNavId,
+  FrontendNavigationOverride,
 } from '@factory-engine-pro/contracts';
+import type { CSSProperties, ReactNode } from 'react';
+import type { NavItem } from '../types';
 
 export type FrontendCustomizationContext = Partial<Record<'summary' | 'dailyCall' | 'priorityCustomer' | 'taskBrief' | 'customerDetail', unknown>>;
 
@@ -32,11 +37,17 @@ interface SlotProps {
 export function FrontendCustomizationSlotView({ customization, slot, context, className }: SlotProps) {
   const blocks = customization?.definition.blocks
     ?.filter((block) => block.slot === slot && blockVisible(block, context))
-    .sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id)) ?? [];
-  if (blocks.length === 0) return null;
+    .map((block) => ({ kind: 'block' as const, priority: block.priority, id: block.id, block })) ?? [];
+  const contentBlocks = customization?.definition.contentBlocks
+    ?.filter((block) => block.slot === slot && contentBlockVisible(block, context))
+    .map((block) => ({ kind: 'content' as const, priority: block.priority, id: block.id, block })) ?? [];
+  const items = [...blocks, ...contentBlocks].sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+  if (items.length === 0) return null;
   return (
     <div className={`mcp-ui-slot mcp-ui-slot-${slot.replaceAll('.', '-')}${className ? ` ${className}` : ''}`}>
-      {blocks.map((block) => <FrontendCustomizationBlockView key={block.id} block={block} context={context} />)}
+      {items.map((item) => item.kind === 'block'
+        ? <FrontendCustomizationBlockView key={item.id} block={item.block} context={context} />
+        : <FrontendCustomizationContentBlockView key={item.id} block={item.block} context={context} />)}
     </div>
   );
 }
@@ -119,6 +130,92 @@ export function frontendModalSectionStyle(
   return { order: index >= 0 ? index + 1 : fallbackOrder };
 }
 
+export function frontendThemeClassName(customization: FrontendCustomizationRuntimeDto | null | undefined) {
+  const overrides = customization?.definition.themeOverrides;
+  if (!overrides) return '';
+  const classes = ['mcp-theme'];
+  if (overrides.spacing) classes.push(`mcp-theme-spacing-${overrides.spacing}`);
+  if (overrides.density) classes.push(`mcp-theme-density-${overrides.density}`);
+  if (overrides.fontWeight) classes.push(`mcp-theme-font-${overrides.fontWeight}`);
+  if (overrides.radius) classes.push(`mcp-theme-radius-${overrides.radius}`);
+  if (overrides.cardTone) classes.push(`mcp-theme-card-${overrides.cardTone}`);
+  if (overrides.accent) classes.push(`mcp-theme-accent-${overrides.accent}`);
+  return classes.length > 1 ? classes.join(' ') : '';
+}
+
+export function frontendThemeStyle(customization: FrontendCustomizationRuntimeDto | null | undefined): CSSProperties | undefined {
+  const overrides = customization?.definition.themeOverrides;
+  if (!overrides) return undefined;
+  const style = {} as CSSProperties & Record<string, string>;
+  if (overrides.spacing === 'compact') {
+    style['--mcp-space'] = '8px';
+  } else if (overrides.spacing === 'roomy') {
+    style['--mcp-space'] = '16px';
+  }
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
+export interface FrontendNavigationItem extends NavItem {
+  order: number;
+  badgeMode: 'count' | 'dot' | 'none';
+  emphasis: 'high' | 'normal' | 'quiet';
+  hidden: boolean;
+  required: boolean;
+}
+
+export interface FrontendNavigationResult {
+  items: FrontendNavigationItem[];
+  defaultNavId: FrontendNavigationNavId | null;
+}
+
+export function frontendNavigation(
+  customization: FrontendCustomizationRuntimeDto | null | undefined,
+  navItems: NavItem[],
+  context: FrontendCustomizationContext,
+): FrontendNavigationResult {
+  const initial = navItems.map((item, index): FrontendNavigationItem => ({
+    ...item,
+    order: index * 10,
+    badgeMode: item.id === 'queue' || item.id === 'customers' || item.id === 'notifications' ? 'count' : 'none',
+    emphasis: item.id === 'queue' ? 'high' : 'normal',
+    hidden: false,
+    required: item.id === 'queue' || item.id === 'customers',
+  }));
+  const overrides = (customization?.definition.navigationOverrides ?? [])
+    .filter((override) => override.target === 'sidebar' && navigationAudienceMatches(override, context))
+    .sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+  if (overrides.length === 0) return { items: initial, defaultNavId: null };
+
+  const groupLabels = new Map<string, { label: string; order: number }>();
+  let defaultNavId: FrontendNavigationNavId | null = null;
+  for (const override of overrides) {
+    for (const group of override.groups) groupLabels.set(group.id, { label: group.label, order: group.order });
+    if (override.defaultNavId) defaultNavId = override.defaultNavId;
+    for (const itemOverride of override.items) {
+      const index = initial.findIndex((item) => item.id === itemOverride.navId);
+      if (index < 0) continue;
+      const current = initial[index];
+      const groupRef = itemOverride.group ? groupLabels.get(itemOverride.group) : null;
+      initial[index] = {
+        ...current,
+        label: itemOverride.label ?? current.label,
+        group: groupRef?.label ?? itemOverride.group ?? current.group,
+        order: itemOverride.order ?? current.order,
+        hidden: itemOverride.hidden,
+        badgeMode: itemOverride.badgeMode ?? current.badgeMode,
+        emphasis: itemOverride.emphasis ?? current.emphasis,
+        required: itemOverride.required || current.required,
+      };
+    }
+  }
+  return {
+    items: initial
+      .filter((item) => !item.hidden)
+      .sort((left, right) => groupOrder(left.group, groupLabels) - groupOrder(right.group, groupLabels) || left.order - right.order || left.label.localeCompare(right.label)),
+    defaultNavId,
+  };
+}
+
 function FrontendCustomizationBlockView({ block, context }: { block: FrontendCustomizationBlock; context: FrontendCustomizationContext }) {
   const value = block.value ? formatBinding(block.value, context) : null;
   const body = block.template ? renderTemplate(block.template, context) : block.text;
@@ -163,6 +260,18 @@ function FrontendCustomizationBlockView({ block, context }: { block: FrontendCus
   );
 }
 
+function FrontendCustomizationContentBlockView({ block, context }: { block: FrontendCustomizationContentBlock; context: FrontendCustomizationContext }) {
+  const rendered = block.format === 'html'
+    ? renderSafeHtml(renderTemplate(block.content, context), block.allowedClasses)
+    : renderSafeMarkdown(renderTemplate(block.content, context), block.allowedClasses);
+  return (
+    <div className={`mcp-ui-block mcp-ui-content tone-${block.tone}${block.compact ? ' compact' : ''}`}>
+      <span className="mcp-ui-content-label">{block.label}</span>
+      <div className="mcp-ui-content-body">{rendered}</div>
+    </div>
+  );
+}
+
 function audienceMatches(override: FrontendCustomizationElementOverride, context: FrontendCustomizationContext) {
   const audience = override.audience ?? {};
   const memberIds = audience.memberIds ?? [];
@@ -182,6 +291,21 @@ function audienceMatches(override: FrontendCustomizationElementOverride, context
     || viewerRoles.some((role) => roleNames.includes(role));
 }
 
+function navigationAudienceMatches(override: FrontendNavigationOverride, context: FrontendCustomizationContext) {
+  return audienceMatches({ ...override, elementId: 'daily.card', toneRule: 'none', copyOverrides: {}, requireScreenshotProof: true } as FrontendCustomizationElementOverride, context);
+}
+
+function groupOrder(group: string | undefined, groups: Map<string, { label: string; order: number }>) {
+  if (!group) return 500;
+  for (const candidate of groups.values()) {
+    if (candidate.label === group) return candidate.order;
+  }
+  if (group === 'Workspace') return 10;
+  if (group === 'Knowledge') return 20;
+  if (group === 'Account') return 30;
+  return 500;
+}
+
 function toneForOverride(
   override: EffectiveElementOverride,
   urgencyScore?: number | null,
@@ -196,6 +320,14 @@ function toneForOverride(
 }
 
 function blockVisible(block: FrontendCustomizationBlock, context: FrontendCustomizationContext) {
+  const all = block.visibility?.all ?? [];
+  const any = block.visibility?.any ?? [];
+  if (all.length > 0 && !all.every((condition) => conditionMatches(condition, context))) return false;
+  if (any.length > 0 && !any.some((condition) => conditionMatches(condition, context))) return false;
+  return true;
+}
+
+function contentBlockVisible(block: FrontendCustomizationContentBlock, context: FrontendCustomizationContext) {
   const all = block.visibility?.all ?? [];
   const any = block.visibility?.any ?? [];
   if (all.length > 0 && !all.every((condition) => conditionMatches(condition, context))) return false;
@@ -251,6 +383,78 @@ function renderTemplate(template: string, context: FrontendCustomizationContext)
     const value = readBindingValue({ source, path }, context);
     return value === null || value === undefined || value === '' ? '-' : String(value);
   });
+}
+
+const SAFE_HTML_TAGS = new Set(['p', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'br', 'span', 'div']);
+
+function renderSafeHtml(html: string, allowedClasses: string[]): ReactNode {
+  if (typeof window === 'undefined' || !('DOMParser' in window)) return htmlToPlainText(html);
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return Array.from(doc.body.childNodes).map((node, index) => renderSafeNode(node, allowedClasses, `html-${index}`));
+}
+
+function renderSafeNode(node: ChildNode, allowedClasses: string[], key: string): ReactNode {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+  const element = node as Element;
+  const tag = element.tagName.toLowerCase();
+  const children = Array.from(element.childNodes).map((child, index) => renderSafeNode(child, allowedClasses, `${key}-${index}`));
+  if (!SAFE_HTML_TAGS.has(tag)) return <span key={key}>{children}</span>;
+  const className = safeClassName(element.getAttribute('class'), allowedClasses);
+  if (tag === 'br') return <br key={key} />;
+  if (tag === 'strong' || tag === 'b') return <strong key={key} className={className}>{children}</strong>;
+  if (tag === 'em' || tag === 'i') return <em key={key} className={className}>{children}</em>;
+  if (tag === 'ul') return <ul key={key} className={className}>{children}</ul>;
+  if (tag === 'ol') return <ol key={key} className={className}>{children}</ol>;
+  if (tag === 'li') return <li key={key} className={className}>{children}</li>;
+  if (tag === 'div') return <div key={key} className={className}>{children}</div>;
+  return <p key={key} className={className}>{children}</p>;
+}
+
+function renderSafeMarkdown(markdown: string, allowedClasses: string[]): ReactNode {
+  const lines = markdown.split(/\r?\n/);
+  const nodes: ReactNode[] = [];
+  let listItems: string[] = [];
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    nodes.push(<ul key={`list-${nodes.length}`} className={allowedClasses.includes('checklist') ? 'checklist' : undefined}>{listItems.map((item) => <li key={item}>{renderInlineMarkdown(item)}</li>)}</ul>);
+    listItems = [];
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+    const bullet = /^[-*]\s+(.+)$/.exec(trimmed);
+    if (bullet) {
+      listItems.push(bullet[1]);
+      continue;
+    }
+    flushList();
+    nodes.push(<p key={`p-${nodes.length}`}>{renderInlineMarkdown(trimmed)}</p>);
+  }
+  flushList();
+  return nodes;
+}
+
+function renderInlineMarkdown(text: string): ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    return part;
+  });
+}
+
+function safeClassName(raw: string | null, allowedClasses: string[]) {
+  if (!raw) return undefined;
+  const allowed = new Set(allowedClasses);
+  const classes = raw.split(/\s+/).filter((name) => allowed.has(name));
+  return classes.length ? classes.join(' ') : undefined;
+}
+
+function htmlToPlainText(html: string) {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

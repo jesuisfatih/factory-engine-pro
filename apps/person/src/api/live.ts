@@ -1,6 +1,7 @@
 import type {
   CreatePersonRequestInput,
   CustomerDetailPanelDto,
+  PersonFrontendCustomizationRuntime,
   AircallDialInput,
   AircallDialResponse,
   PersonEmailContact,
@@ -124,6 +125,8 @@ export const fetchSummary = () => personApi.personWorkspaceSummary() as Promise<
 export const fetchCards = () => personApi.personQueueCards() as Promise<Card[]>;
 export const fetchDailyOperations = (range: PersonDailyOperationRange = 'last7d') =>
   personApi.personDailyOperations(range) as Promise<DailyOperations>;
+export const fetchFrontendCustomization = () =>
+  personApi.personFrontendCustomization() as Promise<PersonFrontendCustomizationRuntime>;
 export const moveCard = (input: { id: string; columnId: ColumnId; index: number }) =>
   personApi.movePersonQueueCard(input.id, { columnId: input.columnId, index: input.index }) as Promise<Card>;
 export const reorderDailyCalls = (input: ReorderPersonDailyCallInput) =>

@@ -134,6 +134,7 @@ import type {
   PatchMailFlowInput,
   MovePersonQueueCardInput,
   PersonDailyOperationRange,
+  PersonFrontendCustomizationRuntime,
   PersonCustomerArchiveQuery,
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
@@ -656,6 +657,10 @@ export class ApiClient {
   personDailyOperations(range: PersonDailyOperationRange = 'last7d') {
     const query = range === 'last7d' ? '' : `?range=${encodeURIComponent(range)}`;
     return this.get(`/person/workspace/daily-operations${query}`);
+  }
+
+  personFrontendCustomization() {
+    return this.get<PersonFrontendCustomizationRuntime>('/person/workspace/frontend-customization');
   }
 
   movePersonQueueCard(id: string, input: MovePersonQueueCardInput) {

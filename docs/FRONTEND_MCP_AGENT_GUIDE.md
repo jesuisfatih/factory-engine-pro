@@ -106,10 +106,13 @@ Do not use raw HTML, script tags, arbitrary CSS, iframe embeds, or remote assets
 
 ## What The Patron Can Change Now
 
-The current MCP frontend system has two safe runtime layers:
+The current MCP frontend system has five safe runtime layers:
 
 - overlay blocks in approved slots
+- sanitized `contentBlocks` in approved slots
 - typed `elementOverrides` for approved native elements
+- typed `navigationOverrides` for the staff sidebar
+- bounded `themeOverrides` for tone, density, spacing, radius, and font weight
 
 It cannot freely restyle every existing React element, and it never accepts raw HTML or CSS from prompts.
 
@@ -121,11 +124,14 @@ Allowed now:
 - add customer warning or opportunity blocks inside priority customer cards
 - add checklist steps to the call-detail modal
 - add customer context blocks inside the modal
+- add sanitized Markdown or limited HTML content blocks
 - use live API data tokens in text
 - show or hide an overlay block based on live data conditions
 - show or hide approved fields on approved native elements
 - rename approved labels and short button copy
+- rename, reorder, regroup, badge, or default staff sidebar items without changing routes
 - set card/modal density: `comfortable` or `compact`
+- set global staff UI density/spacing/font weight/card tone through bounded theme tokens
 - set emphasis: `normal`, `high`, or `quiet`
 - set tone by urgency with `toneRule: "urgency"`
 - reorder approved call-detail modal sections with `sectionOrder`
@@ -133,17 +139,17 @@ Allowed now:
 - set block tone: `neutral`, `info`, `success`, `warning`, `danger`, `accent`
 - keep changes as `draft`, activate them, list history, and rollback
 
-Not allowed in the current overlay DSL:
+Not allowed in the runtime customization DSL:
 
-- arbitrary HTML from prompts
-- arbitrary CSS from prompts
+- arbitrary raw HTML from prompts
+- arbitrary raw CSS from prompts
 - changing auth, tenant, RBAC, API, or backend behavior
 - hiding required business fields such as phone, action, latest order, latest call, open follow-up, or notes
 - replacing the real API response with invented content
 - adding remote scripts, tracking pixels, iframes, or external assets
 - changing source files through the runtime customization tools
 
-When the patron asks for "CSS" or "HTML", translate the request into safe blocks, typed `elementOverrides`, tones, density, copy, visibility, and section ordering. If the requested result needs true source-file editing, say that it requires the separate source patch lane and must include build plus screenshot verification.
+When the patron asks for "CSS" or "HTML", translate the request into safe blocks, sanitized `contentBlocks`, bounded `themeOverrides`, typed `elementOverrides`, tones, density, copy, visibility, navigation overrides, and section ordering. If the requested result needs true source-file editing, use the separate source patch lane and require build plus screenshot verification.
 
 ## Agent Decision Tree
 
@@ -157,8 +163,9 @@ Use this decision tree before answering any staff UI request.
 | "Make Linda see a different layout than Ihsan" | Runtime audience variant | Use `audience.memberEmails`, `audience.memberIds`, or `audience.roleNames`. | Do not fork source files per person. |
 | "Change Daily card density, emphasis, urgency tone" | Runtime native override | Use `density`, `emphasis`, and `toneRule`. | Do not ship unreadable dark-mode cards or color-only meaning. |
 | "Move sections inside the call modal" | Runtime native override | Use `sectionOrder` on `task.modal`. | Do not remove the phone, main action, steps, or history from reachable modal content. |
-| "Change sidebar names, order, groups, badges, or default landing page" | Navigation lane | Current runtime tools cannot apply this yet. Use source patch lane today, or implement the typed `navigationOverrides` contract described below. | Do not fake this with overlay blocks or arbitrary CSS. Do not change route ids casually. |
-| "Insert raw HTML/CSS from a prompt" | Reject or translate | Translate to blocks, tones, density, copy, and safe fields. | Do not store prompted HTML, scripts, inline CSS, iframes, remote assets, or tracking pixels. |
+| "Change sidebar names, order, groups, badges, or default landing page" | Runtime navigation lane | Use typed `navigationOverrides` with known `navId` values and screenshot proof. | Do not fake this with overlay blocks or arbitrary CSS. Do not change route ids casually. |
+| "Insert HTML/CSS from a prompt" | Controlled content/theme lane | Translate CSS to `themeOverrides` and HTML/Markdown to sanitized `contentBlocks` with allowlisted tags/classes. | Do not store scripts, inline CSS, iframes, remote assets, event handlers, or tracking pixels. |
+| "Patch React or CSS source directly" | Maintainer source patch lane | Use `preview_frontend_source_patch`, run typecheck/build/screenshots, then `validate_frontend_source_patch_proof`; deploy only after human approval. | Do not let MCP apply files, touch backend/env/auth/tenant/RBAC, or deploy without approval. |
 | "Change backend data, Aircall behavior, Shopify sync, tokens, RBAC, or task generation" | Backend/product lane | Explain that frontend MCP cannot do this. | Do not mask backend bugs with UI-only copy. |
 
 If the request touches navigation, first decide whether it is only a label/order/group request or a real route/permission/product behavior change. Label/order/group changes can become a typed navigation override. Route, permission, data, or workflow changes are not frontend customization.
@@ -172,8 +179,9 @@ Current truth:
 - Sidebar items are source-defined in `apps/person/src/types.ts` as `NAV`.
 - Sidebar rendering is source-defined in `apps/person/src/components/Sidebar.tsx`.
 - Page titles and route switching are source-defined in `apps/person/src/App.tsx`.
-- Current runtime `preview_frontend_customization` accepts only `blocks` and `elementOverrides`.
-- Current runtime tools will reject unknown fields, so do not send `navigationOverrides` until the contract exposes it.
+- Runtime `preview_frontend_customization` accepts `blocks`, sanitized `contentBlocks`, typed `elementOverrides`, typed `navigationOverrides`, and bounded `themeOverrides`.
+- Runtime navigation overrides can change visible labels, sort order, group labels, badge mode, emphasis, hidden state for safe items, and default landing nav id.
+- Runtime navigation overrides cannot change `navId`, routes, permissions, icons, backend data, or page behavior.
 
 ### Current Staff Sidebar Inventory
 
@@ -181,10 +189,10 @@ Keep `navId` stable unless a maintainer intentionally changes source code, route
 
 | navId | Current label | Route | Group | Badge source | Can rename safely? | Can hide safely? | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `queue` | `Call Queue` | `/staff/queue` | `Workspace` | `summary.queue` | Yes, source patch today; typed nav override later. | No, except explicit maintenance mode. | Primary staff workbench. Must stay easy to find. |
+| `queue` | `Call Queue` | `/staff/queue` | `Workspace` | `summary.queue` | Yes, with `navigationOverrides`. | No, except explicit maintenance mode. | Primary staff workbench. Must stay easy to find. |
 | `daily-archive` | `Daily Archive` | `/staff/daily-archive` | `Workspace` | none | Yes. | Usually yes, if archive is reachable elsewhere. | Old call work beyond active window. |
 | `customers` | `Routine Call List` | `/staff/customers` | `Workspace` | `summary.customers` | Yes. | Usually no for purchase/follow-up staff. | This is the assigned calling portfolio, not generic CRM browsing. |
-| `customer-archive` | `Customer Archive` | `/staff/customer-archive` | `Workspace` | none | Yes. | Usually no for staff who need Shopify customer lookup. | Must stay paginated/searchable; do not preload all customers. |
+| `customer-archive` | `Customer Archive` | `/staff/customer-archive` | `Workspace` | none | Yes, with `navigationOverrides`. | Usually no for staff who need Shopify customer lookup. | Must stay paginated/searchable; do not preload all customers. |
 | `email` | `E-mail` | `/staff/email` | `Workspace` | none | Yes. | Role-dependent. | Must not imply marketing blast tools. |
 | `calendar` | `Calendar` | `/staff/calendar` | `Workspace` | none | Yes. | Role-dependent. | Staff follow-up scheduling surface. |
 | `notes` | `Notes` | `/staff/notes` | `Workspace` | none | Yes. | Role-dependent. | Personnel notes, not internal engineering notes. |
@@ -297,16 +305,17 @@ Changed staff sidebar wording only.
 - Verified light, dark, collapsed sidebar, and route clicks.
 ```
 
-### Navigation Overrides: Intended Typed Contract
+### Navigation Overrides: Active Typed Contract
 
-This is the next safe schema if the product wants remote agents to change sidebar labels/order/groups without source-file edits.
-
-Important: the current backend does not accept `navigationOverrides` yet. Until this appears in `get_frontend_surface_contract`, the agent must treat this as a documented implementation target, not a callable runtime feature.
+Use this schema when the product wants remote agents to change sidebar labels/order/groups/badges/default landing without source-file edits. It is accepted by `preview_frontend_customization` and `apply_frontend_customization` under the `staff.queue` surface.
 
 ```json
 {
-  "surfaceId": "staff.shell",
+  "surfaceId": "staff.queue",
   "schemaVersion": 1,
+  "blocks": [],
+  "contentBlocks": [],
+  "elementOverrides": [],
   "navigationOverrides": [
     {
       "id": "staff_sidebar_purchase_team",
@@ -329,7 +338,8 @@ Important: the current backend does not accept `navigationOverrides` yet. Until 
       ],
       "requireScreenshotProof": true
     }
-  ]
+  ],
+  "themeOverrides": {}
 }
 ```
 
@@ -351,7 +361,7 @@ Allowed typed navigation fields:
 - `items[].required`: blocks accidental hiding of primary work routes.
 - `requireScreenshotProof`: must be `true`.
 
-Validation rules for a future `navigationOverrides` implementation:
+Validation rules for `navigationOverrides`:
 
 - Reject unknown `navId`.
 - Reject duplicate `navId` entries in one override.
@@ -366,16 +376,16 @@ Validation rules for a future `navigationOverrides` implementation:
 
 ### Sidebar Examples
 
-Good source-patch request today:
-
-```text
-Rename the `customers` sidebar item and page title to "Routine Call List", keep route `/staff/customers`, keep badge `summary.customers`, and capture light/dark screenshots.
-```
-
-Good future typed navigation request:
+Good typed navigation request:
 
 ```text
 For Customer Service, order Workspace as Call Queue, Routine Call List, Daily Archive, Customer Archive, E-mail, Calendar, Notes. Keep Call Queue and Routine Call List badges visible.
+```
+
+Good source-patch request only when runtime nav is not enough:
+
+```text
+Add a brand-new staff sidebar route with a new icon and real page component. Use the source patch lane, run build, capture light/dark/mobile screenshots, and wait for human deploy approval.
 ```
 
 Bad request:
@@ -387,12 +397,12 @@ Hide Call Queue with CSS and make Customers link to an external CRM page.
 Correct answer:
 
 ```text
-That is not allowed through frontend MCP. Call Queue is a primary work route, and the staff sidebar cannot navigate to arbitrary external pages. I can draft a safe label/order change or a maintainer source patch with screenshots.
+That is not allowed through frontend MCP. Call Queue is a primary work route, and the staff sidebar cannot navigate to arbitrary external pages. I can draft a safe label/order change with `navigationOverrides`, or a maintainer source patch when a real new route is required.
 ```
 
 ### Sidebar Screenshot Proof
 
-Any sidebar source patch or future navigation override must include:
+Any sidebar source patch or navigation override must include:
 
 - desktop light mode, expanded sidebar
 - desktop dark mode, expanded sidebar
@@ -432,7 +442,7 @@ Element map:
 | Priority customer card | `priority.card.after_summary`, `priority.card.footer`, `elementId: "priority.card"` | add customer blocks; override fields, copy, density, urgency tone | Required fields: `customerName`, `phone`, `latestOrder`, `latestCall`, `openFollowUp`, `latestNote`. |
 | Call modal | `modal.hero`, `modal.after_steps`, `modal.customer_context`, `elementId: "task.modal"` | add modal blocks; override labels and approved section order | Required fields: `title`, `phone`, `hero`, `steps`. |
 | Customer detail popup | `elementId: "customer.detail.popup"` | source patch lane for now; contract exposes required fields | Keep centered popup; never reintroduce right drawer. |
-| Staff sidebar | source: `NAV`, `Sidebar.tsx`, `App.tsx` | source patch lane today; future typed `navigationOverrides` | Rename/order/group requests are valid product requests, but not part of current `staff.queue` runtime overlay. |
+| Staff sidebar | source: `NAV`, `Sidebar.tsx`, `App.tsx`; runtime: `navigationOverrides` | typed `navigationOverrides` for labels/order/groups/badges/default nav; source patch lane for new routes/icons/shell behavior | Rename/order/group requests are valid product requests and should not be faked with CSS or overlay blocks. |
 
 ## Element Overrides
 
@@ -502,6 +512,141 @@ Example:
 Preview rejects hidden required fields, unsupported fields, forbidden staff terminology, and disabled screenshot proof.
 
 Do not implement arbitrary freeform CSS as the main path. It will let agents break readability, hide business fields, or inject unsafe content. Use source patch tools only for maintainers, not routine patron styling.
+
+## Content Blocks And Theme Overrides
+
+Use `contentBlocks` when the patron wants a small Markdown or HTML-like block in an approved slot. The renderer sanitizes content and supports only these tags:
+
+- `p`
+- `strong`, `b`
+- `em`, `i`
+- `ul`, `ol`, `li`
+- `br`
+- `span`, `div`
+
+Allowed classes are fixed tokens, not arbitrary CSS:
+
+- `callout`
+- `metric`
+- `checklist`
+- `muted`
+- `strong`
+- `compact`
+- `stack`
+- `inline`
+- `two-column`
+- `accent-border`
+
+Rejected content:
+
+- `<script>`
+- `<iframe>`
+- inline `style`
+- event handlers such as `onclick`
+- `javascript:` URLs
+- external images, fonts, embeds, or tracking pixels
+
+Use `themeOverrides` for bounded visual changes:
+
+- `accent`: `neutral`, `info`, `success`, `warning`, `danger`, `accent`
+- `cardTone`: same tone list
+- `spacing`: `compact`, `normal`, `roomy`
+- `density`: `comfortable`, `compact`
+- `fontWeight`: `normal`, `medium`, `semibold`
+- `radius`: `tight`, `standard`, `soft`
+
+Example safe content/theme payload:
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "name": "Customer call coaching block",
+  "definition": {
+    "surfaceId": "staff.queue",
+    "schemaVersion": 1,
+    "description": "Add a safe coaching block and slightly denser cards.",
+    "theme": { "density": "comfortable", "accent": "warning" },
+    "themeOverrides": {
+      "spacing": "compact",
+      "density": "compact",
+      "fontWeight": "medium",
+      "cardTone": "info",
+      "radius": "standard"
+    },
+    "blocks": [],
+    "contentBlocks": [
+      {
+        "id": "daily_call_coach",
+        "slot": "daily.header",
+        "format": "markdown",
+        "label": "Call focus",
+        "content": "**Start with the customer question.** Confirm order context, next step, and callback time before closing.",
+        "allowedClasses": ["callout", "compact"],
+        "tone": "info",
+        "priority": 10
+      }
+    ],
+    "elementOverrides": [],
+    "navigationOverrides": []
+  },
+  "reason": "Give staff a short business-language reminder without raw CSS or scripts."
+}
+```
+
+## Source Patch Lane
+
+Use this only when runtime `blocks`, `contentBlocks`, `elementOverrides`, `navigationOverrides`, and `themeOverrides` cannot express the change. The MCP tool validates the patch plan; it does not apply files or deploy code.
+
+Allowed source paths:
+
+- `apps/person/src/**`
+- `packages/ui/src/**`
+
+Allowed source extensions:
+
+- `.ts`
+- `.tsx`
+- `.css`
+- `.md`
+
+Denied areas:
+
+- backend services
+- environment files
+- auth, tenant, RBAC, token, permission, or Prisma files
+- API base URL or Authorization logic
+- arbitrary script/HTML injection paths
+
+Source patch flow:
+
+1. `preview_frontend_source_patch` with file path, purpose, and patch summary.
+2. Human/maintainer applies the patch outside MCP if preview is clean.
+3. Run typecheck and build.
+4. Capture desktop light, desktop dark, and mobile screenshots.
+5. `validate_frontend_source_patch_proof`.
+6. Deploy only after explicit human approval.
+
+Example preview payload:
+
+```json
+{
+  "surfaceId": "staff.queue",
+  "name": "Staff queue source patch preview",
+  "reason": "Add a native compact card variant that runtime overrides cannot express.",
+  "files": [
+    {
+      "path": "apps/person/src/components/Card.tsx",
+      "purpose": "Add a native compact card layout controlled by existing runtime element override state.",
+      "patch": "Small React diff summary or unified patch text goes here."
+    },
+    {
+      "path": "apps/person/src/styles.css",
+      "purpose": "Add bounded readable light/dark styles for the new compact card class.",
+      "patch": "Small CSS diff summary or unified patch text goes here."
+    }
+  ]
+}
+```
 
 ## Example Customization
 

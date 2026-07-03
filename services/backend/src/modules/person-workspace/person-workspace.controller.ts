@@ -62,6 +62,12 @@ export class PersonWorkspaceController {
     return this.workspace.dailyOperations(query);
   }
 
+  @Get('frontend-customization')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  frontendCustomization() {
+    return this.workspace.frontendCustomization();
+  }
+
   @Patch('queue/:id/move')
   @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
   moveQueueCard(

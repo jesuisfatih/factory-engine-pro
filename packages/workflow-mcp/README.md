@@ -69,16 +69,36 @@ For frontend work:
 7. `apply_frontend_customization` only after preview warnings are clean and the user approves activation.
 8. `list_frontend_customizations`, `get_frontend_customization`, and `rollback_frontend_customization` provide audit and rollback.
 
-Frontend customization does not accept raw HTML, scripts, arbitrary CSS, or source-file writes. It changes the staff UI through controlled slots such as `kpi.after`, `daily.card.after_brief`, `priority.card.after_summary`, and `modal.hero`, plus typed `elementOverrides` for approved native elements. Blocks can bind to live response data and use visibility conditions, so agents can express "show this field only when open requests are greater than zero" without editing React code.
+Frontend customization does not accept raw scripts, arbitrary CSS, unsafe HTML, or source-file writes. It changes the staff UI through controlled slots such as `kpi.after`, `daily.card.after_brief`, `priority.card.after_summary`, and `modal.hero`, plus sanitized `contentBlocks`, bounded `themeOverrides`, typed `elementOverrides`, and typed `navigationOverrides`. Blocks can bind to live response data and use visibility conditions, so agents can express "show this field only when open requests are greater than zero" without editing React code.
 
 The staff UI contract includes an element map. Treat it as the source of truth for what can be changed today:
 
 - current MVP: add safe overlay blocks into approved slots;
+- current MVP: add sanitized Markdown/limited HTML through `contentBlocks` with allowlisted tags/classes only;
+- current MVP: use bounded `themeOverrides` for density, spacing, card tone, radius, and font weight;
 - current MVP: use typed `elementOverrides` for field visibility, copy overrides, density, emphasis, tone rules, modal section order, and role/person variants;
-- current sidebar/navigation names, order, groups, badges, and default route are source-defined, not runtime-overridable yet;
+- current MVP: use typed `navigationOverrides` for sidebar names, order, groups, badges, emphasis, safe hidden state, and default route;
+- maintainer-only: use `preview_frontend_source_patch` and `validate_frontend_source_patch_proof` for React/CSS source patches that runtime DSL cannot express;
 - not allowed: raw prompted HTML, raw CSS, hidden required business fields, scripts, external assets, auth changes, backend changes, or source-file edits through the runtime customization tools.
 
-Sidebar and navigation requests must be handled separately from `staff.queue` card/modal overlays. Today, rename/reorder/group changes for the staff sidebar require the maintainer-only source patch lane with build plus screenshot proof. Do not fake sidebar changes with CSS or overlay blocks. A future safe runtime layer should be a typed `navigationOverrides` contract with known `navId` values, allowed labels, group order, badge mode, audience targeting, and `requireScreenshotProof: true`.
+Sidebar and navigation requests must be handled separately from card/modal overlays. Rename/reorder/group/badge/default-route changes now use the typed `navigationOverrides` contract with known `navId` values, allowed labels, group order, badge mode, audience targeting, and `requireScreenshotProof: true`. Do not fake sidebar changes with CSS or overlay blocks. Use the maintainer-only source patch lane only for new routes, icons, route behavior, or shell code that runtime navigation cannot express.
+
+Controlled content/theme requests:
+
+- Translate "HTML" to sanitized `contentBlocks`; allowed tags are `p`, `strong`, `b`, `em`, `i`, `ul`, `ol`, `li`, `br`, `span`, and `div`.
+- Allowed content classes are `callout`, `metric`, `checklist`, `muted`, `strong`, `compact`, `stack`, `inline`, `two-column`, and `accent-border`.
+- Translate "CSS" to `themeOverrides`: `accent`, `cardTone`, `spacing`, `density`, `fontWeight`, and `radius`.
+- Reject scripts, iframes, inline style, event handlers, external assets, tracking pixels, and hidden auth/data access.
+
+Source patch lane:
+
+1. `preview_frontend_source_patch` checks file allowlists and dangerous tokens without applying changes.
+2. Allowed paths are `apps/person/src/**` and `packages/ui/src/**`.
+3. Backend/env/auth/tenant/RBAC/Prisma/API-token files are forbidden.
+4. A maintainer applies the patch outside MCP only after preview passes.
+5. Run typecheck/build and capture desktop light, desktop dark, and mobile screenshots.
+6. `validate_frontend_source_patch_proof` checks the proof package.
+7. Deploy only after explicit human approval.
 
 Known staff nav ids:
 

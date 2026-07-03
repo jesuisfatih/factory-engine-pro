@@ -7,7 +7,9 @@ import {
   frontendMcpApplyCustomizationSchema,
   frontendMcpListCustomizationsSchema,
   frontendMcpPreviewCustomizationSchema,
+  frontendMcpPreviewSourcePatchSchema,
   frontendMcpRollbackCustomizationSchema,
+  frontendMcpValidateSourcePatchProofSchema,
   MEMBER_PERMISSIONS,
   rollbackWorkflowRuleSchema,
   saveWorkflowRuleSchema,
@@ -24,7 +26,9 @@ import {
   type FrontendMcpApplyCustomizationInput,
   type FrontendMcpListCustomizationsInput,
   type FrontendMcpPreviewCustomizationInput,
+  type FrontendMcpPreviewSourcePatchInput,
   type FrontendMcpRollbackCustomizationInput,
+  type FrontendMcpValidateSourcePatchProofInput,
   type RollbackWorkflowRuleInput,
   type SaveWorkflowRuleInput,
   type WorkflowTriggerFireInput,
@@ -216,6 +220,22 @@ export class RulesController {
     @Body(new ZodValidationPipe(frontendMcpRollbackCustomizationSchema)) body: FrontendMcpRollbackCustomizationInput,
   ) {
     return this.rules.rollbackFrontendCustomization(body);
+  }
+
+  @Post('mcp/frontend/source-patches/preview')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpPreviewFrontendSourcePatch(
+    @Body(new ZodValidationPipe(frontendMcpPreviewSourcePatchSchema)) body: FrontendMcpPreviewSourcePatchInput,
+  ) {
+    return this.rules.previewFrontendSourcePatch(body);
+  }
+
+  @Post('mcp/frontend/source-patches/proof')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpValidateFrontendSourcePatchProof(
+    @Body(new ZodValidationPipe(frontendMcpValidateSourcePatchProofSchema)) body: FrontendMcpValidateSourcePatchProofInput,
+  ) {
+    return this.rules.validateFrontendSourcePatchProof(body);
   }
 
   @Get('stats/active')

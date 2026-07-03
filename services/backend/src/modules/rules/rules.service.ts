@@ -18,7 +18,9 @@ import {
   frontendMcpCustomizationIdSchema,
   frontendMcpListCustomizationsSchema,
   frontendMcpPreviewCustomizationSchema,
+  frontendMcpPreviewSourcePatchSchema,
   frontendMcpRollbackCustomizationSchema,
+  frontendMcpValidateSourcePatchProofSchema,
   frontendCustomizationDefinitionSchema,
   workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
@@ -103,12 +105,16 @@ import {
   type FrontendMcpListCustomizationsResponse,
   type FrontendMcpPreviewCustomizationInput,
   type FrontendMcpPreviewCustomizationResponse,
+  type FrontendMcpPreviewSourcePatchInput,
   type FrontendMcpRollbackCustomizationInput,
   type FrontendMcpRollbackCustomizationResponse,
+  type FrontendMcpSourcePatchPreviewResponse,
+  type FrontendMcpSourcePatchProofResponse,
   type FrontendMcpSurfaceId,
   type FrontendMcpSurfaceContract,
   type FrontendMcpSurfaceContractResponse,
   type FrontendMcpSurfacesResponse,
+  type FrontendMcpValidateSourcePatchProofInput,
   type WorkflowRulesResponse,
   type WorkflowTrigger,
   type TranscriptResolverOutput,
@@ -138,7 +144,7 @@ const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Validate and simulate every draft before storing or publishing it.',
 ] as const;
 const FRONTEND_MCP_AGENT_GUIDE_PATH = 'docs/FRONTEND_MCP_AGENT_GUIDE.md';
-const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-03.frontend-mcp-guide.v3';
+const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-03.frontend-mcp-guide.v4';
 const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const SCHEDULED_ACTION_STATUSES = ['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed'] as const;
 const SCHEDULED_ACTION_CLOSED_TASK_STATUSES = ['closed', 'resolved'] as const;
@@ -2604,6 +2610,8 @@ export class RulesService {
         { name: 'list_frontend_customizations', description: 'List stored tenant UI customizations for audit and rollback.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'get_frontend_customization', description: 'Read one stored tenant UI customization.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'rollback_frontend_customization', description: 'Archive the current active UI customization or reactivate a previous one.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'preview_frontend_source_patch', description: 'Validate a maintainer-only frontend source patch plan against allowlists without applying it.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'validate_frontend_source_patch_proof', description: 'Validate build and screenshot proof for an allowlisted frontend source patch plan before human-approved deploy.', mutates: false, requiresPermission: 'settings.read' },
       ],
       safeguards: [
         'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
@@ -2848,6 +2856,31 @@ export class RulesService {
     };
   }
 
+  previewFrontendSourcePatch(input: FrontendMcpPreviewSourcePatchInput): FrontendMcpSourcePatchPreviewResponse {
+    const parsed = frontendMcpPreviewSourcePatchSchema.parse(input);
+    return this.frontendSourcePatchPreview(parsed);
+  }
+
+  validateFrontendSourcePatchProof(input: FrontendMcpValidateSourcePatchProofInput): FrontendMcpSourcePatchProofResponse {
+    const parsed = frontendMcpValidateSourcePatchProofSchema.parse(input);
+    const preview = this.frontendSourcePatchPreview(parsed);
+    const proofWarnings: string[] = [];
+    if (!parsed.typecheckPassed) proofWarnings.push('blocked: typecheck proof did not pass.');
+    if (!parsed.buildPassed) proofWarnings.push('blocked: build proof did not pass.');
+    const screenshotViewports = new Set(parsed.screenshots.map((shot) => shot.viewport));
+    for (const required of ['desktop-light', 'desktop-dark', 'mobile-light'] as const) {
+      if (!screenshotViewports.has(required)) proofWarnings.push(`blocked: missing required screenshot proof ${required}.`);
+    }
+    if (!parsed.humanApproval) proofWarnings.push('warning: human approval is still required before deploy.');
+    const proofOk = preview.ok && !proofWarnings.some((warning) => warning.startsWith('blocked:'));
+    return {
+      ...preview,
+      proofOk,
+      proofWarnings,
+      deployAllowed: proofOk && parsed.humanApproval,
+    };
+  }
+
   private parseFrontendDefinition(value: unknown): FrontendCustomizationDefinition {
     const parsed = frontendCustomizationDefinitionSchema.safeParse(value);
     return parsed.success ? parsed.data : EMPTY_FRONTEND_CUSTOMIZATION;
@@ -2896,8 +2929,14 @@ export class RulesService {
     if (!FRONTEND_MCP_SURFACES.some((surface) => surface.id === definition.surfaceId)) {
       warnings.push(`blocked: unsupported surface ${definition.surfaceId}`);
     }
-    if (definition.blocks.length === 0 && definition.elementOverrides.length === 0) {
-      warnings.push('warning: customization has no blocks or element overrides and will not change the UI.');
+    if (
+      definition.blocks.length === 0
+      && definition.contentBlocks.length === 0
+      && definition.elementOverrides.length === 0
+      && definition.navigationOverrides.length === 0
+      && Object.keys(definition.themeOverrides ?? {}).length === 0
+    ) {
+      warnings.push('warning: customization has no blocks, content blocks, element overrides, navigation overrides, or theme overrides and will not change the UI.');
     }
     for (const block of definition.blocks) {
       if (!FRONTEND_MCP_ALLOWED_SLOTS.includes(block.slot)) {
@@ -2906,6 +2945,12 @@ export class RulesService {
       const text = [block.label, block.title, block.text, block.template, ...block.items].filter(Boolean).join(' ');
       const forbidden = findForbiddenStaffTerm(text);
       if (forbidden) warnings.push(`blocked: block ${block.id} contains forbidden staff term "${forbidden}".`);
+    }
+    for (const block of definition.contentBlocks) {
+      const forbidden = findForbiddenStaffTerm([block.label, block.content].join(' '));
+      if (forbidden) warnings.push(`blocked: content block ${block.id} contains forbidden staff term "${forbidden}".`);
+      const blockedHtml = findUnsafeHtml(block.content);
+      if (blockedHtml) warnings.push(`blocked: content block ${block.id} contains unsafe HTML token "${blockedHtml}".`);
     }
     for (const override of definition.elementOverrides) {
       const allowedFields = new Set(FRONTEND_MCP_ELEMENT_FIELDS[override.elementId] ?? []);
@@ -2936,7 +2981,69 @@ export class RulesService {
       const forbidden = findForbiddenStaffTerm(copyText);
       if (forbidden) warnings.push(`blocked: element override ${override.id} contains forbidden staff term "${forbidden}".`);
     }
+    for (const override of definition.navigationOverrides) {
+      if (!override.requireScreenshotProof) {
+        warnings.push(`blocked: navigation override ${override.id} disables required light/dark/mobile screenshot proof.`);
+      }
+      for (const group of override.groups) {
+        const forbidden = findForbiddenStaffTerm(group.label);
+        if (forbidden) warnings.push(`blocked: navigation group ${group.id} contains forbidden staff term "${forbidden}".`);
+      }
+      for (const item of override.items) {
+        if (item.navId === 'queue' && item.hidden) warnings.push(`blocked: navigation override ${override.id} hides the primary Call Queue route.`);
+        if (item.navId === 'customers' && item.hidden) warnings.push(`blocked: navigation override ${override.id} hides the Routine Call List route.`);
+        if ((item.navId === 'queue' || item.navId === 'customers' || item.navId === 'notifications') && item.badgeMode === 'none') {
+          warnings.push(`blocked: navigation override ${override.id} removes the required ${item.navId} badge.`);
+        }
+        if (item.label) {
+          const forbidden = findForbiddenStaffTerm(item.label);
+          if (forbidden) warnings.push(`blocked: navigation item ${item.navId} contains forbidden staff term "${forbidden}".`);
+        }
+      }
+    }
     return warnings;
+  }
+
+  private frontendSourcePatchPreview(input: FrontendMcpPreviewSourcePatchInput): FrontendMcpSourcePatchPreviewResponse {
+    this.frontendSurfaceContract(input.surfaceId);
+    const warnings: string[] = [];
+    const files = input.files.map((file) => {
+      const normalized = normalizeRepoPath(file.path);
+      const blockedPath = FRONTEND_SOURCE_PATCH_DENIED_PATHS.find((pattern) => normalized.includes(pattern));
+      const allowedPrefix = FRONTEND_SOURCE_PATCH_ALLOWED_PREFIXES.find((prefix) => normalized.startsWith(prefix));
+      const allowedExtension = FRONTEND_SOURCE_PATCH_ALLOWED_EXTENSIONS.some((ext) => normalized.endsWith(ext));
+      const forbiddenSource = findForbiddenSourcePatchToken(file.patch);
+      let allowed = Boolean(allowedPrefix) && allowedExtension && !blockedPath && !forbiddenSource;
+      let reason = 'allowed frontend source patch path';
+      if (!allowedPrefix) reason = 'path is outside frontend source allowlist';
+      else if (!allowedExtension) reason = 'file extension is not allowed for frontend source patch lane';
+      else if (blockedPath) reason = `path is blocked by deny pattern ${blockedPath}`;
+      else if (forbiddenSource) reason = `patch contains forbidden source token ${forbiddenSource}`;
+      if (!allowed) warnings.push(`blocked: ${normalized}: ${reason}.`);
+      const forbiddenTerm = findForbiddenStaffTerm(`${file.purpose} ${file.patch}`);
+      if (forbiddenTerm) {
+        allowed = false;
+        reason = `patch contains forbidden staff term ${forbiddenTerm}`;
+        warnings.push(`blocked: ${normalized}: ${reason}.`);
+      }
+      return { path: normalized, allowed, reason };
+    });
+    if (input.files.length === 0) warnings.push('blocked: source patch plan has no files.');
+    return {
+      ok: !warnings.some((warning) => warning.startsWith('blocked:')),
+      warnings,
+      files,
+      requiredProof: [
+        'typecheck command and pass/fail result',
+        'build command and pass/fail result',
+        'desktop-light screenshot',
+        'desktop-dark screenshot',
+        'mobile-light screenshot',
+        'human approval before deploy',
+      ],
+      allowedPaths: [...FRONTEND_SOURCE_PATCH_ALLOWED_PREFIXES],
+      deniedPatterns: [...FRONTEND_SOURCE_PATCH_DENIED_PATHS, ...FRONTEND_SOURCE_PATCH_FORBIDDEN_TOKENS],
+    };
   }
 
   private async readAgentGuideFile() {
@@ -4270,6 +4377,8 @@ const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name
   'list_frontend_customizations',
   'get_frontend_customization',
   'rollback_frontend_customization',
+  'preview_frontend_source_patch',
+  'validate_frontend_source_patch_proof',
 ];
 
 const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [
@@ -4302,6 +4411,74 @@ function findForbiddenStaffTerm(text: string) {
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
     return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text);
   });
+}
+
+const FRONTEND_MCP_UNSAFE_HTML_TOKENS = [
+  '<script',
+  '<iframe',
+  '<object',
+  '<embed',
+  '<link',
+  '<meta',
+  'onerror=',
+  'onclick=',
+  'onload=',
+  'javascript:',
+  'data:',
+  'style=',
+  'src=',
+] as const;
+
+function findUnsafeHtml(text: string) {
+  const lower = text.toLowerCase();
+  return FRONTEND_MCP_UNSAFE_HTML_TOKENS.find((token) => lower.includes(token));
+}
+
+const FRONTEND_SOURCE_PATCH_ALLOWED_PREFIXES = [
+  'apps/person/src/',
+  'packages/ui/src/',
+] as const;
+
+const FRONTEND_SOURCE_PATCH_ALLOWED_EXTENSIONS = [
+  '.ts',
+  '.tsx',
+  '.css',
+  '.md',
+] as const;
+
+const FRONTEND_SOURCE_PATCH_DENIED_PATHS = [
+  '/auth/',
+  '/lib/api',
+  '.env',
+  'services/backend/',
+  'packages/contracts/src/auth',
+  'packages/contracts/src/identity',
+  'prisma/',
+] as const;
+
+const FRONTEND_SOURCE_PATCH_FORBIDDEN_TOKENS = [
+  'dangerouslySetInnerHTML',
+  'innerHTML',
+  'outerHTML',
+  'eval(',
+  'new Function',
+  'document.cookie',
+  'localStorage.setItem',
+  'Authorization',
+  'Bearer ',
+  '<script',
+  '<iframe',
+  'process.env',
+  'VITE_API_URL',
+] as const;
+
+function normalizeRepoPath(path: string) {
+  return path.replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+/g, '/');
+}
+
+function findForbiddenSourcePatchToken(text: string) {
+  const lower = text.toLowerCase();
+  return FRONTEND_SOURCE_PATCH_FORBIDDEN_TOKENS.find((token) => lower.includes(token.toLowerCase()));
 }
 
 const FRONTEND_MCP_PREFERRED_STAFF_TERMS = [
@@ -4401,8 +4578,11 @@ const EMPTY_FRONTEND_CUSTOMIZATION: FrontendCustomizationDefinition = {
   schemaVersion: 1,
   description: 'Default staff queue layout without tenant MCP overlays.',
   blocks: [],
+  contentBlocks: [],
   elementOverrides: [],
+  navigationOverrides: [],
   theme: { density: 'comfortable', accent: 'accent' },
+  themeOverrides: {},
 };
 
 const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
@@ -4492,16 +4672,17 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
         slots: [],
         fields: [],
         requiredFields: [],
-        currentSupport: 'Source patch lane only today. Runtime customization cannot rename, reorder, group, hide, or retarget sidebar items yet.',
-        nextSafeSupport: 'Add typed navigationOverrides for known nav ids, safe labels, group order, badge mode, default route, role/person variants, and screenshot proof.',
+        currentSupport: 'Typed navigationOverrides can rename, reorder, regroup, hide safe items, change badge display, and set the default staff landing nav id without changing routes or permissions.',
+        nextSafeSupport: 'Source patch lane only for new routes, icons, route behavior, or deeper shell changes.',
       },
     ],
     extensionRoadmap: [
       'Use typed elementOverrides for field visibility, copy overrides, density, emphasis, and tone rules.',
       'Use role/person variants so Linda and Ihsan can see different safe emphasis without branching source files.',
-      'Use a future typed navigationOverrides layer for staff sidebar labels, order, groups, badges, and default route; do not fake navigation changes with CSS or overlay blocks.',
+      'Use typed navigationOverrides for staff sidebar labels, order, groups, badges, and default route; do not fake navigation changes with CSS or overlay blocks.',
+      'Use themeOverrides and sanitized contentBlocks for safe visual/content customization; never accept raw scriptable HTML or arbitrary CSS injection.',
       'Keep screenshot preview proof for light, dark, desktop, and mobile before activation.',
-      'Keep arbitrary HTML/CSS and source-file edits behind a separate maintainer-only patch lane.',
+      'Keep source-file edits behind a separate maintainer-only source patch lane with build and screenshot proof.',
     ],
     themeChecklist: [
       'Light and dark themes must preserve readable contrast for phone numbers, order chips, and action banners.',

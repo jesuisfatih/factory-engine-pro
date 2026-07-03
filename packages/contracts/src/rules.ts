@@ -311,6 +311,49 @@ export type FrontendCustomizationVisibility = z.infer<typeof frontendCustomizati
 export const frontendCustomizationToneSchema = z.enum(['neutral', 'info', 'success', 'warning', 'danger', 'accent']);
 export type FrontendCustomizationTone = z.infer<typeof frontendCustomizationToneSchema>;
 
+export const frontendNavigationNavIdSchema = z.enum([
+  'queue',
+  'daily-archive',
+  'customers',
+  'customer-archive',
+  'email',
+  'calendar',
+  'notes',
+  'training',
+  'announcements',
+  'messaging',
+  'requests',
+  'notifications',
+]);
+export type FrontendNavigationNavId = z.infer<typeof frontendNavigationNavIdSchema>;
+
+export const frontendNavigationBadgeModeSchema = z.enum(['count', 'dot', 'none']);
+export type FrontendNavigationBadgeMode = z.infer<typeof frontendNavigationBadgeModeSchema>;
+
+export const frontendCustomizationAllowedClassSchema = z.enum([
+  'callout',
+  'metric',
+  'checklist',
+  'muted',
+  'strong',
+  'compact',
+  'stack',
+  'inline',
+  'two-column',
+  'accent-border',
+]);
+export type FrontendCustomizationAllowedClass = z.infer<typeof frontendCustomizationAllowedClassSchema>;
+
+export const frontendCustomizationThemeOverridesSchema = z.object({
+  accent: frontendCustomizationToneSchema.optional(),
+  cardTone: frontendCustomizationToneSchema.optional(),
+  spacing: z.enum(['compact', 'normal', 'roomy']).optional(),
+  density: z.enum(['comfortable', 'compact']).optional(),
+  fontWeight: z.enum(['normal', 'medium', 'semibold']).optional(),
+  radius: z.enum(['tight', 'standard', 'soft']).optional(),
+}).default({});
+export type FrontendCustomizationThemeOverrides = z.infer<typeof frontendCustomizationThemeOverridesSchema>;
+
 export const frontendCustomizationElementIdSchema = z.enum([
   'kpi.row',
   'daily.card',
@@ -455,19 +498,96 @@ export const frontendCustomizationBlockSchema = z.object({
 });
 export type FrontendCustomizationBlock = z.infer<typeof frontendCustomizationBlockSchema>;
 
+export const frontendCustomizationContentBlockSchema = z.object({
+  id: z.string().trim().min(2).max(80).regex(/^[a-zA-Z0-9_-]+$/),
+  slot: frontendCustomizationSlotSchema,
+  format: z.enum(['markdown', 'html']).default('markdown'),
+  label: z.string().trim().min(1).max(80),
+  content: z.string().trim().min(1).max(2400),
+  allowedClasses: z.array(frontendCustomizationAllowedClassSchema).max(10).default([]),
+  visibility: frontendCustomizationVisibilitySchema.default({ all: [], any: [] }),
+  tone: frontendCustomizationToneSchema.default('neutral'),
+  priority: z.coerce.number().int().min(0).max(1000).default(100),
+  compact: z.boolean().default(false),
+});
+export type FrontendCustomizationContentBlock = z.infer<typeof frontendCustomizationContentBlockSchema>;
+
+export const frontendNavigationGroupOverrideSchema = z.object({
+  id: z.string().trim().min(2).max(40).regex(/^[a-zA-Z0-9_-]+$/),
+  label: z.string().trim().min(1).max(36),
+  order: z.coerce.number().int().min(0).max(1000),
+});
+export type FrontendNavigationGroupOverride = z.infer<typeof frontendNavigationGroupOverrideSchema>;
+
+export const frontendNavigationItemOverrideSchema = z.object({
+  navId: frontendNavigationNavIdSchema,
+  label: z.string().trim().min(1).max(36).optional(),
+  group: z.string().trim().min(2).max(40).regex(/^[a-zA-Z0-9_-]+$/).optional(),
+  order: z.coerce.number().int().min(0).max(1000).optional(),
+  hidden: z.boolean().default(false),
+  badgeMode: frontendNavigationBadgeModeSchema.optional(),
+  emphasis: z.enum(['high', 'normal', 'quiet']).optional(),
+  required: z.boolean().default(false),
+});
+export type FrontendNavigationItemOverride = z.infer<typeof frontendNavigationItemOverrideSchema>;
+
+export const frontendNavigationOverrideSchema = z.object({
+  id: z.string().trim().min(2).max(80).regex(/^[a-zA-Z0-9_-]+$/),
+  target: z.literal('sidebar'),
+  audience: frontendCustomizationAudienceSchema,
+  priority: z.coerce.number().int().min(0).max(1000).default(100),
+  defaultNavId: frontendNavigationNavIdSchema.optional(),
+  groups: z.array(frontendNavigationGroupOverrideSchema).max(12).default([]),
+  items: z.array(frontendNavigationItemOverrideSchema).min(1).max(24),
+  requireScreenshotProof: z.boolean().default(true),
+}).superRefine((value, ctx) => {
+  const groupIds = new Set<string>();
+  for (const group of value.groups) {
+    if (groupIds.has(group.id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groups'], message: `Duplicate navigation group id: ${group.id}` });
+    }
+    groupIds.add(group.id);
+  }
+  const itemIds = new Set<string>();
+  for (const item of value.items) {
+    if (itemIds.has(item.navId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: `Duplicate navigation item override: ${item.navId}` });
+    }
+    if (item.group && !groupIds.has(item.group)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: `Navigation item ${item.navId} references unknown group id: ${item.group}` });
+    }
+    itemIds.add(item.navId);
+  }
+  if (value.defaultNavId) {
+    const defaultItem = value.items.find((item) => item.navId === value.defaultNavId);
+    if (defaultItem?.hidden) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['defaultNavId'], message: 'Default navigation item cannot be hidden.' });
+    }
+  }
+});
+export type FrontendNavigationOverride = z.infer<typeof frontendNavigationOverrideSchema>;
+
 export const frontendCustomizationDefinitionSchema = z.object({
   surfaceId: frontendMcpSurfaceIdSchema,
   schemaVersion: z.literal(1).default(1),
   description: z.string().trim().max(500).optional(),
   blocks: z.array(frontendCustomizationBlockSchema).max(60),
+  contentBlocks: z.array(frontendCustomizationContentBlockSchema).max(30).default([]),
   elementOverrides: z.array(frontendCustomizationElementOverrideSchema).max(30).default([]),
+  navigationOverrides: z.array(frontendNavigationOverrideSchema).max(10).default([]),
   theme: z.object({
     density: z.enum(['comfortable', 'compact']).default('comfortable'),
     accent: frontendCustomizationToneSchema.default('accent'),
   }).default({ density: 'comfortable', accent: 'accent' }),
+  themeOverrides: frontendCustomizationThemeOverridesSchema,
 }).superRefine((value, ctx) => {
   const ids = new Set<string>();
-  for (const item of [...value.blocks.map((block) => ({ id: block.id, kind: 'block' })), ...value.elementOverrides.map((override) => ({ id: override.id, kind: 'element override' }))]) {
+  for (const item of [
+    ...value.blocks.map((block) => ({ id: block.id, kind: 'block' })),
+    ...value.contentBlocks.map((block) => ({ id: block.id, kind: 'content block' })),
+    ...value.elementOverrides.map((override) => ({ id: override.id, kind: 'element override' })),
+    ...value.navigationOverrides.map((override) => ({ id: override.id, kind: 'navigation override' })),
+  ]) {
     if (ids.has(item.id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -510,6 +630,56 @@ export const frontendMcpRollbackCustomizationSchema = z.object({
   reason: z.string().trim().max(800).optional(),
 });
 export type FrontendMcpRollbackCustomizationInput = z.infer<typeof frontendMcpRollbackCustomizationSchema>;
+
+export const frontendSourcePatchFileSchema = z.object({
+  path: z.string().trim().min(1).max(220).regex(/^[a-zA-Z0-9_./-]+$/, 'Patch path may contain only safe repo path characters.'),
+  purpose: z.string().trim().min(1).max(240),
+  patch: z.string().trim().min(1).max(16000),
+});
+export type FrontendSourcePatchFile = z.infer<typeof frontendSourcePatchFileSchema>;
+
+export const frontendSourcePatchScreenshotSchema = z.object({
+  viewport: z.enum(['desktop-light', 'desktop-dark', 'mobile-light', 'mobile-dark']),
+  path: z.string().trim().min(1).max(260),
+});
+export type FrontendSourcePatchScreenshot = z.infer<typeof frontendSourcePatchScreenshotSchema>;
+
+export const frontendMcpPreviewSourcePatchSchema = z.object({
+  surfaceId: frontendMcpSurfaceIdSchema,
+  name: z.string().trim().min(2).max(120),
+  files: z.array(frontendSourcePatchFileSchema).min(1).max(12),
+  reason: z.string().trim().min(1).max(800),
+});
+export type FrontendMcpPreviewSourcePatchInput = z.infer<typeof frontendMcpPreviewSourcePatchSchema>;
+
+export const frontendMcpValidateSourcePatchProofSchema = frontendMcpPreviewSourcePatchSchema.extend({
+  typecheckCommand: z.string().trim().min(1).max(220),
+  typecheckPassed: z.boolean(),
+  buildCommand: z.string().trim().min(1).max(220),
+  buildPassed: z.boolean(),
+  screenshots: z.array(frontendSourcePatchScreenshotSchema).min(3).max(8),
+  humanApproval: z.boolean().default(false),
+});
+export type FrontendMcpValidateSourcePatchProofInput = z.infer<typeof frontendMcpValidateSourcePatchProofSchema>;
+
+export interface FrontendMcpSourcePatchPreviewResponse {
+  ok: boolean;
+  warnings: string[];
+  files: Array<{
+    path: string;
+    allowed: boolean;
+    reason: string;
+  }>;
+  requiredProof: string[];
+  allowedPaths: string[];
+  deniedPatterns: string[];
+}
+
+export interface FrontendMcpSourcePatchProofResponse extends FrontendMcpSourcePatchPreviewResponse {
+  proofOk: boolean;
+  proofWarnings: string[];
+  deployAllowed: boolean;
+}
 
 export interface WorkflowRuleDto {
   id: string;
@@ -697,7 +867,9 @@ export interface WorkflowMcpCapabilityTool {
     | 'apply_frontend_customization'
     | 'list_frontend_customizations'
     | 'get_frontend_customization'
-    | 'rollback_frontend_customization';
+    | 'rollback_frontend_customization'
+    | 'preview_frontend_source_patch'
+    | 'validate_frontend_source_patch_proof';
   description: string;
   mutates: boolean;
   requiresPermission: string;

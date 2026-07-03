@@ -245,6 +245,11 @@ export class PersonWorkspaceService {
     return this.dailyOperationsFor(member, query.range);
   }
 
+  async frontendCustomization() {
+    await this.currentMember();
+    return this.rules.frontendRuntimeCustomization('staff.queue');
+  }
+
   private async dailyOperationsFor(
     member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>,
     range: PersonDailyOperationRange = 'last7d',

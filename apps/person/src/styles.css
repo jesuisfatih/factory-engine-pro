@@ -114,11 +114,17 @@ button { font-family: inherit; }
 }
 .nav-item:hover { background: var(--surface-3); color: var(--text); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-item.nav-emphasis-high { color: var(--text); font-weight: 600; }
+.nav-item.nav-emphasis-quiet { opacity: .76; }
 .nav-item .ico { width: 16px; height: 16px; opacity: .8; flex-shrink: 0; }
 .nav-item .nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item .badge {
   font-size: 10px; padding: 1px 7px; border-radius: 10px;
   background: var(--surface-3); color: var(--text-muted); font-weight: 600;
+}
+.nav-item .badge.dot {
+  width: 7px; height: 7px; padding: 0; border-radius: 999px;
+  background: var(--accent); color: transparent;
 }
 .nav-item.active .badge { background: var(--accent); color: #fff; }
 
@@ -192,6 +198,19 @@ button { font-family: inherit; }
 .mcp-ui-block strong { color: var(--text); font-weight: 800; }
 .mcp-ui-block p { margin: 3px 0 0; color: var(--text-muted); }
 .mcp-ui-block.compact { padding: 6px 8px; font-size: 11px; }
+.mcp-ui-content-label { display: block; margin-bottom: 5px; color: var(--text-faint); font-size: 10px; font-weight: 800; letter-spacing: .35px; text-transform: uppercase; }
+.mcp-ui-content-body { display: grid; gap: 6px; min-width: 0; }
+.mcp-ui-content-body p { margin: 0; color: var(--text); }
+.mcp-ui-content-body ul,
+.mcp-ui-content-body ol { margin: 0 0 0 18px; padding: 0; color: var(--text); }
+.mcp-ui-content-body li + li { margin-top: 4px; }
+.mcp-ui-content-body .muted { color: var(--text-muted); }
+.mcp-ui-content-body .strong { font-weight: 700; }
+.mcp-ui-content-body .compact { font-size: 11px; line-height: 1.3; }
+.mcp-ui-content-body .stack { display: grid; gap: 6px; }
+.mcp-ui-content-body .inline { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mcp-ui-content-body .two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mcp-ui-content-body .accent-border { border-left: 3px solid var(--accent); padding-left: 8px; }
 .mcp-ui-stat { background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%); }
 .mcp-ui-stat span,
 .mcp-ui-field span { display: block; color: var(--text-faint); font-size: 10px; font-weight: 800; letter-spacing: .35px; text-transform: uppercase; }
@@ -246,6 +265,31 @@ button { font-family: inherit; }
 .segment-customer-card.mcp-element-tone-success { border-left-color: var(--success); }
 .card.mcp-element-tone-info,
 .segment-customer-card.mcp-element-tone-info { border-left-color: var(--info); }
+.layout.mcp-theme-spacing-compact .content { padding: 14px 16px; }
+.layout.mcp-theme-spacing-roomy .content { padding: 22px 24px; }
+.layout.mcp-theme-density-compact .ops-panel,
+.layout.mcp-theme-density-compact .card,
+.layout.mcp-theme-density-compact .segment-customer-card { border-radius: 7px; }
+.layout.mcp-theme-font-normal .card .title,
+.layout.mcp-theme-font-normal .segment-customer-card h3,
+.layout.mcp-theme-font-normal .ops-head h2 { font-weight: 600; }
+.layout.mcp-theme-font-medium .card .title,
+.layout.mcp-theme-font-medium .segment-customer-card h3,
+.layout.mcp-theme-font-medium .ops-head h2 { font-weight: 650; }
+.layout.mcp-theme-font-semibold .card .title,
+.layout.mcp-theme-font-semibold .segment-customer-card h3,
+.layout.mcp-theme-font-semibold .ops-head h2 { font-weight: 700; }
+.layout.mcp-theme-radius-tight { --radius: 6px; }
+.layout.mcp-theme-radius-standard { --radius: 8px; }
+.layout.mcp-theme-radius-soft { --radius: 12px; }
+.layout.mcp-theme-card-info .card,
+.layout.mcp-theme-card-info .segment-customer-card { background: color-mix(in srgb, var(--info-soft) 28%, var(--surface)); }
+.layout.mcp-theme-card-success .card,
+.layout.mcp-theme-card-success .segment-customer-card { background: color-mix(in srgb, var(--success-soft) 30%, var(--surface)); }
+.layout.mcp-theme-card-warning .card,
+.layout.mcp-theme-card-warning .segment-customer-card { background: color-mix(in srgb, var(--warn-soft) 34%, var(--surface)); }
+.layout.mcp-theme-card-danger .card,
+.layout.mcp-theme-card-danger .segment-customer-card { background: color-mix(in srgb, var(--danger-soft) 34%, var(--surface)); }
 .brief-section-shell { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 
 /* ─── Kanban ─────────────────────────────────────────────── */

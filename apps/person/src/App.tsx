@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AnnouncementsView } from './views/Announcements';
@@ -15,8 +16,10 @@ import { TrainingView } from './views/Training';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { LoginView } from './views/auth/LoginView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
+import { fetchFrontendCustomization } from './api/live';
+import { frontendNavigation, frontendThemeClassName, frontendThemeStyle } from './components/FrontendCustomization';
 import { PERSON_SESSION_CHANGED_EVENT, handOffToAdmin, readAdminSession, readSession } from './lib/api';
-import { type NavId } from './types';
+import { NAV, type NavId } from './types';
 
 const TITLES: Record<NavId, string> = {
   queue: 'Call Queue',
@@ -45,7 +48,25 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState<AuthScreen>(initialAuthScreen);
   const [current, setCurrent] = useState<NavId>(initialNav);
   const [collapsed, setCollapsed] = useState(false);
-  const title = TITLES[current];
+  const frontendCustomizationQuery = useQuery({
+    queryKey: ['person', 'frontend-customization'],
+    queryFn: fetchFrontendCustomization,
+    enabled: authed,
+  });
+  const frontendCustomization = frontendCustomizationQuery.data ?? null;
+  const shellViewer = initialPersonSession?.principal
+    ? {
+        id: initialPersonSession.principal.id,
+        email: initialPersonSession.principal.email,
+        name: `${initialPersonSession.principal.firstName} ${initialPersonSession.principal.lastName}`.trim() || initialPersonSession.principal.email,
+        roleNames: [],
+      }
+    : { id: '', email: null, name: '', roleNames: [] };
+  const navigation = useMemo(
+    () => frontendNavigation(frontendCustomization, NAV, { summary: { viewer: shellViewer } }),
+    [frontendCustomization, shellViewer.email, shellViewer.id, shellViewer.name],
+  );
+  const title = navigation.items.find((item) => item.id === current)?.label ?? TITLES[current];
 
   useEffect(() => {
     if (personSurface === 'admin' && initialPersonSession) {
@@ -71,13 +92,19 @@ export default function App() {
 
   useEffect(() => {
     if (authed && isStaffAuthPath(window.location.pathname)) {
-      window.history.replaceState(null, '', '/staff/queue');
+      const target = navigation.defaultNavId ?? 'queue';
+      window.history.replaceState(null, '', `/staff/${target}`);
+      setCurrent(target);
+    } else if (authed && isStaffRootPath(window.location.pathname)) {
+      const target = navigation.defaultNavId ?? 'queue';
+      window.history.replaceState(null, '', `/staff/${target}`);
+      setCurrent(target);
     }
     if (!authed && !isStaffAuthPath(window.location.pathname)) {
       window.history.replaceState(null, '', '/staff/login');
       setAuthScreen('login');
     }
-  }, [authed]);
+  }, [authed, navigation.defaultNavId]);
 
   if (shouldHandOffToAdmin) return null;
 
@@ -115,8 +142,8 @@ export default function App() {
   };
 
   return (
-    <div className={`layout${collapsed ? ' collapsed' : ''}`}>
-      <Sidebar current={current} onSelect={(id) => selectNav(id, setCurrent)} collapsed={collapsed} />
+    <div className={`layout${collapsed ? ' collapsed' : ''} ${frontendThemeClassName(frontendCustomization)}`} style={frontendThemeStyle(frontendCustomization)}>
+      <Sidebar current={current} onSelect={(id) => selectNav(id, setCurrent)} collapsed={collapsed} customization={frontendCustomization} />
       <div className="main">
         <Topbar title={title} onToggleSidebar={() => setCollapsed((value) => !value)} />
         <div className="content">{renderView()}</div>
@@ -133,6 +160,10 @@ function initialAuthScreen(): AuthScreen {
 
 function isStaffAuthPath(pathname: string) {
   return pathname.endsWith('/login') || pathname.endsWith('/forgot-password') || pathname.endsWith('/reset-password');
+}
+
+function isStaffRootPath(pathname: string) {
+  return pathname === '/staff' || pathname === '/staff/';
 }
 
 function initialNav(): NavId {
