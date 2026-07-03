@@ -295,6 +295,12 @@ export type PersonFrontendCustomizationRuntime = z.infer<typeof personFrontendCu
 
 export const personDailyOperationsSchema = z.object({
   summary: z.object({
+    viewer: z.object({
+      id: z.string(),
+      email: z.string().nullable(),
+      name: z.string(),
+      roleNames: z.array(z.string()),
+    }),
     dailyCount: z.number(),
     priorityCount: z.number(),
     pinnedCount: z.number(),

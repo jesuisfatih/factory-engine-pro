@@ -2,11 +2,25 @@ import type {
   FrontendCustomizationBinding,
   FrontendCustomizationBlock,
   FrontendCustomizationCondition,
+  FrontendCustomizationElementField,
+  FrontendCustomizationElementId,
+  FrontendCustomizationElementOverride,
+  FrontendCustomizationModalSection,
   FrontendCustomizationRuntimeDto,
   FrontendCustomizationSlot,
+  FrontendCustomizationTone,
 } from '@factory-engine-pro/contracts';
 
 export type FrontendCustomizationContext = Partial<Record<'summary' | 'dailyCall' | 'priorityCustomer' | 'taskBrief' | 'customerDetail', unknown>>;
+
+export type EffectiveElementOverride = Omit<
+  FrontendCustomizationElementOverride,
+  'audience' | 'copyOverrides' | 'hiddenFields' | 'visibleFields'
+> & {
+  copyOverrides: Record<string, string>;
+  hiddenFields: FrontendCustomizationElementField[];
+  visibleFields?: FrontendCustomizationElementField[];
+};
 
 interface SlotProps {
   customization?: FrontendCustomizationRuntimeDto | null;
@@ -25,6 +39,84 @@ export function FrontendCustomizationSlotView({ customization, slot, context, cl
       {blocks.map((block) => <FrontendCustomizationBlockView key={block.id} block={block} context={context} />)}
     </div>
   );
+}
+
+export function frontendElementOverride(
+  customization: FrontendCustomizationRuntimeDto | null | undefined,
+  elementId: FrontendCustomizationElementId,
+  context: FrontendCustomizationContext,
+): EffectiveElementOverride | null {
+  const matches = (customization?.definition.elementOverrides ?? [])
+    .filter((override) => override.elementId === elementId && audienceMatches(override, context))
+    .sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+  if (matches.length === 0) return null;
+
+  const merged: EffectiveElementOverride = {
+    id: matches[0].id,
+    elementId,
+    priority: 0,
+    toneRule: 'none',
+    copyOverrides: {},
+    hiddenFields: [],
+    requireScreenshotProof: true,
+  };
+  for (const override of matches) {
+    merged.id = override.id;
+    merged.priority = override.priority;
+    merged.density = override.density ?? merged.density;
+    merged.emphasis = override.emphasis ?? merged.emphasis;
+    merged.toneRule = override.toneRule ?? merged.toneRule;
+    merged.tone = override.tone ?? merged.tone;
+    merged.requireScreenshotProof = override.requireScreenshotProof;
+    if (override.visibleFields) merged.visibleFields = [...override.visibleFields];
+    if (override.hiddenFields) {
+      merged.hiddenFields = Array.from(new Set([...merged.hiddenFields, ...override.hiddenFields]));
+    }
+    if (override.sectionOrder) merged.sectionOrder = [...override.sectionOrder];
+    merged.copyOverrides = { ...merged.copyOverrides, ...override.copyOverrides };
+  }
+  return merged;
+}
+
+export function frontendFieldVisible(
+  override: EffectiveElementOverride | null | undefined,
+  field: FrontendCustomizationElementField,
+  defaultVisible = true,
+) {
+  if (!override) return defaultVisible;
+  if (override.visibleFields?.length) return override.visibleFields.includes(field);
+  if (override.hiddenFields.includes(field)) return false;
+  return defaultVisible;
+}
+
+export function frontendCopy(
+  override: EffectiveElementOverride | null | undefined,
+  key: string,
+  fallback: string,
+) {
+  return override?.copyOverrides[key] ?? fallback;
+}
+
+export function frontendElementClassName(
+  override: EffectiveElementOverride | null | undefined,
+  urgencyScore?: number | null,
+) {
+  if (!override) return '';
+  const classes = ['mcp-element'];
+  if (override.density) classes.push(`mcp-element-density-${override.density}`);
+  if (override.emphasis) classes.push(`mcp-element-emphasis-${override.emphasis}`);
+  const tone = toneForOverride(override, urgencyScore);
+  if (tone && tone !== 'neutral') classes.push(`mcp-element-tone-${tone}`);
+  return classes.join(' ');
+}
+
+export function frontendModalSectionStyle(
+  override: EffectiveElementOverride | null | undefined,
+  section: FrontendCustomizationModalSection,
+  fallbackOrder: number,
+): { order: number } {
+  const index = override?.sectionOrder?.indexOf(section) ?? -1;
+  return { order: index >= 0 ? index + 1 : fallbackOrder };
 }
 
 function FrontendCustomizationBlockView({ block, context }: { block: FrontendCustomizationBlock; context: FrontendCustomizationContext }) {
@@ -69,6 +161,38 @@ function FrontendCustomizationBlockView({ block, context }: { block: FrontendCus
       {value ? <p>{value}</p> : null}
     </div>
   );
+}
+
+function audienceMatches(override: FrontendCustomizationElementOverride, context: FrontendCustomizationContext) {
+  const audience = override.audience ?? {};
+  const memberIds = audience.memberIds ?? [];
+  const memberEmails = (audience.memberEmails ?? []).map((email) => email.toLowerCase());
+  const roleNames = (audience.roleNames ?? []).map((role) => role.toLowerCase());
+  if (memberIds.length === 0 && memberEmails.length === 0 && roleNames.length === 0) return true;
+
+  const viewer = asRecord(asRecord(context.summary).viewer);
+  const viewerId = typeof viewer.id === 'string' ? viewer.id : '';
+  const viewerEmail = typeof viewer.email === 'string' ? viewer.email.toLowerCase() : '';
+  const viewerRoles = Array.isArray(viewer.roleNames)
+    ? viewer.roleNames.map((role) => String(role).toLowerCase())
+    : [];
+
+  return (viewerId && memberIds.includes(viewerId))
+    || (viewerEmail && memberEmails.includes(viewerEmail))
+    || viewerRoles.some((role) => roleNames.includes(role));
+}
+
+function toneForOverride(
+  override: EffectiveElementOverride,
+  urgencyScore?: number | null,
+): FrontendCustomizationTone | null {
+  if (override.toneRule === 'static') return override.tone ?? 'accent';
+  if (override.toneRule !== 'urgency') return override.tone ?? null;
+  const score = Number(urgencyScore ?? 0);
+  if (score >= 8) return 'danger';
+  if (score >= 6) return 'warning';
+  if (score >= 4) return 'success';
+  return 'info';
 }
 
 function blockVisible(block: FrontendCustomizationBlock, context: FrontendCustomizationContext) {
@@ -127,6 +251,10 @@ function renderTemplate(template: string, context: FrontendCustomizationContext)
     const value = readBindingValue({ source, path }, context);
     return value === null || value === undefined || value === '' ? '-' : String(value);
   });
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 function numberFormat(value: unknown) {

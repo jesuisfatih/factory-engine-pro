@@ -7,13 +7,14 @@ import {
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
-import { FrontendCustomizationSlotView } from './FrontendCustomization';
+import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
 import type { Card as CardData, TaskBriefDetail } from '../types';
 import { humanize, personSafeText, staffActionLabel, staffActionTone, staffBriefLine } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
   customization?: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
   onClose: () => void;
 }
 
@@ -94,7 +95,7 @@ function NarrativeField({ label, suggestedValue, value, onChange, multiLine }: N
   );
 }
 
-export function TaskBriefModal({ card, customization, onClose }: Props) {
+export function TaskBriefModal({ card, customization, summary, onClose }: Props) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
   const isTaskCard = card.kind === 'task';
@@ -106,6 +107,10 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
 
   const detail = data as TaskBriefDetail | undefined;
   const liveCard = detail?.card ?? card;
+  const customizationContext = { dailyCall: liveCard, taskBrief: detail, summary };
+  const override = frontendElementOverride(customization, 'task.modal', customizationContext);
+  const sectionStyle = (section: Parameters<typeof frontendModalSectionStyle>[1], fallbackOrder: number) => frontendModalSectionStyle(override, section, fallbackOrder);
+  const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
   const hasBrief = liveCard.source !== 'manual' && liveCard.aiBrief;
@@ -227,13 +232,13 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="task-brief-title"
     >
-      <div className="modal-card brief-modal" role="document">
+      <div className={`modal-card brief-modal ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
         <header className="modal-head">
           <div>
-            <h2 id="task-brief-title">{personSafeText(liveCard.title)}</h2>
+            {showField('title') ? <h2 id="task-brief-title">{personSafeText(liveCard.title)}</h2> : null}
             <div className="brief-identity">
-              {liveCard.phone && <span><Phone size={11} /> {liveCard.phone}</span>}
-              {liveCard.email && <span><Mail size={11} /> {liveCard.email}</span>}
+              {liveCard.phone && showField('phone') ? <span><Phone size={11} /> {liveCard.phone}</span> : null}
+              {liveCard.email && showField('email') ? <span><Mail size={11} /> {liveCard.email}</span> : null}
               {latestOrder && <span><ShoppingBag size={11} /> {latestOrder.orderNumber ?? latestOrder.id} {fmtMoney(latestOrder.totalPrice, latestOrder.currency)}</span>}
             </div>
           </div>
@@ -245,25 +250,25 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
         <div className="modal-body brief-body">
           <div className="brief-main">
             {loadingTaskBrief && (
-              <div className="brief-state">
+              <div className="brief-state" style={sectionStyle('loadingState', 1)}>
                 <Loader2 size={16} className="spin" />
-                <strong>Loading live call plan</strong>
+                <strong>{frontendCopy(override, 'loadingTitle', 'Loading live call plan')}</strong>
                 <span>Customer orders, call notes, and timeline are being read from the API.</span>
               </div>
             )}
 
             {taskBriefError && (
-              <div className="brief-state danger-text">
+              <div className="brief-state danger-text" style={sectionStyle('errorState', 2)}>
                 <AlertTriangle size={16} />
-                <strong>Call plan could not be loaded</strong>
+                <strong>{frontendCopy(override, 'errorTitle', 'Call plan could not be loaded')}</strong>
                 <span>{friendlyError(error)}</span>
               </div>
             )}
 
             {isTaskCard && !isLoading && !isError && !detail && (
-              <div className="brief-state">
+              <div className="brief-state" style={sectionStyle('emptyState', 3)}>
                 <StickyNote size={16} />
-                <strong>No call plan data</strong>
+                <strong>{frontendCopy(override, 'emptyTitle', 'No call plan data')}</strong>
                 <span>This follow-up exists on the board, but the live detail endpoint returned no context payload.</span>
               </div>
             )}
@@ -272,57 +277,63 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
               <>
                 {hasBrief ? (
                   <>
-                    <section className={`brief-showcase tone-${actionTone}`}>
+                    <section className={`brief-showcase tone-${actionTone}`} style={sectionStyle('hero', 10)}>
                       <div className="brief-showcase-main">
-                        <span className="brief-showcase-kicker">Do this now</span>
-                        <h3>{actionLabel}</h3>
-                        <p>{primaryBrief}</p>
-                        <div className="brief-showcase-actions">
-                          {directActions.slice(0, 3).map((action, index) => (
-                            <div key={`${action}-${index}`} className="brief-showcase-step">
-                              <span>{index + 1}</span>
-                              <strong>{action}</strong>
-                            </div>
-                          ))}
-                        </div>
+                        <span className="brief-showcase-kicker">{frontendCopy(override, 'heroKicker', 'Do this now')}</span>
+                        <h3>{frontendCopy(override, 'actionLabel', actionLabel)}</h3>
+                        <p>{frontendCopy(override, 'requiredAction', primaryBrief)}</p>
+                        {showField('steps') ? (
+                          <div className="brief-showcase-actions">
+                            {directActions.slice(0, 3).map((action, index) => (
+                              <div key={`${action}-${index}`} className="brief-showcase-step">
+                                <span>{index + 1}</span>
+                                <strong>{action}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="brief-showcase-score">
-                        <span>Urgency</span>
+                        <span>{frontendCopy(override, 'urgencyLabel', 'Urgency')}</span>
                         <strong>U{liveCard.urgencyScore}</strong>
                         <em>{confidenceLabel}</em>
                       </div>
                     </section>
-                    <FrontendCustomizationSlotView customization={customization} slot="modal.hero" context={{ dailyCall: liveCard, taskBrief: detail }} />
+                    <div className="brief-section-shell" style={sectionStyle('customHero', 20)}>
+                      <FrontendCustomizationSlotView customization={customization} slot="modal.hero" context={customizationContext} />
+                    </div>
 
-                    <div className="brief-snapshot-grid">
+                    {showField('snapshotGrid') ? <div className="brief-snapshot-grid" style={sectionStyle('snapshotGrid', 30)}>
                       <div className="brief-snapshot-card snapshot-call">
-                        <span>What happened</span>
+                        <span>{frontendCopy(override, 'whatHappenedLabel', 'What happened')}</span>
                         <strong>{why || primaryBrief}</strong>
                       </div>
                       <div className="brief-snapshot-card snapshot-match">
-                        <span>Customer match</span>
+                        <span>{frontendCopy(override, 'customerMatchLabel', 'Customer match')}</span>
                         <strong>{matchLabel}</strong>
                         <em>{matchHint}</em>
                       </div>
                       <div className="brief-snapshot-card snapshot-order">
-                        <span>Purchase history</span>
+                        <span>{frontendCopy(override, 'purchaseHistoryLabel', 'Purchase history')}</span>
                         <strong>{purchaseSummary}</strong>
                       </div>
                       <div className="brief-snapshot-card snapshot-outcome">
-                        <span>Outcome to save</span>
+                        <span>{frontendCopy(override, 'outcomeLabel', 'Outcome to save')}</span>
                         <strong>{goal || 'Save the next accountable result.'}</strong>
                       </div>
+                    </div> : null}
+                    <div className="brief-section-shell" style={sectionStyle('customAfterSteps', 35)}>
+                      <FrontendCustomizationSlotView customization={customization} slot="modal.after_steps" context={customizationContext} />
                     </div>
-                    <FrontendCustomizationSlotView customization={customization} slot="modal.after_steps" context={{ dailyCall: liveCard, taskBrief: detail }} />
 
-                    <NarrativeField label="Reason for this call" suggestedValue={initial.why} value={why} onChange={setWhy} multiLine />
-                    <NarrativeField label="Customer mood or issue" suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine />
-                    <NarrativeField label="Outcome required" suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine />
+                    {showField('reasonField') ? <div style={sectionStyle('reasonField', 40)}><NarrativeField label={frontendCopy(override, 'reasonLabel', 'Reason for this call')} suggestedValue={initial.why} value={why} onChange={setWhy} multiLine /></div> : null}
+                    {showField('moodField') ? <div style={sectionStyle('moodField', 50)}><NarrativeField label={frontendCopy(override, 'moodLabel', 'Customer mood or issue')} suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine /></div> : null}
+                    {showField('outcomeField') ? <div style={sectionStyle('outcomeField', 60)}><NarrativeField label={frontendCopy(override, 'outcomeRequiredLabel', 'Outcome required')} suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine /></div> : null}
 
-                    {liveCard.aiBrief?.suggestedActions?.length ? (
-                      <div className="brief-block">
+                    {liveCard.aiBrief?.suggestedActions?.length && showField('extraChecks') ? (
+                      <div className="brief-block" style={sectionStyle('extraChecks', 70)}>
                         <div className="brief-block-head">
-                          <span className="lbl">Extra checks</span>
+                          <span className="lbl">{frontendCopy(override, 'extraChecksLabel', 'Extra checks')}</span>
                         </div>
                         <ul className="brief-actions-list">
                           {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
@@ -330,10 +341,10 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                       </div>
                     ) : null}
 
-                    {liveCard.aiBrief?.transcriptSnippet ? (
-                      <div className="brief-block">
+                    {liveCard.aiBrief?.transcriptSnippet && showField('callExcerpt') ? (
+                      <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
-                          <span className="lbl">Call excerpt</span>
+                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
                         </div>
                         <div className="brief-transcript">{liveCard.aiBrief.transcriptSnippet}</div>
                       </div>
@@ -350,10 +361,10 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                   </div>
                 )}
 
-                <div className="brief-grid-two">
-                  <div className="brief-block">
+                {(showField('purchaseHistory') || showField('callSummary')) ? <div className="brief-grid-two">
+                  {showField('purchaseHistory') ? <div className="brief-block" style={sectionStyle('purchaseHistory', 90)}>
                     <div className="brief-block-head">
-                      <span className="lbl">Customer purchase history</span>
+                      <span className="lbl">{frontendCopy(override, 'purchaseHistoryBlockLabel', 'Customer purchase history')}</span>
                       {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="rule-trace-count">linked</span> : null}
                     </div>
                     {detail ? (
@@ -379,10 +390,10 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                     ) : (
                       <div className="brief-val brief-val-muted">Open the live brief to see Shopify match data.</div>
                     )}
-                  </div>
+                  </div> : null}
 
-                  <div className="brief-block">
-                    <div className="brief-block-head"><span className="lbl">Call summary</span></div>
+                  {showField('callSummary') ? <div className="brief-block" style={sectionStyle('callSummary', 100)}>
+                    <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'callSummaryLabel', 'Call summary')}</span></div>
                     {detail?.aiPsychAnalysis ? (
                       <div className="brief-psych">
                         <div><span>Intent</span><strong>{labelize(detail.aiPsychAnalysis.communicationStyle)}</strong></div>
@@ -394,13 +405,15 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                     ) : (
                       <div className="brief-val brief-val-muted">No call summary is attached to this customer yet.</div>
                     )}
-                  </div>
+                  </div> : null}
+                </div> : null}
+                <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 105)}>
+                  <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
                 </div>
-                <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={{ dailyCall: liveCard, taskBrief: detail }} />
 
-                <div className="brief-block">
+                {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
-                    <span className="lbl">Order, call, and task history</span>
+                    <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and task history')}</span>
                     {detail ? <span className="rule-trace-count">{detail.timeline.length}</span> : null}
                   </div>
                   {detail?.timeline.length ? (
@@ -419,13 +432,13 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                   ) : (
                     <div className="brief-val brief-val-muted">No customer history entries yet.</div>
                   )}
-                </div>
+                </div> : null}
 
                 {isTaskCard ? (
                   <>
-                    <form className="brief-block" onSubmit={submitNote}>
+                    {showField('noteForm') ? <form className="brief-block" style={sectionStyle('noteForm', 120)} onSubmit={submitNote}>
                       <div className="brief-block-head">
-                        <span className="lbl">Follow-up note</span>
+                        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up note')}</span>
                         {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
                       </div>
                       <textarea
@@ -451,11 +464,11 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                           ))}
                         </div>
                       ) : null}
-                    </form>
+                    </form> : null}
 
-                    <form className="brief-block" onSubmit={submitSchedule}>
+                    {showField('scheduleForm') ? <form className="brief-block" style={sectionStyle('scheduleForm', 130)} onSubmit={submitSchedule}>
                       <div className="brief-block-head">
-                        <span className="lbl">Calendar action</span>
+                        <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
                       </div>
                       <div className="brief-schedule-grid">
                         <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
@@ -465,16 +478,16 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
                         </button>
                       </div>
                       {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
-                    </form>
+                    </form> : null}
                   </>
                 ) : null}
               </>
             )}
           </div>
 
-          <aside className="brief-side">
+          {showField('customerSidePanel') ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
             <div className="brief-card">
-              <div className="brief-card-head"><Tags size={12} /> Customer</div>
+              <div className="brief-card-head"><Tags size={12} /> {frontendCopy(override, 'customerLabel', 'Customer')}</div>
               <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{personSafeText(liveCard.title)}</span></div>
               {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
               {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
@@ -484,43 +497,43 @@ export function TaskBriefModal({ card, customization, onClose }: Props) {
             <div className="brief-stats">
               <div className="brief-stat">
                 <ShoppingBag size={11} />
-                <div><div className="lbl">Orders</div><div className="val">{liveCard.ordersCount ?? 'N/A'}</div></div>
+                <div><div className="lbl">{frontendCopy(override, 'ordersLabel', 'Orders')}</div><div className="val">{liveCard.ordersCount ?? 'N/A'}</div></div>
               </div>
               <div className="brief-stat">
                 <DollarSign size={11} />
-                <div><div className="lbl">LTV</div><div className="val">{liveCard.totalSpent ? fmtMoney(liveCard.totalSpent) : 'N/A'}</div></div>
+                <div><div className="lbl">{frontendCopy(override, 'ltvLabel', 'LTV')}</div><div className="val">{liveCard.totalSpent ? fmtMoney(liveCard.totalSpent) : 'N/A'}</div></div>
               </div>
               <div className="brief-stat">
                 <Activity size={11} />
-                <div><div className="lbl">30d revenue</div><div className="val">{performance ? fmtMoney(performance.revenue) : 'N/A'}</div></div>
+                <div><div className="lbl">{frontendCopy(override, 'revenue30dLabel', '30d revenue')}</div><div className="val">{performance ? fmtMoney(performance.revenue) : 'N/A'}</div></div>
               </div>
               <div className="brief-stat">
                 <Phone size={11} />
-                <div><div className="lbl">30d calls</div><div className="val">{performance?.calls ?? 'N/A'}</div></div>
+                <div><div className="lbl">{frontendCopy(override, 'calls30dLabel', '30d calls')}</div><div className="val">{performance?.calls ?? 'N/A'}</div></div>
               </div>
             </div>
 
             <div className="brief-quick-actions">
-              <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : 'Call'}</button>
-              <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> Email</a>
+              <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callButton', 'Call')}</button>
+              <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> {frontendCopy(override, 'emailButton', 'Email')}</a>
             </div>
             {dialCustomer.data?.message || dialCustomer.error ? (
               <div className="brief-call-status">{dialCustomer.data?.message ?? friendlyError(dialCustomer.error)}</div>
             ) : null}
             <div className="brief-quick-actions">
-              <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> Customer detail</a>
+              <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>
             </div>
-          </aside>
+          </aside> : null}
         </div>
 
-        <footer className="modal-foot">
+        {showField('footer') ? <footer className="modal-foot" style={sectionStyle('footer', 150)}>
           <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
           <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-          <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> Call now</button>
+          <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> {frontendCopy(override, 'callNowButton', 'Call now')}</button>
           <button type="button" className="btn primary" onClick={onClose}>
-            <CheckCircle2 size={13} /> Done
+            <CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}
           </button>
-        </footer>
+        </footer> : null}
       </div>
     </div>
   );

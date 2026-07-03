@@ -311,6 +311,126 @@ export type FrontendCustomizationVisibility = z.infer<typeof frontendCustomizati
 export const frontendCustomizationToneSchema = z.enum(['neutral', 'info', 'success', 'warning', 'danger', 'accent']);
 export type FrontendCustomizationTone = z.infer<typeof frontendCustomizationToneSchema>;
 
+export const frontendCustomizationElementIdSchema = z.enum([
+  'kpi.row',
+  'daily.card',
+  'priority.card',
+  'task.modal',
+  'customer.detail.popup',
+]);
+export type FrontendCustomizationElementId = z.infer<typeof frontendCustomizationElementIdSchema>;
+
+export const frontendCustomizationElementFieldSchema = z.enum([
+  'title',
+  'phone',
+  'email',
+  'actionBadge',
+  'requiredAction',
+  'assignee',
+  'focus',
+  'segmentPriority',
+  'latestOrder',
+  'performance30d',
+  'segmentChip',
+  'pinButton',
+  'archiveButton',
+  'transferButton',
+  'customerName',
+  'actionButtons',
+  'urgencyScore',
+  'priorityBrief',
+  'reason',
+  'latestCall',
+  'openFollowUp',
+  'latestNote',
+  'orderSummary',
+  'hero',
+  'steps',
+  'snapshotGrid',
+  'reasonField',
+  'moodField',
+  'outcomeField',
+  'extraChecks',
+  'callExcerpt',
+  'purchaseHistory',
+  'callSummary',
+  'timeline',
+  'noteForm',
+  'scheduleForm',
+  'customerSidePanel',
+  'footer',
+]);
+export type FrontendCustomizationElementField = z.infer<typeof frontendCustomizationElementFieldSchema>;
+
+export const frontendCustomizationModalSectionSchema = z.enum([
+  'loadingState',
+  'errorState',
+  'emptyState',
+  'hero',
+  'customHero',
+  'snapshotGrid',
+  'customAfterSteps',
+  'reasonField',
+  'moodField',
+  'outcomeField',
+  'extraChecks',
+  'callExcerpt',
+  'purchaseHistory',
+  'callSummary',
+  'customCustomerContext',
+  'timeline',
+  'noteForm',
+  'scheduleForm',
+  'customerSidePanel',
+  'footer',
+]);
+export type FrontendCustomizationModalSection = z.infer<typeof frontendCustomizationModalSectionSchema>;
+
+export const frontendCustomizationAudienceSchema = z.object({
+  memberIds: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  memberEmails: z.array(z.string().trim().email().max(160)).max(20).optional(),
+  roleNames: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+}).default({});
+export type FrontendCustomizationAudience = z.infer<typeof frontendCustomizationAudienceSchema>;
+
+export const frontendCustomizationElementOverrideSchema = z.object({
+  id: z.string().trim().min(2).max(80).regex(/^[a-zA-Z0-9_-]+$/),
+  elementId: frontendCustomizationElementIdSchema,
+  audience: frontendCustomizationAudienceSchema,
+  priority: z.coerce.number().int().min(0).max(1000).default(100),
+  density: z.enum(['comfortable', 'compact']).optional(),
+  emphasis: z.enum(['normal', 'high', 'quiet']).optional(),
+  toneRule: z.enum(['none', 'urgency', 'static']).default('none'),
+  tone: frontendCustomizationToneSchema.optional(),
+  visibleFields: z.array(frontendCustomizationElementFieldSchema).max(40).optional(),
+  hiddenFields: z.array(frontendCustomizationElementFieldSchema).max(40).optional(),
+  copyOverrides: z.record(
+    z.string().trim().min(1).max(80).regex(/^[a-zA-Z0-9_.-]+$/),
+    z.string().trim().min(1).max(140),
+  ).default({}),
+  sectionOrder: z.array(frontendCustomizationModalSectionSchema).max(20).optional(),
+  requireScreenshotProof: z.boolean().default(true),
+}).superRefine((value, ctx) => {
+  const visible = new Set(value.visibleFields ?? []);
+  for (const hidden of value.hiddenFields ?? []) {
+    if (visible.has(hidden)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['hiddenFields'],
+        message: `Element field cannot be both visible and hidden: ${hidden}`,
+      });
+    }
+  }
+  if (value.sectionOrder?.length && value.elementId !== 'task.modal') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['sectionOrder'],
+      message: 'Section ordering is only supported for task.modal.',
+    });
+  }
+});
+export type FrontendCustomizationElementOverride = z.infer<typeof frontendCustomizationElementOverrideSchema>;
+
 export const frontendCustomizationBlockSchema = z.object({
   id: z.string().trim().min(2).max(80).regex(/^[a-zA-Z0-9_-]+$/),
   slot: frontendCustomizationSlotSchema,
@@ -340,21 +460,21 @@ export const frontendCustomizationDefinitionSchema = z.object({
   schemaVersion: z.literal(1).default(1),
   description: z.string().trim().max(500).optional(),
   blocks: z.array(frontendCustomizationBlockSchema).max(60),
+  elementOverrides: z.array(frontendCustomizationElementOverrideSchema).max(30).default([]),
   theme: z.object({
     density: z.enum(['comfortable', 'compact']).default('comfortable'),
     accent: frontendCustomizationToneSchema.default('accent'),
   }).default({ density: 'comfortable', accent: 'accent' }),
 }).superRefine((value, ctx) => {
   const ids = new Set<string>();
-  for (const block of value.blocks) {
-    if (ids.has(block.id)) {
+  for (const item of [...value.blocks.map((block) => ({ id: block.id, kind: 'block' })), ...value.elementOverrides.map((override) => ({ id: override.id, kind: 'element override' }))]) {
+    if (ids.has(item.id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['blocks'],
-        message: `Duplicate frontend block id: ${block.id}`,
+        message: `Duplicate frontend ${item.kind} id: ${item.id}`,
       });
     }
-    ids.add(block.id);
+    ids.add(item.id);
   }
 });
 export type FrontendCustomizationDefinition = z.infer<typeof frontendCustomizationDefinitionSchema>;
@@ -790,6 +910,8 @@ export interface FrontendMcpSurfaceContract extends FrontendMcpSurfaceSummary {
     elementId: string;
     label: string;
     slots: FrontendCustomizationSlot[];
+    fields: FrontendCustomizationElementField[];
+    requiredFields: FrontendCustomizationElementField[];
     currentSupport: string;
     nextSafeSupport: string;
   }>;

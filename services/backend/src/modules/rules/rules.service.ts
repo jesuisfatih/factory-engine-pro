@@ -91,6 +91,7 @@ import {
   type WorkflowActionRevalidate,
   type FrontendCustomizationDefinition,
   type FrontendCustomizationDto,
+  type FrontendCustomizationElementField,
   type FrontendCustomizationRuntimeDto,
   type FrontendCustomizationSlot,
   type FrontendMcpAgentGuideResponse,
@@ -2895,8 +2896,8 @@ export class RulesService {
     if (!FRONTEND_MCP_SURFACES.some((surface) => surface.id === definition.surfaceId)) {
       warnings.push(`blocked: unsupported surface ${definition.surfaceId}`);
     }
-    if (definition.blocks.length === 0) {
-      warnings.push('warning: customization has no blocks and will not change the UI.');
+    if (definition.blocks.length === 0 && definition.elementOverrides.length === 0) {
+      warnings.push('warning: customization has no blocks or element overrides and will not change the UI.');
     }
     for (const block of definition.blocks) {
       if (!FRONTEND_MCP_ALLOWED_SLOTS.includes(block.slot)) {
@@ -2905,6 +2906,35 @@ export class RulesService {
       const text = [block.label, block.title, block.text, block.template, ...block.items].filter(Boolean).join(' ');
       const forbidden = FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => text.toLowerCase().includes(term.toLowerCase()));
       if (forbidden) warnings.push(`blocked: block ${block.id} contains forbidden staff term "${forbidden}".`);
+    }
+    for (const override of definition.elementOverrides) {
+      const allowedFields = new Set(FRONTEND_MCP_ELEMENT_FIELDS[override.elementId] ?? []);
+      const requiredFields = new Set(FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS[override.elementId] ?? []);
+      if (allowedFields.size === 0) {
+        warnings.push(`blocked: element ${override.elementId} is not allowed.`);
+        continue;
+      }
+      const unknownFields = [...(override.visibleFields ?? []), ...(override.hiddenFields ?? [])].filter((field) => !allowedFields.has(field));
+      if (unknownFields.length > 0) {
+        warnings.push(`blocked: element override ${override.id} references unsupported field(s): ${Array.from(new Set(unknownFields)).join(', ')}.`);
+      }
+      const hiddenRequired = (override.hiddenFields ?? []).filter((field) => requiredFields.has(field));
+      if (hiddenRequired.length > 0) {
+        warnings.push(`blocked: element override ${override.id} hides required field(s): ${hiddenRequired.join(', ')}.`);
+      }
+      if (override.visibleFields && override.visibleFields.length > 0) {
+        const visible = new Set(override.visibleFields);
+        const missingRequired = [...requiredFields].filter((field) => !visible.has(field));
+        if (missingRequired.length > 0) {
+          warnings.push(`blocked: element override ${override.id} omits required field(s): ${missingRequired.join(', ')}.`);
+        }
+      }
+      if (!override.requireScreenshotProof) {
+        warnings.push(`blocked: element override ${override.id} disables required light/dark/mobile screenshot proof.`);
+      }
+      const copyText = Object.values(override.copyOverrides).join(' ');
+      const forbidden = FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => copyText.toLowerCase().includes(term.toLowerCase()));
+      if (forbidden) warnings.push(`blocked: element override ${override.id} contains forbidden staff term "${forbidden}".`);
     }
     return warnings;
   }
@@ -4294,11 +4324,77 @@ const FRONTEND_MCP_ALLOWED_SLOTS: FrontendCustomizationSlot[] = [
   'modal.customer_context',
 ];
 
+const FRONTEND_MCP_ELEMENT_FIELDS: Record<string, FrontendCustomizationElementField[]> = {
+  'kpi.row': ['title', 'requiredAction'],
+  'daily.card': [
+    'title',
+    'actionBadge',
+    'requiredAction',
+    'phone',
+    'email',
+    'assignee',
+    'focus',
+    'segmentPriority',
+    'latestOrder',
+    'performance30d',
+    'segmentChip',
+    'pinButton',
+    'archiveButton',
+    'transferButton',
+    'urgencyScore',
+  ],
+  'priority.card': [
+    'customerName',
+    'phone',
+    'email',
+    'actionButtons',
+    'urgencyScore',
+    'priorityBrief',
+    'reason',
+    'latestOrder',
+    'latestCall',
+    'openFollowUp',
+    'latestNote',
+    'segmentChip',
+    'orderSummary',
+  ],
+  'task.modal': [
+    'title',
+    'phone',
+    'email',
+    'hero',
+    'steps',
+    'snapshotGrid',
+    'reasonField',
+    'moodField',
+    'outcomeField',
+    'extraChecks',
+    'callExcerpt',
+    'purchaseHistory',
+    'callSummary',
+    'timeline',
+    'noteForm',
+    'scheduleForm',
+    'customerSidePanel',
+    'footer',
+  ],
+  'customer.detail.popup': ['customerName', 'phone', 'email', 'latestOrder', 'latestCall', 'openFollowUp', 'latestNote'],
+};
+
+const FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS: Record<string, FrontendCustomizationElementField[]> = {
+  'kpi.row': [],
+  'daily.card': ['title', 'requiredAction', 'phone'],
+  'priority.card': ['customerName', 'phone', 'latestOrder', 'latestCall', 'openFollowUp', 'latestNote'],
+  'task.modal': ['title', 'phone', 'hero', 'steps'],
+  'customer.detail.popup': ['customerName', 'phone'],
+};
+
 const EMPTY_FRONTEND_CUSTOMIZATION: FrontendCustomizationDefinition = {
   surfaceId: 'staff.queue',
   schemaVersion: 1,
   description: 'Default staff queue layout without tenant MCP overlays.',
   blocks: [],
+  elementOverrides: [],
   theme: { density: 'comfortable', accent: 'accent' },
 };
 
@@ -4339,42 +4435,52 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
         elementId: 'kpi.row',
         label: 'KPI row',
         slots: ['kpi.before', 'kpi.after'],
-        currentSupport: 'Add safe KPI/stat/message blocks before or after native KPI tiles.',
-        nextSafeSupport: 'Typed element override for KPI order, labels, density, and field visibility.',
+        fields: FRONTEND_MCP_ELEMENT_FIELDS['kpi.row'],
+        requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['kpi.row'],
+        currentSupport: 'Add safe KPI/stat/message blocks and use typed overrides for labels and density.',
+        nextSafeSupport: 'Source patch lane only for deeper KPI order changes.',
       },
       {
         elementId: 'daily.card',
         label: 'Daily call card',
         slots: ['daily.card.after_brief', 'daily.card.footer'],
-        currentSupport: 'Add call instruction, warning, badge, field, or checklist blocks using live dailyCall data.',
-        nextSafeSupport: 'Typed override for visible fields, business copy, urgency emphasis, and card density.',
+        fields: FRONTEND_MCP_ELEMENT_FIELDS['daily.card'],
+        requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['daily.card'],
+        currentSupport: 'Add call instruction blocks and use typed overrides for visible fields, business copy, urgency emphasis, and card density.',
+        nextSafeSupport: 'Source patch lane only for brand-new native daily card components.',
       },
       {
         elementId: 'priority.card',
         label: 'Priority customer card',
         slots: ['priority.card.after_summary', 'priority.card.footer'],
-        currentSupport: 'Add customer opportunity, risk, or note reminder blocks using live priorityCustomer data.',
-        nextSafeSupport: 'Typed override for order/call/note field layout and customer opportunity labels.',
+        fields: FRONTEND_MCP_ELEMENT_FIELDS['priority.card'],
+        requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['priority.card'],
+        currentSupport: 'Add customer opportunity blocks and use typed overrides for order/call/note visibility and labels.',
+        nextSafeSupport: 'Source patch lane only for brand-new native priority card components.',
       },
       {
         elementId: 'task.modal',
         label: 'Call detail modal',
         slots: ['modal.hero', 'modal.after_steps', 'modal.customer_context'],
-        currentSupport: 'Add first-viewport guidance, operator checklists, and customer context blocks.',
-        nextSafeSupport: 'Typed override for modal section order, first-screen emphasis, and long-history placement.',
+        fields: FRONTEND_MCP_ELEMENT_FIELDS['task.modal'],
+        requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['task.modal'],
+        currentSupport: 'Add first-viewport guidance and use typed overrides for modal section order, first-screen emphasis, and long-history placement.',
+        nextSafeSupport: 'Source patch lane only for new modal sections outside the allowlist.',
       },
       {
         elementId: 'customer.detail.popup',
         label: 'Customer detail popup',
         slots: [],
-        currentSupport: 'No runtime overlay slot yet; centered popup must stay centered and source patching requires stricter lane.',
+        fields: FRONTEND_MCP_ELEMENT_FIELDS['customer.detail.popup'],
+        requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['customer.detail.popup'],
+        currentSupport: 'Typed field contract is exposed; centered popup must stay centered and source patching requires stricter lane.',
         nextSafeSupport: 'Add typed slots for profile header, order tab summary, call tab summary, and notes tab helper blocks.',
       },
     ],
     extensionRoadmap: [
-      'Add typed elementOverrides for field visibility, copy overrides, density, emphasis, and tone rules.',
-      'Add role/person variants so Linda and Ihsan can see different safe emphasis without branching source files.',
-      'Add screenshot preview proof for light, dark, desktop, and mobile before activation.',
+      'Use typed elementOverrides for field visibility, copy overrides, density, emphasis, and tone rules.',
+      'Use role/person variants so Linda and Ihsan can see different safe emphasis without branching source files.',
+      'Keep screenshot preview proof for light, dark, desktop, and mobile before activation.',
       'Keep arbitrary HTML/CSS and source-file edits behind a separate maintainer-only patch lane.',
     ],
     themeChecklist: [

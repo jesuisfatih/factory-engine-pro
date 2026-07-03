@@ -106,7 +106,12 @@ Do not use raw HTML, script tags, arbitrary CSS, iframe embeds, or remote assets
 
 ## What The Patron Can Change Now
 
-The current MCP frontend system is an overlay system. It can add safe, data-bound blocks into approved slots. It cannot freely restyle every existing React element yet.
+The current MCP frontend system has two safe runtime layers:
+
+- overlay blocks in approved slots
+- typed `elementOverrides` for approved native elements
+
+It cannot freely restyle every existing React element, and it never accepts raw HTML or CSS from prompts.
 
 Allowed now:
 
@@ -118,6 +123,13 @@ Allowed now:
 - add customer context blocks inside the modal
 - use live API data tokens in text
 - show or hide an overlay block based on live data conditions
+- show or hide approved fields on approved native elements
+- rename approved labels and short button copy
+- set card/modal density: `comfortable` or `compact`
+- set emphasis: `normal`, `high`, or `quiet`
+- set tone by urgency with `toneRule: "urgency"`
+- reorder approved call-detail modal sections with `sectionOrder`
+- target variants by `memberIds`, `memberEmails`, or `roleNames`
 - set block tone: `neutral`, `info`, `success`, `warning`, `danger`, `accent`
 - keep changes as `draft`, activate them, list history, and rollback
 
@@ -131,7 +143,7 @@ Not allowed in the current overlay DSL:
 - adding remote scripts, tracking pixels, iframes, or external assets
 - changing source files through the runtime customization tools
 
-When the patron asks for "CSS" or "HTML", translate the request into safe blocks, tones, density, copy, and visibility rules. If the requested result needs true source-file editing, say that it requires the separate source patch lane and must include build plus screenshot verification.
+When the patron asks for "CSS" or "HTML", translate the request into safe blocks, typed `elementOverrides`, tones, density, copy, visibility, and section ordering. If the requested result needs true source-file editing, say that it requires the separate source patch lane and must include build plus screenshot verification.
 
 ## Staff Queue Element Map
 
@@ -155,54 +167,82 @@ Element map:
 
 | Element | Native class or slot | Current MCP action | Notes |
 | --- | --- | --- | --- |
-| KPI row | `kpi.before`, `kpi.after` | add `stat_tile`, `message`, `badge`, `field`, `section` | Good for "must call", refund, purchase intent, unmatched caller stats. |
+| Element | Native class or slot | Current MCP action | Notes |
+| --- | --- | --- | --- |
+| KPI row | `kpi.before`, `kpi.after`, `elementId: "kpi.row"` | add blocks; override density/copy | Good for "must call", refund, purchase intent, unmatched caller stats. |
 | Daily header | `daily.header`, `daily.before_list` | add guidance or filters explanation | Do not add segment grouping here. Daily list remains recent call work. |
-| Daily call card | `daily.card.after_brief`, `daily.card.footer` | add short instruction, warning, badge, checklist | Keep phone/action visible. Do not expose internal rule names. |
+| Daily call card | `daily.card.after_brief`, `daily.card.footer`, `elementId: "daily.card"` | add short blocks; override fields, copy, density, emphasis, urgency tone | Required fields: `title`, `requiredAction`, `phone`. Do not expose internal rule names. |
 | Priority group header | `priority.group.header` | add owner/group context | Priority is assigned customer groups, not recent calls. |
-| Priority customer card | `priority.card.after_summary`, `priority.card.footer` | add customer opportunity, risk, note reminders | Use customer/order/call facts only. |
-| Call modal top | `modal.hero` | add the strongest "do this now" block | First viewport must tell staff what happened and what to do. |
-| Call modal steps | `modal.after_steps` | add checklist or decision path | Keep it short enough for a call center operator. |
-| Modal customer context | `modal.customer_context` | add customer/order/call context | Do not duplicate long transcript text. |
-| Customer detail popup | native popup, no overlay slot yet | source patch lane only | Keep centered popup; never reintroduce right drawer. |
+| Priority customer card | `priority.card.after_summary`, `priority.card.footer`, `elementId: "priority.card"` | add customer blocks; override fields, copy, density, urgency tone | Required fields: `customerName`, `phone`, `latestOrder`, `latestCall`, `openFollowUp`, `latestNote`. |
+| Call modal | `modal.hero`, `modal.after_steps`, `modal.customer_context`, `elementId: "task.modal"` | add modal blocks; override labels and approved section order | Required fields: `title`, `phone`, `hero`, `steps`. |
+| Customer detail popup | `elementId: "customer.detail.popup"` | source patch lane for now; contract exposes required fields | Keep centered popup; never reintroduce right drawer. |
 
-## Recommended Next Expansion
+## Element Overrides
 
-To let the patron control more of the staff panel without unsafe raw CSS, add a second MCP layer called element overrides. This should be typed, allowlisted, and previewed before activation.
+Use `elementOverrides` when the patron asks to change native card/modal behavior without source editing.
 
-Recommended schema direction:
+Supported element ids:
+
+- `kpi.row`
+- `daily.card`
+- `priority.card`
+- `task.modal`
+- `customer.detail.popup`
+
+Supported override fields:
+
+- `visibleFields`
+- `hiddenFields`
+- `copyOverrides`
+- `density`
+- `emphasis`
+- `toneRule`
+- `tone`
+- `sectionOrder` for `task.modal` only
+- `audience.memberIds`
+- `audience.memberEmails`
+- `audience.roleNames`
+
+Every active element override must keep `requireScreenshotProof: true`. Before activation, capture or require desktop light, desktop dark, and mobile screenshots for `/staff/queue`.
+
+Example:
 
 ```json
 {
   "surfaceId": "staff.queue",
+  "schemaVersion": 1,
+  "blocks": [],
   "elementOverrides": [
     {
+      "id": "linda_compact_daily_calls",
       "elementId": "daily.card",
-      "label": "Daily call card",
-      "density": "comfortable",
+      "audience": { "memberEmails": ["linda@dtfbank.com"] },
+      "density": "compact",
       "emphasis": "high",
       "toneRule": "urgency",
-      "visibleFields": ["phone", "requiredAction", "assignee", "purchaseIntent", "latestOrder"],
-      "hiddenFields": ["internalSource", "ruleName", "axis"],
+      "visibleFields": ["title", "requiredAction", "phone", "assignee", "focus", "latestOrder", "performance30d", "pinButton", "archiveButton", "transferButton", "urgencyScore"],
       "copyOverrides": {
-        "callSummary": "Call summary",
-        "purchaseIntent": "Purchase intent",
-        "customerConcern": "Customer concern"
-      }
+        "actionLabel": "Call priority",
+        "requiredAction": "Call now, confirm the exact next step, and save the outcome."
+      },
+      "requireScreenshotProof": true
+    },
+    {
+      "id": "modal_order_history_first",
+      "elementId": "task.modal",
+      "toneRule": "urgency",
+      "sectionOrder": ["hero", "snapshotGrid", "purchaseHistory", "reasonField", "moodField", "outcomeField", "timeline", "noteForm", "scheduleForm"],
+      "copyOverrides": {
+        "heroKicker": "Handle this now",
+        "timelineLabel": "Customer history before calling"
+      },
+      "requireScreenshotProof": true
     }
   ]
 }
 ```
 
-That next layer should support:
-
-- safe design tokens instead of raw CSS
-- per-element field visibility
-- per-element label/copy overrides
-- per-element density and emphasis
-- role/person variants, for example Linda versus Ihsan
-- light/dark preview checks
-- screenshot proof before publish
-- rollback to the previous active customization
+Preview rejects hidden required fields, unsupported fields, forbidden staff terminology, and disabled screenshot proof.
 
 Do not implement arbitrary freeform CSS as the main path. It will let agents break readability, hide business fields, or inject unsafe content. Use source patch tools only for maintainers, not routine patron styling.
 

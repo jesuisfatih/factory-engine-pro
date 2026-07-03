@@ -9,7 +9,7 @@ import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } f
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
-import { FrontendCustomizationSlotView } from '../components/FrontendCustomization';
+import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
@@ -225,6 +225,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <DailyWorkflowList
               cards={daily}
               customization={frontendCustomization}
+              summary={summary}
               emptyLabel={archive ? 'No archived call tasks.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
               reorderDisabled={reorderDaily.isPending}
               onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
@@ -253,6 +254,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   key={group.segmentId}
                   group={group}
                   customization={frontendCustomization}
+                  summary={summary}
                   collapsed={Boolean(collapsedGroups[group.segmentId])}
                   onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
                   onTogglePin={(item) => customerPin.mutate(item.customerId)}
@@ -274,7 +276,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         </div>
       </QueryState>
 
-      {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} onClose={closeTaskModal} />}
+      {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} onClose={closeTaskModal} />}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}
@@ -322,6 +324,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
 function DailyWorkflowList({
   cards,
   customization,
+  summary,
   emptyLabel,
   reorderDisabled,
   onReorder,
@@ -332,6 +335,7 @@ function DailyWorkflowList({
 }: {
   cards: CardData[];
   customization: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
   emptyLabel: string;
   reorderDisabled: boolean;
   onReorder: (orderedItemIds: string[]) => void;
@@ -364,6 +368,7 @@ function DailyWorkflowList({
               key={row.card.id}
               card={row.card}
               customization={customization}
+              summary={summary}
               disabled={reorderDisabled}
               onTogglePin={() => onTogglePin(row.card)}
               onArchive={() => onArchive(row.card)}
@@ -380,6 +385,7 @@ function DailyWorkflowList({
 function SortableDailyTaskCard({
   card,
   customization,
+  summary,
   disabled,
   onTogglePin,
   onArchive,
@@ -388,6 +394,7 @@ function SortableDailyTaskCard({
 }: {
   card: CardData;
   customization: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
   disabled: boolean;
   onTogglePin: () => void;
   onArchive: () => void;
@@ -413,9 +420,9 @@ function SortableDailyTaskCard({
         <GripVertical size={13} />
       </button>
       <div className="daily-task-main">
-        <Card card={card} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
-        <FrontendCustomizationSlotView customization={customization} slot="daily.card.after_brief" context={{ dailyCall: card }} />
-        <FrontendCustomizationSlotView customization={customization} slot="daily.card.footer" context={{ dailyCall: card }} />
+        <Card card={card} customization={customization} summary={summary} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
+        <FrontendCustomizationSlotView customization={customization} slot="daily.card.after_brief" context={{ dailyCall: card, summary }} />
+        <FrontendCustomizationSlotView customization={customization} slot="daily.card.footer" context={{ dailyCall: card, summary }} />
       </div>
     </div>
   );
@@ -424,6 +431,7 @@ function SortableDailyTaskCard({
 function PrioritySegmentGroup({
   group,
   customization,
+  summary,
   collapsed,
   onToggle,
   onTogglePin,
@@ -435,6 +443,7 @@ function PrioritySegmentGroup({
 }: {
   group: SegmentDailyGroup;
   customization: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
   collapsed: boolean;
   onToggle: () => void;
   onTogglePin: (item: DailyCallItem) => void;
@@ -445,6 +454,12 @@ function PrioritySegmentGroup({
   callDisabled: boolean;
 }) {
   const cap = group.dailyCap ?? group.totalCustomers;
+  const groupSummary = {
+    ...(typeof summary === 'object' && summary && !Array.isArray(summary) ? summary as Record<string, unknown> : {}),
+    groupName: group.segmentName,
+    groupCount: group.items.length,
+    groupCap: cap,
+  };
   return (
     <section className="segment-group" aria-label={group.segmentName}>
       <button type="button" className={`segment-group-toggle${collapsed ? ' collapsed' : ''}`} onClick={onToggle} aria-expanded={!collapsed}>
@@ -453,7 +468,7 @@ function PrioritySegmentGroup({
         <span className="segment-group-title">{group.segmentName}</span>
         <span className="segment-group-meta">{group.items.length}/{cap}</span>
       </button>
-      <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: { groupName: group.segmentName, groupCount: group.items.length, groupCap: cap } }} />
+      <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: groupSummary }} />
       {!collapsed && (
         <div className="segment-group-items">
           {group.items.length === 0 ? (
@@ -463,6 +478,7 @@ function PrioritySegmentGroup({
               key={item.id}
               item={item}
               customization={customization}
+              summary={summary}
               onTogglePin={() => onTogglePin(item)}
               onOpen={() => onOpenCustomer(item)}
               onAddNote={() => onAddNote(item)}
@@ -480,6 +496,7 @@ function PrioritySegmentGroup({
 function SegmentCustomerCard({
   item,
   customization,
+  summary,
   onTogglePin,
   onOpen,
   onAddNote,
@@ -489,6 +506,7 @@ function SegmentCustomerCard({
 }: {
   item: DailyCallItem;
   customization: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
   onTogglePin: () => void;
   onOpen: () => void;
   onAddNote: () => void;
@@ -497,6 +515,7 @@ function SegmentCustomerCard({
   callDisabled: boolean;
 }) {
   const orderSummary = `${item.ordersCount} orders | ${formatCurrency(item.totalSpent)}`;
+  const override = frontendElementOverride(customization, 'priority.card', { priorityCustomer: item, summary });
   const latestOrder = item.latestOrder
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
     : 'No linked order';
@@ -514,7 +533,7 @@ function SegmentCustomerCard({
 
   return (
     <article
-      className="daily-card segment-customer-card"
+      className={`daily-card segment-customer-card ${frontendElementClassName(override, item.urgencyScore)}`}
       data-priority-customer-id={item.id}
       tabIndex={0}
       role="button"
@@ -532,13 +551,15 @@ function SegmentCustomerCard({
           }}
           title="Open customer history"
         >
-          <span className="daily-title">{item.customerName}</span>
-          <span className="segment-customer-contact">
-            <span><strong>Phone</strong>{item.phone ? item.phone : 'No phone on file'}</span>
-            {item.email ? <span><strong>Email</strong>{item.email}</span> : null}
-          </span>
+          {frontendFieldVisible(override, 'customerName') ? <span className="daily-title">{item.customerName}</span> : null}
+          {(frontendFieldVisible(override, 'phone') || frontendFieldVisible(override, 'email')) ? (
+            <span className="segment-customer-contact">
+              {frontendFieldVisible(override, 'phone') ? <span><strong>{frontendCopy(override, 'phoneLabel', 'Phone')}</strong>{item.phone ? item.phone : 'No phone on file'}</span> : null}
+              {item.email && frontendFieldVisible(override, 'email') ? <span><strong>{frontendCopy(override, 'emailLabel', 'Email')}</strong>{item.email}</span> : null}
+            </span>
+          ) : null}
         </button>
-        <div className="segment-customer-actions" aria-label={`${item.customerName} actions`}>
+        {frontendFieldVisible(override, 'actionButtons') ? <div className="segment-customer-actions" aria-label={`${item.customerName} actions`}>
           <button
             type="button"
             className={`quick-action${item.phone ? '' : ' disabled'}`}
@@ -552,7 +573,7 @@ function SegmentCustomerCard({
             }}
           >
             <Phone size={12} />
-            <span>Call</span>
+            <span>{frontendCopy(override, 'callButton', 'Call')}</span>
           </button>
           <button
             type="button"
@@ -565,7 +586,7 @@ function SegmentCustomerCard({
             }}
           >
             <StickyNote size={12} />
-            <span>Note</span>
+            <span>{frontendCopy(override, 'noteButton', 'Note')}</span>
           </button>
           <button
             type="button"
@@ -578,32 +599,34 @@ function SegmentCustomerCard({
             }}
             disabled={disabled}
           >
-            {item.pinned ? 'Pinned' : 'Pin'}
+            {item.pinned ? frontendCopy(override, 'pinnedLabel', 'Pinned') : frontendCopy(override, 'pinLabel', 'Pin')}
           </button>
-        </div>
-        <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span>
+        </div> : null}
+        {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
       </div>
-      <div className={`priority-brief ${urgencyClass}`}>{customerBrief}</div>
-      <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item }} />
-      <div className="daily-meta">{personSafeText(item.reason)}</div>
-      <div className="segment-customer-insights">
-        <span className="insight-order"><strong>Latest order</strong>{latestOrder}</span>
-        <span className="insight-call"><strong>Latest call</strong>{latestCall}</span>
-        <span><strong>Open follow-up</strong>{item.openTasksCount} items | {item.openRequestsCount} customer requests | {item.notesCount} notes</span>
-        {item.latestNote ? (
+      {frontendFieldVisible(override, 'priorityBrief') ? <div className={`priority-brief ${urgencyClass}`}>{frontendCopy(override, 'priorityBrief', customerBrief)}</div> : null}
+      <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
+      {frontendFieldVisible(override, 'reason') ? <div className="daily-meta">{personSafeText(item.reason)}</div> : null}
+      {(frontendFieldVisible(override, 'latestOrder') || frontendFieldVisible(override, 'latestCall') || frontendFieldVisible(override, 'openFollowUp') || frontendFieldVisible(override, 'latestNote')) ? (
+        <div className="segment-customer-insights">
+        {frontendFieldVisible(override, 'latestOrder') ? <span className="insight-order"><strong>{frontendCopy(override, 'latestOrderLabel', 'Latest order')}</strong>{latestOrder}</span> : null}
+        {frontendFieldVisible(override, 'latestCall') ? <span className="insight-call"><strong>{frontendCopy(override, 'latestCallLabel', 'Latest call')}</strong>{latestCall}</span> : null}
+        {frontendFieldVisible(override, 'openFollowUp') ? <span><strong>{frontendCopy(override, 'openFollowUpLabel', 'Open follow-up')}</strong>{item.openTasksCount} items | {item.openRequestsCount} customer requests | {item.notesCount} notes</span> : null}
+        {frontendFieldVisible(override, 'latestNote') && item.latestNote ? (
           <span className="segment-customer-latest-note">
             <strong>{item.latestNote.authorName}</strong>
             {item.latestNote.body}
           </span>
-        ) : (
-          <span><strong>Latest note</strong>No personnel note yet</span>
-        )}
-      </div>
+        ) : frontendFieldVisible(override, 'latestNote') ? (
+          <span><strong>{frontendCopy(override, 'latestNoteLabel', 'Latest note')}</strong>No personnel note yet</span>
+        ) : null}
+        </div>
+      ) : null}
       <div className="segment-customer-foot">
-        <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span>
-        <span className="segment-customer-orders">{orderSummary}</span>
+        {frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span> : null}
+        {frontendFieldVisible(override, 'orderSummary') ? <span className="segment-customer-orders">{orderSummary}</span> : null}
       </div>
-      <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item }} />
+      <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item, summary }} />
     </article>
   );
 }

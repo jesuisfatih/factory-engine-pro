@@ -387,6 +387,12 @@ export class PersonWorkspaceService {
 
     return {
       summary: {
+        viewer: {
+          id: member.id,
+          email: member.email ?? null,
+          name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email || member.id,
+          roleNames: member.roleAssignments.map((assignment) => assignment.role.name),
+        },
         dailyCount: dailyCallList.length,
         priorityCount: segmentGroups.reduce((total, group) => total + group.items.length, 0),
         pinnedCount: pinBoard.length,

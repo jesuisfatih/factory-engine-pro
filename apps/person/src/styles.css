@@ -216,6 +216,37 @@ button { font-family: inherit; }
 .daily-task-main > .mcp-ui-slot,
 .segment-customer-card > .mcp-ui-slot,
 .brief-main > .mcp-ui-slot { margin-top: 6px; }
+.mcp-element { transition: border-color .12s, background .12s, box-shadow .12s, padding .12s; }
+.mcp-element-density-compact.card,
+.mcp-element-density-compact.segment-customer-card { padding: 9px 10px; }
+.mcp-element-density-compact .staff-brief,
+.mcp-element-density-compact .card-contact-line,
+.mcp-element-density-compact .assign-line,
+.mcp-element-density-compact .card-signals { margin-top: 6px; }
+.mcp-element-density-compact .staff-brief,
+.mcp-element-density-compact .card-signals span,
+.mcp-element-density-compact .card-contact-line span,
+.mcp-element-density-compact .assign-line span { padding-top: 4px; padding-bottom: 4px; }
+.mcp-element-density-compact.brief-modal .brief-main { gap: 9px; }
+.mcp-element-density-compact.brief-modal .brief-block,
+.mcp-element-density-compact.brief-modal .brief-showcase,
+.mcp-element-density-compact.brief-modal .brief-snapshot-card { padding: 10px 12px; }
+.mcp-element-emphasis-high { box-shadow: 0 10px 28px rgba(29, 78, 216, .14); }
+.mcp-element-emphasis-quiet { box-shadow: none; opacity: .94; }
+.mcp-element-tone-danger { border-color: color-mix(in srgb, var(--danger) 42%, var(--border)) !important; }
+.mcp-element-tone-warning { border-color: color-mix(in srgb, var(--warn) 42%, var(--border)) !important; }
+.mcp-element-tone-success { border-color: color-mix(in srgb, var(--success) 35%, var(--border)) !important; }
+.mcp-element-tone-info { border-color: color-mix(in srgb, var(--info) 35%, var(--border)) !important; }
+.mcp-element-tone-accent { border-color: color-mix(in srgb, var(--accent) 42%, var(--border)) !important; }
+.card.mcp-element-tone-danger,
+.segment-customer-card.mcp-element-tone-danger { border-left-color: var(--danger); }
+.card.mcp-element-tone-warning,
+.segment-customer-card.mcp-element-tone-warning { border-left-color: var(--warn); }
+.card.mcp-element-tone-success,
+.segment-customer-card.mcp-element-tone-success { border-left-color: var(--success); }
+.card.mcp-element-tone-info,
+.segment-customer-card.mcp-element-tone-info { border-left-color: var(--info); }
+.brief-section-shell { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 
 /* ─── Kanban ─────────────────────────────────────────────── */
 .queue-wrap { display: block; min-height: 0; }

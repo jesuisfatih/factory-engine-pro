@@ -1,7 +1,9 @@
 import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, Mail, Phone, ShoppingBag, Tags } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import type { Card as CardData, TaskSource } from '../types';
 import { focusLabel, personSafeText, staffActionLabel, staffActionTone, staffBriefLine, taskSourceLabel } from '../lib/personTerminology';
+import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible } from './FrontendCustomization';
 
 interface Props {
   card: CardData;
@@ -9,6 +11,8 @@ interface Props {
   onArchive?: (card: CardData) => void;
   onOpen?: (id: string) => void;
   onTransfer?: (card: CardData) => void;
+  customization?: FrontendCustomizationRuntimeDto | null;
+  summary?: unknown;
 }
 
 function priorityClass(priority: number) {
@@ -29,8 +33,9 @@ function fmtMoney(value: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
-export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props) {
+export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customization, summary }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
+  const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
   const actionInput = {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
     tags: card.psychTags,
@@ -41,7 +46,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
   };
   const actionLabel = staffActionLabel(actionInput);
   const actionTone = staffActionTone(actionInput);
-  const briefLine = staffBriefLine(actionInput);
+  const briefLine = frontendCopy(override, 'requiredAction', staffBriefLine(actionInput));
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
     : card.ordersCount
@@ -53,59 +58,67 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
   const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
   return (
     <div
-      className="card"
+      className={`card ${frontendElementClassName(override, card.urgencyScore)}`}
       onClick={() => {
         onOpen?.(card.id);
       }}
     >
       <div className="row1">
-        <span className="title">{personSafeText(card.title)}</span>
-        {meta ? (
+        {frontendFieldVisible(override, 'title') ? <span className="title">{personSafeText(card.title)}</span> : null}
+        {meta && frontendFieldVisible(override, 'actionBadge') ? (
           <span className={`action-badge tone-${actionTone}`} title={meta.label}>
             <meta.icon size={9} />
-            <span>{actionLabel}</span>
+            <span>{frontendCopy(override, 'actionLabel', actionLabel)}</span>
           </span>
         ) : null}
-        <span className={priorityClass(card.priority)} title={card.urgencyBreakdown.intent ?? 'urgency score'}>
-          U{card.urgencyScore}
-        </span>
-      </div>
-      <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div>
-      {(card.phone || card.email) ? (
-        <div className="card-contact-line">
-          {card.phone ? <span><Phone size={12} /> {card.phone}</span> : null}
-          {card.email ? <span><Mail size={12} /> {card.email}</span> : null}
-        </div>
-      ) : null}
-      <div className="assign-line">
-        <span>{card.assignedMemberName ? card.assignedMemberName : 'Unassigned'}</span>
-        <span>{focusLabel(card.axis)}</span>
-        {card.segmentPriority !== null && card.segmentPriority !== undefined ? (
-          <span>{`Customer group P${card.segmentPriority}`}</span>
+        {frontendFieldVisible(override, 'urgencyScore') ? (
+          <span className={priorityClass(card.priority)} title={card.urgencyBreakdown.intent ?? 'urgency score'}>
+            U{card.urgencyScore}
+          </span>
         ) : null}
       </div>
-      <div className="card-signals">
-        <span title="Latest Shopify order"><ShoppingBag size={10} /> {lastOrder}</span>
-        <span title="Last 30 days"><Activity size={10} /> {performance}</span>
-      </div>
+      {frontendFieldVisible(override, 'requiredAction') ? <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div> : null}
+      {(card.phone || card.email) && (frontendFieldVisible(override, 'phone') || frontendFieldVisible(override, 'email')) ? (
+        <div className="card-contact-line">
+          {card.phone && frontendFieldVisible(override, 'phone') ? <span><Phone size={12} /> {card.phone}</span> : null}
+          {card.email && frontendFieldVisible(override, 'email') ? <span><Mail size={12} /> {card.email}</span> : null}
+        </div>
+      ) : null}
+      {(frontendFieldVisible(override, 'assignee') || frontendFieldVisible(override, 'focus') || frontendFieldVisible(override, 'segmentPriority')) ? (
+        <div className="assign-line">
+          {frontendFieldVisible(override, 'assignee') ? <span>{card.assignedMemberName ? card.assignedMemberName : frontendCopy(override, 'assigneeFallback', 'Unassigned')}</span> : null}
+          {frontendFieldVisible(override, 'focus') ? <span>{frontendCopy(override, 'focusLabel', focusLabel(card.axis))}</span> : null}
+          {frontendFieldVisible(override, 'segmentPriority') && card.segmentPriority !== null && card.segmentPriority !== undefined ? (
+            <span>{frontendCopy(override, 'segmentPriorityLabel', `Customer group P${card.segmentPriority}`)}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {(frontendFieldVisible(override, 'latestOrder') || frontendFieldVisible(override, 'performance30d')) ? (
+        <div className="card-signals">
+          {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><ShoppingBag size={10} /> {lastOrder}</span> : null}
+          {frontendFieldVisible(override, 'performance30d') ? <span title={frontendCopy(override, 'performanceTitle', 'Last 30 days')}><Activity size={10} /> {performance}</span> : null}
+        </div>
+      ) : null}
       <div className="row2">
-        {staffSegment ? <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span> : null}
-        <button
-          type="button"
-          className={`pin-btn${card.pinned ? ' pinned' : ''}`}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onTogglePin(card.id);
-          }}
-        >
-          {card.pinned ? 'Pinned' : 'Pin'}
-        </button>
-        {card.kind === 'task' && onArchive ? (
+        {staffSegment && frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span> : null}
+        {frontendFieldVisible(override, 'pinButton') ? (
+          <button
+            type="button"
+            className={`pin-btn${card.pinned ? ' pinned' : ''}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onTogglePin(card.id);
+            }}
+          >
+            {card.pinned ? frontendCopy(override, 'pinnedLabel', 'Pinned') : frontendCopy(override, 'pinLabel', 'Pin')}
+          </button>
+        ) : null}
+        {card.kind === 'task' && onArchive && frontendFieldVisible(override, 'archiveButton') ? (
           <button
             type="button"
             className="archive-btn"
-            title="Archive from my Daily list"
+            title={frontendCopy(override, 'archiveTitle', 'Archive from my Daily list')}
             aria-label={`Archive ${card.title}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -114,14 +127,14 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
             }}
           >
             <Archive size={12} />
-            <span>Archive</span>
+            <span>{frontendCopy(override, 'archiveLabel', 'Archive')}</span>
           </button>
         ) : null}
-        {card.kind === 'task' ? (
+        {card.kind === 'task' && frontendFieldVisible(override, 'transferButton') ? (
           <button
             type="button"
             className="transfer-btn"
-            title="Transfer follow-up"
+            title={frontendCopy(override, 'transferTitle', 'Transfer follow-up')}
             aria-label={`Transfer ${card.title}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -130,7 +143,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer }: Props
             }}
           >
             <ArrowRightLeft size={12} />
-            <span>Transfer</span>
+            <span>{frontendCopy(override, 'transferLabel', 'Transfer')}</span>
           </button>
         ) : null}
       </div>
