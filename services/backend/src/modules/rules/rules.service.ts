@@ -2904,7 +2904,7 @@ export class RulesService {
         warnings.push(`blocked: slot ${block.slot} is not allowed.`);
       }
       const text = [block.label, block.title, block.text, block.template, ...block.items].filter(Boolean).join(' ');
-      const forbidden = FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => text.toLowerCase().includes(term.toLowerCase()));
+      const forbidden = findForbiddenStaffTerm(text);
       if (forbidden) warnings.push(`blocked: block ${block.id} contains forbidden staff term "${forbidden}".`);
     }
     for (const override of definition.elementOverrides) {
@@ -2933,7 +2933,7 @@ export class RulesService {
         warnings.push(`blocked: element override ${override.id} disables required light/dark/mobile screenshot proof.`);
       }
       const copyText = Object.values(override.copyOverrides).join(' ');
-      const forbidden = FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => copyText.toLowerCase().includes(term.toLowerCase()));
+      const forbidden = findForbiddenStaffTerm(copyText);
       if (forbidden) warnings.push(`blocked: element override ${override.id} contains forbidden staff term "${forbidden}".`);
     }
     return warnings;
@@ -4296,6 +4296,13 @@ const FRONTEND_MCP_FORBIDDEN_STAFF_TERMS = [
   'support axis',
   'internal resolver',
 ] as const;
+
+function findForbiddenStaffTerm(text: string) {
+  return FRONTEND_MCP_FORBIDDEN_STAFF_TERMS.find((term) => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text);
+  });
+}
 
 const FRONTEND_MCP_PREFERRED_STAFF_TERMS = [
   'Call summary',
