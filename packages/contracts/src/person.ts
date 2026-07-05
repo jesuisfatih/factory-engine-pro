@@ -137,6 +137,9 @@ export const personPerformance30dSchema = z.object({
 });
 export type PersonPerformance30d = z.infer<typeof personPerformance30dSchema>;
 
+export const personCustomerRiskSchema = z.enum(['none', 'at_risk', 'lost']);
+export type PersonCustomerRisk = z.infer<typeof personCustomerRiskSchema>;
+
 export const personQueueCardSchema = z.object({
   kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
@@ -170,6 +173,10 @@ export const personQueueCardSchema = z.object({
   miniOrder: personMiniOrderSchema.optional(),
   performance30d: personPerformance30dSchema.optional(),
   createdAt: z.string().optional(),
+  unreached: z.boolean().optional(),
+  missedNote: z.string().nullable().optional(),
+  customerRisk: personCustomerRiskSchema.optional(),
+  customerRiskNote: z.string().nullable().optional(),
   callIntent: z.string().nullable().optional(),
   psychTags: z.array(z.string()).optional(),
   ctaPriority: z.array(z.string()).optional(),
@@ -272,6 +279,8 @@ export const personDailyCallItemSchema = z.object({
   openTasksCount: z.number().default(0),
   openRequestsCount: z.number().default(0),
   callsCount: z.number().default(0),
+  customerRisk: personCustomerRiskSchema.default('none'),
+  customerRiskNote: z.string().nullable().default(null),
   latestNote: z.object({
     id: z.string(),
     body: z.string(),
@@ -329,6 +338,12 @@ export const personDailyOperationsSchema = z.object({
     priorityCount: z.number(),
     pinnedCount: z.number(),
     highUrgencyCount: z.number(),
+    incomingCallsToday: z.number(),
+    outboundCallsToday: z.number(),
+    callsMadeToday: z.number(),
+    openRequestsCount: z.number(),
+    missedFollowUpCount: z.number(),
+    atRiskCustomerCount: z.number(),
     visibleAxes: z.array(z.string()),
     segmentGroupCount: z.number(),
   }),

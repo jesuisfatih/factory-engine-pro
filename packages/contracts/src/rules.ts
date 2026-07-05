@@ -258,6 +258,8 @@ export type FrontendCustomizationStatus = z.infer<typeof frontendCustomizationSt
 export const frontendCustomizationSlotSchema = z.enum([
   'kpi.before',
   'kpi.after',
+  'focus.before',
+  'focus.after',
   'daily.header',
   'daily.before_list',
   'daily.card.after_brief',

@@ -69,7 +69,7 @@ For frontend work:
 7. `apply_frontend_customization` only after preview warnings are clean and the user approves activation.
 8. `list_frontend_customizations`, `get_frontend_customization`, and `rollback_frontend_customization` provide audit and rollback.
 
-Frontend customization does not accept raw scripts, arbitrary CSS, unsafe HTML, or source-file writes. It changes the staff UI through controlled slots such as `kpi.after`, `daily.card.after_brief`, `priority.card.after_summary`, and `modal.hero`, plus sanitized `contentBlocks`, bounded `themeOverrides`, typed `elementOverrides`, and typed `navigationOverrides`. Blocks can bind to live response data and use visibility conditions, so agents can express "show this field only when open requests are greater than zero" without editing React code.
+Frontend customization does not accept raw scripts, arbitrary CSS, unsafe HTML, or source-file writes. It changes the staff UI through controlled slots such as `kpi.after`, `focus.before`, `focus.after`, `daily.card.after_brief`, `priority.card.after_summary`, and `modal.hero`, plus sanitized `contentBlocks`, bounded `themeOverrides`, typed `elementOverrides`, and typed `navigationOverrides`. Blocks can bind to live response data and use visibility conditions, so agents can express "show this field only when open requests are greater than zero" without editing React code.
 
 The staff UI contract includes an element map. Treat it as the source of truth for what can be changed today:
 

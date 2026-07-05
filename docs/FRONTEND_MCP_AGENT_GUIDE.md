@@ -54,6 +54,8 @@ Allowed slots:
 [
   "kpi.before",
   "kpi.after",
+  "focus.before",
+  "focus.after",
   "daily.header",
   "daily.before_list",
   "daily.card.after_brief",
@@ -435,7 +437,8 @@ Element map:
 
 | Element | Native class or slot | Current MCP action | Notes |
 | --- | --- | --- | --- |
-| KPI row | `kpi.before`, `kpi.after`, `elementId: "kpi.row"` | add blocks; override density/copy | Good for "must call", refund, purchase intent, unmatched caller stats. |
+| KPI row | `kpi.before`, `kpi.after`, `elementId: "kpi.row"` | add blocks; override density/copy | Good for incoming calls, outbound calls, open requests, daily calls, priority customers, pinned, high intent, and sync status. |
+| Today focus | `focus.before`, `focus.after` | add staff instructions or stat blocks around the native command center | Bind only to live `summary` fields such as `missedFollowUpCount`, `atRiskCustomerCount`, `openRequestsCount`, `incomingCallsToday`, `outboundCallsToday`, and `callsMadeToday`. Do not fake counts. |
 | Daily header | `daily.header`, `daily.before_list` | add guidance or filters explanation | Do not add segment grouping here. Daily list remains recent call work. |
 | Daily call card | `daily.card.after_brief`, `daily.card.footer`, `elementId: "daily.card"` | add short blocks; override fields, copy, density, emphasis, urgency tone | Required fields: `title`, `requiredAction`, `phone`. Do not expose internal rule names. |
 | Priority group header | `priority.group.header` | add owner/group context | Priority is assigned customer groups, not recent calls. |

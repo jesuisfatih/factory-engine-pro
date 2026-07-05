@@ -53,36 +53,26 @@ export interface Card {
   columnId: ColumnId;
   pinned: boolean;
   pinnedAt: number | null;
-  /** Where the task came from. Generated sources get a small badge + open the live brief modal. */
   source: TaskSource;
-  /** Created timestamp used for Daily call list date grouping. */
   createdAt?: string;
-  /** Resolver call intent badge shown on Daily call list cards. */
+  unreached?: boolean;
+  missedNote?: string | null;
+  customerRisk?: 'none' | 'at_risk' | 'lost';
+  customerRiskNote?: string | null;
   callIntent?: string | null;
-  /** Resolver psych tag badges shown on Daily call list cards. */
   psychTags?: string[];
-  /** Phone + email surface for the customer card panel. */
   phone?: string;
   email?: string;
   ordersCount?: number;
   totalSpent?: number;
-  /** Present only when source !== 'manual'. */
   aiBrief?: TaskBrief;
-  /** Workflow decision context saved when rules created or routed the task. */
   workflowTrace?: PersonTaskWorkflowTrace;
-  /** Fire-time customer, segment, and recent order state copied onto the task. */
   taskStateSnapshot?: PersonTaskStateSnapshot;
-  /** Persisted workflow rule id used by the rule canvas link. */
   matchedRuleId?: string | null;
-  /** Latest Shopify order, projected onto the card for fast scanning. */
   miniOrder?: PersonMiniOrder;
-  /** Rolling 30-day customer signal summary. */
   performance30d?: PersonPerformance30d;
-  /** Runtime strategy output that safely reorders staff CTAs. */
   ctaPriority?: string[];
-  /** Runtime strategy output that safely reorders modal action guidance. */
   modalActionOrder?: string[];
-  /** Proof that a versioned strategy affected this card. */
   strategyProof?: PersonCardStrategyProof;
 }
 

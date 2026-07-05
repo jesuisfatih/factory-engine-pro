@@ -5,6 +5,7 @@ import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
   PersonAiPsychAnalysis,
+  PersonCustomerRisk,
   PersonCustomerArchiveQuery,
   PersonDailyCallItem,
   PersonEmailContact,
@@ -340,12 +341,13 @@ export class PersonWorkspaceService {
       ...memberships.map((membership) => membership.customerId),
       ...allRequestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, priorityCustomerContext] = await Promise.all([
+    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, priorityCustomerContext, todayAircallStats] = await Promise.all([
       this.customerPins(member.id, contextCustomerIds),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
       this.cardCallContext(allRequestRows),
       this.priorityCustomerContext(memberships.map((membership) => membership.customer)),
+      this.todayAircallStats(member, today.start, today.end),
     ]);
     const repeatCounts = initialRepeatCounts;
     const cardContext = initialCardContext;
@@ -412,6 +414,12 @@ export class PersonWorkspaceService {
       .filter((row) => row.customer)
       .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
     const pinBoard = [...pinnedTasks, ...pinnedCustomers].sort(sortByUrgency).slice(0, 120);
+    const openRequestsCount = scopedRows.filter((row) => !CLOSED.has(row.status) && isCustomerRequestLike(row)).length;
+    const missedFollowUpCount = dailyCallList.filter((card) => card.unreached || isMissedFollowUp(card, today.start)).length;
+    const atRiskCustomerCount = segmentGroups.reduce(
+      (total, group) => total + group.items.filter((item) => item.customerRisk !== 'none').length,
+      0,
+    );
 
     return {
       summary: {
@@ -425,6 +433,12 @@ export class PersonWorkspaceService {
         priorityCount: segmentGroups.reduce((total, group) => total + group.items.length, 0),
         pinnedCount: pinBoard.length,
         highUrgencyCount: uniqueHighIntentCount(dailyCallList, dailyRankingStrategy, segmentPriorityCards, priorityCustomerStrategy),
+        incomingCallsToday: todayAircallStats.incomingCallsToday,
+        outboundCallsToday: todayAircallStats.outboundCallsToday,
+        callsMadeToday: todayAircallStats.callsMadeToday,
+        openRequestsCount,
+        missedFollowUpCount,
+        atRiskCustomerCount,
         visibleAxes,
         segmentGroupCount: segmentGroups.length,
       },
@@ -488,6 +502,41 @@ export class PersonWorkspaceService {
       take: 5000,
     });
     return calls.map((call) => call.id);
+  }
+
+  private async todayAircallStats(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date) {
+    const aircallUserIds = await this.memberAircallUserIds(member.id, member.aircallUserId ?? null);
+    if (aircallUserIds.length === 0) {
+      return { incomingCallsToday: 0, outboundCallsToday: 0, callsMadeToday: 0 };
+    }
+    const rows = await this.prisma.db.aircallCallEvent.findMany({
+      where: {
+        aircallUserId: { in: aircallUserIds },
+        eventTimestamp: { gte: start, lt: end },
+      },
+      select: {
+        externalCallId: true,
+        direction: true,
+        eventTimestamp: true,
+      },
+      orderBy: [{ eventTimestamp: 'desc' }],
+      take: 1000,
+    });
+    const seen = new Set<string>();
+    let incomingCallsToday = 0;
+    let outboundCallsToday = 0;
+    for (const row of rows) {
+      if (seen.has(row.externalCallId)) continue;
+      seen.add(row.externalCallId);
+      const direction = normalizeText(row.direction);
+      if (direction.includes('out')) outboundCallsToday += 1;
+      else if (direction.includes('in')) incomingCallsToday += 1;
+    }
+    return {
+      incomingCallsToday,
+      outboundCallsToday,
+      callsMadeToday: outboundCallsToday,
+    };
   }
 
   private isDailyWorkflowTask(row: ServiceRequestRow) {
@@ -2344,6 +2393,12 @@ export class PersonWorkspaceService {
     const customer = membership.customer;
     const axes = assignments.get(customer.id) ?? new Set<string>();
     const assignedAxis = Array.from(axes).filter((axis) => DAILY_WORKFLOW_AXES.has(axis)).sort().join(', ') || 'unassigned';
+    const customerRisk = customerRiskFromSignals({
+      churnRisk: customer.insight?.churnRisk,
+      lastOrderAt: customer.lastOrderAt,
+      openRequestsCount: context.openRequestsCount,
+      repeatCount,
+    });
     const urgencyBreakdown = this.scoring.score({
       priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
       source: 'daily_customer',
@@ -2391,6 +2446,8 @@ export class PersonWorkspaceService {
       openTasksCount: context.openTasksCount,
       openRequestsCount: context.openRequestsCount,
       callsCount: context.callsCount,
+      customerRisk: customerRisk.risk,
+      customerRiskNote: customerRisk.note,
       latestNote: context.latestNote,
       latestOrder: context.latestOrder,
       latestCall: context.latestCall,
@@ -2421,6 +2478,11 @@ export class PersonWorkspaceService {
     const segment = customer?.segmentMemberships[0]?.segment;
     const axes = row.customerId ? assignments.get(row.customerId) : null;
     const assignedAxis = axes ? Array.from(axes).sort().join(', ') : 'unassigned';
+    const customerRisk = customerRiskFromSignals({
+      churnRisk: customer?.insight?.churnRisk,
+      lastOrderAt: customer?.lastOrderAt,
+      repeatCount,
+    });
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAtValues = Object.values(pinnedBy).filter((value): value is number => typeof value === 'number');
@@ -2455,6 +2517,8 @@ export class PersonWorkspaceService {
       email: customer?.email ?? undefined,
       ordersCount: customer?.ordersCount ?? undefined,
       totalSpent: customer ? money(customer.totalSpent) : undefined,
+      customerRisk: customerRisk.risk,
+      customerRiskNote: customerRisk.note,
     };
   }
 
@@ -2503,6 +2567,8 @@ export class PersonWorkspaceService {
       },
       miniOrder: cardContext?.miniOrders.get(item.customerId),
       performance30d: cardContext?.performance.get(item.customerId) ?? { ...EMPTY_PERFORMANCE_30D },
+      customerRisk: item.customerRisk,
+      customerRiskNote: item.customerRiskNote,
     };
   }
 
@@ -2588,6 +2654,12 @@ export class PersonWorkspaceService {
     const workflowTrace = workflowTraceFromMetadata(metadata);
     const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
     const matchedRuleId = row.matchedRuleId ?? workflowTrace?.matchedRuleId ?? workflowTrace?.ruleId ?? null;
+    const missedNote = followUpMissedNote(row);
+    const customerRisk = customerRiskFromSignals({
+      churnRisk: row.customer?.insight?.churnRisk,
+      lastOrderAt: row.customer?.lastOrderAt,
+      repeatCount,
+    });
     const urgencyBreakdown = this.scoring.score({
       priority: row.priority,
       source: row.source,
@@ -2618,6 +2690,10 @@ export class PersonWorkspaceService {
       pinnedAt,
       source,
       createdAt: row.createdAt.toISOString(),
+      unreached: missedNote !== null,
+      missedNote,
+      customerRisk: customerRisk.risk,
+      customerRiskNote: customerRisk.note,
       callIntent: suppressLocalFallbackSignals ? 'inquiry' : workflowBadges.callIntent,
       psychTags: suppressLocalFallbackSignals ? [] : workflowBadges.psychTags,
       phone: header.phone ?? undefined,
@@ -3410,6 +3486,40 @@ function priorityCustomerReason(segmentName: string, context: PersonPriorityCust
     repeatCount ? `${repeatCount} task${repeatCount === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
   return signals.join(' - ');
+}
+
+function customerRiskFromSignals(input: {
+  churnRisk?: string | null;
+  lastOrderAt?: Date | null;
+  openRequestsCount?: number;
+  repeatCount?: number;
+}): { risk: PersonCustomerRisk; note: string | null } {
+  const churnRisk = normalizeText(input.churnRisk);
+  if (churnRisk === 'critical') return { risk: 'lost', note: 'Critical customer risk signal from the customer record.' };
+  if (churnRisk === 'high') return { risk: 'at_risk', note: 'High customer risk signal from the customer record.' };
+  if ((input.openRequestsCount ?? 0) > 0) return { risk: 'at_risk', note: 'Open customer request is waiting before outreach.' };
+  if ((input.repeatCount ?? 0) >= 5) return { risk: 'at_risk', note: 'Multiple open follow-ups exist for this customer.' };
+  if (input.lastOrderAt) {
+    const daysSinceOrder = Math.floor((Date.now() - input.lastOrderAt.getTime()) / 86_400_000);
+    if (daysSinceOrder >= 90) return { risk: 'at_risk', note: `No order in ${daysSinceOrder} days.` };
+  }
+  return { risk: 'none', note: null };
+}
+
+function followUpMissedNote(row: { status: string; createdAt: Date; dueAt?: Date | null }) {
+  if (CLOSED.has(row.status)) return null;
+  const now = Date.now();
+  if (row.dueAt && row.dueAt.getTime() < now) return `Scheduled follow-up was due ${relative(row.dueAt)}.`;
+  const ageHours = Math.floor((now - row.createdAt.getTime()) / 3_600_000);
+  if (ageHours >= 24) return `Open follow-up has been waiting ${relative(row.createdAt)}.`;
+  return null;
+}
+
+function isMissedFollowUp(card: PersonQueueCardDto, todayStart: Date) {
+  if (card.missedNote) return true;
+  if (!card.createdAt) return false;
+  const createdAt = Date.parse(card.createdAt);
+  return Number.isFinite(createdAt) && createdAt < todayStart.getTime() && card.urgencyScore >= 8;
 }
 
 function isCustomerRequestLike(row: { source: string; surface: string; axis: string | null; metadata: Prisma.JsonValue }) {

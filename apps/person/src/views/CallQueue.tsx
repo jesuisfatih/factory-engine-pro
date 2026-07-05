@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -14,9 +14,10 @@ import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
-import { personSafeText } from '../lib/personTerminology';
+import { personSafeText, staffActionLabel, staffBriefLine } from '../lib/personTerminology';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
+type DailyFilter = 'all' | 'must_call' | 'payment_refund' | 'purchase_intent' | 'unmatched';
 
 export function CallQueueView({ range: initialRange = 'last7d', archive = false }: { range?: DailyOperationRange; archive?: boolean } = {}) {
   const qc = useQueryClient();
@@ -29,6 +30,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
+  const [dailyFilter, setDailyFilter] = useState<DailyFilter>('all');
+  const [missedCollapsed, setMissedCollapsed] = useState(false);
+  const [riskCollapsed, setRiskCollapsed] = useState(false);
   const queryKey = [...QK_BASE, range] as const;
   const { data, isLoading, error } = useQuery({
     queryKey,
@@ -48,6 +52,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
   const actionStats = useMemo(() => dailyActionStats(daily), [daily]);
+  const filteredDaily = useMemo(() => filterDailyCards(daily, dailyFilter), [daily, dailyFilter]);
+  const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
+  const atRiskCustomers = useMemo(
+    () => groups.flatMap((group) => group.items.filter((item) => item.customerRisk !== 'none')),
+    [groups],
+  );
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
     mutationFn: reorderDailyCalls,
@@ -157,6 +167,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     <div className="queue-wrap">
       <div className="kpis">
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.before" context={{ summary }} />
+        {!archive && <div className="kpi"><div className="label">Incoming calls</div><div className="val">{summary?.incomingCallsToday ?? 0}</div><div className="sub">today</div></div>}
+        {!archive && <div className="kpi"><div className="label">Outbound calls</div><div className="val">{summary?.outboundCallsToday ?? 0}</div><div className="sub">today</div></div>}
+        {!archive && <div className="kpi"><div className="label">Open requests</div><div className="val">{summary?.openRequestsCount ?? 0}</div><div className="sub">waiting</div></div>}
         <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days calls'}</div></div>
         {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
         {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
@@ -170,29 +183,70 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
       {!archive && (
+        <>
+          <FrontendCustomizationSlotView customization={frontendCustomization} slot="focus.before" context={{ summary }} />
+          <TodayFocusPanel
+            summary={summary}
+            actionStats={actionStats}
+            activeFilter={dailyFilter}
+            onFilter={setDailyFilter}
+          />
+          <FrontendCustomizationSlotView customization={frontendCustomization} slot="focus.after" context={{ summary }} />
+        </>
+      )}
+      {!archive && (
         <div className="call-action-stats" aria-label="Daily call action summary">
-          <div className="call-action-stat stat-call">
+          <button type="button" className={`call-action-stat stat-call${dailyFilter === 'must_call' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'must_call' ? 'all' : 'must_call')}>
             <span>Must call</span>
             <strong>{actionStats.mustCall}</strong>
             <em>urgent or callback</em>
-          </div>
-          <div className="call-action-stat stat-money">
+          </button>
+          <button type="button" className={`call-action-stat stat-money${dailyFilter === 'payment_refund' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'payment_refund' ? 'all' : 'payment_refund')}>
             <span>Payment/refund</span>
             <strong>{actionStats.paymentOrRefund}</strong>
             <em>needs careful wording</em>
-          </div>
-          <div className="call-action-stat stat-purchase">
+          </button>
+          <button type="button" className={`call-action-stat stat-purchase${dailyFilter === 'purchase_intent' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'purchase_intent' ? 'all' : 'purchase_intent')}>
             <span>Purchase intent</span>
             <strong>{actionStats.purchaseIntent}</strong>
             <em>quote or order path</em>
-          </div>
-          <div className="call-action-stat stat-match">
+          </button>
+          <button type="button" className={`call-action-stat stat-match${dailyFilter === 'unmatched' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'unmatched' ? 'all' : 'unmatched')}>
             <span>Unmatched callers</span>
             <strong>{actionStats.unmatched}</strong>
             <em>confirm before promise</em>
-          </div>
+          </button>
         </div>
       )}
+      {!archive && (missedFollowUps.length > 0 || atRiskCustomers.length > 0) ? (
+        <div className="attention-grid">
+          <AttentionPanel
+            title="Missed work"
+            count={summary?.missedFollowUpCount ?? missedFollowUps.length}
+            description="Open follow-ups that need a human next step."
+            collapsed={missedCollapsed}
+            onToggle={() => setMissedCollapsed((value) => !value)}
+          >
+            <CompactTaskList cards={missedFollowUps.slice(0, 6)} onOpen={setSelectedId} />
+          </AttentionPanel>
+          <AttentionPanel
+            title="At-risk customers"
+            count={summary?.atRiskCustomerCount ?? atRiskCustomers.length}
+            description="Assigned customers that need careful outreach."
+            collapsed={riskCollapsed}
+            onToggle={() => setRiskCollapsed((value) => !value)}
+          >
+            <AtRiskCustomerList
+              items={atRiskCustomers.slice(0, 6)}
+              onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
+              onCallCustomer={(item) => {
+                if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
+              }}
+              callDisabled={dialCustomer.isPending}
+            />
+          </AttentionPanel>
+        </div>
+      ) : null}
 
       <QueryState
         isLoading={isLoading}
@@ -216,17 +270,18 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                     <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
                   </div>
                 )}
-                <span className="ops-count">{daily.length} follow-ups</span>
+                <span className="ops-count">{dailyFilter === 'all' ? daily.length : filteredDaily.length} follow-ups</span>
+                {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
               </div>
             </div>
             {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
             {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
             <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
             <DailyWorkflowList
-              cards={daily}
+              cards={filteredDaily}
               customization={frontendCustomization}
               summary={summary}
-              emptyLabel={archive ? 'No archived call tasks.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
+              emptyLabel={archive ? 'No archived call tasks.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
               reorderDisabled={reorderDaily.isPending}
               onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
               onTogglePin={(card) => taskPin.mutate(card)}
@@ -424,6 +479,152 @@ function SortableDailyTaskCard({
         <FrontendCustomizationSlotView customization={customization} slot="daily.card.after_brief" context={{ dailyCall: card, summary }} />
         <FrontendCustomizationSlotView customization={customization} slot="daily.card.footer" context={{ dailyCall: card, summary }} />
       </div>
+    </div>
+  );
+}
+
+function TodayFocusPanel({
+  summary,
+  actionStats,
+  activeFilter,
+  onFilter,
+}: {
+  summary?: DailyOperations['summary'];
+  actionStats: ReturnType<typeof dailyActionStats>;
+  activeFilter: DailyFilter;
+  onFilter: (filter: DailyFilter) => void;
+}) {
+  const focusItems: Array<{ label: string; value: number; body: string; tone: string; filter?: DailyFilter }> = [
+    { label: 'Urgent follow-ups', value: actionStats.mustCall, body: 'Call these before routine outreach.', tone: 'warn', filter: 'must_call' },
+    { label: 'Customer concerns', value: actionStats.paymentOrRefund, body: 'Use careful wording before promises.', tone: 'danger', filter: 'payment_refund' },
+    { label: 'Missed work', value: summary?.missedFollowUpCount ?? 0, body: 'Open items waiting for a human next step.', tone: 'info' },
+    { label: 'At-risk customers', value: summary?.atRiskCustomerCount ?? 0, body: 'Review context before outreach.', tone: 'danger' },
+    { label: 'Open requests', value: summary?.openRequestsCount ?? 0, body: 'Customer requests waiting in your workspace.', tone: 'warn' },
+    { label: 'Calls made today', value: summary?.callsMadeToday ?? 0, body: 'Outbound calls placed from this workspace.', tone: 'success' },
+  ];
+  return (
+    <section className="today-focus-panel" aria-label="Today focus">
+      <div className="today-focus-copy">
+        <span>Today focus</span>
+        <strong>Start with the highest consequence follow-ups.</strong>
+        <p>Work customer concerns first, then missed follow-ups, then the assigned portfolio.</p>
+      </div>
+      <div className="today-focus-items">
+        {focusItems.map((item) => {
+          const active = item.filter && activeFilter === item.filter;
+          return (
+            <button
+              key={item.label}
+              type="button"
+              className={`today-focus-item tone-${item.tone}${active ? ' active' : ''}`}
+              onClick={() => item.filter ? onFilter(active ? 'all' : item.filter) : undefined}
+              aria-disabled={!item.filter}
+            >
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <em>{item.body}</em>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function AttentionPanel({
+  title,
+  count,
+  description,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  description: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="attention-panel">
+      <button type="button" className="attention-head" onClick={onToggle} aria-expanded={!collapsed}>
+        <ChevronDown size={14} className={collapsed ? 'chevron collapsed' : 'chevron'} />
+        <span>{title}</span>
+        <strong>{count}</strong>
+        <em>{description}</em>
+      </button>
+      {!collapsed ? <div className="attention-body">{children}</div> : null}
+    </section>
+  );
+}
+
+function CompactTaskList({ cards, onOpen }: { cards: CardData[]; onOpen: (id: string) => void }) {
+  if (cards.length === 0) return <div className="attention-empty">No missed follow-ups right now.</div>;
+  return (
+    <div className="compact-work-list">
+      {cards.map((card) => {
+        const actionInput = cardActionInput(card);
+        return (
+          <button key={card.id} type="button" className="compact-work-row" onClick={() => onOpen(card.id)}>
+            <span className="compact-work-title">{personSafeText(card.title)}</span>
+            <strong>{staffActionLabel(actionInput)}</strong>
+            <em>{card.missedNote ?? staffBriefLine(actionInput)}</em>
+            <span className="compact-work-meta">U{card.urgencyScore} · {card.phone ?? 'No phone on file'}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AtRiskCustomerList({
+  items,
+  onOpenCustomer,
+  onCallCustomer,
+  callDisabled,
+}: {
+  items: DailyCallItem[];
+  onOpenCustomer: (item: DailyCallItem) => void;
+  onCallCustomer: (item: DailyCallItem) => void;
+  callDisabled: boolean;
+}) {
+  if (items.length === 0) return <div className="attention-empty">No at-risk assigned customers right now.</div>;
+  return (
+    <div className="compact-work-list">
+      {items.map((item) => (
+        <article
+          key={item.id}
+          className="compact-work-row"
+          tabIndex={0}
+          role="button"
+          onClick={() => onOpenCustomer(item)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onOpenCustomer(item);
+          }}
+        >
+          <span className="compact-work-title">{item.customerName}</span>
+          <strong>{riskLabel(item.customerRisk)}</strong>
+          <em>{item.customerRiskNote ?? item.reason}</em>
+          <span className="compact-work-meta">
+            {item.phone ? (
+              <button
+                type="button"
+                className={`compact-call-link${callDisabled ? ' disabled' : ''}`}
+                disabled={callDisabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!callDisabled) onCallCustomer(item);
+                }}
+              >
+                <Phone size={11} /> {item.phone}
+              </button>
+            ) : 'No phone on file'}
+          </span>
+        </article>
+      ))}
     </div>
   );
 }
@@ -647,26 +848,58 @@ function priorityUrgencyClass(score: number) {
   return 'p3';
 }
 
-function dailyActionStats(cards: CardData[]) {
-  const has = (card: CardData, words: string[]) => {
-    const text = [
-      card.title,
-      card.summary,
-      card.callIntent ?? '',
-      ...(card.psychTags ?? []),
-      card.aiBrief?.whyCalling ?? '',
-      card.aiBrief?.upsetAbout ?? '',
-      card.aiBrief?.callGoal ?? '',
-      ...(card.aiBrief?.suggestedActions ?? []),
-    ].join(' ').toLowerCase().replace(/[_-]+/g, ' ');
-    return words.some((word) => text.includes(word));
-  };
+function cardActionInput(card: CardData) {
   return {
-    mustCall: cards.filter((card) => card.urgencyScore >= 8 || has(card, ['callback', 'call back', 'follow up', 'call me'])).length,
-    paymentOrRefund: cards.filter((card) => has(card, ['refund', 'payment', 'chargeback', 'return', 'pricing issue'])).length,
-    purchaseIntent: cards.filter((card) => has(card, ['purchase intent', 'quote', 'order path', 'dtf supply', 'heat press', 'spare part', 'reorder'])).length,
+    intent: card.callIntent ?? card.urgencyBreakdown.intent,
+    tags: card.psychTags,
+    upset: card.aiBrief?.upsetAbout,
+    goal: card.aiBrief?.callGoal,
+    summary: card.aiBrief?.whyCalling ?? card.summary,
+    urgencyScore: card.urgencyScore,
+  };
+}
+
+function cardSignalText(card: CardData) {
+  return [
+    card.title,
+    card.summary,
+    card.callIntent ?? '',
+    ...(card.psychTags ?? []),
+    card.aiBrief?.whyCalling ?? '',
+    card.aiBrief?.upsetAbout ?? '',
+    card.aiBrief?.callGoal ?? '',
+    ...(card.aiBrief?.suggestedActions ?? []),
+    card.missedNote ?? '',
+    card.customerRiskNote ?? '',
+  ].join(' ').toLowerCase().replace(/[_-]+/g, ' ');
+}
+
+function cardHas(card: CardData, words: string[]) {
+  const text = cardSignalText(card);
+  return words.some((word) => text.includes(word));
+}
+
+function filterDailyCards(cards: CardData[], filter: DailyFilter) {
+  if (filter === 'all') return cards;
+  if (filter === 'must_call') return cards.filter((card) => card.urgencyScore >= 8 || cardHas(card, ['callback', 'call back', 'follow up', 'call me']));
+  if (filter === 'payment_refund') return cards.filter((card) => cardHas(card, ['refund', 'payment', 'chargeback', 'return', 'pricing issue']));
+  if (filter === 'purchase_intent') return cards.filter((card) => cardHas(card, ['purchase intent', 'quote', 'order path', 'dtf supply', 'heat press', 'spare part', 'reorder']));
+  return cards.filter((card) => !card.customerId);
+}
+
+function dailyActionStats(cards: CardData[]) {
+  return {
+    mustCall: filterDailyCards(cards, 'must_call').length,
+    paymentOrRefund: filterDailyCards(cards, 'payment_refund').length,
+    purchaseIntent: filterDailyCards(cards, 'purchase_intent').length,
     unmatched: cards.filter((card) => !card.customerId).length,
   };
+}
+
+function riskLabel(value: DailyCallItem['customerRisk']) {
+  if (value === 'lost') return 'Critical customer risk';
+  if (value === 'at_risk') return 'At-risk customer';
+  return 'Customer is stable';
 }
 
 function CustomerNoteModal({
