@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SendHorizonal } from 'lucide-react';
 import { createStaffRequest, fetchRequests, friendlyError } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 export function RequestsView() {
   const qc = useQueryClient();
@@ -26,7 +27,7 @@ export function RequestsView() {
     <>
       <div className="page-head">
         <h2>Submit Request</h2>
-        <div className="sub">PTO, equipment, access and exception requests create internal staff requests.</div>
+        <div className="sub">PTO, equipment, access and exception requests create staff request records.</div>
       </div>
 
       <div className="request-grid">
@@ -83,14 +84,14 @@ export function RequestsView() {
             {rows.map((row) => (
               <div key={row.id} className="email-row">
                 <div>
-                  <div className="from">{row.category}</div>
-                  <div className="from-email">{row.priority}</div>
+                  <div className="from">{requestCategoryLabel(row.category)}</div>
+                  <div className="from-email">{requestPriorityLabel(row.priority)}</div>
                 </div>
                 <div>
-                  <div className="subject">{row.title}</div>
-                  <div className="preview">{row.description}</div>
+                  <div className="subject">{personSafeText(row.title)}</div>
+                  <div className="preview">{personSafeText(row.description)}</div>
                 </div>
-                <div className="when">{row.status}<br />{row.updatedAt}</div>
+                <div className="when">{requestStatusLabel(row.status)}<br />{row.updatedAt}</div>
               </div>
             ))}
           </div>
@@ -98,4 +99,37 @@ export function RequestsView() {
       </div>
     </>
   );
+}
+
+function requestCategoryLabel(value: string) {
+  const labels: Record<string, string> = {
+    pto: 'PTO',
+    equipment: 'Equipment',
+    exception: 'Exception',
+    access: 'Access',
+    other: 'Other',
+  };
+  return labels[value] ?? personSafeText(value);
+}
+
+function requestPriorityLabel(value: string) {
+  const labels: Record<string, string> = {
+    critical: 'Critical',
+    urgent: 'Urgent',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+  };
+  return labels[value] ?? personSafeText(value);
+}
+
+function requestStatusLabel(value: string) {
+  const labels: Record<string, string> = {
+    pending: 'Pending',
+    open: 'Open',
+    approved: 'Approved',
+    rejected: 'Declined',
+    closed: 'Closed',
+  };
+  return labels[value] ?? personSafeText(value);
 }

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquareReply, Plus, Save } from 'lucide-react';
 import { fetchNotes, friendlyError, replyNote, saveNote, type NoteRow } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 type Tab = 'all' | 'scratch' | 'queue';
 
@@ -88,7 +89,7 @@ export function NotesView() {
     <>
       <div className="page-head">
         <h2>Notes</h2>
-        <div className="sub">Scratch (personal) + Queue notes (team-visible, linked to customer/queue item)</div>
+        <div className="sub">Personal notes and shared customer notes, linked to follow-ups when needed.</div>
       </div>
 
       <QueryState
@@ -129,7 +130,7 @@ export function NotesView() {
           {filtered.length === 0 && (
             <div className="state-panel empty">
               <strong>No notes yet</strong>
-              <span>Create a scratch or queue note to start a persisted workspace record.</span>
+              <span>Create a personal or shared note to start a saved workspace record.</span>
             </div>
           )}
 
@@ -137,13 +138,13 @@ export function NotesView() {
             <button key={note.id} type="button"
               className={`note-row${selectedId === note.id ? ' active' : ''}`}
               onClick={() => setSelectedId(note.id)}>
-              <div className="title">{note.title}</div>
+              <div className="title">{personSafeText(note.title)}</div>
               <div className="note-row-context">
-                <span>{note.authorName ?? 'Team member'}</span>
-                <span>{note.linkedCustomer ? `Customer ${note.linkedCustomerName ?? note.linkedCustomer}` : 'No customer link'}</span>
+                <span>{personSafeText(note.authorName ?? 'Team member')}</span>
+                <span>{note.linkedCustomer ? `Customer ${personSafeText(note.linkedCustomerName ?? note.linkedCustomer)}` : 'No customer link'}</span>
               </div>
               <div className="meta">
-                <span className={`kind-pill ${note.kind}`}>{note.kind}</span>
+                <span className={`kind-pill ${note.kind}`}>{noteKindLabel(note.kind)}</span>
                 <span>{note.updatedAt}</span>
                 <span>{note.replies?.length ?? 0} replies</span>
               </div>
@@ -161,11 +162,11 @@ export function NotesView() {
               <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Note title" />
               {selected.linkedCustomer && (
                 <div className="linked">
-                  Linked to <strong>{selected.linkedCustomerName ?? selected.linkedCustomer}</strong> - queue item <strong>{selected.linkedQueueId ?? 'none'}</strong>
+                  Linked to <strong>{personSafeText(selected.linkedCustomerName ?? selected.linkedCustomer)}</strong> - follow-up <strong>{selected.linkedQueueId ?? 'none'}</strong>
                 </div>
               )}
               <div className="linked">
-                Written by <strong>{selected.authorName ?? 'Team member'}</strong>
+                Written by <strong>{personSafeText(selected.authorName ?? 'Team member')}</strong>
                 {selected.authorEmail ? <> - {selected.authorEmail}</> : null}
               </div>
               <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." />
@@ -180,8 +181,8 @@ export function NotesView() {
                   <div className="note-reply-list">
                     {(selected.replies ?? []).map((item) => (
                       <article key={item.id} className="note-reply">
-                        <strong>{item.authorName} - {item.authorRole}</strong>
-                        <p>{item.body}</p>
+                        <strong>{personSafeText(item.authorName)} - {personSafeText(item.authorRole)}</strong>
+                        <p>{personSafeText(item.body)}</p>
                         <span>{item.createdAt}</span>
                       </article>
                     ))}
@@ -207,7 +208,7 @@ export function NotesView() {
               {reply.isError ? <div className="email-compose-error">{friendlyError(reply.error)}</div> : null}
               <div className="actions">
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  {selected.kind === 'queue' ? 'Team-visible - syncs to customer history' : 'Personal - only you can see this'}
+                  {selected.kind === 'queue' ? 'Shared with the team - saved to customer history' : 'Personal - only you can see this'}
                 </span>
                 <button type="button" className="save" onClick={onSave} disabled={save.isPending}>
                   <Save size={12} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
@@ -221,4 +222,8 @@ export function NotesView() {
       </QueryState>
     </>
   );
+}
+
+function noteKindLabel(value: NoteRow['kind']) {
+  return value === 'queue' ? 'Shared' : value === 'scratch' ? 'Personal' : personSafeText(value);
 }

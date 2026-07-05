@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AtSign, Briefcase, ShieldAlert, Star, Bell } from 'lucide-react';
 import { fetchNotifications, friendlyError } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 const ICONS = {
   mention: AtSign,
@@ -19,7 +20,7 @@ export function NotificationsView() {
     <>
       <div className="page-head">
         <h2>Notifications</h2>
-        <div className="sub">{unread} unread - mentions, assignments, SLA, pins and system events</div>
+        <div className="sub">{unread} unread - mentions, assignments, urgent follow-ups, pins and system events</div>
       </div>
 
       <QueryState
@@ -27,7 +28,7 @@ export function NotificationsView() {
         error={error ? new Error(friendlyError(error)) : null}
         empty={rows.length === 0}
         emptyTitle="No notifications"
-        emptyBody="Assignments, urgent unassigned cases and system events will appear here."
+        emptyBody="Assignments, urgent unassigned follow-ups and system events will appear here."
       >
       <div className="notif-feed">
         {rows.map((row) => {
@@ -36,8 +37,8 @@ export function NotificationsView() {
             <div key={row.id} className={`notif-row kind-${row.kind}${row.read ? '' : ' unread'}`}>
               <span className="ico"><Icon size={14} /></span>
               <div className="body">
-                <div className="title">{row.title}</div>
-                <div className="body-text">{row.body}</div>
+                <div className="title">{personSafeText(row.title)}</div>
+                <div className="body-text">{personSafeText(row.body)}</div>
               </div>
               <div className="when">{row.at}</div>
             </div>

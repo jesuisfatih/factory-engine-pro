@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Mail, Save, Send, X } from 'lucide-react';
 import { fetchEmailContacts, fetchEmails, friendlyError, saveEmailDraft, sendEmail } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 export function EmailView() {
   const queryClient = useQueryClient();
@@ -106,7 +107,7 @@ export function EmailView() {
                           setContactPickerOpen(false);
                         }}
                       >
-                        <strong>{contact.name}</strong>
+                        <strong>{personSafeText(contact.name)}</strong>
                         <span>{contact.email}</span>
                         <em>{contactLabel(contact)}</em>
                       </button>
@@ -122,7 +123,7 @@ export function EmailView() {
                       type="button"
                       onClick={() => setDraft((current) => ({ ...current, to: contact.email }))}
                     >
-                      {contact.name}
+                      {personSafeText(contact.name)}
                     </button>
                   ))}
                 </div>
@@ -172,15 +173,15 @@ export function EmailView() {
         {emails.map((email) => (
           <div key={email.id} className={`email-row${email.unread ? ' unread' : ''}${email.status === 'draft' ? ' draft' : ''}`}>
             <div>
-              <div className="from">{email.from}</div>
+              <div className="from">{personSafeText(email.from)}</div>
               <div className="from-email">{email.fromEmail}</div>
             </div>
             <div>
               <div className="subject">
-                {email.subject}
+                {personSafeText(email.subject)}
                 {email.status === 'draft' ? <span className="email-status">Draft</span> : null}
               </div>
-              <div className="preview">{email.preview}</div>
+              <div className="preview">{personSafeText(email.preview)}</div>
             </div>
             <div className="when">{email.at}</div>
           </div>
@@ -196,7 +197,7 @@ function emptyDraft() {
 }
 
 function contactLabel(contact: { name: string; phone: string | null; source: string }) {
-  return [contact.name, contact.phone, contact.source === 'customer' ? 'customer' : 'recent mail'].filter(Boolean).join(' - ');
+  return [personSafeText(contact.name), contact.phone, contact.source === 'customer' ? 'customer' : 'recent mail'].filter(Boolean).join(' - ');
 }
 
 function contactMatches(contact: { name: string; email: string; phone: string | null; source: string }, query: string) {

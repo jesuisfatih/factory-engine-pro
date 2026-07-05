@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, SendHorizonal } from 'lucide-react';
 import { fetchTeammates, fetchThread, friendlyError, sendChatMessage, type PresenceStatus } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 function presenceLabel(status: PresenceStatus) {
   return status === 'online' ? 'Online'
@@ -92,10 +93,10 @@ export function MessagesView() {
                 </div>
                 <div className="body">
                   <div className="row1">
-                    <span className="name">{person.name}</span>
+                    <span className="name">{personSafeText(person.name)}</span>
                     <span className="time">{person.lastAt}</span>
                   </div>
-                  <div className="preview">{person.preview}</div>
+                  <div className="preview">{personSafeText(person.preview)}</div>
                 </div>
                 {person.unread > 0 && <span className="unread-badge">{person.unread}</span>}
               </button>
@@ -114,7 +115,7 @@ export function MessagesView() {
                   <span className={`presence-dot ${selected.status}`} />
                 </div>
                 <div>
-                  <div className="name">{selected.name}</div>
+                  <div className="name">{personSafeText(selected.name)}</div>
                   <div className="meta">{presenceLabel(selected.status)} - {selected.lastSeen}</div>
                 </div>
               </header>
@@ -145,7 +146,7 @@ export function MessagesView() {
                 ) : (
                   thread.map((message) => (
                     <div key={message.id} style={{ display: 'flex', flexDirection: 'column', alignItems: message.fromMe ? 'flex-end' : 'flex-start' }}>
-                      <div className={`bubble ${message.fromMe ? 'me' : 'other'}`}>{message.text}</div>
+                      <div className={`bubble ${message.fromMe ? 'me' : 'other'}`}>{personSafeText(message.text)}</div>
                       <div className="bubble-meta">{message.at}</div>
                     </div>
                   ))
