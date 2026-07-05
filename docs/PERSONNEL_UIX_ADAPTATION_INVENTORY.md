@@ -147,7 +147,7 @@ display contract first. React must not invent it from raw metadata.
 | Call summary in modal | `TaskBriefModal.tsx` | Staff sees mood, issue, motivators, objections | Personnel | Resolver output/person brief | Exists | Keep staff-safe language only | Call summary | fields/copy | Modal screenshot |
 | Order/call/follow-up history | `TaskBriefModal.tsx` | Full recent customer timeline inside the call plan | Personnel | Orders, Aircall calls, notes, follow-up activity | Exists | Preserve | Order, call, and follow-up history | section order | Modal screenshot |
 | Customer 360 popup | `packages/ui/src/customer-detail-panel.tsx` | Customer opens as a popup, not a right drawer | Personnel | Customer detail aggregate | Exists; component uses modal backdrop/panel | Preserve popup behavior | Customer 360 | tab labels/order later | Screenshot |
-| Customer 360 Main tab | `packages/ui/src/customer-detail-panel.tsx` `main` / `mainContent` props | Customer opens with immediate operational context, not a cold profile table | Personnel | Priority/customer row context: reason, segment, urgency, phone, email, latest order, latest call, open work, latest note | Implemented as typed shared UI prop fed by live priority/customer rows; no reference backend port | Keep sourcing from `segmentGroups` or customer archive rows; do not show rule trace | Main | tab order/copy/theme later | Popup screenshot opened from Priority Kanban and Customer Archive |
+| Customer 360 Main tab | `packages/ui/src/customer-detail-panel.tsx` `main` / `mainContent` props | Customer opens with immediate operational context, not a cold profile table | Personnel | Priority/customer row context and, when present, the matching Daily/Priority follow-up card | Implemented as typed shared UI prop fed by live priority/customer rows; matching follow-up cards embed the same `TaskBriefContent` used by the popup modal | Keep sourcing from `segmentGroups` or matching live cards; do not show rule trace | Main | tab order/copy/theme later | Popup screenshot opened from Priority Kanban and Customer Archive |
 | Customer 360 tabs | `customer-detail-panel.tsx` | Profile, Shopify Orders, Aircall Calls, Customer Requests, Email, Messages, Notes, follow-up history | Personnel | Customer aggregate tabs | Exists; commission filtered | Preserve; hide internal rule names for staff | Profile / orders / calls / requests / notes / follow-ups | tab visibility/order later | Screenshot |
 | Customer archive | `apps/person/src/views/Customers.tsx` | Search full Shopify customer archive without freezing | Personnel | Server-side paginated Shopify customers | Exists: limit/offset/search | Preserve 10 default and 50/100/150 choices | Shopify customers | label/theme | Search/pagination screenshot |
 | Sidebar/navigation | `Sidebar.tsx`, `FrontendCustomization.tsx` | Patron can rename/reorder/group/badge/default route safely | Personnel/MCP | Navigation override contract | Exists | Preserve and document | Staff workspace navigation | navigationOverrides | MCP preview/list proof |
@@ -167,6 +167,10 @@ Closed in source:
    rendering native surfaces, Customer 360 tab content, and MCP blocks.
 5. Customer 360 is implemented as a centered popup (`customer-detail-backdrop`
    with centered `customer-detail-panel`), not as a right-side drawer.
+6. Customer 360 "Main" can now embed the same live `TaskBriefContent` used by
+   the call-plan popup when the opened customer has a matching Daily/Priority
+   card. This keeps the reference UIX behavior without duplicating or inventing
+   staff copy in React.
 
 Still requiring live evidence before final sign-off:
 
@@ -304,10 +308,13 @@ Still requiring live evidence before final sign-off:
   `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`. This
   makes it explicit that MCP validates source patch plans and proof packages
   but does not apply files or deploy code.
-- The staff queue top focus area now uses the native command-center panel:
-  colored metric cards for urgent follow-ups, missed work, call list, customer
-  requests, priority customers, and pinned work. These cards are clickable and
-  scroll/filter the live sections instead of showing passive text chips.
+- The staff queue top focus area was realigned to the reference `today-focus`
+  composition so the first band uses the same compact focus-chip structure
+  while keeping staff-safe follow-up/customer-request language.
 - Daily Call List cards now expose a real staff Call action wired to the
   Aircall dial endpoint with source `daily_card`. MCP `elementOverrides` can
   show, hide, or rename the approved `callButton` field without raw CSS/HTML.
+- Daily card Archive now opens a staff-safe completion dialog before hiding the
+  follow-up. Optional notes are saved through the real note endpoint first, then
+  the follow-up is archived, matching the reference completion intent without
+  exposing "task" language to staff.

@@ -7,13 +7,14 @@ import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contra
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Loader2, Phone, PhoneIncoming, PhoneOutgoing, Pin, RefreshCw, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
+import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
-import { TaskBriefModal } from '../components/TaskBriefModal';
+import { TaskBriefContent, TaskBriefModal } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
 import { personSafeText, staffActionLabel } from '../lib/personTerminology';
 
@@ -37,6 +38,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [churnCollapsed, setChurnCollapsed] = useState(false);
   const [kanbanCollapsed, setKanbanCollapsed] = useState(false);
   const [kanbanSegment, setKanbanSegment] = useState<string>('all');
+  const [completeCandidate, setCompleteCandidate] = useState<CardData | null>(null);
   const queryKey = [...QK_BASE, range] as const;
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey,
@@ -60,11 +62,35 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
   const urgentCount = daily.filter((card) => card.urgencyScore >= 8).length;
   const unreachedCount = daily.filter((card) => card.unreached).length;
+  const detailMatchedCard = useMemo(() => {
+    if (!detailCustomerId) return null;
+    return [...daily, ...priority, ...pinned].find((card) => card.customerId === detailCustomerId) ?? null;
+  }, [detailCustomerId, daily, pinned, priority]);
   const customerDetailMain = useMemo(() => {
     if (!detailCustomerId) return undefined;
     const item = groups.flatMap((group) => group.items).find((candidate) => candidate.customerId === detailCustomerId);
-    return item ? priorityItemMainInfo(item) : undefined;
-  }, [detailCustomerId, groups]);
+    if (item) {
+      const main = priorityItemMainInfo(item);
+      if (!detailMatchedCard) return main;
+      return {
+        ...main,
+        reason: personSafeText(detailMatchedCard.displayReason || detailMatchedCard.displayOutcome || main.reason),
+        segmentLabel: personSafeText(detailMatchedCard.segment || main.segmentLabel),
+        segmentColor: detailMatchedCard.segmentColor || main.segmentColor,
+        urgencyScore: detailMatchedCard.urgencyScore,
+        productTags: [detailMatchedCard.displayBadges[0]?.label, detailMatchedCard.displayCustomerSummary, ...main.productTags]
+          .map((value) => personSafeText(value))
+          .filter(Boolean)
+          .slice(0, 4),
+        phone: detailMatchedCard.phone ?? main.phone,
+        email: detailMatchedCard.email ?? main.email,
+        owner: detailMatchedCard.assignedMemberName ?? main.owner,
+        lastContact: detailMatchedCard.createdAt ?? main.lastContact,
+        lastCallSummary: personSafeText(detailMatchedCard.displayCallSnapshot || main.lastCallSummary) || null,
+      };
+    }
+    return detailMatchedCard ? cardMainInfo(detailMatchedCard) : undefined;
+  }, [detailCustomerId, detailMatchedCard, groups]);
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
     mutationFn: reorderDailyCalls,
@@ -99,9 +125,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     },
   });
 
-  const archiveTask = useMutation({
-    mutationFn: (card: CardData) => archiveDailyCall(card.id),
+  const completeFollowUp = useMutation({
+    mutationFn: async ({ card, note }: { card: CardData; note: string }) => {
+      if (note) await saveTaskNote(card.id, { body: note });
+      return archiveDailyCall(card.id);
+    },
     onSuccess: () => {
+      setCompleteCandidate(null);
       qc.invalidateQueries({ queryKey: QK_BASE });
     },
   });
@@ -163,16 +193,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const empty = !isLoading && (archive ? daily.length === 0 : daily.length === 0 && priority.length === 0 && pinned.length === 0);
   const priorityCustomerCount = groups.reduce((total, group) => total + group.totalCustomers, 0);
   const openRequestsCount = summary?.openRequestsCount ?? 0;
-  const primaryFocusText = urgentCount > 0
-    ? `Start with ${urgentCount} urgent follow-up${urgentCount === 1 ? '' : 's'}.`
-    : missedFollowUps.length > 0
-      ? `Catch up ${missedFollowUps.length} overdue follow-up${missedFollowUps.length === 1 ? '' : 's'}.`
-      : daily.length > 0
-        ? `Work through ${daily.length} customer callback${daily.length === 1 ? '' : 's'}.`
-        : 'Your callback list is clear.';
-  const primaryFocusHint = openRequestsCount > 0
-    ? `${openRequestsCount} customer request${openRequestsCount === 1 ? '' : 's'} still need an update.`
-    : 'Keep customer notes updated before leaving each conversation.';
   const closeTaskModal = () => {
     setSelectedId(null);
     setDeepLinkCard(null);
@@ -192,73 +212,32 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       {!archive && (
-        <div className="today-focus-panel">
-          <div className="today-focus-copy">
-            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-            <strong>{primaryFocusText}</strong>
-            <p>{primaryFocusHint}</p>
+        <div className="today-focus">
+          <div className="today-focus-head">
+            <h2>Today's focus</h2>
+            <span className="today-focus-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
           </div>
-          <div className="today-focus-items" aria-label="Today's focus metrics">
-            <button
-              type="button"
-              className={`today-focus-item tone-danger${dailyFilter === 'urgent' ? ' active' : ''}`}
-              onClick={() => {
-                setDailyFilter('urgent');
-                scrollToSection('followup-list-section', () => setDailyCollapsed(false));
-              }}
-            >
-              <span>Urgent follow-ups</span>
-              <strong>{urgentCount}</strong>
-              <em>needs fast callback</em>
-            </button>
-            <button
-              type="button"
-              className="today-focus-item tone-warn"
-              onClick={() => scrollToSection('missed-tasks-section', () => setMissedCollapsed(false))}
-            >
-              <span>Missed work</span>
-              <strong>{missedFollowUps.length}</strong>
-              <em>catch up before new calls</em>
-            </button>
-            <button
-              type="button"
-              className={`today-focus-item tone-info${dailyFilter === 'all' ? ' active' : ''}`}
-              onClick={() => {
-                setDailyFilter('all');
-                scrollToSection('followup-list-section', () => setDailyCollapsed(false));
-              }}
-            >
-              <span>Call list</span>
-              <strong>{daily.length}</strong>
-              <em>{range === 'today' ? 'today only' : 'last 7 days'}</em>
-            </button>
-            <button
-              type="button"
-              className="today-focus-item tone-warn"
-              onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}
-            >
-              <span>Customer requests</span>
-              <strong>{openRequestsCount}</strong>
-              <em>review before outreach</em>
-            </button>
-            <button
-              type="button"
-              className="today-focus-item tone-success"
-              onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}
-            >
-              <span>Priority customers</span>
-              <strong>{priorityCustomerCount}</strong>
-              <em>{groups.length} assigned list{groups.length === 1 ? '' : 's'}</em>
-            </button>
-            <button
-              type="button"
-              className="today-focus-item"
-              onClick={() => scrollToSection('pin-board-section')}
-            >
-              <span>Pinned</span>
-              <strong>{summary?.pinnedCount ?? 0}</strong>
-              <em>{summary?.callsMadeToday ?? 0} calls made today</em>
-            </button>
+          <div className="today-focus-items">
+            <span className={`focus-item${urgentCount > 0 ? ' urgent' : ''}`}>
+              {urgentCount > 0 ? `Handle ${urgentCount} urgent follow-up${urgentCount > 1 ? 's' : ''} first` : 'No urgent follow-ups right now'}
+            </span>
+            {churnFollowUps.length > 0 ? (
+              <span className="focus-item urgent">
+                {`Review ${churnFollowUps.length} customer${churnFollowUps.length > 1 ? 's' : ''} at risk`}
+              </span>
+            ) : null}
+            {missedFollowUps.length > 0 ? (
+              <span className="focus-item warn">
+                {`Catch up ${missedFollowUps.length} missed follow-up${missedFollowUps.length > 1 ? 's' : ''}`}
+              </span>
+            ) : null}
+            <span className="focus-item">
+              {daily.length > 0 ? `Call back ${daily.length} customer${daily.length > 1 ? 's' : ''} from your follow-up list` : 'Follow-up list is clear'}
+            </span>
+            <span className={`focus-item${openRequestsCount > 0 ? ' warn' : ''}`}>
+              {openRequestsCount > 0 ? `${openRequestsCount} customer request${openRequestsCount === 1 ? '' : 's'} waiting` : 'No open customer requests'}
+            </span>
+            <span className="focus-item done">{summary?.callsMadeToday ?? 0} calls made so far today</span>
           </div>
         </div>
       )}
@@ -456,7 +435,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 ) : null}
                 {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
                 {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
-                {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
+                {completeFollowUp.error ? <div className="ops-inline-error">{friendlyError(completeFollowUp.error)}</div> : null}
                 <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
                 <DailyWorkflowList
                   cards={filteredDaily}
@@ -466,7 +445,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   reorderDisabled={reorderDaily.isPending}
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
                   onTogglePin={(card) => taskPin.mutate(card)}
-                  onArchive={(card) => archiveTask.mutate(card)}
+                  onArchive={(card) => setCompleteCandidate(card)}
                   onOpen={setSelectedId}
                   onCall={(card) => {
                     if (card.phone) dialCustomer.mutate({ phone: card.phone, customerId: card.customerId ?? undefined, source: 'daily_card' });
@@ -582,6 +561,15 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} onClose={closeTaskModal} />}
+      {completeCandidate ? (
+        <CompleteTaskDialog
+          followUpTitle={personSafeText(completeCandidate.displayTitle || completeCandidate.title)}
+          busy={completeFollowUp.isPending}
+          errorText={completeFollowUp.error ? friendlyError(completeFollowUp.error) : null}
+          onCancel={() => setCompleteCandidate(null)}
+          onConfirm={(note) => completeFollowUp.mutate({ card: completeCandidate, note })}
+        />
+      ) : null}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}
@@ -594,6 +582,15 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
         main={customerDetailMain}
+        mainContent={detailMatchedCard ? (
+          <TaskBriefContent
+            card={detailMatchedCard}
+            customization={frontendCustomization}
+            summary={summary}
+            onClose={() => setDetailCustomerId(null)}
+            embedded
+          />
+        ) : undefined}
       />
       {noteCustomer && (
         <CustomerNoteModal
@@ -1032,6 +1029,38 @@ function priorityItemMainInfo(item: DailyCallItem): CustomerDetailMainInfo {
     openRequestsCount: item.openRequestsCount,
     notesCount: item.notesCount,
     latestNote: item.latestNote,
+  };
+}
+
+function cardMainInfo(card: CardData): CustomerDetailMainInfo {
+  const latestOrder = card.miniOrder
+    ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} | ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
+    : card.ordersCount
+      ? `${card.ordersCount} orders | ${fmtMoney(card.totalSpent ?? 0)}`
+      : card.displayCommerceSnapshot || 'No linked order yet';
+  return {
+    reason: personSafeText(card.displayReason || card.displayOutcome || card.summary || 'Review this customer before outreach.'),
+    segmentLabel: personSafeText(card.segment || card.displayCustomerSummary || 'Customer follow-up'),
+    segmentColor: card.segmentColor || '#2563eb',
+    urgencyScore: card.urgencyScore,
+    churnRisk: card.customerRisk === 'lost' || card.customerRisk === 'at_risk' ? card.customerRisk : null,
+    productTags: [card.displayBadges[0]?.label, card.displayCustomerSummary]
+      .map((value) => personSafeText(value))
+      .filter(Boolean)
+      .slice(0, 3),
+    phone: card.phone ?? null,
+    email: card.email ?? null,
+    orderLabel: latestOrder,
+    ordersCount: card.ordersCount ?? 0,
+    totalSpent: card.totalSpent ?? 0,
+    lastCallLabel: card.displayCallSnapshot || 'Recent call context',
+    lastCallSummary: personSafeText(card.displayCallSnapshot || card.callExcerpt) || null,
+    lastContact: card.createdAt ?? new Date(0).toISOString(),
+    owner: card.assignedMemberName ?? null,
+    openTasksCount: 1,
+    openRequestsCount: 0,
+    notesCount: 0,
+    latestNote: null,
   };
 }
 

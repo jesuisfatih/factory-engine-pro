@@ -760,6 +760,20 @@ button { font-family: inherit; }
 .transfer-error { margin-right: auto; color: var(--danger); font-size: 11px; align-self: center; }
 
 .brief-modal { max-width: 1080px; max-height: min(92vh, calc(100vh - 40px)); }
+.brief-modal.brief-modal-embedded {
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  box-shadow: none;
+  border-radius: 10px;
+  display: block;
+}
+.brief-modal.brief-modal-embedded .modal-body {
+  overflow: visible;
+}
+.brief-modal.brief-modal-embedded .modal-foot {
+  border-radius: 0 0 10px 10px;
+}
 .brief-eyebrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10px; }
 .brief-source { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-weight: 700; letter-spacing: .25px; }
 .brief-source-manual { background: var(--surface-3); color: var(--text-muted); }
@@ -1470,6 +1484,12 @@ button { font-family: inherit; }
 .missed-action.red { color: #dc2626; background: rgba(239, 68, 68, .1); }
 .missed-action.amber { color: #b45309; background: rgba(245, 158, 11, .14); }
 .missed-action.blue { color: #2563eb; background: rgba(59, 130, 246, .12); }
+.confirm-overlay { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, .45); padding: 16px; }
+.confirm-box { width: min(420px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
+.confirm-box h3 { margin: 0 0 4px; font-size: 15px; font-weight: 750; color: var(--text); }
+.confirm-task-title { margin: 0 0 10px; font-size: 12px; color: var(--text-muted); }
+.confirm-box textarea { width: 100%; resize: vertical; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 12px; color: var(--text); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .churn-v2 { border-left-color: rgba(220, 75, 62, .55); }
 .churn-v2 .missed-v2-list { background: rgba(239, 68, 68, .04); }
 .churn-v2-head { background: rgba(239, 68, 68, .09); cursor: pointer; }

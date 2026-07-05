@@ -18,6 +18,10 @@ interface Props {
   onClose: () => void;
 }
 
+type TaskBriefContentProps = Props & {
+  embedded?: boolean;
+};
+
 function labelize(value: string | null | undefined) {
   if (!value) return 'Not captured';
   return humanize(value);
@@ -95,7 +99,11 @@ function NarrativeField({ label, suggestedValue, value, onChange, multiLine }: N
   );
 }
 
-export function TaskBriefModal({ card, customization, summary, onClose }: Props) {
+export function TaskBriefModal(props: Props) {
+  return <TaskBriefContent {...props} />;
+}
+
+export function TaskBriefContent({ card, customization, summary, onClose, embedded = false }: TaskBriefContentProps) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
   const isTaskCard = card.kind === 'task';
@@ -153,6 +161,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   }, [initial]);
 
   useEffect(() => {
+    if (embedded) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -161,7 +170,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, [embedded, onClose]);
 
   const noteMutation = useMutation({
     mutationFn: () => saveTaskNote(card.id, { body: note }),
@@ -232,15 +241,8 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const summaryChecks = liveCard.displayActions.length > 0 ? liveCard.displayActions : directActions;
   const callExcerpt = personSafeText(liveCard.callExcerpt);
 
-  return (
-    <div
-      className="modal-backdrop"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="task-brief-title"
-    >
-      <div className={`modal-card brief-modal ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
+  const modalContent = (
+      <div className={`modal-card brief-modal ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
         <header className="modal-head">
           <div>
             {showField('title') ? <h2 id="task-brief-title">{personSafeText(liveCard.displayTitle || liveCard.title)}</h2> : null}
@@ -564,6 +566,19 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
           })}
         </footer> : null}
       </div>
+  );
+
+  if (embedded) return modalContent;
+
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-brief-title"
+    >
+      {modalContent}
     </div>
   );
 }
