@@ -25,7 +25,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const qc = useQueryClient();
   const [archivePage, setArchivePage] = useState(0);
   const [archivePageSize, setArchivePageSize] = useState<ArchivePageSize>(DEFAULT_ARCHIVE_PAGE_SIZE);
-  const [archiveSearch, setArchiveSearch] = useState('');
+  const [archiveSearch, setArchiveSearch] = useState(() => archive ? currentArchiveSearchFromUrl() : '');
   const archiveOffset = archive ? archivePage * archivePageSize : 0;
   const { data, isLoading, isFetching, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
     queryKey: ['person', archive ? 'customer-archive' : 'customers', archive ? archivePage : 0, archive ? archivePageSize : 0, archive ? archiveSearch : ''],
@@ -46,10 +46,16 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   });
 
   useEffect(() => {
-    const syncFromUrl = () => setDetailCustomerId(currentCustomerIdFromUrl());
+    const syncFromUrl = () => {
+      setDetailCustomerId(currentCustomerIdFromUrl());
+      if (archive) {
+        setArchivePage(0);
+        setArchiveSearch(currentArchiveSearchFromUrl());
+      }
+    };
     window.addEventListener('popstate', syncFromUrl);
     return () => window.removeEventListener('popstate', syncFromUrl);
-  }, []);
+  }, [archive]);
 
   useEffect(() => {
     setDetailCustomerId(currentCustomerIdFromUrl());
@@ -57,7 +63,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setNoteBody('');
     setArchivePage(0);
     setArchivePageSize(DEFAULT_ARCHIVE_PAGE_SIZE);
-    setArchiveSearch('');
+    setArchiveSearch(archive ? currentArchiveSearchFromUrl() : '');
   }, [archive]);
 
   const openCustomerDetail = (customerId: string) => {
@@ -169,12 +175,15 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
   const hasPrevPage = archive && archivePage > 0;
   const hasNextPage = archive && pageEnd < totalCustomers;
   const applyArchiveSearch = (value: string) => {
+    const next = value.trim();
     setArchivePage(0);
-    setArchiveSearch(value.trim());
+    setArchiveSearch(next);
+    writeArchiveSearchToUrl(next);
   };
   const clearArchiveSearch = () => {
     setArchivePage(0);
     setArchiveSearch('');
+    writeArchiveSearchToUrl('');
   };
   const changeArchivePageSize = (value: string) => {
     const next = Number(value) as ArchivePageSize;
@@ -279,6 +288,17 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
 
 function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
+}
+
+function currentArchiveSearchFromUrl() {
+  return new URLSearchParams(window.location.search).get('q') ?? '';
+}
+
+function writeArchiveSearchToUrl(value: string) {
+  const url = new URL(window.location.href);
+  if (value) url.searchParams.set('q', value);
+  else url.searchParams.delete('q');
+  window.history.replaceState({}, '', url);
 }
 
 function customerRowMainInfo(customer: CustomerRow, archive: boolean): CustomerDetailMainInfo {

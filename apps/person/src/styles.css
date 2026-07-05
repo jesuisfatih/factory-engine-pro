@@ -156,14 +156,28 @@ button { font-family: inherit; }
 }
 .topbar .toggle:hover, .topbar .icon-btn:hover { background: var(--surface-3); color: var(--text); border-color: var(--border); }
 .topbar h1 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+.topbar .search-form {
+  flex: 1;
+  max-width: 520px;
+  min-width: 180px;
+  margin-left: auto;
+}
 .topbar .search {
-  flex: 1; max-width: 480px; margin-left: auto;
+  width: 100%;
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
   padding: 6px 14px; color: var(--text); font-size: 12px;
   outline: none;
 }
 .topbar .search:focus { border-color: var(--accent); }
 .topbar .right { display: flex; align-items: center; gap: 6px; }
+.topbar .topbar-update {
+  width: auto;
+  grid-template-columns: auto auto;
+  gap: 6px;
+  padding: 0 10px;
+}
+.topbar .topbar-update:disabled { opacity: .68; cursor: progress; }
+.topbar-update-label { font-size: 11px; font-weight: 600; }
 .topbar-workspace { display: inline-flex; align-items: center; gap: 7px; max-width: 220px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 9px 3px 4px; color: var(--text); }
 .topbar-workspace span, .topbar-workspace img { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
 .topbar-workspace span { display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .2px; }
