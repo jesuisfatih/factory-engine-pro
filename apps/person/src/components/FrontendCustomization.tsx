@@ -176,6 +176,8 @@ export function frontendNavigation(
 ): FrontendNavigationResult {
   const initial = navItems.map((item, index): FrontendNavigationItem => ({
     ...item,
+    label: staffSafeUiText(item.label),
+    group: item.group ? staffSafeUiText(item.group) : item.group,
     order: index * 10,
     badgeMode: item.id === 'queue' || item.id === 'customers' || item.id === 'notifications' ? 'count' : 'none',
     emphasis: item.id === 'queue' ? 'high' : 'normal',
@@ -190,7 +192,7 @@ export function frontendNavigation(
   const groupLabels = new Map<string, { label: string; order: number }>();
   let defaultNavId: FrontendNavigationNavId | null = null;
   for (const override of overrides) {
-    for (const group of override.groups) groupLabels.set(group.id, { label: group.label, order: group.order });
+    for (const group of override.groups) groupLabels.set(group.id, { label: staffSafeUiText(group.label), order: group.order });
     if (override.defaultNavId) defaultNavId = override.defaultNavId;
     for (const itemOverride of override.items) {
       const index = initial.findIndex((item) => item.id === itemOverride.navId);
@@ -199,8 +201,8 @@ export function frontendNavigation(
       const groupRef = itemOverride.group ? groupLabels.get(itemOverride.group) : null;
       initial[index] = {
         ...current,
-        label: itemOverride.label ?? current.label,
-        group: groupRef?.label ?? itemOverride.group ?? current.group,
+        label: staffSafeUiText(itemOverride.label ?? current.label),
+        group: staffSafeUiText(groupRef?.label ?? itemOverride.group ?? current.group),
         order: itemOverride.order ?? current.order,
         hidden: itemOverride.hidden,
         badgeMode: itemOverride.badgeMode ?? current.badgeMode,

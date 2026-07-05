@@ -113,6 +113,10 @@ Still requiring live evidence before final sign-off:
   Customer 360 tab content, and MCP-rendered copy/content blocks. Runtime
   customization can still change labels and blocks, but forbidden internal
   terms are normalized before rendering.
+- Runtime navigation override labels and sidebar group labels are normalized
+  again at render time. This keeps old or manually inserted customization
+  records from leaking internal terms into staff navigation while preserving
+  stable nav ids, routes, permissions, and default route behavior.
 - Frontend source patch preview/proof responses now expose machine-readable
   safety flags: `appliesPatch: false`, `deploysCode: false`,
   `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`. This
