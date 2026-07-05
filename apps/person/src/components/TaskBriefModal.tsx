@@ -113,13 +113,13 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
-  const hasBrief = liveCard.source !== 'manual' && (liveCard.aiBrief || liveCard.displayActions.length > 0);
+  const hasBrief = liveCard.source !== 'manual' && Boolean(liveCard.displayReason || liveCard.displayOutcome || liveCard.displayActions.length > 0);
   const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
-    why: personSafeText(liveCard.displayReason || liveCard.aiBrief?.whyCalling),
-    upset: personSafeText(liveCard.displayConcern || liveCard.aiBrief?.upsetAbout),
-    goal: personSafeText(liveCard.displayOutcome || liveCard.aiBrief?.callGoal),
-  }), [liveCard.aiBrief, liveCard.displayConcern, liveCard.displayOutcome, liveCard.displayReason]);
+    why: personSafeText(liveCard.displayReason || 'Review the customer context before calling.'),
+    upset: personSafeText(liveCard.displayConcern || 'No customer concern captured yet.'),
+    goal: personSafeText(liveCard.displayOutcome || 'Save the next customer outcome.'),
+  }), [liveCard.displayConcern, liveCard.displayOutcome, liveCard.displayReason]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
@@ -209,11 +209,11 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
   const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);
   const primaryBrief = liveCard.displayOutcome || staffBriefLine(actionInput);
-  const ctaPriority = liveCard.ctaPriority ?? liveCard.aiBrief?.ctaPriority ?? [];
-  const modalActionOrder = liveCard.modalActionOrder ?? liveCard.aiBrief?.modalActionOrder ?? [];
+  const ctaPriority = liveCard.ctaPriority ?? [];
+  const modalActionOrder = liveCard.modalActionOrder ?? [];
   const directActions = liveCard.displayActions.length > 0
     ? orderedDisplayActions(liveCard.displayActions, modalActionOrder)
-    : directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions, modalActionOrder);
+    : directiveActions(actionLabel, liveCard.phone, undefined, modalActionOrder);
   const footerActions = orderedFooterActions(ctaPriority);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
@@ -222,11 +222,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
     : liveCard.ordersCount
       ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
       : 'No linked Shopify order yet');
-  const confidenceLabel = liveCard.aiBrief?.modelUsed === 'local-rule-fallback'
-    ? 'Needs review'
-    : liveCard.aiBrief?.confidence
-      ? `${Math.round(liveCard.aiBrief.confidence * 100)}% confident`
-      : 'Live data';
+  const confidenceLabel = 'Live data';
   const matchLabel = customerMatched ? 'Matched customer' : 'Caller not matched yet';
   const matchHint = customerMatched
     ? 'Use order and note history before calling.'
@@ -234,6 +230,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const summarySignals = detail?.aiPsychAnalysis?.motivators.map(personSafeText).filter(Boolean) ?? [];
   const summaryFriction = detail?.aiPsychAnalysis?.objections.map(personSafeText).filter(Boolean) ?? [];
   const summaryChecks = liveCard.displayActions.length > 0 ? liveCard.displayActions : directActions;
+  const callExcerpt = personSafeText(liveCard.callExcerpt);
 
   return (
     <div
@@ -352,12 +349,12 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                       </div>
                     ) : null}
 
-                    {liveCard.aiBrief?.transcriptSnippet && showField('callExcerpt') ? (
+                    {callExcerpt && showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
                           <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
                         </div>
-                        <div className="brief-transcript">{personSafeText(liveCard.aiBrief.transcriptSnippet)}</div>
+                        <div className="brief-transcript">{callExcerpt}</div>
                       </div>
                     ) : null}
                   </>

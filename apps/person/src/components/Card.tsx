@@ -47,9 +47,9 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
   const actionInput = {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
     tags: card.psychTags,
-    upset: card.displayConcern || card.aiBrief?.upsetAbout,
-    goal: card.displayOutcome || card.aiBrief?.callGoal,
-    summary: card.displayReason || card.aiBrief?.whyCalling || card.summary,
+    upset: card.displayConcern,
+    goal: card.displayOutcome,
+    summary: card.displayReason,
     urgencyScore: card.urgencyScore,
   };
   const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);

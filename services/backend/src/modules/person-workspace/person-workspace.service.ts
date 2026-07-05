@@ -145,7 +145,14 @@ type PersonQueueCardDisplayFields = Pick<
   | 'displayCommerceSnapshot'
   | 'displayCallSnapshot'
 >;
-type PersonQueueCardWithoutDisplay = Omit<PersonQueueCardDto, keyof PersonQueueCardDisplayFields>;
+type PersonQueueCardInternalFields = {
+  aiBrief?: PersonTaskBrief;
+  workflowTrace?: unknown;
+  taskStateSnapshot?: unknown;
+  matchedRuleId?: string | null;
+};
+type PersonQueueCardInternal = PersonQueueCardDto & PersonQueueCardInternalFields;
+type PersonQueueCardWithoutDisplay = Omit<PersonQueueCardInternal, keyof PersonQueueCardDisplayFields>;
 type PersonDailyCallItemDisplayFields = Pick<PersonDailyCallItem, keyof PersonQueueCardDisplayFields>;
 type PersonDailyCallItemWithoutDisplay = Omit<PersonDailyCallItem, keyof PersonDailyCallItemDisplayFields>;
 
@@ -1619,17 +1626,7 @@ export class PersonWorkspaceService {
         durationMinutes: Math.max(15, Math.ceil((row.durationSeconds ?? 900) / 60)),
         kind: 'call',
         source: row.transcriptRaw ? 'call_analysis' : 'manual',
-        aiBrief: row.transcriptRaw ? {
-          whyCalling: row.transcriptRaw.slice(0, 500),
-          painPoints: ['Recent Aircall transcript is available'],
-          callGoal: 'Review the transcript and update the customer request.',
-          promptKey: 'person.workspace.aircall',
-          promptVersion: 'live',
-          modelUsed: 'not-generated',
-          confidence: 1,
-          transcriptSnippet: row.transcriptRaw.slice(0, 240),
-          suggestedActions: ['Open related customer record', 'Add call notes', 'Schedule follow-up if needed'],
-        } : undefined,
+        ...calendarDisplayFromCall(row),
       })),
       ...mail.map((row) => ({
         id: `mail-${row.id}`,
@@ -1644,6 +1641,11 @@ export class PersonWorkspaceService {
         durationMinutes: 15,
         kind: 'task',
         source: 'manual',
+        displayReason: `Mail delivery failed for ${row.recipientEmail}.`,
+        displayConcern: row.errorMessage ?? row.subject,
+        displayOutcome: 'Review the delivery error and decide whether customer follow-up is needed.',
+        displayActions: ['Review failed message', 'Check customer email', 'Save the next step if outreach is needed'],
+        callExcerpt: null,
       })),
     ];
   }
@@ -2675,6 +2677,7 @@ export class PersonWorkspaceService {
     const suppressLocalFallbackSignals = shouldSuppressLocalFallbackSignals(sourceCall);
     const ticket = ticketNumber(row);
     const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
+    const generatedBrief = hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined;
     const missedNote = followUpMissedNote(row);
     const customerRisk = customerRiskFromSignals({
       churnRisk: row.customer?.insight?.churnRisk,
@@ -2725,12 +2728,13 @@ export class PersonWorkspaceService {
       segmentName: ownedSegment?.segmentName ?? row.customer?.segmentMemberships[0]?.segment.name ?? null,
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
-      aiBrief: hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined,
+      aiBrief: generatedBrief,
+      callExcerpt: staffDisplayText(generatedBrief?.transcriptSnippet) || null,
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
     const displayCard = withPersonCardDisplay(card);
-    return strategies ? personCardWithStrategies(displayCard, strategies) : displayCard;
+    return publicPersonQueueCard(strategies ? personCardWithStrategies(displayCard, strategies) : displayCard);
   }
 
   private highestOwnedSegmentByCustomer(
@@ -2856,6 +2860,7 @@ export class PersonWorkspaceService {
   private calendarFromRequest(row: ServiceRequestRow) {
     const date = row.dueAt ?? (row.assignedMemberId ? row.updatedAt : row.createdAt);
     const source = taskSource(row);
+    const display = calendarDisplayFromRequest(row, hasGeneratedBrief(source) ? this.brief(row) : null);
     return {
       id: `sr-${row.id}`,
       serviceRequestId: row.id,
@@ -2869,7 +2874,7 @@ export class PersonWorkspaceService {
       durationMinutes: row.priority === 'critical' || row.priority === 'urgent' ? 30 : 20,
       kind: row.source === 'call' ? 'callback' : 'task',
       source,
-      aiBrief: hasGeneratedBrief(source) ? this.brief(row) : undefined,
+      ...display,
     };
   }
 
@@ -3436,8 +3441,19 @@ function staffBriefText(value: unknown, fallback: string) {
     .trim();
 }
 
-function withPersonCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDto {
+function withPersonCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardInternal {
   return { ...card, ...personCardDisplay(card) };
+}
+
+function publicPersonQueueCard(card: PersonQueueCardInternal): PersonQueueCardDto {
+  const {
+    aiBrief: _aiBrief,
+    workflowTrace: _workflowTrace,
+    taskStateSnapshot: _taskStateSnapshot,
+    matchedRuleId: _matchedRuleId,
+    ...publicCard
+  } = card;
+  return publicCard;
 }
 
 function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): PersonDailyCallItem {
@@ -4176,6 +4192,52 @@ function hasGeneratedBrief(source: ReturnType<typeof taskSource>) {
   return source === 'call_analysis' || source === 'segment_priority' || source === 'stale_follow_up';
 }
 
+function calendarDisplayFromRequest(
+  row: { title: string; description: string | null; priority: string },
+  brief: PersonTaskBrief | null,
+) {
+  const actions = cleanedActions(brief?.suggestedActions ?? []);
+  return {
+    displayReason: firstMeaningfulStaffText([brief?.whyCalling, row.description, row.title]) || staffDisplayText(row.title),
+    displayConcern: firstMeaningfulStaffText([brief?.upsetAbout]) || (row.priority === 'critical' || row.priority === 'urgent'
+      ? 'High-priority customer follow-up needs a human response.'
+      : 'No customer concern captured yet.'),
+    displayOutcome: firstMeaningfulStaffText([brief?.callGoal]) || 'Save the next customer outcome before leaving this event.',
+    displayActions: actions.length > 0 ? actions : ['Review customer context', 'Call or update the task', 'Save the outcome'],
+    callExcerpt: staffDisplayText(brief?.transcriptSnippet),
+  };
+}
+
+function calendarDisplayFromCall(row: {
+  transcriptRaw: string | null;
+  resolverOutput: Prisma.JsonValue | null;
+  eventType: string;
+  contactPhoneE164: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}) {
+  const resolver = asRecord(row.resolverOutput);
+  const personBrief = asRecord(resolver.person_brief);
+  const summary = stringOrNull(personBrief.why_calling)
+    ?? stringOrNull(resolver.summary)
+    ?? row.transcriptRaw?.slice(0, 240)
+    ?? `${titleize(row.eventType)} call captured.`;
+  const concern = stringOrNull(personBrief.upset_about)
+    ?? stringOrNull(resolver.customer_problem)
+    ?? stringOrNull(resolver.objection_summary)
+    ?? 'Review call notes for the customer issue.';
+  const outcome = stringOrNull(personBrief.call_goal)
+    ?? 'Save the next customer outcome or schedule the next follow-up.';
+  const actions = cleanedActions(stringArray(personBrief.suggested_actions));
+  return {
+    displayReason: staffDisplayText(summary),
+    displayConcern: staffDisplayText(concern),
+    displayOutcome: staffDisplayText(outcome),
+    displayActions: actions.length > 0 ? actions : ['Review call context', 'Add call notes', 'Schedule follow-up if needed'],
+    callExcerpt: staffDisplayText(stringOrNull(personBrief.transcript_snippet) ?? row.transcriptRaw?.slice(0, 240)),
+  };
+}
+
 function taskCategoryLabel(value: unknown) {
   const key = normalizeText(value);
   if (key === 'workflow_rule' || key === 'workflow') return 'Call analysis';
@@ -4298,8 +4360,8 @@ function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unk
     hasOpenTask,
     callNow: isCallSource || includesCardText(card, ['callback', 'call back', 'phone']),
     noteFirst: true,
-    scheduleFirst: Boolean(card.aiBrief?.suggestedActions?.some((action) => action.toLowerCase().includes('schedule'))),
-    emailFirst: Boolean(card.aiBrief?.suggestedActions?.some((action) => action.toLowerCase().includes('email'))),
+    scheduleFirst: Boolean(card.displayActions.some((action) => action.toLowerCase().includes('schedule'))),
+    emailFirst: Boolean(card.displayActions.some((action) => action.toLowerCase().includes('email'))),
     reviewOrderFirst: Boolean(card.miniOrder) || ordersCount > 0,
     complaintTone: includesCardText(card, ['complaint', 'angry', 'upset', 'frustrated']),
     refundRisk: includesCardText(card, ['refund', 'return', 'chargeback', 'payment']),
@@ -4348,7 +4410,7 @@ const STAFF_MODAL_ACTION_ALLOWLIST = [
   'archive_if_not_needed',
 ] as const;
 
-function personCardWithStrategies(card: PersonQueueCardDto, strategies: PersonCardStrategyRuntime): PersonQueueCardDto {
+function personCardWithStrategies(card: PersonQueueCardInternal, strategies: PersonCardStrategyRuntime): PersonQueueCardInternal {
   const signals = personCardStrategySignals(card);
   const nextActionProof = personStrategyRuntimeProof(strategies.nextAction, signals, 'cta');
   const callBriefProof = personStrategyRuntimeProof(strategies.callBrief, signals, 'modal');
@@ -4363,14 +4425,6 @@ function personCardWithStrategies(card: PersonQueueCardDto, strategies: PersonCa
     ctaPriority,
     modalActionOrder,
     strategyProof,
-    aiBrief: card.aiBrief
-      ? {
-          ...card.aiBrief,
-          ctaPriority,
-          modalActionOrder,
-          strategyProof,
-        }
-      : card.aiBrief,
   };
   return { ...nextCard, ...personCardDisplay(nextCard) };
 }
@@ -4410,12 +4464,18 @@ function includesCardText(card: PersonQueueCardDto, needles: string[]) {
   const text = [
     card.title,
     card.summary,
-    card.aiBrief?.whyCalling,
-    card.aiBrief?.upsetAbout,
-    card.aiBrief?.callGoal,
-    card.aiBrief?.transcriptSnippet,
+    card.displayTitle,
+    card.displayReason,
+    card.displayConcern,
+    card.displayOutcome,
+    card.displayCustomerSummary,
+    card.displayCommerceSnapshot,
+    card.displayCallSnapshot,
+    card.callExcerpt,
     card.callIntent,
     ...(card.psychTags ?? []),
+    ...card.displayActions,
+    ...card.displayBadges.map((badge) => badge.label),
   ].join(' ').toLowerCase();
   return needles.some((needle) => text.includes(needle));
 }

@@ -61,6 +61,8 @@ export function CalendarView() {
   const selectedTaskId = selected ? taskIdFromEvent(selected) : null;
   const selectedCustomerUrl = selected?.customerId ? `/staff/customers?customerId=${encodeURIComponent(selected.customerId)}` : null;
   const selectedTaskUrl = selectedTaskId ? `/staff/queue?taskId=${encodeURIComponent(selectedTaskId)}` : null;
+  const selectedActions = selected?.displayActions?.map(personSafeText).filter(Boolean) ?? [];
+  const selectedHasCallPlan = Boolean(selected?.displayReason || selected?.displayConcern || selected?.displayOutcome || selected?.callExcerpt || selectedActions.length);
   const noteMutation = useMutation({
     mutationFn: () => {
       if (!selectedTaskId) throw new Error('This calendar event is not linked to a task.');
@@ -269,7 +271,7 @@ export function CalendarView() {
                 )}
               </div>
 
-              {selected.aiBrief ? (
+              {selectedHasCallPlan ? (
                 <div className="generated-brief">
                   <div className="head">
                     <FileText size={14} style={{ color: '#1d4ed8' }} />
@@ -277,26 +279,26 @@ export function CalendarView() {
                     <span className="badge">live</span>
                   </div>
                   <div className="row">
-                    <div className="lbl">Why calling</div>
-                    <div className="val">{personSafeText(selected.aiBrief.whyCalling)}</div>
+                    <div className="lbl">Reason</div>
+                    <div className="val">{personSafeText(selected.displayReason) || 'Review customer context before outreach.'}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Concern</div>
-                    <div className="val">{personSafeText(selected.aiBrief.upsetAbout)}</div>
+                    <div className="val">{personSafeText(selected.displayConcern) || 'No customer concern captured yet.'}</div>
                   </div>
                   <div className="row">
-                    <div className="lbl">Goal</div>
-                    <div className="val"><strong>{personSafeText(selected.aiBrief.callGoal)}</strong></div>
+                    <div className="lbl">Outcome</div>
+                    <div className="val"><strong>{personSafeText(selected.displayOutcome) || 'Save the next customer outcome.'}</strong></div>
                   </div>
-                  {selected.aiBrief.transcriptSnippet && (
+                  {selected.callExcerpt && (
                     <div className="row">
                       <div className="lbl">Call excerpt</div>
-                      <div className="transcript">{personSafeText(selected.aiBrief.transcriptSnippet)}</div>
+                      <div className="transcript">{personSafeText(selected.callExcerpt)}</div>
                     </div>
                   )}
                   <div className="row">
-                    <div className="lbl">Suggested actions</div>
-                    <ul>{selected.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}</ul>
+                    <div className="lbl">Next actions</div>
+                    <ul>{(selectedActions.length ? selectedActions : ['Review context', 'Call or update the task', 'Save the outcome']).map((action) => <li key={action}>{action}</li>)}</ul>
                   </div>
                 </div>
               ) : (

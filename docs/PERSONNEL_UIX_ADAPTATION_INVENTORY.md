@@ -128,6 +128,16 @@ Still requiring live evidence before final sign-off:
   links, workflow traces, matched rule ids, raw task state snapshots, workflow
   triggers, actions, or axis metadata to the personnel panel. Admin can keep
   traceability; staff receives only call/task history in operational language.
+- Daily card, Task Brief modal, Call Queue filters, and Calendar call-plan
+  rendering now read staff-safe display fields and `callExcerpt`; they do not
+  derive labels, steps, ordering, or statistics from raw brief metadata.
+- Calendar events now use the same staff-safe display contract
+  (`displayReason`, `displayConcern`, `displayOutcome`, `displayActions`,
+  `callExcerpt`) instead of returning prompt/model/confidence brief objects to
+  the personnel frontend.
+- `personQueueCardSchema` no longer accepts raw brief, workflow trace, task
+  snapshot, or matched-rule fields. Those values may exist only as backend
+  internal inputs while producing the staff-safe display contract.
 - Reference `support.create` cadence semantics are intentionally mapped to our
   scheduled workflow/materialized staff-work model. Future follow-ups should
   appear when materialized, not as early visible tasks with a later due date.

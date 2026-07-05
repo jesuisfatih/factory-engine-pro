@@ -10,8 +10,6 @@ import type {
   PersonTaskTransferResult,
   PersonTransferTarget,
   PersonTaskBriefDetail,
-  PersonTaskStateSnapshot,
-  PersonTaskWorkflowTrace,
   PersonUrgencyBreakdown,
   TransferPersonTaskInput,
 } from '@factory-engine-pro/contracts';
@@ -19,20 +17,6 @@ import type {
 export type ColumnId = 'unassigned' | 'in_progress' | 'positive' | 'closed';
 
 export type TaskSource = 'manual' | 'call_analysis' | 'segment_priority' | 'stale_follow_up' | 'admin_transfer';
-export interface TaskBrief {
-  whyCalling: string;
-  upsetAbout: string;
-  callGoal: string;
-  suggestedActions: string[];
-  promptKey: string;
-  promptVersion: string;
-  modelUsed: string;
-  confidence: number;
-  transcriptSnippet?: string;
-  ctaPriority?: string[];
-  modalActionOrder?: string[];
-  strategyProof?: PersonCardStrategyProof;
-}
 export interface Card {
   kind: 'task' | 'customer';
   id: string;
@@ -75,10 +59,7 @@ export interface Card {
   email?: string;
   ordersCount?: number;
   totalSpent?: number;
-  aiBrief?: TaskBrief;
-  workflowTrace?: PersonTaskWorkflowTrace;
-  taskStateSnapshot?: PersonTaskStateSnapshot;
-  matchedRuleId?: string | null;
+  callExcerpt?: string | null;
   miniOrder?: PersonMiniOrder;
   performance30d?: PersonPerformance30d;
   ctaPriority?: string[];

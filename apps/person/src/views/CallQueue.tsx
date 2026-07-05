@@ -853,9 +853,9 @@ function cardActionInput(card: CardData) {
   return {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
     tags: card.psychTags,
-    upset: card.displayConcern || card.aiBrief?.upsetAbout,
-    goal: card.displayOutcome || card.aiBrief?.callGoal,
-    summary: card.displayReason || card.aiBrief?.whyCalling || card.summary,
+    upset: card.displayConcern,
+    goal: card.displayOutcome,
+    summary: card.displayReason,
     urgencyScore: card.urgencyScore,
   };
 }
@@ -875,10 +875,6 @@ function cardSignalText(card: CardData) {
     card.summary,
     card.callIntent ?? '',
     ...(card.psychTags ?? []),
-    card.aiBrief?.whyCalling ?? '',
-    card.aiBrief?.upsetAbout ?? '',
-    card.aiBrief?.callGoal ?? '',
-    ...(card.aiBrief?.suggestedActions ?? []),
     card.missedNote ?? '',
     card.customerRiskNote ?? '',
   ].join(' ').toLowerCase().replace(/[_-]+/g, ' ');
