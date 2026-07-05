@@ -18,9 +18,7 @@ import type {
   PersonQueueCardDto,
   PersonQueueColumn,
   PersonTaskBriefDetail,
-  PersonTaskStateSnapshot,
   PersonTaskTimelineEntry,
-  PersonTaskWorkflowTrace,
   PersonTransferTarget,
   PersonTaskBrief,
   TranscriptResolverOutput,
@@ -37,8 +35,6 @@ import type {
   SendPersonEmailInput,
   TogglePersonQueuePinInput,
   TransferPersonTaskInput,
-  WorkflowConditionTrace,
-  WorkflowWhenGroupTrace,
   CustomerAssignmentAxis,
   CreateTaskAxis,
   ArchivePersonDailyCallResult,
@@ -1269,8 +1265,6 @@ export class PersonWorkspaceService {
       ...(row.sourceCallId ? [{ id: row.sourceCallId }] : []),
       ...(aircallWhere ? [aircallWhere] : []),
     ];
-    const matchedRuleId = matchedRuleIdFrom(row);
-
     const [
       config,
       repeatCount,
@@ -1279,7 +1273,6 @@ export class PersonWorkspaceService {
       activityLogs,
       relatedRequests,
       aircallRows,
-      rule,
       callContext,
       cardStrategies,
     ] = await Promise.all([
@@ -1315,9 +1308,6 @@ export class PersonWorkspaceService {
             take: 8,
           })
         : Promise.resolve([]),
-      matchedRuleId
-        ? this.prisma.db.workflowRule.findFirst({ where: { id: matchedRuleId } })
-        : Promise.resolve(null),
       this.cardCallContext([row]),
       this.personCardStrategies(),
     ]);
@@ -1352,13 +1342,7 @@ export class PersonWorkspaceService {
         createdAt: comment.createdAt.toISOString(),
       })).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
       aiPsychAnalysis: latestAiPsychAnalysis(aircallRows),
-      rule: rule ? {
-        id: rule.id,
-        name: rule.name,
-        status: rule.status,
-        trigger: rule.trigger,
-        canvasUrl: `/rules?ruleId=${encodeURIComponent(rule.id)}`,
-      } : null,
+      rule: null,
       customerDetailUrl: customerId ? `/staff/customers?customerId=${encodeURIComponent(customerId)}` : null,
     };
   }
@@ -2096,9 +2080,9 @@ export class PersonWorkspaceService {
         })),
         ...requests.map((request) => ({
           id: `request-${request.id}`,
-          title: `${request.priority.toUpperCase()} case review`,
+          title: `${request.priority.toUpperCase()} customer follow-up`,
           description: request.title,
-          source: 'support',
+          source: 'customer_request',
           updatedAt: relative(request.updatedAt),
         })),
       ].slice(0, 12),
@@ -2690,9 +2674,7 @@ export class PersonWorkspaceService {
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
     const suppressLocalFallbackSignals = shouldSuppressLocalFallbackSignals(sourceCall);
     const ticket = ticketNumber(row);
-    const workflowTrace = workflowTraceFromMetadata(metadata);
     const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
-    const matchedRuleId = row.matchedRuleId ?? workflowTrace?.matchedRuleId ?? workflowTrace?.ruleId ?? null;
     const missedNote = followUpMissedNote(row);
     const customerRisk = customerRiskFromSignals({
       churnRisk: row.customer?.insight?.churnRisk,
@@ -2744,9 +2726,6 @@ export class PersonWorkspaceService {
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
       aiBrief: hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined,
-      workflowTrace,
-      taskStateSnapshot: taskStateSnapshotFromJson(row.taskStateSnapshot),
-      matchedRuleId,
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
@@ -2923,7 +2902,7 @@ export class PersonWorkspaceService {
     const urgencyBreakdown = this.scoring.score({
       priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
       source: 'daily_customer',
-      axis: 'support',
+      axis: 'account',
       createdAt: customer.lastOrderAt ?? customer.updatedAt,
       updatedAt: customer.updatedAt,
       metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
@@ -3802,12 +3781,13 @@ function isMissedFollowUp(card: PersonQueueCardDto, todayStart: Date) {
 function isCustomerRequestLike(row: { source: string; surface: string; axis: string | null; metadata: Prisma.JsonValue }) {
   const metadata = asRecord(row.metadata);
   const category = normalizeText(metadata.category);
-  return row.source === 'customer_self_service'
-    || row.source === 'admin_created'
-    || row.surface === 'customer_facing'
-    || row.axis === 'support'
-    || category.includes('support')
-    || category.includes('customer_request');
+  const source = normalizeText(row.source);
+  const surface = normalizeText(row.surface);
+  return source === 'customer_self_service'
+    || source === 'admin_created'
+    || (source === 'manual' && surface === 'customer_facing')
+    || category === 'customer_request'
+    || category === 'manual_customer_request';
 }
 
 function isNoteReplyComment(comment: { attachmentsJson: Prisma.JsonValue }) {
@@ -3841,39 +3821,6 @@ function firstString(...values: unknown[]) {
   return null;
 }
 
-function workflowTraceFromMetadata(metadata: Record<string, unknown>): PersonTaskWorkflowTrace | undefined {
-  const workflow = asRecord(metadata.workflow);
-  if (!Object.keys(workflow).length) return undefined;
-
-  const conditionTrace = normalizeConditionTrace(workflow.conditionTrace);
-  const whenTrace = normalizeWhenTrace(workflow.whenTrace);
-  const trace: PersonTaskWorkflowTrace = {
-    ruleId: stringOrNull(workflow.ruleId),
-    matchedRuleId: stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id),
-    ruleName: stringOrNull(workflow.ruleName),
-    trigger: stringOrNull(workflow.trigger),
-    source: stringOrNull(workflow.source),
-    eventId: stringOrNull(workflow.eventId),
-    action: stringOrNull(workflow.action),
-    actionId: stringOrNull(workflow.actionId),
-    conditionTrace,
-    whenTrace,
-  };
-
-  if (
-    !trace.ruleId
-    && !trace.matchedRuleId
-    && !trace.ruleName
-    && !trace.trigger
-    && conditionTrace.length === 0
-    && whenTrace.length === 0
-  ) {
-    return undefined;
-  }
-
-  return trace;
-}
-
 function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskStateSnapshot: unknown) {
   const workflow = asRecord(metadata.workflow);
   const params = asRecord(workflow.params);
@@ -3900,17 +3847,6 @@ function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskState
     stringOrNull(params.psych_tag),
   ].filter((value): value is string => Boolean(value)));
   return { callIntent, psychTags };
-}
-
-function taskStateSnapshotFromJson(value: unknown): PersonTaskStateSnapshot | undefined {
-  const snapshot = asRecord(value);
-  return Object.keys(snapshot).length ? snapshot : undefined;
-}
-
-function matchedRuleIdFrom(row: { matchedRuleId: string | null; metadata: Prisma.JsonValue }) {
-  const workflow = asRecord(asRecord(row.metadata).workflow);
-  return row.matchedRuleId
-    ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
 }
 
 function thirtyDaysAgo() {
@@ -4044,29 +3980,25 @@ function taskTimeline(
     if (request.id === row.id) continue;
     const metadata = asRecord(request.metadata);
     if (metadata.personQueueVisible === false || metadata.workflowSuppressed === true) continue;
-    const workflow = asRecord(metadata.workflow);
     const source = taskSource(request);
-    const matchedRuleId = request.matchedRuleId ?? stringOrNull(workflow.matchedRuleId ?? workflow.matched_rule_id ?? workflow.ruleId);
-    const ruleName = stringOrNull(workflow.ruleName);
     const latest = latestComment(request);
+    const titlePrefix = source === 'call_analysis'
+      ? 'Call follow-up'
+      : source === 'segment_priority'
+        ? 'Customer priority'
+        : 'Customer task';
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
-      title: `${source === 'call_analysis' ? 'Transcript task' : request.source === 'workflow' ? 'Automation task' : 'Task'}: ${request.title}`,
+      title: staffDisplayText(`${titlePrefix}: ${request.title}`),
       summary: [
         `${titleize(request.status)} - ${titleize(request.priority)}`,
-        ruleName ? `Rule: ${ruleName}` : matchedRuleId ? `Rule: ${matchedRuleId}` : null,
         latest?.body ? `Latest note: ${latest.body.slice(0, 180)}` : null,
-      ].filter(Boolean).join(' - '),
+      ].filter(Boolean).map((value) => staffDisplayText(value)).join(' - '),
       at: request.updatedAt.toISOString(),
       meta: {
         requestId: request.id,
         source,
-        workflowSource: stringOrNull(workflow.source),
-        trigger: stringOrNull(workflow.trigger),
-        action: stringOrNull(workflow.action),
-        matchedRuleId,
-        axis: request.axis,
         comments: request.comments?.length ?? 0,
       },
     });
@@ -4158,38 +4090,6 @@ function summarizePayload(value: unknown) {
   if (summary) return summary;
   const serialized = JSON.stringify(payload);
   return serialized.length > 180 ? `${serialized.slice(0, 177)}...` : serialized;
-}
-
-function normalizeWhenTrace(value: unknown): WorkflowWhenGroupTrace[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry) => {
-    const row = asRecord(entry);
-    const conditionTrace = normalizeConditionTrace(row.conditionTrace);
-    if (!row.id && conditionTrace.length === 0) return [];
-    return [{
-      id: stringOrNull(row.id) ?? 'when-group',
-      matched: row.matched === true,
-      conditionTrace,
-    }];
-  });
-}
-
-function normalizeConditionTrace(value: unknown): WorkflowConditionTrace[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry) => {
-    const row = asRecord(entry);
-    const condition = stringOrNull(row.condition);
-    if (!condition) return [];
-    return [{
-      id: stringOrNull(row.id) ?? condition,
-      condition,
-      operator: stringOrNull(row.operator) ?? '=',
-      expected: has(row, 'expected') ? row.expected : null,
-      actual: has(row, 'actual') ? row.actual : null,
-      matched: row.matched === true,
-      source: stringOrNull(row.source) ?? 'workflow',
-    }];
-  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

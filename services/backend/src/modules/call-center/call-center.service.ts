@@ -1255,11 +1255,14 @@ function isNoteReplyComment(comment: { attachmentsJson: Prisma.JsonValue }) {
 function isCustomerRequest(row: { source: string; surface: string; axis?: string | null; metadata: Prisma.JsonValue }) {
   if (isInternalWorkspaceRow(row.metadata)) return false;
   const metadata = record(row.metadata);
-  return row.source === 'customer_self_service'
-    || row.surface === 'customer_facing'
-    || row.axis === 'support'
-    || normalize(metadata.category).includes('support')
-    || normalize(metadata.category).includes('customer_request');
+  const source = normalize(row.source);
+  const surface = normalize(row.surface);
+  const category = normalize(metadata.category);
+  return source === 'customer_self_service'
+    || source === 'admin_created'
+    || (source === 'manual' && surface === 'customer_facing')
+    || category === 'customer_request'
+    || category === 'manual_customer_request';
 }
 
 function priorityScore(

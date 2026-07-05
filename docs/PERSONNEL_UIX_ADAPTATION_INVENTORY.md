@@ -12,6 +12,31 @@ Rules for this adaptation:
   support, commission, debug, resolver.
 - Admin/debug traces stay out of staff screens.
 
+## Reference Backend Trace Semantics
+
+Reference snapshot inspected locally:
+`C:/tmp/ibaysal-factory-engine-pro-readonly` at commit
+`3752e75 Complete staff dashboard live wiring: backend counters, cases, churn signals, at-risk cadence, reminders`.
+Refreshing from GitHub was attempted but DNS resolution for `github.com` failed in
+this environment, so this table only claims what is visible in that local
+reference checkout.
+
+| Reference trace | Observed backend/API source | UI intent behind it | Factory Engine Pro target semantics | Required decision |
+| --- | --- | --- | --- | --- |
+| Command center / Daily Operations | `GET /person/workspace/daily-operations`, `personDailyOperationsSchema`, `PersonWorkspaceService.dailyOperationsFor` | One staff page should carry current-call work, assigned portfolio, pins, and top counters | Keep one staff-safe `PersonDailyOperationsDto` contract. React reads `display*` fields first and never derives staff wording from raw metadata | Preserve in our backend; continue expanding only through typed staff-safe fields |
+| Daily Call List | Reference daily task rows come from `ServiceRequest` rows with source call/email links and Aircall member scoping | Staff sees recent call-generated follow-ups, not segment customers | Our Daily Call List remains last 7 days / today / archive call work. Source is Aircall/transcript/rule-created staff tasks scoped to the current member | Keep distinct from Priority Kanban; no segment grouping in Daily list |
+| Priority Kanban | `SegmentOwnership -> SegmentCustomerMembership -> Customer` plus latest order/call/note context | Staff sees their owned customer portfolio grouped by assigned segment | Our `segmentGroups` and `priorityKanban` remain the portfolio source. Cards need phone, email, latest order, latest call, open work, latest note, call/note/pin/detail actions | Preserve; never populate Priority from Daily task query |
+| Task Brief | Reference `personTaskBrief` includes `aiBrief`, `workflowTrace`, `matchedRuleId`, prompt key/version/model/confidence | Staff needs a direct call plan and customer context | Backend may keep raw trace internally, but staff contract must expose `displayReason`, `displayConcern`, `displayOutcome`, `displayActions`, history, and commerce snapshots | Hide raw `aiBrief`, prompt/model, rule trace, matched ids from staff UI |
+| Customer Archive | Reference `personCustomerArchive()` returns active Shopify customers with `take: 1000`; reference UI filters client-side | Staff wants Shopify customer lookup, not the routine calling list | Our archive must stay server-side paginated/searchable with `limit/offset/search`, default 10, options 50/100/150 | Do not regress to all-customer client filtering |
+| Customer notes from archive | Reference shares customer note flow between list and archive | Staff must add notes from either assigned customers or Shopify archive detail | Our archive note endpoint must accept only real Shopify customers and write through staff note permissions, while assigned-list notes keep workspace scope | Preserve split endpoints |
+| Cases page | `GET /person/workspace/cases`, `personCaseRowSchema`, `openCaseWhere()` includes customer self-service/admin/customer-facing and also support-axis rows | Patron wants customer issues visible, but automatic support case creation is forbidden | Staff surface should be "Customer Requests" only when source is manual, customer self-service, or admin-created. Rule-generated/support-axis work must not be counted as customer request work | Do not port `CasesView` as-is; remove support-axis/source leakage from request counts |
+| Commission request | Reference Customers UI calls `fetchMyCommissionRequests` and `submitCommissionRequest` and renders a `%` action | User explicitly banned commission request/commission UI in staff | No staff commission column, action, modal, route, or API call | Keep out of staff UI completely |
+| At-risk cadence worker | Reference `AtRiskCadenceService` creates follow-up service requests through `support.create` and adds `metadata.aiSource` | Staff needs risk-based customer work, but not automatic support cases | Our equivalent must be rule/scheduled-workflow driven staff work with staff-safe display text, not support-case automation | Use scheduled workflow action/materialization, not `support.create` |
+| "15 days later show this call" | Reference cadence is daily sweep; our rules module has `deferred_materialization` timing and scheduled-action MCP endpoints | Staff should not see the item until the future date arrives | The create-task action should materialize at `runAt`/delay time after revalidation. It is not merely a `dueAt` on an already visible task | Keep/extend scheduled workflow actions; prove visible only after materialization |
+| Staff sync | Reference `syncTasks` calls backfill plus resolver reprocess for recent 7 days | Staff wants latest calls, but token/cost must not be re-burned for old transcripts | Staff sync should backfill/pull recent calls and queue only new/missing resolver work. Version repair/reprocess belongs to admin repair tooling, not every staff refresh | Preserve our cheaper sync behavior; do not call broad reprocess from staff sync |
+| Dev fallback fixtures | Reference `apps/person/src/api/live.ts` has DEV fallback comments and `dev-fixture` imports | UI authors wanted local visual work without auth | Production Factory Engine Pro cannot show fallback, seed, mock, fixture, or invented data | Do not import this pattern |
+| Navigation and frontend customization | Reference has source-defined sidebar; our system has `navigationOverrides`, `elementOverrides`, `contentBlocks`, `themeOverrides`, source patch lane | Patron wants sidebar names/order/groups/badges/default route and safe visual control | Runtime customization stays typed and sanitized. Source patch lane can validate plans only; maintainer applies after proof | Preserve strict MCP boundary |
+
 ## Element Inventory
 
 | UI element | Reference location | Patron intent | Owner surface | Live data required | Current backend support | Required work | Staff-safe name | MCP editable | Acceptance proof |
@@ -95,6 +120,17 @@ Still requiring live evidence before final sign-off:
 - Daily cards, missed-work rows, priority customer cards, and the task brief
   modal read those display fields first. Raw internal task metadata stays as
   fallback data only, not as the normal staff-facing copy source.
+- Staff customer-request counts now only accept real customer-request sources:
+  `manual` customer-facing rows, `customer_self_service`, `admin_created`, or
+  explicit `customer_request` categories. Support-axis/workflow artifacts from
+  the reference backend are not counted as staff customer requests.
+- Daily queue cards and Task Brief API responses no longer return rule canvas
+  links, workflow traces, matched rule ids, raw task state snapshots, workflow
+  triggers, actions, or axis metadata to the personnel panel. Admin can keep
+  traceability; staff receives only call/task history in operational language.
+- Reference `support.create` cadence semantics are intentionally mapped to our
+  scheduled workflow/materialized staff-work model. Future follow-ups should
+  appear when materialized, not as early visible tasks with a later due date.
 - Customer 360 popup keeps the staff-safe terminology switch for call summaries,
   customer request descriptions, and call tags while preserving admin-capable
   raw tab keys internally.
