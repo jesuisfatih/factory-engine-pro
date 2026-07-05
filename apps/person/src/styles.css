@@ -2442,3 +2442,79 @@ button { font-family: inherit; }
   .customer-detail-panel { width: 100vw; height: 100vh; border-radius: 0; }
   .customer-detail-summary, .customer-detail-grid { grid-template-columns: 1fr; }
 }
+
+/* Staff queue parity lock: the patron reference uses a single operations stream.
+   Keep later/wide-screen rules from recreating the old right rail layout. */
+.queue-wrap .ops-grid:not(.archive),
+.queue-wrap .with-rail {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.queue-wrap .missed-v2,
+.queue-wrap .followup-v2,
+.queue-wrap .kanban-v2,
+.queue-wrap .pin-board-panel {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.queue-wrap .pin-board-panel {
+  order: 40;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.queue-wrap .pin-board-panel .pin-panel {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.queue-wrap .missed-v2-head {
+  min-width: 0;
+}
+
+.queue-wrap .missed-v2-title,
+.queue-wrap .missed-main,
+.queue-wrap .card-body,
+.queue-wrap .daily-task-main {
+  min-width: 0;
+}
+
+.queue-wrap .missed-note,
+.queue-wrap .missed-chip,
+.queue-wrap .card-meta > span,
+.queue-wrap .card-signals span,
+.queue-wrap .card-contact-line span,
+.queue-wrap .segment-customer-insights span,
+.queue-wrap .pin-panel .name,
+.queue-wrap .pin-panel .seg {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.queue-wrap .card-actions,
+.queue-wrap .segment-customer-actions {
+  min-width: 0;
+}
+
+@media (min-width: 1600px) {
+  .queue-wrap .content,
+  .queue-wrap {
+    max-width: 100%;
+  }
+
+  .queue-wrap .ops-panel,
+  .queue-wrap .missed-v2 {
+    max-height: none;
+  }
+}
