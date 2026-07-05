@@ -15,7 +15,7 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       cell: ({ row }) => (
         <>
           <div className="name">{personSafeText(row.original.displayTitle || row.original.title)}</div>
-          <div className="seg">{row.original.kind === 'customer' ? 'Customer' : 'Task'} - {personSafeText(row.original.segment)} - U{row.original.urgencyScore}</div>
+          <div className="seg">{row.original.kind === 'customer' ? 'Customer' : 'Follow-up'} - {personSafeText(row.original.segment)} - U{row.original.urgencyScore}</div>
         </>
       ),
     },

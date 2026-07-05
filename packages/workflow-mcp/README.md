@@ -140,7 +140,7 @@ Example `elementOverrides` payload:
       "density": "compact",
       "emphasis": "high",
       "toneRule": "urgency",
-      "visibleFields": ["title", "requiredAction", "phone", "assignee", "focus", "latestOrder", "performance30d", "pinButton", "archiveButton", "transferButton", "urgencyScore"],
+      "visibleFields": ["title", "requiredAction", "phone", "assignee", "focus", "latestOrder", "performance30d", "callButton", "pinButton", "archiveButton", "transferButton", "urgencyScore"],
       "copyOverrides": {
         "actionLabel": "Call priority",
         "requiredAction": "Call now, confirm the exact next step, and save the outcome."

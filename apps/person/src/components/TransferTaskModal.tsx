@@ -90,7 +90,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
             ) : targets.length === 0 ? (
               <div className="state-panel empty">
                 <strong>No transfer targets</strong>
-                <span>Active teammates with task assignment permissions will appear here.</span>
+                <span>Active teammates who can receive follow-ups will appear here.</span>
               </div>
             ) : (
               <>
@@ -127,7 +127,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                     maxLength={500}
-                    placeholder="Why is this task moving?"
+                    placeholder="Why is this follow-up moving?"
                     rows={4}
                   />
                 </label>

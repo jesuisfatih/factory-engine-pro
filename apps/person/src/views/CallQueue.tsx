@@ -161,6 +161,18 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     ?? (deepLinkCard?.id === selectedId ? deepLinkCard : null);
   const summary = data?.summary;
   const empty = !isLoading && (archive ? daily.length === 0 : daily.length === 0 && priority.length === 0 && pinned.length === 0);
+  const priorityCustomerCount = groups.reduce((total, group) => total + group.totalCustomers, 0);
+  const openRequestsCount = summary?.openRequestsCount ?? 0;
+  const primaryFocusText = urgentCount > 0
+    ? `Start with ${urgentCount} urgent follow-up${urgentCount === 1 ? '' : 's'}.`
+    : missedFollowUps.length > 0
+      ? `Catch up ${missedFollowUps.length} overdue follow-up${missedFollowUps.length === 1 ? '' : 's'}.`
+      : daily.length > 0
+        ? `Work through ${daily.length} customer callback${daily.length === 1 ? '' : 's'}.`
+        : 'Your callback list is clear.';
+  const primaryFocusHint = openRequestsCount > 0
+    ? `${openRequestsCount} customer request${openRequestsCount === 1 ? '' : 's'} still need an update.`
+    : 'Keep customer notes updated before leaving each conversation.';
   const closeTaskModal = () => {
     setSelectedId(null);
     setDeepLinkCard(null);
@@ -180,32 +192,73 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   return (
     <div className="queue-wrap">
       {!archive && (
-        <div className="today-focus">
-          <div className="today-focus-head">
-            <h2>Today's focus</h2>
-            <span className="today-focus-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+        <div className="today-focus-panel">
+          <div className="today-focus-copy">
+            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+            <strong>{primaryFocusText}</strong>
+            <p>{primaryFocusHint}</p>
           </div>
-          <div className="today-focus-items">
-            <span className={`focus-item${urgentCount > 0 ? ' urgent' : ''}`}>
-              {urgentCount > 0 ? `Handle ${urgentCount} urgent follow-up${urgentCount > 1 ? 's' : ''} first` : 'No urgent follow-ups right now'}
-            </span>
-            {churnFollowUps.length > 0 ? (
-              <span className="focus-item urgent">
-                {`Review ${churnFollowUps.length} customer${churnFollowUps.length > 1 ? 's' : ''} at risk`}
-              </span>
-            ) : null}
-            {missedFollowUps.length > 0 ? (
-              <span className="focus-item warn">
-                {`Catch up ${missedFollowUps.length} missed task${missedFollowUps.length > 1 ? 's' : ''}`}
-              </span>
-            ) : null}
-            <span className="focus-item">
-              {daily.length > 0 ? `Call back ${daily.length} customer${daily.length > 1 ? 's' : ''} from your follow-up list` : 'Follow-up list is clear'}
-            </span>
-            <span className={`focus-item${(summary?.openRequestsCount ?? 0) > 0 ? 'warn' : ''}`}>
-              {(summary?.openRequestsCount ?? 0) > 0 ? `${summary?.openRequestsCount} customer request${summary?.openRequestsCount === 1 ? '' : 's'} waiting` : 'No open customer requests'}
-            </span>
-            <span className="focus-item done">{summary?.callsMadeToday ?? 0} calls made so far today</span>
+          <div className="today-focus-items" aria-label="Today's focus metrics">
+            <button
+              type="button"
+              className={`today-focus-item tone-danger${dailyFilter === 'urgent' ? ' active' : ''}`}
+              onClick={() => {
+                setDailyFilter('urgent');
+                scrollToSection('followup-list-section', () => setDailyCollapsed(false));
+              }}
+            >
+              <span>Urgent follow-ups</span>
+              <strong>{urgentCount}</strong>
+              <em>needs fast callback</em>
+            </button>
+            <button
+              type="button"
+              className="today-focus-item tone-warn"
+              onClick={() => scrollToSection('missed-tasks-section', () => setMissedCollapsed(false))}
+            >
+              <span>Missed work</span>
+              <strong>{missedFollowUps.length}</strong>
+              <em>catch up before new calls</em>
+            </button>
+            <button
+              type="button"
+              className={`today-focus-item tone-info${dailyFilter === 'all' ? ' active' : ''}`}
+              onClick={() => {
+                setDailyFilter('all');
+                scrollToSection('followup-list-section', () => setDailyCollapsed(false));
+              }}
+            >
+              <span>Call list</span>
+              <strong>{daily.length}</strong>
+              <em>{range === 'today' ? 'today only' : 'last 7 days'}</em>
+            </button>
+            <button
+              type="button"
+              className="today-focus-item tone-warn"
+              onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}
+            >
+              <span>Customer requests</span>
+              <strong>{openRequestsCount}</strong>
+              <em>review before outreach</em>
+            </button>
+            <button
+              type="button"
+              className="today-focus-item tone-success"
+              onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}
+            >
+              <span>Priority customers</span>
+              <strong>{priorityCustomerCount}</strong>
+              <em>{groups.length} assigned list{groups.length === 1 ? '' : 's'}</em>
+            </button>
+            <button
+              type="button"
+              className="today-focus-item"
+              onClick={() => scrollToSection('pin-board-section')}
+            >
+              <span>Pinned</span>
+              <strong>{summary?.pinnedCount ?? 0}</strong>
+              <em>{summary?.callsMadeToday ?? 0} calls made today</em>
+            </button>
           </div>
         </div>
       )}
@@ -228,7 +281,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         {!archive && (
           <div className="kpi">
             <div className="kpi-head"><span className="kpi-icon amber"><ShieldAlert size={13} /></span><span className="label">Open requests</span></div>
-            <div className="val">{summary?.openRequestsCount ?? 0}</div>
+            <div className="val">{openRequestsCount}</div>
             <div className="sub amber">waiting for an update</div>
           </div>
         )}
@@ -247,7 +300,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         {!archive && (
           <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}>
             <div className="kpi-head"><span className="kpi-icon green"><Users size={13} /></span><span className="label">Priority customers</span></div>
-            <div className="val">{groups.reduce((total, group) => total + group.totalCustomers, 0)}</div>
+            <div className="val">{priorityCustomerCount}</div>
             <div className="sub green">{groups.length} segment{groups.length === 1 ? '' : 's'}</div>
           </button>
         )}
@@ -415,6 +468,10 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   onTogglePin={(card) => taskPin.mutate(card)}
                   onArchive={(card) => archiveTask.mutate(card)}
                   onOpen={setSelectedId}
+                  onCall={(card) => {
+                    if (card.phone) dialCustomer.mutate({ phone: card.phone, customerId: card.customerId ?? undefined, source: 'daily_card' });
+                  }}
+                  callDisabled={dialCustomer.isPending}
                   onTransfer={setTransferCard}
                 />
               </div>
@@ -580,6 +637,8 @@ function DailyWorkflowList({
   onTogglePin,
   onArchive,
   onOpen,
+  onCall,
+  callDisabled,
   onTransfer,
 }: {
   cards: CardData[];
@@ -591,6 +650,8 @@ function DailyWorkflowList({
   onTogglePin: (card: CardData) => void;
   onArchive: (card: CardData) => void;
   onOpen: (id: string) => void;
+  onCall: (card: CardData) => void;
+  callDisabled: boolean;
   onTransfer: (card: CardData) => void;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -622,6 +683,8 @@ function DailyWorkflowList({
               onTogglePin={() => onTogglePin(row.card)}
               onArchive={() => onArchive(row.card)}
               onOpen={onOpen}
+              onCall={onCall}
+              callDisabled={callDisabled}
               onTransfer={onTransfer}
             />
           ))}
@@ -639,6 +702,8 @@ function SortableDailyTaskCard({
   onTogglePin,
   onArchive,
   onOpen,
+  onCall,
+  callDisabled,
   onTransfer,
 }: {
   card: CardData;
@@ -648,6 +713,8 @@ function SortableDailyTaskCard({
   onTogglePin: () => void;
   onArchive: () => void;
   onOpen: (id: string) => void;
+  onCall: (card: CardData) => void;
+  callDisabled: boolean;
   onTransfer: (card: CardData) => void;
 }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id, disabled });
@@ -669,7 +736,17 @@ function SortableDailyTaskCard({
         <GripVertical size={13} />
       </button>
       <div className="daily-task-main">
-        <Card card={card} customization={customization} summary={summary} onTogglePin={onTogglePin} onArchive={onArchive} onOpen={onOpen} onTransfer={onTransfer} />
+        <Card
+          card={card}
+          customization={customization}
+          summary={summary}
+          onTogglePin={onTogglePin}
+          onArchive={onArchive}
+          onOpen={onOpen}
+          onCall={onCall}
+          callDisabled={callDisabled}
+          onTransfer={onTransfer}
+        />
         <FrontendCustomizationSlotView customization={customization} slot="daily.card.after_brief" context={{ dailyCall: card, summary }} />
         <FrontendCustomizationSlotView customization={customization} slot="daily.card.footer" context={{ dailyCall: card, summary }} />
       </div>
@@ -817,7 +894,7 @@ function SegmentCustomerCard({
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
   const cardUrgencyClass = item.urgencyScore >= 8 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
   const safeName = personSafeText(item.displayTitle || item.customerName);
-  const openWork = `${item.openTasksCount} task${item.openTasksCount === 1 ? '' : 's'} · ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
+  const openWork = `${item.openTasksCount} follow-up${item.openTasksCount === 1 ? '' : 's'} · ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();

@@ -304,3 +304,10 @@ Still requiring live evidence before final sign-off:
   `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`. This
   makes it explicit that MCP validates source patch plans and proof packages
   but does not apply files or deploy code.
+- The staff queue top focus area now uses the native command-center panel:
+  colored metric cards for urgent follow-ups, missed work, call list, customer
+  requests, priority customers, and pinned work. These cards are clickable and
+  scroll/filter the live sections instead of showing passive text chips.
+- Daily Call List cards now expose a real staff Call action wired to the
+  Aircall dial endpoint with source `daily_card`. MCP `elementOverrides` can
+  show, hide, or rename the approved `callButton` field without raw CSS/HTML.

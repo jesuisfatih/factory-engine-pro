@@ -378,6 +378,7 @@ export const frontendCustomizationElementFieldSchema = z.enum([
   'latestOrder',
   'performance30d',
   'segmentChip',
+  'callButton',
   'pinButton',
   'archiveButton',
   'transferButton',

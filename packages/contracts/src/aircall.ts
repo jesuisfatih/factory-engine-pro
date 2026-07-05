@@ -51,7 +51,7 @@ export type AircallTranscriptExportQuery = z.infer<typeof aircallTranscriptExpor
 export const aircallDialSchema = z.object({
   phone: z.string().trim().min(3).max(40),
   customerId: z.string().trim().min(1).optional(),
-  source: z.enum(['customer_detail', 'task_brief', 'priority_board', 'customer_table', 'calendar']).default('customer_detail'),
+  source: z.enum(['customer_detail', 'task_brief', 'daily_card', 'priority_board', 'customer_table', 'calendar']).default('customer_detail'),
 });
 export type AircallDialInput = z.infer<typeof aircallDialSchema>;
 

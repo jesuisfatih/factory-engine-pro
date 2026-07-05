@@ -516,6 +516,10 @@ button { font-family: inherit; }
 .archive-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 4px 9px; border-radius: 6px; font-size: 12px; }
 .archive-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .archive-btn svg { flex-shrink: 0; }
+.call-btn { display: inline-flex; align-items: center; gap: 5px; background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; cursor: pointer; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 650; }
+.call-btn:hover:not(:disabled) { color: #065F46; border-color: #34D399; background: #D1FAE5; }
+.call-btn:disabled { opacity: .5; cursor: not-allowed; }
+.call-btn svg { flex-shrink: 0; }
 
 /* ─── Right rail (pin board) ─────────────────────────────── */
 .with-rail { display: grid; grid-template-columns: 1fr 280px; gap: 12px; min-height: 0; }
@@ -1957,6 +1961,7 @@ button { font-family: inherit; }
 :root[data-theme="dark"] .pin-btn,
 :root[data-theme="dark"] .transfer-btn,
 :root[data-theme="dark"] .archive-btn,
+:root[data-theme="dark"] .call-btn,
 :root[data-theme="dark"] .action-btn,
 :root[data-theme="dark"] .customer-detail-icon-btn,
 :root[data-theme="dark"] .modal-card .btn {
@@ -1969,12 +1974,17 @@ button { font-family: inherit; }
 :root[data-theme="dark"] .pin-btn:hover,
 :root[data-theme="dark"] .transfer-btn:hover,
 :root[data-theme="dark"] .archive-btn:hover,
+:root[data-theme="dark"] .call-btn:hover:not(:disabled),
 :root[data-theme="dark"] .action-btn:hover,
 :root[data-theme="dark"] .customer-detail-icon-btn:hover,
 :root[data-theme="dark"] .modal-card .btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+:root[data-theme="dark"] .call-btn {
+  color: #86EFAC;
 }
 
 :root[data-theme="dark"] .card-contact-line span,

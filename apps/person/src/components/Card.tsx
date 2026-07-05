@@ -10,6 +10,8 @@ interface Props {
   onTogglePin: (id: string) => void;
   onArchive?: (card: CardData) => void;
   onOpen?: (id: string) => void;
+  onCall?: (card: CardData) => void;
+  callDisabled?: boolean;
   onTransfer?: (card: CardData) => void;
   customization?: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
@@ -53,7 +55,7 @@ function displayToneClass(tone: string | undefined) {
   return 'info';
 }
 
-export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customization, summary }: Props) {
+export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisabled = false, onTransfer, customization, summary }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
   const safeCardTitle = personSafeText(card.displayTitle || card.title);
@@ -119,6 +121,23 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
             ) : null}
           </div>
           <div className="card-actions">
+            {frontendFieldVisible(override, 'callButton') ? (
+              <button
+                type="button"
+                className="call-btn"
+                title={card.phone ? frontendCopy(override, 'callTitle', `Call ${card.phone}`) : frontendCopy(override, 'noPhoneTitle', 'No phone on file')}
+                aria-label={card.phone ? `Call ${safeCardTitle}` : `No phone for ${safeCardTitle}`}
+                disabled={!card.phone || callDisabled}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (card.phone) onCall?.(card);
+                }}
+              >
+                <Phone size={12} />
+                <span>{frontendCopy(override, 'callLabel', callDisabled ? 'Calling' : 'Call')}</span>
+              </button>
+            ) : null}
             {frontendFieldVisible(override, 'pinButton') ? (
               <button
                 type="button"

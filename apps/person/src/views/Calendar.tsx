@@ -65,7 +65,7 @@ export function CalendarView() {
   const selectedHasCallPlan = Boolean(selected?.displayReason || selected?.displayConcern || selected?.displayOutcome || selected?.callExcerpt || selectedActions.length);
   const noteMutation = useMutation({
     mutationFn: () => {
-      if (!selectedTaskId) throw new Error('This calendar event is not linked to a task.');
+      if (!selectedTaskId) throw new Error('This calendar event is not linked to a follow-up.');
       return saveTaskNote(selectedTaskId, { body: note.trim() });
     },
     onSuccess: () => {
@@ -76,7 +76,7 @@ export function CalendarView() {
   });
   const scheduleMutation = useMutation({
     mutationFn: () => {
-      if (!selectedTaskId) throw new Error('This calendar event is not linked to a task.');
+      if (!selectedTaskId) throw new Error('This calendar event is not linked to a follow-up.');
       return scheduleTaskFollowUp(selectedTaskId, {
         scheduledAt: new Date(scheduleAt).toISOString(),
         note: scheduleNote.trim() || undefined,
@@ -231,7 +231,7 @@ export function CalendarView() {
                       <span className="meta">{dialCustomer.data?.message ?? friendlyError(dialCustomer.error)}</span>
                     ) : null}
                     {selectedCustomerUrl ? <a className="btn" href={selectedCustomerUrl}><ExternalLink size={12} /> View customer</a> : null}
-                    {selectedTaskUrl ? <a className="btn" href={selectedTaskUrl}><FileText size={12} /> Open task</a> : null}
+                    {selectedTaskUrl ? <a className="btn" href={selectedTaskUrl}><FileText size={12} /> Open follow-up</a> : null}
                   </div>
                 </section>
                 {selectedTaskId ? (
@@ -244,7 +244,7 @@ export function CalendarView() {
                         rows={3}
                         value={note}
                         onChange={(event) => setNote(event.target.value)}
-                        placeholder="Save notes to this task history..."
+                        placeholder="Save notes to this follow-up history..."
                         style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 12, resize: 'none', fontFamily: 'inherit' }}
                       />
                       {noteMutation.isError ? <div className="danger-text">{friendlyError(noteMutation.error)}</div> : null}
@@ -267,7 +267,7 @@ export function CalendarView() {
                     </form>
                   </>
                 ) : (
-                  <div className="meta" style={{ marginTop: 12 }}>This event is not linked to a task, so notes and follow-up changes are read-only here.</div>
+                  <div className="meta" style={{ marginTop: 12 }}>This event is not linked to a follow-up, so notes and follow-up changes are read-only here.</div>
                 )}
               </div>
 
@@ -298,7 +298,7 @@ export function CalendarView() {
                   )}
                   <div className="row">
                     <div className="lbl">Next actions</div>
-                    <ul>{(selectedActions.length ? selectedActions : ['Review context', 'Call or update the task', 'Save the outcome']).map((action) => <li key={action}>{action}</li>)}</ul>
+                    <ul>{(selectedActions.length ? selectedActions : ['Review context', 'Call or update the follow-up', 'Save the outcome']).map((action) => <li key={action}>{action}</li>)}</ul>
                   </div>
                 </div>
               ) : (

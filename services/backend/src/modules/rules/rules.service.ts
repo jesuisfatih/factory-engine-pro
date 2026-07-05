@@ -6274,6 +6274,7 @@ const FRONTEND_MCP_ELEMENT_FIELDS: Record<string, FrontendCustomizationElementFi
     'latestOrder',
     'performance30d',
     'segmentChip',
+    'callButton',
     'pinButton',
     'archiveButton',
     'transferButton',

@@ -454,7 +454,7 @@ Element map:
 | KPI row | `kpi.before`, `kpi.after`, `elementId: "kpi.row"` | add blocks; override density/copy | Good for incoming calls, outbound calls, open requests, daily calls, priority customers, pinned, high intent, and sync status. |
 | Today focus | `focus.before`, `focus.after` | add staff instructions or stat blocks around the native command center | Bind only to live `summary` fields such as `missedFollowUpCount`, `atRiskCustomerCount`, `openRequestsCount`, `incomingCallsToday`, `outboundCallsToday`, and `callsMadeToday`. Do not fake counts. |
 | Daily header | `daily.header`, `daily.before_list` | add guidance or filters explanation | Do not add segment grouping here. Daily list remains recent call work. |
-| Daily call card | `daily.card.after_brief`, `daily.card.footer`, `elementId: "daily.card"` | add short blocks; override fields, copy, density, emphasis, urgency tone | Required fields: `title`, `requiredAction`, `phone`. Do not expose internal rule names. |
+| Daily call card | `daily.card.after_brief`, `daily.card.footer`, `elementId: "daily.card"` | add short blocks; override fields, copy, density, emphasis, urgency tone, call button copy/visibility | Required fields: `title`, `requiredAction`, `phone`. Do not expose internal rule names. |
 | Priority group header | `priority.group.header` | add owner/group context | Priority is assigned customer groups, not recent calls. |
 | Priority customer card | `priority.card.after_summary`, `priority.card.footer`, `elementId: "priority.card"` | add customer blocks; override fields, copy, density, urgency tone | Required fields: `customerName`, `phone`, `latestOrder`, `latestCall`, `openFollowUp`, `latestNote`. |
 | Call modal | `modal.hero`, `modal.after_steps`, `modal.customer_context`, `elementId: "task.modal"` | add modal blocks; override labels and approved section order | Required fields: `title`, `phone`, `hero`, `steps`. |
@@ -504,7 +504,7 @@ Example:
       "density": "compact",
       "emphasis": "high",
       "toneRule": "urgency",
-      "visibleFields": ["title", "requiredAction", "phone", "assignee", "focus", "latestOrder", "performance30d", "pinButton", "archiveButton", "transferButton", "urgencyScore"],
+      "visibleFields": ["title", "requiredAction", "phone", "assignee", "focus", "latestOrder", "performance30d", "callButton", "pinButton", "archiveButton", "transferButton", "urgencyScore"],
       "copyOverrides": {
         "actionLabel": "Call priority",
         "requiredAction": "Call now, confirm the exact next step, and save the outcome."
