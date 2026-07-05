@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { AlertTriangle, FileText, Mail, PlayCircle, RefreshCw, Send, Users, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
@@ -10,6 +11,7 @@ import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
 
 type Tab = 'overview' | 'contacts' | 'templates' | 'audiences' | 'campaigns' | 'flows' | 'settings';
+const MAIL_MARKETING_TABS: Tab[] = ['overview', 'contacts', 'templates', 'audiences', 'campaigns', 'flows', 'settings'];
 
 interface MailContact {
   id: string;
@@ -257,6 +259,10 @@ const DEFAULT_FLOW_DRAFT: FlowDraft = {
 
 export function MailMarketingPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const routeTab = useRouterState({
+    select: (state) => normalizeMailTab((state.location.search as Record<string, unknown>).tab),
+  });
   const canTemplateWrite = useCan(MEMBER_PERMISSIONS.mailTemplateWrite);
   const canTemplateApprove = useCan(MEMBER_PERMISSIONS.mailTemplateApprove);
   const canTemplatePublish = useCan(MEMBER_PERMISSIONS.mailTemplatePublish);
@@ -267,7 +273,7 @@ export function MailMarketingPage() {
   const canFlowWrite = useCan(MEMBER_PERMISSIONS.mailMarketingFlowWrite);
   const canFlowPublish = useCan(MEMBER_PERMISSIONS.mailMarketingFlowPublish);
   const canSettingsWrite = useCan(MEMBER_PERMISSIONS.mailSettingsWrite);
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTabState] = useState<Tab>(() => normalizeMailTab(new URLSearchParams(window.location.search).get('tab')) ?? 'overview');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(DEFAULT_TEMPLATE_DRAFT);
@@ -420,6 +426,15 @@ export function MailMarketingPage() {
     queryFn: () => adminApi.mailMarketingAnalyticsOverview({ days: 30, limit: 10 }) as Promise<MailMarketingAnalyticsOverviewResponse>,
     retry: false,
   });
+
+  useEffect(() => {
+    if (routeTab && routeTab !== tab) setTabState(routeTab);
+  }, [routeTab, tab]);
+
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    void navigate({ to: '/mail-marketing', search: { tab: next } as never, replace: true });
+  };
   const analyticsFunnel = useQuery({
     queryKey: QK.analyticsFunnel,
     queryFn: () => adminApi.mailMarketingAnalyticsFunnel({ days: 30, limit: 10 }) as Promise<MailMarketingAnalyticsFunnelResponse>,
@@ -1162,7 +1177,7 @@ export function MailMarketingPage() {
       )}
 
       <div className="orders-toolbar" style={{ marginBottom: 16, flexWrap: 'wrap' }}>
-        {(['overview', 'contacts', 'templates', 'audiences', 'campaigns', 'flows', 'settings'] as Tab[]).map((entry) => (
+        {MAIL_MARKETING_TABS.map((entry) => (
           <button key={entry} type="button" className={`btn ${tab === entry ? 'primary' : ''}`} onClick={() => setTab(entry)}>
             {label(entry)}
           </button>
@@ -4148,6 +4163,10 @@ function splitCsv(value: string) {
 
 function label(tab: Tab) {
   return tab.replace('-', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function normalizeMailTab(value: unknown): Tab | null {
+  return typeof value === 'string' && MAIL_MARKETING_TABS.includes(value as Tab) ? value as Tab : null;
 }
 
 function fmtDate(value: string | null) {

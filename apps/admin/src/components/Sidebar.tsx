@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
   ShoppingCart, UserSquare2, Workflow, KeyRound, FileCheck2,
-  Mail,
+  FileText, Mail,
 } from 'lucide-react';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { adminApi, clearSurfaceSessions } from '@/lib/api';
@@ -17,6 +17,8 @@ interface NavLeaf {
   id: string;
   icon: typeof LayoutDashboard;
   permission?: string | string[];
+  search?: Record<string, string>;
+  activeTabs?: string[];
   exact?: boolean;
 }
 
@@ -69,7 +71,8 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     groupKey: 'nav.group_transactional_mail',
     children: [
       { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: MEMBER_PERMISSIONS.mailDeliveryRead },
-      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: MEMBER_PERMISSIONS.mailMarketingContactRead },
+      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_templates', id: 'nav-mail-templates', icon: FileText, permission: MEMBER_PERMISSIONS.settingsRead, search: { tab: 'templates' }, activeTabs: ['templates'] },
+      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: MEMBER_PERMISSIONS.settingsRead, search: { tab: 'overview' }, activeTabs: ['overview', 'contacts', 'audiences', 'campaigns', 'flows', 'settings'] },
     ],
   },
   {
@@ -84,7 +87,7 @@ interface Props { collapsed: boolean; }
 
 export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
-  const router = useRouterState({ select: (s) => s.location.pathname });
+  const router = useRouterState({ select: (s) => ({ pathname: s.location.pathname, search: s.location.search as Record<string, unknown> }) });
   const principal = useCurrentPrincipal().data;
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
@@ -126,11 +129,14 @@ export function Sidebar({ collapsed }: Props) {
             <div className="group-label">{t(section.groupKey)}</div>
             {section.children.map((leaf) => {
               const Icon = leaf.icon;
-              const active = leaf.exact ? router === leaf.matchPrefix : router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
+              const currentTab = typeof router.search.tab === 'string' ? router.search.tab : 'overview';
+              const pathActive = leaf.exact ? router.pathname === leaf.matchPrefix : router.pathname === leaf.matchPrefix || router.pathname.startsWith(`${leaf.matchPrefix}/`);
+              const active = pathActive && (!leaf.activeTabs || leaf.activeTabs.includes(currentTab));
               return (
                 <Link
-                  key={leaf.to}
+                  key={leaf.id}
                   to={leaf.to}
+                  search={leaf.search as never}
                   id={leaf.id}
                   data-i18n-key={leaf.i18nKey}
                   className={`nav-item${active ? ' active' : ''}`}
