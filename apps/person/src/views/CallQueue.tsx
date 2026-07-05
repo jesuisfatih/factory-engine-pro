@@ -231,6 +231,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               {openRequestsCount > 0 ? `${openRequestsCount} customer request${openRequestsCount === 1 ? '' : 's'} waiting` : 'No open customer requests'}
             </span>
             <span className="focus-item done">{summary?.callsMadeToday ?? 0} calls made so far today</span>
+            <span className="focus-item">
+              {`${(summary?.incomingCallsToday ?? 0) + (summary?.outboundCallsToday ?? 0)} calls pulled into today's intake`}
+            </span>
           </div>
         </div>
       )}
@@ -307,7 +310,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 >
                   <h2>Missed work</h2>
                 </button>
-                <span className="missed-v2-badge">Not completed · {missedFollowUps.length}</span>
+                <span className="missed-v2-badge">Not completed - {missedFollowUps.length}</span>
               </div>
               {!missedCollapsed ? (
                 <div className="missed-v2-list">
@@ -346,7 +349,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               >
                 <span className="missed-v2-icon churn-v2-icon"><UserX size={15} /></span>
                 <h2>At-risk customers</h2>
-                <span className="missed-v2-badge churn-v2-badge">Needs care · {churnFollowUps.length}</span>
+                <span className="missed-v2-badge churn-v2-badge">Needs care - {churnFollowUps.length}</span>
               </button>
               {!churnCollapsed ? (
                 <div className="missed-v2-list">
@@ -396,7 +399,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
                 </div>
               ) : null}
-              <span className="missed-v2-badge followup-badge">To call · {filteredDaily.length}</span>
+              <span className="missed-v2-badge followup-badge">To call - {filteredDaily.length}</span>
             </div>
             {!dailyCollapsed ? (
               <div className="followup-body">
@@ -415,7 +418,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                         aria-pressed={dailyFilter === filter.id}
                         onClick={() => setDailyFilter(filter.id)}
                       >
-                        {filter.label} · {filter.count}
+                        {filter.label} - {filter.count}
                       </button>
                     ))}
                   </div>
@@ -457,7 +460,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
                 <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
               </button>
-              <span className="missed-v2-badge kanban-badge">Assigned · {groups.reduce((total, group) => total + group.totalCustomers, 0)} in {groups.length} segment{groups.length === 1 ? '' : 's'}</span>
+              <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} in {groups.length} segment{groups.length === 1 ? '' : 's'}</span>
             </div>
             {!kanbanCollapsed ? <div className="followup-body">
               {(() => {
@@ -474,7 +477,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                           aria-pressed={kanbanSegment === 'all'}
                           onClick={() => setKanbanSegment('all')}
                         >
-                          All lists · {orderedGroups.reduce((total, group) => total + group.items.length, 0)}
+                          All lists - {orderedGroups.reduce((total, group) => total + group.items.length, 0)}
                         </button>
                         {orderedGroups.map((group, index) => (
                           <button
@@ -485,7 +488,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                             onClick={() => setKanbanSegment(group.segmentId)}
                           >
                             <span className="segment-group-dot" style={{ background: group.segmentColor }} />
-                            List {index + 1} · {group.items.length}
+                            List {index + 1} - {group.items.length}
                           </button>
                         ))}
                       </div>
@@ -743,18 +746,18 @@ const MISSED_AVATAR_COLORS = ['#dc4b3e', '#d99a2b', '#2f7f7a', '#6366f1'];
 
 function staffSegmentLabel(internalName: string, displayName?: string | null) {
   if (displayName?.trim()) return displayName.trim();
-  return personSafeText(internalName.replace(/^\s*(sales|support|account|internal)\s*[-:|·]\s*/i, '').trim() || internalName);
+  return personSafeText(internalName.replace(/^\s*(sales|support|account|internal)\s*[-:|\u00b7]\s*/i, '').trim() || internalName);
 }
 
 function NoteText({ text }: { text: string }) {
   const clipped = text.length > 70 ? `${text.slice(0, 70)}...` : text;
-  const parts = clipped.split('·').map((part) => part.trim()).filter(Boolean);
+  const parts = clipped.split('\u00b7').map((part) => part.trim()).filter(Boolean);
   if (parts.length === 0) return <>{clipped}</>;
   return (
     <>
       {parts.map((part, index) => (
         <Fragment key={index}>
-          {index > 0 ? <span className="note-sep">•</span> : null}
+          {index > 0 ? <span className="note-sep"> - </span> : null}
           {part}
         </Fragment>
       ))}
@@ -822,7 +825,7 @@ function PrioritySegmentGroup({
         <span className="segment-group-title">{listLabel ?? displayName}</span>
         {listLabel ? <span className="segment-group-subname">{displayName}</span> : null}
         <span className="segment-group-priority">P{group.priority}</span>
-        <span className="segment-group-meta">{group.items.length}/{cap} today · {group.totalCustomers} total</span>
+        <span className="segment-group-meta">{group.items.length}/{cap} today - {group.totalCustomers} total</span>
       </button>
       <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: groupSummary }} />
       {!collapsed && (
@@ -883,7 +886,7 @@ function SegmentCustomerCard({
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
   const cardUrgencyClass = item.urgencyScore >= 12 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
   const safeName = personSafeText(item.displayTitle || item.customerName);
-  const openWork = `${item.openTasksCount} follow-up${item.openTasksCount === 1 ? '' : 's'} · ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
+  const openWork = `${item.openTasksCount} follow-up${item.openTasksCount === 1 ? '' : 's'} - ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();

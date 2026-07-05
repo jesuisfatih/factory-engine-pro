@@ -335,7 +335,7 @@ button { font-family: inherit; }
 
 /* ─── Kanban ─────────────────────────────────────────────── */
 .queue-wrap { display: block; min-height: 0; }
-.ops-grid { display: grid; grid-template-columns: minmax(460px, 0.95fr) minmax(520px, 1.18fr) minmax(220px, .42fr); align-items: start; gap: 12px; min-height: 0; }
+.ops-grid { display: grid; grid-template-columns: 1fr; align-items: start; gap: 10px; min-height: 0; }
 .ops-grid.archive { grid-template-columns: minmax(320px, 720px); align-content: start; }
 .ops-panel { background: #FBFCFE; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 196px); box-shadow: var(--shadow); }
 .ops-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 2px 11px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
@@ -1467,15 +1467,15 @@ button { font-family: inherit; }
 .missed-v2-head h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
 .missed-v2-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
 .missed-v2-list { display: flex; flex-direction: column; background: rgba(245, 196, 81, .05); }
-.missed-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
+.missed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
 .missed-row:last-child { border-bottom: none; }
 .missed-row:hover { background: var(--surface-2); }
 .missed-avatar { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; color: #fff; font-size: 13px; font-weight: 750; flex-shrink: 0; }
 .missed-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .missed-name { font-size: 13px; font-weight: 650; color: var(--text); }
-.missed-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); min-width: 0; }
+.missed-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 11.5px; color: var(--text-muted); min-width: 0; }
 .missed-chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font-weight: 600; color: var(--text); flex-shrink: 0; }
-.missed-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.missed-note { min-width: min(100%, 220px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-sep { display: inline-block; margin: 0 5px; font-size: 14px; line-height: 1; font-weight: 700; color: var(--text-faint); vertical-align: -1px; }
 .missed-action { font-size: 12px; font-weight: 650; padding: 5px 12px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
 .missed-action.red { color: #dc2626; background: rgba(239, 68, 68, .1); }
@@ -1528,9 +1528,9 @@ button { font-family: inherit; }
 .daily-card.urgency-med { border-left: 3px solid #f59e0b; }
 .card.urgency-low,
 .daily-card.urgency-low { border-left: 3px solid var(--border); }
-.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
-.card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 11.5px; font-weight: 550; color: var(--text-muted); min-width: 0; }
-.card-meta > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.card-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 8px; }
+.card-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: center; gap: 7px 12px; font-size: 11.5px; font-weight: 550; color: var(--text-muted); min-width: 0; }
+.card-meta > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
 .sig-ic { display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 21px; border-radius: 7px; flex-shrink: 0; }
 .sig-ic.green { background: rgba(34, 197, 94, .14); color: #15803d; }
@@ -1551,7 +1551,7 @@ button { font-family: inherit; }
 .segment-customer-latest-note strong { display: block; color: var(--text); margin-bottom: 2px; }
 
 @media (max-width: 1500px) {
-  .ops-grid { grid-template-columns: minmax(360px, 1fr) minmax(380px, 1.05fr); }
+  .ops-grid { grid-template-columns: 1fr; }
   .pin-board-panel { grid-column: 1 / -1; }
   .call-action-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .today-focus-panel { grid-template-columns: 1fr; }

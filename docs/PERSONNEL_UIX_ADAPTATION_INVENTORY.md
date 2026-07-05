@@ -87,7 +87,7 @@ without using the reference backend.
 | Reference UIX element | Our implemented surface | Backend/data rule |
 | --- | --- | --- |
 | Command-center top focus band | `today-focus` with daily focus items, urgent follow-ups, missed work, risk review, open request count, and calls made today | Uses `PersonDailyOperationsDto.summary` and live Daily Call List counts only |
-| Icon KPI strip | KPI cards with colored icons for incoming calls, outbound calls, open requests, follow-ups, pinned, priority customers, and sync | Counts come from live summary, Daily Call List, pin board, and segment groups |
+| Icon KPI strip | KPI cards with colored icons for incoming calls, outbound calls, open requests, follow-ups, pinned, and priority customers. Passive call intake status lives inside Today focus instead of a separate right-side card | Counts come from live summary, Daily Call List, pin board, and segment groups. The intake status uses today's real Aircall counts and does not reprocess old transcripts |
 | Missed work block | `missed-v2` expandable list with avatar, note, phone, and action copy | Only cards with `unreached` or `missedNote`; no invented rows |
 | At-risk block | `churn-v2` expandable list for customer risk notes | Only cards with live `customerRisk` / `customerRiskNote` flags |
 | Follow-up list with filter chips | `followup-v2` panel with All / Urgent / Not reached / At risk filters and date separators | Filters operate on live Daily Call List rows already scoped to current staff |
@@ -160,7 +160,7 @@ Closed in source:
 1. `PersonDailyOperationsDto.summary` exposes command-center fields for today
    calls, open requests, missed follow-ups, and at-risk customers.
 2. `CallQueueView` renders the command-center layout with Today focus,
-   incoming/outbound KPIs, missed work, at-risk customers, sync status, Daily
+   incoming/outbound KPIs, missed work, at-risk customers, call intake status, Daily
    Call List, Priority Kanban, and Pinned board.
 3. Priority customer cards receive `customerRisk` and `customerRiskNote` from
    backend service logic, so at-risk presentation is not guessed in React.
