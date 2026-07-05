@@ -121,6 +121,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ─── Content / Page ─────────────────────────────────────── */
 .content { padding: 18px 20px; overflow-y: auto; overflow-x: hidden; min-height: 0; min-width: 0; }
+.content > * { min-width: 0; max-width: 100%; }
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; min-width: 0; }
 .page-head > div:first-child { min-width: 0; }
 .page-head h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
@@ -189,15 +190,18 @@ a { color: inherit; text-decoration: none; }
 .kpi .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
 /* ─── Cards / Sections ──────────────────────────────────── */
-.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-width: 0; max-width: 100%; }
+.section > * { min-width: 0; }
 .section h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .section h3 > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .section h3 .meta { font-size: 11px; color: var(--text-faint); font-weight: 500; }
 .two-col { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 16px; min-width: 0; }
+.two-col > * { min-width: 0; }
 .row-stack { display: flex; flex-direction: column; gap: 8px; }
 
 /* ─── Tables ─────────────────────────────────────────────── */
-.data-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; min-width: 0; }
+.data-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; min-width: 0; max-width: 100%; }
+.data-card > * { min-width: 0; }
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); min-width: 0; }
 .card-title-row strong { color: var(--text); font-size: 12px; }
 .card-title-row .muted { font-size: 11px; }
@@ -207,6 +211,8 @@ a { color: inherit; text-decoration: none; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .data-table th { background: var(--surface-2); text-align: left; font-size: 10px; text-transform: uppercase; color: var(--text-faint); padding: 10px 14px; font-weight: 700; border-bottom: 1px solid var(--border); }
 .data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.data-table th,
+.data-table td { min-width: 0; overflow-wrap: anywhere; }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--surface-2); }
 .data-table .name { font-weight: 600; }
@@ -325,7 +331,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .kpi-icon.purple { background: #EDE9FE; color: #6D28D9; }
 :root[data-theme="dark"] .kpi-icon.purple { background: #2A1F3E; color: #C4B5FD; }
 
-.seg-split { display: grid; grid-template-columns: 320px 1fr; gap: 16px; min-height: 0; }
+.seg-split { display: grid; grid-template-columns: minmax(280px, .65fr) minmax(0, 1fr); gap: 16px; min-height: 0; min-width: 0; }
+.seg-split > * { min-width: 0; }
 .seg-packages { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .seg-packages-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .seg-packages-head h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); }
@@ -397,7 +404,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-signal-head .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .customer-signal-head .right { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .customer-signal-head .right a { color: var(--accent); cursor: pointer; }
-.preview-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, 110px) 150px 150px auto; gap: 8px; margin-bottom: 12px; align-items: center; }
+.preview-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(96px, 110px)) minmax(120px, 150px) minmax(120px, 150px) auto; gap: 8px; margin-bottom: 12px; align-items: center; min-width: 0; }
+.preview-toolbar > * { min-width: 0; }
 .preview-toolbar input,
 .preview-toolbar select { min-width: 0; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 12px; padding: 0 10px; }
 .signal-cards { display: flex; flex-direction: column; gap: 8px; }
@@ -544,7 +552,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 :root[data-theme="dark"] .integration-tabs .tab.active { background: var(--accent); color: #0A0F1A; }
 
 /* Service mini-cards (subtle, no gradients) */
-.service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; min-width: 0; }
+.service-grid > * { min-width: 0; }
 .service-card { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
 .service-card .top { padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
 .service-card .top .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -557,7 +566,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .service-card .foot { padding: 8px 16px 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
 
 /* Neutral stat-card (used in Budget) */
-.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; min-width: 0; }
+.stat-row > * { min-width: 0; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
 .stat-card .icon-wrap { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-3); color: var(--text-muted); display: grid; place-items: center; flex-shrink: 0; }
 .stat-card .lbl { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
@@ -607,8 +617,10 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .status-success { background: var(--success-soft); color: var(--success); }
 
 /* ─── Webhook status card (Aircall) ──────────────────────── */
-.webhook-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
-.webhook-card .head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.webhook-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; min-width: 0; max-width: 100%; }
+.webhook-card > * { min-width: 0; }
+.webhook-card .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; min-width: 0; }
+.webhook-card .head > * { min-width: 0; }
 .webhook-card .head h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
 .webhook-card .head .sub { font-size: 11px; color: var(--text-muted); }
 .webhook-id-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface-2); border-radius: 8px; margin-bottom: 14px; }
@@ -616,13 +628,15 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .webhook-id-row .ico { color: var(--success); }
 .webhook-id-row .id-text { font-weight: 700; color: var(--text); font-size: 13px; }
 .webhook-id-row .url { font-size: 11px; color: var(--text-muted); margin-top: 2px; word-break: break-all; }
-.webhook-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; background: var(--surface-2); padding: 14px; border-radius: 8px; margin-bottom: 14px; }
+.webhook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: var(--surface-2); padding: 14px; border-radius: 8px; margin-bottom: 14px; min-width: 0; }
+.webhook-grid > * { min-width: 0; }
 .webhook-grid .cell .lbl { font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-.webhook-grid .cell .val { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.webhook-grid .cell .val { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 4px; overflow-wrap: anywhere; }
 .webhook-warning { background: var(--warn-soft); color: var(--warn); padding: 10px 14px; border-radius: 8px; font-size: 11px; margin-bottom: 14px; display: flex; gap: 8px; align-items: flex-start; }
 .webhook-actions { display: flex; gap: 8px; }
 
-.config-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+.config-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; min-width: 0; max-width: 100%; }
+.config-card > * { min-width: 0; }
 .config-card h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
 .config-card .sub { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
 .field-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -641,7 +655,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .unlink-pill { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--danger-soft); color: var(--danger); border: none; cursor: pointer; }
 .unlink-pill:hover { filter: brightness(.96); }
 
-.numbers-stat { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.numbers-stat { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; min-width: 0; }
+.numbers-stat > * { min-width: 0; }
 .numbers-stat .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
 .numbers-stat .card .lbl { font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
 .numbers-stat .card .v { font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
@@ -1199,6 +1214,21 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   .two-col {
     grid-template-columns: 1fr;
   }
+  .seg-split,
+  .rules-mcp-panel,
+  .rules-shell {
+    grid-template-columns: 1fr;
+  }
+  .rules-shell {
+    height: auto;
+    min-height: 0;
+  }
+  .rules-list {
+    max-height: 460px;
+  }
+  .preview-toolbar {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
   .kpis,
   .kpis.four {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1308,7 +1338,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 
 /* ─── Support / SR ───────────────────────────────────────── */
-.sr-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.sr-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; min-width: 0; }
+.sr-kpi-row > * { min-width: 0; }
 .sr-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .sr-kpi .lbl { font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
 .sr-kpi .val { font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
@@ -1465,6 +1496,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   padding: 14px 20px;
   display: flex; align-items: center; gap: 14px;
   margin-bottom: 14px;
+  min-width: 0;
 }
 :root[data-theme="dark"] .rules-banner {
   background: linear-gradient(90deg, #78350f 0%, #92400e 100%);
@@ -1474,12 +1506,14 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-size: 14px; font-weight: 800; letter-spacing: .3px;
   text-transform: uppercase;
 }
-.rules-banner-body { font-size: 12px; margin-top: 2px; line-height: 1.5; max-width: 900px; }
+.rules-banner > div { min-width: 0; }
+.rules-banner-body { font-size: 12px; margin-top: 2px; line-height: 1.5; max-width: 900px; overflow-wrap: anywhere; }
 .rules-health-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 14px;
+  min-width: 0;
 }
 .rules-health-strip div {
   display: grid;
@@ -1508,13 +1542,16 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
   gap: 12px;
   margin-bottom: 14px;
+  min-width: 0;
 }
+.rules-mcp-panel > * { min-width: 0; }
 .rules-mcp-editor,
 .rules-mcp-registry {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   padding: 12px;
+  min-width: 0;
 }
 .rules-mcp-editor textarea {
   width: 100%;
@@ -1545,7 +1582,9 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   margin-top: 10px;
   color: var(--text-muted);
   font-size: 11px;
+  min-width: 0;
 }
+.rules-mcp-status span { min-width: 0; overflow-wrap: anywhere; }
 .rules-mcp-status strong { color: var(--text); }
 .rules-mcp-registry {
   display: flex;
@@ -1565,7 +1604,9 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
+.rules-mcp-intent div > * { min-width: 0; }
 .rules-mcp-intent strong { font-size: 12px; color: var(--text); }
 .rules-mcp-intent span,
 .rules-mcp-intent em,
@@ -1578,6 +1619,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 45%;
 }
 .rules-mcp-foot {
   display: flex;
@@ -1587,9 +1629,11 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 
 .rules-shell {
-  display: grid; grid-template-columns: 320px 1fr;
+  display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: 12px; height: calc(100vh - 240px); min-height: 600px;
+  min-width: 0;
 }
+.rules-shell > * { min-width: 0; }
 .rules-list {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 8px;
@@ -1601,9 +1645,13 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 8px; padding: 8px 4px 4px;
   font-size: 11px; font-weight: 800; color: var(--text-muted);
   text-transform: uppercase;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .rules-section-head span {
   display: inline-flex; align-items: center; gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rule-card {
   width: 100%; background: var(--surface); border: 1px solid var(--border);
@@ -1616,12 +1664,15 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .rule-card-head {
   display: flex; align-items: center; justify-content: space-between;
   font-size: 11px;
+  gap: 8px;
+  min-width: 0;
 }
-.rule-card-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.rule-card-name { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
 .rule-card-desc { font-size: 11px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rule-card-meta {
-  display: flex; gap: 8px; align-items: center;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   font-size: 10px; color: var(--text-faint);
+  min-width: 0;
 }
 .rule-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
 .rule-card-meta .pill { padding: 1px 6px; font-size: 9px; }
@@ -1980,6 +2031,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 16px;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .customer-detail-header-actions {
   display: inline-flex;
@@ -1987,6 +2040,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 8px;
   flex-shrink: 0;
 }
+.customer-detail-title { min-width: 0; }
 .customer-detail-call-status {
   padding: 8px 20px;
   border-bottom: 1px solid var(--border);
@@ -2011,7 +2065,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 .customer-detail-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 1px;
   background: var(--border);
   border-bottom: 1px solid var(--border);
@@ -2047,6 +2101,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-card p { margin: 10px 0 0; color: var(--text); line-height: 1.45; }
 .customer-detail-card blockquote { margin: 10px 0 0; border-left: 3px solid #0f766e; padding-left: 10px; color: var(--muted, var(--text-muted)); }
 .customer-detail-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.customer-detail-row > * { min-width: 0; }
 .customer-detail-row + .customer-detail-row, .customer-detail-kv + .customer-detail-kv { margin-top: 10px; }
 .customer-detail-row strong, .customer-detail-row span, .customer-detail-kv span, .customer-detail-kv strong { display: block; }
 .customer-detail-row span, .customer-detail-kv span { color: var(--muted, var(--text-muted)); font-size: 12px; margin-top: 3px; }
@@ -2099,6 +2154,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   margin-bottom: 14px;
   min-width: 0;
 }
+.call-center-preview-grid > * { min-width: 0; }
 .call-center-header-actions {
   display: inline-flex;
   align-items: center;
@@ -2169,6 +2225,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   padding: 10px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .call-center-tab {
   border: 1px solid var(--border);
@@ -2190,20 +2248,25 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   margin-left: auto;
   color: var(--muted, var(--text-muted));
   font-size: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .call-center-kanban {
   display: grid;
-  grid-template-columns: minmax(300px, .95fr) minmax(340px, 1.15fr) minmax(260px, .65fr);
+  grid-template-columns: minmax(320px, .95fr) minmax(380px, 1.15fr) minmax(320px, .72fr);
   gap: 10px;
   padding: 10px;
   min-width: 0;
 }
+.call-center-kanban > * { min-width: 0; }
 .call-center-panel {
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: 8px;
   padding: 10px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .call-center-panel-head {
   display: flex;
@@ -2213,9 +2276,11 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
-.call-center-panel-head h3 { margin: 0; font-size: 13px; }
-.call-center-panel-head span { color: var(--muted, var(--text-muted)); font-size: 12px; }
+.call-center-panel-head h3 { margin: 0; font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.call-center-panel-head span { color: var(--muted, var(--text-muted)); font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
 .call-center-task-card,
 .segment-customer-row,
 .pin-line,
@@ -2224,6 +2289,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   border-radius: 8px;
   background: var(--surface);
   padding: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 .call-center-task-card + .call-center-task-card,
 .pin-line + .pin-line,
@@ -2241,12 +2308,14 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   color: var(--muted, var(--text-muted));
   font-size: 12px;
   font-style: normal;
+  overflow-wrap: anywhere;
 }
 .call-center-task-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   margin-bottom: 7px;
+  min-width: 0;
 }
 .call-center-task-badges span {
   border: 1px solid var(--accent);
@@ -2266,17 +2335,22 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-size: 11px;
   color: #0f766e;
   background: color-mix(in srgb, #0f766e 10%, transparent);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .task-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+  min-width: 0;
 }
 .task-card-meta span {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 2px 7px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .call-center-segment {
   border: 1px solid var(--border);
@@ -2287,7 +2361,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .call-center-segment + .call-center-segment { margin-top: 8px; }
 .call-center-segment summary {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  grid-template-columns: 8px minmax(0, 1fr) minmax(120px, auto) auto;
   gap: 8px;
   align-items: center;
   padding: 10px;
@@ -2305,7 +2379,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .segment-customer-list { display: grid; gap: 7px; padding: 8px; }
 .segment-customer-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(190px, 1.15fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(180px, .85fr) minmax(220px, 1fr) minmax(160px, .75fr);
   gap: 10px;
   align-items: start;
   cursor: pointer;
@@ -2334,6 +2408,9 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 6px;
   justify-content: flex-end;
 }
+.segment-customer-actions {
+  grid-column: 1 / -1;
+}
 .priority-pill {
   display: inline-flex;
   align-items: center;
@@ -2347,11 +2424,14 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-weight: 800;
 }
 .pin-line {
-  display: grid;
-  grid-template-columns: minmax(80px, .7fr) minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
+.pin-line strong { order: -1; flex: 1 0 100%; }
+.pin-line span,
+.pin-line em { min-width: 0; max-width: 100%; }
 .call-center-list { display: grid; gap: 8px; }
 .call-center-list-row {
   display: grid;
@@ -2359,6 +2439,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 10px;
   align-items: start;
 }
+.call-center-list-row > * { min-width: 0; }
 .call-center-note-search {
   display: grid;
   gap: 5px;
@@ -2430,7 +2511,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 
 @media (max-width: 1500px) {
   .call-center-preview-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
-  .call-center-kanban { grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.05fr); }
+  .call-center-kanban { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
   .call-center-kanban .call-center-panel:last-child { grid-column: 1 / -1; }
 }
 
