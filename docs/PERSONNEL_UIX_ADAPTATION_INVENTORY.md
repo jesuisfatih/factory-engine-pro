@@ -62,6 +62,7 @@ or changing the tenant/user model.
 | Reference schedule form updates existing task `dueAt` immediately | Snooze/follow-up date is visible as a due date on already-visible work | User asked for "show this call 15 days later", not "due in 15 days but visible now" | Use deferred materialization: store scheduled action, revalidate when time arrives, then create/show the follow-up | Do not expose future follow-ups early unless explicitly pinned/scheduled by human |
 | Reference UI detail `mainContent` embeds task brief in Customer 360 | Customer detail opens with immediate operational context | Customer 360 should start with why this customer matters right now | Keep typed `CustomerDetailMainInfo` / `mainContent` supplied by live Daily/Priority/Archive row context | Do not embed rule/debug/task trace panels in Customer 360 |
 | Source sidebar is static in `Sidebar.tsx`; our system adds runtime customization | Patron wants sidebar names, order, group labels, badges, and default route controlled later | Use typed `navigationOverrides` with stable `navId`; use source patch lane only when runtime customization cannot express the change | Do not let MCP change route ids, permissions, auth, backend behavior, or deploy source directly |
+| `FollowUpReminders` polls calendar events and fires browser notifications for upcoming scheduled follow-ups | Staff should be prompted before scheduled follow-up calls while the panel is open | Add a global reminder component that reads the real `personCalendarEvents()` contract and sanitizes notification copy through staff-safe terminology | Do not use browser notifications for mock rows. Do not request permission on page load before a user gesture |
 
 ### Backend Semantics That Must Stay Separate
 
@@ -153,6 +154,7 @@ display contract first. React must not invent it from raw metadata.
 | Customer 360 tabs | `customer-detail-panel.tsx` | Profile, Shopify Orders, Aircall Calls, Customer Requests, Email, Messages, Notes, follow-up history | Personnel | Customer aggregate tabs | Exists; commission filtered | Preserve; hide internal rule names for staff | Profile / orders / calls / requests / notes / follow-ups | tab visibility/order later | Screenshot |
 | Customer archive | `apps/person/src/views/Customers.tsx` | Search full Shopify customer archive without freezing | Personnel | Server-side paginated Shopify customers | Exists: limit/offset/search | Preserve 10 default and 50/100/150 choices | Shopify customers | label/theme | Search/pagination screenshot |
 | Sidebar/navigation | `Sidebar.tsx`, `FrontendCustomization.tsx` | Patron can rename/reorder/group/badge/default route safely | Personnel/MCP | Navigation override contract | Exists | Preserve and document | Staff workspace navigation | navigationOverrides | MCP preview/list proof |
+| Follow-up reminders | `components/FollowUpReminders.tsx` | Staff gets a browser reminder shortly before scheduled follow-up work | Personnel | `GET /person/workspace/calendar` live events | Exists: calendar API and schedule endpoint | Add global listener using the live calendar query key and staff-safe notification text | Upcoming follow-up reminder | enable/disable later via MCP | Calendar event proof + notification permission behavior |
 
 ## Current Completion And Evidence Status
 
@@ -173,6 +175,10 @@ Closed in source:
    the call-plan popup when the opened customer has a matching Daily/Priority
    card. This keeps the reference UIX behavior without duplicating or inventing
    staff copy in React.
+7. The reference `FollowUpReminders` behavior is now mapped to our real
+   calendar contract: it polls live calendar events, requests browser
+   notification permission only after user interaction, and sanitizes
+   notification text with staff-safe terminology.
 
 Still requiring live evidence before final sign-off:
 

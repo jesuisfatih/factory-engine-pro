@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { FollowUpReminders } from './components/FollowUpReminders';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AnnouncementsView } from './views/Announcements';
@@ -148,6 +149,7 @@ export default function App() {
       <Sidebar current={current} onSelect={(id) => selectNav(id, setCurrent)} collapsed={collapsed} customization={frontendCustomization} />
       <div className="main">
         <Topbar title={title} onToggleSidebar={() => setCollapsed((value) => !value)} />
+        <FollowUpReminders />
         <div className="content">{renderView()}</div>
       </div>
     </div>

@@ -191,7 +191,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
       setScheduleNote('');
       queryClient.setQueryData(queryKey, next);
       queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
-      queryClient.invalidateQueries({ queryKey: ['person', 'calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['person', 'cal', 'events'] });
     },
   });
 
