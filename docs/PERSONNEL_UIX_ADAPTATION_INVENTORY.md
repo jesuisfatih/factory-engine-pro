@@ -37,6 +37,73 @@ reference checkout.
 | Dev fallback fixtures | Reference `apps/person/src/api/live.ts` has DEV fallback comments and `dev-fixture` imports | UI authors wanted local visual work without auth | Production Factory Engine Pro cannot show fallback, seed, mock, fixture, or invented data | Do not import this pattern |
 | Navigation and frontend customization | Reference has source-defined sidebar; our system has `navigationOverrides`, `elementOverrides`, `contentBlocks`, `themeOverrides`, source patch lane | Patron wants sidebar names/order/groups/badges/default route and safe visual control | Runtime customization stays typed and sanitized. Source patch lane can validate plans only; maintainer applies after proof | Preserve strict MCP boundary |
 
+## Reference Backend Footprint Decision Matrix
+
+This section is the guardrail for the patron UIX migration. The reference UI is
+allowed to teach product intent, but its backend implementation is not copied.
+Each backend footprint below is mapped to the Factory Engine Pro production
+contract that must satisfy the same UI intent without leaking internal concepts
+or changing the tenant/user model.
+
+| Reference footprint | What the reference code actually does | Patron UI intent | Factory Engine Pro implementation lane | Do not port |
+| --- | --- | --- | --- | --- |
+| `person-workspace.controller.ts` exposes `summary`, `queue`, `daily-operations`, task archive/reorder/sync, customer detail, notes, calendar, messages, cases, training, requests | A single person workspace controller owns most staff-panel actions | Staff should work from one operational panel, not jump between unrelated apps | Keep `person-workspace` as the staff-safe facade. It may orchestrate customers, Aircall, Shopify, rules, notes, and mail services, but React receives one display contract per surface | Do not let modules speak to each other's tables from React. Do not expose admin/debug endpoints to staff |
+| `dailyOperationsFor()` joins `SegmentOwnership`, `SegmentCustomerMembership`, `ServiceRequest`, `personDailyTaskOrder`, Aircall stats, pins, and open case counts | It builds the whole command center response in one service method | Patron wants the first screen to have Daily Call List, Priority Kanban, pinned board, sync/KPI status, and action counts | Keep one `PersonDailyOperationsDto` response, but keep query semantics separate: Daily = staff follow-ups from calls; Priority = owned Shopify segment customers | Do not merge Daily and Priority queries. Do not fill Priority from follow-up rows or Daily from segment rows |
+| `dailyWorkflowRows()` selects `ServiceRequest` rows by assigned member, `sourceCallId`/`sourceEmailId`/matched workflow metadata, `axis in sales/account`, date window, and member archive metadata | It makes call-generated work visible in Daily Call List | Staff sees recent call follow-ups scoped to them, sorted by date and custom order | Keep this as internal query logic only. Public card contract is `displayTitle`, `displayReason`, `displayConcern`, `displayOutcome`, `displayActions`, snapshots, phone, order, call, pin/archive/transfer actions | Do not display `axis`, `workflow`, `rule`, source ids, matched rule ids, prompt names, or raw task snapshots |
+| `syncTasks()` calls `aircall.backfillRecentCalls({ recentDays: 7 })` and `aircall.reprocessResolver({ recentDays: 7, limit: 500 })` together | Staff refresh can reprocess resolver work broadly | Staff wants latest calls without waiting for an admin | Staff sync may pull new/missing recent Aircall calls and enqueue missing resolver work only. Broad version repair/reprocess belongs to admin repair tooling | Do not burn tokens by re-reading old transcripts on every staff refresh. Do not tie page refresh to resolver reprocess |
+| `taskBrief()` reads service request, orders, activity logs, related service requests, Aircall rows, matched rule, and returns `aiPsychAnalysis`, `rule`, `customerDetailUrl` | The modal receives both useful customer context and internal rule/debug context | Staff needs a direct call plan, context, history, notes, schedule, and call/email actions | Keep order/call/history/note/schedule data, but expose it as staff-safe call plan sections. `rule` must remain null/hidden for staff; raw trace can exist only in admin surfaces | Do not show rule canvas links, prompt key/version/model/confidence, matched rule ids, raw condition traces, or source labels in staff UI |
+| `queueCard()` builds `aiBrief`, `workflowTrace`, badges, urgency, call/customer/product context, then returns card fields | The reference card object mixes internal production inputs with visible UI copy | Cards need rich display text and action badges | Use internal inputs only to produce public display fields. `publicPersonQueueCard()` strips internal brief/trace/snapshot/matched id before response validation | Do not make React infer copy from raw metadata. Do not add new UI fields unless backend provides staff-safe display equivalents |
+| `customers()` uses `customerAssignment` axis ownership and returns a 120-row staff customer table | Staff wants a regular calling portfolio | The staff "Routine Call List" is assigned/owned contacts, not a full CRM dump. It may use assignments/segments depending on product semantics, but must remain scoped to the member | Do not call this "generic Customers" when it is a work list. Do not show commission or internal ownership labels |
+| `customerArchive()` returns active Shopify customers with `take: 1000`; reference UI filters in memory | Staff wants a full Shopify customer lookup | Keep `customerArchive({ limit, offset, search })`, default 10, page-size options 50/100/150, and server-side search over name/email/phone/Shopify id | Do not preload thousands of customers. Do not client-filter 6000+ records |
+| `customerArchiveDetail()` only checks active Shopify customer and then calls `customersService.detail()` | Archive detail is a Shopify customer file, even outside assigned portfolio | Staff can open any Shopify customer file from archive with real Shopify/Aircall/history tabs | Keep a separate archive detail endpoint and separate archive note endpoint. It must still be tenant-scoped and permission-checked | Do not reuse the assigned-customer note endpoint for archive rows. Do not bypass tenant context |
+| Reference `Customers.tsx` calls commission request APIs and renders a `%` action plus commission KPI | Staff can request commission from customer rows | User explicitly removed commission from staff UI | No staff commission route, KPI, column, action, modal, or API call. Commission remains admin/organization-only if ever used | Do not port the commission UI or its backend calls |
+| `cases()` returns `openCaseWhere()` rows where source is customer self-service/admin/customer-facing OR `axis = support` | Reference cases page mixes real customer requests with support-axis work | Staff should see real customer requests when humans create or customers submit them | Count/list only manual customer-facing, customer self-service, and admin-created customer requests. Keep automatic call/rule work as follow-ups | Do not count workflow/rule/call generated rows as customer requests. Do not auto-create support cases |
+| `AtRiskCadenceService` daily worker creates rows via `support.create()` with `metadata.category = at_risk_cadence` and `aiSource = segment` | Risk signals become support-created service requests | Staff should get risk-based future call work | Model this as scheduled/materialized staff follow-up work or rule output, with support/customer request untouched | Do not call `support.create()` for automated risk cadence |
+| Reference schedule form updates existing task `dueAt` immediately | Snooze/follow-up date is visible as a due date on already-visible work | User asked for "show this call 15 days later", not "due in 15 days but visible now" | Use deferred materialization: store scheduled action, revalidate when time arrives, then create/show the follow-up | Do not expose future follow-ups early unless explicitly pinned/scheduled by human |
+| Reference UI detail `mainContent` embeds task brief in Customer 360 | Customer detail opens with immediate operational context | Customer 360 should start with why this customer matters right now | Keep typed `CustomerDetailMainInfo` / `mainContent` supplied by live Daily/Priority/Archive row context | Do not embed rule/debug/task trace panels in Customer 360 |
+| Source sidebar is static in `Sidebar.tsx`; our system adds runtime customization | Patron wants sidebar names, order, group labels, badges, and default route controlled later | Use typed `navigationOverrides` with stable `navId`; use source patch lane only when runtime customization cannot express the change | Do not let MCP change route ids, permissions, auth, backend behavior, or deploy source directly |
+
+### Backend Semantics That Must Stay Separate
+
+- Daily Call List is staff follow-up work from recent call/email/routing signals.
+  It is date-windowed and staff-orderable.
+- Priority Kanban is the staff member's assigned Shopify segment portfolio. It
+  is segment-grouped and changes as Shopify segment membership changes.
+- Routine Call List is the staff member's regular calling portfolio. It is not
+  the full Shopify archive.
+- Customer Archive is full Shopify customer lookup with server-side pagination
+  and search. It is not a work queue.
+- Customer Requests are human/customer/admin-created request records only.
+  Automated call/routing output stays as follow-up work.
+- Future follow-ups that should appear later are materialized later. A future
+  visibility rule is not the same thing as setting `dueAt` on an already-visible
+  row.
+- MCP frontend customization changes runtime presentation or validates source
+  patch plans. It does not silently change backend behavior, permissions, env,
+  tenant data, or deployment state.
+
+### Required Backend Contract Shape For Staff UIX
+
+Every staff UI section must consume display-ready fields from backend contracts:
+
+- `displayTitle`
+- `displayReason`
+- `displayConcern`
+- `displayOutcome`
+- `displayActions`
+- `displayBadges`
+- `displayCustomerSummary`
+- `displayCommerceSnapshot`
+- `displayCallSnapshot`
+- `callExcerpt`
+- typed customer/order/call/note/history arrays
+
+Internal derivation inputs may include resolver output, rule execution metadata,
+service request metadata, Aircall event payloads, Shopify order data, segment
+membership, and urgency scoring, but those inputs are not a staff-facing API.
+If a future UI element needs new wording or a new metric, add it to the backend
+display contract first. React must not invent it from raw metadata.
+
 ## Element Inventory
 
 | UI element | Reference location | Patron intent | Owner surface | Live data required | Current backend support | Required work | Staff-safe name | MCP editable | Acceptance proof |
