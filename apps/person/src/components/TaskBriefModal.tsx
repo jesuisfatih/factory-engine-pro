@@ -113,13 +113,13 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
-  const hasBrief = liveCard.source !== 'manual' && liveCard.aiBrief;
+  const hasBrief = liveCard.source !== 'manual' && (liveCard.aiBrief || liveCard.displayActions.length > 0);
   const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
-    why: personSafeText(liveCard.aiBrief?.whyCalling),
-    upset: personSafeText(liveCard.aiBrief?.upsetAbout),
-    goal: personSafeText(liveCard.aiBrief?.callGoal),
-  }), [liveCard.aiBrief]);
+    why: personSafeText(liveCard.displayReason || liveCard.aiBrief?.whyCalling),
+    upset: personSafeText(liveCard.displayConcern || liveCard.aiBrief?.upsetAbout),
+    goal: personSafeText(liveCard.displayOutcome || liveCard.aiBrief?.callGoal),
+  }), [liveCard.aiBrief, liveCard.displayConcern, liveCard.displayOutcome, liveCard.displayReason]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
@@ -205,20 +205,23 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
     summary: why || liveCard.summary,
     urgencyScore: liveCard.urgencyScore,
   };
-  const actionTone = staffActionTone(actionInput);
-  const actionLabel = staffActionLabel(actionInput);
-  const primaryBrief = staffBriefLine(actionInput);
+  const primaryBadge = liveCard.displayBadges[0];
+  const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
+  const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);
+  const primaryBrief = liveCard.displayOutcome || staffBriefLine(actionInput);
   const ctaPriority = liveCard.ctaPriority ?? liveCard.aiBrief?.ctaPriority ?? [];
   const modalActionOrder = liveCard.modalActionOrder ?? liveCard.aiBrief?.modalActionOrder ?? [];
-  const directActions = directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions, modalActionOrder);
+  const directActions = liveCard.displayActions.length > 0
+    ? orderedDisplayActions(liveCard.displayActions, modalActionOrder)
+    : directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions, modalActionOrder);
   const footerActions = orderedFooterActions(ctaPriority);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
-  const purchaseSummary = latestOrder
+  const purchaseSummary = liveCard.displayCommerceSnapshot || (latestOrder
     ? `${latestOrder.orderNumber ?? latestOrder.id} - ${fmtMoney(latestOrder.totalPrice, latestOrder.currency)}`
     : liveCard.ordersCount
       ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
-      : 'No linked Shopify order yet';
+      : 'No linked Shopify order yet');
   const confidenceLabel = liveCard.aiBrief?.modelUsed === 'local-rule-fallback'
     ? 'Needs review'
     : liveCard.aiBrief?.confidence
@@ -240,7 +243,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
       <div className={`modal-card brief-modal ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
         <header className="modal-head">
           <div>
-            {showField('title') ? <h2 id="task-brief-title">{personSafeText(liveCard.title)}</h2> : null}
+            {showField('title') ? <h2 id="task-brief-title">{personSafeText(liveCard.displayTitle || liveCard.title)}</h2> : null}
             <div className="brief-identity">
               {liveCard.phone && showField('phone') ? <span><Phone size={11} /> {liveCard.phone}</span> : null}
               {liveCard.email && showField('email') ? <span><Mail size={11} /> {liveCard.email}</span> : null}
@@ -335,13 +338,13 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                     {showField('moodField') ? <div style={sectionStyle('moodField', 50)}><NarrativeField label={frontendCopy(override, 'moodLabel', 'Customer mood or issue')} suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine /></div> : null}
                     {showField('outcomeField') ? <div style={sectionStyle('outcomeField', 60)}><NarrativeField label={frontendCopy(override, 'outcomeRequiredLabel', 'Outcome required')} suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine /></div> : null}
 
-                    {liveCard.aiBrief?.suggestedActions?.length && showField('extraChecks') ? (
+                    {directActions.length && showField('extraChecks') ? (
                       <div className="brief-block" style={sectionStyle('extraChecks', 70)}>
                         <div className="brief-block-head">
                           <span className="lbl">{frontendCopy(override, 'extraChecksLabel', 'Extra checks')}</span>
                         </div>
                         <ul className="brief-actions-list">
-                          {liveCard.aiBrief.suggestedActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
+                          {directActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
                         </ul>
                       </div>
                     ) : null}
@@ -351,7 +354,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                         <div className="brief-block-head">
                           <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
                         </div>
-                        <div className="brief-transcript">{liveCard.aiBrief.transcriptSnippet}</div>
+                        <div className="brief-transcript">{personSafeText(liveCard.aiBrief.transcriptSnippet)}</div>
                       </div>
                     ) : null}
                   </>
@@ -370,7 +373,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                   {showField('purchaseHistory') ? <div className="brief-block" style={sectionStyle('purchaseHistory', 90)}>
                     <div className="brief-block-head">
                       <span className="lbl">{frontendCopy(override, 'purchaseHistoryBlockLabel', 'Customer purchase history')}</span>
-                      {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="rule-trace-count">linked</span> : null}
+                      {detail?.shopifyCustomer.emailMatched || detail?.shopifyCustomer.phoneMatched ? <span className="brief-count-pill">linked</span> : null}
                     </div>
                     {detail ? (
                       <>
@@ -403,8 +406,8 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                       <div className="brief-psych">
                         <div><span>Intent</span><strong>{labelize(detail.aiPsychAnalysis.communicationStyle)}</strong></div>
                         <div><span>Urgency</span><strong>{labelize(detail.aiPsychAnalysis.decisionMakingStyle)}</strong></div>
-                        <div><span>Motivators</span><strong>{detail.aiPsychAnalysis.motivators.join(', ') || 'None'}</strong></div>
-                        <div><span>Objections</span><strong>{detail.aiPsychAnalysis.objections.join(', ') || 'None'}</strong></div>
+                        <div><span>Motivators</span><strong>{detail.aiPsychAnalysis.motivators.map(personSafeText).join(', ') || 'None'}</strong></div>
+                        <div><span>Objections</span><strong>{detail.aiPsychAnalysis.objections.map(personSafeText).join(', ') || 'None'}</strong></div>
                         <p>{callSignal}</p>
                       </div>
                     ) : (
@@ -419,7 +422,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                 {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
                     <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and task history')}</span>
-                    {detail ? <span className="rule-trace-count">{detail.timeline.length}</span> : null}
+                    {detail ? <span className="brief-count-pill">{detail.timeline.length}</span> : null}
                   </div>
                   {detail?.timeline.length ? (
                     <div className="brief-timeline">
@@ -444,7 +447,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                     {showField('noteForm') ? <form className="brief-block" style={sectionStyle('noteForm', 120)} onSubmit={submitNote}>
                       <div className="brief-block-head">
                         <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up note')}</span>
-                        {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
+                        {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
                       </div>
                       <textarea
                         ref={noteRef}
@@ -495,10 +498,10 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
           {showField('customerSidePanel') ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
             <div className="brief-card">
               <div className="brief-card-head"><Tags size={12} /> {frontendCopy(override, 'customerLabel', 'Customer')}</div>
-              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{personSafeText(liveCard.title)}</span></div>
+              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{personSafeText(liveCard.displayTitle || liveCard.title)}</span></div>
               {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
               {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
-              <div className="brief-card-row"><span className="lbl">Segment</span><span className="val">{liveCard.segment}</span></div>
+              <div className="brief-card-row"><span className="lbl">Context</span><span className="val">{personSafeText(liveCard.displayCustomerSummary || liveCard.segment)}</span></div>
             </div>
 
             <div className="brief-stats">
@@ -562,6 +565,26 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
       </div>
     </div>
   );
+}
+
+function displayToneClass(tone: string | undefined) {
+  if (tone === 'warning') return 'warn';
+  if (tone === 'danger' || tone === 'success' || tone === 'info') return tone;
+  return 'info';
+}
+
+function orderedDisplayActions(actions: string[], modalActionOrder: string[] = []) {
+  const cleaned = actions.map((action) => personSafeText(action).trim()).filter(Boolean);
+  if (modalActionOrder.length === 0) return uniqueActions(cleaned).slice(0, 3);
+  const keyed = new Map(cleaned.map((action) => [actionKey(action), action] as const));
+  const ordered = modalActionOrder
+    .map((action) => keyed.get(actionKey(action)))
+    .filter((action): action is string => Boolean(action));
+  return uniqueActions([...ordered, ...cleaned]).slice(0, 3);
+}
+
+function actionKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined, modalActionOrder: string[] = []) {

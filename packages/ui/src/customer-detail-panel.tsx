@@ -159,8 +159,8 @@ export function CustomerDetailPanel({
 function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRetry: () => void, staffTerminology: boolean) {
   if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} />;
   if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} />;
-  if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} />;
-  if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} />;
+  if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
+  if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} />;
   if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} />;
   if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} />;
@@ -248,7 +248,7 @@ function OrdersTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetr
   );
 }
 
-function AircallTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function AircallTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.aircallCalls;
   if (rows.length === 0) return <EmptyTab title="No Aircall calls" body="No Aircall event currently matches this customer email or phone." onRetry={onRetry} />;
   return (
@@ -262,15 +262,15 @@ function AircallTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRet
             </div>
             <small>{dateTime(call.eventTimestamp)}</small>
           </div>
-          <p>{call.resolverSummary ?? call.transcriptPreview ?? 'Call notes or summary are not attached yet.'}</p>
-          {call.psychTags.length > 0 && <div className="customer-detail-tags">{call.psychTags.map((tag) => <span key={tag}>{label(tag)}</span>)}</div>}
+          <p>{staffPanelText(call.resolverSummary ?? call.transcriptPreview ?? 'Call notes or summary are not attached yet.', staffTerminology)}</p>
+          {call.psychTags.length > 0 && <div className="customer-detail-tags">{call.psychTags.map((tag) => <span key={tag}>{staffPanelText(label(tag), staffTerminology)}</span>)}</div>}
         </article>
       ))}
     </div>
   );
 }
 
-function SupportTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function SupportTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.support;
   if (rows.length === 0) return <EmptyTab title="No customer request history" body="No customer-request record is linked to this customer." onRetry={onRetry} />;
   return (
@@ -284,8 +284,8 @@ function SupportTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRet
             </div>
             <small>{dateTime(request.updatedAt)}</small>
           </div>
-          <p>{request.description ?? 'No description captured.'}</p>
-          {request.comments.slice(0, 3).map((comment) => <blockquote key={comment.id}>{comment.body}</blockquote>)}
+          <p>{staffPanelText(request.description ?? 'No description captured.', staffTerminology)}</p>
+          {request.comments.slice(0, 3).map((comment) => <blockquote key={comment.id}>{staffPanelText(comment.body, staffTerminology)}</blockquote>)}
         </article>
       ))}
     </div>
@@ -476,6 +476,25 @@ function customerFocusLabel(value: string) {
   if (normalized === 'account') return 'Customer care';
   if (normalized === 'support') return 'Customer request';
   return label(value);
+}
+
+function staffPanelText(value: string, staffTerminology: boolean) {
+  if (!staffTerminology) return value;
+  return value
+    .replace(/\bAI\b/gi, 'call')
+    .replace(/\bworkflow\s+rules?\b/gi, 'call routing')
+    .replace(/\bworkflow\b/gi, 'follow-up')
+    .replace(/\brule\s+engine\b/gi, 'call routing')
+    .replace(/\brules?\b/gi, 'routing')
+    .replace(/\baxis\b/gi, 'focus')
+    .replace(/\bsales\b/gi, 'purchase intent')
+    .replace(/\bsale\b/gi, 'purchase intent')
+    .replace(/\bsupport\s+case\b/gi, 'customer request')
+    .replace(/\bsupport\b/gi, 'customer request')
+    .replace(/\btranscript\s+resolver\b/gi, 'call summary')
+    .replace(/\bresolver\b/gi, 'summary')
+    .replace(/\bdebug\b/gi, 'review')
+    .replace(/\bcommission\b/gi, 'request');
 }
 
 function normalizeAddress(value: unknown) {

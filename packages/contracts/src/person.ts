@@ -140,6 +140,12 @@ export type PersonPerformance30d = z.infer<typeof personPerformance30dSchema>;
 export const personCustomerRiskSchema = z.enum(['none', 'at_risk', 'lost']);
 export type PersonCustomerRisk = z.infer<typeof personCustomerRiskSchema>;
 
+export const personQueueCardDisplayBadgeSchema = z.object({
+  label: z.string(),
+  tone: z.enum(['neutral', 'info', 'success', 'warning', 'danger', 'accent']).default('neutral'),
+});
+export type PersonQueueCardDisplayBadge = z.infer<typeof personQueueCardDisplayBadgeSchema>;
+
 export const personQueueCardSchema = z.object({
   kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
@@ -149,6 +155,15 @@ export const personQueueCardSchema = z.object({
   axis: customerAssignmentAxisSchema.nullable().optional(),
   title: z.string(),
   summary: z.string(),
+  displayTitle: z.string(),
+  displayReason: z.string(),
+  displayConcern: z.string(),
+  displayOutcome: z.string(),
+  displayActions: z.array(z.string()),
+  displayBadges: z.array(personQueueCardDisplayBadgeSchema),
+  displayCustomerSummary: z.string(),
+  displayCommerceSnapshot: z.string(),
+  displayCallSnapshot: z.string(),
   segment: z.string(),
   segmentColor: z.string(),
   segmentId: z.string().nullable().optional(),
@@ -256,6 +271,15 @@ export const personDailyCallItemSchema = z.object({
   id: z.string(),
   customerId: z.string(),
   customerName: z.string(),
+  displayTitle: z.string(),
+  displayReason: z.string(),
+  displayConcern: z.string(),
+  displayOutcome: z.string(),
+  displayActions: z.array(z.string()),
+  displayBadges: z.array(personQueueCardDisplayBadgeSchema),
+  displayCustomerSummary: z.string(),
+  displayCommerceSnapshot: z.string(),
+  displayCallSnapshot: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
   ordersCount: z.number(),

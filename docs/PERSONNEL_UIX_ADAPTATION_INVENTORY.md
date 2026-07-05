@@ -68,3 +68,14 @@ Rules for this adaptation:
   the at-risk section is not guessed in React.
 - `staff.queue` MCP customization now has `focus.before` and `focus.after`
   slots around the native Today focus command center.
+- `PersonQueueCardDto` and `PersonDailyCallItem` now expose staff-safe display
+  fields: `displayTitle`, `displayReason`, `displayConcern`,
+  `displayOutcome`, `displayActions`, `displayBadges`,
+  `displayCustomerSummary`, `displayCommerceSnapshot`, and
+  `displayCallSnapshot`.
+- Daily cards, missed-work rows, priority customer cards, and the task brief
+  modal read those display fields first. Raw internal task metadata stays as
+  fallback data only, not as the normal staff-facing copy source.
+- Customer 360 popup keeps the staff-safe terminology switch for call summaries,
+  customer request descriptions, and call tags while preserving admin-capable
+  raw tab keys internally.

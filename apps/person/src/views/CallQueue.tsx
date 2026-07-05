@@ -467,7 +467,7 @@ function SortableDailyTaskCard({
         ref={setActivatorNodeRef}
         type="button"
         className="daily-drag-handle"
-        aria-label={`Reorder ${card.title}`}
+        aria-label={`Reorder ${card.displayTitle || card.title}`}
         disabled={disabled}
         {...attributes}
         {...listeners}
@@ -567,9 +567,9 @@ function CompactTaskList({ cards, onOpen }: { cards: CardData[]; onOpen: (id: st
         const actionInput = cardActionInput(card);
         return (
           <button key={card.id} type="button" className="compact-work-row" onClick={() => onOpen(card.id)}>
-            <span className="compact-work-title">{personSafeText(card.title)}</span>
+            <span className="compact-work-title">{personSafeText(card.displayTitle || card.title)}</span>
             <strong>{staffActionLabel(actionInput)}</strong>
-            <em>{card.missedNote ?? staffBriefLine(actionInput)}</em>
+            <em>{card.displayConcern || card.missedNote || staffBriefLine(actionInput)}</em>
             <span className="compact-work-meta">U{card.urgencyScore} · {card.phone ?? 'No phone on file'}</span>
           </button>
         );
@@ -715,14 +715,14 @@ function SegmentCustomerCard({
   disabled: boolean;
   callDisabled: boolean;
 }) {
-  const orderSummary = `${item.ordersCount} orders | ${formatCurrency(item.totalSpent)}`;
+  const orderSummary = item.displayCommerceSnapshot || `${item.ordersCount} orders | ${formatCurrency(item.totalSpent)}`;
   const override = frontendElementOverride(customization, 'priority.card', { priorityCustomer: item, summary });
-  const latestOrder = item.latestOrder
+  const latestOrder = item.displayCommerceSnapshot || (item.latestOrder
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
-    : 'No linked order';
-  const latestCall = item.latestCall
+    : 'No linked order');
+  const latestCall = item.displayCallSnapshot || (item.latestCall
     ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'linked call'}`
-    : 'No linked call yet';
+    : 'No linked call yet');
   const customerBrief = priorityCustomerBrief(item);
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -752,7 +752,7 @@ function SegmentCustomerCard({
           }}
           title="Open customer history"
         >
-          {frontendFieldVisible(override, 'customerName') ? <span className="daily-title">{item.customerName}</span> : null}
+          {frontendFieldVisible(override, 'customerName') ? <span className="daily-title">{item.displayTitle || item.customerName}</span> : null}
           {(frontendFieldVisible(override, 'phone') || frontendFieldVisible(override, 'email')) ? (
             <span className="segment-customer-contact">
               {frontendFieldVisible(override, 'phone') ? <span><strong>{frontendCopy(override, 'phoneLabel', 'Phone')}</strong>{item.phone ? item.phone : 'No phone on file'}</span> : null}
@@ -807,7 +807,7 @@ function SegmentCustomerCard({
       </div>
       {frontendFieldVisible(override, 'priorityBrief') ? <div className={`priority-brief ${urgencyClass}`}>{frontendCopy(override, 'priorityBrief', customerBrief)}</div> : null}
       <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
-      {frontendFieldVisible(override, 'reason') ? <div className="daily-meta">{personSafeText(item.reason)}</div> : null}
+      {frontendFieldVisible(override, 'reason') ? <div className="daily-meta">{personSafeText(item.displayReason || item.reason)}</div> : null}
       {(frontendFieldVisible(override, 'latestOrder') || frontendFieldVisible(override, 'latestCall') || frontendFieldVisible(override, 'openFollowUp') || frontendFieldVisible(override, 'latestNote')) ? (
         <div className="segment-customer-insights">
         {frontendFieldVisible(override, 'latestOrder') ? <span className="insight-order"><strong>{frontendCopy(override, 'latestOrderLabel', 'Latest order')}</strong>{latestOrder}</span> : null}
@@ -833,6 +833,7 @@ function SegmentCustomerCard({
 }
 
 function priorityCustomerBrief(item: DailyCallItem) {
+  if (item.displayConcern) return item.displayConcern;
   const recentCall = item.latestCall ? `Last call ${relativeTime(item.latestCall.at)}` : 'No recent call captured';
   if (item.openRequestsCount > 0) return `${item.openRequestsCount} customer request${item.openRequestsCount === 1 ? '' : 's'} open - review before outreach.`;
   if (item.ordersCount > 0 && item.latestCall) return `${recentCall} - check order context before calling.`;
@@ -852,15 +853,24 @@ function cardActionInput(card: CardData) {
   return {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
     tags: card.psychTags,
-    upset: card.aiBrief?.upsetAbout,
-    goal: card.aiBrief?.callGoal,
-    summary: card.aiBrief?.whyCalling ?? card.summary,
+    upset: card.displayConcern || card.aiBrief?.upsetAbout,
+    goal: card.displayOutcome || card.aiBrief?.callGoal,
+    summary: card.displayReason || card.aiBrief?.whyCalling || card.summary,
     urgencyScore: card.urgencyScore,
   };
 }
 
 function cardSignalText(card: CardData) {
   return [
+    card.displayTitle,
+    card.displayReason,
+    card.displayConcern,
+    card.displayOutcome,
+    card.displayCustomerSummary,
+    card.displayCommerceSnapshot,
+    card.displayCallSnapshot,
+    ...(card.displayActions ?? []),
+    ...(card.displayBadges ?? []).map((badge) => badge.label),
     card.title,
     card.summary,
     card.callIntent ?? '',

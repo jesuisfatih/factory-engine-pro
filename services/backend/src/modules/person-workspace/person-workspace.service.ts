@@ -137,6 +137,22 @@ interface PersonDailyTaskOrderRow {
   position: number;
 }
 
+type PersonQueueCardDisplayFields = Pick<
+  PersonQueueCardDto,
+  | 'displayTitle'
+  | 'displayReason'
+  | 'displayConcern'
+  | 'displayOutcome'
+  | 'displayActions'
+  | 'displayBadges'
+  | 'displayCustomerSummary'
+  | 'displayCommerceSnapshot'
+  | 'displayCallSnapshot'
+>;
+type PersonQueueCardWithoutDisplay = Omit<PersonQueueCardDto, keyof PersonQueueCardDisplayFields>;
+type PersonDailyCallItemDisplayFields = Pick<PersonDailyCallItem, keyof PersonQueueCardDisplayFields>;
+type PersonDailyCallItemWithoutDisplay = Omit<PersonDailyCallItem, keyof PersonDailyCallItemDisplayFields>;
+
 type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
   include: {
     customer: {
@@ -2418,7 +2434,7 @@ export class PersonWorkspaceService {
       segmentPriority: Math.max(membership.segment.priorityGlobal, membership.segment.priority, ownership.priority),
       repeatCount,
     }, config);
-    return {
+    const item: PersonDailyCallItemWithoutDisplay = {
       kind: 'customer' as const,
       id: dailyItemId(membership.segmentId, customer.id),
       customerId: customer.id,
@@ -2453,6 +2469,7 @@ export class PersonWorkspaceService {
       latestCall: context.latestCall,
       reason: priorityCustomerReason(membership.segment.name, context, repeatCount),
     };
+    return withPersonDailyCallItemDisplay(item);
   }
 
   private applyDailyCustomOrder(
@@ -2498,7 +2515,7 @@ export class PersonWorkspaceService {
       segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? 0,
       repeatCount,
     }, config);
-    return {
+    return withPersonCardDisplay({
       kind: 'customer' as const,
       id: row.id,
       customerId: row.customerId,
@@ -2519,7 +2536,7 @@ export class PersonWorkspaceService {
       totalSpent: customer ? money(customer.totalSpent) : undefined,
       customerRisk: customerRisk.risk,
       customerRiskNote: customerRisk.note,
-    };
+    });
   }
 
   private segmentPriorityCard(
@@ -2528,7 +2545,7 @@ export class PersonWorkspaceService {
     cardContext?: CardContext,
   ): PersonQueueCardDto {
     const urgencyScore = item.urgencyScore;
-    return {
+    return withPersonCardDisplay({
       kind: 'customer',
       id: item.id,
       customerId: item.customerId,
@@ -2569,7 +2586,7 @@ export class PersonWorkspaceService {
       performance30d: cardContext?.performance.get(item.customerId) ?? { ...EMPTY_PERFORMANCE_30D },
       customerRisk: item.customerRisk,
       customerRiskNote: item.customerRiskNote,
-    };
+    });
   }
 
   private async currentMember() {
@@ -2671,7 +2688,7 @@ export class PersonWorkspaceService {
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       repeatCount,
     }, config);
-    const card: PersonQueueCardDto = {
+    const card: PersonQueueCardWithoutDisplay = {
       kind: 'task' as const,
       id: row.id,
       customerId: row.customerId,
@@ -2711,7 +2728,8 @@ export class PersonWorkspaceService {
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
-    return strategies ? personCardWithStrategies(card, strategies) : card;
+    const displayCard = withPersonCardDisplay(card);
+    return strategies ? personCardWithStrategies(displayCard, strategies) : displayCard;
   }
 
   private highestOwnedSegmentByCustomer(
@@ -3398,11 +3416,248 @@ function cleanedActions(values: Array<string | null | undefined>) {
 function staffBriefText(value: unknown, fallback: string) {
   const text = firstString(value, fallback) ?? fallback;
   return text
-    .replace(/\bAI\b/gi, 'Transcript')
-    .replace(/\bautomation\b/gi, 'workflow')
+    .replace(/\bAI\b/gi, 'call')
+    .replace(/\bautomation\b/gi, 'follow-up')
+    .replace(/\bworkflow\s+rules?\b/gi, 'call routing')
+    .replace(/\bworkflow\b/gi, 'follow-up')
+    .replace(/\brule\s+engine\b/gi, 'call routing')
+    .replace(/\brules?\b/gi, 'routing')
+    .replace(/\baxis\b/gi, 'focus')
+    .replace(/\bsales\b/gi, 'purchase intent')
+    .replace(/\bsale\b/gi, 'purchase intent')
     .replace(/\bsupport case\b/gi, 'customer request')
+    .replace(/\bsupport\b/gi, 'customer request')
+    .replace(/\btranscript\s+resolver\b/gi, 'call summary')
+    .replace(/\bresolver\b/gi, 'summary')
+    .replace(/\bdebug\b/gi, 'review')
+    .replace(/\bcommission\b/gi, 'request')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function withPersonCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDto {
+  return { ...card, ...personCardDisplay(card) };
+}
+
+function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): PersonDailyCallItem {
+  return { ...item, ...personDailyCallItemDisplay(item) };
+}
+
+function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
+  const actionLabel = staffActionLabelForCard(card);
+  const actionTone = staffActionToneForCard(card);
+  const reason = staffCardReason(card, actionLabel);
+  const concern = staffCardConcern(card);
+  const outcome = staffCardOutcome(card, actionLabel);
+  const actions = staffCardActions(card, actionLabel);
+  const badges = [
+    { label: actionLabel, tone: actionTone },
+    card.customerRisk === 'lost'
+      ? { label: 'Critical customer risk', tone: 'danger' as const }
+      : card.customerRisk === 'at_risk'
+        ? { label: 'At-risk customer', tone: 'warning' as const }
+        : null,
+    card.unreached ? { label: 'Needs callback', tone: 'warning' as const } : null,
+    card.source === 'segment_priority' ? { label: 'Customer portfolio', tone: 'info' as const } : null,
+  ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
+  return {
+    displayTitle: staffDisplayText(card.title),
+    displayReason: reason,
+    displayConcern: concern,
+    displayOutcome: outcome,
+    displayActions: actions,
+    displayBadges: badges,
+    displayCustomerSummary: staffCustomerSummary(card),
+    displayCommerceSnapshot: staffCommerceSnapshot(card),
+    displayCallSnapshot: staffCallSnapshot(card),
+  };
+}
+
+function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): PersonDailyCallItemDisplayFields {
+  const concern = firstMeaningfulStaffText([
+    item.customerRiskNote,
+    item.latestCall?.summary,
+    item.latestNote?.body,
+  ]) || (item.openRequestsCount > 0
+    ? `${item.openRequestsCount} customer request${item.openRequestsCount === 1 ? '' : 's'} open - review before outreach.`
+    : 'No customer concern captured yet.');
+  const actionLabel = item.openRequestsCount > 0
+    ? 'Customer request open - review before outreach'
+    : item.customerRisk === 'lost'
+      ? 'Critical customer risk - review history'
+      : item.latestCall
+        ? 'Recent call - check context'
+        : 'Portfolio customer - review next step';
+  const badges = [
+    { label: actionLabel, tone: item.openRequestsCount > 0 || item.customerRisk === 'lost' ? 'danger' as const : item.customerRisk === 'at_risk' ? 'warning' as const : 'info' as const },
+    item.ordersCount > 0 ? { label: 'Has purchase history', tone: 'success' as const } : null,
+    item.pinned ? { label: 'Pinned', tone: 'accent' as const } : null,
+  ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
+  return {
+    displayTitle: staffDisplayText(item.customerName),
+    displayReason: staffDisplayText(item.reason || concern),
+    displayConcern: concern,
+    displayOutcome: item.openRequestsCount > 0
+      ? 'Review the request, check order and call context, then choose the next outreach.'
+      : 'Review history and decide whether to call, note, pin, or leave the customer in the portfolio.',
+    displayActions: [
+      'Review latest order',
+      'Review latest call or note',
+      item.phone ? 'Call if action is needed' : 'Confirm a reachable phone before calling',
+    ],
+    displayBadges: badges,
+    displayCustomerSummary: [
+      item.phone ? `Phone ${item.phone}` : 'No phone on file',
+      item.email ? `Email ${item.email}` : null,
+      staffFocusLabel(item.assignedAxis),
+    ].filter((value): value is string => Boolean(value)).join(' - '),
+    displayCommerceSnapshot: item.latestOrder
+      ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} - ${item.latestOrder.currency} ${money(item.latestOrder.totalPrice).toLocaleString()}`
+      : item.ordersCount > 0
+        ? `${item.ordersCount} orders - ${money(item.totalSpent).toLocaleString()} total`
+        : 'No linked Shopify order yet.',
+    displayCallSnapshot: item.latestCall
+      ? `${relative(new Date(item.latestCall.at))} - ${staffDisplayText(item.latestCall.phone ?? item.latestCall.email ?? 'linked call')}`
+      : item.callsCount > 0
+        ? `${item.callsCount} calls linked to this customer`
+        : 'No recent call activity attached yet.',
+  };
+}
+
+function staffActionLabelForCard(card: PersonQueueCardWithoutDisplay) {
+  const signal = staffPrimarySignal(card);
+  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing')) return 'Payment/refund issue - clarify next step';
+  if (signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'Customer concern - handle carefully';
+  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('freight')) return 'Delivery issue - give next step';
+  if (signal.includes('callback') || signal.includes('follow up') || signal.includes('call back')) return 'Callback requested - call back';
+  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('reorder')) return 'Purchase intent - qualify next step';
+  if (signal.includes('product') || signal.includes('fit') || signal.includes('information') || signal.includes('inquiry')) return 'Product question - guide the customer';
+  if (card.urgencyScore >= 8) return 'High priority - act today';
+  return card.kind === 'customer' ? 'Review customer before outreach' : 'Customer follow-up';
+}
+
+function staffActionToneForCard(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields['displayBadges'][number]['tone'] {
+  const signal = staffPrimarySignal(card);
+  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
+  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow up')) return 'warning';
+  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('reorder')) return 'success';
+  if (card.urgencyScore >= 8) return 'danger';
+  if (card.urgencyScore >= 6) return 'warning';
+  return 'info';
+}
+
+function staffCardReason(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
+  const candidates = [
+    card.aiBrief?.whyCalling,
+    card.summary,
+    card.missedNote,
+    card.customerRiskNote,
+  ];
+  const reason = firstMeaningfulStaffText(candidates);
+  if (reason) return reason;
+  if (card.kind === 'customer') return `Customer is in ${staffDisplayText(card.segment)}. Review order and call context before outreach.`;
+  return actionLabel;
+}
+
+function staffCardConcern(card: PersonQueueCardWithoutDisplay) {
+  const concern = firstMeaningfulStaffText([
+    card.aiBrief?.upsetAbout,
+    card.customerRiskNote,
+    card.missedNote,
+  ]);
+  if (concern) return concern;
+  if (card.customerRisk === 'lost') return 'Customer may be lost or inactive; review history before outreach.';
+  if (card.customerRisk === 'at_risk') return 'Customer may need attention based on recent activity.';
+  return 'No customer concern captured yet.';
+}
+
+function staffCardOutcome(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
+  const outcome = firstMeaningfulStaffText([card.aiBrief?.callGoal]);
+  if (outcome) return outcome;
+  if (actionLabel.includes('Payment/refund')) return 'Confirm the exact issue, order context, and next accountable step.';
+  if (actionLabel.includes('Purchase intent')) return 'Confirm product need, quantity, timing, and order or quote path.';
+  if (actionLabel.includes('Delivery issue')) return 'Confirm order or tracking context and save the promised update.';
+  if (actionLabel.includes('Callback')) return 'Reach the customer and save the result or next callback time.';
+  if (card.kind === 'customer') return 'Review history, decide whether to call, and save the next human follow-up.';
+  return 'Move the customer task to the next accountable status.';
+}
+
+function staffCardActions(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
+  const actions = cleanedActions([
+    ...(card.aiBrief?.suggestedActions ?? []),
+  ]);
+  if (actions.length > 0) return actions.slice(0, 5);
+  if (actionLabel.includes('Payment/refund')) return ['Ask for the order number', 'Clarify the exact issue', 'Save the promised next step'];
+  if (actionLabel.includes('Purchase intent')) return ['Confirm product and quantity', 'Check recent order context', 'Guide the order or quote path'];
+  if (actionLabel.includes('Delivery issue')) return ['Ask for order or tracking number', 'Clarify delivery issue', 'Save the next update path'];
+  if (actionLabel.includes('Callback')) return ['Call the customer', 'Confirm what is pending', 'Save the outcome'];
+  if (card.kind === 'customer') return ['Review latest order', 'Review latest call or note', 'Call or add a note if action is needed'];
+  return ['Review customer context', 'Call or update the task', 'Save the outcome'];
+}
+
+function staffCustomerSummary(card: PersonQueueCardWithoutDisplay) {
+  const parts = [
+    card.phone ? `Phone ${card.phone}` : null,
+    card.email ? `Email ${card.email}` : null,
+    card.assignedMemberName ? `Assigned to ${card.assignedMemberName}` : null,
+    staffFocusLabel(card.axis),
+  ].filter((value): value is string => Boolean(value));
+  return parts.length > 0 ? parts.join(' - ') : 'Customer details are not linked yet.';
+}
+
+function staffCommerceSnapshot(card: PersonQueueCardWithoutDisplay) {
+  if (card.miniOrder) {
+    return `${card.miniOrder.orderNumber ?? card.miniOrder.id} - ${card.miniOrder.currency} ${money(card.miniOrder.totalPrice).toLocaleString()}`;
+  }
+  if (card.ordersCount !== undefined && card.ordersCount > 0) {
+    return `${card.ordersCount} orders - ${money(card.totalSpent ?? 0).toLocaleString()} total`;
+  }
+  return 'No linked Shopify order yet.';
+}
+
+function staffCallSnapshot(card: PersonQueueCardWithoutDisplay) {
+  if (card.performance30d) {
+    return `${card.performance30d.calls} calls and ${card.performance30d.serviceRequests} follow-ups in 30 days`;
+  }
+  if (card.createdAt) return `Created ${relative(new Date(card.createdAt))}`;
+  return 'No recent call activity attached yet.';
+}
+
+function staffPrimarySignal(card: PersonQueueCardWithoutDisplay) {
+  return [
+    card.aiBrief?.upsetAbout,
+    card.aiBrief?.callGoal,
+    card.aiBrief?.whyCalling,
+    card.summary,
+    card.callIntent,
+    ...(card.psychTags ?? []),
+    card.missedNote,
+    card.customerRiskNote,
+  ].map((value) => staffSignalText(value)).filter(Boolean).join(' ');
+}
+
+function firstMeaningfulStaffText(values: Array<unknown>) {
+  return values
+    .map((value) => staffDisplayText(value))
+    .find((value) => value && !/^no explicit complaint/i.test(value) && !/^no customer complaint/i.test(value) && !/^no customer request/i.test(value))
+    ?? '';
+}
+
+function staffSignalText(value: unknown) {
+  return staffDisplayText(value).toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function staffDisplayText(value: unknown) {
+  return staffBriefText(value, '');
+}
+
+function staffFocusLabel(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'sales' || normalized === 'sale' || normalized.includes('purchase')) return 'Purchase intent';
+  if (normalized === 'account') return 'Customer care';
+  if (normalized === 'support') return 'Customer request';
+  return titleize(staffBriefText(normalized, normalized));
 }
 
 function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {
@@ -4181,7 +4436,7 @@ function personCardWithStrategies(card: PersonQueueCardDto, strategies: PersonCa
     nextAction: { ...nextActionProof, ctaPriority },
     callBrief: { ...callBriefProof, modalActionOrder },
   };
-  return {
+  const nextCard = {
     ...card,
     ctaPriority,
     modalActionOrder,
@@ -4195,6 +4450,7 @@ function personCardWithStrategies(card: PersonQueueCardDto, strategies: PersonCa
         }
       : card.aiBrief,
   };
+  return { ...nextCard, ...personCardDisplay(nextCard) };
 }
 
 function personStrategyRuntimeProof(

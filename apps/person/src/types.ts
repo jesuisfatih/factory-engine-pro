@@ -6,6 +6,7 @@ import type {
   PersonMiniOrder,
   PersonPerformance30d,
   PersonCardStrategyProof,
+  PersonQueueCardDisplayBadge,
   PersonTaskTransferResult,
   PersonTransferTarget,
   PersonTaskBriefDetail,
@@ -41,6 +42,15 @@ export interface Card {
   axis?: 'sales' | 'support' | 'account' | null;
   title: string;
   summary: string;
+  displayTitle: string;
+  displayReason: string;
+  displayConcern: string;
+  displayOutcome: string;
+  displayActions: string[];
+  displayBadges: PersonQueueCardDisplayBadge[];
+  displayCustomerSummary: string;
+  displayCommerceSnapshot: string;
+  displayCallSnapshot: string;
   segment: string;
   segmentColor: string;
   segmentId?: string | null;

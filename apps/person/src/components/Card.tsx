@@ -33,28 +33,35 @@ function fmtMoney(value: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
+function displayToneClass(tone: string | undefined) {
+  if (tone === 'warning') return 'warn';
+  if (tone === 'danger' || tone === 'success' || tone === 'info') return tone;
+  return 'info';
+}
+
 export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customization, summary }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
+  const primaryBadge = card.displayBadges[0];
   const actionInput = {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
     tags: card.psychTags,
-    upset: card.aiBrief?.upsetAbout,
-    goal: card.aiBrief?.callGoal,
-    summary: card.aiBrief?.whyCalling ?? card.summary,
+    upset: card.displayConcern || card.aiBrief?.upsetAbout,
+    goal: card.displayOutcome || card.aiBrief?.callGoal,
+    summary: card.displayReason || card.aiBrief?.whyCalling || card.summary,
     urgencyScore: card.urgencyScore,
   };
-  const actionLabel = staffActionLabel(actionInput);
-  const actionTone = staffActionTone(actionInput);
-  const briefLine = frontendCopy(override, 'requiredAction', staffBriefLine(actionInput));
+  const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);
+  const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
+  const briefLine = frontendCopy(override, 'requiredAction', card.displayOutcome || card.displayReason || staffBriefLine(actionInput));
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
     : card.ordersCount
       ? `${card.ordersCount} orders ${fmtMoney(card.totalSpent ?? 0)}`
       : 'No linked order';
-  const performance = card.performance30d
+  const performance = card.displayCallSnapshot || (card.performance30d
     ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
-    : '30d customer activity pending';
+    : '30d customer activity pending');
   const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
   return (
     <div
@@ -64,7 +71,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
       }}
     >
       <div className="row1">
-        {frontendFieldVisible(override, 'title') ? <span className="title">{personSafeText(card.title)}</span> : null}
+        {frontendFieldVisible(override, 'title') ? <span className="title">{personSafeText(card.displayTitle || card.title)}</span> : null}
         {meta && frontendFieldVisible(override, 'actionBadge') ? (
           <span className={`action-badge tone-${actionTone}`} title={meta.label}>
             <meta.icon size={9} />
@@ -95,7 +102,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
       ) : null}
       {(frontendFieldVisible(override, 'latestOrder') || frontendFieldVisible(override, 'performance30d')) ? (
         <div className="card-signals">
-          {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><ShoppingBag size={10} /> {lastOrder}</span> : null}
+          {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><ShoppingBag size={10} /> {card.displayCommerceSnapshot || lastOrder}</span> : null}
           {frontendFieldVisible(override, 'performance30d') ? <span title={frontendCopy(override, 'performanceTitle', 'Last 30 days')}><Activity size={10} /> {performance}</span> : null}
         </div>
       ) : null}
@@ -119,7 +126,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
             type="button"
             className="archive-btn"
             title={frontendCopy(override, 'archiveTitle', 'Archive from my Daily list')}
-            aria-label={`Archive ${card.title}`}
+            aria-label={`Archive ${card.displayTitle || card.title}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -135,7 +142,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
             type="button"
             className="transfer-btn"
             title={frontendCopy(override, 'transferTitle', 'Transfer follow-up')}
-            aria-label={`Transfer ${card.title}`}
+            aria-label={`Transfer ${card.displayTitle || card.title}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();

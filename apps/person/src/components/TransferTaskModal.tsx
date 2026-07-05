@@ -107,7 +107,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
 
                 <div className="field">
                   <span>Follow-up focus</span>
-                  <div className="axis-options">
+                  <div className="focus-options">
                     {(selectedTarget?.axes ?? []).map((axis) => (
                       <button
                         key={axis}
