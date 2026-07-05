@@ -174,6 +174,11 @@ Still requiring live evidence before final sign-off:
   but their table semantics are separate. Column definitions now recompute when
   `archive` mode changes so archive headers/actions cannot retain routine-list
   wording after a route switch.
+- Customer Archive search remains server-side through `limit`, `offset`, and
+  submitted `search`. Backend search also expands phone input into normalized
+  phone variants, so pasted formats such as `(831) 319-1837`, `8313191837`, or
+  `+18313191837` can match the same Shopify customer without client-side
+  filtering thousands of rows.
 - Task Brief modal call summary no longer labels raw analysis fields as
   `Intent` or `Urgency`. Staff now sees display-contract language: issue,
   next step, checks, signals, and friction.

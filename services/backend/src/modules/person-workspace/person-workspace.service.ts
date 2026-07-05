@@ -1456,18 +1456,23 @@ export class PersonWorkspaceService {
     const limit = query.limit;
     const offset = query.offset;
     const search = query.search?.trim();
+    const searchDigits = search?.replace(/\D/g, '') ?? '';
+    const phoneSearches = search && searchDigits.length >= 4 ? phoneVariants(search) : [];
+    const phoneSearchOr: Prisma.CustomerWhereInput[] = phoneSearches.map((phone) => ({
+      phone: { contains: phone, mode: 'insensitive' },
+    }));
+    const searchOr: Prisma.CustomerWhereInput[] = search ? [
+      { companyName: { contains: search, mode: 'insensitive' } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+      { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+      ...phoneSearchOr,
+    ] : [];
     const where: Prisma.CustomerWhereInput = {
       shopifyCustomerId: { not: null },
-      ...(search ? {
-        OR: [
-          { companyName: { contains: search, mode: 'insensitive' } },
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } },
-          { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
-        ],
-      } : {}),
+      ...(searchOr.length > 0 ? { OR: searchOr } : {}),
     };
     const [rows, total, aggregate, atRisk] = await Promise.all([
       this.prisma.db.customer.findMany({
