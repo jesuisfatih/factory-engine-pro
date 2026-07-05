@@ -16,7 +16,7 @@ import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefContent, TaskBriefModal } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
-import { personSafeText, staffActionLabel } from '../lib/personTerminology';
+import { focusLabel, personSafeText, staffActionLabel } from '../lib/personTerminology';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
 type DailyFilter = 'all' | 'urgent' | 'unreached' | 'at_risk';
@@ -315,7 +315,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               {!missedCollapsed ? (
                 <div className="missed-v2-list">
                   {missedFollowUps.slice(0, 8).map((card, index) => {
-                    const tags = [card.displayCustomerSummary, personSafeText(card.segment)].filter(Boolean).slice(0, 2);
+                    const tags = compactCardChips(card);
                     const note = card.missedNote || card.displayOutcome || card.displayReason || card.summary;
                     const action = missedActionFor(card);
                     return (
@@ -356,6 +356,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   {churnFollowUps.slice(0, 8).map((card, index) => {
                     const note = card.customerRiskNote || card.displayConcern || card.displayReason || card.summary;
                     const lost = card.customerRisk === 'lost';
+                    const tags = compactCardChips(card);
                     return (
                       <button type="button" key={card.id} className="missed-row" onClick={() => setSelectedId(card.id)}>
                         <span className="missed-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>
@@ -364,7 +365,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                         <span className="missed-main">
                           <span className="missed-name">{personSafeText(card.displayTitle || card.title)}</span>
                           <span className="missed-sub">
-                            <span className="missed-chip">{personSafeText(card.displayCustomerSummary || card.segment)}</span>
+                            {tags.map((tag) => <span key={tag} className="missed-chip">{tag}</span>)}
                             <span className="missed-note"><NoteText text={personSafeText(note)} /></span>
                           </span>
                         </span>
@@ -778,6 +779,17 @@ function missedActionFor(card: CardData) {
   if (card.customerRisk === 'at_risk') return { label: 'Review', cls: 'amber' };
   if (label.toLowerCase().includes('call')) return { label: 'Call back', cls: 'amber' };
   return { label: 'Follow up', cls: 'amber' };
+}
+
+function compactCardChips(card: CardData) {
+  const chips = [
+    card.phone ? `Phone ${card.phone}` : null,
+    card.assignedMemberName ? card.assignedMemberName : null,
+    focusLabel(card.axis),
+  ]
+    .map((value) => personSafeText(value).trim())
+    .filter((value): value is string => Boolean(value));
+  return [...new Set(chips)].slice(0, 3);
 }
 
 function PrioritySegmentGroup({
