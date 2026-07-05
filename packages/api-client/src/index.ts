@@ -363,6 +363,10 @@ export class ApiClient {
     }
   }
 
+  async refreshSession() {
+    return this.refreshStoredSession();
+  }
+
   members(query = '') {
     return this.get(`/identity/members${query}`);
   }

@@ -91,6 +91,7 @@ export class AuthService {
 
   async loginMember(input: MemberLoginInput, surface: 'admin' | 'person'): Promise<AuthSession> {
     const tenantId = this.requireTenant();
+    await this.identity.ensureDefaultRoles();
     const principal = await this.principals.findMemberByEmail(input.email);
     await this.assertPassword(principal, input.password, input.email, surface);
     await this.prisma.db.member.updateMany({ where: { id: principal!.id }, data: { lastLoginAt: new Date() } });
@@ -209,9 +210,19 @@ export class AuthService {
 
   async refresh(refreshToken: string): Promise<AuthSession> {
     const token = await this.authTokens.consume('refresh', refreshToken);
-    const principal = await this.principals.findById(token.principalType as PrincipalType, token.principalId);
-    if (!principal) throw new UnauthorizedException('Principal no longer exists');
-    return this.sessions.issue(token.tenantId, principal);
+    return this.tenantContext.run(
+      {
+        requestId: this.tenantContext.get()?.requestId ?? 'auth-refresh',
+        tenantId: token.tenantId,
+        permissions: [],
+      },
+      async () => {
+        if (token.principalType === 'member') await this.identity.ensureDefaultRoles();
+        const principal = await this.principals.findById(token.principalType as PrincipalType, token.principalId);
+        if (!principal) throw new UnauthorizedException('Principal no longer exists');
+        return this.sessions.issue(token.tenantId, principal);
+      },
+    );
   }
 
   async logout(input: { refreshToken?: string; accessToken?: string }) {

@@ -1,20 +1,36 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { MEMBER_PERMISSIONS, type AuthSession } from '@factory-engine-pro/contracts';
-import { readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
+import { adminApi, readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
 
 type Principal = AuthSession['principal'];
+
+let sessionRefreshStarted = false;
+let sessionRefreshPromise: Promise<void> | null = null;
 
 export function useCurrentPrincipal() {
   const sessionSnapshot = useSyncExternalStore(subscribeSession, readSessionSnapshot, () => null);
   const session = useMemo(() => readSession(), [sessionSnapshot]);
   const principal = session?.principal;
+  useEffect(() => {
+    if (!session?.refreshToken || sessionRefreshStarted) return;
+    sessionRefreshStarted = true;
+    sessionRefreshPromise ??= adminApi.refreshSession()
+      .then(() => undefined)
+      .catch(() => undefined)
+      .finally(() => {
+        sessionRefreshPromise = null;
+      });
+  }, [session?.refreshToken]);
   return useMemo(
     () => ({
       data: principal,
       isLoading: false,
       isError: false,
       error: null,
-      refetch: async () => ({ data: principal }),
+      refetch: async () => {
+        await (sessionRefreshPromise ?? adminApi.refreshSession().then(() => undefined).catch(() => undefined));
+        return { data: readSession()?.principal ?? principal };
+      },
     }),
     [principal],
   );
