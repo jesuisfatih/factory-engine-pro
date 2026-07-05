@@ -424,7 +424,7 @@ export class PersonWorkspaceService {
         dailyCount: dailyCallList.length,
         priorityCount: segmentGroups.reduce((total, group) => total + group.items.length, 0),
         pinnedCount: pinBoard.length,
-        highUrgencyCount: uniqueHighUrgencyCount(dailyCallList, segmentPriorityCards),
+        highUrgencyCount: uniqueHighIntentCount(dailyCallList, dailyRankingStrategy, segmentPriorityCards, priorityCustomerStrategy),
         visibleAxes,
         segmentGroupCount: segmentGroups.length,
       },
@@ -3115,14 +3115,16 @@ function dailyItemId(segmentId: string, customerId: string) {
   return `daily-${segmentId}-${customerId}`;
 }
 
-function uniqueHighUrgencyCount(
-  daily: { customerId?: string | null; id: string; urgencyScore: number }[],
-  tasks: { customerId?: string | null; id: string; urgencyScore: number }[],
+function uniqueHighIntentCount(
+  daily: PersonQueueCardDto[],
+  dailyStrategy: AlgorithmStrategyDefinition,
+  tasks: PersonQueueCardDto[],
+  taskStrategy: AlgorithmStrategyDefinition,
 ) {
   const seen = new Set<string>();
   let count = 0;
   for (const item of daily) {
-    if (item.urgencyScore < 80) continue;
+    if (!isHighIntentByStrategy(dailyStrategy, item)) continue;
     const key = item.customerId ? `customer:${item.customerId}` : `task:${item.id}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -3130,7 +3132,7 @@ function uniqueHighUrgencyCount(
     }
   }
   for (const item of tasks) {
-    if (item.urgencyScore < 80) continue;
+    if (!isHighIntentByStrategy(taskStrategy, item)) continue;
     const key = item.customerId ? `customer:${item.customerId}` : `task:${item.id}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -3138,6 +3140,21 @@ function uniqueHighUrgencyCount(
     }
   }
   return count;
+}
+
+function isHighIntentByStrategy(strategy: AlgorithmStrategyDefinition, card: PersonQueueCardDto) {
+  const signals = personCardStrategySignals(card);
+  const score = personStrategyScore(strategy, signals);
+  const band = strategy.scoreBands.find((entry) => score >= entry.min && score <= entry.max) ?? null;
+  if (!band) return false;
+  const configuredBandIds = highIntentBandIds(strategy);
+  if (configuredBandIds.length > 0) return configuredBandIds.includes(band.id);
+  return band.tone === 'danger' || /\b(high|urgent|fast)\b/i.test(`${band.id} ${band.label}`);
+}
+
+function highIntentBandIds(strategy: AlgorithmStrategyDefinition) {
+  const raw = strategy.metadata?.highIntentBandIds;
+  return Array.isArray(raw) ? raw.map((value) => String(value).trim()).filter(Boolean) : [];
 }
 
 function resolverForBrief(

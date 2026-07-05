@@ -3228,6 +3228,10 @@ export class RulesService {
     for (const action of parsed.data.definition.modalActionOrder) {
       if (!surface.allowedModalActions.includes(action)) issues.push(`Modal action is not allowed on ${surface.id}: ${action}`);
     }
+    const bandIds = new Set(parsed.data.definition.scoreBands.map((band) => band.id));
+    for (const bandId of metadataStringArray(parsed.data.definition.metadata.highIntentBandIds)) {
+      if (!bandIds.has(bandId)) issues.push(`highIntentBandIds references an unknown score band on ${surface.id}: ${bandId}`);
+    }
     if (parsed.data.status === 'active') {
       warnings.push('MCP draft/validate can produce active-looking JSON, but publish_algorithm_version is still required to activate it.');
     }
@@ -5270,7 +5274,7 @@ function draftAlgorithmStrategy(
       ctaPriority: ctas.length ? ctas : surface.allowedCtas.slice(0, 4),
       modalActionOrder: modalActions.length ? modalActions : surface.allowedModalActions.slice(0, 4),
       explanationTemplate: 'Explain the ranking from customer/task signals, not internal debug labels.',
-      metadata: { source: 'mcp_draft', naturalLanguageGoal: goal },
+      metadata: { source: 'mcp_draft', naturalLanguageGoal: goal, highIntentBandIds: ['urgent'] },
     },
   });
 }
@@ -5299,8 +5303,12 @@ function defaultAlgorithmDefinition(surface: AlgorithmSurfaceContract): Algorith
     scoreBands: defaultScoreBands(),
     ctaPriority: surface.allowedCtas.slice(0, 4),
     modalActionOrder: surface.allowedModalActions.slice(0, 4),
-    metadata: { source: 'system_default' },
+    metadata: { source: 'system_default', highIntentBandIds: ['urgent'] },
   });
+}
+
+function metadataStringArray(value: unknown) {
+  return Array.isArray(value) ? value.map((entry) => String(entry).trim()).filter(Boolean) : [];
 }
 
 function defaultAlgorithmSort(surface: AlgorithmSurfaceContract) {

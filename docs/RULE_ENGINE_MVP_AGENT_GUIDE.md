@@ -1358,7 +1358,10 @@ A strategy is controlled JSON:
       { "id": "urgent", "label": "Needs fast follow-up", "min": 80, "max": 10000, "tone": "danger", "cta": "call" }
     ],
     "ctaPriority": ["call", "note", "schedule"],
-    "modalActionOrder": ["call_customer", "confirm_need", "capture_outcome"]
+    "modalActionOrder": ["call_customer", "confirm_need", "capture_outcome"],
+    "metadata": {
+      "highIntentBandIds": ["urgent"]
+    }
   }
 }
 ```
@@ -1371,6 +1374,7 @@ Allowed levers:
 - `sort`: tie-breakers after scoring.
 - `cooldown`: reappearance and duplicate suppression policy.
 - `scoreBands`: business-facing labels for score ranges.
+- `metadata.highIntentBandIds`: which `scoreBands` count as the staff "High intent" KPI. Do not hard-code a numeric high-intent threshold outside strategy.
 - `ctaPriority`: which staff action should appear first.
 - `modalActionOrder`: which instruction blocks appear first in a staff modal.
 
