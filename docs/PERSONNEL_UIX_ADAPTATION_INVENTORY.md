@@ -117,6 +117,10 @@ Still requiring live evidence before final sign-off:
   again at render time. This keeps old or manually inserted customization
   records from leaking internal terms into staff navigation while preserving
   stable nav ids, routes, permissions, and default route behavior.
+- Pinned board rows and daily-card accessibility labels now use the same
+  staff-safe display path as the visible Daily Call List and modal surfaces, so
+  fallback task titles, segment labels, and tooltip metadata cannot leak
+  internal terminology through secondary UI affordances.
 - Frontend source patch preview/proof responses now expose machine-readable
   safety flags: `appliesPatch: false`, `deploysCode: false`,
   `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`. This

@@ -1,5 +1,6 @@
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
 import type { Card } from '../types';
+import { personSafeText } from '../lib/personTerminology';
 
 interface Props {
   pinned: Card[];
@@ -13,8 +14,8 @@ export function PinPanel({ pinned, onUnpin }: Props) {
       header: 'Pinned card',
       cell: ({ row }) => (
         <>
-          <div className="name">{row.original.title}</div>
-          <div className="seg">{row.original.kind === 'customer' ? 'Customer' : 'Task'} - {row.original.segment} - U{row.original.urgencyScore}</div>
+          <div className="name">{personSafeText(row.original.displayTitle || row.original.title)}</div>
+          <div className="seg">{row.original.kind === 'customer' ? 'Customer' : 'Task'} - {personSafeText(row.original.segment)} - U{row.original.urgencyScore}</div>
         </>
       ),
     },

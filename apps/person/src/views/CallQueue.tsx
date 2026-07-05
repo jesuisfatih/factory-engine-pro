@@ -467,7 +467,7 @@ function SortableDailyTaskCard({
         ref={setActivatorNodeRef}
         type="button"
         className="daily-drag-handle"
-        aria-label={`Reorder ${card.displayTitle || card.title}`}
+        aria-label={`Reorder ${personSafeText(card.displayTitle || card.title)}`}
         disabled={disabled}
         {...attributes}
         {...listeners}

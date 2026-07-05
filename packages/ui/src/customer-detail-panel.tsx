@@ -492,6 +492,7 @@ function staffPanelText(value: string, staffTerminology: boolean) {
     .replace(/\bsupport\s+case\b/gi, 'customer request')
     .replace(/\bsupport\b/gi, 'customer request')
     .replace(/\btranscript\s+resolver\b/gi, 'call summary')
+    .replace(/\btranscripts?\b/gi, 'call summary')
     .replace(/\bresolver\b/gi, 'summary')
     .replace(/\bdebug\b/gi, 'review')
     .replace(/\bcommission\b/gi, 'request');

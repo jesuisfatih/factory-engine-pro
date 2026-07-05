@@ -42,6 +42,7 @@ function displayToneClass(tone: string | undefined) {
 export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customization, summary }: Props) {
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
+  const safeCardTitle = personSafeText(card.displayTitle || card.title);
   const primaryBadge = card.displayBadges[0];
   const actionInput = {
     intent: card.callIntent ?? card.urgencyBreakdown.intent,
@@ -71,7 +72,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
       }}
     >
       <div className="row1">
-        {frontendFieldVisible(override, 'title') ? <span className="title">{personSafeText(card.displayTitle || card.title)}</span> : null}
+        {frontendFieldVisible(override, 'title') ? <span className="title">{safeCardTitle}</span> : null}
         {meta && frontendFieldVisible(override, 'actionBadge') ? (
           <span className={`action-badge tone-${actionTone}`} title={meta.label}>
             <meta.icon size={9} />
@@ -79,7 +80,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
           </span>
         ) : null}
         {frontendFieldVisible(override, 'urgencyScore') ? (
-          <span className={priorityClass(card.priority)} title={card.urgencyBreakdown.intent ?? 'urgency score'}>
+          <span className={priorityClass(card.priority)} title={personSafeText(card.urgencyBreakdown.intent ?? 'urgency score')}>
             U{card.urgencyScore}
           </span>
         ) : null}
@@ -126,7 +127,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
             type="button"
             className="archive-btn"
             title={frontendCopy(override, 'archiveTitle', 'Archive from my Daily list')}
-            aria-label={`Archive ${card.displayTitle || card.title}`}
+            aria-label={`Archive ${safeCardTitle}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -142,7 +143,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onTransfer, customi
             type="button"
             className="transfer-btn"
             title={frontendCopy(override, 'transferTitle', 'Transfer follow-up')}
-            aria-label={`Transfer ${card.displayTitle || card.title}`}
+            aria-label={`Transfer ${safeCardTitle}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
