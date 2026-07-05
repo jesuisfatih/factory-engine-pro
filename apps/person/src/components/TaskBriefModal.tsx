@@ -216,17 +216,18 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
   };
   const primaryBadge = liveCard.displayBadges[0];
   const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
-  const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);
-  const primaryBrief = liveCard.displayOutcome || staffBriefLine(actionInput);
+  const actionLabel = personSafeText(primaryBadge?.label) || staffActionLabel(actionInput);
+  const primaryBrief = personSafeText(liveCard.displayOutcome) || staffBriefLine(actionInput);
   const ctaPriority = liveCard.ctaPriority ?? [];
   const modalActionOrder = liveCard.modalActionOrder ?? [];
-  const directActions = liveCard.displayActions.length > 0
-    ? orderedDisplayActions(liveCard.displayActions, modalActionOrder)
+  const safeDisplayActions = liveCard.displayActions.map((action) => personSafeText(action)).filter(Boolean);
+  const directActions = safeDisplayActions.length > 0
+    ? orderedDisplayActions(safeDisplayActions, modalActionOrder)
     : directiveActions(actionLabel, liveCard.phone, undefined, modalActionOrder);
   const footerActions = orderedFooterActions(ctaPriority);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
-  const purchaseSummary = liveCard.displayCommerceSnapshot || (latestOrder
+  const purchaseSummary = personSafeText(liveCard.displayCommerceSnapshot) || (latestOrder
     ? `${latestOrder.orderNumber ?? latestOrder.id} - ${fmtMoney(latestOrder.totalPrice, latestOrder.currency)}`
     : liveCard.ordersCount
       ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
@@ -238,7 +239,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
     : 'Confirm phone or email before promising order, refund, or pricing details.';
   const summarySignals = detail?.callSummary?.motivators.map(personSafeText).filter(Boolean) ?? [];
   const summaryFriction = detail?.callSummary?.objections.map(personSafeText).filter(Boolean) ?? [];
-  const summaryChecks = liveCard.displayActions.length > 0 ? liveCard.displayActions : directActions;
+  const summaryChecks = safeDisplayActions.length > 0 ? safeDisplayActions : directActions;
   const callExcerpt = personSafeText(liveCard.callExcerpt);
 
   const modalContent = (

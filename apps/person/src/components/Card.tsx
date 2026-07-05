@@ -68,7 +68,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
     summary: card.displayReason,
     urgencyScore: card.urgencyScore,
   };
-  const actionLabel = primaryBadge?.label ?? staffActionLabel(actionInput);
+  const actionLabel = personSafeText(primaryBadge?.label) || staffActionLabel(actionInput);
   const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
   const briefLine = frontendCopy(
     override,
@@ -80,7 +80,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
     : card.ordersCount
       ? `${card.ordersCount} orders ${fmtMoney(card.totalSpent ?? 0)}`
       : 'No linked order';
-  const performance = card.displayCallSnapshot || (card.performance30d
+  const performance = personSafeText(card.displayCallSnapshot) || (card.performance30d
     ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
     : '30d customer activity pending');
   const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
@@ -112,7 +112,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
         <div className="card-foot">
           <div className="card-meta">
             {frontendFieldVisible(override, 'phone') ? <span title="Phone"><span className="sig-ic green"><Phone size={11} /></span> {card.phone || 'No phone'}</span> : null}
-            {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><span className="sig-ic indigo"><ShoppingBag size={11} /></span> {card.displayCommerceSnapshot || lastOrder}</span> : null}
+            {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><span className="sig-ic indigo"><ShoppingBag size={11} /></span> {personSafeText(card.displayCommerceSnapshot) || lastOrder}</span> : null}
             {frontendFieldVisible(override, 'performance30d') ? <span title={frontendCopy(override, 'performanceTitle', 'Last 30 days')}><span className="sig-ic amber"><Activity size={11} /></span> {performance}</span> : null}
             {frontendFieldVisible(override, 'assignee') ? <span title="Owner"><span className="sig-ic blue"><UserRound size={11} /></span> {card.assignedMemberName ? card.assignedMemberName : frontendCopy(override, 'assigneeFallback', 'Unassigned')}</span> : null}
             {frontendFieldVisible(override, 'focus') ? <span>{frontendCopy(override, 'focusLabel', focusLabel(card.axis))}</span> : null}

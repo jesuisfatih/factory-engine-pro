@@ -877,10 +877,10 @@ function SegmentCustomerCard({
   callDisabled: boolean;
 }) {
   const override = frontendElementOverride(customization, 'priority.card', { priorityCustomer: item, summary });
-  const latestOrder = item.displayCommerceSnapshot || (item.latestOrder
+  const latestOrder = personSafeText(item.displayCommerceSnapshot) || (item.latestOrder
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
     : 'No linked order');
-  const latestCall = item.displayCallSnapshot || (item.latestCall
+  const latestCall = personSafeText(item.displayCallSnapshot) || (item.latestCall
     ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'linked call'}`
     : 'No linked call yet');
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
@@ -995,7 +995,7 @@ function priorityItemMainInfo(item: DailyCallItem): CustomerDetailMainInfo {
       : 'No linked order yet';
   const lastCallLabel = item.latestCall
     ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'call captured'}`
-    : item.displayCallSnapshot || 'No recent call captured';
+    : personSafeText(item.displayCallSnapshot) || 'No recent call captured';
   return {
     reason: personSafeText(item.displayReason || item.reason || priorityCustomerBrief(item)),
     segmentLabel: personSafeText(item.segment.name),
@@ -1027,7 +1027,7 @@ function cardMainInfo(card: CardData): CustomerDetailMainInfo {
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} | ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
     : card.ordersCount
       ? `${card.ordersCount} orders | ${fmtMoney(card.totalSpent ?? 0)}`
-      : card.displayCommerceSnapshot || 'No linked order yet';
+      : personSafeText(card.displayCommerceSnapshot) || 'No linked order yet';
   return {
     reason: personSafeText(card.displayReason || card.displayOutcome || card.summary || 'Review this customer before outreach.'),
     segmentLabel: personSafeText(card.segment || card.displayCustomerSummary || 'Customer follow-up'),
@@ -1043,7 +1043,7 @@ function cardMainInfo(card: CardData): CustomerDetailMainInfo {
     orderLabel: latestOrder,
     ordersCount: card.ordersCount ?? 0,
     totalSpent: card.totalSpent ?? 0,
-    lastCallLabel: card.displayCallSnapshot || 'Recent call context',
+    lastCallLabel: personSafeText(card.displayCallSnapshot) || 'Recent call context',
     lastCallSummary: personSafeText(card.displayCallSnapshot || card.callExcerpt) || null,
     lastContact: card.createdAt ?? new Date(0).toISOString(),
     owner: card.assignedMemberName ?? null,
