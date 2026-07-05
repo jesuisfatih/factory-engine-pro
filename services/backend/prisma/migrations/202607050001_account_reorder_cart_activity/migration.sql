@@ -21,7 +21,7 @@ CREATE INDEX "account_reorder_cart_activities_tenant_id_created_at_idx" ON "acco
 
 ALTER TABLE "account_reorder_cart_activities"
   ADD CONSTRAINT "account_reorder_cart_activities_tenant_id_fkey"
-  FOREIGN KEY ("tenant_id") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "account_reorder_cart_activities"
   ADD CONSTRAINT "account_reorder_cart_activities_cart_id_fkey"
