@@ -23,6 +23,7 @@ import { TenantContextService } from './tenant-context.js';
     RealtimeGateway,
   ],
   exports: [
+    JwtModule,
     TenantContextService,
     PrismaService,
     PasswordService,
