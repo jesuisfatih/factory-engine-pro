@@ -2886,8 +2886,8 @@ export class PersonWorkspaceService {
 
     return {
       whyCalling: row.description ?? row.title,
-      upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority customer task needs a human response.' : 'No explicit complaint captured.',
-      callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the customer task to the next accountable status.',
+      upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority customer follow-up needs a human response.' : 'No explicit complaint captured.',
+      callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the customer follow-up to the next accountable status.',
       suggestedActions: ['Review customer context', 'Add an internal note', 'Update status before leaving the screen'],
       promptKey: 'person.workspace.live-context',
       promptVersion: 'live',
@@ -3364,11 +3364,11 @@ function synthesizedResolverBrief(
   return {
     whyCalling: primarySignal?.reason ?? whyByIntent[intent] ?? resolver.summary ?? row.description ?? row.title,
     upsetAbout,
-    callGoal: goalByIntent[intent] ?? 'Move the customer to the next accountable sales or account step.',
+    callGoal: goalByIntent[intent] ?? 'Move the customer to the next accountable purchase or care step.',
     suggestedActions: cleanedActions([
       ...(synthesizedActionsByIntent(intent, products)),
-      primarySignal?.suggested_task_title ? `Use task context: ${primarySignal.suggested_task_title}` : null,
-      sourceCall?.transcriptRaw ? 'Record the call outcome before leaving the task' : null,
+      primarySignal?.suggested_task_title ? `Use follow-up context: ${primarySignal.suggested_task_title}` : null,
+      sourceCall?.transcriptRaw ? 'Record the call outcome before leaving the follow-up' : null,
     ]),
   };
 }
@@ -3378,10 +3378,10 @@ function synthesizedActionsByIntent(intent: string, products: string[]) {
   const actions: Record<string, Array<string | null>> = {
     refund_requested: ['Ask for order number and refund reason', 'Clarify whether replacement, return, or account review is needed', 'Set the next account-side action'],
     shipping_status_question: ['Ask for order or tracking number', 'Clarify freight, address, or delivery issue', 'Give the next accountable update path'],
-    callback_requested: ['Call the customer back from the task phone number', 'Confirm what decision or question is pending', 'Record the outcome before leaving the task'],
+    callback_requested: ['Call the customer back from the follow-up phone number', 'Confirm what decision or question is pending', 'Record the outcome before leaving the follow-up'],
     sales_follow_up: ['Clarify product need, timing, and budget', productAction, 'Set quote or order next step'],
     product_fit_question: ['Ask use case, volume, material, and size', productAction, 'Recommend the matching product family'],
-    no_action: ['Review transcript signal', 'Decide if follow-up is required', 'Record the outcome before leaving the task'],
+    no_action: ['Review call signal', 'Decide if follow-up is required', 'Record the outcome before leaving the follow-up'],
   };
   return actions[intent] ?? actions.no_action;
 }
@@ -3596,7 +3596,7 @@ function staffCardOutcome(card: PersonQueueCardWithoutDisplay, actionLabel: stri
   if (actionLabel.includes('Delivery issue')) return 'Confirm order or tracking context and save the promised update.';
   if (actionLabel.includes('Callback')) return 'Reach the customer and save the result or next callback time.';
   if (card.kind === 'customer') return 'Review history, decide whether to call, and save the next human follow-up.';
-  return 'Move the customer task to the next accountable status.';
+  return 'Move the customer follow-up to the next accountable status.';
 }
 
 function staffCardActions(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
@@ -3609,7 +3609,7 @@ function staffCardActions(card: PersonQueueCardWithoutDisplay, actionLabel: stri
   if (actionLabel.includes('Delivery issue')) return ['Ask for order or tracking number', 'Clarify delivery issue', 'Save the next update path'];
   if (actionLabel.includes('Callback')) return ['Call the customer', 'Confirm what is pending', 'Save the outcome'];
   if (card.kind === 'customer') return ['Review latest order', 'Review latest call or note', 'Call or add a note if action is needed'];
-  return ['Review customer context', 'Call or update the task', 'Save the outcome'];
+  return ['Review customer context', 'Call or update the follow-up', 'Save the outcome'];
 }
 
 function staffCustomerSummary(card: PersonQueueCardWithoutDisplay) {
@@ -3755,7 +3755,7 @@ function priorityCustomerReason(segmentName: string, context: PersonPriorityCust
     context.latestOrder ? `last order ${money(context.latestOrder.totalPrice).toLocaleString()} ${context.latestOrder.currency}` : null,
     context.latestNote ? `last note by ${context.latestNote.authorName}` : null,
     context.openRequestsCount ? `${context.openRequestsCount} customer request${context.openRequestsCount === 1 ? '' : 's'}` : null,
-    repeatCount ? `${repeatCount} task${repeatCount === 1 ? '' : 's'}` : null,
+    repeatCount ? `${repeatCount} follow-up${repeatCount === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
   return signals.join(' - ');
 }
@@ -3985,7 +3985,7 @@ function taskTimeline(
     entries.push({
       id: `note-${comment.id}`,
       kind: 'note',
-      title: 'Task note',
+      title: 'Follow-up note',
       summary: comment.body,
       at: comment.createdAt.toISOString(),
       meta: { actorType: comment.actorType, internal: comment.internal },
@@ -4002,7 +4002,7 @@ function taskTimeline(
       ? 'Call follow-up'
       : source === 'segment_priority'
         ? 'Customer priority'
-        : 'Customer task';
+        : 'Customer follow-up';
     entries.push({
       id: `request-${request.id}`,
       kind: 'task',
@@ -4203,7 +4203,7 @@ function calendarDisplayFromRequest(
       ? 'High-priority customer follow-up needs a human response.'
       : 'No customer concern captured yet.'),
     displayOutcome: firstMeaningfulStaffText([brief?.callGoal]) || 'Save the next customer outcome before leaving this event.',
-    displayActions: actions.length > 0 ? actions : ['Review customer context', 'Call or update the task', 'Save the outcome'],
+    displayActions: actions.length > 0 ? actions : ['Review customer context', 'Call or update the follow-up', 'Save the outcome'],
     callExcerpt: staffDisplayText(brief?.transcriptSnippet),
   };
 }

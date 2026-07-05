@@ -364,7 +364,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                       <span className="lbl">Manual follow-up</span>
                     </div>
                     <div className="brief-val brief-val-muted">
-                      Created by an operator. Add a task note or schedule a follow-up to enrich the customer history.
+                      Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
                     </div>
                   </div>
                 )}
@@ -422,7 +422,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
 
                 {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
-                    <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and task history')}</span>
+                    <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and follow-up history')}</span>
                     {detail ? <span className="brief-count-pill">{detail.timeline.length}</span> : null}
                   </div>
                   {detail?.timeline.length ? (
@@ -455,12 +455,12 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                         id="task-note-input"
                         className="brief-edit"
                         rows={3}
-                        placeholder="Save a task note to customer history..."
+                        placeholder="Save a follow-up note to customer history..."
                         value={note}
                         onChange={(event) => setNote(event.target.value)}
                       />
                       <div className="brief-form-actions">
-                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer task thread.'}</span>
+                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer follow-up thread.'}</span>
                         <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
                           <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
                         </button>
@@ -641,7 +641,7 @@ function modalActionText(action: string, callStep: string, suggestedActions: str
   const map: Record<string, string> = {
     call_customer: callStep,
     confirm_need: secondSuggested,
-    capture_outcome: 'Save the exact result before leaving this task.',
+    capture_outcome: 'Save the exact result before leaving this follow-up.',
     check_order: 'Check the latest Shopify order before promising a next step.',
     schedule_follow_up: 'Schedule the next follow-up time if the customer is not ready now.',
     add_note: 'Add a clear internal note with the promise, owner, and next date.',
@@ -652,7 +652,7 @@ function modalActionText(action: string, callStep: string, suggestedActions: str
     state_reason: firstSuggested,
     confirm_next_step: 'Confirm the single next accountable step with the customer.',
     save_outcome: 'Save the outcome so the next person sees exactly what happened.',
-    archive_if_not_needed: 'Archive only if the transcript has no real customer follow-up need.',
+    archive_if_not_needed: 'Archive only if the call has no real customer follow-up need.',
   };
   return map[action];
 }

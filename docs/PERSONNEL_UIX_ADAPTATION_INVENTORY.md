@@ -53,7 +53,7 @@ reference checkout.
 | Task brief playbook | `TaskBriefModal.tsx` | Staff sees what to do now in clear steps | Personnel | `person_brief`, orders, calls, notes, timeline, performance | Exists | Ensure internal labels are hidden and sections are ordered | Call plan | section order/copy/theme | Modal screenshot |
 | Customer purchase history in modal | `TaskBriefModal.tsx` | Staff can confirm order context before calling | Personnel | Shopify customer match and recent orders | Exists | Preserve and keep live-only | Customer purchase history | fields/copy | Modal screenshot |
 | Call summary in modal | `TaskBriefModal.tsx` | Staff sees mood, issue, motivators, objections | Personnel | Resolver output/person brief | Exists | Keep staff-safe language only | Call summary | fields/copy | Modal screenshot |
-| Order/call/task history | `TaskBriefModal.tsx` | Full recent customer timeline inside task | Personnel | Orders, Aircall calls, notes, tasks/activity | Exists | Preserve | Order, call, and task history | section order | Modal screenshot |
+| Order/call/follow-up history | `TaskBriefModal.tsx` | Full recent customer timeline inside the call plan | Personnel | Orders, Aircall calls, notes, follow-up activity | Exists | Preserve | Order, call, and follow-up history | section order | Modal screenshot |
 | Customer 360 popup | `packages/ui/src/customer-detail-panel.tsx` | Customer opens as a popup, not a right drawer | Personnel | Customer detail aggregate | Exists; component uses modal backdrop/panel | Preserve popup behavior | Customer 360 | tab labels/order later | Screenshot |
 | Customer 360 Main tab | `packages/ui/src/customer-detail-panel.tsx` `main` / `mainContent` props | Customer opens with immediate operational context, not a cold profile table | Personnel | Priority/customer row context: reason, segment, urgency, phone, email, latest order, latest call, open work, latest note | Implemented as typed shared UI prop fed by live priority/customer rows; no reference backend port | Keep sourcing from `segmentGroups` or customer archive rows; do not show rule trace | Main | tab order/copy/theme later | Popup screenshot opened from Priority Kanban and Customer Archive |
 | Customer 360 tabs | `customer-detail-panel.tsx` | Profile, Shopify Orders, Aircall Calls, Customer Requests, Email, Messages, Notes, follow-up history | Personnel | Customer aggregate tabs | Exists; commission filtered | Preserve; hide internal rule names for staff | Profile / orders / calls / requests / notes / follow-ups | tab visibility/order later | Screenshot |
@@ -118,7 +118,7 @@ Still requiring live evidence before final sign-off:
   `displayOutcome`, `displayActions`, `displayBadges`,
   `displayCustomerSummary`, `displayCommerceSnapshot`, and
   `displayCallSnapshot`.
-- Daily cards, missed-work rows, priority customer cards, and the task brief
+- Daily cards, missed-work rows, priority customer cards, and the call plan
   modal read those display fields first. Raw internal task metadata stays as
   fallback data only, not as the normal staff-facing copy source.
 - Staff customer-request counts now only accept real customer-request sources:
@@ -161,6 +161,11 @@ Still requiring live evidence before final sign-off:
   normalization used by the rest of the personnel surface. This keeps future
   `main`/`mainContent` suppliers from leaking internal words if an upstream
   contract accidentally contains them.
+- Task Brief and Customer 360 use "follow-up" / "call" for personnel-visible
+  work language. The reference backend's raw task/transcript terminology may
+  still exist in internal schemas, but staff-visible titles, instructions,
+  timeline labels, note placeholders, and generated fallback actions must not
+  surface those raw names.
 - Customer Archive notes now use a dedicated archive endpoint. The routine
   calling-list note endpoint still enforces assigned-workspace customer scope;
   the archive endpoint only accepts real Shopify customers and preserves the

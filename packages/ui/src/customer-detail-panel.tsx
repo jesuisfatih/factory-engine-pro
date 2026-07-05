@@ -141,7 +141,7 @@ export function CustomerDetailPanel({
         </header>
         {callMessage ? <div className="customer-detail-call-status">{callMessage}</div> : null}
 
-        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and task records." />}
+        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and follow-up records." />}
         {!isLoading && error && (
           <PanelState
             title="Customer detail failed"
@@ -433,7 +433,7 @@ function MessagesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDe
 
 function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.notes;
-  if (rows.length === 0) return <EmptyTab title="No internal notes" body="Notes saved from task brief or person workspace will appear here." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No internal notes" body="Notes saved from call plans or person workspace will appear here." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((note) => (
