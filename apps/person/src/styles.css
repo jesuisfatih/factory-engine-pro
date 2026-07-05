@@ -424,7 +424,7 @@ button { font-family: inherit; }
 .quick-action:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .quick-action.disabled, .quick-action:disabled { opacity: .48; cursor: not-allowed; }
 .pin-board-panel { padding: 0; background: transparent; border: 0; }
-.pin-board-panel .pin-panel { height: 100%; }
+.pin-board-panel .pin-panel { height: auto; }
 .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; min-height: 0; }
 
 /* react-resizable-panels - column-level + pin-rail width persistence */
@@ -528,11 +528,13 @@ button { font-family: inherit; }
 .pin-panel h2 { font-size: 12px; font-weight: 700; color: var(--text); margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; }
 .pin-panel .badge { font-size: 10px; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 10px; }
 .pin-panel .empty { text-align: center; font-size: 11px; color: var(--text-faint); padding: 24px; border: 1px dashed var(--border); border-radius: 8px; }
-.pin-panel .table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.pin-panel .table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; }
 .pin-panel .table th { text-align: left; font-size: 9px; text-transform: uppercase; color: var(--text-faint); padding: 5px 4px; font-weight: 700; border-bottom: 1px solid var(--border); }
 .pin-panel .table td { padding: 7px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.pin-panel .table th:last-child,
+.pin-panel .table td:last-child { width: 82px; text-align: right; }
 .pin-panel .table tr:hover td { background: var(--surface-2); }
-.pin-panel .table .name { font-weight: 600; color: var(--text); }
+.pin-panel .table .name { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .pin-panel .table .seg { font-size: 10px; line-height: 1.35; color: var(--text-muted); margin-top: 2px; overflow-wrap: anywhere; }
 
 /* ─── Tables (customers) ─────────────────────────────────── */
@@ -1468,7 +1470,7 @@ button { font-family: inherit; }
 .missed-v2-head h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
 .missed-v2-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
 .missed-v2-list { display: flex; flex-direction: column; background: rgba(245, 196, 81, .05); }
-.missed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) minmax(92px, auto); align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
+.missed-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
 .missed-row:last-child { border-bottom: none; }
 .missed-row:hover { background: var(--surface-2); }
 .missed-avatar { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; color: #fff; font-size: 13px; font-weight: 750; flex-shrink: 0; }
@@ -1478,7 +1480,7 @@ button { font-family: inherit; }
 .missed-chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font-weight: 600; color: var(--text); flex-shrink: 0; }
 .missed-note { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-sep { display: inline-block; margin: 0 5px; font-size: 14px; line-height: 1; font-weight: 700; color: var(--text-faint); vertical-align: -1px; }
-.missed-action { font-size: 12px; font-weight: 650; padding: 5px 12px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+.missed-action { margin-left: auto; font-size: 12px; font-weight: 650; padding: 5px 12px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
 .missed-action.red { color: #dc2626; background: rgba(239, 68, 68, .1); }
 .missed-action.amber { color: #b45309; background: rgba(245, 158, 11, .14); }
 .missed-action.blue { color: #2563eb; background: rgba(59, 130, 246, .12); }
@@ -1586,9 +1588,10 @@ button { font-family: inherit; }
   .call-action-stats { grid-template-columns: 1fr; }
   .today-focus-items { grid-template-columns: 1fr; }
   .attention-grid { grid-template-columns: 1fr; }
-  .missed-row { grid-template-columns: 34px minmax(0, 1fr); align-items: start; }
+  .missed-row { flex-wrap: wrap; align-items: flex-start; }
+  .missed-main { flex: 1 1 calc(100% - 48px); }
   .missed-action,
-  .churn-actions { grid-column: 2; justify-self: start; align-items: flex-start; }
+  .churn-actions { margin-left: 50px; align-items: flex-start; }
   .segment-group-toggle { grid-template-columns: 16px 9px minmax(0, 1fr) auto; }
   .segment-group-priority { grid-column: 4; }
   .segment-group-meta { grid-column: 3 / -1; white-space: normal; }
