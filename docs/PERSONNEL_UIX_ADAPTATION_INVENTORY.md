@@ -79,3 +79,7 @@ Rules for this adaptation:
 - Customer 360 popup keeps the staff-safe terminology switch for call summaries,
   customer request descriptions, and call tags while preserving admin-capable
   raw tab keys internally.
+- Customer Archive notes now use a dedicated archive endpoint. The routine
+  calling-list note endpoint still enforces assigned-workspace customer scope;
+  the archive endpoint only accepts real Shopify customers and preserves the
+  same staff note write permission used by the existing personnel note flow.

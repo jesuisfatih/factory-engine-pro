@@ -913,6 +913,10 @@ export class ApiClient {
     return this.post<CustomerDetailPanelDto>(`/person/workspace/customers/${encodeURIComponent(customerId)}/notes`, input);
   }
 
+  savePersonCustomerArchiveNote(customerId: string, input: SavePersonCustomerNoteInput) {
+    return this.post<CustomerDetailPanelDto>(`/person/workspace/customer-archive/${encodeURIComponent(customerId)}/notes`, input);
+  }
+
   personCalendarEvents() {
     return this.get('/person/workspace/calendar');
   }

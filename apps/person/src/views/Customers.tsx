@@ -2,7 +2,7 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerNote } from '../api/live';
+import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerArchiveNote, saveCustomerNote } from '../api/live';
 import type { CustomerArchivePage, CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
@@ -71,7 +71,9 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     setDetailCustomerId(null);
   };
   const customerNote = useMutation({
-    mutationFn: (input: { customerId: string; body: string }) => saveCustomerNote(input.customerId, { body: input.body }),
+    mutationFn: (input: { customerId: string; body: string }) => archive
+      ? saveCustomerArchiveNote(input.customerId, { body: input.body })
+      : saveCustomerNote(input.customerId, { body: input.body }),
     onSuccess: async (_detail, input) => {
       setNoteTarget(null);
       setNoteBody('');

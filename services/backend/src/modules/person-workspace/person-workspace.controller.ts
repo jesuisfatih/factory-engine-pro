@@ -242,6 +242,15 @@ export class PersonWorkspaceController {
     return this.workspace.customerArchiveDetail(id);
   }
 
+  @Post('customer-archive/:id/notes')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  saveCustomerArchiveNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(savePersonCustomerNoteSchema)) body: SavePersonCustomerNoteInput,
+  ) {
+    return this.workspace.saveCustomerArchiveNote(id, body);
+  }
+
   @Get('emails')
   @RequirePermission(MEMBER_PERMISSIONS.supportRead)
   emails() {

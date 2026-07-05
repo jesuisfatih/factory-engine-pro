@@ -1539,6 +1539,27 @@ export class PersonWorkspaceService {
   async saveCustomerNote(id: string, input: SavePersonCustomerNoteInput) {
     const member = await this.currentMember();
     await this.assertCustomerInWorkspace(id, member.id);
+    await this.createCustomerNote(id, input, member, 'workspace');
+    return this.customersService.detail(id);
+  }
+
+  async saveCustomerArchiveNote(id: string, input: SavePersonCustomerNoteInput) {
+    const member = await this.currentMember();
+    const customer = await this.prisma.db.customer.findFirst({
+      where: { id, shopifyCustomerId: { not: null } },
+      select: { id: true },
+    });
+    if (!customer) throw new NotFoundException('Shopify customer not found');
+    await this.createCustomerNote(id, input, member, 'archive');
+    return this.customersService.detail(id);
+  }
+
+  private async createCustomerNote(
+    id: string,
+    input: SavePersonCustomerNoteInput,
+    member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>,
+    source: 'workspace' | 'archive',
+  ) {
     const title = `Customer note - ${memberDisplayName(member)}`;
     await this.prisma.db.serviceRequest.create({
       data: {
@@ -1557,18 +1578,19 @@ export class PersonWorkspaceService {
           noteKind: 'customer',
           linkedCustomer: id,
           category: 'person_customer_note',
+          personWorkspaceSource: source,
           createdByMemberId: member.id,
           createdByMemberEmail: member.email,
           createdByMemberName: memberDisplayName(member),
         } as Prisma.InputJsonValue,
       },
     });
-    this.logger.log('person_workspace', 'customer.note.create', 'Customer note saved from priority board', {
+    this.logger.log('person_workspace', 'customer.note.create', 'Customer note saved from person workspace', {
       customer_id: id,
       member_id: member.id,
+      source,
     });
     this.emitCallCenterInvalidate('person.customer.note.create');
-    return this.customersService.detail(id);
   }
 
   private async assertCustomerInWorkspace(customerId: string, memberId: string) {
