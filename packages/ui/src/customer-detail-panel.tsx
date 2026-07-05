@@ -158,12 +158,12 @@ export function CustomerDetailPanel({
 
 function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRetry: () => void, staffTerminology: boolean) {
   if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} />;
-  if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} />;
+  if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
-  if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} />;
-  if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} />;
-  if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} />;
+  if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
+  if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
+  if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'tasks') return <TasksTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   return null;
 }
@@ -192,7 +192,7 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
               <strong>{staffTerminology ? customerFocusLabel(assignment.axis) : label(assignment.axis)}</strong>
               <span>{assignment.memberName}</span>
             </div>
-            <small>{label(assignment.source)}</small>
+            <small>{staffPanelText(label(assignment.source), staffTerminology)}</small>
           </div>
         ))}
       </section>
@@ -218,7 +218,7 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
   );
 }
 
-function OrdersTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function OrdersTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.shopifyOrders;
   if (rows.length === 0 && detail.customer.metrics.ordersCount > 0) {
     return (
@@ -237,7 +237,7 @@ function OrdersTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetr
           <div className="customer-detail-row">
             <div>
               <strong>{order.orderNumber ?? order.shopifyOrderId ?? order.id}</strong>
-              <span>{label(order.financialStatus ?? 'unknown')} - {label(order.fulfillmentStatus ?? order.fulfillmentMode)}</span>
+              <span>{staffPanelText(`${label(order.financialStatus ?? 'unknown')} - ${label(order.fulfillmentStatus ?? order.fulfillmentMode)}`, staffTerminology)}</span>
             </div>
             <div className="customer-detail-amount">{money(order.totalPrice)}</div>
           </div>
@@ -279,8 +279,8 @@ function SupportTab({ detail, onRetry, staffTerminology }: { detail: CustomerDet
         <article key={request.id} className="customer-detail-card">
           <div className="customer-detail-row">
             <div>
-              <strong>{request.title}</strong>
-              <span>{label(request.status)} - {label(request.priority)} - {request.assignedMemberName ?? 'Unassigned'}</span>
+              <strong>{staffPanelText(request.title, staffTerminology)}</strong>
+              <span>{staffPanelText(`${label(request.status)} - ${label(request.priority)} - ${request.assignedMemberName ?? 'Unassigned'}`, staffTerminology)}</span>
             </div>
             <small>{dateTime(request.updatedAt)}</small>
           </div>
@@ -292,7 +292,7 @@ function SupportTab({ detail, onRetry, staffTerminology }: { detail: CustomerDet
   );
 }
 
-function EmailTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function EmailTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.email;
   if (rows.length === 0) return <EmptyTab title="No email deliveries" body="No transactional or marketing email delivery matches this customer email." onRetry={onRetry} />;
   return (
@@ -301,19 +301,19 @@ function EmailTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
         <article key={mail.id} className="customer-detail-card">
           <div className="customer-detail-row">
             <div>
-              <strong>{mail.subject}</strong>
-              <span>{label(mail.category)} - {label(mail.status)} - attempts {mail.attemptCount}</span>
+              <strong>{staffPanelText(mail.subject, staffTerminology)}</strong>
+              <span>{staffPanelText(`${label(mail.category)} - ${label(mail.status)} - attempts ${mail.attemptCount}`, staffTerminology)}</span>
             </div>
             <small>{dateTime(mail.sentAt ?? mail.createdAt)}</small>
           </div>
-          <p>{mail.preview ?? mail.errorMessage ?? 'No delivery body preview.'}</p>
+          <p>{staffPanelText(mail.preview ?? mail.errorMessage ?? 'No delivery body preview.', staffTerminology)}</p>
         </article>
       ))}
     </div>
   );
 }
 
-function MessagesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function MessagesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.messages;
   if (rows.length === 0) return <EmptyTab title="No linked internal messages" body="Internal person messages can appear here when a thread is linked to this customer." onRetry={onRetry} />;
   return (
@@ -322,19 +322,19 @@ function MessagesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRe
         <article key={thread.id} className="customer-detail-card">
           <div className="customer-detail-row">
             <div>
-              <strong>{thread.title}</strong>
+              <strong>{staffPanelText(thread.title, staffTerminology)}</strong>
               <span>{thread.participants.length} participants</span>
             </div>
             <small>{dateTime(thread.updatedAt)}</small>
           </div>
-          {thread.messages.slice(-4).map((message) => <blockquote key={message.id}>{message.body}</blockquote>)}
+          {thread.messages.slice(-4).map((message) => <blockquote key={message.id}>{staffPanelText(message.body, staffTerminology)}</blockquote>)}
         </article>
       ))}
     </div>
   );
 }
 
-function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry: () => void }) {
+function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.notes;
   if (rows.length === 0) return <EmptyTab title="No internal notes" body="Notes saved from task brief or person workspace will appear here." onRetry={onRetry} />;
   return (
@@ -343,16 +343,16 @@ function NotesTab({ detail, onRetry }: { detail: CustomerDetailPanelDto; onRetry
         <article key={note.id} className="customer-detail-card">
           <div className="customer-detail-row">
             <div>
-              <strong>{note.title}</strong>
+              <strong>{staffPanelText(note.title, staffTerminology)}</strong>
               <span>
-                {label(note.kind)}
+                {staffPanelText(label(note.kind), staffTerminology)}
                 {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
                 {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
               </span>
             </div>
             <small>{dateTime(note.updatedAt)}</small>
           </div>
-          <p>{note.body}</p>
+          <p>{staffPanelText(note.body, staffTerminology)}</p>
         </article>
       ))}
     </div>
@@ -368,12 +368,12 @@ function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
         <article key={task.id} className="customer-detail-card">
           <div className="customer-detail-row">
             <div>
-              <strong>{task.title}</strong>
-              <span>{label(task.status)} - {label(task.priority)} - {task.assignedMemberName ?? 'Unassigned'}</span>
+              <strong>{staffPanelText(task.title, staffTerminology)}</strong>
+              <span>{staffPanelText(`${label(task.status)} - ${label(task.priority)} - ${task.assignedMemberName ?? 'Unassigned'}`, staffTerminology)}</span>
             </div>
             <small>{dateTime(task.dueAt ?? task.updatedAt)}</small>
           </div>
-          <p>{task.description ?? 'No task description captured.'}</p>
+          <p>{staffPanelText(task.description ?? 'No task description captured.', staffTerminology)}</p>
           {!staffTerminology && task.matchedRuleName && <div className="customer-detail-muted">Rule: {task.matchedRuleName}</div>}
         </article>
       ))}

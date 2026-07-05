@@ -14,6 +14,7 @@ import type {
   FrontendNavigationOverride,
 } from '@factory-engine-pro/contracts';
 import type { CSSProperties, ReactNode } from 'react';
+import { personSafeText } from '../lib/personTerminology';
 import type { NavItem } from '../types';
 
 export type FrontendCustomizationContext = Partial<Record<'summary' | 'dailyCall' | 'priorityCustomer' | 'taskBrief' | 'customerDetail', unknown>>;
@@ -105,7 +106,7 @@ export function frontendCopy(
   key: string,
   fallback: string,
 ) {
-  return override?.copyOverrides[key] ?? fallback;
+  return staffSafeUiText(override?.copyOverrides[key] ?? fallback);
 }
 
 export function frontendElementClassName(
@@ -217,14 +218,16 @@ export function frontendNavigation(
 }
 
 function FrontendCustomizationBlockView({ block, context }: { block: FrontendCustomizationBlock; context: FrontendCustomizationContext }) {
-  const value = block.value ? formatBinding(block.value, context) : null;
-  const body = block.template ? renderTemplate(block.template, context) : block.text;
-  const title = block.title ? renderTemplate(block.title, context) : block.label;
+  const rawValue = block.value ? formatBinding(block.value, context) : null;
+  const value = rawValue ? staffSafeUiText(rawValue) : null;
+  const body = staffSafeUiText(block.template ? renderTemplate(block.template, context) : block.text);
+  const title = staffSafeUiText(block.title ? renderTemplate(block.title, context) : block.label);
+  const label = staffSafeUiText(block.label);
   const tone = `tone-${block.tone}`;
   if (block.type === 'stat_tile') {
     return (
       <div className={`mcp-ui-block mcp-ui-stat ${tone}${block.compact ? ' compact' : ''}`}>
-        <span>{block.label}</span>
+        <span>{label}</span>
         <strong>{value ?? body ?? '-'}</strong>
         {body && value ? <em>{body}</em> : null}
       </div>
@@ -236,7 +239,7 @@ function FrontendCustomizationBlockView({ block, context }: { block: FrontendCus
   if (block.type === 'field') {
     return (
       <div className={`mcp-ui-block mcp-ui-field ${tone}${block.compact ? ' compact' : ''}`}>
-        <span>{block.label}</span>
+        <span>{label}</span>
         <strong>{value ?? body ?? '-'}</strong>
       </div>
     );
@@ -246,7 +249,7 @@ function FrontendCustomizationBlockView({ block, context }: { block: FrontendCus
       <div className={`mcp-ui-block mcp-ui-checklist ${tone}`}>
         <strong>{title}</strong>
         <ul>
-          {block.items.map((item) => <li key={item}>{renderTemplate(item, context)}</li>)}
+          {block.items.map((item) => <li key={item}>{staffSafeUiText(renderTemplate(item, context))}</li>)}
         </ul>
       </div>
     );
@@ -261,12 +264,14 @@ function FrontendCustomizationBlockView({ block, context }: { block: FrontendCus
 }
 
 function FrontendCustomizationContentBlockView({ block, context }: { block: FrontendCustomizationContentBlock; context: FrontendCustomizationContext }) {
+  const content = staffSafeUiText(renderTemplate(block.content, context));
+  const label = staffSafeUiText(block.label);
   const rendered = block.format === 'html'
-    ? renderSafeHtml(renderTemplate(block.content, context), block.allowedClasses)
-    : renderSafeMarkdown(renderTemplate(block.content, context), block.allowedClasses);
+    ? renderSafeHtml(content, block.allowedClasses)
+    : renderSafeMarkdown(content, block.allowedClasses);
   return (
     <div className={`mcp-ui-block mcp-ui-content tone-${block.tone}${block.compact ? ' compact' : ''}`}>
-      <span className="mcp-ui-content-label">{block.label}</span>
+      <span className="mcp-ui-content-label">{label}</span>
       <div className="mcp-ui-content-body">{rendered}</div>
     </div>
   );
@@ -381,8 +386,12 @@ function readBindingValue(binding: Pick<FrontendCustomizationBinding, 'source' |
 function renderTemplate(template: string, context: FrontendCustomizationContext) {
   return template.replace(/\{\{\s*([a-zA-Z]+)\.([a-zA-Z0-9_.]+)\s*\}\}/g, (_match, source: keyof FrontendCustomizationContext, path: string) => {
     const value = readBindingValue({ source, path }, context);
-    return value === null || value === undefined || value === '' ? '-' : String(value);
+    return value === null || value === undefined || value === '' ? '-' : staffSafeUiText(String(value));
   });
+}
+
+function staffSafeUiText(value: string | null | undefined): string {
+  return personSafeText(value);
 }
 
 const SAFE_HTML_TAGS = new Set(['p', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'br', 'span', 'div']);

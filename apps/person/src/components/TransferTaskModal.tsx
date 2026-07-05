@@ -58,7 +58,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
           <div>
             <h2 id="transfer-task-title">Transfer follow-up</h2>
             <div className="sub">
-              <span>{personSafeText(card.title)}</span>
+              <span>{personSafeText(card.displayTitle || card.title)}</span>
               <span>{focusLabel(card.axis)}</span>
               <span>{card.assignedMemberName ?? 'unassigned'}</span>
             </div>
@@ -78,7 +78,7 @@ export function TransferTaskModal({ card, onClose, onTransferred }: Props) {
             </div>
             <div className="transfer-row">
               <span>Customer</span>
-              <strong>{card.customerId ? personSafeText(card.title) : 'No linked customer'}</strong>
+              <strong>{card.customerId ? personSafeText(card.displayTitle || card.title) : 'No linked customer'}</strong>
             </div>
           </section>
 

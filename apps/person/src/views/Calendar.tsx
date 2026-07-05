@@ -291,7 +291,7 @@ export function CalendarView() {
                   {selected.aiBrief.transcriptSnippet && (
                     <div className="row">
                       <div className="lbl">Call excerpt</div>
-                      <div className="transcript">{selected.aiBrief.transcriptSnippet}</div>
+                      <div className="transcript">{personSafeText(selected.aiBrief.transcriptSnippet)}</div>
                     </div>
                   )}
                   <div className="row">

@@ -35,7 +35,10 @@ export function personSafeText(value: string | null | undefined) {
     .replace(/\bsale\b/gi, 'purchase intent')
     .replace(/\bsupport\b/gi, 'customer request')
     .replace(/\btranscript\s+resolver\b/gi, 'call summary')
+    .replace(/\bresolver\b/gi, 'summary')
     .replace(/\btranscript\b/gi, 'call')
+    .replace(/\bdebug\b/gi, 'review')
+    .replace(/\bcommission\b/gi, 'request')
     .replace(/\bAI\b/g, 'Call')
     .replace(/\bai\b/g, 'call');
 }

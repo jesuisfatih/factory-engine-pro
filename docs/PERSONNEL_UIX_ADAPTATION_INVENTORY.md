@@ -86,3 +86,7 @@ Rules for this adaptation:
 - Task Brief modal call summary no longer labels raw analysis fields as
   `Intent` or `Urgency`. Staff now sees display-contract language: issue,
   next step, checks, signals, and friction.
+- Staff-safe text filtering now covers native calendar/transfer surfaces,
+  Customer 360 tab content, and MCP-rendered copy/content blocks. Runtime
+  customization can still change labels and blocks, but forbidden internal
+  terms are normalized before rendering.
