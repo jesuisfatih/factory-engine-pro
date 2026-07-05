@@ -78,6 +78,31 @@ or changing the tenant/user model.
 - Future follow-ups that should appear later are materialized later. A future
   visibility rule is not the same thing as setting `dueAt` on an already-visible
   row.
+
+## Staff Queue UIX Parity Step - 2026-07-05
+
+This step aligns our real staff queue composition with the patron/reference UIX
+without using the reference backend.
+
+| Reference UIX element | Our implemented surface | Backend/data rule |
+| --- | --- | --- |
+| Command-center top focus band | `today-focus` with daily focus items, urgent follow-ups, missed work, risk review, open request count, and calls made today | Uses `PersonDailyOperationsDto.summary` and live Daily Call List counts only |
+| Icon KPI strip | KPI cards with colored icons for incoming calls, outbound calls, open requests, follow-ups, pinned, priority customers, and sync | Counts come from live summary, Daily Call List, pin board, and segment groups |
+| Missed work block | `missed-v2` expandable list with avatar, note, phone, and action copy | Only cards with `unreached` or `missedNote`; no invented rows |
+| At-risk block | `churn-v2` expandable list for customer risk notes | Only cards with live `customerRisk` / `customerRiskNote` flags |
+| Follow-up list with filter chips | `followup-v2` panel with All / Urgent / Not reached / At risk filters and date separators | Filters operate on live Daily Call List rows already scoped to current staff |
+| Reference card-v2 visual language | Daily cards now use avatar, title row, action badge, staff brief, card meta row, phone/order/activity/owner/focus, and pin/archive/transfer actions | Card text reads `display*` contract first. Fallbacks are staff-safe and do not expose internal terms |
+| Segment portfolio navigation | `kanban-v2` panel with All lists / List N chips and previous/next list navigation | Priority customers still come only from `SegmentOwnership -> SegmentCustomerMembership -> Customer` |
+| Segment customer cards | `segment-customer-card card-v2` with avatar, phone/email, latest note, latest order, latest call, open follow-up summary, call/note/pin actions | Uses live `segmentGroups` items. Clicking opens Customer 360 popup with real detail API data |
+| Dark/light theme parity layer | Shared parity CSS plus dark overrides for focus, missed work, filters, cards, priority groups, and customer cards | Pure frontend presentation; no data semantics changed |
+
+Guardrails kept in this step:
+- No reference backend code was copied.
+- Daily Call List and Priority Kanban remain separate queries and separate UI
+  semantics.
+- Person-facing labels still pass through staff-safe text normalization.
+- Runtime customization remains typed through `frontendCustomization`; raw
+  script/html injection is still not allowed.
 - MCP frontend customization changes runtime presentation or validates source
   patch plans. It does not silently change backend behavior, permissions, env,
   tenant data, or deployment state.

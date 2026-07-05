@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
-import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } from 'lucide-react';
+import { ChevronDown, Clock, GripVertical, ListChecks, Loader2, Phone, PhoneIncoming, PhoneOutgoing, Pin, RefreshCw, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
@@ -15,10 +15,10 @@ import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefModal } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
-import { personSafeText, staffActionLabel, staffBriefLine } from '../lib/personTerminology';
+import { personSafeText, staffActionLabel } from '../lib/personTerminology';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
-type DailyFilter = 'all' | 'must_call' | 'payment_refund' | 'purchase_intent' | 'unmatched';
+type DailyFilter = 'all' | 'urgent' | 'unreached' | 'at_risk';
 
 export function CallQueueView({ range: initialRange = 'last7d', archive = false }: { range?: DailyOperationRange; archive?: boolean } = {}) {
   const qc = useQueryClient();
@@ -32,10 +32,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>('all');
+  const [dailyCollapsed, setDailyCollapsed] = useState(false);
   const [missedCollapsed, setMissedCollapsed] = useState(false);
-  const [riskCollapsed, setRiskCollapsed] = useState(false);
+  const [churnCollapsed, setChurnCollapsed] = useState(false);
+  const [kanbanCollapsed, setKanbanCollapsed] = useState(false);
+  const [kanbanSegment, setKanbanSegment] = useState<string>('all');
   const queryKey = [...QK_BASE, range] as const;
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey,
     queryFn: () => fetchDailyOperations(range),
     refetchInterval: archive ? false : 15000,
@@ -52,13 +55,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const pinned = data?.pinBoard ?? [];
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
-  const actionStats = useMemo(() => dailyActionStats(daily), [daily]);
   const filteredDaily = useMemo(() => filterDailyCards(daily, dailyFilter), [daily, dailyFilter]);
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
-  const atRiskCustomers = useMemo(
-    () => groups.flatMap((group) => group.items.filter((item) => item.customerRisk !== 'none')),
-    [groups],
-  );
+  const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
+  const urgentCount = daily.filter((card) => card.urgencyScore >= 8).length;
+  const unreachedCount = daily.filter((card) => card.unreached).length;
   const customerDetailMain = useMemo(() => {
     if (!detailCustomerId) return undefined;
     const item = groups.flatMap((group) => group.items).find((candidate) => candidate.customerId === detailCustomerId);
@@ -168,91 +169,96 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       window.history.replaceState(null, '', window.location.pathname);
     }
   };
+  const scrollToSection = (id: string, expand?: () => void) => {
+    expand?.();
+    window.setTimeout(() => {
+      const el = document.getElementById(id);
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 50);
+  };
 
   return (
     <div className="queue-wrap">
+      {!archive && (
+        <div className="today-focus">
+          <div className="today-focus-head">
+            <h2>Today's focus</h2>
+            <span className="today-focus-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+          </div>
+          <div className="today-focus-items">
+            <span className={`focus-item${urgentCount > 0 ? ' urgent' : ''}`}>
+              {urgentCount > 0 ? `Handle ${urgentCount} urgent follow-up${urgentCount > 1 ? 's' : ''} first` : 'No urgent follow-ups right now'}
+            </span>
+            {churnFollowUps.length > 0 ? (
+              <span className="focus-item urgent">
+                {`Review ${churnFollowUps.length} customer${churnFollowUps.length > 1 ? 's' : ''} at risk`}
+              </span>
+            ) : null}
+            {missedFollowUps.length > 0 ? (
+              <span className="focus-item warn">
+                {`Catch up ${missedFollowUps.length} missed task${missedFollowUps.length > 1 ? 's' : ''}`}
+              </span>
+            ) : null}
+            <span className="focus-item">
+              {daily.length > 0 ? `Call back ${daily.length} customer${daily.length > 1 ? 's' : ''} from your follow-up list` : 'Follow-up list is clear'}
+            </span>
+            <span className={`focus-item${(summary?.openRequestsCount ?? 0) > 0 ? 'warn' : ''}`}>
+              {(summary?.openRequestsCount ?? 0) > 0 ? `${summary?.openRequestsCount} customer request${summary?.openRequestsCount === 1 ? '' : 's'} waiting` : 'No open customer requests'}
+            </span>
+            <span className="focus-item done">{summary?.callsMadeToday ?? 0} calls made so far today</span>
+          </div>
+        </div>
+      )}
       <div className="kpis">
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.before" context={{ summary }} />
-        {!archive && <div className="kpi"><div className="label">Incoming calls</div><div className="val">{summary?.incomingCallsToday ?? 0}</div><div className="sub">today</div></div>}
-        {!archive && <div className="kpi"><div className="label">Outbound calls</div><div className="val">{summary?.outboundCallsToday ?? 0}</div><div className="sub">today</div></div>}
-        {!archive && <div className="kpi"><div className="label">Open requests</div><div className="val">{summary?.openRequestsCount ?? 0}</div><div className="sub">waiting</div></div>}
-        <div className="kpi"><div className="label">{archive ? 'Archived calls' : 'Daily calls'}</div><div className="val">{summary?.dailyCount ?? 0}</div><div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days calls'}</div></div>
-        {!archive && <div className="kpi"><div className="label">Priority customers</div><div className="val">{summary?.priorityCount ?? 0}</div><div className="sub">assigned segments</div></div>}
-        {!archive && <div className="kpi"><div className="label">Pinned</div><div className="val">{summary?.pinnedCount ?? 0}</div><div className="sub">persistent board</div></div>}
-        {!archive && <div className="kpi"><div className="label">High intent</div><div className="val">{summary?.highUrgencyCount ?? 0}</div><div className="sub">needs fast follow-up</div></div>}
+        {!archive && (
+          <div className="kpi">
+            <div className="kpi-head"><span className="kpi-icon blue"><PhoneIncoming size={13} /></span><span className="label">Incoming calls</span></div>
+            <div className="val">{summary?.incomingCallsToday ?? 0}</div>
+            <div className="sub blue">received today</div>
+          </div>
+        )}
+        {!archive && (
+          <div className="kpi">
+            <div className="kpi-head"><span className="kpi-icon rose"><PhoneOutgoing size={13} /></span><span className="label">Outbound calls</span></div>
+            <div className="val">{summary?.outboundCallsToday ?? 0}</div>
+            <div className={`sub ${missedFollowUps.length > 0 ? 'red' : 'green'}`}>{missedFollowUps.length > 0 ? `${missedFollowUps.length} overdue` : 'all caught up'}</div>
+          </div>
+        )}
+        {!archive && (
+          <div className="kpi">
+            <div className="kpi-head"><span className="kpi-icon amber"><ShieldAlert size={13} /></span><span className="label">Open requests</span></div>
+            <div className="val">{summary?.openRequestsCount ?? 0}</div>
+            <div className="sub amber">waiting for an update</div>
+          </div>
+        )}
+        <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('followup-list-section', () => setDailyCollapsed(false))}>
+          <div className="kpi-head"><span className="kpi-icon indigo"><ListChecks size={13} /></span><span className="label">{archive ? 'Archived calls' : 'Follow-ups'}</span></div>
+          <div className="val">{daily.length}</div>
+          <div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days'}</div>
+        </button>
+        {!archive && (
+          <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('pin-board-section')}>
+            <div className="kpi-head"><span className="kpi-icon yellow"><Pin size={13} /></span><span className="label">Pinned</span></div>
+            <div className="val">{summary?.pinnedCount ?? 0}</div>
+            <div className="sub">persistent board</div>
+          </button>
+        )}
+        {!archive && (
+          <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}>
+            <div className="kpi-head"><span className="kpi-icon green"><Users size={13} /></span><span className="label">Priority customers</span></div>
+            <div className="val">{groups.reduce((total, group) => total + group.totalCustomers, 0)}</div>
+            <div className="sub green">{groups.length} segment{groups.length === 1 ? '' : 's'}</div>
+          </button>
+        )}
         <button type="button" className="kpi queue-sync-card" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
-          <div className="label">Sync</div>
+          <div className="kpi-head"><span className="kpi-icon blue"><RefreshCw size={13} /></span><span className="label">Sync</span></div>
           <div className="val">{syncTasks.isPending ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</div>
           <div className="sub">{syncTasks.data ? `${syncTasks.data.backfill.ingested} calls updated` : 'pull latest calls'}</div>
         </button>
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
-      {!archive && (
-        <>
-          <FrontendCustomizationSlotView customization={frontendCustomization} slot="focus.before" context={{ summary }} />
-          <TodayFocusPanel
-            summary={summary}
-            actionStats={actionStats}
-            activeFilter={dailyFilter}
-            onFilter={setDailyFilter}
-          />
-          <FrontendCustomizationSlotView customization={frontendCustomization} slot="focus.after" context={{ summary }} />
-        </>
-      )}
-      {!archive && (
-        <div className="call-action-stats" aria-label="Daily call action summary">
-          <button type="button" className={`call-action-stat stat-call${dailyFilter === 'must_call' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'must_call' ? 'all' : 'must_call')}>
-            <span>Must call</span>
-            <strong>{actionStats.mustCall}</strong>
-            <em>urgent or callback</em>
-          </button>
-          <button type="button" className={`call-action-stat stat-money${dailyFilter === 'payment_refund' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'payment_refund' ? 'all' : 'payment_refund')}>
-            <span>Payment/refund</span>
-            <strong>{actionStats.paymentOrRefund}</strong>
-            <em>needs careful wording</em>
-          </button>
-          <button type="button" className={`call-action-stat stat-purchase${dailyFilter === 'purchase_intent' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'purchase_intent' ? 'all' : 'purchase_intent')}>
-            <span>Purchase intent</span>
-            <strong>{actionStats.purchaseIntent}</strong>
-            <em>quote or order path</em>
-          </button>
-          <button type="button" className={`call-action-stat stat-match${dailyFilter === 'unmatched' ? ' active' : ''}`} onClick={() => setDailyFilter(dailyFilter === 'unmatched' ? 'all' : 'unmatched')}>
-            <span>Unmatched callers</span>
-            <strong>{actionStats.unmatched}</strong>
-            <em>confirm before promise</em>
-          </button>
-        </div>
-      )}
-      {!archive && (missedFollowUps.length > 0 || atRiskCustomers.length > 0) ? (
-        <div className="attention-grid">
-          <AttentionPanel
-            title="Missed work"
-            count={summary?.missedFollowUpCount ?? missedFollowUps.length}
-            description="Open follow-ups that need a human next step."
-            collapsed={missedCollapsed}
-            onToggle={() => setMissedCollapsed((value) => !value)}
-          >
-            <CompactTaskList cards={missedFollowUps.slice(0, 6)} onOpen={setSelectedId} />
-          </AttentionPanel>
-          <AttentionPanel
-            title="At-risk customers"
-            count={summary?.atRiskCustomerCount ?? atRiskCustomers.length}
-            description="Assigned customers that need careful outreach."
-            collapsed={riskCollapsed}
-            onToggle={() => setRiskCollapsed((value) => !value)}
-          >
-            <AtRiskCustomerList
-              items={atRiskCustomers.slice(0, 6)}
-              onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
-              onCallCustomer={(item) => {
-                if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
-              }}
-              callDisabled={dialCustomer.isPending}
-            />
-          </AttentionPanel>
-        </div>
-      ) : null}
 
       <QueryState
         isLoading={isLoading}
@@ -262,76 +268,257 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         emptyBody={archive ? 'Calls older than 7 days, or calls you archived manually, will appear here.' : 'Recent customer calls and assigned customer groups will appear here.'}
       >
         <div className={`ops-grid${archive ? ' archive' : ''}`}>
-          <section className="ops-panel">
-            <div className="ops-head">
-              <div>
-                <h2>{archive ? 'Daily call list archive' : 'Daily call list'}</h2>
-                <p>{archive ? 'Older customer call follow-ups for this staff member.' : 'Recent customer calls grouped by day.'}</p>
-                <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
+          {!archive && missedFollowUps.length > 0 ? (
+            <section className="missed-v2" id="missed-tasks-section">
+              <div className="missed-v2-head">
+                <button
+                  type="button"
+                  className="missed-v2-icon missed-refresh"
+                  title="Refresh missed work"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                >
+                  <RotateCcw size={15} className={isFetching ? 'spin' : ''} />
+                </button>
+                <button
+                  type="button"
+                  className="missed-v2-title"
+                  aria-expanded={!missedCollapsed}
+                  onClick={() => setMissedCollapsed((current) => !current)}
+                >
+                  <h2>Missed work</h2>
+                </button>
+                <span className="missed-v2-badge">Not completed · {missedFollowUps.length}</span>
               </div>
-              <div className="ops-head-actions">
-                {!archive && (
-                  <div className="daily-range-toggle" aria-label="Daily call list range">
-                    <button type="button" className={range === 'last7d' ? 'active' : ''} aria-pressed={range === 'last7d'} onClick={() => setRange('last7d')}>Last 7 days</button>
-                    <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
-                  </div>
-                )}
-                <span className="ops-count">{dailyFilter === 'all' ? daily.length : filteredDaily.length} follow-ups</span>
-                {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
-              </div>
-            </div>
-            {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
-            {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
-            <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
-            <DailyWorkflowList
-              cards={filteredDaily}
-              customization={frontendCustomization}
-              summary={summary}
-              emptyLabel={archive ? 'No archived call tasks.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No call tasks from today.' : 'No call tasks from the last 7 days.'}
-              reorderDisabled={reorderDaily.isPending}
-              onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
-              onTogglePin={(card) => taskPin.mutate(card)}
-              onArchive={(card) => archiveTask.mutate(card)}
-              onOpen={setSelectedId}
-              onTransfer={setTransferCard}
-            />
-          </section>
+              {!missedCollapsed ? (
+                <div className="missed-v2-list">
+                  {missedFollowUps.slice(0, 8).map((card, index) => {
+                    const tags = [card.displayCustomerSummary, personSafeText(card.segment)].filter(Boolean).slice(0, 2);
+                    const note = card.missedNote || card.displayOutcome || card.displayReason || card.summary;
+                    const action = missedActionFor(card);
+                    return (
+                      <button type="button" key={card.id} className="missed-row" onClick={() => setSelectedId(card.id)}>
+                        <span className="missed-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>
+                          {initialsFor(card.displayTitle || card.title)}
+                        </span>
+                        <span className="missed-main">
+                          <span className="missed-name">{personSafeText(card.displayTitle || card.title)}</span>
+                          <span className="missed-sub">
+                            {tags.map((tag) => <span key={tag} className="missed-chip">{personSafeText(tag)}</span>)}
+                            <span className="missed-note"><NoteText text={personSafeText(note)} /></span>
+                          </span>
+                        </span>
+                        <span className={`missed-action ${action.cls}`}>{action.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
-          {!archive && <section className="ops-panel">
-            <div className="ops-head">
-              <div>
-                <h2>Priority kanban</h2>
-                <p>Assigned customer groups for purchase and follow-up focus.</p>
-                <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
-              </div>
-              <span className="ops-count">{groups.length} segments</span>
+          {!archive && churnFollowUps.length > 0 ? (
+            <section className="missed-v2 churn-v2" id="at-risk-section">
+              <button
+                type="button"
+                className="missed-v2-head churn-v2-head"
+                aria-expanded={!churnCollapsed}
+                onClick={() => setChurnCollapsed((current) => !current)}
+              >
+                <span className="missed-v2-icon churn-v2-icon"><UserX size={15} /></span>
+                <h2>At-risk customers</h2>
+                <span className="missed-v2-badge churn-v2-badge">Needs care · {churnFollowUps.length}</span>
+              </button>
+              {!churnCollapsed ? (
+                <div className="missed-v2-list">
+                  {churnFollowUps.slice(0, 8).map((card, index) => {
+                    const note = card.customerRiskNote || card.displayConcern || card.displayReason || card.summary;
+                    const lost = card.customerRisk === 'lost';
+                    return (
+                      <button type="button" key={card.id} className="missed-row" onClick={() => setSelectedId(card.id)}>
+                        <span className="missed-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>
+                          {initialsFor(card.displayTitle || card.title)}
+                        </span>
+                        <span className="missed-main">
+                          <span className="missed-name">{personSafeText(card.displayTitle || card.title)}</span>
+                          <span className="missed-sub">
+                            <span className="missed-chip">{personSafeText(card.displayCustomerSummary || card.segment)}</span>
+                            <span className="missed-note"><NoteText text={personSafeText(note)} /></span>
+                          </span>
+                        </span>
+                        <span className="churn-actions">
+                          <span className={`missed-action ${lost ? 'red' : 'amber'}`}>{lost ? 'Critical' : 'At risk'}</span>
+                          <span className="churn-cadence">{lost ? 'Call carefully' : 'Review before calling'}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          <section className="missed-v2 followup-v2" id="followup-list-section">
+            <div className="missed-v2-head followup-head">
+              <span className="missed-v2-icon followup-icon"><ListChecks size={15} /></span>
+              <button
+                type="button"
+                className="missed-v2-title"
+                aria-expanded={!dailyCollapsed}
+                onClick={() => setDailyCollapsed((current) => !current)}
+              >
+                <h2>{archive ? 'Follow-up archive' : range === 'today' ? 'Follow-up list for today' : 'Follow-up list'}</h2>
+                <p className="followup-subtitle">{archive ? 'Archived follow-ups for this staff member.' : 'Customers you need to call back, based on recent conversations.'}</p>
+                <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
+              </button>
+              {!archive && !dailyCollapsed ? (
+                <div className="daily-range-toggle" aria-label="Daily call list range">
+                  <button type="button" className={range === 'last7d' ? 'active' : ''} aria-pressed={range === 'last7d'} onClick={() => setRange('last7d')}>Last 7 days</button>
+                  <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
+                </div>
+              ) : null}
+              <span className="missed-v2-badge followup-badge">To call · {filteredDaily.length}</span>
             </div>
-            <div className="segment-groups">
-              {deepLinkError ? <div className="ops-empty">{deepLinkError}</div> : null}
-              {groups.length === 0 ? (
-                <div className="ops-empty">No customer group is assigned to this workspace.</div>
-              ) : groups.map((group) => (
-                <PrioritySegmentGroup
-                  key={group.segmentId}
-                  group={group}
+            {!dailyCollapsed ? (
+              <div className="followup-body">
+                {!archive ? (
+                  <div className="filter-chips" role="tablist" aria-label="Follow-up filters">
+                    {([
+                      { id: 'all', label: 'All', count: daily.length },
+                      { id: 'urgent', label: 'Urgent', count: urgentCount },
+                      { id: 'unreached', label: 'Not reached', count: unreachedCount },
+                      { id: 'at_risk', label: 'At risk', count: churnFollowUps.length },
+                    ] as const).map((filter) => (
+                      <button
+                        key={filter.id}
+                        type="button"
+                        className={`filter-chip${dailyFilter === filter.id ? ' active' : ''}`}
+                        aria-pressed={dailyFilter === filter.id}
+                        onClick={() => setDailyFilter(filter.id)}
+                      >
+                        {filter.label} · {filter.count}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
+                {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
+                {archiveTask.error ? <div className="ops-inline-error">{friendlyError(archiveTask.error)}</div> : null}
+                <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
+                <DailyWorkflowList
+                  cards={filteredDaily}
                   customization={frontendCustomization}
                   summary={summary}
-                  collapsed={Boolean(collapsedGroups[group.segmentId])}
-                  onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
-                  onTogglePin={(item) => customerPin.mutate(item.customerId)}
-                  onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
-                  onAddNote={(item) => setNoteCustomer(item)}
-                  onCallCustomer={(item) => {
-                    if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
-                  }}
-                  pinDisabled={customerPin.isPending}
-                  callDisabled={dialCustomer.isPending}
+                  emptyLabel={archive ? 'No archived follow-ups.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No follow-ups for today.' : 'No follow-ups from the last 7 days.'}
+                  reorderDisabled={reorderDaily.isPending}
+                  onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
+                  onTogglePin={(card) => taskPin.mutate(card)}
+                  onArchive={(card) => archiveTask.mutate(card)}
+                  onOpen={setSelectedId}
+                  onTransfer={setTransferCard}
                 />
-              ))}
+              </div>
+            ) : null}
+          </section>
+
+          {!archive && <section className="missed-v2 kanban-v2" id="priority-kanban-section">
+            <div className="missed-v2-head kanban-head">
+              <span className="missed-v2-icon kanban-icon"><Users size={15} /></span>
+              <button
+                type="button"
+                className="missed-v2-title"
+                aria-expanded={!kanbanCollapsed}
+                onClick={() => setKanbanCollapsed((current) => !current)}
+              >
+                <h2>Priority kanban</h2>
+                <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
+                <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
+              </button>
+              <span className="missed-v2-badge kanban-badge">Assigned · {groups.reduce((total, group) => total + group.totalCustomers, 0)} in {groups.length} segment{groups.length === 1 ? '' : 's'}</span>
             </div>
+            {!kanbanCollapsed ? <div className="followup-body">
+              {(() => {
+                const orderedGroups = [...groups].sort((a, b) => a.priority - b.priority);
+                const currentIndex = orderedGroups.findIndex((group) => group.segmentId === kanbanSegment);
+                const visibleGroups = kanbanSegment === 'all' ? orderedGroups : orderedGroups.filter((group) => group.segmentId === kanbanSegment);
+                return (
+                  <>
+                    {orderedGroups.length > 1 ? (
+                      <div className="filter-chips kanban-chips" role="tablist" aria-label="Customer lists">
+                        <button
+                          type="button"
+                          className={`filter-chip green${kanbanSegment === 'all' ? ' active' : ''}`}
+                          aria-pressed={kanbanSegment === 'all'}
+                          onClick={() => setKanbanSegment('all')}
+                        >
+                          All lists · {orderedGroups.reduce((total, group) => total + group.items.length, 0)}
+                        </button>
+                        {orderedGroups.map((group, index) => (
+                          <button
+                            key={group.segmentId}
+                            type="button"
+                            className={`filter-chip green${kanbanSegment === group.segmentId ? ' active' : ''}`}
+                            aria-pressed={kanbanSegment === group.segmentId}
+                            onClick={() => setKanbanSegment(group.segmentId)}
+                          >
+                            <span className="segment-group-dot" style={{ background: group.segmentColor }} />
+                            List {index + 1} · {group.items.length}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {kanbanSegment !== 'all' && currentIndex >= 0 ? (
+                      <div className="list-nav">
+                        <span className="list-nav-status">Viewing List {currentIndex + 1} of {orderedGroups.length}</span>
+                        <button
+                          type="button"
+                          className="filter-chip green"
+                          disabled={currentIndex === 0}
+                          onClick={() => setKanbanSegment(orderedGroups[currentIndex - 1].segmentId)}
+                        >
+                          Previous list
+                        </button>
+                        <button
+                          type="button"
+                          className="filter-chip green"
+                          disabled={currentIndex === orderedGroups.length - 1}
+                          onClick={() => setKanbanSegment(orderedGroups[currentIndex + 1].segmentId)}
+                        >
+                          Next list
+                        </button>
+                      </div>
+                    ) : null}
+                    <div className="segment-groups">
+                      {deepLinkError ? <div className="ops-empty">{deepLinkError}</div> : null}
+                      {orderedGroups.length === 0 ? (
+                        <div className="ops-empty">No customer group is assigned to this workspace.</div>
+                      ) : visibleGroups.map((group) => (
+                        <PrioritySegmentGroup
+                          key={group.segmentId}
+                          group={group}
+                          listLabel={`List ${orderedGroups.findIndex((entry) => entry.segmentId === group.segmentId) + 1}`}
+                          customization={frontendCustomization}
+                          summary={summary}
+                          collapsed={Boolean(collapsedGroups[group.segmentId])}
+                          onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
+                          onTogglePin={(item) => customerPin.mutate(item.customerId)}
+                          onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
+                          onAddNote={(item) => setNoteCustomer(item)}
+                          onCallCustomer={(item) => {
+                            if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
+                          }}
+                          pinDisabled={customerPin.isPending}
+                          callDisabled={dialCustomer.isPending}
+                        />
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div> : null}
           </section>}
 
-          {!archive && <div className="ops-panel pin-board-panel">
+          {!archive && <div className="ops-panel pin-board-panel" id="pin-board-section">
             <PinPanel pinned={pinned} onUnpin={(card) => taskPin.mutate(card)} />
           </div>}
         </div>
@@ -490,154 +677,46 @@ function SortableDailyTaskCard({
   );
 }
 
-function TodayFocusPanel({
-  summary,
-  actionStats,
-  activeFilter,
-  onFilter,
-}: {
-  summary?: DailyOperations['summary'];
-  actionStats: ReturnType<typeof dailyActionStats>;
-  activeFilter: DailyFilter;
-  onFilter: (filter: DailyFilter) => void;
-}) {
-  const focusItems: Array<{ label: string; value: number; body: string; tone: string; filter?: DailyFilter }> = [
-    { label: 'Urgent follow-ups', value: actionStats.mustCall, body: 'Call these before routine outreach.', tone: 'warn', filter: 'must_call' },
-    { label: 'Customer concerns', value: actionStats.paymentOrRefund, body: 'Use careful wording before promises.', tone: 'danger', filter: 'payment_refund' },
-    { label: 'Missed work', value: summary?.missedFollowUpCount ?? 0, body: 'Open items waiting for a human next step.', tone: 'info' },
-    { label: 'At-risk customers', value: summary?.atRiskCustomerCount ?? 0, body: 'Review context before outreach.', tone: 'danger' },
-    { label: 'Open requests', value: summary?.openRequestsCount ?? 0, body: 'Customer requests waiting in your workspace.', tone: 'warn' },
-    { label: 'Calls made today', value: summary?.callsMadeToday ?? 0, body: 'Outbound calls placed from this workspace.', tone: 'success' },
-  ];
-  return (
-    <section className="today-focus-panel" aria-label="Today focus">
-      <div className="today-focus-copy">
-        <span>Today focus</span>
-        <strong>Start with the highest consequence follow-ups.</strong>
-        <p>Work customer concerns first, then missed follow-ups, then the assigned portfolio.</p>
-      </div>
-      <div className="today-focus-items">
-        {focusItems.map((item) => {
-          const active = item.filter && activeFilter === item.filter;
-          return (
-            <button
-              key={item.label}
-              type="button"
-              className={`today-focus-item tone-${item.tone}${active ? ' active' : ''}`}
-              onClick={() => item.filter ? onFilter(active ? 'all' : item.filter) : undefined}
-              aria-disabled={!item.filter}
-            >
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <em>{item.body}</em>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
+const MISSED_AVATAR_COLORS = ['#dc4b3e', '#d99a2b', '#2f7f7a', '#6366f1'];
+
+function staffSegmentLabel(internalName: string, displayName?: string | null) {
+  if (displayName?.trim()) return displayName.trim();
+  return personSafeText(internalName.replace(/^\s*(sales|support|account|internal)\s*[-:|·]\s*/i, '').trim() || internalName);
 }
 
-function AttentionPanel({
-  title,
-  count,
-  description,
-  collapsed,
-  onToggle,
-  children,
-}: {
-  title: string;
-  count: number;
-  description: string;
-  collapsed: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
+function NoteText({ text }: { text: string }) {
+  const clipped = text.length > 70 ? `${text.slice(0, 70)}...` : text;
+  const parts = clipped.split('·').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return <>{clipped}</>;
   return (
-    <section className="attention-panel">
-      <button type="button" className="attention-head" onClick={onToggle} aria-expanded={!collapsed}>
-        <ChevronDown size={14} className={collapsed ? 'chevron collapsed' : 'chevron'} />
-        <span>{title}</span>
-        <strong>{count}</strong>
-        <em>{description}</em>
-      </button>
-      {!collapsed ? <div className="attention-body">{children}</div> : null}
-    </section>
-  );
-}
-
-function CompactTaskList({ cards, onOpen }: { cards: CardData[]; onOpen: (id: string) => void }) {
-  if (cards.length === 0) return <div className="attention-empty">No missed follow-ups right now.</div>;
-  return (
-    <div className="compact-work-list">
-      {cards.map((card) => {
-        const actionInput = cardActionInput(card);
-        return (
-          <button key={card.id} type="button" className="compact-work-row" onClick={() => onOpen(card.id)}>
-            <span className="compact-work-title">{personSafeText(card.displayTitle || card.title)}</span>
-            <strong>{staffActionLabel(actionInput)}</strong>
-            <em>{card.displayConcern || card.missedNote || staffBriefLine(actionInput)}</em>
-            <span className="compact-work-meta">U{card.urgencyScore} · {card.phone ?? 'No phone on file'}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function AtRiskCustomerList({
-  items,
-  onOpenCustomer,
-  onCallCustomer,
-  callDisabled,
-}: {
-  items: DailyCallItem[];
-  onOpenCustomer: (item: DailyCallItem) => void;
-  onCallCustomer: (item: DailyCallItem) => void;
-  callDisabled: boolean;
-}) {
-  if (items.length === 0) return <div className="attention-empty">No at-risk assigned customers right now.</div>;
-  return (
-    <div className="compact-work-list">
-      {items.map((item) => (
-        <article
-          key={item.id}
-          className="compact-work-row"
-          tabIndex={0}
-          role="button"
-          onClick={() => onOpenCustomer(item)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            onOpenCustomer(item);
-          }}
-        >
-          <span className="compact-work-title">{item.customerName}</span>
-          <strong>{riskLabel(item.customerRisk)}</strong>
-          <em>{item.customerRiskNote ?? item.reason}</em>
-          <span className="compact-work-meta">
-            {item.phone ? (
-              <button
-                type="button"
-                className={`compact-call-link${callDisabled ? ' disabled' : ''}`}
-                disabled={callDisabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (!callDisabled) onCallCustomer(item);
-                }}
-              >
-                <Phone size={11} /> {item.phone}
-              </button>
-            ) : 'No phone on file'}
-          </span>
-        </article>
+    <>
+      {parts.map((part, index) => (
+        <Fragment key={index}>
+          {index > 0 ? <span className="note-sep">•</span> : null}
+          {part}
+        </Fragment>
       ))}
-    </div>
+    </>
   );
+}
+
+function initialsFor(title: string) {
+  const words = title.replace(/[^\p{L}\s]/gu, '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '#';
+  return `${words[0][0] ?? ''}${words[1]?.[0] ?? ''}`.toUpperCase() || '#';
+}
+
+function missedActionFor(card: CardData) {
+  const actionInput = cardActionInput(card);
+  const label = staffActionLabel(actionInput);
+  if (card.urgencyScore >= 8 || label.toLowerCase().includes('call')) return { label: 'Call again', cls: 'red' };
+  if (card.customerRisk === 'lost' || card.customerRisk === 'at_risk') return { label: 'Review', cls: 'amber' };
+  return { label: 'Follow up', cls: 'amber' };
 }
 
 function PrioritySegmentGroup({
   group,
+  listLabel,
   customization,
   summary,
   collapsed,
@@ -650,6 +729,7 @@ function PrioritySegmentGroup({
   callDisabled,
 }: {
   group: SegmentDailyGroup;
+  listLabel?: string;
   customization: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
   collapsed: boolean;
@@ -662,19 +742,22 @@ function PrioritySegmentGroup({
   callDisabled: boolean;
 }) {
   const cap = group.dailyCap ?? group.totalCustomers;
+  const displayName = staffSegmentLabel(group.segmentName, (group as unknown as { displayName?: string }).displayName);
   const groupSummary = {
     ...(typeof summary === 'object' && summary && !Array.isArray(summary) ? summary as Record<string, unknown> : {}),
-    groupName: group.segmentName,
+    groupName: displayName,
     groupCount: group.items.length,
     groupCap: cap,
   };
   return (
-    <section className="segment-group" aria-label={group.segmentName}>
+    <section className="segment-group" aria-label={displayName}>
       <button type="button" className={`segment-group-toggle${collapsed ? ' collapsed' : ''}`} onClick={onToggle} aria-expanded={!collapsed}>
         <ChevronDown size={14} className="chevron" />
         <span className="segment-group-dot" style={{ background: group.segmentColor }} />
-        <span className="segment-group-title">{group.segmentName}</span>
-        <span className="segment-group-meta">{group.items.length}/{cap}</span>
+        <span className="segment-group-title">{listLabel ?? displayName}</span>
+        {listLabel ? <span className="segment-group-subname">{displayName}</span> : null}
+        <span className="segment-group-priority">P{group.priority}</span>
+        <span className="segment-group-meta">{group.items.length}/{cap} today · {group.totalCustomers} total</span>
       </button>
       <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: groupSummary }} />
       {!collapsed && (
@@ -732,6 +815,9 @@ function SegmentCustomerCard({
     : 'No linked call yet');
   const customerBrief = priorityCustomerBrief(item);
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
+  const cardUrgencyClass = item.urgencyScore >= 8 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
+  const safeName = personSafeText(item.displayTitle || item.customerName);
+  const openWork = `${item.openTasksCount} task${item.openTasksCount === 1 ? '' : 's'} · ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -741,100 +827,88 @@ function SegmentCustomerCard({
 
   return (
     <article
-      className={`daily-card segment-customer-card ${frontendElementClassName(override, item.urgencyScore)}`}
+      className={`daily-card segment-customer-card card-v2 ${cardUrgencyClass} ${frontendElementClassName(override, item.urgencyScore)}`}
       data-priority-customer-id={item.id}
       tabIndex={0}
       role="button"
       onClick={onOpen}
       onKeyDown={handleKeyDown}
     >
-      <div className="segment-customer-head">
-        <button
-          type="button"
-          className="segment-customer-open"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpen();
-          }}
-          title="Open customer history"
-        >
-          {frontendFieldVisible(override, 'customerName') ? <span className="daily-title">{item.displayTitle || item.customerName}</span> : null}
-          {(frontendFieldVisible(override, 'phone') || frontendFieldVisible(override, 'email')) ? (
-            <span className="segment-customer-contact">
-              {frontendFieldVisible(override, 'phone') ? <span><strong>{frontendCopy(override, 'phoneLabel', 'Phone')}</strong>{item.phone ? item.phone : 'No phone on file'}</span> : null}
-              {item.email && frontendFieldVisible(override, 'email') ? <span><strong>{frontendCopy(override, 'emailLabel', 'Email')}</strong>{item.email}</span> : null}
-            </span>
-          ) : null}
-        </button>
-        {frontendFieldVisible(override, 'actionButtons') ? <div className="segment-customer-actions" aria-label={`${item.customerName} actions`}>
-          <button
-            type="button"
-            className={`quick-action${item.phone ? '' : ' disabled'}`}
-            aria-disabled={!item.phone}
-            title={item.phone ? `Call ${item.phone}` : 'No phone on file'}
-            disabled={!item.phone || callDisabled}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (item.phone) onCall();
-            }}
-          >
-            <Phone size={12} />
-            <span>{frontendCopy(override, 'callButton', 'Call')}</span>
-          </button>
-          <button
-            type="button"
-            className="quick-action"
-            title="Add customer note"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onAddNote();
-            }}
-          >
-            <StickyNote size={12} />
-            <span>{frontendCopy(override, 'noteButton', 'Note')}</span>
-          </button>
-          <button
-            type="button"
-            className={`pin-btn${item.pinned ? ' pinned' : ''}`}
-            title={item.pinned ? 'Customer is pinned' : 'Pin customer'}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onTogglePin();
-            }}
-            disabled={disabled}
-          >
-            {item.pinned ? frontendCopy(override, 'pinnedLabel', 'Pinned') : frontendCopy(override, 'pinLabel', 'Pin')}
-          </button>
-        </div> : null}
-        {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
-      </div>
-      {frontendFieldVisible(override, 'priorityBrief') ? <div className={`priority-brief ${urgencyClass}`}>{frontendCopy(override, 'priorityBrief', customerBrief)}</div> : null}
-      <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
-      {frontendFieldVisible(override, 'reason') ? <div className="daily-meta">{personSafeText(item.displayReason || item.reason)}</div> : null}
-      {(frontendFieldVisible(override, 'latestOrder') || frontendFieldVisible(override, 'latestCall') || frontendFieldVisible(override, 'openFollowUp') || frontendFieldVisible(override, 'latestNote')) ? (
-        <div className="segment-customer-insights">
-        {frontendFieldVisible(override, 'latestOrder') ? <span className="insight-order"><strong>{frontendCopy(override, 'latestOrderLabel', 'Latest order')}</strong>{latestOrder}</span> : null}
-        {frontendFieldVisible(override, 'latestCall') ? <span className="insight-call"><strong>{frontendCopy(override, 'latestCallLabel', 'Latest call')}</strong>{latestCall}</span> : null}
-        {frontendFieldVisible(override, 'openFollowUp') ? <span><strong>{frontendCopy(override, 'openFollowUpLabel', 'Open follow-up')}</strong>{item.openTasksCount} items | {item.openRequestsCount} customer requests | {item.notesCount} notes</span> : null}
-        {frontendFieldVisible(override, 'latestNote') && item.latestNote ? (
-          <span className="segment-customer-latest-note">
+      <span className="missed-avatar card-avatar" style={{ background: MISSED_AVATAR_COLORS[Math.abs(safeName.length + safeName.charCodeAt(0)) % MISSED_AVATAR_COLORS.length] }}>
+        {initialsFor(safeName)}
+      </span>
+      <div className="card-body">
+        <div className="row1">
+          {frontendFieldVisible(override, 'customerName') ? <span className="title">{safeName}</span> : null}
+          {(item.displayBadges ?? []).slice(0, 2).map((badge) => (
+            <span key={badge.label} className="product-chip">{personSafeText(badge.label)}</span>
+          ))}
+          {frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: item.segment.color }}>{personSafeText(item.segment.name)}</span> : null}
+          {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
+        </div>
+        {frontendFieldVisible(override, 'priorityBrief') ? <div className={`priority-brief ${urgencyClass}`}>{frontendCopy(override, 'priorityBrief', customerBrief)}</div> : null}
+        <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
+        {frontendFieldVisible(override, 'reason') ? <div className="summary">{personSafeText(item.displayReason || item.reason)}</div> : null}
+        <div className="card-foot">
+          <div className="card-meta">
+            {frontendFieldVisible(override, 'phone') ? <span title={frontendCopy(override, 'phoneLabel', 'Phone')}><span className="sig-ic green"><Phone size={11} /></span> {item.phone || 'No phone'}</span> : null}
+            {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderLabel', 'Latest order')}><span className="sig-ic indigo"><ShoppingBag size={11} /></span> {latestOrder}</span> : null}
+            {frontendFieldVisible(override, 'latestCall') ? <span title={frontendCopy(override, 'latestCallLabel', 'Latest call')}><span className="sig-ic amber"><Clock size={11} /></span> {latestCall}</span> : null}
+            {frontendFieldVisible(override, 'openFollowUp') ? <span title={frontendCopy(override, 'openFollowUpLabel', 'Open follow-up')}><span className="sig-ic blue"><StickyNote size={11} /></span> {openWork}</span> : null}
+          </div>
+          {frontendFieldVisible(override, 'actionButtons') ? <div className="card-actions segment-customer-actions" aria-label={`${item.customerName} actions`}>
+            <button
+              type="button"
+              className={`quick-action${item.phone ? '' : ' disabled'}`}
+              aria-disabled={!item.phone}
+              title={item.phone ? `Call ${item.phone}` : 'No phone on file'}
+              disabled={!item.phone || callDisabled}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (item.phone) onCall();
+              }}
+            >
+              <Phone size={12} />
+              <span>{frontendCopy(override, 'callButton', 'Call')}</span>
+            </button>
+            <button
+              type="button"
+              className="quick-action"
+              title="Add customer note"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddNote();
+              }}
+            >
+              <StickyNote size={12} />
+              <span>{frontendCopy(override, 'noteButton', 'Note')}</span>
+            </button>
+            <button
+              type="button"
+              className={`pin-btn${item.pinned ? ' pinned' : ''}`}
+              title={item.pinned ? 'Customer is pinned' : 'Pin customer'}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onTogglePin();
+              }}
+              disabled={disabled}
+            >
+              {item.pinned ? frontendCopy(override, 'pinnedLabel', 'Pinned') : frontendCopy(override, 'pinLabel', 'Pin')}
+            </button>
+          </div> : null}
+        </div>
+        {(frontendFieldVisible(override, 'latestNote') && item.latestNote) ? (
+          <div className="segment-customer-latest-note">
             <strong>{item.latestNote.authorName}</strong>
             {item.latestNote.body}
-          </span>
-        ) : frontendFieldVisible(override, 'latestNote') ? (
-          <span><strong>{frontendCopy(override, 'latestNoteLabel', 'Latest note')}</strong>No personnel note yet</span>
+          </div>
         ) : null}
-        </div>
-      ) : null}
-      <div className="segment-customer-foot">
-        {frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: item.segment.color }}>{item.segment.name}</span> : null}
-        {frontendFieldVisible(override, 'orderSummary') ? <span className="segment-customer-orders">{orderSummary}</span> : null}
+        {frontendFieldVisible(override, 'orderSummary') ? <div className="segment-customer-orders">{orderSummary}</div> : null}
+        <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item, summary }} />
       </div>
-      <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item, summary }} />
     </article>
   );
 }
@@ -906,52 +980,11 @@ function cardActionInput(card: CardData) {
   };
 }
 
-function cardSignalText(card: CardData) {
-  return [
-    card.displayTitle,
-    card.displayReason,
-    card.displayConcern,
-    card.displayOutcome,
-    card.displayCustomerSummary,
-    card.displayCommerceSnapshot,
-    card.displayCallSnapshot,
-    ...(card.displayActions ?? []),
-    ...(card.displayBadges ?? []).map((badge) => badge.label),
-    card.title,
-    card.summary,
-    card.callIntent ?? '',
-    ...(card.psychTags ?? []),
-    card.missedNote ?? '',
-    card.customerRiskNote ?? '',
-  ].join(' ').toLowerCase().replace(/[_-]+/g, ' ');
-}
-
-function cardHas(card: CardData, words: string[]) {
-  const text = cardSignalText(card);
-  return words.some((word) => text.includes(word));
-}
-
 function filterDailyCards(cards: CardData[], filter: DailyFilter) {
   if (filter === 'all') return cards;
-  if (filter === 'must_call') return cards.filter((card) => card.urgencyScore >= 8 || cardHas(card, ['callback', 'call back', 'follow up', 'call me']));
-  if (filter === 'payment_refund') return cards.filter((card) => cardHas(card, ['refund', 'payment', 'chargeback', 'return', 'pricing issue']));
-  if (filter === 'purchase_intent') return cards.filter((card) => cardHas(card, ['purchase intent', 'quote', 'order path', 'dtf supply', 'heat press', 'spare part', 'reorder']));
-  return cards.filter((card) => !card.customerId);
-}
-
-function dailyActionStats(cards: CardData[]) {
-  return {
-    mustCall: filterDailyCards(cards, 'must_call').length,
-    paymentOrRefund: filterDailyCards(cards, 'payment_refund').length,
-    purchaseIntent: filterDailyCards(cards, 'purchase_intent').length,
-    unmatched: cards.filter((card) => !card.customerId).length,
-  };
-}
-
-function riskLabel(value: DailyCallItem['customerRisk']) {
-  if (value === 'lost') return 'Critical customer risk';
-  if (value === 'at_risk') return 'At-risk customer';
-  return 'Customer is stable';
+  if (filter === 'urgent') return cards.filter((card) => card.urgencyScore >= 8);
+  if (filter === 'unreached') return cards.filter((card) => card.unreached);
+  return cards.filter((card) => card.customerRisk === 'lost' || card.customerRisk === 'at_risk' || Boolean(card.customerRiskNote));
 }
 
 function CustomerNoteModal({
