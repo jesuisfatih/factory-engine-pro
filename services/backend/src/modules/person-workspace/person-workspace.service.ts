@@ -20,7 +20,6 @@ import type {
   PersonTaskBriefDetail,
   PersonTaskTimelineEntry,
   PersonTransferTarget,
-  PersonTaskBrief,
   TranscriptResolverOutput,
   UrgencyScoringConfig,
   ReorderPersonDailyCallInput,
@@ -145,6 +144,22 @@ type PersonQueueCardDisplayFields = Pick<
   | 'displayCommerceSnapshot'
   | 'displayCallSnapshot'
 >;
+
+type PersonTaskBrief = {
+  whyCalling: string;
+  upsetAbout: string;
+  callGoal: string;
+  suggestedActions: string[];
+  promptKey: string;
+  promptVersion: string;
+  modelUsed: string;
+  confidence: number;
+  transcriptSnippet?: string;
+  ctaPriority?: string[];
+  modalActionOrder?: string[];
+  strategyProof?: PersonQueueCardDto['strategyProof'];
+};
+
 type PersonQueueCardInternalFields = {
   aiBrief?: PersonTaskBrief;
   workflowTrace?: unknown;

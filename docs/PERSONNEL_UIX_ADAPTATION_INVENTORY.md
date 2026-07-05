@@ -201,6 +201,10 @@ Still requiring live evidence before final sign-off:
   no longer includes a `rule` link field. The backend can still derive the
   summary from resolver/routing inputs internally, but the staff API only
   receives call-plan language.
+- Unused public personnel contract exports for workflow trace, task state
+  snapshot, and internal brief metadata were removed. Backend derivation may
+  still keep prompt/model/trace data privately, but shared client contracts only
+  describe staff-safe response shapes.
 - Daily card, Task Brief modal, Call Queue filters, and Calendar call-plan
   rendering now read staff-safe display fields and `callExcerpt`; they do not
   derive labels, steps, ordering, or statistics from raw brief metadata.

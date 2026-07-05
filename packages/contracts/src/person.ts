@@ -7,8 +7,6 @@ import {
   algorithmSurfaceIdSchema,
   frontendCustomizationDefinitionSchema,
   frontendMcpSurfaceIdSchema,
-  workflowConditionTraceSchema,
-  workflowWhenGroupTraceSchema,
 } from './rules.js';
 
 export const personQueueColumnSchema = z.enum(['unassigned', 'in_progress', 'positive', 'closed']);
@@ -66,23 +64,6 @@ export const personUrgencyBreakdownSchema = z.object({
 });
 export type PersonUrgencyBreakdown = z.infer<typeof personUrgencyBreakdownSchema>;
 
-export const personTaskWorkflowTraceSchema = z.object({
-  ruleId: z.string().nullable(),
-  matchedRuleId: z.string().nullable(),
-  ruleName: z.string().nullable(),
-  trigger: z.string().nullable(),
-  source: z.string().nullable(),
-  eventId: z.string().nullable(),
-  action: z.string().nullable(),
-  actionId: z.string().nullable(),
-  conditionTrace: z.array(workflowConditionTraceSchema).default([]),
-  whenTrace: z.array(workflowWhenGroupTraceSchema).default([]),
-});
-export type PersonTaskWorkflowTrace = z.infer<typeof personTaskWorkflowTraceSchema>;
-
-export const personTaskStateSnapshotSchema = z.record(z.string(), z.unknown());
-export type PersonTaskStateSnapshot = z.infer<typeof personTaskStateSnapshotSchema>;
-
 export const personStrategyRuntimeProofSchema = z.object({
   surfaceId: algorithmSurfaceIdSchema,
   score: z.number(),
@@ -99,22 +80,6 @@ export const personCardStrategyProofSchema = z.object({
   callBrief: personStrategyRuntimeProofSchema.optional(),
 });
 export type PersonCardStrategyProof = z.infer<typeof personCardStrategyProofSchema>;
-
-export const personTaskBriefSchema = z.object({
-  whyCalling: z.string(),
-  upsetAbout: z.string(),
-  callGoal: z.string(),
-  suggestedActions: z.array(z.string()),
-  promptKey: z.string(),
-  promptVersion: z.string(),
-  modelUsed: z.string(),
-  confidence: z.number(),
-  transcriptSnippet: z.string().optional(),
-  ctaPriority: z.array(z.string()).optional(),
-  modalActionOrder: z.array(z.string()).optional(),
-  strategyProof: personCardStrategyProofSchema.optional(),
-});
-export type PersonTaskBrief = z.infer<typeof personTaskBriefSchema>;
 
 export const personMiniOrderSchema = z.object({
   id: z.string(),
