@@ -2253,12 +2253,13 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 .call-center-kanban {
   display: grid;
-  grid-template-columns: minmax(320px, .95fr) minmax(380px, 1.15fr) minmax(320px, .72fr);
+  grid-template-columns: minmax(360px, .95fr) minmax(460px, 1.05fr);
   gap: 10px;
   padding: 10px;
   min-width: 0;
 }
 .call-center-kanban > * { min-width: 0; }
+.call-center-kanban .call-center-panel:last-child { grid-column: 1 / -1; }
 .call-center-panel {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -2379,7 +2380,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .segment-customer-list { display: grid; gap: 7px; padding: 8px; }
 .segment-customer-row {
   display: grid;
-  grid-template-columns: minmax(180px, .85fr) minmax(220px, 1fr) minmax(160px, .75fr);
+  grid-template-columns: minmax(190px, .85fr) minmax(240px, 1fr);
   gap: 10px;
   align-items: start;
   cursor: pointer;
@@ -2395,6 +2396,11 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   display: grid;
   gap: 4px;
 }
+.segment-customer-signals span,
+.segment-customer-note span {
+  min-width: 0;
+  white-space: normal;
+}
 .segment-customer-note span {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2408,9 +2414,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 6px;
   justify-content: flex-end;
 }
-.segment-customer-actions {
-  grid-column: 1 / -1;
-}
+.segment-customer-note,
+.segment-customer-actions { grid-column: 1 / -1; }
 .priority-pill {
   display: inline-flex;
   align-items: center;
@@ -2509,10 +2514,18 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   font-size: 12px;
 }
 
+@media (min-width: 2100px) {
+  .call-center-kanban {
+    grid-template-columns: minmax(360px, .95fr) minmax(460px, 1.15fr) minmax(320px, .72fr);
+  }
+  .call-center-kanban .call-center-panel:last-child { grid-column: auto; }
+}
+
 @media (max-width: 1500px) {
   .call-center-preview-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
   .call-center-kanban { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
   .call-center-kanban .call-center-panel:last-child { grid-column: 1 / -1; }
+  .segment-customer-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 980px) {
