@@ -276,7 +276,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}>
             <div className="kpi-head"><span className="kpi-icon green"><Users size={13} /></span><span className="label">Priority customers</span></div>
             <div className="val">{priorityCustomerCount}</div>
-            <div className="sub green">{groups.length} segment{groups.length === 1 ? '' : 's'}</div>
+            <div className="sub green">{groups.length} customer list{groups.length === 1 ? '' : 's'}</div>
           </button>
         )}
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
@@ -456,11 +456,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 aria-expanded={!kanbanCollapsed}
                 onClick={() => setKanbanCollapsed((current) => !current)}
               >
-                <h2>Priority kanban</h2>
+                <h2>Priority customers</h2>
                 <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
                 <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
               </button>
-              <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} in {groups.length} segment{groups.length === 1 ? '' : 's'}</span>
+              <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} across {groups.length} customer list{groups.length === 1 ? '' : 's'}</span>
             </div>
             {!kanbanCollapsed ? <div className="followup-body">
               {(() => {
@@ -831,7 +831,7 @@ function PrioritySegmentGroup({
       {!collapsed && (
         <div className="segment-group-items">
           {group.items.length === 0 ? (
-            <div className="segment-group-empty">No customers in this assigned segment.</div>
+            <div className="segment-group-empty">No customers in this assigned list.</div>
           ) : group.items.map((item) => (
             <SegmentCustomerCard
               key={item.id}
@@ -1111,7 +1111,7 @@ function CustomerNoteModal({
         <header className="modal-head">
           <div>
             <div className="brief-eyebrow">
-              <span className="chip" style={{ background: customer.segment.color }}>{customer.segment.name}</span>
+              <span className="chip" style={{ background: customer.segment.color }}>{personSafeText(customer.segment.name)}</span>
             </div>
             <h2 id="customer-note-title">Customer note</h2>
             <div className="brief-identity">

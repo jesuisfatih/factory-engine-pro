@@ -267,6 +267,8 @@ function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRet
 
 function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelDto; staffTerminology: boolean }) {
   const customer = detail.customer;
+  const customerListHeading = staffTerminology ? 'Customer lists' : 'Segments';
+  const noCustomerListText = staffTerminology ? 'No live customer-list membership.' : 'No live segment membership.';
   return (
     <div className="customer-detail-grid">
       <section className="customer-detail-card">
@@ -294,13 +296,13 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
         ))}
       </section>
       <section className="customer-detail-card">
-        <h3>Segments</h3>
-        {customer.segments.length === 0 && <div className="customer-detail-muted">No live segment membership.</div>}
+        <h3>{customerListHeading}</h3>
+        {customer.segments.length === 0 && <div className="customer-detail-muted">{noCustomerListText}</div>}
         {customer.segments.map((segment) => (
           <div key={segment.id} className="customer-detail-row">
             <div>
-              <strong><span className="customer-detail-dot" style={{ background: segment.color }} />{segment.name}</strong>
-              <span>{segment.owners.map((owner) => owner.memberName).join(', ') || 'No owner'}</span>
+              <strong><span className="customer-detail-dot" style={{ background: segment.color }} />{staffPanelText(segment.name, staffTerminology)}</strong>
+              <span>{segment.owners.map((owner) => staffPanelText(owner.memberName, staffTerminology)).join(', ') || 'No owner'}</span>
             </div>
             <small>{date(segment.matchedAt)}</small>
           </div>

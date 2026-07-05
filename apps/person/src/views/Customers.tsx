@@ -7,6 +7,7 @@ import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCus
 import type { CustomerArchivePage, CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 const ARCHIVE_PAGE_SIZE_OPTIONS = [10, 50, 100, 150] as const;
 type ArchivePageSize = (typeof ARCHIVE_PAGE_SIZE_OPTIONS)[number];
@@ -111,9 +112,9 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     },
     {
       id: 'segment',
-      header: 'Segment',
+      header: 'Customer list',
       cell: ({ row }) => (
-        <span className="chip" style={{ background: row.original.segment.color }}>{row.original.segment.name}</span>
+        <span className="chip" style={{ background: row.original.segment.color }}>{personSafeText(row.original.segment.name)}</span>
       ),
     },
     { id: 'lifecycle', header: 'Lifecycle', cell: ({ row }) => <span className="stat-pill">{LIFECYCLE_LABEL[row.original.lifecycle]}</span> },
@@ -189,7 +190,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'from assigned contacts'}</div></div>
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
         <div className="kpi"><div className="label">Avg orders</div><div className="val">{avgOrders}</div><div className="sub">{archive ? 'per customer' : 'per contact'}</div></div>
-        <div className="kpi"><div className="label">Segments</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'on this page' : 'owned'}</div></div>
+        <div className="kpi"><div className="label">Customer lists</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'on this page' : 'owned'}</div></div>
       </div>
 
       {archive ? (
@@ -209,7 +210,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         error={error ? new Error(friendlyError(error)) : null}
         empty={customers.length === 0}
         emptyTitle={archive ? 'No Shopify customers in archive' : 'No routine call contacts yet'}
-        emptyBody={archive ? 'Run Shopify customer sync before the archive can show live customers.' : 'Assigned segment contacts will appear here when they enter your regular calling list.'}
+        emptyBody={archive ? 'Run Shopify customer sync before the archive can show live customers.' : 'Assigned contacts will appear here when they enter your regular calling list.'}
       >
       <div className="data-card">
         <table className="data-table">

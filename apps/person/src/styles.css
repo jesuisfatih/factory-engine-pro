@@ -176,13 +176,13 @@ button { font-family: inherit; }
 .page-head h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
 .page-head .meta { font-size: 12px; color: var(--text-faint); }
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .kpi {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 11px;
+  min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 11px;
 }
 .kpi .label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
 .kpi .val { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; line-height: 1.1; }
-.kpi .sub { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+.kpi .sub { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-top: 2px; line-height: 1.25; overflow-wrap: anywhere; }
 .today-focus-panel { display: grid; grid-template-columns: minmax(250px, .62fr) minmax(0, 1.38fr); gap: 10px; margin: 0 0 12px; }
 .today-focus-copy { border: 1px solid #BFDBFE; border-radius: var(--radius); background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%); padding: 13px 14px; box-shadow: var(--shadow); }
 .today-focus-copy span { display: block; color: #1D4ED8; font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .35px; }
@@ -532,7 +532,7 @@ button { font-family: inherit; }
 .pin-panel .table td { padding: 7px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .pin-panel .table tr:hover td { background: var(--surface-2); }
 .pin-panel .table .name { font-weight: 600; color: var(--text); }
-.pin-panel .table .seg { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.pin-panel .table .seg { font-size: 10px; line-height: 1.35; color: var(--text-muted); margin-top: 2px; overflow-wrap: anywhere; }
 
 /* ─── Tables (customers) ─────────────────────────────────── */
 .data-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -1457,15 +1457,15 @@ button { font-family: inherit; }
 .focus-item.warn { border-color: rgba(245, 158, 11, .45); background: rgba(245, 158, 11, .1); color: #b45309; font-weight: 600; }
 .focus-item.done { color: var(--text-muted); }
 .missed-v2 { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid rgba(217, 154, 43, .55); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-.missed-v2-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; background: rgba(245, 196, 81, .16); border: none; border-bottom: 1px solid var(--border); text-align: left; }
+.missed-v2-head { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%; padding: 12px 16px; background: rgba(245, 196, 81, .16); border: none; border-bottom: 1px solid var(--border); text-align: left; }
 .missed-v2-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: rgba(245, 196, 81, .22); color: #92400e; flex-shrink: 0; border: none; }
 .missed-refresh { cursor: pointer; transition: background .15s ease; }
 .missed-refresh:hover { background: rgba(245, 196, 81, .4); }
 .missed-refresh:disabled { opacity: .6; cursor: default; }
-.missed-v2-title { flex: 1; background: none; border: none; padding: 0; cursor: pointer; text-align: left; min-width: 0; }
+.missed-v2-title { flex: 1 1 240px; background: none; border: none; padding: 0; cursor: pointer; text-align: left; min-width: 0; }
 .missed-v2-title h2,
 .missed-v2-head h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
-.missed-v2-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+.missed-v2-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
 .missed-v2-list { display: flex; flex-direction: column; background: rgba(245, 196, 81, .05); }
 .missed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
 .missed-row:last-child { border-bottom: none; }
@@ -1824,12 +1824,18 @@ button { font-family: inherit; }
 }
 
 .segment-group-title {
-  flex-shrink: 0;
+  min-width: 0;
+  flex: 0 1 auto;
   font-size: 12px;
   font-weight: 700;
 }
 
 .segment-group-subname {
+  min-width: 0;
+  flex: 1 1 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
 }
@@ -1840,7 +1846,11 @@ button { font-family: inherit; }
 
 .segment-group-meta {
   margin-left: auto;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 34%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
   font-size: 11px;
   font-weight: 600;
 }
