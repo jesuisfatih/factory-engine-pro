@@ -510,20 +510,21 @@ export type PersonEmailContact = z.infer<typeof personEmailContactSchema>;
 
 export const personTaskSyncResultSchema = z.object({
   ok: z.literal(true),
-  backfill: z.object({
+  intake: z.object({
     recentDays: z.number(),
-    fetched: z.number(),
-    ingested: z.number(),
-    resolverQueued: z.number(),
-    transcriptsFound: z.number(),
+    callsChecked: z.number(),
+    callsAdded: z.number(),
+    callSummariesQueued: z.number(),
+    callNotesFound: z.number(),
     errors: z.number(),
   }),
-  resolver: z.object({
-    scanned: z.number(),
+  processing: z.object({
+    checked: z.number(),
     queued: z.number(),
     skipped: z.number(),
-    targetVersion: z.number(),
+    version: z.number(),
   }),
+  displayMessage: z.string(),
   syncedAt: z.string(),
 });
 export type PersonTaskSyncResult = z.infer<typeof personTaskSyncResultSchema>;

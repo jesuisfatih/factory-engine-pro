@@ -246,6 +246,12 @@ Still requiring live evidence before final sign-off:
   `signalUrgency` / `signalUrgencyWeight` / `signalUrgencyScores` instead of
   `aiUrgency` names. Older stored config and metadata keys are still normalized
   on read so live tenant settings do not break.
+- Person workspace sync response no longer exposes raw `backfill`,
+  `resolverQueued`, `transcriptsFound`, or `resolver` response keys to the
+  staff contract. The endpoint now returns staff-safe intake/processing fields
+  such as `callsChecked`, `callsAdded`, `callSummariesQueued`,
+  `callNotesFound`, and `displayMessage`, while backend logs may keep private
+  operational names.
 - Daily card, Task Brief modal, Call Queue filters, and Calendar call-plan
   rendering now read staff-safe display fields and `callExcerpt`; they do not
   derive labels, steps, ordering, or statistics from raw brief metadata.

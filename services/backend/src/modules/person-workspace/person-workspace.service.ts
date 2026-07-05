@@ -851,20 +851,21 @@ export class PersonWorkspaceService {
     this.emitCallCenterInvalidate('person.tasks.sync');
     return {
       ok: true,
-      backfill: {
+      intake: {
         recentDays: backfill.recentDays,
-        fetched: backfill.fetched,
-        ingested: backfill.ingested,
-        resolverQueued: backfill.resolverQueued,
-        transcriptsFound: backfill.transcriptsFound,
+        callsChecked: backfill.fetched,
+        callsAdded: backfill.ingested,
+        callSummariesQueued: backfill.resolverQueued,
+        callNotesFound: backfill.transcriptsFound,
         errors: backfill.errors,
       },
-      resolver: {
-        scanned: 0,
+      processing: {
+        checked: 0,
         queued: backfill.resolverQueued,
         skipped: backfill.skipped,
-        targetVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+        version: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
       },
+      displayMessage: `${backfill.ingested} new call${backfill.ingested === 1 ? '' : 's'} added from the last ${backfill.recentDays} days.`,
       syncedAt,
     };
   }
