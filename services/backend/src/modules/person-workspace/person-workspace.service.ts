@@ -2095,16 +2095,16 @@ export class PersonWorkspaceService {
       cards: [
         ...segments.map((segment) => ({
           id: `segment-${segment.id}`,
-          title: `${segment.name} segment context`,
-          description: segment.description ?? `Live Shopify segment with ${segment.customerCount} customer(s). Review customer history before calling.`,
-          source: 'shopify_segment',
+          title: `${staffDisplayText(segment.name)} customer-list context`,
+          description: staffDisplayText(segment.description) || `Live Shopify customer list with ${segment.customerCount} customer(s). Review customer history before calling.`,
+          source: 'Shopify customer list',
           updatedAt: relative(segment.updatedAt),
         })),
         ...requests.map((request) => ({
           id: `request-${request.id}`,
           title: `${request.priority.toUpperCase()} customer follow-up`,
-          description: request.title,
-          source: 'customer_request',
+          description: staffDisplayText(request.title),
+          source: 'Customer request',
           updatedAt: relative(request.updatedAt),
         })),
       ].slice(0, 12),

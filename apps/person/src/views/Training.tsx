@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BookOpenCheck } from 'lucide-react';
 import { fetchTraining, friendlyError } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { personSafeText } from '../lib/personTerminology';
 
 export function TrainingView() {
   const { data, isLoading, error } = useQuery({ queryKey: ['person', 'training'], queryFn: fetchTraining });
@@ -28,11 +29,11 @@ export function TrainingView() {
           {cards.map((card) => (
             <article key={card.id} className="announce-card severity-info">
               <div className="head">
-                <span className="from">{card.source}</span>
+                <span className="from">{personSafeText(card.source)}</span>
                 <span>{card.updatedAt}</span>
               </div>
-              <h3>{card.title}</h3>
-              <p>{card.description}</p>
+              <h3>{personSafeText(card.title)}</h3>
+              <p>{personSafeText(card.description)}</p>
             </article>
           ))}
         </div>
