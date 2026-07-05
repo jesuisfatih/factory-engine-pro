@@ -62,7 +62,7 @@ const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: Lucid
   email: { label: 'Email', Icon: Mail },
   messages: { label: 'Messages', Icon: MessageSquare },
   notes: { label: 'Notes', Icon: NotebookText },
-  tasks: { label: 'Follow-ups', Icon: ClipboardList },
+  tasks: { label: 'Tasks', Icon: ClipboardList },
 };
 
 type PanelTab = CustomerDetailTab | 'main';
@@ -142,7 +142,7 @@ export function CustomerDetailPanel({
         </header>
         {callMessage ? <div className="customer-detail-call-status">{callMessage}</div> : null}
 
-        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and follow-up records." />}
+        {isLoading && <PanelState title="Loading customer file" body="Reading live Shopify, Aircall, customer request, mail, note, and task records." />}
         {!isLoading && error && (
           <PanelState
             title="Customer detail failed"
@@ -164,7 +164,7 @@ export function CustomerDetailPanel({
               <Metric label="Orders" value={String(detail.customer.metrics.ordersCount)} />
               <Metric label="Calls" value={String(detail.customer.metrics.callsCount)} />
               <Metric label="Open requests" value={String(detail.customer.metrics.openSupportCount)} />
-              <Metric label="Follow-ups" value={String(detail.customer.metrics.openTaskCount)} />
+              <Metric label="Tasks" value={String(detail.customer.metrics.openTaskCount)} />
             </div>
 
             <nav className="customer-detail-tabs" aria-label="Customer detail tabs">
@@ -233,7 +233,7 @@ function MainTab({ main, mainContent, staffTerminology }: { main: CustomerDetail
       </section>
       <section className="customer-detail-card">
         <h3>Open work</h3>
-        <KeyValue label="Follow-ups" value={String(main.openTasksCount)} />
+        <KeyValue label="Open tasks" value={String(main.openTasksCount)} />
         <KeyValue label="Customer requests" value={String(main.openRequestsCount)} />
         <KeyValue label="Notes" value={String(main.notesCount)} />
       </section>
@@ -436,7 +436,7 @@ function MessagesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDe
 
 function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.notes;
-  if (rows.length === 0) return <EmptyTab title="No internal notes" body="Notes saved from call plans or person workspace will appear here." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No personnel notes" body="Notes saved from call plans or customer history will appear here." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((note) => (
@@ -447,7 +447,7 @@ function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
               <span>
                 {staffPanelText(label(note.kind), staffTerminology)}
                 {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
-                {note.linkedQueueId ? ` - follow-up ${note.linkedQueueId}` : ''}
+                {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
               </span>
             </div>
             <small>{dateTime(note.updatedAt)}</small>
@@ -461,7 +461,7 @@ function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
 
 function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.tasks;
-  if (rows.length === 0) return <EmptyTab title="No follow-ups" body="No call or manual follow-up is linked to this customer." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No tasks" body="No call or manual task is linked to this customer." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((task) => (
@@ -473,7 +473,7 @@ function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
             </div>
             <small>{dateTime(task.dueAt ?? task.updatedAt)}</small>
           </div>
-          <p>{staffPanelText(task.description ?? 'No follow-up description captured.', staffTerminology)}</p>
+          <p>{staffPanelText(task.description ?? 'No task description captured.', staffTerminology)}</p>
         </article>
       ))}
     </div>
