@@ -86,7 +86,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
   return (
     <div
-      className={`card card-v2 ${card.urgencyScore >= 8 ? 'urgency-high' : card.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low'} ${frontendElementClassName(override, card.urgencyScore)}`}
+      className={`card card-v2 ${card.urgencyScore >= 12 ? 'urgency-high' : card.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low'} ${frontendElementClassName(override, card.urgencyScore)}`}
       onClick={() => {
         onOpen?.(card.id);
       }}

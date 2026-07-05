@@ -6,8 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
-import { ChevronDown, Clock, GripVertical, ListChecks, Loader2, Phone, PhoneIncoming, PhoneOutgoing, Pin, RefreshCw, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
+import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
@@ -60,7 +60,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const filteredDaily = useMemo(() => filterDailyCards(daily, dailyFilter), [daily, dailyFilter]);
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
-  const urgentCount = daily.filter((card) => card.urgencyScore >= 8).length;
+  const urgentCount = daily.filter((card) => card.urgencyScore >= 12).length;
   const unreachedCount = daily.filter((card) => card.unreached).length;
   const detailMatchedCard = useMemo(() => {
     if (!detailCustomerId) return null;
@@ -147,13 +147,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       qc.invalidateQueries({ queryKey: ['person', 'customers'] });
     },
   });
-  const syncTasks = useMutation({
-    mutationFn: syncPersonTasks,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK_BASE });
-      qc.invalidateQueries({ queryKey: ['person', 'summary'] });
-    },
-  });
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
     onSuccess: (result) => {
@@ -219,7 +212,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           </div>
           <div className="today-focus-items">
             <span className={`focus-item${urgentCount > 0 ? ' urgent' : ''}`}>
-              {urgentCount > 0 ? `Handle ${urgentCount} urgent follow-up${urgentCount > 1 ? 's' : ''} first` : 'No urgent follow-ups right now'}
+              {urgentCount > 0 ? `Handle ${urgentCount} urgent follow-up${urgentCount > 1 ? 's' : ''} first (U12+)` : 'No urgent follow-ups right now'}
             </span>
             {churnFollowUps.length > 0 ? (
               <span className="focus-item urgent">
@@ -283,14 +276,8 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <div className="sub green">{groups.length} segment{groups.length === 1 ? '' : 's'}</div>
           </button>
         )}
-        <button type="button" className="kpi queue-sync-card" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
-          <div className="kpi-head"><span className="kpi-icon blue"><RefreshCw size={13} /></span><span className="label">Sync</span></div>
-          <div className="val">{syncTasks.isPending ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</div>
-          <div className="sub">{syncTasks.data ? `${syncTasks.data.backfill.ingested} calls updated` : 'pull latest calls'}</div>
-        </button>
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
-      {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
 
       <QueryState
         isLoading={isLoading}
@@ -535,6 +522,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                           listLabel={`List ${orderedGroups.findIndex((entry) => entry.segmentId === group.segmentId) + 1}`}
                           customization={frontendCustomization}
                           summary={summary}
+                          segmentLabel={displayNameForGroup(group)}
                           collapsed={Boolean(collapsedGroups[group.segmentId])}
                           onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
                           onTogglePin={(item) => customerPin.mutate(item.customerId)}
@@ -783,8 +771,9 @@ function initialsFor(title: string) {
 function missedActionFor(card: CardData) {
   const actionInput = cardActionInput(card);
   const label = staffActionLabel(actionInput);
-  if (card.urgencyScore >= 8 || label.toLowerCase().includes('call')) return { label: 'Call again', cls: 'red' };
-  if (card.customerRisk === 'lost' || card.customerRisk === 'at_risk') return { label: 'Review', cls: 'amber' };
+  if (card.urgencyScore >= 12 || card.customerRisk === 'lost') return { label: 'Call again', cls: 'red' };
+  if (card.customerRisk === 'at_risk') return { label: 'Review', cls: 'amber' };
+  if (label.toLowerCase().includes('call')) return { label: 'Call back', cls: 'amber' };
   return { label: 'Follow up', cls: 'amber' };
 }
 
@@ -793,6 +782,7 @@ function PrioritySegmentGroup({
   listLabel,
   customization,
   summary,
+  segmentLabel,
   collapsed,
   onToggle,
   onTogglePin,
@@ -806,6 +796,7 @@ function PrioritySegmentGroup({
   listLabel?: string;
   customization: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
+  segmentLabel?: string;
   collapsed: boolean;
   onToggle: () => void;
   onTogglePin: (item: DailyCallItem) => void;
@@ -844,6 +835,7 @@ function PrioritySegmentGroup({
               item={item}
               customization={customization}
               summary={summary}
+              segmentLabel={segmentLabel}
               onTogglePin={() => onTogglePin(item)}
               onOpen={() => onOpenCustomer(item)}
               onAddNote={() => onAddNote(item)}
@@ -862,6 +854,7 @@ function SegmentCustomerCard({
   item,
   customization,
   summary,
+  segmentLabel,
   onTogglePin,
   onOpen,
   onAddNote,
@@ -872,6 +865,7 @@ function SegmentCustomerCard({
   item: DailyCallItem;
   customization: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
+  segmentLabel?: string;
   onTogglePin: () => void;
   onOpen: () => void;
   onAddNote: () => void;
@@ -879,7 +873,6 @@ function SegmentCustomerCard({
   disabled: boolean;
   callDisabled: boolean;
 }) {
-  const orderSummary = item.displayCommerceSnapshot || `${item.ordersCount} orders | ${formatCurrency(item.totalSpent)}`;
   const override = frontendElementOverride(customization, 'priority.card', { priorityCustomer: item, summary });
   const latestOrder = item.displayCommerceSnapshot || (item.latestOrder
     ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${formatCurrency(item.latestOrder.totalPrice, item.latestOrder.currency)}`
@@ -887,9 +880,8 @@ function SegmentCustomerCard({
   const latestCall = item.displayCallSnapshot || (item.latestCall
     ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'linked call'}`
     : 'No linked call yet');
-  const customerBrief = priorityCustomerBrief(item);
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
-  const cardUrgencyClass = item.urgencyScore >= 8 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
+  const cardUrgencyClass = item.urgencyScore >= 12 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
   const safeName = personSafeText(item.displayTitle || item.customerName);
   const openWork = `${item.openTasksCount} follow-up${item.openTasksCount === 1 ? '' : 's'} · ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -917,11 +909,9 @@ function SegmentCustomerCard({
           {(item.displayBadges ?? []).slice(0, 2).map((badge) => (
             <span key={badge.label} className="product-chip">{personSafeText(badge.label)}</span>
           ))}
-          {frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: item.segment.color }}>{personSafeText(item.segment.name)}</span> : null}
+          {frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: item.segment.color }}>{personSafeText(segmentLabel ?? item.segment.name)}</span> : null}
           {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
         </div>
-        {frontendFieldVisible(override, 'priorityBrief') ? <div className={`priority-brief ${urgencyClass}`}>{frontendCopy(override, 'priorityBrief', customerBrief)}</div> : null}
-        <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
         {frontendFieldVisible(override, 'reason') ? <div className="summary">{personSafeText(item.displayReason || item.reason)}</div> : null}
         <div className="card-foot">
           <div className="card-meta">
@@ -974,17 +964,14 @@ function SegmentCustomerCard({
             </button>
           </div> : null}
         </div>
-        {(frontendFieldVisible(override, 'latestNote') && item.latestNote) ? (
-          <div className="segment-customer-latest-note">
-            <strong>{item.latestNote.authorName}</strong>
-            {item.latestNote.body}
-          </div>
-        ) : null}
-        {frontendFieldVisible(override, 'orderSummary') ? <div className="segment-customer-orders">{orderSummary}</div> : null}
         <FrontendCustomizationSlotView customization={customization} slot="priority.card.footer" context={{ priorityCustomer: item, summary }} />
       </div>
     </article>
   );
+}
+
+function displayNameForGroup(group: SegmentDailyGroup) {
+  return staffSegmentLabel(group.segmentName, (group as unknown as { displayName?: string }).displayName);
 }
 
 function priorityCustomerBrief(item: DailyCallItem) {
@@ -1088,7 +1075,7 @@ function cardActionInput(card: CardData) {
 
 function filterDailyCards(cards: CardData[], filter: DailyFilter) {
   if (filter === 'all') return cards;
-  if (filter === 'urgent') return cards.filter((card) => card.urgencyScore >= 8);
+  if (filter === 'urgent') return cards.filter((card) => card.urgencyScore >= 12);
   if (filter === 'unreached') return cards.filter((card) => card.unreached);
   return cards.filter((card) => card.customerRisk === 'lost' || card.customerRisk === 'at_risk' || Boolean(card.customerRiskNote));
 }

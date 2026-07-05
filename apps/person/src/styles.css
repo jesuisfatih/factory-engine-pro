@@ -1148,9 +1148,6 @@ button { font-family: inherit; }
   background: var(--success-soft); color: var(--success);
   font-size: 10px; font-weight: 800;
 }
-.queue-sync-card { text-align: left; cursor: pointer; border: 1px solid var(--border); }
-.queue-sync-card:disabled { opacity: .65; cursor: not-allowed; }
-
 @media (max-width: 760px) {
   .email-compose-grid { grid-template-columns: 1fr; }
   .email-compose-actions { justify-content: stretch; }
@@ -1815,6 +1812,85 @@ button { font-family: inherit; }
   font-weight: 700;
 }
 
+/* Patron reference UIX parity for the default staff queue surface. */
+.segment-group-toggle {
+  height: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: var(--surface-2);
+}
+
+.segment-group-title {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.segment-group-subname {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.segment-group-priority {
+  font-weight: 800;
+}
+
+.segment-group-meta {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.segment-group-items {
+  gap: 7px;
+  padding: 8px;
+}
+
+.daily-card {
+  padding: 9px 10px;
+}
+
+.daily-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.daily-foot {
+  margin-top: 8px;
+  font-size: 10px;
+}
+
+.segment-customer-card .row1 .title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.segment-customer-card .summary {
+  font-size: 11.5px;
+}
+
+.card-meta {
+  gap: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.quick-action {
+  height: 23px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
 /* Dark theme: keep staff work surfaces readable instead of mixing white cards into dark pages. */
 :root[data-theme="dark"] .kpi {
   background: linear-gradient(180deg, #182134 0%, #111827 100%);
@@ -2198,12 +2274,12 @@ button { font-family: inherit; }
 }
 
 :root[data-theme="dark"] .missed-v2-head {
-  background: #2A2108;
-  border-color: #3B2A0C;
+  background: rgba(245, 196, 81, .08);
+  border-color: var(--border);
 }
 
 :root[data-theme="dark"] .missed-v2-list {
-  background: rgba(245, 158, 11, .05);
+  background: transparent;
 }
 
 :root[data-theme="dark"] .missed-row:hover {
@@ -2212,17 +2288,17 @@ button { font-family: inherit; }
 
 :root[data-theme="dark"] .followup-head,
 :root[data-theme="dark"] .followup-v2 .followup-body {
-  background: #0E2433;
+  background: rgba(59, 130, 246, .06);
 }
 
 :root[data-theme="dark"] .kanban-head,
 :root[data-theme="dark"] .kanban-v2 .followup-body {
-  background: #0E2620;
+  background: rgba(34, 197, 94, .055);
 }
 
 :root[data-theme="dark"] .churn-v2-head,
 :root[data-theme="dark"] .churn-v2 .missed-v2-list {
-  background: #2A1414;
+  background: rgba(239, 68, 68, .055);
 }
 
 :root[data-theme="dark"] .card-foot,
