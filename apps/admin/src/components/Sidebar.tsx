@@ -8,6 +8,12 @@ import {
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import { adminApi, clearSurfaceSessions } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
+import {
+  MAIL_MARKETING_PERMISSIONS,
+  MAIL_TEMPLATE_PERMISSIONS,
+  SYSTEM_MAIL_PERMISSIONS,
+  hasAnyPermission,
+} from '@/lib/permission-groups';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface NavLeaf {
@@ -16,7 +22,7 @@ interface NavLeaf {
   i18nKey: string;
   id: string;
   icon: typeof LayoutDashboard;
-  permission?: string | string[];
+  permission?: string | readonly string[];
   search?: Record<string, string>;
   activeTabs?: string[];
   exact?: boolean;
@@ -70,9 +76,9 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_transactional_mail',
     children: [
-      { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: MEMBER_PERMISSIONS.mailDeliveryRead },
-      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_templates', id: 'nav-mail-templates', icon: FileText, permission: MEMBER_PERMISSIONS.settingsRead, search: { tab: 'templates' }, activeTabs: ['templates'] },
-      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: MEMBER_PERMISSIONS.settingsRead, search: { tab: 'overview' }, activeTabs: ['overview', 'contacts', 'audiences', 'campaigns', 'flows', 'settings'] },
+      { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: SYSTEM_MAIL_PERMISSIONS },
+      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_templates', id: 'nav-mail-templates', icon: FileText, permission: MAIL_TEMPLATE_PERMISSIONS, search: { tab: 'templates' }, activeTabs: ['templates'] },
+      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: MAIL_MARKETING_PERMISSIONS, search: { tab: 'overview' }, activeTabs: ['overview', 'contacts', 'audiences', 'campaigns', 'flows', 'settings'] },
     ],
   },
   {
@@ -93,10 +99,7 @@ export function Sidebar({ collapsed }: Props) {
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const permissions = new Set(principal?.permissions ?? []);
-  const can = (permission?: string | string[]) => !permission
-    || (Array.isArray(permission)
-      ? permission.some((item) => permissions.has(item))
-      : permissions.has(permission));
+  const can = (permission?: string | readonly string[]) => hasAnyPermission(permissions, permission);
   const sections = NAV.map((section) => ({
     ...section,
     children: section.children.filter((leaf) => can(leaf.permission)),

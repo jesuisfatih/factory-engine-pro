@@ -4,6 +4,7 @@ import { MEMBER_PERMISSIONS, memberSurfaceFromPermissions } from '@factory-engin
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { handOffToPerson, readPersonSession, readSession, readSessionSnapshot, subscribeSession } from '@/lib/api';
+import { MAIL_MARKETING_PAGE_PERMISSIONS, SYSTEM_MAIL_PERMISSIONS, hasAnyPermission } from '@/lib/permission-groups';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/rules/, key: 'nav.rules' },
@@ -25,7 +26,7 @@ const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
 ];
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
-const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> = [
+const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | readonly string[] }> = [
   { test: /^\/team\/users\/add/, permission: MEMBER_PERMISSIONS.membersWrite },
   { test: /^\/team\/users/, permission: MEMBER_PERMISSIONS.membersRead },
   { test: /^\/team\/roles/, permission: MEMBER_PERMISSIONS.rolesRead },
@@ -41,8 +42,8 @@ const ROUTE_PERMISSIONS: Array<{ test: RegExp; permission: string | string[] }> 
   { test: /^\/rules\/shadow-telemetry/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/rules\/stats/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/rules/, permission: MEMBER_PERMISSIONS.settingsRead },
-  { test: /^\/mail-marketing/, permission: MEMBER_PERMISSIONS.settingsRead },
-  { test: /^\/system-mail/, permission: MEMBER_PERMISSIONS.settingsRead },
+  { test: /^\/mail-marketing/, permission: MAIL_MARKETING_PAGE_PERMISSIONS },
+  { test: /^\/system-mail/, permission: SYSTEM_MAIL_PERMISSIONS },
   { test: /^\/settings\/aircall/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/shopify/, permission: MEMBER_PERMISSIONS.settingsRead },
   { test: /^\/settings\/workspace/, permission: MEMBER_PERMISSIONS.settingsRead },
@@ -59,13 +60,6 @@ function redirectTarget(pathname: string, searchStr: string) {
 
 function requiredPermission(pathname: string) {
   return ROUTE_PERMISSIONS.find((item) => item.test.test(pathname))?.permission;
-}
-
-function hasRoutePermission(permissions: string[], required: string | string[] | undefined) {
-  if (!required) return true;
-  return Array.isArray(required)
-    ? required.some((permission) => permissions.includes(permission))
-    : permissions.includes(required);
 }
 
 function RootLayout() {
@@ -134,7 +128,7 @@ export const Route = createRootRoute({
     }
 
     const permission = requiredPermission(location.pathname);
-    if (hasSession && !authRoute && !hasRoutePermission(session?.principal.permissions ?? [], permission)) {
+    if (hasSession && !authRoute && !hasAnyPermission(session?.principal.permissions ?? [], permission)) {
       throw redirect({ to: '/dashboard' });
     }
   },
