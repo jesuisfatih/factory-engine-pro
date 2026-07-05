@@ -83,6 +83,10 @@ Rules for this adaptation:
   calling-list note endpoint still enforces assigned-workspace customer scope;
   the archive endpoint only accepts real Shopify customers and preserves the
   same staff note write permission used by the existing personnel note flow.
+- Customer Archive and Routine Call List share the same React view component,
+  but their table semantics are separate. Column definitions now recompute when
+  `archive` mode changes so archive headers/actions cannot retain routine-list
+  wording after a route switch.
 - Task Brief modal call summary no longer labels raw analysis fields as
   `Intent` or `Urgency`. Staff now sees display-contract language: issue,
   next step, checks, signals, and friction.

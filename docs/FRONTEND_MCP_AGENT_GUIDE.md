@@ -14,7 +14,7 @@ The agent may help improve allowed frontend surfaces, but it must work inside ex
 6. Preview the customization.
 7. Apply it only after preview warnings are clean and the user approves activation.
 8. Use list/get/rollback tools for audit and recovery.
-9. Source-file patching is a later, separate capability and must stay behind stricter allowlists.
+9. Use source-file patching only through the maintainer source patch lane when the runtime DSL cannot express the requested change.
 
 The agent must not directly edit production source files or deploy without a separate publish tool and human approval.
 
@@ -28,15 +28,29 @@ The agent must not directly edit production source files or deploy without a sep
 - `list_frontend_customizations`
 - `get_frontend_customization`
 - `rollback_frontend_customization`
+- `preview_frontend_source_patch`
+- `validate_frontend_source_patch_proof`
 
-Required order:
+Required order for runtime overlays:
 
 1. Read this guide.
 2. Read the target surface contract.
-3. Preview the customization.
+3. List existing frontend customizations for the surface.
+4. Preview the customization.
+5. Explain warnings and expected UI effect.
+6. Apply as `draft` for review or `active` only with explicit approval.
+7. Verify through the staff UI.
+
+Required order for source patch plans:
+
+1. Read this guide.
+2. Read the target surface contract.
+3. Use `preview_frontend_source_patch` with the exact allowlisted files and patch intent.
 4. Explain warnings and expected UI effect.
-5. Apply as `draft` for review or `active` with explicit approval.
-6. Verify through the staff UI.
+5. A maintainer applies code outside MCP only after preview is clean.
+6. Run typecheck/build and capture required screenshots.
+7. Use `validate_frontend_source_patch_proof`.
+8. Deploy only after explicit human approval.
 
 ## Runtime Customization DSL
 
@@ -783,10 +797,7 @@ Future surfaces may be added through `list_frontend_surfaces`.
 Frontend patch tools may operate only inside explicit allowlists:
 
 - `apps/person/src/**`
-- `apps/person/src/styles/**`
-- `apps/admin/src/features/**`
-- `apps/admin/src/routes/**`
-- `apps/*/src/styles/**`
+- `packages/ui/src/**`
 
 Contract changes require separate approval:
 

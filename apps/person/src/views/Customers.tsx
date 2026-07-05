@@ -147,7 +147,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         );
       },
     },
-  ], [dialCustomer.isPending]);
+  ], [archive, dialCustomer.isPending]);
 
   const table = useReactTable({ data: customers, columns, getCoreRowModel: getCoreRowModel(), getRowId: (row) => row.id });
 

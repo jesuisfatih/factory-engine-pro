@@ -74,6 +74,8 @@ The MCP surface exposes these tool concepts:
 - `list_frontend_customizations`
 - `get_frontend_customization`
 - `rollback_frontend_customization`
+- `preview_frontend_source_patch`
+- `validate_frontend_source_patch_proof`
 - `list_algorithm_surfaces`
 - `get_algorithm_contract`
 - `draft_algorithm_change`
@@ -1182,8 +1184,10 @@ Frontend MCP changes use a safe runtime customization DSL before source-file pat
 - `list_frontend_customizations`: audit current and historical overlays.
 - `get_frontend_customization`: inspect one overlay.
 - `rollback_frontend_customization`: archive current active overlay or reactivate a previous overlay.
+- `preview_frontend_source_patch`: validate a maintainer-only React/CSS source patch plan against frontend allowlists without applying files.
+- `validate_frontend_source_patch_proof`: verify typecheck, build, required screenshots, and human approval before any deploy decision.
 
-The DSL supports slots, block types, live data bindings, and visibility conditions. It must not include raw HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes.
+The DSL supports slots, block types, sanitized content blocks, theme overrides, typed element overrides, typed navigation overrides, live data bindings, and visibility conditions. It must not include raw scriptable HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes. When runtime DSL is not enough, use the separate maintainer source patch lane; MCP previews and validates proof, but it does not apply files or deploy code.
 
 Current staff queue focus slots are available around the native command center:
 
