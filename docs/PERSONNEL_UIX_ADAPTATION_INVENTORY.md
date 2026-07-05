@@ -34,17 +34,36 @@ Rules for this adaptation:
 | Customer archive | `apps/person/src/views/Customers.tsx` | Search full Shopify customer archive without freezing | Personnel | Server-side paginated Shopify customers | Exists: limit/offset/search | Preserve 10 default and 50/100/150 choices | Shopify customers | label/theme | Search/pagination screenshot |
 | Sidebar/navigation | `Sidebar.tsx`, `FrontendCustomization.tsx` | Patron can rename/reorder/group/badge/default route safely | Personnel/MCP | Navigation override contract | Exists | Preserve and document | Staff workspace navigation | navigationOverrides | MCP preview/list proof |
 
-## Current Gaps To Close First
+## Current Completion And Evidence Status
 
-1. `PersonDailyOperationsDto.summary` does not expose first-class command-center
-   fields for today calls, open requests, missed follow-ups, and at-risk customers.
-2. `CallQueueView` lacks the reference UIX command-center layout: Today focus,
-   incoming/outbound KPIs, missed section, and at-risk section.
-3. Priority customer cards need explicit risk metadata so at-risk lists do not
-   rely on frontend guessing.
-4. Some CSS class names still use historical internal names. They are not visible,
-   but new staff UI must avoid adding visible internal text.
-5. Evidence must be collected after implementation through real API/build/UI proof.
+Closed in source:
+
+1. `PersonDailyOperationsDto.summary` exposes command-center fields for today
+   calls, open requests, missed follow-ups, and at-risk customers.
+2. `CallQueueView` renders the command-center layout with Today focus,
+   incoming/outbound KPIs, missed work, at-risk customers, sync status, Daily
+   Call List, Priority Kanban, and Pinned board.
+3. Priority customer cards receive `customerRisk` and `customerRiskNote` from
+   backend service logic, so at-risk presentation is not guessed in React.
+4. Staff-facing copy paths now normalize forbidden implementation terms before
+   rendering native surfaces, Customer 360 tab content, and MCP blocks.
+5. Customer 360 is implemented as a centered popup (`customer-detail-backdrop`
+   with centered `customer-detail-panel`), not as a right-side drawer.
+
+Still requiring live evidence before final sign-off:
+
+1. Authenticated `/staff/queue` screenshot with real Daily Call List,
+   command-center KPIs, Priority Kanban, and Pinned board.
+2. Task Brief modal screenshot proving the first viewport shows phone, reason,
+   issue, outcome, and direct next steps without internal terms.
+3. Customer 360 popup screenshot proving Shopify orders, Aircall calls, requests,
+   email, messages, notes, and tasks are real API data.
+4. Customer Archive search/pagination screenshot proving default 10 rows,
+   50/100/150 row choices, and server-side search against the full Shopify
+   archive without locking the page.
+5. MCP proof: preview/apply/list for a safe navigation or element override, plus
+   proof that source patch lane only validates allowlisted person/UI files and
+   does not apply or deploy source code.
 
 ## Implementation Order
 
@@ -94,3 +113,8 @@ Rules for this adaptation:
   Customer 360 tab content, and MCP-rendered copy/content blocks. Runtime
   customization can still change labels and blocks, but forbidden internal
   terms are normalized before rendering.
+- Frontend source patch preview/proof responses now expose machine-readable
+  safety flags: `appliesPatch: false`, `deploysCode: false`,
+  `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`. This
+  makes it explicit that MCP validates source patch plans and proof packages
+  but does not apply files or deploy code.

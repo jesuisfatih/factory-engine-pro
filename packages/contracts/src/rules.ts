@@ -667,6 +667,10 @@ export type FrontendMcpValidateSourcePatchProofInput = z.infer<typeof frontendMc
 
 export interface FrontendMcpSourcePatchPreviewResponse {
   ok: boolean;
+  appliesPatch: false;
+  deploysCode: false;
+  maintainerMustApplyPatch: true;
+  humanApprovalRequired: true;
   warnings: string[];
   files: Array<{
     path: string;

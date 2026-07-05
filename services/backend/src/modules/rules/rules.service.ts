@@ -3944,6 +3944,10 @@ export class RulesService {
     if (input.files.length === 0) warnings.push('blocked: source patch plan has no files.');
     return {
       ok: !warnings.some((warning) => warning.startsWith('blocked:')),
+      appliesPatch: false,
+      deploysCode: false,
+      maintainerMustApplyPatch: true,
+      humanApprovalRequired: true,
       warnings,
       files,
       requiredProof: [

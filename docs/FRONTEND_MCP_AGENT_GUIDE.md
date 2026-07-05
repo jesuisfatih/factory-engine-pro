@@ -637,11 +637,12 @@ Denied areas:
 Source patch flow:
 
 1. `preview_frontend_source_patch` with file path, purpose, and patch summary.
-2. Human/maintainer applies the patch outside MCP if preview is clean.
-3. Run typecheck and build.
-4. Capture desktop light, desktop dark, and mobile screenshots.
-5. `validate_frontend_source_patch_proof`.
-6. Deploy only after explicit human approval.
+2. Confirm the response has `appliesPatch: false`, `deploysCode: false`, `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`.
+3. Human/maintainer applies the patch outside MCP if preview is clean.
+4. Run typecheck and build.
+5. Capture desktop light, desktop dark, and mobile screenshots.
+6. `validate_frontend_source_patch_proof`.
+7. Deploy only after explicit human approval.
 
 Example preview payload:
 

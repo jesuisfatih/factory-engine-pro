@@ -1187,7 +1187,7 @@ Frontend MCP changes use a safe runtime customization DSL before source-file pat
 - `preview_frontend_source_patch`: validate a maintainer-only React/CSS source patch plan against frontend allowlists without applying files.
 - `validate_frontend_source_patch_proof`: verify typecheck, build, required screenshots, and human approval before any deploy decision.
 
-The DSL supports slots, block types, sanitized content blocks, theme overrides, typed element overrides, typed navigation overrides, live data bindings, and visibility conditions. It must not include raw scriptable HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes. When runtime DSL is not enough, use the separate maintainer source patch lane; MCP previews and validates proof, but it does not apply files or deploy code.
+The DSL supports slots, block types, sanitized content blocks, theme overrides, typed element overrides, typed navigation overrides, live data bindings, and visibility conditions. It must not include raw scriptable HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes. When runtime DSL is not enough, use the separate maintainer source patch lane; MCP previews and validates proof, but it does not apply files or deploy code. Source patch responses expose `appliesPatch: false`, `deploysCode: false`, `maintainerMustApplyPatch: true`, and `humanApprovalRequired: true`.
 
 Current staff queue focus slots are available around the native command center:
 
