@@ -1458,12 +1458,15 @@ button { font-family: inherit; }
 .kpi-icon.indigo { background: rgba(99, 102, 241, 0.14); color: #4f46e5; }
 .kpi-icon.yellow { background: rgba(245, 196, 81, 0.24); color: #a16207; }
 .kpi-icon.green { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+.kpi-icon.cyan { background: rgba(14, 165, 233, .14); color: #0284c7; }
 .kpi-link { cursor: pointer; text-align: left; font: inherit; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
 .kpi-link:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(79, 110, 247, .12); transform: translateY(-1px); }
+.kpi-link:disabled { opacity: .68; cursor: progress; transform: none; }
 .kpi .sub.green { color: #16a34a; }
 .kpi .sub.red { color: #dc2626; }
 .kpi .sub.amber { color: #b45309; }
 .kpi .sub.blue { color: #2563eb; }
+.sync-kpi .sync-val { font-size: 16px; }
 .today-focus { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
 .today-focus-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .today-focus-head h2 { font-size: 14px; font-weight: 650; margin: 0; color: var(--text); }

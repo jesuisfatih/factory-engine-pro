@@ -7,7 +7,7 @@ import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contra
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, toggleCustomerPin, togglePin } from '../api/live';
+import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
@@ -45,6 +45,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     queryFn: () => fetchDailyOperations(range),
     refetchInterval: archive ? false : 15000,
     refetchIntervalInBackground: false,
+  });
+  const syncTasks = useMutation({
+    mutationFn: syncPersonTasks,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: QK_BASE });
+      await refetch();
+    },
   });
   const customerDetailQuery = useQuery({
     queryKey: ['person', 'customer-detail', detailCustomerId],
@@ -279,8 +286,16 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <div className="sub green">{groups.length} customer list{groups.length === 1 ? '' : 's'}</div>
           </button>
         )}
+        {!archive && (
+          <button type="button" className="kpi kpi-link sync-kpi" onClick={() => syncTasks.mutate()} disabled={syncTasks.isPending}>
+            <div className="kpi-head"><span className="kpi-icon cyan"><RotateCcw size={13} className={syncTasks.isPending ? 'spin' : ''} /></span><span className="label">Sync</span></div>
+            <div className="val sync-val">{syncTasks.isPending ? '...' : 'Run'}</div>
+            <div className="sub blue">{syncTasks.isPending ? 'pulling latest calls' : 'pull latest calls'}</div>
+          </button>
+        )}
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
+      {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
 
       <QueryState
         isLoading={isLoading}
