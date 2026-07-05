@@ -1,4 +1,5 @@
 import type { TaskSource } from '../types';
+import { staffSafeDisplayText } from '@factory-engine-pro/contracts';
 
 export function taskSourceLabel(source: TaskSource) {
   if (source === 'call_analysis') return 'Call summary';
@@ -24,23 +25,7 @@ export function focusLabel(value: string | null | undefined) {
 }
 
 export function personSafeText(value: string | null | undefined) {
-  if (!value) return '';
-  return value
-    .replace(/\bworkflow\s+rules?\b/gi, 'call routing')
-    .replace(/\bworkflow\b/gi, 'follow-up')
-    .replace(/\brule\s+engine\b/gi, 'call routing')
-    .replace(/\brules?\b/gi, 'routing')
-    .replace(/\baxis\b/gi, 'focus')
-    .replace(/\bsales\b/gi, 'purchase intent')
-    .replace(/\bsale\b/gi, 'purchase intent')
-    .replace(/\bsupport\b/gi, 'customer request')
-    .replace(/\btranscript\s+resolver\b/gi, 'call summary')
-    .replace(/\bresolver\b/gi, 'summary')
-    .replace(/\btranscript\b/gi, 'call')
-    .replace(/\bdebug\b/gi, 'review')
-    .replace(/\bcommission\b/gi, 'request')
-    .replace(/\bAI\b/g, 'Call')
-    .replace(/\bai\b/g, 'call');
+  return staffSafeDisplayText(value);
 }
 
 export function humanize(value: string) {

@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, transcriptResolverOutputSchema } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, staffSafeDisplayText, transcriptResolverOutputSchema } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
@@ -3441,24 +3441,7 @@ function cleanedActions(values: Array<string | null | undefined>) {
 
 function staffBriefText(value: unknown, fallback: string) {
   const text = firstString(value, fallback) ?? fallback;
-  return text
-    .replace(/\bAI\b/gi, 'call')
-    .replace(/\bautomation\b/gi, 'follow-up')
-    .replace(/\bworkflow\s+rules?\b/gi, 'call routing')
-    .replace(/\bworkflow\b/gi, 'follow-up')
-    .replace(/\brule\s+engine\b/gi, 'call routing')
-    .replace(/\brules?\b/gi, 'routing')
-    .replace(/\baxis\b/gi, 'focus')
-    .replace(/\bsales\b/gi, 'purchase intent')
-    .replace(/\bsale\b/gi, 'purchase intent')
-    .replace(/\bsupport case\b/gi, 'customer request')
-    .replace(/\bsupport\b/gi, 'customer request')
-    .replace(/\btranscript\s+resolver\b/gi, 'call summary')
-    .replace(/\bresolver\b/gi, 'summary')
-    .replace(/\bdebug\b/gi, 'review')
-    .replace(/\bcommission\b/gi, 'request')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return staffSafeDisplayText(text);
 }
 
 function withPersonCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardInternal {

@@ -309,6 +309,12 @@ Still requiring live evidence before final sign-off:
   Customer 360 tab content, and MCP-rendered copy/content blocks. Runtime
   customization can still change labels and blocks, but forbidden internal
   terms are normalized before rendering.
+- Staff-safe text normalization is centralized in
+  `packages/contracts/src/staff-text.ts` and reused by backend person-workspace
+  responses, the person app, shared Customer 360 UI, and MCP-rendered blocks.
+  Delimiter-heavy internal tokens such as `workflow_rule`, `ai_workflow`,
+  `support_axis`, `sales-axis`, `transcript_resolver`, `debug`, `resolver`, and
+  `commission` are converted before they can render in staff-visible surfaces.
 - Runtime navigation override labels and sidebar group labels are normalized
   again at render time. This keeps old or manually inserted customization
   records from leaking internal terms into staff navigation while preserving

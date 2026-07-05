@@ -14,4 +14,5 @@ export * from './person.js';
 export * from './permissions.js';
 export * from './realtime.js';
 export * from './rules.js';
+export * from './staff-text.js';
 export * from './sync.js';

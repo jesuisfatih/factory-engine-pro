@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { CustomerDetailPanelDto, CustomerDetailTab } from '@factory-engine-pro/contracts';
+import { staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import {
   ClipboardList,
   Headphones,
@@ -583,22 +584,7 @@ function customerFocusLabel(value: string) {
 
 function staffPanelText(value: string, staffTerminology: boolean) {
   if (!staffTerminology) return value;
-  return value
-    .replace(/\bAI\b/gi, 'call')
-    .replace(/\bworkflow\s+rules?\b/gi, 'call routing')
-    .replace(/\bworkflow\b/gi, 'follow-up')
-    .replace(/\brule\s+engine\b/gi, 'call routing')
-    .replace(/\brules?\b/gi, 'routing')
-    .replace(/\baxis\b/gi, 'focus')
-    .replace(/\bsales\b/gi, 'purchase intent')
-    .replace(/\bsale\b/gi, 'purchase intent')
-    .replace(/\bsupport\s+case\b/gi, 'customer request')
-    .replace(/\bsupport\b/gi, 'customer request')
-    .replace(/\btranscript\s+resolver\b/gi, 'call summary')
-    .replace(/\btranscripts?\b/gi, 'call summary')
-    .replace(/\bresolver\b/gi, 'summary')
-    .replace(/\bdebug\b/gi, 'review')
-    .replace(/\bcommission\b/gi, 'request');
+  return staffSafeDisplayText(value);
 }
 
 function normalizeAddress(value: unknown) {
