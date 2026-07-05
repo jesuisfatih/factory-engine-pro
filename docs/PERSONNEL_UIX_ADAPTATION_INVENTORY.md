@@ -95,6 +95,7 @@ without using the reference backend.
 | Segment portfolio navigation | `kanban-v2` panel with All lists / List N chips and previous/next list navigation | Priority customers still come only from `SegmentOwnership -> SegmentCustomerMembership -> Customer` |
 | Segment customer cards | `segment-customer-card card-v2` with avatar, phone/email, latest note, latest order, latest call, open follow-up summary, call/note/pin actions | Uses live `segmentGroups` items. Clicking opens Customer 360 popup with real detail API data |
 | Dark/light theme parity layer | Shared parity CSS plus dark overrides for focus, missed work, filters, cards, priority groups, and customer cards | Pure frontend presentation; no data semantics changed |
+| Base theme density | Root tokens, body size, content padding, and KPI card density now match the patron/reference staff UIX baseline more closely | Pure frontend presentation; prevents the personnel panel from drifting into a heavier custom visual system |
 
 Guardrails kept in this step:
 - No reference backend code was copied.

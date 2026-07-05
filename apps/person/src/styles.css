@@ -1,14 +1,14 @@
 /* ─── Theme tokens ───────────────────────────────────────── */
 :root {
-  --bg: #EEF2F7;
+  --bg: #F4F5F8;
   --surface: #FFFFFF;
-  --surface-2: #F7F9FC;
-  --surface-3: #E9EEF5;
-  --border: #DDE5EF;
-  --border-strong: #BAC6D6;
-  --text: #111827;
-  --text-muted: #4B5563;
-  --text-faint: #64748B;
+  --surface-2: #FAFBFC;
+  --surface-3: #F0F1F4;
+  --border: #ECECEC;
+  --border-strong: #D8DADD;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --text-faint: #9aa0a6;
   --accent: #1d4ed8;
   --accent-soft: #E0E7FF;
   --warn: #B45309;
@@ -19,8 +19,8 @@
   --success-soft: #DCFCE7;
   --info: #075985;
   --info-soft: #E0F2FE;
-  --shadow: 0 2px 8px rgba(15, 23, 42, .06);
-  --shadow-lg: 0 12px 28px -8px rgba(15, 23, 42, .18);
+  --shadow: 0 1px 1px rgba(15, 23, 42, .03);
+  --shadow-lg: 0 8px 24px -8px rgba(15, 23, 42, .14);
   --radius: 10px;
   --radius-lg: 14px;
   --side-w: 232px;
@@ -32,11 +32,11 @@
   --surface: #131826;
   --surface-2: #181F2E;
   --surface-3: #1F2738;
-  --border: #2A3548;
-  --border-strong: #3B4A64;
+  --border: #232938;
+  --border-strong: #2E3548;
   --text: #E5E7EB;
-  --text-muted: #CBD5E1;
-  --text-faint: #94A3B8;
+  --text-muted: #9CA3AF;
+  --text-faint: #6B7280;
   --accent: #60A5FA;
   --accent-soft: #1E293B;
   --warn: #F59E0B;
@@ -58,7 +58,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -171,18 +171,18 @@ button { font-family: inherit; }
 .topbar-workspace strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; }
 
 /* ─── Generic content ────────────────────────────────────── */
-.content { padding: 18px 20px; overflow-y: auto; min-height: 0; }
+.content { padding: 16px 18px; overflow-y: auto; min-height: 0; }
 .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .page-head h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
 .page-head .meta { font-size: 12px; color: var(--text-faint); }
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .kpi {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 11px;
 }
-.kpi .label { font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: .5px; }
-.kpi .val { font-size: 21px; font-weight: 800; color: var(--text); margin-top: 2px; }
-.kpi .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.kpi .label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.kpi .val { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; line-height: 1.1; }
+.kpi .sub { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
 .today-focus-panel { display: grid; grid-template-columns: minmax(250px, .62fr) minmax(0, 1.38fr); gap: 10px; margin: 0 0 12px; }
 .today-focus-copy { border: 1px solid #BFDBFE; border-radius: var(--radius); background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%); padding: 13px 14px; box-shadow: var(--shadow); }
 .today-focus-copy span { display: block; color: #1D4ED8; font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .35px; }
