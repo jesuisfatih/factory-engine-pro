@@ -56,7 +56,7 @@ reference checkout.
 | Order/call/task history | `TaskBriefModal.tsx` | Full recent customer timeline inside task | Personnel | Orders, Aircall calls, notes, tasks/activity | Exists | Preserve | Order, call, and task history | section order | Modal screenshot |
 | Customer 360 popup | `packages/ui/src/customer-detail-panel.tsx` | Customer opens as a popup, not a right drawer | Personnel | Customer detail aggregate | Exists; component uses modal backdrop/panel | Preserve popup behavior | Customer 360 | tab labels/order later | Screenshot |
 | Customer 360 Main tab | `packages/ui/src/customer-detail-panel.tsx` `main` / `mainContent` props | Customer opens with immediate operational context, not a cold profile table | Personnel | Priority/customer row context: reason, segment, urgency, phone, email, latest order, latest call, open work, latest note | Implemented as typed shared UI prop fed by live priority/customer rows; no reference backend port | Keep sourcing from `segmentGroups` or customer archive rows; do not show rule trace | Main | tab order/copy/theme later | Popup screenshot opened from Priority Kanban and Customer Archive |
-| Customer 360 tabs | `customer-detail-panel.tsx` | Profile, Shopify Orders, Aircall Calls, Customer Requests, Email, Messages, Notes, Tasks | Personnel | Customer aggregate tabs | Exists; commission filtered | Preserve; hide internal rule names for staff | Same labels | tab visibility/order later | Screenshot |
+| Customer 360 tabs | `customer-detail-panel.tsx` | Profile, Shopify Orders, Aircall Calls, Customer Requests, Email, Messages, Notes, follow-up history | Personnel | Customer aggregate tabs | Exists; commission filtered | Preserve; hide internal rule names for staff | Profile / orders / calls / requests / notes / follow-ups | tab visibility/order later | Screenshot |
 | Customer archive | `apps/person/src/views/Customers.tsx` | Search full Shopify customer archive without freezing | Personnel | Server-side paginated Shopify customers | Exists: limit/offset/search | Preserve 10 default and 50/100/150 choices | Shopify customers | label/theme | Search/pagination screenshot |
 | Sidebar/navigation | `Sidebar.tsx`, `FrontendCustomization.tsx` | Patron can rename/reorder/group/badge/default route safely | Personnel/MCP | Navigation override contract | Exists | Preserve and document | Staff workspace navigation | navigationOverrides | MCP preview/list proof |
 
@@ -153,6 +153,14 @@ Still requiring live evidence before final sign-off:
 - Staff-visible person workspace errors no longer mention workspace axis,
   call-analysis task internals, or raw transfer axis values. Transfer failures
   use focus labels such as Purchase intent / Customer care.
+- Customer 360 no longer exposes the reference panel's staff-facing "Tasks"
+  wording as a cold technical tab. Staff sees "Follow-ups" and the summary
+  metric also reads "Follow-ups"; internal task ids can still exist in backend
+  history, but the personnel UI presents them as customer follow-up work.
+- Customer 360 Main tab values are passed through the same staff-safe text
+  normalization used by the rest of the personnel surface. This keeps future
+  `main`/`mainContent` suppliers from leaking internal words if an upstream
+  contract accidentally contains them.
 - Customer Archive notes now use a dedicated archive endpoint. The routine
   calling-list note endpoint still enforces assigned-workspace customer scope;
   the archive endpoint only accepts real Shopify customers and preserves the

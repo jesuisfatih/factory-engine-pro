@@ -61,7 +61,7 @@ const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: Lucid
   email: { label: 'Email', Icon: Mail },
   messages: { label: 'Messages', Icon: MessageSquare },
   notes: { label: 'Notes', Icon: NotebookText },
-  tasks: { label: 'Tasks', Icon: ClipboardList },
+  tasks: { label: 'Follow-ups', Icon: ClipboardList },
 };
 
 type PanelTab = CustomerDetailTab | 'main';
@@ -163,7 +163,7 @@ export function CustomerDetailPanel({
               <Metric label="Orders" value={String(detail.customer.metrics.ordersCount)} />
               <Metric label="Calls" value={String(detail.customer.metrics.callsCount)} />
               <Metric label="Open requests" value={String(detail.customer.metrics.openSupportCount)} />
-              <Metric label="Open tasks" value={String(detail.customer.metrics.openTaskCount)} />
+              <Metric label="Follow-ups" value={String(detail.customer.metrics.openTaskCount)} />
             </div>
 
             <nav className="customer-detail-tabs" aria-label="Customer detail tabs">
@@ -185,7 +185,7 @@ export function CustomerDetailPanel({
 
             <main className="customer-detail-body">
               {activeTab === 'main' && main
-                ? <MainTab main={main} mainContent={mainContent} />
+                ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} />
                 : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology)}
             </main>
           </>
@@ -195,23 +195,24 @@ export function CustomerDetailPanel({
   );
 }
 
-function MainTab({ main, mainContent }: { main: CustomerDetailMainInfo; mainContent?: ReactNode }) {
+function MainTab({ main, mainContent, staffTerminology }: { main: CustomerDetailMainInfo; mainContent?: ReactNode; staffTerminology: boolean }) {
   if (mainContent) {
     return <div className="customer-detail-main-card">{mainContent}</div>;
   }
+  const productTags = main.productTags.map((tag) => staffPanelText(tag, staffTerminology)).filter(Boolean);
   return (
     <div className="customer-detail-grid">
       <section className="customer-detail-card customer-detail-main-reason">
         <h3>Why this customer is open</h3>
-        <p>{main.reason}</p>
+        <p>{staffPanelText(main.reason, staffTerminology)}</p>
         <div className="customer-detail-main-chips">
-          {main.productTags.map((tag) => <span key={tag} className="cd-main-chip product">{tag}</span>)}
+          {productTags.map((tag) => <span key={tag} className="cd-main-chip product">{tag}</span>)}
           {main.churnRisk ? (
             <span className={`churn-badge ${main.churnRisk === 'lost' ? 'lost' : 'risk'}`}>
               {main.churnRisk === 'lost' ? 'Lost risk' : 'At risk'}
             </span>
           ) : null}
-          <span className="cd-main-chip segment" style={{ background: main.segmentColor }}>{main.segmentLabel}</span>
+          <span className="cd-main-chip segment" style={{ background: main.segmentColor }}>{staffPanelText(main.segmentLabel, staffTerminology)}</span>
           <span className="cd-main-chip urgency" title="Urgency score">U{main.urgencyScore}</span>
         </div>
       </section>
@@ -220,12 +221,12 @@ function MainTab({ main, mainContent }: { main: CustomerDetailMainInfo; mainCont
         <KeyValue label="Phone" value={main.phone ?? 'No phone'} />
         <KeyValue label="Email" value={main.email ?? 'No email'} />
         <KeyValue label="Last contact" value={date(main.lastContact)} />
-        <KeyValue label="Latest call" value={main.lastCallLabel} />
-        <KeyValue label="Owner" value={main.owner ?? 'Unassigned'} />
+        <KeyValue label="Latest call" value={staffPanelText(main.lastCallLabel, staffTerminology)} />
+        <KeyValue label="Owner" value={staffPanelText(main.owner ?? 'Unassigned', staffTerminology)} />
       </section>
       <section className="customer-detail-card">
         <h3>Orders</h3>
-        <KeyValue label="Latest order" value={main.orderLabel} />
+        <KeyValue label="Latest order" value={staffPanelText(main.orderLabel, staffTerminology)} />
         <KeyValue label="Total orders" value={String(main.ordersCount)} />
         <KeyValue label="Total spent" value={money(main.totalSpent)} />
       </section>
@@ -238,14 +239,14 @@ function MainTab({ main, mainContent }: { main: CustomerDetailMainInfo; mainCont
       {main.lastCallSummary ? (
         <section className="customer-detail-card">
           <h3>Last call summary</h3>
-          <p>{main.lastCallSummary}</p>
+          <p>{staffPanelText(main.lastCallSummary, staffTerminology)}</p>
         </section>
       ) : null}
       {main.latestNote ? (
         <section className="customer-detail-card">
           <h3>Latest note</h3>
-          <p>{main.latestNote.body}</p>
-          <div className="customer-detail-muted">{main.latestNote.authorName} - {date(main.latestNote.createdAt)}</div>
+          <p>{staffPanelText(main.latestNote.body, staffTerminology)}</p>
+          <div className="customer-detail-muted">{staffPanelText(main.latestNote.authorName, staffTerminology)} - {date(main.latestNote.createdAt)}</div>
         </section>
       ) : null}
     </div>
@@ -280,7 +281,7 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
       <section className="customer-detail-card">
         <h3>Ownership</h3>
         {customer.assignments.length === 0 && (
-          <div className="customer-detail-muted">{staffTerminology ? 'No customer focus owner assigned.' : 'No axis owner assigned.'}</div>
+          <div className="customer-detail-muted">No customer focus owner assigned.</div>
         )}
         {customer.assignments.map((assignment) => (
           <div key={assignment.id} className="customer-detail-row">
@@ -443,7 +444,7 @@ function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
               <span>
                 {staffPanelText(label(note.kind), staffTerminology)}
                 {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
-                {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
+                {note.linkedQueueId ? ` - follow-up ${note.linkedQueueId}` : ''}
               </span>
             </div>
             <small>{dateTime(note.updatedAt)}</small>
@@ -457,7 +458,7 @@ function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
 
 function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
   const rows = detail.tabs.tasks;
-  if (rows.length === 0) return <EmptyTab title="No tasks" body="No call or manual task is linked to this customer." onRetry={onRetry} />;
+  if (rows.length === 0) return <EmptyTab title="No follow-ups" body="No call or manual follow-up is linked to this customer." onRetry={onRetry} />;
   return (
     <div className="customer-detail-list">
       {rows.map((task) => (
@@ -469,8 +470,7 @@ function TasksTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetai
             </div>
             <small>{dateTime(task.dueAt ?? task.updatedAt)}</small>
           </div>
-          <p>{staffPanelText(task.description ?? 'No task description captured.', staffTerminology)}</p>
-          {!staffTerminology && task.matchedRuleName && <div className="customer-detail-muted">Rule: {task.matchedRuleName}</div>}
+          <p>{staffPanelText(task.description ?? 'No follow-up description captured.', staffTerminology)}</p>
         </article>
       ))}
     </div>
@@ -551,7 +551,9 @@ function date(value: string | null) {
 
 function dateTime(value: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function duration(seconds: number | null) {
@@ -564,7 +566,8 @@ function cleanPhone(value: string) {
   return value.replace(/[^\d+]/g, '');
 }
 
-function label(value: string) {
+function label(value: string | null | undefined) {
+  if (!value) return '-';
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
