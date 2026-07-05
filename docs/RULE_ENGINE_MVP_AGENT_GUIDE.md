@@ -74,6 +74,16 @@ The MCP surface exposes these tool concepts:
 - `list_frontend_customizations`
 - `get_frontend_customization`
 - `rollback_frontend_customization`
+- `list_algorithm_surfaces`
+- `get_algorithm_contract`
+- `draft_algorithm_change`
+- `validate_algorithm_change`
+- `simulate_algorithm_change`
+- `compare_algorithm_versions`
+- `publish_algorithm_version`
+- `rollback_algorithm_version`
+- `explain_customer_ranking`
+- `explain_task_visibility`
 
 The safe authoring sequence is always:
 
@@ -1192,6 +1202,350 @@ sales axis
 support axis
 internal resolver
 ```
+
+## Algorithm Strategy Layer
+
+Workflow rules decide when staff work is created. The algorithm strategy layer decides how existing staff/customer/mail work is ranked, shown, explained, and actioned.
+
+Do not confuse these two layers:
+
+- Workflow DSL: creates deterministic work from call or business events.
+- Algorithm strategy DSL: ranks, filters, scores, schedules visibility, orders CTA buttons, and explains why an item appears.
+- Frontend customization DSL: changes safe UI presentation slots and wording.
+- Source patch lane: maintainer-only code changes with build and screenshot proof.
+
+The strategy layer exists because the business owner wants to change operating logic without asking an engineer to edit source code for every idea. The answer is not freeform JavaScript. The answer is versioned JSON strategy with strict schema and a no-mutation simulation gate.
+
+### Strategy surfaces
+
+Use `list_algorithm_surfaces` first. The current allowed surfaces are:
+
+- `staff.daily_call_list.ranking`
+- `staff.priority_kanban.customer_score`
+- `staff.task_visibility`
+- `staff.customer_next_action`
+- `staff.call_brief_generation`
+- `customer_portal.reorder_eligibility`
+- `mail_marketing.audience_eligibility`
+- `mail_marketing.send_safety`
+
+Use `get_algorithm_contract` for the target surface before drafting. The contract tells you:
+
+- allowed signal fields
+- allowed weights
+- allowed sort fields
+- allowed CTA ids
+- allowed modal action ids
+- simulation evidence expected before publish
+- red lines for that surface
+
+Never invent field names. If a requested field is not in the contract, return a clear limitation and ask for the backend contract to be expanded.
+
+### Native runtime binding matrix
+
+Strategy tools are not documentation-only. A published strategy changes a native runtime surface only when that surface is listed below. If a surface is not listed here, treat it as design-time only until engineering wires it.
+
+Current runtime bindings:
+
+- `staff.daily_call_list.ranking`
+  - Runtime: `PersonWorkspaceService.dailyOperationsFor`.
+  - Effect: ranks visible Daily Call List cards after ownership, source, axis, and date-window filters.
+  - Hard guard: Linda custom ordering can still override automatic sort for her own queue.
+- `staff.priority_kanban.customer_score`
+  - Runtime: `PersonWorkspaceService.dailyOperationsFor`.
+  - Effect: scores and sorts customers inside assigned Shopify segment groups.
+  - Hard guard: cannot add customers outside the member's assigned segment ownership.
+- `staff.task_visibility`
+  - Runtime: `PersonWorkspaceService.dailyOperationsFor`.
+  - Effect: hides or surfaces already-created staff work from the queue view.
+  - Hard guard: never deletes service requests and never bypasses workflow source/axis contracts.
+- `staff.customer_next_action`
+  - Runtime: `PersonWorkspaceService.queueCard` and `TaskBriefModal`.
+  - Effect: computes a per-card strategy proof and safely reorders staff CTAs such as call, note, schedule, email, customer detail, snooze, and done.
+  - Hard guard: unsupported CTA ids are ignored, raw buttons/scripts are not rendered, and the strategy cannot auto-send mail or auto-open customer requests.
+- `staff.call_brief_generation`
+  - Runtime: `PersonWorkspaceService.queueCard`, `PersonWorkspaceService.taskBrief`, and `TaskBriefModal`.
+  - Effect: computes a per-card strategy proof and safely reorders modal guidance steps from stored resolver/customer signals.
+  - Hard guard: does not re-read full transcripts when resolver output is already stored, does not expose internal workflow/debug labels, and does not allow raw prompt-generated HTML.
+- `customer_portal.reorder_eligibility`
+  - Runtime: `AccountsService.createReorderCart`.
+  - Effect: adds a strategy visibility and score gate to customer reorder cart creation.
+  - Hard guard: customer ownership, catalog variant matching, variant availability, checkout creation, and payment safety stay in native Accounts/Shopify services. Strategy can block an item; it cannot force an unavailable variant into checkout.
+- `mail_marketing.audience_eligibility`
+  - Runtime: `MailMarketingService.resolveAudience`.
+  - Effect: filters and sorts contacts after the saved audience filters resolve against the customer/mail graph.
+  - Hard guard: strategy does not replace consent, suppression, Shopify/customer graph, or explicit audience filter resolution.
+- `mail_marketing.send_safety`
+  - Runtime: `MailMarketingService.queueCampaign` and `MailMarketingService.processFlowEnrollmentNode`.
+  - Effect: adds a final strategy gate before campaign or flow delivery proof is recorded.
+  - Hard guard: existing category enablement, quiet hours, frequency caps, daily caps, template approval, consent, suppression, and provider-mode checks remain mandatory and cannot be loosened by strategy.
+
+Do not tell the owner a strategy affects production unless it appears in the runtime binding matrix and the current deploy contains that code.
+
+### Staff runtime proof fields
+
+When a staff strategy is runtime-bound, the staff API carries proof on each affected card. Use this proof before claiming a strategy changed the screen.
+
+Daily task cards and task brief cards may include:
+
+```json
+{
+  "ctaPriority": ["call", "note", "schedule"],
+  "modalActionOrder": ["call_customer", "confirm_need", "capture_outcome"],
+  "strategyProof": {
+    "nextAction": {
+      "surfaceId": "staff.customer_next_action",
+      "score": 84,
+      "bandId": "urgent",
+      "bandLabel": "Needs fast follow-up",
+      "tone": "danger",
+      "ctaPriority": ["call", "note", "schedule"]
+    },
+    "callBrief": {
+      "surfaceId": "staff.call_brief_generation",
+      "score": 84,
+      "bandId": "urgent",
+      "bandLabel": "Needs fast follow-up",
+      "tone": "danger",
+      "modalActionOrder": ["call_customer", "confirm_need", "capture_outcome"]
+    }
+  }
+}
+```
+
+Rules for agents:
+
+- `ctaPriority` only reorders known staff actions. Unknown ids are ignored.
+- `modalActionOrder` only reorders known guidance steps. Unknown ids are ignored.
+- The modal still uses stored resolver/customer/order data; it must not re-send the full transcript to a model just to reorder buttons.
+- The strategy proof is operator evidence, not customer-facing copy.
+- If these fields are missing from the API response, the strategy is not active in that deployed runtime even if a draft exists.
+
+### Strategy JSON shape
+
+A strategy is controlled JSON:
+
+```json
+{
+  "surfaceId": "staff.daily_call_list.ranking",
+  "name": "Refund and repeat-call daily ranking",
+  "status": "draft",
+  "definition": {
+    "schemaVersion": 1,
+    "surfaceId": "staff.daily_call_list.ranking",
+    "description": "Prioritize payment/refund friction and repeat calls for the daily call list.",
+    "weights": {
+      "urgencyScore": 4,
+      "refundOrPaymentIssue": 8,
+      "repeatCount": 5,
+      "purchaseIntent": 3
+    },
+    "conditions": [],
+    "visibility": {
+      "mode": "show_by_default",
+      "showWhen": [],
+      "hideWhen": []
+    },
+    "sort": [
+      { "field": "urgencyScore", "direction": "desc", "nulls": "last" },
+      { "field": "createdAt", "direction": "desc", "nulls": "last" }
+    ],
+    "cooldown": {
+      "hideIfOpenTaskExists": true,
+      "reappearAfterHours": 360
+    },
+    "scoreBands": [
+      { "id": "urgent", "label": "Needs fast follow-up", "min": 80, "max": 10000, "tone": "danger", "cta": "call" }
+    ],
+    "ctaPriority": ["call", "note", "schedule"],
+    "modalActionOrder": ["call_customer", "confirm_need", "capture_outcome"]
+  }
+}
+```
+
+Allowed levers:
+
+- `weights`: how much a known signal contributes to ranking.
+- `conditions`: bounded boolean/numeric/string checks that can add score.
+- `visibility`: show/hide logic. This does not delete data.
+- `sort`: tie-breakers after scoring.
+- `cooldown`: reappearance and duplicate suppression policy.
+- `scoreBands`: business-facing labels for score ranges.
+- `ctaPriority`: which staff action should appear first.
+- `modalActionOrder`: which instruction blocks appear first in a staff modal.
+
+Forbidden levers:
+
+- raw SQL
+- arbitrary code
+- network calls
+- token or secret access
+- tenant scope changes
+- auth or RBAC changes
+- checkout/payment changes
+- webhook secret changes
+- destructive queue/worker behavior
+
+### Safe algorithm workflow
+
+Always use this order:
+
+1. `list_algorithm_surfaces`
+2. `get_algorithm_contract`
+3. `draft_algorithm_change`
+4. `validate_algorithm_change`
+5. `simulate_algorithm_change`
+6. `compare_algorithm_versions` when replacing an active strategy
+7. Explain the diff to the user
+8. `publish_algorithm_version` only after explicit human approval
+9. `rollback_algorithm_version` if the result is not acceptable
+
+Publishing without simulation is not allowed. Publishing a strategy with only a limited simulation is not acceptable for a surface that must affect live ranking.
+
+### What simulation must prove
+
+For `staff.daily_call_list.ranking`, simulation should answer:
+
+- What changed in Linda's last 7 days queue?
+- Which tasks moved into the top list?
+- Which tasks disappeared from the visible sample?
+- Did the newest real customer calls remain visible?
+- Are internal labels such as workflow rule, axis, or AI hidden from staff-facing text?
+
+For `staff.priority_kanban.customer_score`, simulation should answer:
+
+- Who is in the top 20 before and after?
+- Which assigned Shopify segment caused each customer to appear?
+- Which customer moved up because of last order, recent call, open follow-up, or repeat activity?
+- Which customers became hidden or newly surfaced?
+
+For mail and customer portal surfaces, simulation must prove:
+
+- consent/suppression/ownership guards were preserved
+- no send, checkout, payment, or destructive mutation happened
+- eligible/blocked counts are explained
+
+Native simulation coverage:
+
+- `staff.daily_call_list.ranking`
+  - Sample source: recent tenant-scoped `ServiceRequest` rows for sales/account work created from call analysis, matched rules, source calls, source email, or workflow metadata.
+  - Member filter: pass `memberEmail` to simulate Linda/Ihsan/Charlotte-specific queue impact.
+  - Safety proof: simulation never creates, updates, deletes, transfers, archives, or closes a task; it only scores the bounded live sample.
+  - Useful diff: which daily cards moved in the visible list, which cards became hidden or surfaced, and why the score changed.
+- `staff.priority_kanban.customer_score`
+  - Sample source: `SegmentOwnership -> SegmentCustomerMembership -> Customer`, including customer insight, open service requests, and latest Shopify order context.
+  - Member filter: pass `memberEmail` to restrict simulation to that staff member's assigned Shopify segments.
+  - Safety proof: strategy cannot add customers outside the owner's segment scope and cannot mutate segment membership.
+  - Useful diff: top customer movement, hidden/surfaced customers, last order/open follow-up/repeat activity impact.
+- `staff.task_visibility`
+  - Sample source: the same bounded sales/account call-analysis service requests used by the Daily Call List.
+  - Runtime lever: `visibility.showWhen`, `visibility.hideWhen`, `cooldown.reappearAfterHours`, and `cooldown.archiveAfterDays`.
+  - Safety proof: hidden means "not shown on this staff surface now"; it does not delete or close the underlying service request.
+  - Useful diff: visible count, hidden count, surfaced count, and archive/reappearance boundary impact.
+- `staff.customer_next_action`
+  - Sample source: bounded live staff task cards and stored task/customer/order signals.
+  - Runtime lever: `ctaPriority` plus score/condition/sort fields from the surface contract.
+  - Safety proof: strategy can reorder only known staff actions such as call, note, schedule, email, customer detail, archive, transfer, done, snooze, more, and pin.
+  - Useful diff: CTA order changed from baseline to candidate, plus any score/rank/visibility changes.
+- `staff.call_brief_generation`
+  - Sample source: bounded live staff task cards with stored resolver/customer/order signals.
+  - Runtime lever: `modalActionOrder` plus score/condition/sort fields from the surface contract.
+  - Safety proof: simulation and runtime do not re-read full transcripts when stored resolver output already exists; no raw prompt HTML or internal debug labels are exposed.
+  - Useful diff: modal action order changed from baseline to candidate, plus any score/rank/visibility changes.
+- `customer_portal.reorder_eligibility`
+  - Sample source: recent tenant-scoped `CommerceOrder` rows and their Shopify line-item JSON.
+  - Variant context: the simulator resolves SKU or Shopify variant id against `CatalogVariant` and `CatalogProduct`.
+  - Safety proof: ownership remains customer/order scoped; unavailable catalog variants stay blocked; no cart, checkout, draft order, or payment mutation happens.
+  - Useful diff: which line items became eligible, blocked, or moved in score/rank.
+- `mail_marketing.audience_eligibility`
+  - Sample source: recent `MailContact` rows with marketing consent and active suppression state, joined to customer and segment context when available.
+  - Safety proof: unsubscribed, suppressed, and unsendable contacts remain visible to the simulation as blockers; the strategy cannot override the core audience filter contract.
+  - Useful diff: which contacts moved into or out of the eligible sample and why.
+- `mail_marketing.send_safety`
+  - Sample source: recent frozen snapshot members when available; otherwise recent contacts are used as a bounded safety sample.
+  - Safety proof: no email is sent, no provider credential is touched, and existing quiet-hour/frequency/provider/template guards remain native service guards.
+  - Useful diff: which recipients would be held before delivery proof is recorded.
+
+If any algorithm simulation returns `limited`, do not publish that strategy. It means the contract exists but the current deployed backend cannot yet prove the native impact for that surface.
+
+### Explanation tools
+
+Use `explain_customer_ranking` when the user asks why a customer is high or low in Priority kanban.
+
+The answer should mention business signals:
+
+```text
+Score 92 is in "Needs fast follow-up".
+segmentPriority contributed 30.
+repeatCount contributed 12.
+totalSpent contributed 18.
+```
+
+Do not answer with internal implementation labels:
+
+```text
+Resolver returned U4.2.
+Workflow trace matched action a1.
+Axis sales boosted score.
+```
+
+Use `explain_task_visibility` when the user asks why a call task is visible, hidden, delayed, or archived.
+
+### Hard examples
+
+Example prompt:
+
+```text
+For Linda, make refund/payment calls appear above normal purchase intent calls for the last 7 days. Keep newest calls high, but do not show duplicate tasks if the customer already has an open follow-up for the same intent. Put Call first, Note second, Schedule third. Simulate before publishing.
+```
+
+Expected tool flow:
+
+1. `get_algorithm_contract` for `staff.daily_call_list.ranking`
+2. `draft_algorithm_change`
+3. `validate_algorithm_change`
+4. `simulate_algorithm_change` with `memberEmail`
+5. summarize top moved tasks, hidden count, surfaced count
+6. wait for approval before `publish_algorithm_version`
+
+Example prompt:
+
+```text
+In Priority kanban, rank assigned segment customers by last order value, repeat calls, and open follow-up. Customers with no phone should still be visible but lower priority. Explain why Salvador moved into the top 20.
+```
+
+Expected tool flow:
+
+1. `get_algorithm_contract` for `staff.priority_kanban.customer_score`
+2. draft/validate/simulate
+3. `explain_customer_ranking` for the named customer id
+
+Example prompt:
+
+```text
+Show a call again 15 days after the source call only if the customer has not purchased and no open follow-up exists.
+```
+
+This can be either:
+
+- workflow deferred materialization when a new hidden future task must be created, or
+- strategy cooldown/reappearance when existing work should reappear in a queue.
+
+Do not mix them. If the request says "create staff work 15 days later", use deferred workflow action. If the request says "make this existing work visible again later", use algorithm cooldown/reappearance.
+
+### Patch lane
+
+If the user asks for real algorithmic source-code changes instead of strategy DSL:
+
+1. Explain that strategy DSL should be tried first.
+2. If code is still required, use the source patch lane.
+3. Only allow listed files and modules.
+4. Generate a patch plan.
+5. Run typecheck/build.
+6. Produce fixture/API/screenshot evidence as relevant.
+7. Wait for human approval before deploy.
+
+The agent must not edit auth, tenant scope, RBAC, checkout/payment, webhook secret, raw SQL, Prisma tenant extension, or destructive worker behavior.
 
 ## Agent Instruction Summary
 

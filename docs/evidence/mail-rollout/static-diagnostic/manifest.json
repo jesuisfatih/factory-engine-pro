@@ -1,0 +1,454 @@
+{
+  "generatedAt": "2026-07-05T07:57:48.704Z",
+  "runId": "20260705-075748",
+  "config": {
+    "apiUrl": "http://127.0.0.1:4120/api/v1",
+    "adminUrl": "http://127.0.0.1:5173",
+    "accountsUrl": "http://127.0.0.1:5175",
+    "tenantId": "ten_remote_test",
+    "evidenceDir": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\mail-rollout\\static-diagnostic",
+    "hasAdminSession": false,
+    "hasAccountsSession": false,
+    "hasCustomerAccountSession": false,
+    "browserProofSkipped": true
+  },
+  "api": [
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "settings",
+      "path": "/mail/settings",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "health",
+      "path": "/mail/health",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "delivery_log",
+      "path": "/mail/delivery-log?limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "provider_events",
+      "path": "/mail/provider-events?limit=10",
+      "assertions": {
+        "minCount": 1,
+        "reason": "Real Resend webhook signoff requires at least one stored mail_provider_events row for this tenant."
+      },
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "suppression",
+      "path": "/mail/suppression?active=true&limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "system_mail",
+      "auth": "admin",
+      "name": "dlq",
+      "path": "/mail/dlq?status=pending&limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_template",
+      "auth": "admin",
+      "name": "workspace",
+      "path": "/email-templates/workspace",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_template",
+      "auth": "admin",
+      "name": "templates",
+      "path": "/mail-marketing/templates?limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "overview",
+      "path": "/mail-marketing/overview",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "settings",
+      "path": "/mail-marketing/settings",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "audiences",
+      "path": "/mail-marketing/audiences",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "campaigns",
+      "path": "/mail-marketing/campaigns?limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "flows",
+      "path": "/mail-marketing/flows",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "webhook_destinations",
+      "path": "/mail-marketing/flows/webhook-destinations",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "analytics_funnel",
+      "path": "/mail-marketing/analytics/funnel?days=30&limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "mail_marketing",
+      "auth": "admin",
+      "name": "analytics_cohorts",
+      "path": "/mail-marketing/analytics/cohorts?days=30&limit=10",
+      "assertions": {},
+      "status": "skipped",
+      "reason": "admin session is required. Set FACTORY_ENGINE_ADMIN_SESSION_JSON or FACTORY_ENGINE_ADMIN_ACCESS_TOKEN."
+    },
+    {
+      "module": "customer_portal",
+      "auth": "accounts",
+      "name": "orders",
+      "path": "/accounts/orders?limit=10",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "accounts session is required. Set FACTORY_ENGINE_ACCOUNTS_SESSION_JSON or FACTORY_ENGINE_ACCOUNTS_ACCESS_TOKEN."
+    },
+    {
+      "module": "customer_portal",
+      "auth": "accounts",
+      "name": "invoices",
+      "path": "/accounts/invoices?limit=10",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "accounts session is required. Set FACTORY_ENGINE_ACCOUNTS_SESSION_JSON or FACTORY_ENGINE_ACCOUNTS_ACCESS_TOKEN."
+    },
+    {
+      "module": "customer_portal",
+      "auth": "accounts",
+      "name": "reorder_templates",
+      "path": "/accounts/reorder-templates",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "accounts session is required. Set FACTORY_ENGINE_ACCOUNTS_SESSION_JSON or FACTORY_ENGINE_ACCOUNTS_ACCESS_TOKEN."
+    },
+    {
+      "module": "customer_portal",
+      "auth": "accounts",
+      "name": "active_cart",
+      "path": "/accounts/cart/active",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "accounts session is required. Set FACTORY_ENGINE_ACCOUNTS_SESSION_JSON or FACTORY_ENGINE_ACCOUNTS_ACCESS_TOKEN."
+    },
+    {
+      "module": "customer_portal",
+      "auth": "accounts",
+      "name": "documents",
+      "path": "/accounts/documents?limit=10",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "accounts session is required. Set FACTORY_ENGINE_ACCOUNTS_SESSION_JSON or FACTORY_ENGINE_ACCOUNTS_ACCESS_TOKEN."
+    },
+    {
+      "module": "shopify_customer_account",
+      "auth": "shopify_customer_account",
+      "name": "customer_account_context",
+      "path": "/customer-account/context",
+      "assertions": {
+        "customerSafePayload": true
+      },
+      "status": "skipped",
+      "reason": "Shopify Customer Account session token is required. Set FACTORY_ENGINE_CUSTOMER_ACCOUNT_SESSION_JSON or FACTORY_ENGINE_SHOPIFY_CUSTOMER_ACCOUNT_SESSION_TOKEN."
+    }
+  ],
+  "copy": [
+    {
+      "id": "customer-facing-copy",
+      "module": "customer_portal",
+      "status": "passed",
+      "durationMs": 19,
+      "proof": {
+        "scope": [
+          "apps/accounts/src/i18n string values",
+          "apps/accounts/src route/component visible JSX copy",
+          "extensions/customer-account-extension/src visible copy and customer-safe errors"
+        ],
+        "scanned": [
+          {
+            "file": "apps/accounts/src/i18n/en.json",
+            "kind": "json",
+            "strings": 380
+          },
+          {
+            "file": "apps/accounts/src/routes/addresses.tsx",
+            "kind": "code",
+            "strings": 33
+          },
+          {
+            "file": "apps/accounts/src/routes/cart.tsx",
+            "kind": "code",
+            "strings": 61
+          },
+          {
+            "file": "apps/accounts/src/routes/documents.tsx",
+            "kind": "code",
+            "strings": 31
+          },
+          {
+            "file": "apps/accounts/src/routes/forgot-password.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/index.tsx",
+            "kind": "code",
+            "strings": 89
+          },
+          {
+            "file": "apps/accounts/src/routes/invoices.tsx",
+            "kind": "code",
+            "strings": 55
+          },
+          {
+            "file": "apps/accounts/src/routes/login.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/orders.tsx",
+            "kind": "code",
+            "strings": 52
+          },
+          {
+            "file": "apps/accounts/src/routes/pickup.tsx",
+            "kind": "code",
+            "strings": 8
+          },
+          {
+            "file": "apps/accounts/src/routes/products.tsx",
+            "kind": "code",
+            "strings": 29
+          },
+          {
+            "file": "apps/accounts/src/routes/profile.tsx",
+            "kind": "code",
+            "strings": 15
+          },
+          {
+            "file": "apps/accounts/src/routes/register.$token.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/register.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/reorder.tsx",
+            "kind": "code",
+            "strings": 23
+          },
+          {
+            "file": "apps/accounts/src/routes/request-invitation.tsx",
+            "kind": "code",
+            "strings": 15
+          },
+          {
+            "file": "apps/accounts/src/routes/reset-password.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/support.tsx",
+            "kind": "code",
+            "strings": 21
+          },
+          {
+            "file": "apps/accounts/src/routes/team.tsx",
+            "kind": "code",
+            "strings": 1
+          },
+          {
+            "file": "apps/accounts/src/routes/tracking.tsx",
+            "kind": "code",
+            "strings": 14
+          },
+          {
+            "file": "apps/accounts/src/routes/__root.tsx",
+            "kind": "code",
+            "strings": 2
+          },
+          {
+            "file": "apps/accounts/src/components/AuthShell.tsx",
+            "kind": "code",
+            "strings": 9
+          },
+          {
+            "file": "apps/accounts/src/components/Dialog.tsx",
+            "kind": "code",
+            "strings": 0
+          },
+          {
+            "file": "apps/accounts/src/components/PageHeader.tsx",
+            "kind": "code",
+            "strings": 0
+          },
+          {
+            "file": "apps/accounts/src/components/QueryState.tsx",
+            "kind": "code",
+            "strings": 5
+          },
+          {
+            "file": "apps/accounts/src/components/Sidebar.tsx",
+            "kind": "code",
+            "strings": 4
+          },
+          {
+            "file": "apps/accounts/src/components/Topbar.tsx",
+            "kind": "code",
+            "strings": 0
+          },
+          {
+            "file": "extensions/customer-account-extension/src/api.ts",
+            "kind": "code",
+            "strings": 6
+          },
+          {
+            "file": "extensions/customer-account-extension/src/CustomerAccountPage.tsx",
+            "kind": "code",
+            "strings": 61
+          }
+        ],
+        "missing": [],
+        "warnings": [],
+        "warningCount": 0,
+        "violationCount": 0,
+        "violations": [],
+        "reason": "Customer-facing screens must use business-clear copy and must not expose tenant/provider/workflow/routing/source/raw-payload/debug vocabulary."
+      }
+    }
+  ],
+  "contract": [
+    {
+      "id": "customer-response-contract",
+      "module": "customer_portal",
+      "status": "passed",
+      "durationMs": 9,
+      "proof": {
+        "scope": [
+          "Customer Portal public TypeScript response surface",
+          "Customer Account extension context response surface",
+          "Shared account contract surface"
+        ],
+        "scanned": [
+          {
+            "file": "apps/accounts/src/lib/portal.ts",
+            "scope": "Customer Portal frontend response helpers and exported buyer-facing types",
+            "properties": 320
+          },
+          {
+            "file": "packages/contracts/src/accounts.ts",
+            "scope": "Customer Portal shared account contracts",
+            "properties": 59
+          },
+          {
+            "file": "extensions/customer-account-extension/src/CustomerAccountPage.tsx",
+            "scope": "Shopify Customer Account context response type",
+            "properties": 64
+          }
+        ],
+        "missing": [],
+        "violationCount": 0,
+        "violations": [],
+        "reason": "Customer-facing response contracts must not accept source-prefixed fields, tenant/provider/workflow/routing/source internals, raw payloads, secrets, debug fields, staff-only notes, or request ids."
+      }
+    }
+  ],
+  "browser": [
+    {
+      "status": "skipped",
+      "reason": "FACTORY_ENGINE_SKIP_BROWSER_PROOF=1"
+    }
+  ],
+  "summary": {
+    "status": "incomplete",
+    "apiPassed": 0,
+    "apiFailed": 0,
+    "apiSkipped": 22,
+    "copyPassed": 1,
+    "copyFailed": 0,
+    "copyWarnings": 0,
+    "contractPassed": 1,
+    "contractFailed": 0,
+    "browserPassed": 0,
+    "browserFailed": 0,
+    "browserSkipped": 1
+  }
+}

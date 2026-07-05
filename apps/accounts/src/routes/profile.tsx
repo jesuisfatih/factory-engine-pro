@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Save, ShieldCheck, User, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
+import { apiErrorMessage } from '@/lib/api';
 import { fetchProfile, saveProfile, updateAccountPassword, type BuyerProfile } from '@/lib/portal';
 
 const QK = ['profile'] as const;
@@ -28,7 +29,7 @@ function ProfileView() {
   const save = useMutation({
     mutationFn: saveProfile,
     onSuccess: () => { toast.success(t('profile.saved')); qc.invalidateQueries({ queryKey: QK }); },
-    onError: (error) => toast.error('Save failed', { description: (error as Error).message }),
+    onError: (error) => toast.error('Save failed', { description: apiErrorMessage(error) }),
   });
 
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
@@ -39,7 +40,7 @@ function ProfileView() {
       toast.success('Password updated');
       setPwd({ current: '', next: '', confirm: '' });
     },
-    onError: (error) => toast.error('Password update failed', { description: (error as Error).message }),
+    onError: (error) => toast.error('Password update failed', { description: apiErrorMessage(error) }),
   });
 
   if (isError) {

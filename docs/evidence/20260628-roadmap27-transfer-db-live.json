@@ -1,0 +1,159 @@
+﻿{
+  "generatedAt": "2026-06-28T17:06:33.906Z",
+  "tenantId": "ten_dtfbank",
+  "customerId": "cust_roadmap27_transfer",
+  "taskId": "sr_roadmap27_transfer_task",
+  "task": {
+    "id": "sr_roadmap27_transfer_task",
+    "tenantId": "ten_dtfbank",
+    "customerId": "cust_roadmap27_transfer",
+    "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+    "axis": "sales",
+    "status": "open",
+    "priority": "high",
+    "metadata": {
+      "fixture": true,
+      "category": "roadmap27-proof",
+      "previousAxis": "support",
+      "ticketNumber": "SR-RM27-TRANSFER",
+      "transferredAt": "2026-06-28T17:06:00.934Z",
+      "transferReason": "Roadmap 27 live proof transfer",
+      "transferHistory": [
+        {
+          "at": "2026-06-28T17:06:00.934Z",
+          "reason": "Roadmap 27 live proof transfer",
+          "toAxis": "sales",
+          "fromAxis": "support",
+          "toMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "fromMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+          "actorMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+        }
+      ],
+      "transferredByMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "previousAssignedMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+    },
+    "updatedAt": "2026-06-28T17:06:00.939Z",
+    "assignedMember": {
+      "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "email": "ihsan@dtfbank.com",
+      "firstName": "Ihsan",
+      "lastName": "Taskiran"
+    }
+  },
+  "assignments": [
+    {
+      "id": "casn_roadmap27_sales",
+      "axis": "sales",
+      "memberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "isPrimary": true,
+      "source": "person_workspace_transfer",
+      "reason": "Roadmap 27 live proof transfer",
+      "approvedByMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "approvedAt": "2026-06-28T17:06:00.934Z",
+      "updatedAt": "2026-06-28T17:06:00.965Z",
+      "member": {
+        "email": "ihsan@dtfbank.com",
+        "firstName": "Ihsan",
+        "lastName": "Taskiran"
+      }
+    },
+    {
+      "id": "casn_roadmap27_support",
+      "axis": "support",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "isPrimary": false,
+      "source": "person_workspace_transfer",
+      "reason": "Roadmap 27 live proof transfer",
+      "approvedByMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "approvedAt": "2026-06-28T17:06:00.934Z",
+      "updatedAt": "2026-06-28T17:06:00.960Z",
+      "member": {
+        "email": "dtfbanktx@gmail.com",
+        "firstName": "Linda",
+        "lastName": "Marroquin"
+      }
+    }
+  ],
+  "audits": [
+    {
+      "id": "caud_hwupnmzcn4txzlv1cjos2hh7",
+      "axis": "support",
+      "action": "person_workspace_transfer_out",
+      "previousMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "newMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "actorMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "source": "person_workspace_transfer",
+      "reason": "Roadmap 27 live proof transfer",
+      "metadata": {
+        "toAxis": "sales",
+        "serviceRequestId": "sr_roadmap27_transfer_task",
+        "disabledSourceAssignmentIds": [
+          "casn_roadmap27_support"
+        ]
+      },
+      "createdAt": "2026-06-28T17:06:00.977Z"
+    },
+    {
+      "id": "caud_ul6ob4z74ix7lztxsohc3axw",
+      "axis": "sales",
+      "action": "person_workspace_transfer",
+      "previousMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "newMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "actorMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "source": "person_workspace_transfer",
+      "reason": "Roadmap 27 live proof transfer",
+      "metadata": {
+        "toAxis": "sales",
+        "fromAxis": "support",
+        "assignmentId": "casn_roadmap27_sales",
+        "serviceRequestId": "sr_roadmap27_transfer_task",
+        "disabledSourceAssignmentIds": [
+          "casn_roadmap27_support"
+        ]
+      },
+      "createdAt": "2026-06-28T17:06:00.971Z"
+    }
+  ],
+  "comments": [
+    {
+      "id": "srcm_ou1ospmr9wyrglf2cp6r4dir",
+      "actorId": "tmbr_ten_dtfbank_linda_marroquin",
+      "actorType": "member",
+      "body": "Transferred from Linda Marroquin to Ihsan Taskiran (support -> sales). Reason: Roadmap 27 live proof transfer",
+      "internal": true,
+      "attachmentsJson": [
+        {
+          "kind": "task_transfer",
+          "toAxis": "sales",
+          "fromAxis": "support",
+          "toMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+          "fromMemberId": "tmbr_ten_dtfbank_linda_marroquin"
+        }
+      ],
+      "createdAt": "2026-06-28T17:06:00.944Z"
+    }
+  ],
+  "participants": [
+    {
+      "id": "tpar_jh5rcgrdmywe7t8wlvgp9xjo",
+      "memberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "role": "watcher",
+      "source": "manual_transfer",
+      "createdAt": "2026-06-28T17:06:00.948Z",
+      "member": {
+        "email": "dtfbanktx@gmail.com",
+        "firstName": "Linda",
+        "lastName": "Marroquin"
+      }
+    }
+  ],
+  "gates": {
+    "taskAssignedToTarget": true,
+    "supportAssignmentInactive": true,
+    "salesAssignmentPrimary": true,
+    "transferAuditExists": true,
+    "transferOutAuditExists": true,
+    "internalCommentExists": true,
+    "sourceWatcherExists": true
+  }
+}

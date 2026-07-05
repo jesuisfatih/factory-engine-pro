@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { emailSchema } from './common.js';
 import { createTaskAxisSchema, operationalIntentSchema, workflowActionSchema, workflowConditionSchema, workflowTriggerSchema, type CreateTaskAxis, type WorkflowTrigger } from './enums.js';
 
 export const workflowRuleStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
@@ -681,6 +682,183 @@ export interface FrontendMcpSourcePatchProofResponse extends FrontendMcpSourcePa
   deployAllowed: boolean;
 }
 
+export const algorithmSurfaceIdSchema = z.enum([
+  'staff.daily_call_list.ranking',
+  'staff.priority_kanban.customer_score',
+  'staff.task_visibility',
+  'staff.customer_next_action',
+  'staff.call_brief_generation',
+  'customer_portal.reorder_eligibility',
+  'mail_marketing.audience_eligibility',
+  'mail_marketing.send_safety',
+]);
+export type AlgorithmSurfaceId = z.infer<typeof algorithmSurfaceIdSchema>;
+
+export const algorithmStrategyStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
+export type AlgorithmStrategyStatus = z.infer<typeof algorithmStrategyStatusSchema>;
+
+export const algorithmConditionOperatorSchema = z.enum(['=', '!=', '>', '>=', '<', '<=', 'contains', 'in', 'not_in', 'exists', 'not_exists']);
+export type AlgorithmConditionOperator = z.infer<typeof algorithmConditionOperatorSchema>;
+
+export const algorithmConditionSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  field: z.string().trim().min(1).max(120),
+  operator: algorithmConditionOperatorSchema,
+  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number(), z.boolean()]))]).optional(),
+  weight: z.coerce.number().min(-100).max(100).optional(),
+  reason: z.string().trim().max(240).optional(),
+});
+export type AlgorithmCondition = z.infer<typeof algorithmConditionSchema>;
+
+export const algorithmSortRuleSchema = z.object({
+  field: z.string().trim().min(1).max(120),
+  direction: z.enum(['asc', 'desc']),
+  nulls: z.enum(['first', 'last']).default('last'),
+});
+export type AlgorithmSortRule = z.infer<typeof algorithmSortRuleSchema>;
+
+export const algorithmScoreBandSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(120),
+  min: z.coerce.number().min(-10000).max(10000),
+  max: z.coerce.number().min(-10000).max(10000),
+  tone: z.enum(['neutral', 'info', 'success', 'warning', 'danger']).default('neutral'),
+  cta: z.string().trim().min(1).max(80).optional(),
+}).superRefine((value, ctx) => {
+  if (value.max < value.min) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['max'], message: 'Score band max must be greater than or equal to min.' });
+  }
+});
+export type AlgorithmScoreBand = z.infer<typeof algorithmScoreBandSchema>;
+
+export const algorithmCooldownSchema = z.object({
+  reappearAfterHours: z.coerce.number().int().min(0).max(8760).optional(),
+  hideIfOpenTaskExists: z.boolean().default(true),
+  archiveAfterDays: z.coerce.number().int().min(1).max(365).optional(),
+  duplicateWindowHours: z.coerce.number().int().min(0).max(8760).optional(),
+}).default({ hideIfOpenTaskExists: true });
+export type AlgorithmCooldown = z.infer<typeof algorithmCooldownSchema>;
+
+export const algorithmVisibilitySchema = z.object({
+  mode: z.enum(['show_by_default', 'hide_by_default']).default('show_by_default'),
+  showWhen: z.array(algorithmConditionSchema).max(30).default([]),
+  hideWhen: z.array(algorithmConditionSchema).max(30).default([]),
+}).default({ mode: 'show_by_default', showWhen: [], hideWhen: [] });
+export type AlgorithmVisibility = z.infer<typeof algorithmVisibilitySchema>;
+
+export const algorithmStrategyDefinitionSchema = z.object({
+  schemaVersion: z.literal(1).default(1),
+  surfaceId: algorithmSurfaceIdSchema,
+  description: z.string().trim().max(700).optional(),
+  weights: z.record(z.string().trim().min(1).max(80), z.coerce.number().min(-100).max(100)).default({}),
+  conditions: z.array(algorithmConditionSchema).max(60).default([]),
+  visibility: algorithmVisibilitySchema,
+  sort: z.array(algorithmSortRuleSchema).max(12).default([]),
+  cooldown: algorithmCooldownSchema,
+  scoreBands: z.array(algorithmScoreBandSchema).max(20).default([]),
+  ctaPriority: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
+  modalActionOrder: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
+  explanationTemplate: z.string().trim().max(800).optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+}).superRefine((value, ctx) => {
+  const scoreBandIds = new Set<string>();
+  for (const band of value.scoreBands) {
+    if (scoreBandIds.has(band.id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scoreBands'], message: `Duplicate score band id: ${band.id}` });
+    }
+    scoreBandIds.add(band.id);
+  }
+});
+export type AlgorithmStrategyDefinition = z.infer<typeof algorithmStrategyDefinitionSchema>;
+
+export const saveAlgorithmStrategySchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  name: z.string().trim().min(2).max(140),
+  definition: algorithmStrategyDefinitionSchema,
+  status: algorithmStrategyStatusSchema.default('draft'),
+  reason: z.string().trim().max(1000).optional(),
+});
+export type SaveAlgorithmStrategyInput = z.infer<typeof saveAlgorithmStrategySchema>;
+
+const algorithmStrategyJsonSchema = z.string().trim().min(2).max(250_000);
+const algorithmStrategyIdSchema = z.string().trim().min(1).max(100);
+
+export const algorithmMcpDraftChangeSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  naturalLanguageGoal: z.string().trim().min(8).max(1600),
+  preferredStatus: algorithmStrategyStatusSchema.default('draft'),
+});
+export type AlgorithmMcpDraftChangeInput = z.infer<typeof algorithmMcpDraftChangeSchema>;
+
+const algorithmStrategyReferenceFields = {
+  strategyId: algorithmStrategyIdSchema.optional(),
+  strategy: z.union([saveAlgorithmStrategySchema, algorithmStrategyJsonSchema]).optional(),
+  strategyJson: algorithmStrategyJsonSchema.optional(),
+};
+
+export const algorithmMcpValidateChangeSchema = z.object(algorithmStrategyReferenceFields).superRefine((value, ctx) => {
+  const provided = [value.strategyId, value.strategy, value.strategyJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide exactly one of strategyId, strategy, or strategyJson.' });
+  }
+});
+export type AlgorithmMcpValidateChangeInput = z.infer<typeof algorithmMcpValidateChangeSchema>;
+
+export const algorithmMcpSimulateChangeSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  ...algorithmStrategyReferenceFields,
+  memberEmail: emailSchema.optional(),
+  recentDays: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type AlgorithmMcpSimulateChangeInput = z.infer<typeof algorithmMcpSimulateChangeSchema>;
+
+export const algorithmMcpCompareVersionsSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  baseStrategyId: algorithmStrategyIdSchema.optional(),
+  candidateStrategyId: algorithmStrategyIdSchema.optional(),
+  candidateStrategy: z.union([saveAlgorithmStrategySchema, algorithmStrategyJsonSchema]).optional(),
+  candidateStrategyJson: algorithmStrategyJsonSchema.optional(),
+  memberEmail: emailSchema.optional(),
+  recentDays: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type AlgorithmMcpCompareVersionsInput = z.infer<typeof algorithmMcpCompareVersionsSchema>;
+
+export const algorithmMcpPublishVersionSchema = z.object({
+  strategyId: algorithmStrategyIdSchema,
+  simulationId: algorithmStrategyIdSchema,
+  comment: z.string().trim().max(800).optional(),
+});
+export type AlgorithmMcpPublishVersionInput = z.infer<typeof algorithmMcpPublishVersionSchema>;
+
+export const algorithmMcpRollbackVersionSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  targetStrategyId: algorithmStrategyIdSchema.optional(),
+  versionNo: z.coerce.number().int().min(1).optional(),
+  comment: z.string().trim().max(800).optional(),
+}).superRefine((value, ctx) => {
+  const provided = [value.targetStrategyId, value.versionNo].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided > 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide either targetStrategyId or versionNo, not both.' });
+  }
+});
+export type AlgorithmMcpRollbackVersionInput = z.infer<typeof algorithmMcpRollbackVersionSchema>;
+
+export const algorithmMcpExplainCustomerRankingSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema.default('staff.priority_kanban.customer_score'),
+  customerId: z.string().trim().min(1),
+  strategyId: algorithmStrategyIdSchema.optional(),
+});
+export type AlgorithmMcpExplainCustomerRankingInput = z.infer<typeof algorithmMcpExplainCustomerRankingSchema>;
+
+export const algorithmMcpExplainTaskVisibilitySchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema.default('staff.task_visibility'),
+  serviceRequestId: z.string().trim().min(1),
+  strategyId: algorithmStrategyIdSchema.optional(),
+});
+export type AlgorithmMcpExplainTaskVisibilityInput = z.infer<typeof algorithmMcpExplainTaskVisibilitySchema>;
+
 export interface WorkflowRuleDto {
   id: string;
   name: string;
@@ -762,6 +940,158 @@ export interface WorkflowRuleBackfillRunResponse {
 export interface WorkflowRuleBackfillReportsResponse {
   ruleId: string;
   reports: WorkflowRuleBackfillReportDto[];
+}
+
+export interface AlgorithmSurfaceContract {
+  id: AlgorithmSurfaceId;
+  label: string;
+  purpose: string;
+  ownerSurface: 'staff' | 'customer_portal' | 'mail_marketing';
+  allowedFields: string[];
+  allowedWeights: string[];
+  allowedSortFields: string[];
+  allowedCtas: string[];
+  allowedModalActions: string[];
+  simulationEvidence: string[];
+  redLines: string[];
+}
+
+export interface AlgorithmStrategyDto {
+  id: string;
+  surfaceId: AlgorithmSurfaceId;
+  name: string;
+  status: AlgorithmStrategyStatus;
+  definition: AlgorithmStrategyDefinition;
+  reason: string | null;
+  warnings: string[];
+  createdByMemberId: string | null;
+  activatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlgorithmStrategyVersionDto {
+  id: string;
+  strategyId: string;
+  surfaceId: AlgorithmSurfaceId;
+  versionNo: number;
+  jsonSnapshot: SaveAlgorithmStrategyInput;
+  editedByMemberId: string | null;
+  editedAt: string;
+  comment: string | null;
+}
+
+export interface AlgorithmStrategySimulationDto {
+  id: string;
+  strategyId: string | null;
+  surfaceId: AlgorithmSurfaceId;
+  status: 'passed' | 'failed' | 'limited';
+  windowStart: string | null;
+  windowEnd: string | null;
+  sampleSize: number;
+  result: AlgorithmSimulationResult;
+  createdByMemberId: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface AlgorithmSimulationRankedItem {
+  id: string;
+  label: string;
+  beforeRank: number | null;
+  afterRank: number | null;
+  beforeScore: number | null;
+  afterScore: number | null;
+  delta: number;
+  visibleBefore: boolean;
+  visibleAfter: boolean;
+  reasons: string[];
+}
+
+export interface AlgorithmSimulationResult {
+  noMutation: boolean;
+  baselineStrategyId: string | null;
+  candidateHash: string;
+  changedTopItems: AlgorithmSimulationRankedItem[];
+  hiddenCount: number;
+  surfacedCount: number;
+  unchangedCount: number;
+  warnings: string[];
+  evidence: string[];
+}
+
+export interface AlgorithmMcpSurfacesResponse {
+  surfaces: AlgorithmSurfaceContract[];
+}
+
+export interface AlgorithmMcpSurfaceContractResponse {
+  surface: AlgorithmSurfaceContract;
+  activeStrategy: AlgorithmStrategyDto | null;
+}
+
+export interface AlgorithmMcpDraftChangeResponse {
+  draftId: string;
+  strategy: SaveAlgorithmStrategyInput;
+  confidence: number;
+  assumptions: string[];
+  warnings: string[];
+}
+
+export interface AlgorithmMcpValidateChangeResponse {
+  ok: boolean;
+  issues: string[];
+  warnings: string[];
+  normalizedStrategy: SaveAlgorithmStrategyInput | null;
+}
+
+export interface AlgorithmMcpSimulateChangeResponse {
+  simulation: AlgorithmStrategySimulationDto;
+  strategy: AlgorithmStrategyDto | null;
+  candidate: SaveAlgorithmStrategyInput;
+}
+
+export interface AlgorithmMcpCompareVersionsResponse {
+  base: AlgorithmMcpSimulateChangeResponse;
+  candidate: AlgorithmMcpSimulateChangeResponse;
+  diff: {
+    topItemChanges: AlgorithmSimulationRankedItem[];
+    hiddenDelta: number;
+    surfacedDelta: number;
+    summary: string[];
+  };
+}
+
+export interface AlgorithmMcpPublishVersionResponse {
+  strategy: AlgorithmStrategyDto;
+  version: AlgorithmStrategyVersionDto;
+  simulation: AlgorithmStrategySimulationDto;
+  publishedAt: string;
+  deactivatedStrategyIds: string[];
+}
+
+export interface AlgorithmMcpRollbackVersionResponse {
+  strategy: AlgorithmStrategyDto;
+  version: AlgorithmStrategyVersionDto | null;
+  archivedStrategyIds: string[];
+}
+
+export interface AlgorithmMcpExplainCustomerRankingResponse {
+  surfaceId: AlgorithmSurfaceId;
+  customerId: string;
+  strategyId: string | null;
+  score: number;
+  band: AlgorithmScoreBand | null;
+  reasons: string[];
+  rawSignals: Record<string, unknown>;
+}
+
+export interface AlgorithmMcpExplainTaskVisibilityResponse {
+  surfaceId: AlgorithmSurfaceId;
+  serviceRequestId: string;
+  strategyId: string | null;
+  visible: boolean;
+  reasons: string[];
+  rawSignals: Record<string, unknown>;
 }
 
 export interface WorkflowRuleExecutionTaskDto {
@@ -869,7 +1199,17 @@ export interface WorkflowMcpCapabilityTool {
     | 'get_frontend_customization'
     | 'rollback_frontend_customization'
     | 'preview_frontend_source_patch'
-    | 'validate_frontend_source_patch_proof';
+    | 'validate_frontend_source_patch_proof'
+    | 'list_algorithm_surfaces'
+    | 'get_algorithm_contract'
+    | 'draft_algorithm_change'
+    | 'validate_algorithm_change'
+    | 'simulate_algorithm_change'
+    | 'compare_algorithm_versions'
+    | 'publish_algorithm_version'
+    | 'rollback_algorithm_version'
+    | 'explain_customer_ranking'
+    | 'explain_task_visibility';
   description: string;
   mutates: boolean;
   requiresPermission: string;

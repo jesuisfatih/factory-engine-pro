@@ -1,0 +1,183 @@
+{
+  "generatedAt": "2026-06-29T11:32:19.812Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "summary": {
+    "dailyCount": 0,
+    "priorityCount": 104,
+    "pinnedCount": 4,
+    "highUrgencyCount": 90,
+    "visibleAxes": [
+      "support"
+    ],
+    "segmentGroupCount": 5
+  },
+  "dailyCallListCount": 0,
+  "priorityKanbanCount": 104,
+  "segmentGroupCount": 5,
+  "dailyHasSegmentGroups": false,
+  "priorityHasSegmentGroups": true,
+  "dailySample": [],
+  "segmentGroups": [
+    {
+      "id": "seg_ylrrmvy2s4tv0xcsjuuy5q2z",
+      "name": "Min 2 max 5 purchase",
+      "count": 25,
+      "sampleCustomers": [
+        {
+          "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_zmjpes6ztnzuvl09zo5roa4l",
+          "customerId": "cust_zmjpes6ztnzuvl09zo5roa4l",
+          "customerName": "1st Place Awards & Embroidery"
+        },
+        {
+          "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_x8nzhns0b2ifnm64bnicnc2v",
+          "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+          "customerName": "Akil Kurji"
+        },
+        {
+          "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_jp5l8tb6waye3825shaygnar",
+          "customerId": "cust_jp5l8tb6waye3825shaygnar",
+          "customerName": "Americraft Sign Co. LLC"
+        },
+        {
+          "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_vmkcu1nnag0yqngvv72jwpgs",
+          "customerId": "cust_vmkcu1nnag0yqngvv72jwpgs",
+          "customerName": "Apliiq, Inc"
+        },
+        {
+          "id": "daily-seg_ylrrmvy2s4tv0xcsjuuy5q2z-cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerName": "#gregsvinyl"
+        }
+      ]
+    },
+    {
+      "id": "seg_i2igf1ynhxp1umg8relmg5aa",
+      "name": "Customers over 20 orders",
+      "count": 17,
+      "sampleCustomers": [
+        {
+          "id": "daily-seg_i2igf1ynhxp1umg8relmg5aa-cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerId": "cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerName": "AA FASHION EXPRESS PRESS"
+        },
+        {
+          "id": "daily-seg_i2igf1ynhxp1umg8relmg5aa-cust_uuqib7l3yh7k825cxxwx60z7",
+          "customerId": "cust_uuqib7l3yh7k825cxxwx60z7",
+          "customerName": "Beary Creative"
+        },
+        {
+          "id": "daily-seg_i2igf1ynhxp1umg8relmg5aa-cust_xtces1c98kuzt7tkfrjhffr5",
+          "customerId": "cust_xtces1c98kuzt7tkfrjhffr5",
+          "customerName": "Ashley Fairchild"
+        },
+        {
+          "id": "daily-seg_i2igf1ynhxp1umg8relmg5aa-cust_z2r0j392wcfvsej88adw9rnq",
+          "customerId": "cust_z2r0j392wcfvsej88adw9rnq",
+          "customerName": "Cynthia Hagan"
+        },
+        {
+          "id": "daily-seg_i2igf1ynhxp1umg8relmg5aa-cust_ky4coh9qjssid717luxk6am9",
+          "customerId": "cust_ky4coh9qjssid717luxk6am9",
+          "customerName": "Epic Marks LLC"
+        }
+      ]
+    },
+    {
+      "id": "seg_ui2gyn7udvfekebsyyuyn0mo",
+      "name": "Wholesale Customers",
+      "count": 25,
+      "sampleCustomers": [
+        {
+          "id": "daily-seg_ui2gyn7udvfekebsyyuyn0mo-cust_qqpanovsy8vudlaanh0mbhjv",
+          "customerId": "cust_qqpanovsy8vudlaanh0mbhjv",
+          "customerName": "2G Nitrile LLC"
+        },
+        {
+          "id": "daily-seg_ui2gyn7udvfekebsyyuyn0mo-cust_r7qbxl63zhiq3fhuq7h98p7d",
+          "customerId": "cust_r7qbxl63zhiq3fhuq7h98p7d",
+          "customerName": "Atolye LLC"
+        },
+        {
+          "id": "daily-seg_ui2gyn7udvfekebsyyuyn0mo-cust_ph5li3pmsk7vy1133gq31jjj",
+          "customerId": "cust_ph5li3pmsk7vy1133gq31jjj",
+          "customerName": "Bella Vision MA LLC"
+        },
+        {
+          "id": "daily-seg_ui2gyn7udvfekebsyyuyn0mo-cust_wungu6wpzdjyw8oju3amdhsb",
+          "customerId": "cust_wungu6wpzdjyw8oju3amdhsb",
+          "customerName": "CAGMER LLC"
+        },
+        {
+          "id": "daily-seg_ui2gyn7udvfekebsyyuyn0mo-cust_yi52z0r9l4ncrrtdzzlrokmt",
+          "customerId": "cust_yi52z0r9l4ncrrtdzzlrokmt",
+          "customerName": "Dina Novik"
+        }
+      ]
+    },
+    {
+      "id": "seg_rz3xkyzxykilcj4pswvdixtd",
+      "name": "Customers who have purchased DTF or UV DTF Printer",
+      "count": 12,
+      "sampleCustomers": [
+        {
+          "id": "daily-seg_rz3xkyzxykilcj4pswvdixtd-cust_wji7h8ljaus28jktwf3wzloe",
+          "customerId": "cust_wji7h8ljaus28jktwf3wzloe",
+          "customerName": "Alpha DTF Print"
+        },
+        {
+          "id": "daily-seg_rz3xkyzxykilcj4pswvdixtd-cust_cp0z4yv5syurtbvwpcusbb9c",
+          "customerId": "cust_cp0z4yv5syurtbvwpcusbb9c",
+          "customerName": "Alpha Print LLC"
+        },
+        {
+          "id": "daily-seg_rz3xkyzxykilcj4pswvdixtd-cust_tthaz3zrppxel7mz62ksnu4b",
+          "customerId": "cust_tthaz3zrppxel7mz62ksnu4b",
+          "customerName": "Emma Collins"
+        },
+        {
+          "id": "daily-seg_rz3xkyzxykilcj4pswvdixtd-cust_gmpge71zpy75b1jbno3jch6b",
+          "customerId": "cust_gmpge71zpy75b1jbno3jch6b",
+          "customerName": "Ethan Hayes"
+        },
+        {
+          "id": "daily-seg_rz3xkyzxykilcj4pswvdixtd-cust_hly4piixopqxmqz4n0t4nbbe",
+          "customerId": "cust_hly4piixopqxmqz4n0t4nbbe",
+          "customerName": "James Bennett"
+        }
+      ]
+    },
+    {
+      "id": "seg_eftzjgf9bcyvnjz09d66b6h6",
+      "name": "Customers who have purchased DTF inks, DTF films, or DTF powders",
+      "count": 25,
+      "sampleCustomers": [
+        {
+          "id": "daily-seg_eftzjgf9bcyvnjz09d66b6h6-cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerId": "cust_dejnli6ghj1lqx3lm5w8mwlg",
+          "customerName": "AA FASHION EXPRESS PRESS"
+        },
+        {
+          "id": "daily-seg_eftzjgf9bcyvnjz09d66b6h6-cust_x8nzhns0b2ifnm64bnicnc2v",
+          "customerId": "cust_x8nzhns0b2ifnm64bnicnc2v",
+          "customerName": "Akil Kurji"
+        },
+        {
+          "id": "daily-seg_eftzjgf9bcyvnjz09d66b6h6-cust_jp5l8tb6waye3825shaygnar",
+          "customerId": "cust_jp5l8tb6waye3825shaygnar",
+          "customerName": "Americraft Sign Co. LLC"
+        },
+        {
+          "id": "daily-seg_eftzjgf9bcyvnjz09d66b6h6-cust_uuqib7l3yh7k825cxxwx60z7",
+          "customerId": "cust_uuqib7l3yh7k825cxxwx60z7",
+          "customerName": "Beary Creative"
+        },
+        {
+          "id": "daily-seg_eftzjgf9bcyvnjz09d66b6h6-cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerId": "cust_pwa8sxfbodvgc692zu2fh8j8",
+          "customerName": "#gregsvinyl"
+        }
+      ]
+    }
+  ]
+}

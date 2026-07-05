@@ -1,6 +1,14 @@
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
   activeWorkflowRuleStatsQuerySchema,
+  algorithmMcpCompareVersionsSchema,
+  algorithmMcpDraftChangeSchema,
+  algorithmMcpExplainCustomerRankingSchema,
+  algorithmMcpExplainTaskVisibilitySchema,
+  algorithmMcpPublishVersionSchema,
+  algorithmMcpRollbackVersionSchema,
+  algorithmMcpSimulateChangeSchema,
+  algorithmMcpValidateChangeSchema,
   backfillWorkflowRuleSchema,
   bootstrapWorkflowDefaultsSchema,
   fireWorkflowTriggerSchema,
@@ -21,6 +29,14 @@ import {
   workflowMcpSimulateRuleSchema,
   workflowMcpValidateRuleSchema,
   type ActiveWorkflowRuleStatsQuery,
+  type AlgorithmMcpCompareVersionsInput,
+  type AlgorithmMcpDraftChangeInput,
+  type AlgorithmMcpExplainCustomerRankingInput,
+  type AlgorithmMcpExplainTaskVisibilityInput,
+  type AlgorithmMcpPublishVersionInput,
+  type AlgorithmMcpRollbackVersionInput,
+  type AlgorithmMcpSimulateChangeInput,
+  type AlgorithmMcpValidateChangeInput,
   type BackfillWorkflowRuleInput,
   type BootstrapWorkflowDefaultsInput,
   type FrontendMcpApplyCustomizationInput,
@@ -236,6 +252,82 @@ export class RulesController {
     @Body(new ZodValidationPipe(frontendMcpValidateSourcePatchProofSchema)) body: FrontendMcpValidateSourcePatchProofInput,
   ) {
     return this.rules.validateFrontendSourcePatchProof(body);
+  }
+
+  @Get('mcp/algorithms/surfaces')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpAlgorithmSurfaces() {
+    return this.rules.algorithmSurfaces();
+  }
+
+  @Get('mcp/algorithms/surfaces/:surfaceId')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpAlgorithmContract(@Param('surfaceId') surfaceId: string) {
+    return this.rules.algorithmSurfaceContract(surfaceId);
+  }
+
+  @Post('mcp/algorithms/draft')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpDraftAlgorithmChange(
+    @Body(new ZodValidationPipe(algorithmMcpDraftChangeSchema)) body: AlgorithmMcpDraftChangeInput,
+  ) {
+    return this.rules.draftAlgorithmChangeFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/validate')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpValidateAlgorithmChange(
+    @Body(new ZodValidationPipe(algorithmMcpValidateChangeSchema)) body: AlgorithmMcpValidateChangeInput,
+  ) {
+    return this.rules.validateAlgorithmChangeFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/simulate')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpSimulateAlgorithmChange(
+    @Body(new ZodValidationPipe(algorithmMcpSimulateChangeSchema)) body: AlgorithmMcpSimulateChangeInput,
+  ) {
+    return this.rules.simulateAlgorithmChangeFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/compare')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpCompareAlgorithmVersions(
+    @Body(new ZodValidationPipe(algorithmMcpCompareVersionsSchema)) body: AlgorithmMcpCompareVersionsInput,
+  ) {
+    return this.rules.compareAlgorithmVersionsFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/publish')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpPublishAlgorithmVersion(
+    @Body(new ZodValidationPipe(algorithmMcpPublishVersionSchema)) body: AlgorithmMcpPublishVersionInput,
+  ) {
+    return this.rules.publishAlgorithmVersionFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/rollback')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpRollbackAlgorithmVersion(
+    @Body(new ZodValidationPipe(algorithmMcpRollbackVersionSchema)) body: AlgorithmMcpRollbackVersionInput,
+  ) {
+    return this.rules.rollbackAlgorithmVersionFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/explain-customer-ranking')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpExplainCustomerRanking(
+    @Body(new ZodValidationPipe(algorithmMcpExplainCustomerRankingSchema)) body: AlgorithmMcpExplainCustomerRankingInput,
+  ) {
+    return this.rules.explainCustomerRankingFromMcp(body);
+  }
+
+  @Post('mcp/algorithms/explain-task-visibility')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  mcpExplainTaskVisibility(
+    @Body(new ZodValidationPipe(algorithmMcpExplainTaskVisibilitySchema)) body: AlgorithmMcpExplainTaskVisibilityInput,
+  ) {
+    return this.rules.explainTaskVisibilityFromMcp(body);
   }
 
   @Get('stats/active')

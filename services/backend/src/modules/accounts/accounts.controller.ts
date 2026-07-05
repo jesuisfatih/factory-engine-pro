@@ -1,14 +1,30 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import {
   accountAddressSchema,
   accountAddressTypeSchema,
+  accountCartAddItemSchema,
+  accountCartCheckoutSchema,
+  accountCartCreateSchema,
+  accountCartUpdateItemSchema,
+  accountDocumentListQuerySchema,
+  accountInvoiceListQuerySchema,
+  accountOrderListQuerySchema,
+  accountReorderSchema,
   createAccountSupportTicketSchema,
   CUSTOMER_PERMISSIONS,
   updateAccountPasswordSchema,
   updateAccountProfileSchema,
   type AccountAddressInput,
   type AccountAddressType,
+  type AccountCartAddItemInput,
+  type AccountCartCheckoutInput,
+  type AccountCartCreateInput,
+  type AccountCartUpdateItemInput,
+  type AccountDocumentListQuery,
+  type AccountInvoiceListQuery,
+  type AccountOrderListQuery,
+  type AccountReorderInput,
   type CreateAccountSupportTicketInput,
   type UpdateAccountPasswordInput,
   type UpdateAccountProfileInput,
@@ -62,8 +78,79 @@ export class AccountsController {
 
   @Get('orders')
   @RequirePermission(CUSTOMER_PERMISSIONS.ordersRead)
-  orders() {
-    return this.accounts.orders();
+  orders(@Query(new ZodValidationPipe(accountOrderListQuerySchema)) query: AccountOrderListQuery) {
+    return this.accounts.orders(query);
+  }
+
+  @Get('orders/:orderId')
+  @RequirePermission(CUSTOMER_PERMISSIONS.ordersRead)
+  order(@Param('orderId') orderId: string) {
+    return this.accounts.orderDetail(orderId);
+  }
+
+  @Post('orders/:orderId/reorder')
+  @RequirePermission(CUSTOMER_PERMISSIONS.ordersReorder)
+  reorderOrder(
+    @Param('orderId') orderId: string,
+    @Body(new ZodValidationPipe(accountReorderSchema)) body: AccountReorderInput,
+  ) {
+    return this.accounts.reorderOrder(orderId, body);
+  }
+
+  @Post('orders/:orderId/line-items/:lineItemId/reorder')
+  @RequirePermission(CUSTOMER_PERMISSIONS.ordersReorder)
+  reorderLineItem(
+    @Param('orderId') orderId: string,
+    @Param('lineItemId') lineItemId: string,
+    @Body(new ZodValidationPipe(accountReorderSchema)) body: AccountReorderInput,
+  ) {
+    return this.accounts.reorderLineItem(orderId, lineItemId, body);
+  }
+
+  @Get('cart/active')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  activeCart() {
+    return this.accounts.activeCart();
+  }
+
+  @Post('cart')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  createCart(@Body(new ZodValidationPipe(accountCartCreateSchema)) body: AccountCartCreateInput) {
+    return this.accounts.createCart(body);
+  }
+
+  @Post('cart/:cartId/items')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  addCartItem(
+    @Param('cartId') cartId: string,
+    @Body(new ZodValidationPipe(accountCartAddItemSchema)) body: AccountCartAddItemInput,
+  ) {
+    return this.accounts.addCartItem(cartId, body);
+  }
+
+  @Patch('cart/:cartId/items/:itemId')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  updateCartItem(
+    @Param('cartId') cartId: string,
+    @Param('itemId') itemId: string,
+    @Body(new ZodValidationPipe(accountCartUpdateItemSchema)) body: AccountCartUpdateItemInput,
+  ) {
+    return this.accounts.updateCartItem(cartId, itemId, body);
+  }
+
+  @Delete('cart/:cartId/items/:itemId')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  removeCartItem(@Param('cartId') cartId: string, @Param('itemId') itemId: string) {
+    return this.accounts.removeCartItem(cartId, itemId);
+  }
+
+  @Post('cart/:cartId/checkout')
+  @RequirePermission(CUSTOMER_PERMISSIONS.cartWrite)
+  checkoutCart(
+    @Param('cartId') cartId: string,
+    @Body(new ZodValidationPipe(accountCartCheckoutSchema)) body: AccountCartCheckoutInput,
+  ) {
+    return this.accounts.checkoutCart(cartId, body);
   }
 
   @Get('reorder-templates')
@@ -91,15 +178,33 @@ export class AccountsController {
   }
 
   @Get('invoices')
-  @RequirePermission(CUSTOMER_PERMISSIONS.ordersRead)
-  invoices() {
-    return this.accounts.invoices();
+  @RequirePermission(CUSTOMER_PERMISSIONS.invoicesRead)
+  invoices(@Query(new ZodValidationPipe(accountInvoiceListQuerySchema)) query: AccountInvoiceListQuery) {
+    return this.accounts.invoices(query);
+  }
+
+  @Get('invoices/:invoiceId/download')
+  @RequirePermission(CUSTOMER_PERMISSIONS.invoicesRead)
+  invoiceDownload(@Param('invoiceId') invoiceId: string) {
+    return this.accounts.invoiceDownload(invoiceId);
+  }
+
+  @Post('invoices/:invoiceId/pay')
+  @RequirePermission(CUSTOMER_PERMISSIONS.invoicesRead)
+  invoicePay(@Param('invoiceId') invoiceId: string) {
+    return this.accounts.invoicePay(invoiceId);
+  }
+
+  @Get('invoices/:invoiceId')
+  @RequirePermission(CUSTOMER_PERMISSIONS.invoicesRead)
+  invoice(@Param('invoiceId') invoiceId: string) {
+    return this.accounts.invoiceDetail(invoiceId);
   }
 
   @Get('documents')
   @RequirePermission(CUSTOMER_PERMISSIONS.accountRead)
-  documents() {
-    return this.accounts.documents();
+  documents(@Query(new ZodValidationPipe(accountDocumentListQuerySchema)) query: AccountDocumentListQuery) {
+    return this.accounts.documents(query);
   }
 
   @Get('documents/:id/download')

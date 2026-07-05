@@ -1,0 +1,176 @@
+{
+  "proof": "roadmap_m18_customers_layout_live",
+  "generatedAt": "2026-06-29T10:59:52.319Z",
+  "appUrl": "https://app.dtfbank.com/customers",
+  "apiHealthUrl": "https://api.dtfbank.com/api/v1/health",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "db1e593f9bb8fceb02faf3e70dcc1f365086d190",
+  "tokenValuesPersistedInEvidence": false,
+  "principal": {
+    "memberId": "tmbr_ten_dtfbank_info_owner",
+    "email": "info@dtfbank.com",
+    "tokenSource": "ephemeral_signed_inside_dtfbank_container_not_persisted"
+  },
+  "runtime": {
+    "buildSha": "db1e593f9bb8fceb02faf3e70dcc1f365086d190",
+    "pm2Status": [
+      "│ 1  │ factory-engine-pro-admin       │ default     │ N/A     │ fork    │ 57875    │ 67s    │ 204  │ online    │ 0%       │ 2.3mb    │ root     │ disabled │",
+      "│ 0  │ factory-engine-pro-api         │ default     │ N/A     │ fork    │ 49102    │ 34m    │ 552  │ online    │ 0%       │ 694.3mb  │ root     │ disabled │"
+    ],
+    "publicHealth": "{\"ok\":true,\"service\":\"factory-engine-pro-backend\"}",
+    "appHttpStatus": 200
+  },
+  "ui": {
+    "desktop": {
+      "href": "https://app.dtfbank.com/customers",
+      "viewportWidth": 1440,
+      "bodyScrollWidth": 1440,
+      "sidebarDisplay": "flex",
+      "wrapperClientWidth": 1158,
+      "wrapperScrollWidth": 1158,
+      "wrapperHasHorizontalScroll": false,
+      "tableWidth": 1158,
+      "rowCount": 100,
+      "headerCells": [
+        50,
+        417,
+        126,
+        105,
+        94,
+        133,
+        128,
+        105
+      ],
+      "firstRowCells": [
+        {
+          "width": 50,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": ""
+        },
+        {
+          "width": 417,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "Sarah Mae Specially Made For Yousarahmaemade@gmail.comLogin with ShopShopwholesale30"
+        },
+        {
+          "width": 126,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "newnew"
+        },
+        {
+          "width": 105,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "—unknown"
+        },
+        {
+          "width": 94,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "185"
+        },
+        {
+          "width": 133,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "$66,563"
+        },
+        {
+          "width": 128,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": "—"
+        },
+        {
+          "width": 105,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "text": ""
+        }
+      ],
+      "tableOverflowClippedToWrapper": true
+    },
+    "mobile": {
+      "href": "https://app.dtfbank.com/customers",
+      "viewportWidth": 390,
+      "bodyScrollWidth": 390,
+      "sidebarDisplay": "none",
+      "wrapperClientWidth": 368,
+      "wrapperScrollWidth": 840,
+      "wrapperHasHorizontalScroll": true,
+      "tableWidth": 840,
+      "rowCount": 100,
+      "headerCells": [
+        44,
+        192,
+        110,
+        92,
+        82,
+        116,
+        112,
+        92
+      ],
+      "firstRowCells": [
+        {
+          "width": 44,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": ""
+        },
+        {
+          "width": 192,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "Sarah Mae Specially Made For Yousarahmaemade@gmail.comLogin with ShopShopwholesale30"
+        },
+        {
+          "width": 110,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "newnew"
+        },
+        {
+          "width": 92,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "—unknown"
+        },
+        {
+          "width": 82,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "185"
+        },
+        {
+          "width": 116,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "$66,563"
+        },
+        {
+          "width": 112,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": "—"
+        },
+        {
+          "width": 92,
+          "paddingLeft": "10px",
+          "paddingRight": "10px",
+          "text": ""
+        }
+      ],
+      "tableOverflowClippedToWrapper": true
+    },
+    "consoleErrors": [],
+    "failedResponsesCount": 0
+  },
+  "screenshots": {
+    "desktopShot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m18-customers-layout-desktop-ui-live.png",
+    "mobileShot": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m18-customers-layout-mobile-ui-live.png"
+  },
+  "pass": true
+}

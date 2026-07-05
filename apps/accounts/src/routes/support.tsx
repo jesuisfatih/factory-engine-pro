@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
+import { apiErrorMessage } from '@/lib/api';
 import {
   fetchSupportTickets, createSupportTicket,
   type SupportTicket, type TicketStatus, type TicketPriority, type TicketCategory,
@@ -126,7 +127,7 @@ function SupportView() {
       qc.invalidateQueries({ queryKey: QK_TICKETS });
       setForm({ category: 'shipping', subject: '', priority: 'normal', relatedTo: '', description: '' });
     },
-    onError: (error) => toast.error('Submit failed', { description: (error as Error).message }),
+    onError: (error) => toast.error('Submit failed', { description: apiErrorMessage(error) }),
   });
 
   const filtered = tickets

@@ -12,11 +12,13 @@
     "group_logistics": "Logistics",
     "group_billing": "Billing",
     "group_help": "Help",
+    "home": "Home",
     "addresses": "Addresses",
     "team": "Team",
     "profile": "Profile",
     "documents": "Documents",
     "orders": "Orders",
+    "cart": "Cart",
     "products": "Catalog",
     "reorder": "Reorder templates",
     "tracking": "Tracking",
@@ -42,6 +44,11 @@
     "notifications": "Notifications",
     "logout": "Log out",
     "more": "More"
+  },
+  "home": {
+    "title": "Account home",
+    "subtitle": "Orders, invoices, reorder options, and cart status for this buying account",
+    "next_step_label": "Next safe action"
   },
   "addresses": {
     "title": "Addresses",
@@ -153,7 +160,7 @@
     "field_new_pwd": "New password",
     "field_confirm_pwd": "Confirm new password",
     "update_password": "Update password",
-    "pwd_tip": "Passwords are hashed with PBKDF2 (sha512, 100k iterations). They never reach our servers in plaintext.",
+    "pwd_tip": "Choose a strong password. Your password is protected and is never shown after it is saved.",
     "notif_title": "Notifications",
     "notif_subtitle": "Pick which events should hit your inbox",
     "notif_order_updates": "Order status updates",
@@ -209,6 +216,10 @@
     "delete_confirm": "Delete this template?",
     "empty_state": "No templates yet — save a frequent basket to reorder it in one click."
   },
+  "cart": {
+    "title": "Cart",
+    "subtitle": "Review saved reorder items and request checkout only when real availability is confirmed"
+  },
   "invoices": {
     "title": "Invoices",
     "subtitle": "Review and download invoices, pay outstanding balances",
@@ -240,16 +251,21 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Tax certificates, contracts and licenses — keep them current",
+    "subtitle": "Invoices, design files, and account documents for this buying account",
     "upload": "Upload document",
     "drag_drop_hint": "Drag a file here or click upload to add a document",
     "tab_all": "All",
+    "tab_invoices": "Invoices",
+    "tab_designs": "Designs",
     "tab_contracts": "Contracts",
     "tab_certificates": "Certificates",
     "tab_tax": "Tax",
     "tab_licenses": "Licenses",
     "tab_other": "Other",
+    "search_placeholder": "Search file, invoice, order, or certificate",
     "categories": {
+      "invoice": "Invoice",
+      "design": "Design",
       "contract": "Contract",
       "certificate": "Certificate",
       "tax": "Tax",

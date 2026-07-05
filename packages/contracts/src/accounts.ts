@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { pageQuerySchema } from './common.js';
 
 export const accountAddressTypeSchema = z.enum(['shipping', 'billing']);
 export type AccountAddressType = z.infer<typeof accountAddressTypeSchema>;
@@ -41,3 +42,92 @@ export const createAccountSupportTicketSchema = z.object({
   relatedTo: z.string().trim().max(240).optional(),
 });
 export type CreateAccountSupportTicketInput = z.infer<typeof createAccountSupportTicketSchema>;
+
+export const accountReorderSchema = z.object({
+  quantity: z.coerce.number().int().min(1).max(999).optional(),
+});
+export type AccountReorderInput = z.infer<typeof accountReorderSchema>;
+
+export const accountCartCreateSchema = z.object({
+  originOrderId: z.string().trim().min(1).optional(),
+  reason: z.string().trim().max(500).optional(),
+});
+export type AccountCartCreateInput = z.infer<typeof accountCartCreateSchema>;
+
+export const accountCartAddItemSchema = z.object({
+  catalogVariantId: z.string().trim().min(1).optional(),
+  sku: z.string().trim().min(1).optional(),
+  quantity: z.coerce.number().int().min(1).max(999).default(1),
+}).refine((input) => Boolean(input.catalogVariantId || input.sku), {
+  message: 'A catalog variant or SKU is required',
+});
+export type AccountCartAddItemInput = z.infer<typeof accountCartAddItemSchema>;
+
+export const accountCartUpdateItemSchema = z.object({
+  quantity: z.coerce.number().int().min(0).max(999),
+});
+export type AccountCartUpdateItemInput = z.infer<typeof accountCartUpdateItemSchema>;
+
+export const accountCartCheckoutSchema = z.object({
+  note: z.string().trim().max(1000).optional(),
+});
+export type AccountCartCheckoutInput = z.infer<typeof accountCartCheckoutSchema>;
+
+export const accountInvoiceDownloadActionSchema = z.object({
+  action: z.literal('download'),
+  invoiceId: z.string().trim().min(1),
+  invoiceNumber: z.string().trim().min(1),
+  url: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  message: z.string().trim().min(1),
+});
+export type AccountInvoiceDownloadAction = z.infer<typeof accountInvoiceDownloadActionSchema>;
+
+export const accountInvoicePayActionSchema = z.object({
+  action: z.enum(['paid', 'payment_link', 'contact_billing']),
+  invoiceId: z.string().trim().min(1),
+  invoiceNumber: z.string().trim().min(1),
+  status: z.string().trim().min(1),
+  currency: z.string().trim().min(1),
+  totalUsd: z.number(),
+  paidUsd: z.number(),
+  balanceUsd: z.number(),
+  amountDueUsd: z.number(),
+  url: z.string().trim().min(1).nullable(),
+  label: z.string().trim().min(1),
+  message: z.string().trim().min(1),
+  downloadAvailable: z.boolean(),
+});
+export type AccountInvoicePayAction = z.infer<typeof accountInvoicePayActionSchema>;
+
+export const accountOrderListStatusSchema = z.enum(['all', 'pending', 'paid', 'fulfilled', 'cancelled']);
+export type AccountOrderListStatus = z.infer<typeof accountOrderListStatusSchema>;
+
+export const accountOrderListQuerySchema = pageQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(150).default(10),
+  status: accountOrderListStatusSchema.default('all'),
+  pickupOnly: z.coerce.boolean().optional(),
+  hasDesignFiles: z.coerce.boolean().optional(),
+});
+export type AccountOrderListQuery = z.infer<typeof accountOrderListQuerySchema>;
+
+export const accountInvoiceListStatusSchema = z.enum(['all', 'paid', 'unpaid', 'overdue', 'partial']);
+export type AccountInvoiceListStatus = z.infer<typeof accountInvoiceListStatusSchema>;
+
+export const accountInvoiceListQuerySchema = pageQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(150).default(10),
+  status: accountInvoiceListStatusSchema.default('all'),
+});
+export type AccountInvoiceListQuery = z.infer<typeof accountInvoiceListQuerySchema>;
+
+export const accountDocumentCategorySchema = z.enum(['invoice', 'design', 'contract', 'certificate', 'tax', 'license', 'other']);
+export type AccountDocumentCategory = z.infer<typeof accountDocumentCategorySchema>;
+
+export const accountDocumentListCategorySchema = z.enum(['all', 'invoice', 'design', 'contract', 'certificate', 'tax', 'license', 'other']);
+export type AccountDocumentListCategory = z.infer<typeof accountDocumentListCategorySchema>;
+
+export const accountDocumentListQuerySchema = pageQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(150).default(10),
+  category: accountDocumentListCategorySchema.default('all'),
+});
+export type AccountDocumentListQuery = z.infer<typeof accountDocumentListQuerySchema>;

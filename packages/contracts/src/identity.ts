@@ -79,6 +79,7 @@ export const tenantConfigSchema = z.object({
   aircallWebhookSecret: z.string().optional(),
   anthropicApiKey: z.string().optional(),
   resendApiKey: z.string().optional(),
+  resendWebhookSecret: z.string().optional(),
 });
 export type TenantConfigInput = z.infer<typeof tenantConfigSchema>;
 

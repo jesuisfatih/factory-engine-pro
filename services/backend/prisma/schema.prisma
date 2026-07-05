@@ -68,6 +68,12 @@ model Tenant {
   catalogVariants         CatalogVariant[]
   commerceOrders          CommerceOrder[]
   commercePickupOrders    CommercePickupOrder[]
+  accountInvoices         AccountInvoice[]
+  accountInvoicePayments  AccountInvoicePayment[]
+  accountInvoiceActivities AccountInvoiceActivity[]
+  accountReorderCarts     AccountReorderCart[]
+  accountReorderCartItems AccountReorderCartItem[]
+  accountReorderCartActivities AccountReorderCartActivity[]
   commerceActivityLogs    CommerceActivityLog[]
   customerInsights        CustomerInsight[]
   customerLists           CustomerList[]
@@ -86,13 +92,36 @@ model Tenant {
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
   mailDeliveries          MailDelivery[]
+  mailIdempotencyKeys     MailIdempotencyKey[]
   emailTemplates          EmailTemplate[]
   emailTemplateVersions   EmailTemplateVersion[]
+  emailTemplateBindings   EmailTemplateBinding[]
+  mailTemplateApprovals   MailTemplateApproval[]
+  mailTemplatePreviewProfiles MailTemplatePreviewProfile[]
+  mailTemplateSnippets    MailTemplateSnippet[]
+  mailTemplateBlocks      MailTemplateBlock[]
   mailContacts            MailContact[]
+  mailContactIdentities   MailContactIdentity[]
+  mailConsentStates       MailConsentState[]
   mailAudiences           MailAudience[]
+  mailAudienceSnapshots   MailAudienceSnapshot[]
+  mailAudienceSnapshotMembers MailAudienceSnapshotMember[]
+  mailCampaigns           MailCampaign[]
   mailFlows               MailFlow[]
+  mailFlowVersions        MailFlowVersion[]
+  mailFlowNodes           MailFlowNode[]
+  mailFlowRuns            MailFlowRun[]
+  mailFlowEnrollments     MailFlowEnrollment[]
+  mailFlowActionLogs      MailFlowActionLog[]
+  mailFlowIdempotencyKeys MailFlowIdempotencyKey[]
+  mailFlowWebhookDestinations MailFlowWebhookDestination[]
   mailMarketingEvents     MailMarketingEvent[]
   mailMarketingSettings   MailMarketingSetting?
+  mailCenterSettings      MailCenterSetting?
+  mailSuppressions        MailSuppression[]
+  mailDlq                 MailDlq[]
+  mailSettingsAuditLogs   MailSettingsAuditLog[]
+  mailProviderEvents      MailProviderEvent[]
   aircallUsers            AircallUser[]
   aircallMemberMaps       AircallMemberMap[]
   aircallNumbers          AircallNumber[]
@@ -113,6 +142,9 @@ model Tenant {
   workflowRuleCooldowns   WorkflowRuleCooldown[]
   workflowRuleVersions    WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
+  algorithmStrategies     AlgorithmStrategy[]
+  algorithmStrategyVersions AlgorithmStrategyVersion[]
+  algorithmStrategySimulations AlgorithmStrategySimulation[]
   taskParticipants        TaskParticipant[]
   personDailyCallOrders   PersonDailyCallOrder[]
   personDailyTaskOrders   PersonDailyTaskOrder[]
@@ -139,6 +171,7 @@ model TenantConfig {
   aircallWebhookSecretEncrypted String? @map("aircall_webhook_secret_encrypted")
   anthropicApiKeyEncrypted   String?  @map("anthropic_api_key_encrypted")
   resendApiKeyEncrypted      String?  @map("resend_api_key_encrypted")
+  resendWebhookSecretEncrypted String? @map("resend_webhook_secret_encrypted")
   createdAt                  DateTime @default(now()) @map("created_at")
   updatedAt                  DateTime @updatedAt @map("updated_at")
 
@@ -177,6 +210,11 @@ model Member {
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
   workflowScheduledActions WorkflowScheduledAction[]
   frontendCustomizations FrontendCustomization[]
+  algorithmStrategies AlgorithmStrategy[]
+  algorithmStrategyVersions AlgorithmStrategyVersion[]
+  algorithmStrategySimulations AlgorithmStrategySimulation[]
+  createdMailCampaigns MailCampaign[] @relation("MailCampaignCreator")
+  approvedMailCampaigns MailCampaign[] @relation("MailCampaignApprover")
   dailyCallOrders PersonDailyCallOrder[]
   dailyTaskOrders PersonDailyTaskOrder[]
   commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
@@ -254,6 +292,9 @@ model Customer {
   subUsers      SubUser[]
   orders        CommerceOrder[]
   pickupOrders  CommercePickupOrder[]
+  accountInvoices AccountInvoice[]
+  accountReorderCarts AccountReorderCart[]
+  accountReorderCartActivities AccountReorderCartActivity[]
   activityLogs  CommerceActivityLog[]
   insight       CustomerInsight?
   listItems     CustomerListItem[]
@@ -579,6 +620,9 @@ model CommerceOrder {
   customer     Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerUser CustomerUser?          @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
   pickupOrder  CommercePickupOrder?
+  accountInvoices AccountInvoice[]
+  reorderCarts AccountReorderCart[]
+  reorderCartItems AccountReorderCartItem[]
   commissionRequests CommissionRequest[]
 
   @@unique([tenantId, shopifyOrderId])
@@ -617,6 +661,165 @@ model CommercePickupOrder {
   @@index([tenantId, status])
   @@index([tenantId, customerId])
   @@map("commerce_pickup_orders")
+}
+
+model AccountInvoice {
+  id                  String   @id
+  tenantId            String   @map("tenant_id")
+  customerId          String   @map("customer_id")
+  orderId             String?  @map("order_id")
+  shopifyCustomerId   String?  @map("shopify_customer_id")
+  invoiceNumber       String   @map("invoice_number")
+  status              String   @default("unpaid")
+  issuedAt            DateTime @default(now()) @map("issued_at")
+  dueAt               DateTime? @map("due_at")
+  subtotal            Decimal  @default(0) @db.Decimal(12, 2)
+  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  shippingAmount      Decimal  @default(0) @map("shipping_amount") @db.Decimal(12, 2)
+  taxAmount           Decimal  @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  totalAmount         Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
+  amountPaid          Decimal  @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  currency            String   @default("USD")
+  fileUrl             String?  @map("file_url")
+  externalPaymentUrl  String?  @map("external_payment_url")
+  notes               String?
+  lineItems           Json     @default("[]") @map("line_items")
+  metadata            Json     @default("{}")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order    CommerceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payments AccountInvoicePayment[]
+  activities AccountInvoiceActivity[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, customerId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, status])
+  @@map("account_invoices")
+}
+
+model AccountInvoicePayment {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  invoiceId   String   @map("invoice_id")
+  amount      Decimal  @db.Decimal(12, 2)
+  method      String   @default("manual")
+  note        String?
+  recordedByMemberId String? @map("recorded_by_member_id")
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+  metadata    Json     @default("{}")
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice AccountInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, recordedAt])
+  @@map("account_invoice_payments")
+}
+
+model AccountInvoiceActivity {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  invoiceId   String   @map("invoice_id")
+  action      String
+  actorMemberId String? @map("actor_member_id")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice AccountInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, action])
+  @@index([tenantId, createdAt])
+  @@map("account_invoice_activities")
+}
+
+model AccountReorderCart {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  customerId      String   @map("customer_id")
+  sourceOrderId   String?  @map("source_order_id")
+  status          String   @default("review_required")
+  currency        String   @default("USD")
+  subtotal        Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
+  itemCount       Int      @default(0) @map("item_count")
+  checkoutUrl     String?  @map("checkout_url")
+  checkoutError   String?  @map("checkout_error")
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sourceOrder CommerceOrder?            @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  items       AccountReorderCartItem[]
+  activities  AccountReorderCartActivity[]
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, sourceOrderId])
+  @@index([tenantId, status])
+  @@map("account_reorder_carts")
+}
+
+model AccountReorderCartItem {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  cartId            String   @map("cart_id")
+  sourceOrderId     String?  @map("source_order_id")
+  sourceLineItemKey String   @map("source_line_item_key")
+  productTitle      String   @map("product_title")
+  variantTitle      String?  @map("variant_title")
+  sku               String?
+  quantity          Int      @default(1)
+  unitPrice         Decimal  @default(0) @map("unit_price") @db.Decimal(12, 2)
+  lineTotal         Decimal  @default(0) @map("line_total") @db.Decimal(12, 2)
+  shopifyVariantId  String?  @map("shopify_variant_id")
+  catalogVariantId  String?  @map("catalog_variant_id")
+  reorderable       Boolean  @default(false)
+  reason            String?
+  propertiesJson    Json     @default("[]") @map("properties_json")
+  designFilesJson   Json     @default("[]") @map("design_files_json")
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cart        AccountReorderCart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  sourceOrder CommerceOrder?      @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, cartId])
+  @@index([tenantId, sourceOrderId])
+  @@index([tenantId, sku])
+  @@map("account_reorder_cart_items")
+}
+
+model AccountReorderCartActivity {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  cartId    String   @map("cart_id")
+  customerId String  @map("customer_id")
+  action    String
+  label     String
+  detail    String?
+  actorType String   @default("customer") @map("actor_type")
+  actorId   String?  @map("actor_id")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cart     AccountReorderCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  customer Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, cartId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, action])
+  @@index([tenantId, createdAt])
+  @@map("account_reorder_cart_activities")
 }
 
 model CommerceActivityLog {
@@ -1150,6 +1353,8 @@ model MailDelivery {
   tenantId          String             @map("tenant_id")
   eventKey          String             @map("event_key")
   category          String             @default("system")
+  templateId        String?            @map("template_id")
+  templateVersionId String?            @map("template_version_id")
   recipientEmail    String             @map("recipient_email")
   subject           String
   html              String
@@ -1164,12 +1369,61 @@ model MailDelivery {
   updatedAt         DateTime           @updatedAt @map("updated_at")
   sentAt            DateTime?          @map("sent_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template        EmailTemplate?        @relation("MailDeliveryTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  templateVersion EmailTemplateVersion? @relation("MailDeliveryTemplateVersion", fields: [templateVersionId], references: [id], onDelete: SetNull)
+  providerEvents  MailProviderEvent[]
 
   @@index([tenantId, status, createdAt])
   @@index([tenantId, eventKey, createdAt])
   @@index([tenantId, recipientEmail])
+  @@index([tenantId, templateId, createdAt])
+  @@index([tenantId, templateVersionId, createdAt])
   @@map("mail_deliveries")
+}
+
+model MailProviderEvent {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  provider          String   @default("resend")
+  providerEventId   String   @map("provider_event_id")
+  providerMessageId String?  @map("provider_message_id")
+  deliveryId        String?  @map("delivery_id")
+  eventType         String   @map("event_type")
+  recipientEmail    String?  @map("recipient_email")
+  subject           String?
+  payload           Json     @default("{}")
+  headers           Json     @default("{}")
+  occurredAt        DateTime? @map("occurred_at")
+  receivedAt        DateTime @default(now()) @map("received_at")
+  processedAt       DateTime? @map("processed_at")
+  ignoredReason     String?  @map("ignored_reason")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  delivery MailDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, providerEventId])
+  @@index([tenantId, provider, providerMessageId])
+  @@index([tenantId, deliveryId, occurredAt])
+  @@index([tenantId, eventType, occurredAt])
+  @@map("mail_provider_events")
+}
+
+model MailIdempotencyKey {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  idempotencyKey String   @map("idempotency_key")
+  eventKey       String   @map("event_key")
+  recipientEmail String   @map("recipient_email")
+  deliveryId     String?  @map("delivery_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, eventKey, recipientEmail, createdAt])
+  @@index([tenantId, deliveryId])
+  @@map("mail_idempotency_keys")
 }
 
 model EmailTemplate {
@@ -1177,6 +1431,7 @@ model EmailTemplate {
   tenantId       String   @map("tenant_id")
   slug           String
   name           String
+  description    String?
   eventKey       String   @map("event_key")
   templateType   String   @default("transactional") @map("template_type")
   folderKey      String   @default("general") @map("folder_key")
@@ -1187,12 +1442,21 @@ model EmailTemplate {
   approvalState  String   @default("draft") @map("approval_state")
   variables      Json     @default("[]")
   metadata       Json     @default("{}")
+  isArchived     Boolean  @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
+  publishedVersionId String? @unique @map("published_version_id")
   publishedAt    DateTime? @map("published_at")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  versions EmailTemplateVersion[]
+  tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions         EmailTemplateVersion[]       @relation("EmailTemplateVersions")
+  bindings         EmailTemplateBinding[]
+  publishedVersion EmailTemplateVersion?        @relation("EmailTemplatePublishedVersion", fields: [publishedVersionId], references: [id], onDelete: SetNull)
+  approvals        MailTemplateApproval[]
+  previewProfiles  MailTemplatePreviewProfile[]
+  campaigns        MailCampaign[]
+  mailDeliveries   MailDelivery[]              @relation("MailDeliveryTemplate")
 
   @@unique([tenantId, slug])
   @@index([tenantId, eventKey, status])
@@ -1206,21 +1470,139 @@ model EmailTemplateVersion {
   templateId    String   @map("template_id")
   versionNumber Int      @map("version_number")
   subject       String
+  previewText   String?  @map("preview_text")
   html          String
+  css           String?
   text          String?
   status        String   @default("draft")
   approvalState String   @default("draft") @map("approval_state")
   variables     Json     @default("[]")
   metadata      Json     @default("{}")
+  renderMode    String   @default("code") @map("render_mode")
+  lintSummary   Json?    @map("lint_summary")
+  spamScore     Float?   @map("spam_score")
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
   publishedAt   DateTime? @map("published_at")
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  template EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template      EmailTemplate          @relation("EmailTemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+  publishedBy   EmailTemplate?         @relation("EmailTemplatePublishedVersion")
+  bindings      EmailTemplateBinding[]
+  approvals     MailTemplateApproval[]
+  mailDeliveries MailDelivery[]          @relation("MailDeliveryTemplateVersion")
+  campaigns     MailCampaign[]          @relation("MailCampaignTemplateVersion")
 
   @@unique([tenantId, templateId, versionNumber])
   @@index([tenantId, templateId, createdAt])
+  @@index([tenantId, templateId, status, createdAt])
+  @@index([tenantId, approvalState, updatedAt])
   @@map("email_template_versions")
+}
+
+model EmailTemplateBinding {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  eventKey          String   @map("event_key")
+  templateId        String   @map("template_id")
+  templateVersionId String   @map("template_version_id")
+  isEnabled         Boolean  @default(true) @map("is_enabled")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template        EmailTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateVersion EmailTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, eventKey])
+  @@index([tenantId, templateId])
+  @@index([tenantId, templateVersionId])
+  @@map("email_template_bindings")
+}
+
+model MailTemplateApproval {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  templateId        String   @map("template_id")
+  templateVersionId String   @map("template_version_id")
+  action            String
+  comment           String?
+  actorId           String?  @map("actor_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template        EmailTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateVersion EmailTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, templateId, createdAt])
+  @@index([tenantId, templateVersionId, createdAt])
+  @@map("mail_template_approvals")
+}
+
+model MailTemplatePreviewProfile {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  templateId  String?  @map("template_id")
+  eventKey    String?  @map("event_key")
+  name        String
+  description String?
+  variables   Json     @default("{}")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, templateId, isDefault])
+  @@index([tenantId, eventKey, isDefault])
+  @@map("mail_template_preview_profiles")
+}
+
+model MailTemplateSnippet {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  key          String
+  name         String
+  description  String?
+  templateType String?  @map("template_type")
+  subject      String?
+  html         String?
+  css          String?
+  text         String?
+  metadata     Json     @default("{}")
+  isSystem     Boolean  @default(false) @map("is_system")
+  isArchived   Boolean  @default(false) @map("is_archived")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId, templateType, isArchived, updatedAt])
+  @@map("mail_template_snippets")
+}
+
+model MailTemplateBlock {
+  id          String   @id
+  tenantId    String   @map("tenant_id")
+  key         String
+  name        String
+  category    String   @default("general")
+  description String?
+  html        String
+  css         String?
+  metadata    Json     @default("{}")
+  isSystem    Boolean  @default(false) @map("is_system")
+  isArchived  Boolean  @default(false) @map("is_archived")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId, category, isArchived, updatedAt])
+  @@map("mail_template_blocks")
 }
 
 model MailContact {
@@ -1240,13 +1622,101 @@ model MailContact {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  suppressions    MailSuppression[]
+  identities       MailContactIdentity[]
+  consentStates   MailConsentState[]
+  snapshotMembers MailAudienceSnapshotMember[]
+  flowEnrollments MailFlowEnrollment[]
+  flowActionLogs  MailFlowActionLog[]
 
   @@unique([tenantId, normalizedEmail])
   @@index([tenantId, isSendable])
   @@index([tenantId, customerId])
   @@index([tenantId, lastActivityAt])
   @@map("mail_contacts")
+}
+
+model MailContactIdentity {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  contactId         String   @map("contact_id")
+  entityType        String   @map("entity_type")
+  entityKey         String   @map("entity_key")
+  customerId        String?  @map("customer_id")
+  customerUserId    String?  @map("customer_user_id")
+  shopifyCustomerId String?  @map("shopify_customer_id")
+  email             String?
+  phone             String?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact MailContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entityType, entityKey])
+  @@index([tenantId, contactId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, customerUserId])
+  @@index([tenantId, shopifyCustomerId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@map("mail_contact_identities")
+}
+
+model MailSuppression {
+  id         String    @id
+  tenantId   String    @map("tenant_id")
+  contactId  String    @map("contact_id")
+  channel    String    @default("email")
+  scope      String    @default("global")
+  category   String?
+  campaignId String?   @map("campaign_id")
+  flowId     String?   @map("flow_id")
+  templateId String?   @map("template_id")
+  isActive   Boolean   @default(true) @map("is_active")
+  reason     String    @default("manual")
+  source     String    @default("admin-ui")
+  notes      String?
+  expiresAt  DateTime? @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact MailContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, contactId, channel, scope, isActive])
+  @@index([tenantId, category, isActive])
+  @@index([tenantId, campaignId, isActive])
+  @@index([tenantId, flowId, isActive])
+  @@index([tenantId, templateId, isActive])
+  @@index([tenantId, isActive, createdAt])
+  @@index([tenantId, reason])
+  @@map("mail_suppressions")
+}
+
+model MailConsentState {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  contactId    String   @map("contact_id")
+  channel      String   @default("email")
+  category     String   @default("marketing")
+  state        String   @default("unknown")
+  source       String   @default("external_event")
+  sourceDetail String?  @map("source_detail")
+  metadata     Json     @default("{}")
+  capturedAt   DateTime @default(now()) @map("captured_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact MailContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, contactId, channel, category])
+  @@index([tenantId, contactId, channel, category])
+  @@index([tenantId, state, updatedAt])
+  @@map("mail_consent_states")
 }
 
 model MailAudience {
@@ -1263,11 +1733,109 @@ model MailAudience {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  snapshots MailAudienceSnapshot[]
+  campaigns MailCampaign[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, isArchived, updatedAt])
   @@map("mail_audiences")
+}
+
+model MailAudienceSnapshot {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  audienceId     String?  @map("audience_id")
+  name           String
+  filters        Json     @default("{}")
+  summary        Json     @default("{}")
+  sourceSummary  Json     @default("{}") @map("source_summary")
+  memberCount    Int      @default(0) @map("member_count")
+  reachableCount Int      @default(0) @map("reachable_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  audience  MailAudience?                 @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  members   MailAudienceSnapshotMember[]
+  campaigns MailCampaign[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, audienceId, createdAt])
+  @@map("mail_audience_snapshots")
+}
+
+model MailAudienceSnapshotMember {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  snapshotId        String   @map("snapshot_id")
+  contactId         String   @map("contact_id")
+  customerId        String?  @map("customer_id")
+  email             String
+  consentState      String   @default("unknown") @map("consent_state")
+  suppressionReason String?  @map("suppression_reason")
+  isSendable        Boolean  @default(false) @map("is_sendable")
+  buyerIntent       String?  @map("buyer_intent")
+  lastActivityAt    DateTime? @map("last_activity_at")
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  snapshot MailAudienceSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  contact  MailContact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, contactId])
+  @@index([tenantId, snapshotId])
+  @@index([tenantId, customerId])
+  @@map("mail_audience_snapshot_members")
+}
+
+model MailCampaign {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  name           String
+  description    String?
+  status         String   @default("draft")
+  audienceId     String?  @map("audience_id")
+  snapshotId     String?  @map("snapshot_id")
+  templateId     String?  @map("template_id")
+  templateVersionId String? @map("template_version_id")
+  subjectOverride String? @map("subject_override")
+  senderName     String?  @map("sender_name")
+  replyTo        String?  @map("reply_to")
+  scheduledAt    DateTime? @map("scheduled_at")
+  queuedAt       DateTime? @map("queued_at")
+  sentAt         DateTime? @map("sent_at")
+  pausedAt       DateTime? @map("paused_at")
+  approvedAt     DateTime? @map("approved_at")
+  createdByMemberId String? @map("created_by_member_id")
+  approvedByMemberId String? @map("approved_by_member_id")
+  completedAt    DateTime? @map("completed_at")
+  recipientCount Int      @default(0) @map("recipient_count")
+  queuedCount    Int      @default(0) @map("queued_count")
+  sentCount      Int      @default(0) @map("sent_count")
+  failedCount    Int      @default(0) @map("failed_count")
+  skippedCount   Int      @default(0) @map("skipped_count")
+  suppressedCount Int     @default(0) @map("suppressed_count")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  audience MailAudience?         @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  snapshot MailAudienceSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  template EmailTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateVersion EmailTemplateVersion? @relation("MailCampaignTemplateVersion", fields: [templateVersionId], references: [id], onDelete: SetNull)
+  createdByMember Member?        @relation("MailCampaignCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  approvedByMember Member?       @relation("MailCampaignApprover", fields: [approvedByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, updatedAt])
+  @@index([tenantId, audienceId])
+  @@index([tenantId, snapshotId])
+  @@index([tenantId, templateVersionId])
+  @@index([tenantId, createdByMemberId])
+  @@index([tenantId, approvedByMemberId])
+  @@map("mail_campaigns")
 }
 
 model MailFlow {
@@ -1279,16 +1847,209 @@ model MailFlow {
   status      String   @default("draft")
   graph       Json     @default("{}")
   metadata    Json     @default("{}")
+  activeVersionId String? @unique @map("active_version_id")
   publishedAt DateTime? @map("published_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activeVersion MailFlowVersion?    @relation("MailFlowActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  versions      MailFlowVersion[]   @relation("MailFlowVersions")
+  runs          MailFlowRun[]
+  enrollments   MailFlowEnrollment[]
+  actionLogs    MailFlowActionLog[]
+  idempotencyKeys MailFlowIdempotencyKey[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status, updatedAt])
   @@index([tenantId, triggerType])
   @@map("mail_flows")
+}
+
+model MailFlowVersion {
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  flowId        String   @map("flow_id")
+  versionNumber Int      @map("version_number")
+  status        String   @default("draft")
+  triggerType   String   @map("trigger_type")
+  graph         Json     @default("{}")
+  summary       Json     @default("{}")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow           MailFlow            @relation("MailFlowVersions", fields: [flowId], references: [id], onDelete: Cascade)
+  activeForFlows MailFlow[]          @relation("MailFlowActiveVersion")
+  nodes          MailFlowNode[]
+  runs           MailFlowRun[]
+  enrollments    MailFlowEnrollment[]
+  actionLogs     MailFlowActionLog[]
+  idempotencyKeys MailFlowIdempotencyKey[]
+
+  @@unique([tenantId, flowId, versionNumber])
+  @@index([tenantId, flowId, status])
+  @@index([tenantId, triggerType])
+  @@map("mail_flow_versions")
+}
+
+model MailFlowNode {
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  flowVersionId String   @map("flow_version_id")
+  nodeKey       String   @map("node_key")
+  nodeType      String   @map("node_type")
+  label         String
+  description   String?
+  nextNodeKey   String?  @map("next_node_key")
+  routes        Json     @default("[]")
+  config        Json     @default("{}")
+  sortOrder     Int      @default(0) @map("sort_order")
+  positionX     Int      @default(0) @map("position_x")
+  positionY     Int      @default(0) @map("position_y")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flowVersion MailFlowVersion @relation(fields: [flowVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, flowVersionId, nodeKey])
+  @@index([tenantId, nodeType])
+  @@map("mail_flow_nodes")
+}
+
+model MailFlowWebhookDestination {
+  id                   String   @id
+  tenantId             String   @map("tenant_id")
+  name                 String
+  slug                 String
+  url                  String
+  status               String   @default("disabled")
+  authType             String   @default("none") @map("auth_type")
+  secretHeaderName     String?  @map("secret_header_name")
+  secretValueEncrypted String?  @map("secret_value_encrypted")
+  timeoutMs            Int      @default(5000) @map("timeout_ms")
+  metadata             Json     @default("{}")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status, updatedAt])
+  @@map("mail_flow_webhook_destinations")
+}
+
+model MailFlowRun {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  flowId           String   @map("flow_id")
+  flowVersionId    String?  @map("flow_version_id")
+  triggerType      String   @map("trigger_type")
+  triggerEventType String?  @map("trigger_event_type")
+  status           String   @default("recorded")
+  enrollmentCount  Int      @default(0) @map("enrollment_count")
+  completedCount   Int      @default(0) @map("completed_count")
+  failedCount      Int      @default(0) @map("failed_count")
+  startedAt        DateTime? @map("started_at")
+  endedAt          DateTime? @map("ended_at")
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow         MailFlow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion  MailFlowVersion?       @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+  enrollments  MailFlowEnrollment[]
+  actionLogs   MailFlowActionLog[]
+
+  @@index([tenantId, flowId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("mail_flow_runs")
+}
+
+model MailFlowEnrollment {
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  flowId        String   @map("flow_id")
+  flowVersionId String?  @map("flow_version_id")
+  flowRunId     String   @map("flow_run_id")
+  contactId     String?  @map("contact_id")
+  customerId    String?  @map("customer_id")
+  email         String?
+  currentNodeKey String? @map("current_node_key")
+  status        String   @default("recorded")
+  eventPayload  Json     @default("{}") @map("event_payload")
+  lastError     String?  @map("last_error")
+  nextRunAt     DateTime? @map("next_run_at")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow         MailFlow         @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion  MailFlowVersion? @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+  flowRun      MailFlowRun      @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+  contact      MailContact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  actionLogs   MailFlowActionLog[]
+
+  @@index([tenantId, flowId, status])
+  @@index([tenantId, flowRunId])
+  @@index([tenantId, contactId])
+  @@map("mail_flow_enrollments")
+}
+
+model MailFlowActionLog {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  flowId         String   @map("flow_id")
+  flowVersionId  String?  @map("flow_version_id")
+  flowRunId      String?  @map("flow_run_id")
+  enrollmentId   String?  @map("enrollment_id")
+  contactId      String?  @map("contact_id")
+  actionType     String   @map("action_type")
+  nodeKey        String?  @map("node_key")
+  status         String   @default("recorded")
+  message        String?
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow        MailFlow            @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion MailFlowVersion?    @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+  flowRun     MailFlowRun?        @relation(fields: [flowRunId], references: [id], onDelete: SetNull)
+  enrollment  MailFlowEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  contact     MailContact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, flowId, createdAt])
+  @@index([tenantId, flowRunId])
+  @@index([tenantId, enrollmentId])
+  @@index([tenantId, actionType, status])
+  @@map("mail_flow_action_logs")
+}
+
+model MailFlowIdempotencyKey {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  flowId         String   @map("flow_id")
+  flowVersionId  String?  @map("flow_version_id")
+  triggerType    String   @map("trigger_type")
+  targetKey      String   @map("target_key")
+  idempotencyKey String   @map("idempotency_key")
+  expiresAt      DateTime @map("expires_at")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow        MailFlow         @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion MailFlowVersion? @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, flowId, idempotencyKey])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, triggerType, targetKey])
+  @@map("mail_flow_idempotency_keys")
 }
 
 model MailMarketingEvent {
@@ -1323,6 +2084,61 @@ model MailMarketingSetting {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("mail_marketing_settings")
+}
+
+model MailCenterSetting {
+  id                String   @id
+  tenantId          String   @unique @map("tenant_id")
+  providerMode      String   @default("disabled") @map("provider_mode")
+  categorySystem    Json     @default("{}") @map("category_system")
+  categoryB2b       Json     @default("{}") @map("category_b2b")
+  categoryMarketing Json     @default("{}") @map("category_marketing")
+  updatedBy         String?  @map("updated_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("mail_center_settings")
+}
+
+model MailSettingsAuditLog {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  category  String
+  field     String
+  oldValue  Json?    @map("old_value")
+  newValue  Json?    @map("new_value")
+  changedBy String   @default("system") @map("changed_by")
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, changedAt])
+  @@index([tenantId, category, field])
+  @@map("mail_settings_audit_logs")
+}
+
+model MailDlq {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  eventKey       String   @map("event_key")
+  recipientEmail String   @map("recipient_email")
+  status         String   @default("pending")
+  provider       String?
+  errorMessage   String?  @map("error_message")
+  lastDeliveryId String?  @map("last_delivery_id")
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, eventKey, createdAt])
+  @@index([tenantId, recipientEmail])
+  @@map("mail_dlq")
 }
 
 model AircallUser {
@@ -1769,6 +2585,76 @@ model WorkflowRuleBackfillReport {
   @@index([tenantId, status])
   @@index([tenantId, createdByMemberId])
   @@map("workflow_rule_backfill_reports")
+}
+
+model AlgorithmStrategy {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  surfaceId         String   @map("surface_id")
+  name              String
+  status            String   @default("draft")
+  definition        Json
+  reason            String?
+  warnings          String[] @default([])
+  createdByMemberId String?  @map("created_by_member_id")
+  activatedAt       DateTime? @map("activated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  versions    AlgorithmStrategyVersion[]
+  simulations AlgorithmStrategySimulation[]
+
+  @@index([tenantId, surfaceId, status])
+  @@index([tenantId, createdByMemberId])
+  @@index([tenantId, activatedAt])
+  @@map("algorithm_strategies")
+}
+
+model AlgorithmStrategyVersion {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  strategyId       String   @map("strategy_id")
+  surfaceId        String   @map("surface_id")
+  versionNo        Int      @map("version_no")
+  jsonSnapshot     Json     @map("json_snapshot")
+  editedByMemberId String?  @map("edited_by_member_id")
+  editedAt         DateTime @default(now()) @map("edited_at")
+  comment          String?
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strategy AlgorithmStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  editor   Member? @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, strategyId, versionNo])
+  @@index([tenantId, surfaceId, editedAt])
+  @@index([tenantId, editedByMemberId])
+  @@map("algorithm_strategy_versions")
+}
+
+model AlgorithmStrategySimulation {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  strategyId        String?  @map("strategy_id")
+  surfaceId         String   @map("surface_id")
+  status            String   @default("passed")
+  windowStart       DateTime? @map("window_start")
+  windowEnd         DateTime? @map("window_end")
+  sampleSize        Int      @default(0) @map("sample_size")
+  result            Json     @default("{}")
+  createdByMemberId String?  @map("created_by_member_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  finishedAt        DateTime? @map("finished_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strategy AlgorithmStrategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  creator  Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, surfaceId, createdAt])
+  @@index([tenantId, strategyId])
+  @@index([tenantId, createdByMemberId])
+  @@map("algorithm_strategy_simulations")
 }
 
 model WorkflowRuleExecution {

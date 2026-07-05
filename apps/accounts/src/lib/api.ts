@@ -36,9 +36,36 @@ export function readSession() {
 }
 
 export function apiErrorMessage(error: unknown) {
-  if (error instanceof Error && 'requestId' in error) {
-    const requestId = String((error as { requestId?: string }).requestId ?? '');
-    return `${error.message}${requestId ? ` (request_id: ${requestId})` : ''}`;
+  const status = typeof error === 'object' && error !== null && 'status' in error
+    ? Number((error as { status?: unknown }).status)
+    : 0;
+  const message = error instanceof Error ? error.message : '';
+  if (!message || unsafeCustomerErrorCopy(message)) {
+    return customerFallbackError(status);
   }
-  return error instanceof Error ? error.message : 'Request failed';
+  return message;
+}
+
+function customerFallbackError(status: number) {
+  if (status === 401 || status === 403) {
+    return 'Please sign in again or ask the account owner for access.';
+  }
+  if (status === 404) {
+    return 'That record is no longer available for this account.';
+  }
+  if (status === 409) {
+    return 'This changed while you were working. Refresh the page and try again.';
+  }
+  if (status >= 400 && status < 500) {
+    return 'Please check the information and try again.';
+  }
+  if (status >= 500) {
+    return 'Account services are temporarily unavailable. Please try again shortly.';
+  }
+  return 'Request failed. Please try again.';
+}
+
+function unsafeCustomerErrorCopy(message: string) {
+  return /\b(tenant|provider|workflow|queue|routing|source|axis|rule|suppression|metadata|debug|stack trace|raw payload|raw json|admin[_\s-]*graphql|staff note|campaign|audience|flow)\b/i.test(message)
+    || /\b(token|authorization|secret|passwordhash|request_id)\b/i.test(message);
 }

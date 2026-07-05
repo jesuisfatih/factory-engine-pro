@@ -1,0 +1,133 @@
+{
+  "generatedAt": "2026-06-28T17:05:59.034Z",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "taskId": "sr_roadmap27_transfer_task",
+  "customerId": "cust_roadmap27_transfer",
+  "principals": {
+    "source": {
+      "id": "tmbr_ten_dtfbank_linda_marroquin",
+      "email": "dtfbanktx@gmail.com",
+      "loginStatus": 201,
+      "permissions": [
+        "orders.read",
+        "task.assign",
+        "support.read",
+        "segments.read",
+        "support.write",
+        "customers.read",
+        "customers.write",
+        "aircall.users.read"
+      ]
+    },
+    "target": {
+      "id": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "email": "ihsan@dtfbank.com",
+      "loginStatus": 201,
+      "permissions": [
+        "orders.read",
+        "task.assign",
+        "orders.write",
+        "pricing.read",
+        "support.read",
+        "pricing.write",
+        "segments.read",
+        "support.write",
+        "customers.read",
+        "customers.write",
+        "commission.submit",
+        "aircall.users.read"
+      ]
+    }
+  },
+  "transferTargets": {
+    "status": 200,
+    "requestId": "c81bad2f-eac7-4520-a732-d6d91200ca8c",
+    "targetFound": true,
+    "targetAxes": [
+      "sales",
+      "support",
+      "account"
+    ],
+    "targetRoleNames": [
+      "Sales Personel"
+    ],
+    "totalTargets": 3
+  },
+  "before": {
+    "sourceStatus": 200,
+    "targetStatus": 200,
+    "sourceHasTask": true,
+    "targetHasTask": false,
+    "sourceTask": {
+      "id": "sr_roadmap27_transfer_task",
+      "title": "Roadmap 27 Transfer Proof Co",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedMemberName": "Linda Marroquin",
+      "axis": "support"
+    },
+    "targetSummary": {
+      "dailyCount": 2,
+      "priorityCount": 3,
+      "pinnedCount": 0,
+      "highUrgencyCount": 2,
+      "visibleAxes": [
+        "sales"
+      ],
+      "segmentGroupCount": 2
+    }
+  },
+  "transfer": {
+    "status": 201,
+    "requestId": "d9c6661b-6331-4ed7-b3a5-de1e08d59e7d",
+    "result": {
+      "ok": true,
+      "taskId": "sr_roadmap27_transfer_task",
+      "customerId": "cust_roadmap27_transfer",
+      "fromMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "fromMemberName": "Linda Marroquin",
+      "toMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "toMemberName": "Ihsan Taskiran",
+      "fromAxis": "support",
+      "toAxis": "sales",
+      "sourceListRemoved": true,
+      "targetListEntered": true
+    }
+  },
+  "after": {
+    "sourceStatus": 200,
+    "targetStatus": 200,
+    "sourceHasTask": false,
+    "targetHasTask": true,
+    "targetTask": {
+      "id": "sr_roadmap27_transfer_task",
+      "title": "Roadmap 27 Transfer Proof Co",
+      "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "assignedMemberName": "Ihsan Taskiran",
+      "axis": "sales"
+    }
+  },
+  "brief": {
+    "targetStatus": 200,
+    "targetRequestId": "329cf30a-2613-412e-8fad-b8b06cb122ef",
+    "targetCard": {
+      "id": "sr_roadmap27_transfer_task",
+      "assignedMemberId": "tmbr_ten_dtfbank_ihsan_taskiran",
+      "assignedMemberName": "Ihsan Taskiran",
+      "axis": "sales"
+    },
+    "sourceStatusAfterTransfer": 403,
+    "sourceRequestIdAfterTransfer": "c7a63c7c-883e-43af-99ed-289ea74f8388",
+    "sourceMessageAfterTransfer": "Customer is outside your axis scope"
+  },
+  "gates": {
+    "transferTargetsOk": true,
+    "sourceStartedWithTask": true,
+    "targetStartedWithoutTask": true,
+    "transferEndpointOk": true,
+    "sourceLostTask": true,
+    "targetReceivedTask": true,
+    "targetCanReadBrief": true,
+    "sourceCannotReadBriefAfterTransfer": true
+  }
+}

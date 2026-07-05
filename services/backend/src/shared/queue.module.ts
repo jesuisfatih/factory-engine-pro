@@ -6,6 +6,8 @@ export const REDIS_CONNECTION = Symbol('REDIS_CONNECTION');
 export const AUTH_EVENTS_QUEUE = Symbol('AUTH_EVENTS_QUEUE');
 export const PRICING_RULE_SYNC_QUEUE = Symbol('PRICING_RULE_SYNC_QUEUE');
 export const MAIL_OUTBOUND_QUEUE = Symbol('MAIL_OUTBOUND_QUEUE');
+export const MAIL_MARKETING_FLOW_QUEUE = Symbol('MAIL_MARKETING_FLOW_QUEUE');
+export const MAIL_MARKETING_CAMPAIGN_QUEUE = Symbol('MAIL_MARKETING_CAMPAIGN_QUEUE');
 export const AIRCALL_INGEST_QUEUE = Symbol('AIRCALL_INGEST_QUEUE');
 export const AIRCALL_ROLLING_SYNC_QUEUE = Symbol('AIRCALL_ROLLING_SYNC_QUEUE');
 export const AI_TRANSCRIPT_RESOLVER_QUEUE = Symbol('AI_TRANSCRIPT_RESOLVER_QUEUE');
@@ -23,6 +25,10 @@ export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
 export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
 export const WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME = 'workflow-scheduled-actions';
 export const WORKFLOW_SCHEDULED_ACTION_JOB = 'workflow_scheduled_actions_sweep';
+export const MAIL_MARKETING_FLOW_QUEUE_NAME = 'mail-marketing-flow';
+export const MAIL_MARKETING_FLOW_JOB = 'process-enrollment';
+export const MAIL_MARKETING_CAMPAIGN_QUEUE_NAME = 'mail-marketing-campaign';
+export const MAIL_MARKETING_CAMPAIGN_JOB = 'queue-campaign';
 
 @Global()
 @Module({
@@ -58,6 +64,22 @@ export const WORKFLOW_SCHEDULED_ACTION_JOB = 'workflow_scheduled_actions_sweep';
       useFactory: (connection: ConnectionOptions | null) => {
         if (!connection) return null;
         return new Queue('mail-outbound', { connection });
+      },
+    },
+    {
+      provide: MAIL_MARKETING_FLOW_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(MAIL_MARKETING_FLOW_QUEUE_NAME, { connection });
+      },
+    },
+    {
+      provide: MAIL_MARKETING_CAMPAIGN_QUEUE,
+      inject: [REDIS_CONNECTION],
+      useFactory: (connection: ConnectionOptions | null) => {
+        if (!connection) return null;
+        return new Queue(MAIL_MARKETING_CAMPAIGN_QUEUE_NAME, { connection });
       },
     },
     {
@@ -122,6 +144,8 @@ export const WORKFLOW_SCHEDULED_ACTION_JOB = 'workflow_scheduled_actions_sweep';
     AUTH_EVENTS_QUEUE,
     PRICING_RULE_SYNC_QUEUE,
     MAIL_OUTBOUND_QUEUE,
+    MAIL_MARKETING_FLOW_QUEUE,
+    MAIL_MARKETING_CAMPAIGN_QUEUE,
     AIRCALL_INGEST_QUEUE,
     AIRCALL_ROLLING_SYNC_QUEUE,
     AI_TRANSCRIPT_RESOLVER_QUEUE,

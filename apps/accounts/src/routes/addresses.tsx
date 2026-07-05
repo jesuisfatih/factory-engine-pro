@@ -9,6 +9,7 @@ import {
 import { PageHeader } from '@/components/PageHeader';
 import { Dialog, DialogTitle, DialogClose } from '@/components/Dialog';
 import { ErrorState } from '@/components/QueryState';
+import { apiErrorMessage } from '@/lib/api';
 import {
   fetchAccountAddresses, saveAccountAddress, deleteAccountAddress,
   type AccountAddress, type AddressType,
@@ -200,12 +201,12 @@ function AddressesView() {
   const save = useMutation({
     mutationFn: saveAccountAddress,
     onSuccess: () => { toast.success('Address saved'); qc.invalidateQueries({ queryKey: QK }); setEditing(null); },
-    onError: (error) => toast.error('Save failed', { description: (error as Error).message }),
+    onError: (error) => toast.error('Save failed', { description: apiErrorMessage(error) }),
   });
   const remove = useMutation({
     mutationFn: deleteAccountAddress,
     onSuccess: () => { toast.success('Address deleted'); qc.invalidateQueries({ queryKey: QK }); },
-    onError: (error) => toast.error('Delete failed', { description: (error as Error).message }),
+    onError: (error) => toast.error('Delete failed', { description: apiErrorMessage(error) }),
   });
 
   const filtered = useMemo(() => tab === 'all' ? addresses : addresses.filter((row) => row.type === tab), [addresses, tab]);

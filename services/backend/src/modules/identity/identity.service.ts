@@ -258,6 +258,7 @@ export class IdentityService {
         hasAircallWebhookSecret: false,
         hasAnthropicApiKey: false,
         hasResendApiKey: false,
+        hasResendWebhookSecret: false,
       };
     }
     return {
@@ -275,6 +276,7 @@ export class IdentityService {
       hasAircallWebhookSecret: Boolean(config.aircallWebhookSecretEncrypted),
       hasAnthropicApiKey: Boolean(config.anthropicApiKeyEncrypted),
       hasResendApiKey: Boolean(config.resendApiKeyEncrypted),
+      hasResendWebhookSecret: Boolean(config.resendWebhookSecretEncrypted),
     };
   }
 
@@ -312,6 +314,7 @@ export class IdentityService {
       aircallWebhookSecretEncrypted: this.crypto.encrypt(input.aircallWebhookSecret),
       anthropicApiKeyEncrypted: this.crypto.encrypt(input.anthropicApiKey),
       resendApiKeyEncrypted: this.crypto.encrypt(input.resendApiKey),
+      resendWebhookSecretEncrypted: this.crypto.encrypt(input.resendWebhookSecret),
     };
     if (existing) {
       await this.prisma.db.tenantConfig.updateMany({ where: { id: existing.id }, data: stripUndefined(data) });

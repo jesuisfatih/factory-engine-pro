@@ -1,0 +1,55 @@
+{
+  "target": "ROADMAP m06/m07 staff queue split live UI proof",
+  "capturedAt": "2026-06-29T11:37:48.1532981Z",
+  "liveBuildSha": "7ba4bb441ce532ddaca4ed8e1defe4a15dfba9fc",
+  "baseUrl": "https://app.dtfbank.com",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "principal": {
+    "email": "dtfbanktx@gmail.com",
+    "type": "member",
+    "tokensOmitted": true
+  },
+  "screenshots": {
+    "m06Daily": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-daily-workflow-ui-live.png",
+    "m07Priority": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m07-priority-segment-groups-ui-live.png",
+    "urlbar": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-m07-staff-queue-urlbar-live.png"
+  },
+  "state": {
+    "url": "https://app.dtfbank.com/staff/queue",
+    "title": "Factory Engine Pro Staff",
+    "bodyText": "D\nDTF Bank\nCustomer Service\nWORKSPACE\nCall Queue\n104\nCustomers\n0\nE-mail\nCalendar\nNotes\nKNOWLEDGE\nTraining\nAnnouncements\nMessaging\nACCOUNT\nSubmit Request\nNotifications\n7\nLM\ndtfbanktx@gmail.com\nCustomer Service\nCall Queue\nD\nDTF Bank\nDAILY CALLS\n0\ntoday's AI workflow\nPRIORITY CUSTOMERS\n104\nassigned segments\nPINNED\n4\npersistent board\nU80+\n90\nsame formula\nAXES\n1\nsupport\nDaily call list\n\nToday's workflow tasks from live call analysis.\n\n0 tasks\nNo workflow tasks from today's calls.\nPriority kanban\n\nAssigned Shopify segments grouped by segment owner scope.\n\n5 segments\nMin 2 max 5 purchase\n25/25\n1st Place Awards & Embroidery\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $3.229\nPin\nAkil Kurji\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $411\nPinned\nAmericraft Sign Co. LLC\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $1.511\nPin\nApliiq, Inc\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $413\nPinned\n#gregsvinyl\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $300\nPin\n4 FORTY SCREENS AND STITCHES\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $4.593\nPin\n404 Cafe and Creamery\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $400\nPin\n802 Print\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.297\nPin\n904 Vinyls & More\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $2.803\nPin\nA3-USA\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $264\nPin\nAaron Turpin\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.102\nPin\nAbdul Mallah\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $217\nPin\nAbundant Design\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $4.193\nPin\nAkin Industries LLC\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $168\nPin\nAlabama Adult and Teen Challenge\nU150.9\nMin 2 max 5 purchase segment - 0 recent r",
+    "dailyText": "Daily call list\n\nToday's workflow tasks from live call analysis.\n\n0 tasks\nNo workflow tasks from today's calls.",
+    "priorityText": "Priority kanban\n\nAssigned Shopify segments grouped by segment owner scope.\n\n5 segments\nMin 2 max 5 purchase\n25/25\n1st Place Awards & Embroidery\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $3.229\nPin\nAkil Kurji\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $411\nPinned\nAmericraft Sign Co. LLC\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $1.511\nPin\nApliiq, Inc\nU151.9\nMin 2 max 5 purchase segment - 1 recent requests - support axis\nMin 2 max 5 purchase\n3 orders | $413\nPinned\n#gregsvinyl\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $300\nPin\n4 FORTY SCREENS AND STITCHES\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n5 orders | $4.593\nPin\n404 Cafe and Creamery\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $400\nPin\n802 Print\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.297\nPin\n904 Vinyls & More\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n4 orders | $2.803\nPin\nA3-USA\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $264\nPin\nAaron Turpin\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $3.102\nPin\nAbdul Mallah\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $217\nPin\nAbundant Design\nU150.9\nMin 2 max 5 purchase segment - 0 recent requests - support axis\nMin 2 max 5 purchase\n2 orders | $4.1",
+    "dailyHasSegmentGroups": false,
+    "dailyEmptyState": true,
+    "prioritySegmentGroupCount": 5,
+    "prioritySegmentTitles": [
+      "Min 2 max 5 purchase",
+      "Customers over 20 orders",
+      "Wholesale Customers",
+      "Customers who have purchased DTF or UV DTF Printer",
+      "Customers who have purchased DTF inks, DTF films, or DTF powders"
+    ],
+    "priorityCustomerCardsVisible": 0,
+    "labels": [
+      "DAILY CALLS\n0\ntoday's AI workflow",
+      "PRIORITY CUSTOMERS\n104\nassigned segments",
+      "PINNED\n4\npersistent board",
+      "U80+\n90\nsame formula",
+      "AXES\n1\nsupport"
+    ],
+    "hasQueryError": false,
+    "authenticated": true
+  },
+  "assertions": {
+    "realSubdomain": true,
+    "authenticated": true,
+    "noQueryError": true,
+    "dailyFlatNoSegmentGroups": true,
+    "dailyShowsWorkflowEmptyState": true,
+    "priorityHasSegmentDropdowns": true,
+    "labelsClarifyDifferentSources": true
+  },
+  "pageUrl": "https://app.dtfbank.com/staff/queue"
+}

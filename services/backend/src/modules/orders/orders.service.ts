@@ -1,11 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
+  type AccountInvoiceQuery,
   type CreateDirectOrderInput,
   type OrderListQuery,
   type OrderSortBy,
+  type RecordAccountInvoicePaymentInput,
   type ResolveReorderInput,
+  type SaveAccountInvoiceInput,
   type TransferOrderToMemberInput,
+  type UpdateAccountInvoiceFileInput,
+  type UpdateAccountInvoiceStatusInput,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -13,6 +18,19 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { classifyFulfillment } from './order-fulfillment-classifier.js';
 import { defaultOrderOrderBy, type CommerceOrderOrderBy, type CommerceOrderWithRelations, OrdersRepository } from './orders.repository.js';
+
+const accountInvoiceInclude = {
+  customer: true,
+  order: true,
+  payments: { orderBy: { recordedAt: 'desc' } },
+  activities: { orderBy: { createdAt: 'desc' } },
+} satisfies Prisma.AccountInvoiceInclude;
+
+type InvoiceRecord = Prisma.AccountInvoiceGetPayload<{ include: typeof accountInvoiceInclude }>;
+
+function invoiceInclude() {
+  return accountInvoiceInclude;
+}
 
 @Injectable()
 export class OrdersService {
@@ -117,6 +135,225 @@ export class OrdersService {
         },
       },
     };
+  }
+
+  async invoices(query: AccountInvoiceQuery) {
+    const where: Prisma.AccountInvoiceWhereInput = {};
+    if (query.customerId) where.customerId = query.customerId;
+    if (query.orderId) where.orderId = query.orderId;
+    if (query.status) where.status = query.status;
+    if (query.search) {
+      where.OR = [
+        { invoiceNumber: { contains: query.search, mode: 'insensitive' } },
+        { order: { shopifyOrderNumber: { contains: query.search, mode: 'insensitive' } } },
+        { customer: { companyName: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+    const rows = await this.prisma.db.accountInvoice.findMany({
+      where,
+      include: invoiceInclude(),
+      orderBy: [{ issuedAt: 'desc' }, { createdAt: 'desc' }],
+      take: query.limit,
+    });
+    return {
+      data: rows.map((invoice) => this.mapInvoice(invoice)),
+      meta: { count: rows.length, limit: query.limit },
+    };
+  }
+
+  async orderInvoices(orderId: string) {
+    await this.repository.getRequired(orderId);
+    const rows = await this.prisma.db.accountInvoice.findMany({
+      where: { orderId },
+      include: invoiceInclude(),
+      orderBy: [{ issuedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 20,
+    });
+    return rows.map((invoice) => this.mapInvoice(invoice, true));
+  }
+
+  async invoice(invoiceId: string) {
+    return this.mapInvoice(await this.requireInvoice(invoiceId), true);
+  }
+
+  async createInvoice(input: SaveAccountInvoiceInput) {
+    const order = input.orderId ? await this.repository.getRequired(input.orderId) : null;
+    const customerId = input.customerId ?? order?.customerId;
+    if (!customerId) throw new BadRequestException('Select a customer or order before creating an invoice');
+    if (order?.customerId && input.customerId && input.customerId !== order.customerId) {
+      throw new BadRequestException('Selected order belongs to a different customer');
+    }
+    const customer = await this.prisma.db.customer.findFirst({ where: { id: customerId } });
+    if (!customer) throw new NotFoundException('Customer not found');
+    if (order?.id && input.status !== 'draft') {
+      const existingForOrder = await this.prisma.db.accountInvoice.findFirst({
+        where: { orderId: order.id, status: { not: 'draft' } },
+        select: { invoiceNumber: true },
+      });
+      if (existingForOrder) {
+        throw new ConflictException(`Invoice ${existingForOrder.invoiceNumber} already exists for this order`);
+      }
+    }
+
+    const issuedAt = input.issuedAt ? new Date(input.issuedAt) : new Date();
+    const dueAt = input.dueAt ? new Date(input.dueAt) : addDays(issuedAt, 30);
+    assertInvoiceUrl(input.fileUrl, 'Invoice file URL');
+    assertInvoiceUrl(input.externalPaymentUrl, 'Payment URL');
+    const lineItems = input.lineItems?.length ? input.lineItems : invoiceItemsFromOrder(order);
+    const subtotal = input.subtotal ?? roundMoney(lineItems.reduce((sum, item) => sum + invoiceLineTotal(item), 0));
+    const totalAmount = input.totalAmount ?? roundMoney(subtotal - input.discountAmount + input.shippingAmount + input.taxAmount);
+    const amountPaid = input.status === 'paid' ? totalAmount : input.amountPaid;
+    const status = invoiceStatusFromPayment(input.status, totalAmount, amountPaid);
+    const invoice = await this.prisma.db.accountInvoice.create({
+      data: {
+        id: prefixedId('ainv'),
+        tenantId: this.requireTenantId(),
+        customerId,
+        orderId: order?.id ?? null,
+        shopifyCustomerId: customer.shopifyCustomerId ?? order?.shopifyCustomerId ?? null,
+        invoiceNumber: input.invoiceNumber || `INV-${Date.now()}`,
+        status,
+        issuedAt,
+        dueAt,
+        subtotal,
+        discountAmount: input.discountAmount,
+        shippingAmount: input.shippingAmount,
+        taxAmount: input.taxAmount,
+        totalAmount,
+        amountPaid,
+        currency: input.currency || order?.currency || 'USD',
+        fileUrl: input.fileUrl ?? null,
+        externalPaymentUrl: input.externalPaymentUrl ?? null,
+        notes: input.notes ?? null,
+        lineItems: lineItems as Prisma.InputJsonValue,
+        metadata: {
+          source: 'admin_invoice_create',
+          orderNumber: order?.shopifyOrderNumber ?? null,
+        } as Prisma.InputJsonValue,
+      },
+      include: invoiceInclude(),
+    });
+    await this.recordInvoiceActivity(invoice.id, 'invoice_created', { orderId: order?.id ?? null, totalAmount });
+    this.logger.log('orders', 'invoice.create', 'Account invoice created', { invoice_id: invoice.id, order_id: order?.id, customer_id: customerId });
+    return this.invoice(invoice.id);
+  }
+
+  async updateInvoiceStatus(invoiceId: string, input: UpdateAccountInvoiceStatusInput) {
+    const existing = await this.requireInvoice(invoiceId);
+    const total = money(existing.totalAmount);
+    const amountPaid = input.status === 'paid' ? total : input.amountPaid ?? money(existing.amountPaid);
+    const status = invoiceStatusFromPayment(input.status, total, amountPaid);
+    const updated = await this.prisma.db.accountInvoice.updateMany({
+      where: { id: invoiceId },
+      data: {
+        status,
+        amountPaid,
+      },
+    });
+    if (updated.count === 0) throw new NotFoundException('Invoice not found');
+    await this.recordInvoiceActivity(invoiceId, 'invoice_status_updated', {
+      previousStatus: existing.status,
+      status,
+      note: input.note ?? null,
+      amountPaid,
+    });
+    return this.invoice(invoiceId);
+  }
+
+  async updateInvoiceFile(invoiceId: string, input: UpdateAccountInvoiceFileInput) {
+    const existing = await this.requireInvoice(invoiceId);
+    assertInvoiceUrl(input.fileUrl, 'Invoice file URL');
+    assertInvoiceUrl(input.externalPaymentUrl, 'Payment URL');
+    if (existing.status !== 'draft' && existing.fileUrl && existing.fileUrl !== input.fileUrl) {
+      throw new ConflictException('Issued invoice file cannot be replaced. Duplicate the invoice or void it before attaching a different file.');
+    }
+    const updated = await this.prisma.db.accountInvoice.updateMany({
+      where: { id: invoiceId },
+      data: {
+        fileUrl: input.fileUrl,
+        ...(input.externalPaymentUrl !== undefined ? { externalPaymentUrl: input.externalPaymentUrl } : {}),
+      },
+    });
+    if (updated.count === 0) throw new NotFoundException('Invoice not found');
+    await this.recordInvoiceActivity(invoiceId, 'invoice_file_updated', input);
+    return this.invoice(invoiceId);
+  }
+
+  async recordInvoicePayment(invoiceId: string, input: RecordAccountInvoicePaymentInput) {
+    const invoice = await this.requireInvoice(invoiceId);
+    const previousPaid = money(invoice.amountPaid);
+    const total = money(invoice.totalAmount);
+    const nextPaid = roundMoney(previousPaid + input.amount);
+    const status = invoiceStatusFromPayment(invoice.status, total, nextPaid);
+    const context = this.tenantContext.require();
+    await this.prisma.db.accountInvoicePayment.create({
+      data: {
+        id: prefixedId('aip'),
+        tenantId: this.requireTenantId(),
+        invoiceId,
+        amount: input.amount,
+        method: input.method,
+        note: input.note ?? null,
+        recordedByMemberId: context.principalType === 'member' ? context.principalId : null,
+        metadata: { previousPaid, nextPaid } as Prisma.InputJsonValue,
+      },
+    });
+    await this.prisma.db.accountInvoice.updateMany({
+      where: { id: invoiceId },
+      data: { amountPaid: nextPaid, status },
+    });
+    await this.recordInvoiceActivity(invoiceId, 'invoice_payment_recorded', {
+      amount: input.amount,
+      method: input.method,
+      previousStatus: invoice.status,
+      status,
+    });
+    return this.invoice(invoiceId);
+  }
+
+  async duplicateInvoice(invoiceId: string) {
+    const invoice = await this.requireInvoice(invoiceId);
+    const created = await this.prisma.db.accountInvoice.create({
+      data: {
+        id: prefixedId('ainv'),
+        tenantId: this.requireTenantId(),
+        customerId: invoice.customerId,
+        orderId: invoice.orderId,
+        shopifyCustomerId: invoice.shopifyCustomerId,
+        invoiceNumber: `INV-${Date.now()}`,
+        status: 'draft',
+        issuedAt: new Date(),
+        dueAt: invoice.dueAt,
+        subtotal: invoice.subtotal,
+        discountAmount: invoice.discountAmount,
+        shippingAmount: invoice.shippingAmount,
+        taxAmount: invoice.taxAmount,
+        totalAmount: invoice.totalAmount,
+        amountPaid: 0,
+        currency: invoice.currency,
+        fileUrl: null,
+        externalPaymentUrl: invoice.externalPaymentUrl,
+        notes: invoice.notes,
+        lineItems: invoice.lineItems as Prisma.InputJsonValue,
+        metadata: { duplicatedFromInvoiceId: invoice.id } as Prisma.InputJsonValue,
+      },
+      include: invoiceInclude(),
+    });
+    await this.recordInvoiceActivity(created.id, 'invoice_duplicated', { sourceInvoiceId: invoice.id });
+    return this.invoice(created.id);
+  }
+
+  async markOverdueInvoices() {
+    const now = new Date();
+    const rows = await this.prisma.db.accountInvoice.findMany({
+      where: { status: { in: ['unpaid', 'partial'] }, dueAt: { lt: now } },
+      take: 500,
+    });
+    for (const invoice of rows) {
+      await this.prisma.db.accountInvoice.updateMany({ where: { id: invoice.id }, data: { status: 'overdue' } });
+      await this.recordInvoiceActivity(invoice.id, 'invoice_marked_overdue', { previousStatus: invoice.status });
+    }
+    return { updated: rows.length };
   }
 
   async transferToMember(id: string, input: TransferOrderToMemberInput) {
@@ -361,6 +598,99 @@ export class OrdersService {
       events: events.map((event) => ({ eventType: event.eventType, count: event._count.eventType })),
       orders: orderCount,
     };
+  }
+
+  private async requireInvoice(invoiceId: string) {
+    const invoice = await this.prisma.db.accountInvoice.findFirst({
+      where: { id: invoiceId },
+      include: invoiceInclude(),
+    });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    return invoice;
+  }
+
+  private async recordInvoiceActivity(invoiceId: string, action: string, metadata: Record<string, unknown> = {}) {
+    const context = this.tenantContext.require();
+    await this.prisma.db.accountInvoiceActivity.create({
+      data: {
+        id: prefixedId('aia'),
+        tenantId: this.requireTenantId(),
+        invoiceId,
+        action,
+        actorMemberId: context.principalType === 'member' ? context.principalId : null,
+        metadata: metadata as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  private mapInvoice(invoice: InvoiceRecord, detailed = false) {
+    const totalAmount = money(invoice.totalAmount);
+    const amountPaid = money(invoice.amountPaid);
+    const amountDue = Math.max(0, roundMoney(totalAmount - amountPaid));
+    const dueAt = invoice.dueAt ?? addDays(invoice.issuedAt, 30);
+    const status = invoice.status === 'void'
+      ? 'void'
+      : invoice.status === 'draft'
+        ? 'draft'
+        : amountDue <= 0
+          ? 'paid'
+          : invoice.status === 'partial'
+            ? 'partial'
+            : dueAt.getTime() < Date.now() && invoice.status !== 'draft'
+              ? 'overdue'
+              : invoice.status;
+    const base = {
+      id: invoice.id,
+      customerId: invoice.customerId,
+      customerName: invoice.customer.companyName,
+      customerEmail: invoice.customer.email,
+      orderId: invoice.orderId,
+      orderNumber: invoice.order?.shopifyOrderNumber ?? invoice.order?.id ?? null,
+      invoiceNumber: invoice.invoiceNumber,
+      status,
+      issuedAt: invoice.issuedAt.toISOString(),
+      dueAt: dueAt.toISOString(),
+      subtotal: money(invoice.subtotal),
+      discountAmount: money(invoice.discountAmount),
+      shippingAmount: money(invoice.shippingAmount),
+      taxAmount: money(invoice.taxAmount),
+      totalAmount,
+      amountPaid,
+      amountDue,
+      currency: invoice.currency,
+      fileUrl: invoice.fileUrl,
+      externalPaymentUrl: invoice.externalPaymentUrl,
+      notes: invoice.notes,
+      payment: invoicePaymentState(invoice),
+      createdAt: invoice.createdAt.toISOString(),
+      updatedAt: invoice.updatedAt.toISOString(),
+    };
+    if (!detailed) return base;
+    return {
+      ...base,
+      lineItems: invoiceLineItems(invoice.lineItems),
+      payments: invoice.payments.map((payment) => ({
+        id: payment.id,
+        amount: money(payment.amount),
+        method: payment.method,
+        note: payment.note,
+        recordedAt: payment.recordedAt.toISOString(),
+        recordedByMemberId: payment.recordedByMemberId,
+      })),
+      activities: invoice.activities.map((activity) => ({
+        id: activity.id,
+        action: activity.action,
+        actorMemberId: activity.actorMemberId,
+        metadata: activity.metadata,
+        createdAt: activity.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  private requireTenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new BadRequestException('Tenant context is required');
+    return tenantId;
   }
 
   private whereFromQuery(query: Partial<OrderListQuery>): Prisma.CommerceOrderWhereInput {
@@ -629,6 +959,72 @@ function normalizeProperties(value: unknown): Array<[string, unknown]> {
   return [];
 }
 
+function invoiceItemsFromOrder(order: CommerceOrderWithRelations | null) {
+  if (!order) return [];
+  return jsonArray(order.lineItems).map((item, index) => {
+    const quantity = Number(item.quantity ?? item.qty ?? 1);
+    const unitPrice = money(item.unitPrice ?? item.unit_price ?? item.price ?? 0);
+    return {
+      id: stringValue(item.id) ?? `${order.id}-invoice-line-${index + 1}`,
+      sku: stringValue(item.sku),
+      name: stringValue(item.title ?? item.name ?? item.product_title) ?? `Line item ${index + 1}`,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      unitPrice,
+      total: roundMoney((Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * unitPrice),
+    };
+  });
+}
+
+function invoiceLineTotal(item: { quantity?: number; unitPrice?: number; total?: number }) {
+  return item.total ?? roundMoney((item.quantity ?? 1) * (item.unitPrice ?? 0));
+}
+
+function invoiceLineItems(value: unknown) {
+  return jsonArray(value).map((item, index) => {
+    const quantity = Number(item.quantity ?? item.qty ?? 1);
+    const unitPrice = money(item.unitPrice ?? item.unit_price ?? item.price ?? 0);
+    return {
+      id: stringValue(item.id) ?? `invoice-line-${index + 1}`,
+      sku: stringValue(item.sku),
+      name: stringValue(item.name ?? item.title) ?? `Invoice line ${index + 1}`,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      unitPrice,
+      total: money(item.total ?? item.lineTotal ?? item.line_total) || roundMoney((Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * unitPrice),
+    };
+  });
+}
+
+function invoicePaymentState(invoice: Pick<InvoiceRecord, 'status' | 'totalAmount' | 'amountPaid' | 'externalPaymentUrl' | 'fileUrl'>) {
+  const total = money(invoice.totalAmount);
+  const paid = money(invoice.amountPaid);
+  const amountDue = Math.max(0, roundMoney(total - paid));
+  if (invoice.status === 'draft') return { state: 'draft', amountDue, url: null, label: 'Draft invoice' };
+  if (amountDue <= 0) return { state: 'paid', amountDue, url: null, label: 'Paid in full' };
+  if (isInvoiceWebUrl(invoice.externalPaymentUrl)) return { state: 'payment_link', amountDue, url: invoice.externalPaymentUrl, label: 'Open payment link' };
+  if (isInvoiceWebUrl(invoice.fileUrl)) return { state: 'invoice_file', amountDue, url: invoice.fileUrl, label: 'Open invoice file' };
+  return { state: 'contact_billing', amountDue, url: null, label: 'Contact billing' };
+}
+
+function invoiceStatusFromPayment(currentStatus: string, totalAmount: number, amountPaid: number) {
+  if (currentStatus === 'void') return 'void';
+  if (currentStatus === 'draft') return 'draft';
+  if (totalAmount > 0 && amountPaid >= totalAmount) return 'paid';
+  if (amountPaid > 0) return 'partial';
+  if (currentStatus === 'overdue') return 'overdue';
+  return 'unpaid';
+}
+
+function assertInvoiceUrl(value: string | null | undefined, label: string) {
+  if (value === null || value === undefined || value === '') return;
+  if (!isInvoiceWebUrl(value)) {
+    throw new BadRequestException(`${label} must start with http:// or https://`);
+  }
+}
+
+function isInvoiceWebUrl(value: string | null | undefined) {
+  return typeof value === 'string' && /^https?:\/\//i.test(value.trim());
+}
+
 function isUrl(value: string) {
   return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//');
 }
@@ -636,6 +1032,14 @@ function isUrl(value: string) {
 function money(value: unknown) {
   if (value === null || value === undefined) return 0;
   return Number(value);
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function addDays(value: Date, days: number) {
+  return new Date(value.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 function jsonArray(value: unknown): Array<Record<string, unknown>> {

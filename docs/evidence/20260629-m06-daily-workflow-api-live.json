@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-06-29T11:39:37.663Z",
+  "target": "ROADMAP m06 Daily call list = today workflow task list",
+  "liveBuildSha": "7ba4bb441ce532ddaca4ed8e1defe4a15dfba9fc",
+  "apiBase": "https://api.dtfbank.com/api/v1",
+  "tenantId": "ten_dtfbank",
+  "queryContract": "ServiceRequest source='admin_created' + metadata.workflow.trigger in ['aircall.transcript.received','call_intent.classified','psych.tag.detected'] + taskSource='ai_transcript' + assignedMemberId=currentUser",
+  "summary": {
+    "dailyCount": 0,
+    "dailyCallListCount": 0
+  },
+  "uiAssertions": {
+    "flatListNoSegmentGroups": true,
+    "emptyStateVisible": true,
+    "labelClarifiesAiWorkflow": true
+  },
+  "dataReasonForZero": {
+    "dailyCandidateCount": 0,
+    "lindaDailyCount": 0,
+    "workflowExecutionSummary": {
+      "psych.tag.detected|Default: Refund intent support task|no_op|tasks:0": 1
+    },
+    "supportWorkflowNoOpByM5": true,
+    "noMockOrSeedCreated": true
+  },
+  "aircallBackfillReprocess": {
+    "backfillRecent": {
+      "recentDays": 3,
+      "fetched": 71,
+      "ingested": 21,
+      "skipped": 50,
+      "errors": 0,
+      "pages": 2,
+      "transcriptsFound": 2,
+      "transcriptsEmpty": 19,
+      "transcriptErrors": 0,
+      "resolverQueued": 2
+    },
+    "resolverReprocess": {
+      "recentDays": 3,
+      "scanned": 52,
+      "queued": 52,
+      "skipped": 0,
+      "sample": [
+        {
+          "id": "acev_kyqsww7gqvl23lzrjd13b0xc",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_brimlfg4ttnbojeilihdzlbo",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_bg3nnltaqyrq5yvuzo1wxdih",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_tsqja63f79ln2vxg7g6naqt1",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_up5dvp6zzlnv3o6ew2z3tru3",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_dltdv904c9v7afn9p8yl9ov5",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_o74bjguswsflx1vlaa92akk8",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_p08x9ddhxt0vlnqpj5g91prc",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_nasgsxiqib6xj15raozqj05o",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        },
+        {
+          "id": "acev_dx8dy3di5t88lr8pr2v59gwk",
+          "previousStatus": "succeeded",
+          "queued": true,
+          "skippedReason": null
+        }
+      ]
+    },
+    "finalResolverStatsObservedLater": {
+      "resolverSucceeded": 171,
+      "resolverFailed": 0
+    }
+  },
+  "screenshots": {
+    "panel": "C:\\Users\\mhmmd\\Desktop\\factory-engine-pro\\docs\\evidence\\20260629-m06-daily-workflow-ui-live.png"
+  },
+  "pageUrl": "https://app.dtfbank.com/staff/queue"
+}

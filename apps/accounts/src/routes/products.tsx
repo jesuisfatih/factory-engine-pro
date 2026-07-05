@@ -1,13 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Search, Grid3x3, List as ListIcon, ShoppingCart, X,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
-import { fetchBuyerProducts, uniqueVendors, type BuyerProduct } from '@/lib/portal';
+import { apiErrorMessage } from '@/lib/api';
+import { addCartItem, createCart, fetchActiveCart, fetchBuyerProducts, uniqueVendors, type BuyerProduct } from '@/lib/portal';
 
 const QK = ['products'] as const;
 
@@ -25,7 +27,22 @@ function discountPct(product: BuyerProduct) {
 
 function ProductsView() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: products = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchBuyerProducts });
+  const addToCart = useMutation({
+    mutationFn: async (product: BuyerProduct) => {
+      const cart = (await fetchActiveCart()) ?? (await createCart({ reason: 'Catalog add to cart' }));
+      return addCartItem(cart.id, {
+        ...(product.variantId ? { catalogVariantId: product.variantId } : { sku: product.sku }),
+        quantity: 1,
+      });
+    },
+    onSuccess: async () => {
+      toast.success('Added to cart');
+      await queryClient.invalidateQueries({ queryKey: ['active-cart'] });
+    },
+    onError: (error) => toast.error('Could not add item', { description: apiErrorMessage(error) }),
+  });
 
   const [search, setSearch] = useState('');
   const [vendor, setVendor] = useState('');
@@ -135,8 +152,9 @@ function ProductsView() {
                     <button
                       type="button"
                       className="btn"
-                      disabled
-                      title="Portal checkout is not enabled for catalog items yet"
+                      disabled={!product.inStock || addToCart.isPending}
+                      title={product.inStock ? 'Add this catalog item to your review cart' : 'This item is out of stock'}
+                      onClick={() => addToCart.mutate(product)}
                     >
                       <ShoppingCart size={12} /> {t('products.add_to_cart')}
                     </button>
@@ -180,7 +198,7 @@ function ProductsView() {
                     <td>
                       {discount > 0
                         ? <span className="pill success">{t('products.discount_off', { percent: discount })}</span>
-                        : <span className="muted">—</span>}
+                        : <span className="muted">-</span>}
                     </td>
                     <td>
                       <span className={`pill ${product.inStock ? 'success' : 'danger'}`}>
@@ -191,8 +209,9 @@ function ProductsView() {
                       <button
                         type="button"
                         className="btn"
-                        disabled
-                        title="Portal checkout is not enabled for catalog items yet"
+                        disabled={!product.inStock || addToCart.isPending}
+                        title={product.inStock ? 'Add this catalog item to your review cart' : 'This item is out of stock'}
+                        onClick={() => addToCart.mutate(product)}
                       >
                         <ShoppingCart size={12} /> {t('products.add_to_cart')}
                       </button>

@@ -5,11 +5,13 @@ import { Topbar } from '@/components/Topbar';
 import { readSession } from '@/lib/api';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
+  { test: /^\/$/, key: 'nav.home' },
   { test: /^\/addresses/, key: 'nav.addresses' },
   { test: /^\/support/, key: 'nav.support' },
   { test: /^\/team/, key: 'nav.team' },
   { test: /^\/profile/, key: 'nav.profile' },
   { test: /^\/orders/, key: 'nav.orders' },
+  { test: /^\/cart/, key: 'nav.cart' },
   { test: /^\/products/, key: 'nav.products' },
   { test: /^\/reorder/, key: 'nav.reorder' },
   { test: /^\/invoices/, key: 'nav.invoices' },

@@ -4,6 +4,7 @@ import { serviceRequestPrioritySchema } from './operations.js';
 import { customerAssignmentAxisSchema } from './commerce.js';
 import { createTaskAxisSchema } from './enums.js';
 import {
+  algorithmSurfaceIdSchema,
   frontendCustomizationDefinitionSchema,
   frontendMcpSurfaceIdSchema,
   workflowConditionTraceSchema,
@@ -82,6 +83,23 @@ export type PersonTaskWorkflowTrace = z.infer<typeof personTaskWorkflowTraceSche
 export const personTaskStateSnapshotSchema = z.record(z.string(), z.unknown());
 export type PersonTaskStateSnapshot = z.infer<typeof personTaskStateSnapshotSchema>;
 
+export const personStrategyRuntimeProofSchema = z.object({
+  surfaceId: algorithmSurfaceIdSchema,
+  score: z.number(),
+  bandId: z.string().nullable(),
+  bandLabel: z.string().nullable(),
+  tone: z.enum(['neutral', 'info', 'success', 'warning', 'danger']).nullable(),
+  ctaPriority: z.array(z.string()).default([]),
+  modalActionOrder: z.array(z.string()).default([]),
+});
+export type PersonStrategyRuntimeProof = z.infer<typeof personStrategyRuntimeProofSchema>;
+
+export const personCardStrategyProofSchema = z.object({
+  nextAction: personStrategyRuntimeProofSchema.optional(),
+  callBrief: personStrategyRuntimeProofSchema.optional(),
+});
+export type PersonCardStrategyProof = z.infer<typeof personCardStrategyProofSchema>;
+
 export const personTaskBriefSchema = z.object({
   whyCalling: z.string(),
   upsetAbout: z.string(),
@@ -92,6 +110,9 @@ export const personTaskBriefSchema = z.object({
   modelUsed: z.string(),
   confidence: z.number(),
   transcriptSnippet: z.string().optional(),
+  ctaPriority: z.array(z.string()).optional(),
+  modalActionOrder: z.array(z.string()).optional(),
+  strategyProof: personCardStrategyProofSchema.optional(),
 });
 export type PersonTaskBrief = z.infer<typeof personTaskBriefSchema>;
 
@@ -151,6 +172,9 @@ export const personQueueCardSchema = z.object({
   createdAt: z.string().optional(),
   callIntent: z.string().nullable().optional(),
   psychTags: z.array(z.string()).optional(),
+  ctaPriority: z.array(z.string()).optional(),
+  modalActionOrder: z.array(z.string()).optional(),
+  strategyProof: personCardStrategyProofSchema.optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 

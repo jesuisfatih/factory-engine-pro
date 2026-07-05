@@ -193,6 +193,9 @@ a { color: inherit; text-decoration: none; }
 
 /* ─── Tables ─────────────────────────────────────────────── */
 .data-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.card-title-row strong { color: var(--text); font-size: 12px; }
+.card-title-row .muted { font-size: 11px; }
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: var(--surface-2); }
 .clickable-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -216,6 +219,7 @@ a { color: inherit; text-decoration: none; }
 /* ─── Forms ──────────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
 .field label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+.field > span { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
 .field input, .field select, .field textarea {
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px;
   padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit;
@@ -444,6 +448,14 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .compact-list strong, .order-history-list strong { display: block; color: var(--text); margin-bottom: 3px; }
 .compact-list span, .order-history-list span { color: var(--text-muted); display: block; overflow-wrap: anywhere; }
 .compact-list a { display: inline-flex; margin-top: 5px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.order-invoice-create { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.order-invoice-create textarea, .order-invoice-create .btn { grid-column: 1 / -1; }
+.invoice-list { gap: 10px; }
+.invoice-row { display: flex; flex-direction: column; gap: 9px; }
+.invoice-row-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.invoice-link-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+.invoice-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.invoice-action-row input { width: 130px; }
 .order-history-list > div.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .field-label { display: block; margin: 10px 0 5px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: .35px; }
 .inline-error { color: var(--danger); font-size: 11px; margin-top: 5px; }
@@ -452,6 +464,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 @media (max-width: 900px) {
   .order-modal-body { grid-template-columns: 1fr; }
   .order-detail-grid, .order-stats-grid, .money-breakdown { grid-template-columns: 1fr; }
+  .order-invoice-create { grid-template-columns: 1fr; }
 }
 
 .rule-row { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 8px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
@@ -1273,6 +1286,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .sr-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
 .sr-kpi .lbl { font-size: 10px; color: var(--text-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
 .sr-kpi .val { font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
+.sr-kpi.info .val { color: var(--info); }
 .sr-kpi.warn .val { color: var(--warn); }
 .sr-kpi.danger .val { color: var(--danger); }
 .sr-kpi.success .val { color: var(--success); }

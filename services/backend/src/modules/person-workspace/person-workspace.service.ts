@@ -43,6 +43,7 @@ import type {
   ArchivePersonDailyCallResult,
   AircallDialInput,
   AircallDialResponse,
+  AlgorithmStrategyDefinition,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { prefixedId } from '../../shared/id.js';
@@ -203,6 +204,11 @@ interface PersonPriorityCustomerContext {
   } | null;
 }
 
+interface PersonCardStrategyRuntime {
+  nextAction: AlgorithmStrategyDefinition;
+  callBrief: AlgorithmStrategyDefinition;
+}
+
 @Injectable()
 export class PersonWorkspaceService {
   constructor(
@@ -260,7 +266,16 @@ export class PersonWorkspaceService {
     const today = istanbulDayRange();
     const dailyWindow = dailyWorkflowRange(range, today);
 
-    const [config, rawSegmentOwnerships, frontendCustomization] = await Promise.all([
+    const [
+      config,
+      rawSegmentOwnerships,
+      frontendCustomization,
+      dailyRankingStrategy,
+      priorityCustomerStrategy,
+      taskVisibilityStrategy,
+      nextActionStrategy,
+      callBriefStrategy,
+    ] = await Promise.all([
       this.urgencyConfig(),
       this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
@@ -269,7 +284,13 @@ export class PersonWorkspaceService {
         take: 100,
       }),
       this.rules.frontendRuntimeCustomization('staff.queue'),
+      this.rules.algorithmRuntimeDefinition('staff.daily_call_list.ranking'),
+      this.rules.algorithmRuntimeDefinition('staff.priority_kanban.customer_score'),
+      this.rules.algorithmRuntimeDefinition('staff.task_visibility'),
+      this.rules.algorithmRuntimeDefinition('staff.customer_next_action'),
+      this.rules.algorithmRuntimeDefinition('staff.call_brief_generation'),
     ]);
+    const cardStrategies = { nextAction: nextActionStrategy, callBrief: callBriefStrategy };
     const segmentOwnerships = rawSegmentOwnerships.filter((ownership) => isShopifyNativeSegment(ownership.segment));
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
 
@@ -366,13 +387,15 @@ export class PersonWorkspaceService {
         .filter((row) => range === 'archive'
           ? this.isDailyWorkflowArchived(row, member.id, dailyWindow.start)
           : !this.isArchivedForMember(row, member.id))
-        .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext)),
+        .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies))
+        .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card))),
       dailyTaskOrderRows,
+      dailyRankingStrategy,
     ).slice(0, 150);
 
     const segmentPriorityCards = segmentGroups
       .flatMap((group) => group.items.map((item) => this.segmentPriorityCard(item, member, cardContext)))
-      .sort(sortByUrgency)
+      .sort((left, right) => sortByPersonStrategy(priorityCustomerStrategy, left, right) || sortByUrgency(left, right))
       .slice(0, 120);
     const visibleAxes = Array.from(new Set([
       ...assignmentAxes,
@@ -384,7 +407,7 @@ export class PersonWorkspaceService {
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
     const pinnedTasks = scopedRows
       .filter((row) => this.isTaskPinned(row, member.id))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext));
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies));
     const pinnedCustomers = customerPinRows
       .filter((row) => row.customer)
       .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
@@ -485,18 +508,21 @@ export class PersonWorkspaceService {
   private applyDailyTaskOrder(
     cards: PersonQueueCardDto[],
     orderRows: PersonDailyTaskOrderRow[],
+    strategy?: AlgorithmStrategyDefinition,
   ) {
-    if (orderRows.length === 0) return [...cards].sort(sortByCreatedAtDesc);
+    if (orderRows.length === 0) {
+      return [...cards].sort((left, right) => strategy ? sortByPersonStrategy(strategy, left, right) || sortByCreatedAtDesc(left, right) : sortByCreatedAtDesc(left, right));
+    }
     const orderByTaskId = new Map(orderRows.map((row) => [row.serviceRequestId, row.position] as const));
     return cards
       .map((card) => ({ card, position: orderByTaskId.get(card.id) ?? null }))
       .sort((left, right) => {
         if (left.position !== null && right.position !== null) {
-          return left.position - right.position || sortByCreatedAtDesc(left.card, right.card);
+          return left.position - right.position || (strategy ? sortByPersonStrategy(strategy, left.card, right.card) : 0) || sortByCreatedAtDesc(left.card, right.card);
         }
         if (left.position !== null) return -1;
         if (right.position !== null) return 1;
-        return sortByCreatedAtDesc(left.card, right.card);
+        return (strategy ? sortByPersonStrategy(strategy, left.card, right.card) : 0) || sortByCreatedAtDesc(left.card, right.card);
       })
       .map((entry) => entry.card);
   }
@@ -526,14 +552,15 @@ export class PersonWorkspaceService {
     });
     const visible = rows.filter((row) => this.isQueueVisible(row) && this.isServiceRequestScoped(row, assignments, member.id));
     const visibleCustomerIds = visible.map((row) => row.customerId).filter((id): id is string => Boolean(id));
-    const [config, repeatCounts, cardContext, callContext] = await Promise.all([
+    const [config, repeatCounts, cardContext, callContext, cardStrategies] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(visibleCustomerIds),
       this.cardContext(visibleCustomerIds),
       this.cardCallContext(visible),
+      this.personCardStrategies(),
     ]);
     return visible
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, null, callContext))
+      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, null, callContext, cardStrategies))
       .sort(sortByUrgency)
       .slice(0, 120);
   }
@@ -554,14 +581,22 @@ export class PersonWorkspaceService {
     });
     this.emitCallCenterInvalidate('person.queue.move');
     const updated = await this.requireServiceRequest(id);
+    const [config, repeatCount, cardContext, callContext, cardStrategies] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCount(updated.customerId),
+      this.cardContext(updated.customerId ? [updated.customerId] : []),
+      this.cardCallContext([updated]),
+      this.personCardStrategies(),
+    ]);
     return this.queueCard(
       updated,
       member.id,
-      await this.urgencyConfig(),
-      await this.repeatCount(updated.customerId),
-      await this.cardContext(updated.customerId ? [updated.customerId] : []),
+      config,
+      repeatCount,
+      cardContext,
       null,
-      await this.cardCallContext([updated]),
+      callContext,
+      cardStrategies,
     );
   }
 
@@ -788,14 +823,22 @@ export class PersonWorkspaceService {
     });
     this.emitCallCenterInvalidate('person.queue.pin');
     const updated = await this.requireServiceRequest(id);
+    const [config, repeatCount, cardContext, callContext, cardStrategies] = await Promise.all([
+      this.urgencyConfig(),
+      this.repeatCount(updated.customerId),
+      this.cardContext(updated.customerId ? [updated.customerId] : []),
+      this.cardCallContext([updated]),
+      this.personCardStrategies(),
+    ]);
     return this.queueCard(
       updated,
       member.id,
-      await this.urgencyConfig(),
-      await this.repeatCount(updated.customerId),
-      await this.cardContext(updated.customerId ? [updated.customerId] : []),
+      config,
+      repeatCount,
+      cardContext,
       null,
-      await this.cardCallContext([updated]),
+      callContext,
+      cardStrategies,
     );
   }
 
@@ -1173,6 +1216,7 @@ export class PersonWorkspaceService {
       aircallRows,
       rule,
       callContext,
+      cardStrategies,
     ] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCount(customerId),
@@ -1210,9 +1254,10 @@ export class PersonWorkspaceService {
         ? this.prisma.db.workflowRule.findFirst({ where: { id: matchedRuleId } })
         : Promise.resolve(null),
       this.cardCallContext([row]),
+      this.personCardStrategies(),
     ]);
 
-    const card = this.queueCard(row, member.id, config, repeatCount, cardContext, null, callContext);
+    const card = this.queueCard(row, member.id, config, repeatCount, cardContext, null, callContext, cardStrategies);
     const orders = recentOrders.map((order) => miniOrder(order));
     const basePerformance = customerId
       ? cardContext.performance.get(customerId) ?? { ...EMPTY_PERFORMANCE_30D }
@@ -2513,6 +2558,14 @@ export class PersonWorkspaceService {
     };
   }
 
+  private async personCardStrategies(): Promise<PersonCardStrategyRuntime> {
+    const [nextAction, callBrief] = await Promise.all([
+      this.rules.algorithmRuntimeDefinition('staff.customer_next_action'),
+      this.rules.algorithmRuntimeDefinition('staff.call_brief_generation'),
+    ]);
+    return { nextAction, callBrief };
+  }
+
   private queueCard(
     row: ServiceRequestRow,
     memberId: string,
@@ -2521,7 +2574,8 @@ export class PersonWorkspaceService {
     cardContext?: CardContext,
     ownedSegment?: OwnedSegmentContext | null,
     callContext?: CardCallContext,
-  ) {
+    strategies?: PersonCardStrategyRuntime,
+  ): PersonQueueCardDto {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
     const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
@@ -2545,7 +2599,7 @@ export class PersonWorkspaceService {
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       repeatCount,
     }, config);
-    return {
+    const card: PersonQueueCardDto = {
       kind: 'task' as const,
       id: row.id,
       customerId: row.customerId,
@@ -2581,6 +2635,7 @@ export class PersonWorkspaceService {
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
     };
+    return strategies ? personCardWithStrategies(card, strategies) : card;
   }
 
   private highestOwnedSegmentByCustomer(
@@ -3860,6 +3915,255 @@ function sortByCreatedAtDesc(
   const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
   const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
   return rightTime - leftTime || sortByUrgency(left, right);
+}
+
+function sortByPersonStrategy(strategy: AlgorithmStrategyDefinition, left: PersonQueueCardDto, right: PersonQueueCardDto) {
+  const leftSignals = personCardStrategySignals(left);
+  const rightSignals = personCardStrategySignals(right);
+  const leftScore = personStrategyScore(strategy, leftSignals);
+  const rightScore = personStrategyScore(strategy, rightSignals);
+  const sortRules = strategy.sort.length ? strategy.sort : [{ field: 'urgencyScore', direction: 'desc' as const, nulls: 'last' as const }];
+  for (const rule of sortRules) {
+    const leftValue = rule.field === 'urgencyScore' ? leftScore : strategyComparable(leftSignals[rule.field]);
+    const rightValue = rule.field === 'urgencyScore' ? rightScore : strategyComparable(rightSignals[rule.field]);
+    const compared = compareStrategyValue(leftValue, rightValue, rule.nulls);
+    if (compared !== 0) return rule.direction === 'desc' ? -compared : compared;
+  }
+  return 0;
+}
+
+function personStrategyVisible(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>) {
+  if (strategy.visibility.hideWhen.some((condition) => personConditionMatches(condition, signals))) return false;
+  if (strategy.visibility.mode === 'hide_by_default') {
+    if (!strategy.visibility.showWhen.some((condition) => personConditionMatches(condition, signals))) return false;
+  }
+  const waitingHours = numberSignal(signals.waitingHours);
+  if (strategy.cooldown.reappearAfterHours !== undefined && waitingHours < strategy.cooldown.reappearAfterHours) return false;
+  if (strategy.cooldown.archiveAfterDays !== undefined && waitingHours > strategy.cooldown.archiveAfterDays * 24) return false;
+  return true;
+}
+
+function personStrategyScore(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>) {
+  let score = numberSignal(signals.urgencyScore);
+  for (const [key, weight] of Object.entries(strategy.weights)) {
+    score += numberSignal(signals[key]) * weight;
+  }
+  for (const condition of strategy.conditions) {
+    if (personConditionMatches(condition, signals)) score += condition.weight ?? 1;
+  }
+  return Math.round(score * 10) / 10;
+}
+
+function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unknown> {
+  const createdAtMs = card.createdAt ? Date.parse(card.createdAt) : 0;
+  const waitingHours = createdAtMs > 0 ? Math.max(0, (Date.now() - createdAtMs) / 3_600_000) : 0;
+  const openTasksCount = card.performance30d?.serviceRequests ?? 0;
+  const latestOrderValue = card.miniOrder?.totalPrice ?? 0;
+  const ordersCount = card.ordersCount ?? 0;
+  const totalSpent = card.totalSpent ?? 0;
+  const hasOpenTask = !CLOSED.has(card.columnId);
+  const isCallSource = card.source === 'call_analysis' || Boolean(card.callIntent);
+  return {
+    createdAt: card.createdAt ?? null,
+    updatedAt: card.createdAt ?? null,
+    urgencyScore: card.urgencyScore,
+    repeatCount: card.urgencyBreakdown.repeatCount,
+    customerName: card.title,
+    intent: card.callIntent ?? card.axis ?? card.source,
+    callIntent: card.callIntent ?? null,
+    psychTags: card.psychTags?.join(',') ?? '',
+    priority: card.priority,
+    source: card.source,
+    axis: card.axis,
+    status: card.columnId,
+    segmentPriority: card.segmentPriority ?? 0,
+    ordersCount,
+    totalSpent,
+    openTasksCount,
+    openRequestsCount: card.performance30d?.serviceRequests ?? 0,
+    latestOrderValue,
+    lastOrderValue: latestOrderValue,
+    lastOrderAt: card.miniOrder?.processedAt ?? null,
+    lastCallAt: isCallSource ? card.createdAt ?? null : null,
+    latestNoteAt: null,
+    purchaseIntent: card.callIntent === 'sale' || card.urgencyBreakdown.intent === 'sales' || card.urgencyBreakdown.intent === 'purchase_intent',
+    refundOrPaymentIssue: includesCardText(card, ['refund', 'payment', 'price', 'pricing']),
+    shippingIssue: includesCardText(card, ['shipping', 'delivery', 'tracking', 'freight']),
+    complaint: includesCardText(card, ['complaint', 'angry', 'upset', 'frustrated']),
+    customerMatched: Boolean(card.customerId),
+    hasOpenTask,
+    callNow: isCallSource || includesCardText(card, ['callback', 'call back', 'phone']),
+    noteFirst: true,
+    scheduleFirst: Boolean(card.aiBrief?.suggestedActions?.some((action) => action.toLowerCase().includes('schedule'))),
+    emailFirst: Boolean(card.aiBrief?.suggestedActions?.some((action) => action.toLowerCase().includes('email'))),
+    reviewOrderFirst: Boolean(card.miniOrder) || ordersCount > 0,
+    complaintTone: includesCardText(card, ['complaint', 'angry', 'upset', 'frustrated']),
+    refundRisk: includesCardText(card, ['refund', 'return', 'chargeback', 'payment']),
+    shippingConcern: includesCardText(card, ['shipping', 'delivery', 'tracking', 'freight']),
+    customerHistory: ordersCount > 0 || totalSpent > 0,
+    productSpecificity: includesCardText(card, ['hydro', 'dtf', 'printer', 'press', 'ink', 'film', 'powder', 'sku']),
+    openTaskPenalty: hasOpenTask,
+    unmatchedCustomerPenalty: !card.customerId,
+    recentCallBoost: isCallSource && waitingHours <= 168,
+    olderThanSevenDaysPenalty: waitingHours > 168,
+    lastCallRecency: isCallSource ? Math.round((waitingHours / 24) * 10) / 10 : 0,
+    openFollowUp: openTasksCount > 0,
+    notesSignal: false,
+    waitingHours,
+  };
+}
+
+const STAFF_CTA_ALLOWLIST = [
+  'call',
+  'note',
+  'schedule',
+  'email',
+  'customer_detail',
+  'archive',
+  'transfer',
+  'done',
+  'snooze',
+  'more',
+  'pin',
+] as const;
+
+const STAFF_MODAL_ACTION_ALLOWLIST = [
+  'call_customer',
+  'confirm_need',
+  'capture_outcome',
+  'check_order',
+  'schedule_follow_up',
+  'add_note',
+  'review_context',
+  'review_shopify_orders',
+  'open_customer_history',
+  'ask_specific_question',
+  'state_reason',
+  'confirm_next_step',
+  'save_outcome',
+  'archive_if_not_needed',
+] as const;
+
+function personCardWithStrategies(card: PersonQueueCardDto, strategies: PersonCardStrategyRuntime): PersonQueueCardDto {
+  const signals = personCardStrategySignals(card);
+  const nextActionProof = personStrategyRuntimeProof(strategies.nextAction, signals, 'cta');
+  const callBriefProof = personStrategyRuntimeProof(strategies.callBrief, signals, 'modal');
+  const ctaPriority = uniqueAllowedStrings(nextActionProof.ctaPriority, STAFF_CTA_ALLOWLIST);
+  const modalActionOrder = uniqueAllowedStrings(callBriefProof.modalActionOrder, STAFF_MODAL_ACTION_ALLOWLIST);
+  const strategyProof = {
+    nextAction: { ...nextActionProof, ctaPriority },
+    callBrief: { ...callBriefProof, modalActionOrder },
+  };
+  return {
+    ...card,
+    ctaPriority,
+    modalActionOrder,
+    strategyProof,
+    aiBrief: card.aiBrief
+      ? {
+          ...card.aiBrief,
+          ctaPriority,
+          modalActionOrder,
+          strategyProof,
+        }
+      : card.aiBrief,
+  };
+}
+
+function personStrategyRuntimeProof(
+  strategy: AlgorithmStrategyDefinition,
+  signals: Record<string, unknown>,
+  mode: 'cta' | 'modal',
+) {
+  const score = personStrategyScore(strategy, signals);
+  const band = strategy.scoreBands.find((entry) => score >= entry.min && score <= entry.max) ?? null;
+  return {
+    surfaceId: strategy.surfaceId,
+    score,
+    bandId: band?.id ?? null,
+    bandLabel: band?.label ?? null,
+    tone: band?.tone ?? null,
+    ctaPriority: mode === 'cta' ? strategy.ctaPriority : [],
+    modalActionOrder: mode === 'modal' ? strategy.modalActionOrder : [],
+  };
+}
+
+function uniqueAllowedStrings(values: string[], allowed: readonly string[]) {
+  const allowedSet = new Set(allowed);
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const normalized = String(value).trim();
+    if (!normalized || !allowedSet.has(normalized) || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
+function includesCardText(card: PersonQueueCardDto, needles: string[]) {
+  const text = [
+    card.title,
+    card.summary,
+    card.aiBrief?.whyCalling,
+    card.aiBrief?.upsetAbout,
+    card.aiBrief?.callGoal,
+    card.aiBrief?.transcriptSnippet,
+    card.callIntent,
+    ...(card.psychTags ?? []),
+  ].join(' ').toLowerCase();
+  return needles.some((needle) => text.includes(needle));
+}
+
+function personConditionMatches(condition: AlgorithmStrategyDefinition['conditions'][number], signals: Record<string, unknown>) {
+  const actual = signals[condition.field];
+  const expected = condition.value;
+  switch (condition.operator) {
+    case 'exists': return actual !== undefined && actual !== null && actual !== '';
+    case 'not_exists': return actual === undefined || actual === null || actual === '';
+    case '=': return String(actual).toLowerCase() === String(expected).toLowerCase();
+    case '!=': return String(actual).toLowerCase() !== String(expected).toLowerCase();
+    case '>': return numberSignal(actual) > numberSignal(expected);
+    case '>=': return numberSignal(actual) >= numberSignal(expected);
+    case '<': return numberSignal(actual) < numberSignal(expected);
+    case '<=': return numberSignal(actual) <= numberSignal(expected);
+    case 'contains': return String(actual ?? '').toLowerCase().includes(String(expected ?? '').toLowerCase());
+    case 'in': return Array.isArray(expected) && expected.map((entry) => String(entry).toLowerCase()).includes(String(actual).toLowerCase());
+    case 'not_in': return Array.isArray(expected) && !expected.map((entry) => String(entry).toLowerCase()).includes(String(actual).toLowerCase());
+    default: return false;
+  }
+}
+
+function strategyComparable(value: unknown) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string') {
+    const asDate = Date.parse(value);
+    if (Number.isFinite(asDate) && /[-:TZ]/.test(value)) return asDate;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : value.toLowerCase();
+  }
+  return null;
+}
+
+function compareStrategyValue(left: string | number | null, right: string | number | null, nulls: 'first' | 'last') {
+  if (left === null && right === null) return 0;
+  if (left === null) return nulls === 'first' ? -1 : 1;
+  if (right === null) return nulls === 'first' ? 1 : -1;
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  return String(left).localeCompare(String(right));
+}
+
+function numberSignal(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string' && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+    return 1;
+  }
+  return 0;
 }
 
 function colorForUrgency(score: number) {

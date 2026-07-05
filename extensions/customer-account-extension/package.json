@@ -1,0 +1,24 @@
+{
+  "name": "@factory-engine-pro/customer-account-extension",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "shopify app build --include-config-on-deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions": "2025.10.13",
+    "@shopify/ui-extensions-react": "2025.7.4",
+    "react": "^18.3.1",
+    "react-reconciler": "^0.29.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@shopify/ui-extensions": "2025.10.13",
+    "@shopify/ui-extensions-react": "2025.7.4"
+  }
+}

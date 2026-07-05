@@ -1,0 +1,27 @@
+api_version = "2025-10"
+
+[[extensions]]
+type = "ui_extension"
+name = "Factory Engine Account Desk"
+handle = "factory-engine-account-desk"
+
+  [[extensions.targeting]]
+  target = "customer-account.page.render"
+  module = "./src/CustomerAccountPage.tsx"
+
+  [extensions.capabilities]
+  network_access = true
+
+  [extensions.settings]
+
+    [[extensions.settings.fields]]
+    key = "api_base_url"
+    type = "single_line_text_field"
+    name = "API Base URL"
+    description = "Factory Engine API base URL."
+
+    [[extensions.settings.fields]]
+    key = "accounts_url"
+    type = "single_line_text_field"
+    name = "Accounts Portal URL"
+    description = "Standalone customer portal URL for order, invoice, cart, and document detail."

@@ -17,6 +17,27 @@ const workflowRuleInputSchema = z.union([
   }).passthrough(),
   z.string().trim().min(2).max(250_000),
 ]);
+const algorithmSurfaceIdSchema = z.enum([
+  'staff.daily_call_list.ranking',
+  'staff.priority_kanban.customer_score',
+  'staff.task_visibility',
+  'staff.customer_next_action',
+  'staff.call_brief_generation',
+  'customer_portal.reorder_eligibility',
+  'mail_marketing.audience_eligibility',
+  'mail_marketing.send_safety',
+]);
+const algorithmStrategyStatusSchema = z.enum(['draft', 'shadow', 'active', 'archived']);
+const algorithmStrategyInputSchema = z.union([
+  z.object({
+    surfaceId: algorithmSurfaceIdSchema,
+    name: z.string().trim().min(2).max(140),
+    definition: z.object({}).passthrough(),
+    status: algorithmStrategyStatusSchema.optional(),
+    reason: z.string().trim().max(1000).optional(),
+  }).passthrough(),
+  z.string().trim().min(2).max(250_000),
+]);
 
 const apiBaseUrl = normalizeBaseUrl(process.env.FACTORY_ENGINE_API_URL);
 const accessToken = process.env.FACTORY_ENGINE_ACCESS_TOKEN?.trim() ?? '';
@@ -459,6 +480,157 @@ server.registerTool(
   async (input) => jsonTool(await requestApi('POST', '/rules/mcp/frontend/source-patches/proof', input)),
 );
 
+server.registerTool(
+  'list_algorithm_surfaces',
+  {
+    title: 'List algorithm surfaces',
+    description: 'List safe strategy-engine surfaces that can be changed through JSON/DSL.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async () => jsonTool(await requestApi('GET', '/rules/mcp/algorithms/surfaces')),
+);
+
+server.registerTool(
+  'get_algorithm_contract',
+  {
+    title: 'Get algorithm contract',
+    description: 'Read a strategy surface contract, active strategy, allowed fields, simulation evidence, and red lines.',
+    inputSchema: { surfaceId: algorithmSurfaceIdSchema },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('GET', `/rules/mcp/algorithms/surfaces/${encodeURIComponent(input.surfaceId)}`)),
+);
+
+server.registerTool(
+  'draft_algorithm_change',
+  {
+    title: 'Draft algorithm change',
+    description: 'Draft and persist a versioned algorithm strategy from a natural-language business goal.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema,
+      naturalLanguageGoal: z.string().trim().min(8).max(1600),
+      preferredStatus: algorithmStrategyStatusSchema.optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/draft', input)),
+);
+
+server.registerTool(
+  'validate_algorithm_change',
+  {
+    title: 'Validate algorithm change',
+    description: 'Validate a stored or JSON strategy against the surface contract.',
+    inputSchema: {
+      strategyId: z.string().trim().min(1).optional(),
+      strategy: algorithmStrategyInputSchema.optional(),
+      strategyJson: z.string().trim().min(2).max(250_000).optional(),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/validate', input)),
+);
+
+server.registerTool(
+  'simulate_algorithm_change',
+  {
+    title: 'Simulate algorithm change',
+    description: 'Run a no-mutation strategy simulation against bounded live data and store the diff report.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema,
+      strategyId: z.string().trim().min(1).optional(),
+      strategy: algorithmStrategyInputSchema.optional(),
+      strategyJson: z.string().trim().min(2).max(250_000).optional(),
+      memberEmail: z.string().email().optional(),
+      recentDays: z.number().int().min(1).max(90).optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/simulate', input)),
+);
+
+server.registerTool(
+  'compare_algorithm_versions',
+  {
+    title: 'Compare algorithm versions',
+    description: 'Compare baseline and candidate strategy outcomes before publish.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema,
+      baseStrategyId: z.string().trim().min(1).optional(),
+      candidateStrategyId: z.string().trim().min(1).optional(),
+      candidateStrategy: algorithmStrategyInputSchema.optional(),
+      candidateStrategyJson: z.string().trim().min(2).max(250_000).optional(),
+      memberEmail: z.string().email().optional(),
+      recentDays: z.number().int().min(1).max(90).optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/compare', input)),
+);
+
+server.registerTool(
+  'publish_algorithm_version',
+  {
+    title: 'Publish algorithm version',
+    description: 'Activate a stored strategy only after a passed simulation report for the same strategy.',
+    inputSchema: {
+      strategyId: z.string().trim().min(1),
+      simulationId: z.string().trim().min(1),
+      comment: z.string().trim().max(800).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/publish', input)),
+);
+
+server.registerTool(
+  'rollback_algorithm_version',
+  {
+    title: 'Rollback algorithm version',
+    description: 'Rollback one strategy surface to a previous strategy/version without source edits.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema,
+      targetStrategyId: z.string().trim().min(1).optional(),
+      versionNo: z.number().int().min(1).optional(),
+      comment: z.string().trim().max(800).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/rollback', input)),
+);
+
+server.registerTool(
+  'explain_customer_ranking',
+  {
+    title: 'Explain customer ranking',
+    description: 'Explain why a customer ranks where they do under a strategy.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema.optional(),
+      customerId: z.string().trim().min(1),
+      strategyId: z.string().trim().min(1).optional(),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/explain-customer-ranking', input)),
+);
+
+server.registerTool(
+  'explain_task_visibility',
+  {
+    title: 'Explain task visibility',
+    description: 'Explain why a task is visible, hidden, or delayed under a strategy.',
+    inputSchema: {
+      surfaceId: algorithmSurfaceIdSchema.optional(),
+      serviceRequestId: z.string().trim().min(1),
+      strategyId: z.string().trim().min(1).optional(),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/algorithms/explain-task-visibility', input)),
+);
+
 server.registerPrompt(
   'workflow_rule_authoring_playbook',
   {
@@ -487,6 +659,10 @@ server.registerPrompt(
             'For "show this to staff after N days" requirements, use deferred materialization on create_task. This creates a hidden scheduled action first, then BullMQ materializes the actual staff task at run time after revalidation.',
             'Use simulate_deferred_workflow_rule before publishing deferred rules. Use list_scheduled_workflow_actions, get_scheduled_workflow_action, and explain_scheduled_workflow_action to audit hidden pending work.',
             'Use cancel_scheduled_workflow_action only when the user wants to stop a pending deferred action before it appears to staff.',
+            'For algorithm changes, use list_algorithm_surfaces, then get_algorithm_contract for the exact surface. Draft with draft_algorithm_change, validate with validate_algorithm_change, simulate with simulate_algorithm_change, and compare with compare_algorithm_versions before publish.',
+            'Use publish_algorithm_version only after explicit human approval and a passed simulation report for the same stored strategy. Use rollback_algorithm_version to recover.',
+            'Use explain_customer_ranking and explain_task_visibility when the user asks why a customer or task appears, disappears, or moves in rank.',
+            'Algorithm strategy JSON may change weights, conditions, sort, visibility, cooldown, scoreBands, CTA priority, and modal action order only. It must not change auth, tenant scope, RBAC, checkout/payment, webhook secrets, raw SQL, Prisma tenant extension, or destructive queue behavior.',
             'For frontend work, read_frontend_agent_guide first, then list_frontend_surfaces and get_frontend_surface_contract.',
             'Before proposing a frontend change, list_frontend_customizations for the target surface so you know whether an active tenant overlay already exists.',
             'Use preview_frontend_customization before apply_frontend_customization. The customization DSL changes staff UI through safe slots, blocks, sanitized contentBlocks, bounded themeOverrides, data bindings, visibility conditions, typed elementOverrides, and typed navigationOverrides; it never accepts scripts, secrets, arbitrary CSS, or source edits.',

@@ -1,0 +1,109 @@
+﻿{
+  "generatedAt": "2026-06-29T11:38:58.562Z",
+  "tenantId": "ten_dtfbank",
+  "member": {
+    "id": "tmbr_ten_dtfbank_linda_marroquin",
+    "email": "dtfbanktx@gmail.com",
+    "firstName": "Linda",
+    "lastName": "Marroquin"
+  },
+  "workDate": "2026-06-29",
+  "window": {
+    "start": "2026-06-28T21:00:00.000Z",
+    "end": "2026-06-29T21:00:00.000Z"
+  },
+  "queryContract": "ServiceRequest source='admin_created' + metadata.workflow.trigger in ['aircall.transcript.received','call_intent.classified','psych.tag.detected'] + taskSource='ai_transcript' + assignedMemberId=currentUser",
+  "adminCreatedOpenToday": 3,
+  "dailyCandidateCount": 0,
+  "lindaDailyCount": 0,
+  "dailyCandidates": [],
+  "adminCreatedOpenTodaySample": [
+    {
+      "id": "sr_gwfut9y693se5u0wqlgimhd3",
+      "title": "Order 4816 follow-up",
+      "axis": "support",
+      "createdAt": "2026-06-29T10:11:49.446Z",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedEmail": "dtfbanktx@gmail.com",
+      "trigger": null,
+      "workflowSource": null,
+      "aiSource": null,
+      "sourceCallId": null,
+      "taskSource": "admin_transfer",
+      "matchedRuleId": null
+    },
+    {
+      "id": "sr_jy7wdfuvx24p0efvvtxiuijo",
+      "title": "Order 4816 follow-up",
+      "axis": "support",
+      "createdAt": "2026-06-29T07:27:18.417Z",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedEmail": "dtfbanktx@gmail.com",
+      "trigger": null,
+      "workflowSource": null,
+      "aiSource": null,
+      "sourceCallId": null,
+      "taskSource": "admin_transfer",
+      "matchedRuleId": null
+    },
+    {
+      "id": "sr_zqonyye72mgc1kxgl7r0bnue",
+      "title": "Order 4816 follow-up",
+      "axis": "support",
+      "createdAt": "2026-06-29T07:20:20.908Z",
+      "assignedMemberId": "tmbr_ten_dtfbank_linda_marroquin",
+      "assignedEmail": "dtfbanktx@gmail.com",
+      "trigger": null,
+      "workflowSource": null,
+      "aiSource": null,
+      "sourceCallId": null,
+      "taskSource": "admin_transfer",
+      "matchedRuleId": null
+    }
+  ],
+  "workflowExecutionLookbackHours": 3,
+  "workflowExecutionCount": 1,
+  "workflowExecutionSummary": {
+    "psych.tag.detected|Default: Refund intent support task|no_op|tasks:0": 1
+  },
+  "workflowExecutionSamples": [
+    {
+      "id": "wrex_ueaxhj5kdpr51dg3vmrudpnc",
+      "eventId": "acev_nwaiyxd70zy0iql7zqmyx085:psych_tag:refund_intent",
+      "trigger": "psych.tag.detected",
+      "ruleName": "Default: Refund intent support task",
+      "status": "no_op",
+      "taskIds": [],
+      "updatedAt": "2026-06-29T09:36:23.704Z",
+      "actionTrace": [
+        {
+          "action": "no-op",
+          "status": "applied",
+          "message": "Support intent detected; Support cases are created manually.",
+          "actionId": "create_refund_task",
+          "targetType": "audit"
+        },
+        {
+          "action": "add_watcher",
+          "status": "skipped",
+          "message": "No service request target was available for add_watcher.",
+          "actionId": "add_account_watcher",
+          "targetType": "service_request"
+        }
+      ],
+      "conditionTrace": [
+        {
+          "id": "tag_refund_intent",
+          "actual": [
+            "refund_intent"
+          ],
+          "source": "event_param",
+          "matched": true,
+          "expected": "refund_intent",
+          "operator": "=",
+          "condition": "psych_tag_includes"
+        }
+      ]
+    }
+  ]
+}

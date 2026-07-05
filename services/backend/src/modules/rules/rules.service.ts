@@ -1,10 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   activeWorkflowRuleStatsQuerySchema,
+  algorithmMcpCompareVersionsSchema,
+  algorithmMcpDraftChangeSchema,
+  algorithmMcpExplainCustomerRankingSchema,
+  algorithmMcpExplainTaskVisibilitySchema,
+  algorithmMcpPublishVersionSchema,
+  algorithmMcpRollbackVersionSchema,
+  algorithmMcpSimulateChangeSchema,
+  algorithmMcpValidateChangeSchema,
+  algorithmStrategyDefinitionSchema,
   backfillWorkflowRuleSchema,
   fireWorkflowTriggerSchema,
   rollbackWorkflowRuleSchema,
@@ -22,6 +31,7 @@ import {
   frontendMcpRollbackCustomizationSchema,
   frontendMcpValidateSourcePatchProofSchema,
   frontendCustomizationDefinitionSchema,
+  saveAlgorithmStrategySchema,
   workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
   workflowMcpValidateRuleSchema,
@@ -42,6 +52,32 @@ import {
   workflowEnumProbeValues,
   type ActiveWorkflowRuleStatsQuery,
   type ActiveWorkflowRuleStatsResponse,
+  type AlgorithmMcpCompareVersionsInput,
+  type AlgorithmMcpCompareVersionsResponse,
+  type AlgorithmMcpDraftChangeInput,
+  type AlgorithmMcpDraftChangeResponse,
+  type AlgorithmMcpExplainCustomerRankingInput,
+  type AlgorithmMcpExplainCustomerRankingResponse,
+  type AlgorithmMcpExplainTaskVisibilityInput,
+  type AlgorithmMcpExplainTaskVisibilityResponse,
+  type AlgorithmMcpPublishVersionInput,
+  type AlgorithmMcpPublishVersionResponse,
+  type AlgorithmMcpRollbackVersionInput,
+  type AlgorithmMcpRollbackVersionResponse,
+  type AlgorithmMcpSimulateChangeInput,
+  type AlgorithmMcpSimulateChangeResponse,
+  type AlgorithmMcpSurfaceContractResponse,
+  type AlgorithmMcpSurfacesResponse,
+  type AlgorithmMcpValidateChangeInput,
+  type AlgorithmMcpValidateChangeResponse,
+  type AlgorithmSimulationResult,
+  type AlgorithmStrategyDefinition,
+  type AlgorithmStrategyDto,
+  type AlgorithmStrategySimulationDto,
+  type AlgorithmStrategyVersionDto,
+  type AlgorithmSurfaceContract,
+  type AlgorithmSurfaceId,
+  type SaveAlgorithmStrategyInput,
   type BackfillWorkflowRuleInput,
   type BootstrapWorkflowDefaultsResponse,
   type WorkflowActionTrace,
@@ -133,7 +169,7 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
 
 const RULE_ENGINE_AGENT_GUIDE_PATH = 'docs/RULE_ENGINE_MVP_AGENT_GUIDE.md';
 const RULE_ENGINE_AGENT_GUIDE_ENDPOINT = '/api/v1/rules/mcp/agent-guide';
-const RULE_ENGINE_AGENT_GUIDE_VERSION = '2026-07-01.rule-engine-mcp-guide.v2';
+const RULE_ENGINE_AGENT_GUIDE_VERSION = '2026-07-05.rule-engine-mcp-guide.v3';
 const RULE_ENGINE_AGENT_GUIDE_SUMMARY = [
   'Read this guide before drafting complex workflow rules.',
   'List existing rules before creating or archiving workflow rules.',
@@ -148,6 +184,114 @@ const FRONTEND_MCP_AGENT_GUIDE_VERSION = '2026-07-03.frontend-mcp-guide.v4';
 const MCP_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const SCHEDULED_ACTION_STATUSES = ['pending', 'executing', 'executed', 'skipped', 'cancelled', 'failed'] as const;
 const SCHEDULED_ACTION_CLOSED_TASK_STATUSES = ['closed', 'resolved'] as const;
+const ALGORITHM_CLOSED_TASK_STATUSES = ['closed', 'resolved', 'transferred'] as const;
+
+const ALGORITHM_SURFACES: AlgorithmSurfaceContract[] = [
+  {
+    id: 'staff.daily_call_list.ranking',
+    label: 'Staff Daily Call List Ranking',
+    purpose: 'Rank recent call follow-ups without segment grouping, using call/task signals and staff ownership.',
+    ownerSurface: 'staff',
+    allowedFields: ['createdAt', 'updatedAt', 'urgencyScore', 'repeatCount', 'intent', 'callIntent', 'psychTags', 'priority', 'source', 'axis', 'status', 'hasOpenTask', 'lastOrderAt', 'totalSpent'],
+    allowedWeights: ['urgencyScore', 'repeatCount', 'purchaseIntent', 'refundOrPaymentIssue', 'shippingIssue', 'complaint', 'waitingHours', 'lastOrderValue', 'customerMatched'],
+    allowedSortFields: ['urgencyScore', 'createdAt', 'updatedAt', 'repeatCount', 'customerName', 'lastOrderAt', 'totalSpent'],
+    allowedCtas: ['call', 'note', 'schedule', 'email', 'archive', 'transfer', 'done'],
+    allowedModalActions: ['call_customer', 'confirm_need', 'capture_outcome', 'check_order', 'schedule_follow_up', 'add_note'],
+    simulationEvidence: ['last 7 days staff queue diff', 'hidden vs surfaced task count', 'top ranked task delta'],
+    redLines: ['Do not change tenant scope.', 'Do not create customer requests automatically.', 'Do not query raw SQL through MCP.'],
+  },
+  {
+    id: 'staff.priority_kanban.customer_score',
+    label: 'Staff Priority Kanban Customer Score',
+    purpose: 'Score assigned Shopify segment customers for repeated outreach and purchase follow-up.',
+    ownerSurface: 'staff',
+    allowedFields: ['segmentPriority', 'membershipScore', 'repeatCount', 'ordersCount', 'totalSpent', 'lastOrderAt', 'lastCallAt', 'openTasksCount', 'openRequestsCount', 'notesCount'],
+    allowedWeights: ['segmentPriority', 'membershipScore', 'repeatCount', 'ordersCount', 'totalSpent', 'lastCallRecency', 'openFollowUp', 'latestOrderValue', 'notesSignal'],
+    allowedSortFields: ['urgencyScore', 'segmentPriority', 'repeatCount', 'ordersCount', 'totalSpent', 'lastOrderAt', 'customerName'],
+    allowedCtas: ['call', 'note', 'pin', 'email', 'customer_detail'],
+    allowedModalActions: ['open_customer_history', 'call_customer', 'add_customer_note', 'review_shopify_orders', 'schedule_follow_up'],
+    simulationEvidence: ['priority top 20 diff', 'customer rank explanation', 'segment group impact'],
+    redLines: ['Do not assign customers outside owned Shopify segments.', 'Do not hide phone/order/note context from staff.'],
+  },
+  {
+    id: 'staff.task_visibility',
+    label: 'Staff Task Visibility',
+    purpose: 'Control whether generated staff work appears now, later, or in archive.',
+    ownerSurface: 'staff',
+    allowedFields: ['createdAt', 'updatedAt', 'status', 'source', 'axis', 'hasOpenTask', 'customerMatched', 'callIntent', 'operationalIntent', 'assignedMemberId'],
+    allowedWeights: ['openTaskPenalty', 'unmatchedCustomerPenalty', 'recentCallBoost', 'olderThanSevenDaysPenalty'],
+    allowedSortFields: ['createdAt', 'updatedAt', 'urgencyScore'],
+    allowedCtas: ['call', 'archive', 'done', 'snooze'],
+    allowedModalActions: ['capture_outcome', 'schedule_follow_up', 'archive_if_not_needed'],
+    simulationEvidence: ['visible task count', 'hidden task count', 'archive boundary count'],
+    redLines: ['Do not delete service requests.', 'Do not bypass workflow source/axis contract.'],
+  },
+  {
+    id: 'staff.customer_next_action',
+    label: 'Staff Customer Next Action',
+    purpose: 'Decide which human CTA should be first for a customer or task card.',
+    ownerSurface: 'staff',
+    allowedFields: ['callIntent', 'operationalIntent', 'lastCallAt', 'lastOrderAt', 'openTasksCount', 'openRequestsCount', 'latestNoteAt'],
+    allowedWeights: ['callNow', 'noteFirst', 'scheduleFirst', 'emailFirst', 'reviewOrderFirst'],
+    allowedSortFields: ['priority', 'createdAt'],
+    allowedCtas: ['call', 'note', 'schedule', 'email', 'customer_detail'],
+    allowedModalActions: ['call_customer', 'review_context', 'add_note', 'schedule_follow_up'],
+    simulationEvidence: ['CTA order diff', 'reason text diff'],
+    redLines: ['Do not auto-send mail.', 'Do not auto-open support cases.'],
+  },
+  {
+    id: 'staff.call_brief_generation',
+    label: 'Staff Call Brief Generation',
+    purpose: 'Shape staff-facing call guidance using stored resolver signals and customer context.',
+    ownerSurface: 'staff',
+    allowedFields: ['callIntent', 'operationalIntent', 'psychTags', 'objections', 'motivators', 'productMentions', 'customerMatched', 'ordersCount', 'totalSpent'],
+    allowedWeights: ['complaintTone', 'purchaseIntent', 'refundRisk', 'shippingConcern', 'customerHistory', 'productSpecificity'],
+    allowedSortFields: ['urgencyScore', 'createdAt'],
+    allowedCtas: ['call', 'note', 'schedule', 'customer_detail'],
+    allowedModalActions: ['state_reason', 'ask_specific_question', 'confirm_next_step', 'save_outcome'],
+    simulationEvidence: ['brief field coverage', 'fallback usage count'],
+    redLines: ['Do not re-read full transcript when resolver output is already stored.', 'Do not expose internal workflow/debug labels to staff.'],
+  },
+  {
+    id: 'customer_portal.reorder_eligibility',
+    label: 'Customer Portal Reorder Eligibility',
+    purpose: 'Control which Shopify order/items can be reordered from the customer account portal.',
+    ownerSurface: 'customer_portal',
+    allowedFields: ['orderStatus', 'fulfillmentStatus', 'productType', 'variantAvailable', 'customerOwnsOrder', 'lastPurchasedAt'],
+    allowedWeights: ['recentPurchase', 'variantAvailable', 'repeatableItem', 'blockedFulfillment'],
+    allowedSortFields: ['processedAt', 'totalPrice', 'lineItemTitle'],
+    allowedCtas: ['reorder', 'view_order', 'download_invoice', 'request_help'],
+    allowedModalActions: ['review_item', 'add_to_cart', 'request_quote'],
+    simulationEvidence: ['eligible item count', 'blocked item count'],
+    redLines: ['Do not bypass customer ownership.', 'Do not touch checkout/payment code from MCP strategy.'],
+  },
+  {
+    id: 'mail_marketing.audience_eligibility',
+    label: 'Mail Marketing Audience Eligibility',
+    purpose: 'Control who can enter marketing audiences and flows with consent and suppression safeguards.',
+    ownerSurface: 'mail_marketing',
+    allowedFields: ['consentStatus', 'suppressed', 'lastOrderAt', 'segmentIds', 'campaignHistory', 'emailDeliverability'],
+    allowedWeights: ['consent', 'segmentMatch', 'recency', 'purchaseHistory', 'engagement'],
+    allowedSortFields: ['lastOrderAt', 'totalSpent', 'createdAt'],
+    allowedCtas: ['preview_audience', 'exclude', 'send_test'],
+    allowedModalActions: ['review_consent', 'preview_template', 'confirm_send_safety'],
+    simulationEvidence: ['eligible contacts', 'suppressed contacts', 'consent failures'],
+    redLines: ['Do not override unsubscribed/suppressed contacts.', 'Do not send mail from strategy simulation.'],
+  },
+  {
+    id: 'mail_marketing.send_safety',
+    label: 'Mail Marketing Send Safety',
+    purpose: 'Control final send gates for transactional and marketing mail.',
+    ownerSurface: 'mail_marketing',
+    allowedFields: ['consentStatus', 'suppressed', 'providerMode', 'templateApproved', 'rateLimitState', 'idempotencyKey'],
+    allowedWeights: ['templateApproval', 'suppression', 'rateLimit', 'providerReadiness'],
+    allowedSortFields: ['createdAt', 'priority'],
+    allowedCtas: ['hold_send', 'send_test', 'approve_send'],
+    allowedModalActions: ['review_template', 'review_suppression', 'confirm_provider'],
+    simulationEvidence: ['blocked sends', 'allowed sends', 'provider safety warnings'],
+    redLines: ['Do not bypass compliance guards.', 'Do not mutate provider credentials.'],
+  },
+];
 
 type CompiledMcpDraft = Omit<WorkflowMcpDraftRuleResponse, 'draftId'>;
 
@@ -1748,7 +1892,10 @@ export class RulesService {
       customer_id: customer?.id ?? null,
       template_id: templateId,
       mail_delivery_id: delivery.id,
+      mail_delivery_status: delivery.status,
     });
+    const deliveryMetadata = asRecord(delivery.metadata);
+    const failClosed = deliveryMetadata.failClosed === true;
     return {
       trace: {
         actionId: action.id,
@@ -1756,13 +1903,18 @@ export class RulesService {
         status: 'applied' as const,
         targetType: 'mail_delivery' as const,
         targetId: delivery.id,
-        message: 'send_mail action queued a transactional mail delivery.',
+        message: failClosed
+          ? 'send_mail action was recorded without sending because no active published template was bound.'
+          : 'send_mail action queued a transactional mail delivery.',
         metadata: {
-          sendingEnabled: true,
-          providerMode: 'resend',
+          sendingEnabled: !failClosed,
+          providerMode: String(delivery.provider ?? deliveryMetadata.providerMode ?? 'resend'),
+          deliveryStatus: delivery.status,
+          failClosed,
           customerId: customer?.id ?? null,
           recipientEmail,
-          templateId,
+          templateId: deliveryMetadata.templateId ?? templateId,
+          templateVersionId: deliveryMetadata.templateVersionId ?? null,
         },
       },
     };
@@ -2612,6 +2764,16 @@ export class RulesService {
         { name: 'rollback_frontend_customization', description: 'Archive the current active UI customization or reactivate a previous one.', mutates: true, requiresPermission: 'settings.write' },
         { name: 'preview_frontend_source_patch', description: 'Validate a maintainer-only frontend source patch plan against allowlists without applying it.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'validate_frontend_source_patch_proof', description: 'Validate build and screenshot proof for an allowlisted frontend source patch plan before human-approved deploy.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'list_algorithm_surfaces', description: 'List strategy-engine surfaces that can be changed through safe JSON/DSL instead of source code.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'get_algorithm_contract', description: 'Read one algorithm surface contract, active strategy, allowed fields, simulation evidence, and red lines.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'draft_algorithm_change', description: 'Draft a versioned algorithm strategy from a natural-language business goal.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'validate_algorithm_change', description: 'Validate a draft or JSON strategy against the surface contract before simulation or publish.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'simulate_algorithm_change', description: 'Run a no-mutation strategy simulation against bounded live data and produce a diff report.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'compare_algorithm_versions', description: 'Compare baseline and candidate strategy outcomes before publish.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'publish_algorithm_version', description: 'Activate a strategy only after a successful simulation report.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'rollback_algorithm_version', description: 'Rollback an algorithm surface to a previous strategy/version without source edits.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'explain_customer_ranking', description: 'Explain why a customer ranks where they do under an active or candidate strategy.', mutates: false, requiresPermission: 'settings.read' },
+        { name: 'explain_task_visibility', description: 'Explain why a task is visible, hidden, or delayed under an active or candidate strategy.', mutates: false, requiresPermission: 'settings.read' },
       ],
       safeguards: [
         'External authoring agents never execute workflow actions directly; they only draft the deterministic workflow DSL.',
@@ -2623,6 +2785,9 @@ export class RulesService {
         'Automatic customer request/support case creation is not a supported action.',
         'Publish requires a stored rule and a recent simulation/backfill report for that rule.',
         'Unsupported actions such as send_mail or segment removal are rejected for MCP-authored rules.',
+        'Algorithm changes use versioned strategy JSON with weights, conditions, sort, visibility, cooldown, scoreBands, CTA priority, and modal action order.',
+        'Algorithm publish requires a stored no-mutation simulation report for the same strategy and surface.',
+        'Algorithm MCP tools cannot alter auth, tenant scope, RBAC, checkout/payment, webhook secrets, raw SQL, Prisma tenant extension, or destructive queue behavior.',
       ],
       allowed: {
         triggers: MCP_ALLOWED_TRIGGERS,
@@ -2651,6 +2816,750 @@ export class RulesService {
         'Create account follow-up tasks for financing questions and keep duplicate open-task guards on.',
       ],
     };
+  }
+
+  async algorithmSurfaces(): Promise<AlgorithmMcpSurfacesResponse> {
+    return { surfaces: ALGORITHM_SURFACES.map(cloneAlgorithmSurface) };
+  }
+
+  async algorithmSurfaceContract(surfaceId: string): Promise<AlgorithmMcpSurfaceContractResponse> {
+    const surface = requireAlgorithmSurface(surfaceId);
+    const active = await this.activeAlgorithmStrategy(surface.id);
+    return {
+      surface: cloneAlgorithmSurface(surface),
+      activeStrategy: active ? algorithmStrategyDto(active) : null,
+    };
+  }
+
+  async algorithmRuntimeDefinition(surfaceId: AlgorithmSurfaceId): Promise<AlgorithmStrategyDefinition> {
+    const surface = requireAlgorithmSurface(surfaceId);
+    const active = await this.activeAlgorithmStrategy(surface.id);
+    return active ? algorithmStrategyDefinitionSchema.parse(active.definition) : defaultAlgorithmDefinition(surface);
+  }
+
+  async draftAlgorithmChangeFromMcp(input: AlgorithmMcpDraftChangeInput): Promise<AlgorithmMcpDraftChangeResponse> {
+    const parsed = algorithmMcpDraftChangeSchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    const strategy = draftAlgorithmStrategy(surface, parsed.naturalLanguageGoal, parsed.preferredStatus);
+    const validation = this.validateAlgorithmStrategy(strategy);
+    const warnings = [...validation.warnings];
+    const created = await this.prisma.db.algorithmStrategy.create({
+      data: {
+        id: prefixedId('astrat'),
+        tenantId: this.tenantId(),
+        surfaceId: parsed.surfaceId,
+        name: strategy.name,
+        status: 'draft',
+        definition: strategy.definition as Prisma.InputJsonValue,
+        reason: parsed.naturalLanguageGoal,
+        warnings,
+        createdByMemberId: this.editedByMemberId(),
+      },
+    });
+    return {
+      draftId: created.id,
+      strategy: {
+        ...strategy,
+        status: 'draft',
+      },
+      confidence: validation.issues.length === 0 ? 0.82 : 0.55,
+      assumptions: [
+        'Strategy changes are DSL-only; no source code, raw SQL, auth, tenant, RBAC, checkout, webhook, or worker mutation is allowed.',
+        'Publish requires a successful no-mutation simulation for the same stored strategy.',
+      ],
+      warnings,
+    };
+  }
+
+  async validateAlgorithmChangeFromMcp(input: AlgorithmMcpValidateChangeInput): Promise<AlgorithmMcpValidateChangeResponse> {
+    const parsed = algorithmMcpValidateChangeSchema.parse(input);
+    const { strategy } = await this.resolveAlgorithmStrategyReference(parsed);
+    const validation = this.validateAlgorithmStrategy(strategy);
+    return {
+      ok: validation.issues.length === 0,
+      issues: validation.issues,
+      warnings: validation.warnings,
+      normalizedStrategy: validation.issues.length === 0 ? strategy : null,
+    };
+  }
+
+  async simulateAlgorithmChangeFromMcp(input: AlgorithmMcpSimulateChangeInput): Promise<AlgorithmMcpSimulateChangeResponse> {
+    const parsed = algorithmMcpSimulateChangeSchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    const resolved = await this.resolveAlgorithmCandidate(surface.id, parsed);
+    const validation = this.validateAlgorithmStrategy(resolved.strategy);
+    if (validation.issues.length > 0) {
+      throw new BadRequestException(`Algorithm strategy is invalid: ${validation.issues.join('; ')}`);
+    }
+
+    const baseline = await this.activeAlgorithmStrategy(surface.id);
+    const baselineDefinition = baseline ? algorithmStrategyDefinitionSchema.parse(baseline.definition) : defaultAlgorithmDefinition(surface);
+    const simulationResult = await this.runAlgorithmSimulation(surface, baseline?.id ?? null, baselineDefinition, resolved.strategy.definition, parsed.memberEmail ?? null, parsed.recentDays, parsed.limit);
+    const now = new Date();
+    const simulation = await this.prisma.db.algorithmStrategySimulation.create({
+      data: {
+        id: prefixedId('asim'),
+        tenantId: this.tenantId(),
+        strategyId: resolved.strategyRecord?.id ?? null,
+        surfaceId: surface.id,
+        status: simulationResult.status,
+        windowStart: simulationResult.windowStart,
+        windowEnd: simulationResult.windowEnd,
+        sampleSize: simulationResult.result.changedTopItems.length + simulationResult.result.unchangedCount,
+        result: simulationResult.result as unknown as Prisma.InputJsonValue,
+        createdByMemberId: this.editedByMemberId(),
+        finishedAt: now,
+      },
+    });
+
+    return {
+      simulation: algorithmSimulationDto(simulation),
+      strategy: resolved.strategyRecord ? algorithmStrategyDto(resolved.strategyRecord) : null,
+      candidate: resolved.strategy,
+    };
+  }
+
+  async compareAlgorithmVersionsFromMcp(input: AlgorithmMcpCompareVersionsInput): Promise<AlgorithmMcpCompareVersionsResponse> {
+    const parsed = algorithmMcpCompareVersionsSchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    const active = await this.activeAlgorithmStrategy(surface.id);
+    const baseStrategy = parsed.baseStrategyId
+      ? (await this.resolveAlgorithmStrategyReference({ strategyId: parsed.baseStrategyId })).strategy
+      : active
+        ? strategyInputFromRecord(active)
+        : defaultAlgorithmStrategyInput(surface);
+    const candidateStrategy = await this.resolveAlgorithmCandidate(surface.id, {
+      strategyId: parsed.candidateStrategyId,
+      strategy: parsed.candidateStrategy,
+      strategyJson: parsed.candidateStrategyJson,
+    });
+
+    const base = await this.simulateAlgorithmChangeFromMcp({
+      surfaceId: surface.id,
+      strategy: baseStrategy,
+      memberEmail: parsed.memberEmail,
+      recentDays: parsed.recentDays,
+      limit: parsed.limit,
+    });
+    const candidate = await this.simulateAlgorithmChangeFromMcp({
+      surfaceId: surface.id,
+      strategy: candidateStrategy.strategy,
+      memberEmail: parsed.memberEmail,
+      recentDays: parsed.recentDays,
+      limit: parsed.limit,
+    });
+    const topItemChanges = candidate.simulation.result.changedTopItems.filter((item) => {
+      const baseItem = base.simulation.result.changedTopItems.find((entry) => entry.id === item.id);
+      return !baseItem || baseItem.afterRank !== item.afterRank || baseItem.afterScore !== item.afterScore || baseItem.visibleAfter !== item.visibleAfter;
+    });
+
+    return {
+      base,
+      candidate,
+      diff: {
+        topItemChanges,
+        hiddenDelta: candidate.simulation.result.hiddenCount - base.simulation.result.hiddenCount,
+        surfacedDelta: candidate.simulation.result.surfacedCount - base.simulation.result.surfacedCount,
+        summary: [
+          `${topItemChanges.length} ranked items changed in the bounded sample.`,
+          `${candidate.simulation.result.hiddenCount - base.simulation.result.hiddenCount} hidden-count delta.`,
+          `${candidate.simulation.result.surfacedCount - base.simulation.result.surfacedCount} surfaced-count delta.`,
+        ],
+      },
+    };
+  }
+
+  async publishAlgorithmVersionFromMcp(input: AlgorithmMcpPublishVersionInput): Promise<AlgorithmMcpPublishVersionResponse> {
+    const parsed = algorithmMcpPublishVersionSchema.parse(input);
+    const strategy = await this.prisma.db.algorithmStrategy.findFirst({ where: { tenantId: this.tenantId(), id: parsed.strategyId } });
+    if (!strategy) throw new NotFoundException('Algorithm strategy was not found.');
+    const simulation = await this.prisma.db.algorithmStrategySimulation.findFirst({
+      where: {
+        tenantId: this.tenantId(),
+        id: parsed.simulationId,
+        strategyId: strategy.id,
+        surfaceId: strategy.surfaceId,
+        status: 'passed',
+      },
+    });
+    if (!simulation) {
+      throw new BadRequestException('Publish requires a passed simulation for the same stored strategy and surface.');
+    }
+
+    const versionNo = await this.nextAlgorithmVersionNo(strategy.id);
+    const version = await this.prisma.db.algorithmStrategyVersion.create({
+      data: {
+        id: prefixedId('astrv'),
+        tenantId: this.tenantId(),
+        strategyId: strategy.id,
+        surfaceId: strategy.surfaceId,
+        versionNo,
+        jsonSnapshot: strategyInputFromRecord(strategy) as Prisma.InputJsonValue,
+        editedByMemberId: this.editedByMemberId(),
+        comment: parsed.comment ?? 'Published through algorithm MCP after simulation.',
+      },
+    });
+    const previousActive = await this.prisma.db.algorithmStrategy.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        surfaceId: strategy.surfaceId,
+        status: 'active',
+        id: { not: strategy.id },
+      },
+      select: { id: true },
+    });
+    await this.prisma.db.algorithmStrategy.updateMany({
+      where: {
+        tenantId: this.tenantId(),
+        surfaceId: strategy.surfaceId,
+        status: 'active',
+        id: { not: strategy.id },
+      },
+      data: { status: 'archived' },
+    });
+    const now = new Date();
+    await this.prisma.db.algorithmStrategy.updateMany({
+      where: { tenantId: this.tenantId(), id: strategy.id },
+      data: { status: 'active', activatedAt: now, warnings: [] },
+    });
+    const updated = await this.prisma.db.algorithmStrategy.findFirst({ where: { tenantId: this.tenantId(), id: strategy.id } });
+    if (!updated) throw new NotFoundException('Published algorithm strategy could not be reloaded.');
+    return {
+      strategy: algorithmStrategyDto(updated),
+      version: algorithmStrategyVersionDto(version),
+      simulation: algorithmSimulationDto(simulation),
+      publishedAt: now.toISOString(),
+      deactivatedStrategyIds: previousActive.map((row) => row.id),
+    };
+  }
+
+  async rollbackAlgorithmVersionFromMcp(input: AlgorithmMcpRollbackVersionInput): Promise<AlgorithmMcpRollbackVersionResponse> {
+    const parsed = algorithmMcpRollbackVersionSchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    let target = parsed.targetStrategyId
+      ? await this.prisma.db.algorithmStrategy.findFirst({ where: { tenantId: this.tenantId(), id: parsed.targetStrategyId, surfaceId: surface.id } })
+      : null;
+    let versionRecord: AlgorithmStrategyVersionRecord | null = null;
+
+    if (!target && parsed.versionNo) {
+      versionRecord = await this.prisma.db.algorithmStrategyVersion.findFirst({
+        where: { tenantId: this.tenantId(), surfaceId: surface.id, versionNo: parsed.versionNo },
+        orderBy: { editedAt: 'desc' },
+      });
+      if (!versionRecord) throw new NotFoundException('Algorithm strategy version was not found.');
+      const snapshot = saveAlgorithmStrategySchema.parse(versionRecord.jsonSnapshot);
+      target = await this.prisma.db.algorithmStrategy.create({
+        data: {
+          id: prefixedId('astrat'),
+          tenantId: this.tenantId(),
+          surfaceId: surface.id,
+          name: `${snapshot.name} rollback`,
+          status: 'draft',
+          definition: snapshot.definition as Prisma.InputJsonValue,
+          reason: parsed.comment ?? 'Rollback from stored algorithm version.',
+          warnings: [],
+          createdByMemberId: this.editedByMemberId(),
+        },
+      });
+    }
+
+    if (!target) {
+      target = await this.prisma.db.algorithmStrategy.findFirst({
+        where: { tenantId: this.tenantId(), surfaceId: surface.id, status: { in: ['archived', 'shadow', 'draft'] } },
+        orderBy: [{ updatedAt: 'desc' }],
+      });
+    }
+    if (!target) throw new NotFoundException('No rollback target strategy was found for this surface.');
+
+    const previousActive = await this.prisma.db.algorithmStrategy.findMany({
+      where: { tenantId: this.tenantId(), surfaceId: surface.id, status: 'active', id: { not: target.id } },
+      select: { id: true },
+    });
+    await this.prisma.db.algorithmStrategy.updateMany({
+      where: { tenantId: this.tenantId(), surfaceId: surface.id, status: 'active', id: { not: target.id } },
+      data: { status: 'archived' },
+    });
+    await this.prisma.db.algorithmStrategy.updateMany({
+      where: { tenantId: this.tenantId(), id: target.id },
+      data: { status: 'active', activatedAt: new Date() },
+    });
+    const activated = await this.prisma.db.algorithmStrategy.findFirst({ where: { tenantId: this.tenantId(), id: target.id } });
+    if (!activated) throw new NotFoundException('Rollback algorithm strategy could not be reloaded.');
+    return {
+      strategy: algorithmStrategyDto(activated),
+      version: versionRecord ? algorithmStrategyVersionDto(versionRecord) : null,
+      archivedStrategyIds: previousActive.map((row) => row.id),
+    };
+  }
+
+  async explainCustomerRankingFromMcp(input: AlgorithmMcpExplainCustomerRankingInput): Promise<AlgorithmMcpExplainCustomerRankingResponse> {
+    const parsed = algorithmMcpExplainCustomerRankingSchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    const strategy = parsed.strategyId
+      ? (await this.resolveAlgorithmStrategyReference({ strategyId: parsed.strategyId })).strategy
+      : await this.activeOrDefaultStrategyInput(surface);
+    const customer = await this.prisma.db.customer.findFirst({
+      where: { tenantId: this.tenantId(), id: parsed.customerId },
+      include: { insight: true, segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 5 } },
+    });
+    if (!customer) throw new NotFoundException('Customer was not found.');
+    const signals = customerSignals(customer);
+    const score = scoreAlgorithmStrategy(strategy.definition, signals);
+    return {
+      surfaceId: surface.id,
+      customerId: customer.id,
+      strategyId: parsed.strategyId ?? null,
+      score,
+      band: scoreBandFor(strategy.definition, score),
+      reasons: explainScore(strategy.definition, signals, score),
+      rawSignals: signals,
+    };
+  }
+
+  async explainTaskVisibilityFromMcp(input: AlgorithmMcpExplainTaskVisibilityInput): Promise<AlgorithmMcpExplainTaskVisibilityResponse> {
+    const parsed = algorithmMcpExplainTaskVisibilitySchema.parse(input);
+    const surface = requireAlgorithmSurface(parsed.surfaceId);
+    const strategy = parsed.strategyId
+      ? (await this.resolveAlgorithmStrategyReference({ strategyId: parsed.strategyId })).strategy
+      : await this.activeOrDefaultStrategyInput(surface);
+    const task = await this.prisma.db.serviceRequest.findFirst({
+      where: { tenantId: this.tenantId(), id: parsed.serviceRequestId },
+      include: { customer: { include: { insight: true, segmentMemberships: { include: { segment: true }, take: 3 } } } },
+    });
+    if (!task) throw new NotFoundException('Service request was not found.');
+    const signals = serviceRequestSignals(task);
+    const visible = isVisibleByStrategy(strategy.definition, signals);
+    return {
+      surfaceId: surface.id,
+      serviceRequestId: task.id,
+      strategyId: parsed.strategyId ?? null,
+      visible,
+      reasons: explainVisibility(strategy.definition, signals, visible),
+      rawSignals: signals,
+    };
+  }
+
+  private async activeAlgorithmStrategy(surfaceId: AlgorithmSurfaceId) {
+    return this.prisma.db.algorithmStrategy.findFirst({
+      where: { tenantId: this.tenantId(), surfaceId, status: 'active' },
+      orderBy: [{ activatedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+  }
+
+  private async activeOrDefaultStrategyInput(surface: AlgorithmSurfaceContract): Promise<SaveAlgorithmStrategyInput> {
+    const active = await this.activeAlgorithmStrategy(surface.id);
+    return active ? strategyInputFromRecord(active) : defaultAlgorithmStrategyInput(surface);
+  }
+
+  private async resolveAlgorithmCandidate(
+    surfaceId: AlgorithmSurfaceId,
+    input: {
+      strategyId?: string;
+      strategy?: SaveAlgorithmStrategyInput | string;
+      strategyJson?: string;
+    },
+  ): Promise<{ strategy: SaveAlgorithmStrategyInput; strategyRecord: AlgorithmStrategyRecord | null }> {
+    const provided = [input.strategyId, input.strategy, input.strategyJson].filter((entry) => entry !== undefined && entry !== null).length;
+    if (provided === 0) {
+      return { strategy: await this.activeOrDefaultStrategyInput(requireAlgorithmSurface(surfaceId)), strategyRecord: null };
+    }
+    const resolved = await this.resolveAlgorithmStrategyReference(input);
+    if (resolved.strategy.surfaceId !== surfaceId || resolved.strategy.definition.surfaceId !== surfaceId) {
+      throw new BadRequestException('Strategy surfaceId must match the requested algorithm surface.');
+    }
+    return resolved;
+  }
+
+  private async resolveAlgorithmStrategyReference(input: {
+    strategyId?: string;
+    strategy?: SaveAlgorithmStrategyInput | string;
+    strategyJson?: string;
+  }): Promise<{ strategy: SaveAlgorithmStrategyInput; strategyRecord: AlgorithmStrategyRecord | null }> {
+    if (input.strategyId) {
+      const record = await this.prisma.db.algorithmStrategy.findFirst({
+        where: { tenantId: this.tenantId(), id: input.strategyId },
+      });
+      if (!record) throw new NotFoundException('Algorithm strategy was not found.');
+      return { strategy: strategyInputFromRecord(record), strategyRecord: record };
+    }
+
+    const raw = input.strategyJson ?? input.strategy;
+    if (typeof raw === 'string') {
+      return { strategy: saveAlgorithmStrategySchema.parse(JSON.parse(raw)), strategyRecord: null };
+    }
+    if (raw) {
+      return { strategy: saveAlgorithmStrategySchema.parse(raw), strategyRecord: null };
+    }
+    throw new BadRequestException('Algorithm strategy reference is required.');
+  }
+
+  private validateAlgorithmStrategy(strategy: SaveAlgorithmStrategyInput) {
+    const parsed = saveAlgorithmStrategySchema.safeParse(strategy);
+    if (!parsed.success) {
+      return {
+        issues: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'strategy'}: ${issue.message}`),
+        warnings: [],
+      };
+    }
+    const surface = requireAlgorithmSurface(parsed.data.surfaceId);
+    const issues: string[] = [];
+    const warnings: string[] = [];
+    if (parsed.data.definition.surfaceId !== parsed.data.surfaceId) {
+      issues.push('definition.surfaceId must match strategy.surfaceId.');
+    }
+    for (const key of Object.keys(parsed.data.definition.weights)) {
+      if (!surface.allowedWeights.includes(key)) issues.push(`Weight is not allowed on ${surface.id}: ${key}`);
+    }
+    for (const field of parsed.data.definition.conditions.map((condition) => condition.field)) {
+      if (!surface.allowedFields.includes(field)) issues.push(`Condition field is not allowed on ${surface.id}: ${field}`);
+    }
+    for (const field of [
+      ...parsed.data.definition.visibility.showWhen.map((condition) => condition.field),
+      ...parsed.data.definition.visibility.hideWhen.map((condition) => condition.field),
+    ]) {
+      if (!surface.allowedFields.includes(field)) issues.push(`Visibility field is not allowed on ${surface.id}: ${field}`);
+    }
+    for (const rule of parsed.data.definition.sort) {
+      if (!surface.allowedSortFields.includes(rule.field)) issues.push(`Sort field is not allowed on ${surface.id}: ${rule.field}`);
+    }
+    for (const cta of parsed.data.definition.ctaPriority) {
+      if (!surface.allowedCtas.includes(cta)) issues.push(`CTA is not allowed on ${surface.id}: ${cta}`);
+    }
+    for (const action of parsed.data.definition.modalActionOrder) {
+      if (!surface.allowedModalActions.includes(action)) issues.push(`Modal action is not allowed on ${surface.id}: ${action}`);
+    }
+    if (parsed.data.status === 'active') {
+      warnings.push('MCP draft/validate can produce active-looking JSON, but publish_algorithm_version is still required to activate it.');
+    }
+    if (parsed.data.definition.visibility.mode === 'hide_by_default' && parsed.data.definition.visibility.showWhen.length === 0) {
+      warnings.push('hide_by_default without showWhen will suppress the whole surface sample.');
+    }
+    return { issues, warnings };
+  }
+
+  private async runAlgorithmSimulation(
+    surface: AlgorithmSurfaceContract,
+    baselineStrategyId: string | null,
+    baseline: AlgorithmStrategyDefinition,
+    candidate: AlgorithmStrategyDefinition,
+    memberEmail: string | null,
+    recentDays: number,
+    limit: number,
+  ): Promise<{ status: 'passed' | 'limited'; windowStart: Date | null; windowEnd: Date | null; result: AlgorithmSimulationResult }> {
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd.getTime() - recentDays * 24 * 60 * 60 * 1000);
+    if (surface.id === 'staff.daily_call_list.ranking') {
+      const rows = await this.staffAlgorithmServiceRequestRows(memberEmail, windowStart, windowEnd, limit);
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, rows.map((row) => ({
+          id: row.id,
+          label: row.customer ? customerDisplayLabel(row.customer) : row.title,
+          signals: serviceRequestSignals(row),
+        })), limit),
+      };
+    }
+
+    if (surface.id === 'staff.task_visibility') {
+      const rows = await this.staffAlgorithmServiceRequestRows(memberEmail, windowStart, windowEnd, limit);
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, rows.map((row) => ({
+          id: row.id,
+          label: row.customer ? customerDisplayLabel(row.customer) : row.title,
+          signals: serviceRequestSignals(row),
+        })), limit),
+      };
+    }
+
+    if (surface.id === 'staff.customer_next_action') {
+      const rows = await this.staffAlgorithmServiceRequestRows(memberEmail, windowStart, windowEnd, limit);
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: staffActionOrderSimulationResult(surface, baselineStrategyId, baseline, candidate, rows.map((row) => ({
+          id: row.id,
+          label: row.customer ? customerDisplayLabel(row.customer) : row.title,
+          signals: serviceRequestSignals(row),
+        })), limit, 'cta'),
+      };
+    }
+
+    if (surface.id === 'staff.call_brief_generation') {
+      const rows = await this.staffAlgorithmServiceRequestRows(memberEmail, windowStart, windowEnd, limit);
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: staffActionOrderSimulationResult(surface, baselineStrategyId, baseline, candidate, rows.map((row) => ({
+          id: row.id,
+          label: row.customer ? customerDisplayLabel(row.customer) : row.title,
+          signals: serviceRequestSignals(row),
+        })), limit, 'modal'),
+      };
+    }
+
+    if (surface.id === 'staff.priority_kanban.customer_score') {
+      const member = memberEmail ? await this.memberByEmail(memberEmail) : null;
+      const ownerships = await this.prisma.db.segmentOwnership.findMany({
+        where: member ? { tenantId: this.tenantId(), memberId: member.id } : { tenantId: this.tenantId() },
+        include: {
+          segment: {
+            include: {
+              memberships: {
+                include: {
+                  customer: {
+                    include: {
+                      insight: true,
+                      segmentMemberships: { include: { segment: true }, take: 3 },
+                      serviceRequests: {
+                        where: { status: { notIn: [...ALGORITHM_CLOSED_TASK_STATUSES] } },
+                        orderBy: [{ updatedAt: 'desc' }],
+                        take: 5,
+                      },
+                      orders: { orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }], take: 1 },
+                    },
+                  },
+                },
+                orderBy: [{ matchedAt: 'desc' }],
+                take: Math.min(limit * 4, 500),
+              },
+            },
+          },
+        },
+        orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+        take: 30,
+      });
+      const items = ownerships.flatMap((ownership) => ownership.segment.memberships.map((membership) => ({
+        id: membership.customerId,
+        label: customerDisplayLabel(membership.customer),
+        signals: {
+          ...customerSignals(membership.customer),
+          segmentPriority: Math.max(ownership.priority, ownership.segment.priorityGlobal, ownership.segment.priority),
+          membershipScore: Number(membership.score ?? 0),
+        },
+      })));
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, items, limit),
+      };
+    }
+
+    if (surface.id === 'customer_portal.reorder_eligibility') {
+      const orders = await this.prisma.db.commerceOrder.findMany({
+        where: {
+          tenantId: this.tenantId(),
+          OR: [
+            { processedAt: { gte: windowStart, lte: windowEnd } },
+            { createdAt: { gte: windowStart, lte: windowEnd } },
+          ],
+        },
+        include: { customer: true },
+        orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(limit * 6, 300),
+      });
+      const lineItems = orders.flatMap((order) => simulationReorderLineItems(order).map((item) => ({ order, item }))).slice(0, Math.min(limit * 6, 300));
+      const variantKeys = uniqueStrings(lineItems.flatMap(({ item }) => [item.shopifyVariantId, item.sku]));
+      const variants = variantKeys.length > 0
+        ? await this.prisma.db.catalogVariant.findMany({
+            where: {
+              tenantId: this.tenantId(),
+              OR: [
+                { shopifyVariantId: { in: variantKeys } },
+                { sku: { in: variantKeys } },
+              ],
+            },
+            include: { product: true },
+          })
+        : [];
+      const variantByKey = new Map<string, (typeof variants)[number]>();
+      for (const variant of variants) {
+        if (variant.shopifyVariantId) variantByKey.set(variant.shopifyVariantId, variant);
+        if (variant.sku) variantByKey.set(variant.sku, variant);
+      }
+      const items = lineItems.map(({ order, item }) => {
+        const variant = (item.shopifyVariantId ? variantByKey.get(item.shopifyVariantId) : null) ?? (item.sku ? variantByKey.get(item.sku) : null) ?? null;
+        return {
+          id: `${order.id}:${item.sourceKey}`,
+          label: `${order.shopifyOrderNumber ?? order.id} - ${item.name}`,
+          signals: reorderSimulationSignals(order, item, variant),
+        };
+      });
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, items, limit),
+      };
+    }
+
+    if (surface.id === 'mail_marketing.audience_eligibility') {
+      const contacts = await this.prisma.db.mailContact.findMany({
+        where: {
+          tenantId: this.tenantId(),
+          OR: [
+            { createdAt: { gte: windowStart, lte: windowEnd } },
+            { updatedAt: { gte: windowStart, lte: windowEnd } },
+            { lastActivityAt: { gte: windowStart, lte: windowEnd } },
+          ],
+        },
+        include: {
+          consentStates: { where: { category: 'marketing' }, orderBy: { updatedAt: 'desc' }, take: 1 },
+          suppressions: { where: { isActive: true }, orderBy: { updatedAt: 'desc' }, take: 5 },
+        },
+        orderBy: [{ lastActivityAt: 'desc' }, { updatedAt: 'desc' }],
+        take: Math.min(limit * 4, 500),
+      });
+      const customers = await customersForMailContacts(this.prisma, this.tenantId(), contacts);
+      const items = contacts.map((contact) => {
+        const customer = (contact.customerId ? customers.byId.get(contact.customerId) : null) ?? customers.byEmail.get(contact.normalizedEmail) ?? null;
+        return {
+          id: contact.id,
+          label: contact.name || contact.email,
+          signals: mailAudienceSimulationSignals(contact, customer),
+        };
+      });
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, items, limit),
+      };
+    }
+
+    if (surface.id === 'mail_marketing.send_safety') {
+      const snapshotMembers = await this.prisma.db.mailAudienceSnapshotMember.findMany({
+        where: {
+          tenantId: this.tenantId(),
+          createdAt: { gte: windowStart, lte: windowEnd },
+        },
+        include: {
+          contact: {
+            include: {
+              consentStates: { where: { category: 'marketing' }, orderBy: { updatedAt: 'desc' }, take: 1 },
+              suppressions: { where: { isActive: true }, orderBy: { updatedAt: 'desc' }, take: 5 },
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(limit * 4, 500),
+      });
+      const directContacts = snapshotMembers.length > 0
+        ? []
+        : await this.prisma.db.mailContact.findMany({
+            where: { tenantId: this.tenantId() },
+            include: {
+              consentStates: { where: { category: 'marketing' }, orderBy: { updatedAt: 'desc' }, take: 1 },
+              suppressions: { where: { isActive: true }, orderBy: { updatedAt: 'desc' }, take: 5 },
+            },
+            orderBy: [{ updatedAt: 'desc' }],
+            take: Math.min(limit * 4, 500),
+          });
+      const items = snapshotMembers.length > 0
+        ? snapshotMembers.map((member) => ({
+            id: member.id,
+            label: member.email,
+            signals: mailSendSafetySimulationSignals({
+              email: member.email,
+              isSendable: member.isSendable,
+              consentState: member.consentState,
+              suppressionReason: member.suppressionReason,
+              contact: member.contact,
+              createdAt: member.createdAt,
+            }),
+          }))
+        : directContacts.map((contact) => ({
+            id: contact.id,
+            label: contact.email,
+            signals: mailSendSafetySimulationSignals({
+              email: contact.email,
+              isSendable: contact.isSendable,
+              consentState: contact.consentStates[0]?.state ?? 'unknown',
+              suppressionReason: activeMailSuppressionReason(contact.suppressions),
+              contact,
+              createdAt: contact.createdAt,
+            }),
+          }));
+      return {
+        status: 'passed',
+        windowStart,
+        windowEnd,
+        result: rankSimulationResult(surface, baselineStrategyId, baseline, candidate, items, limit),
+      };
+    }
+
+    return {
+      status: 'limited',
+      windowStart: null,
+      windowEnd: null,
+      result: {
+        noMutation: true,
+        baselineStrategyId,
+        candidateHash: hashJson(candidate),
+        changedTopItems: [],
+        hiddenCount: 0,
+        surfacedCount: 0,
+        unchangedCount: 0,
+        warnings: [`${surface.id} has a contract and validation lane, but native live-data simulation is not yet bound.`],
+        evidence: [`Contract checked for ${surface.id}. Publish should remain blocked until native simulation is wired for this surface.`],
+      },
+    };
+  }
+
+  private async staffAlgorithmServiceRequestRows(memberEmail: string | null, windowStart: Date, windowEnd: Date, limit: number) {
+    const member = memberEmail ? await this.memberByEmail(memberEmail) : null;
+    const workflowScope: Prisma.ServiceRequestWhereInput = {
+      OR: [
+        { source: 'workflow' },
+        { sourceCallId: { not: null } },
+        { sourceEmailId: { not: null } },
+        { matchedRuleId: { not: null } },
+        { metadata: { path: ['workflow'], not: Prisma.JsonNull } },
+      ],
+    };
+    return this.prisma.db.serviceRequest.findMany({
+      where: {
+        tenantId: this.tenantId(),
+        axis: { in: ['sales', 'account'] },
+        status: { notIn: [...ALGORITHM_CLOSED_TASK_STATUSES] },
+        createdAt: { gte: windowStart, lte: windowEnd },
+        ...(member ? { assignedMemberId: member.id } : {}),
+        AND: [workflowScope],
+      },
+      include: {
+        assignedMember: true,
+        customer: { include: { insight: true, segmentMemberships: { include: { segment: true }, take: 3 } } },
+        comments: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+        _count: { select: { comments: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+      take: Math.min(limit * 4, 500),
+    });
+  }
+
+  private async memberByEmail(email: string) {
+    const member = await this.prisma.db.member.findFirst({
+      where: { tenantId: this.tenantId(), email },
+      select: { id: true, email: true },
+    });
+    if (!member) throw new NotFoundException(`Member was not found: ${email}`);
+    return member;
+  }
+
+  private async nextAlgorithmVersionNo(strategyId: string) {
+    const latest = await this.prisma.db.algorithmStrategyVersion.findFirst({
+      where: { tenantId: this.tenantId(), strategyId },
+      orderBy: { versionNo: 'desc' },
+      select: { versionNo: true },
+    });
+    return (latest?.versionNo ?? 0) + 1;
   }
 
   async mcpAgentGuide(): Promise<WorkflowMcpAgentGuideResponse> {
@@ -4251,6 +5160,817 @@ export class RulesService {
   }
 }
 
+type AlgorithmStrategyRecord = {
+  id: string;
+  surfaceId: string;
+  name: string;
+  status: string;
+  definition: unknown;
+  reason: string | null;
+  warnings: string[];
+  createdByMemberId: string | null;
+  activatedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type AlgorithmStrategyVersionRecord = {
+  id: string;
+  strategyId: string;
+  surfaceId: string;
+  versionNo: number;
+  jsonSnapshot: unknown;
+  editedByMemberId: string | null;
+  editedAt: Date;
+  comment: string | null;
+};
+
+type AlgorithmStrategySimulationRecord = {
+  id: string;
+  strategyId: string | null;
+  surfaceId: string;
+  status: string;
+  windowStart: Date | null;
+  windowEnd: Date | null;
+  sampleSize: number;
+  result: unknown;
+  createdByMemberId: string | null;
+  createdAt: Date;
+  finishedAt: Date | null;
+};
+
+type AlgorithmSignalItem = {
+  id: string;
+  label: string;
+  signals: Record<string, unknown>;
+};
+
+function cloneAlgorithmSurface(surface: AlgorithmSurfaceContract): AlgorithmSurfaceContract {
+  return {
+    ...surface,
+    allowedFields: [...surface.allowedFields],
+    allowedWeights: [...surface.allowedWeights],
+    allowedSortFields: [...surface.allowedSortFields],
+    allowedCtas: [...surface.allowedCtas],
+    allowedModalActions: [...surface.allowedModalActions],
+    simulationEvidence: [...surface.simulationEvidence],
+    redLines: [...surface.redLines],
+  };
+}
+
+function requireAlgorithmSurface(surfaceId: string): AlgorithmSurfaceContract {
+  const surface = ALGORITHM_SURFACES.find((entry) => entry.id === surfaceId);
+  if (!surface) throw new NotFoundException(`Algorithm surface contract was not found: ${surfaceId}`);
+  return surface;
+}
+
+function draftAlgorithmStrategy(
+  surface: AlgorithmSurfaceContract,
+  goal: string,
+  status: SaveAlgorithmStrategyInput['status'],
+): SaveAlgorithmStrategyInput {
+  const lower = goal.toLowerCase();
+  const weights: Record<string, number> = {};
+  for (const weight of surface.allowedWeights.slice(0, 5)) weights[weight] = 1;
+  if (lower.includes('refund') || lower.includes('payment') || lower.includes('price')) weights.refundOrPaymentIssue = 8;
+  if (lower.includes('shipping') || lower.includes('delivery') || lower.includes('tracking')) weights.shippingIssue = 6;
+  if (lower.includes('purchase') || lower.includes('buy') || lower.includes('reorder')) weights.purchaseIntent = 9;
+  if (lower.includes('repeat') || lower.includes('again') || lower.includes('called')) weights.repeatCount = 5;
+  if (lower.includes('high intent') || lower.includes('urgent')) weights.urgencyScore = Math.max(weights.urgencyScore ?? 0, 6);
+
+  const ctas = surface.allowedCtas.filter((cta) => {
+    if (lower.includes('email')) return ['email', 'note', 'customer_detail'].includes(cta);
+    if (lower.includes('note')) return ['note', 'call', 'customer_detail'].includes(cta);
+    if (lower.includes('schedule') || lower.includes('15 day') || lower.includes('15 gun')) return ['schedule', 'call', 'note'].includes(cta);
+    return ['call', 'note', 'customer_detail', 'schedule'].includes(cta);
+  });
+  const modalActions = surface.allowedModalActions.filter((action) => {
+    if (lower.includes('order')) return ['review_shopify_orders', 'check_order', 'confirm_need', 'capture_outcome', 'call_customer'].includes(action);
+    return ['call_customer', 'confirm_need', 'capture_outcome', 'review_context', 'add_note', 'schedule_follow_up'].includes(action);
+  });
+
+  return saveAlgorithmStrategySchema.parse({
+    surfaceId: surface.id,
+    name: strategyNameFromGoal(surface, goal),
+    status,
+    reason: goal,
+    definition: {
+      schemaVersion: 1,
+      surfaceId: surface.id,
+      description: goal,
+      weights,
+      conditions: [],
+      visibility: { mode: 'show_by_default', showWhen: [], hideWhen: [] },
+      sort: defaultAlgorithmSort(surface),
+      cooldown: {
+        hideIfOpenTaskExists: true,
+        reappearAfterHours: lower.includes('15') ? 15 * 24 : undefined,
+      },
+      scoreBands: defaultScoreBands(),
+      ctaPriority: ctas.length ? ctas : surface.allowedCtas.slice(0, 4),
+      modalActionOrder: modalActions.length ? modalActions : surface.allowedModalActions.slice(0, 4),
+      explanationTemplate: 'Explain the ranking from customer/task signals, not internal debug labels.',
+      metadata: { source: 'mcp_draft', naturalLanguageGoal: goal },
+    },
+  });
+}
+
+function defaultAlgorithmStrategyInput(surface: AlgorithmSurfaceContract): SaveAlgorithmStrategyInput {
+  return {
+    surfaceId: surface.id,
+    name: `Default ${surface.label}`,
+    status: 'active',
+    definition: defaultAlgorithmDefinition(surface),
+    reason: 'System default strategy.',
+  };
+}
+
+function defaultAlgorithmDefinition(surface: AlgorithmSurfaceContract): AlgorithmStrategyDefinition {
+  const defaultWeights = Object.fromEntries(surface.allowedWeights.slice(0, 5).map((key, index) => [key, Math.max(1, 5 - index)]));
+  return algorithmStrategyDefinitionSchema.parse({
+    schemaVersion: 1,
+    surfaceId: surface.id,
+    description: `Default strategy for ${surface.label}.`,
+    weights: defaultWeights,
+    conditions: [],
+    visibility: { mode: 'show_by_default', showWhen: [], hideWhen: [] },
+    sort: defaultAlgorithmSort(surface),
+    cooldown: { hideIfOpenTaskExists: true },
+    scoreBands: defaultScoreBands(),
+    ctaPriority: surface.allowedCtas.slice(0, 4),
+    modalActionOrder: surface.allowedModalActions.slice(0, 4),
+    metadata: { source: 'system_default' },
+  });
+}
+
+function defaultAlgorithmSort(surface: AlgorithmSurfaceContract) {
+  const preferred = ['urgencyScore', 'createdAt', 'segmentPriority', 'repeatCount', 'totalSpent', 'customerName'];
+  return preferred
+    .filter((field) => surface.allowedSortFields.includes(field))
+    .slice(0, 3)
+    .map((field) => ({ field, direction: field === 'customerName' ? 'asc' as const : 'desc' as const, nulls: 'last' as const }));
+}
+
+function defaultScoreBands() {
+  return [
+    { id: 'urgent', label: 'Needs fast follow-up', min: 80, max: 10000, tone: 'danger' as const, cta: 'call' },
+    { id: 'active', label: 'Worth follow-up', min: 35, max: 79.9, tone: 'warning' as const, cta: 'call' },
+    { id: 'normal', label: 'Routine', min: -10000, max: 34.9, tone: 'neutral' as const, cta: 'note' },
+  ];
+}
+
+function strategyNameFromGoal(surface: AlgorithmSurfaceContract, goal: string) {
+  const normalized = goal.replace(/\s+/g, ' ').trim();
+  const clipped = normalized.length > 72 ? `${normalized.slice(0, 69)}...` : normalized;
+  return `${surface.label}: ${clipped}`;
+}
+
+function strategyInputFromRecord(record: AlgorithmStrategyRecord): SaveAlgorithmStrategyInput {
+  const surfaceId = requireAlgorithmSurface(record.surfaceId).id;
+  return saveAlgorithmStrategySchema.parse({
+    surfaceId,
+    name: record.name,
+    status: algorithmStatus(record.status),
+    definition: record.definition,
+    reason: record.reason ?? undefined,
+  });
+}
+
+function algorithmStrategyDto(record: AlgorithmStrategyRecord): AlgorithmStrategyDto {
+  return {
+    id: record.id,
+    surfaceId: requireAlgorithmSurface(record.surfaceId).id,
+    name: record.name,
+    status: algorithmStatus(record.status),
+    definition: algorithmStrategyDefinitionSchema.parse(record.definition),
+    reason: record.reason,
+    warnings: [...record.warnings],
+    createdByMemberId: record.createdByMemberId,
+    activatedAt: record.activatedAt?.toISOString() ?? null,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+function algorithmStatus(status: string): SaveAlgorithmStrategyInput['status'] {
+  return status === 'active' || status === 'shadow' || status === 'archived' ? status : 'draft';
+}
+
+function algorithmStrategyVersionDto(record: AlgorithmStrategyVersionRecord): AlgorithmStrategyVersionDto {
+  return {
+    id: record.id,
+    strategyId: record.strategyId,
+    surfaceId: requireAlgorithmSurface(record.surfaceId).id,
+    versionNo: record.versionNo,
+    jsonSnapshot: saveAlgorithmStrategySchema.parse(record.jsonSnapshot),
+    editedByMemberId: record.editedByMemberId,
+    editedAt: record.editedAt.toISOString(),
+    comment: record.comment,
+  };
+}
+
+function algorithmSimulationDto(record: AlgorithmStrategySimulationRecord): AlgorithmStrategySimulationDto {
+  const status = record.status === 'failed' || record.status === 'limited' ? record.status : 'passed';
+  return {
+    id: record.id,
+    strategyId: record.strategyId,
+    surfaceId: requireAlgorithmSurface(record.surfaceId).id,
+    status,
+    windowStart: record.windowStart?.toISOString() ?? null,
+    windowEnd: record.windowEnd?.toISOString() ?? null,
+    sampleSize: record.sampleSize,
+    result: algorithmSimulationResult(record.result),
+    createdByMemberId: record.createdByMemberId,
+    createdAt: record.createdAt.toISOString(),
+    finishedAt: record.finishedAt?.toISOString() ?? null,
+  };
+}
+
+function algorithmSimulationResult(value: unknown): AlgorithmSimulationResult {
+  const record = asRecord(value);
+  return {
+    noMutation: record.noMutation !== false,
+    baselineStrategyId: stringOrNull(record.baselineStrategyId),
+    candidateHash: stringOrNull(record.candidateHash) ?? hashJson(record),
+    changedTopItems: Array.isArray(record.changedTopItems) ? record.changedTopItems.map((item) => algorithmRankedItem(item)).slice(0, 200) : [],
+    hiddenCount: numberOrZero(record.hiddenCount),
+    surfacedCount: numberOrZero(record.surfacedCount),
+    unchangedCount: numberOrZero(record.unchangedCount),
+    warnings: stringArray(record.warnings),
+    evidence: stringArray(record.evidence),
+  };
+}
+
+function algorithmRankedItem(value: unknown) {
+  const record = asRecord(value);
+  return {
+    id: stringOrNull(record.id) ?? 'unknown',
+    label: stringOrNull(record.label) ?? 'Unknown',
+    beforeRank: numberOrNull(record.beforeRank),
+    afterRank: numberOrNull(record.afterRank),
+    beforeScore: numberOrNull(record.beforeScore),
+    afterScore: numberOrNull(record.afterScore),
+    delta: numberOrZero(record.delta),
+    visibleBefore: record.visibleBefore !== false,
+    visibleAfter: record.visibleAfter !== false,
+    reasons: stringArray(record.reasons),
+  };
+}
+
+function rankSimulationResult(
+  surface: AlgorithmSurfaceContract,
+  baselineStrategyId: string | null,
+  baseline: AlgorithmStrategyDefinition,
+  candidate: AlgorithmStrategyDefinition,
+  items: AlgorithmSignalItem[],
+  limit: number,
+): AlgorithmSimulationResult {
+  const baselineRows = rankRows(baseline, items, limit);
+  const candidateRows = rankRows(candidate, items, limit);
+  const baselineById = new Map(baselineRows.map((row) => [row.id, row]));
+  const candidateById = new Map(candidateRows.map((row) => [row.id, row]));
+  const allIds = new Set([...baselineById.keys(), ...candidateById.keys()]);
+  const changedTopItems = Array.from(allIds).map((id) => {
+    const before = baselineById.get(id);
+    const after = candidateById.get(id);
+    const signals = after?.signals ?? before?.signals ?? {};
+    return {
+      id,
+      label: after?.label ?? before?.label ?? id,
+      beforeRank: before?.rank ?? null,
+      afterRank: after?.rank ?? null,
+      beforeScore: before?.score ?? null,
+      afterScore: after?.score ?? null,
+      delta: round1((after?.score ?? 0) - (before?.score ?? 0)),
+      visibleBefore: before?.visible ?? false,
+      visibleAfter: after?.visible ?? false,
+      reasons: explainScore(candidate, signals, after?.score ?? 0),
+    };
+  }).filter((row) => row.beforeRank !== row.afterRank || row.beforeScore !== row.afterScore || row.visibleBefore !== row.visibleAfter)
+    .sort((left, right) => (left.afterRank ?? 9999) - (right.afterRank ?? 9999))
+    .slice(0, limit);
+
+  const hiddenCount = items.filter((item) => isVisibleByStrategy(baseline, item.signals) && !isVisibleByStrategy(candidate, item.signals)).length;
+  const surfacedCount = items.filter((item) => !isVisibleByStrategy(baseline, item.signals) && isVisibleByStrategy(candidate, item.signals)).length;
+  return {
+    noMutation: true,
+    baselineStrategyId,
+    candidateHash: hashJson(candidate),
+    changedTopItems,
+    hiddenCount,
+    surfacedCount,
+    unchangedCount: Math.max(0, items.length - changedTopItems.length),
+    warnings: items.length === 0 ? [`No live sample rows found for ${surface.id}.`] : [],
+    evidence: [
+      `Surface ${surface.id} simulated with ${items.length} bounded live rows.`,
+      'Simulation is no-mutation and stores only aggregate/diff evidence.',
+    ],
+  };
+}
+
+function staffActionOrderSimulationResult(
+  surface: AlgorithmSurfaceContract,
+  baselineStrategyId: string | null,
+  baseline: AlgorithmStrategyDefinition,
+  candidate: AlgorithmStrategyDefinition,
+  items: AlgorithmSignalItem[],
+  limit: number,
+  mode: 'cta' | 'modal',
+): AlgorithmSimulationResult {
+  const result = rankSimulationResult(surface, baselineStrategyId, baseline, candidate, items, limit);
+  const beforeOrder = staffActionOrder(baseline, mode);
+  const afterOrder = staffActionOrder(candidate, mode);
+  if (sameStringArray(beforeOrder, afterOrder)) return result;
+
+  const beforeRows = rankRows(baseline, items, limit);
+  const afterRows = rankRows(candidate, items, limit);
+  const beforeById = new Map(beforeRows.map((row) => [row.id, row]));
+  const existingIds = new Set(result.changedTopItems.map((row) => row.id));
+  const orderLabel = mode === 'cta' ? 'CTA priority' : 'modal action order';
+  const orderReason = `${orderLabel} changed from ${formatActionOrder(beforeOrder)} to ${formatActionOrder(afterOrder)}.`;
+  const proofRows = afterRows
+    .filter((row) => !existingIds.has(row.id))
+    .slice(0, Math.min(5, limit))
+    .map((row) => {
+      const before = beforeById.get(row.id);
+      return {
+        id: row.id,
+        label: row.label,
+        beforeRank: before?.rank ?? null,
+        afterRank: row.rank,
+        beforeScore: before?.score ?? null,
+        afterScore: row.score,
+        delta: round1(row.score - (before?.score ?? 0)),
+        visibleBefore: Boolean(before?.visible ?? false),
+        visibleAfter: row.visible,
+        reasons: [orderReason, ...explainScore(candidate, row.signals, row.score).slice(0, 4)],
+      };
+    });
+
+  return {
+    ...result,
+    changedTopItems: [...result.changedTopItems, ...proofRows].slice(0, limit),
+    evidence: [
+      ...result.evidence,
+      orderReason,
+      `${surface.id} action-order proof is no-mutation and uses stored task/customer resolver signals only.`,
+    ],
+  };
+}
+
+function staffActionOrder(strategy: AlgorithmStrategyDefinition, mode: 'cta' | 'modal') {
+  const values = mode === 'cta' ? strategy.ctaPriority : strategy.modalActionOrder;
+  return values.map((value) => value.trim()).filter(Boolean);
+}
+
+function sameStringArray(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function formatActionOrder(values: string[]) {
+  return values.length > 0 ? values.join(' > ') : 'default runtime order';
+}
+
+function rankRows(strategy: AlgorithmStrategyDefinition, items: AlgorithmSignalItem[], limit: number) {
+  return items.map((item) => ({
+    ...item,
+    score: scoreAlgorithmStrategy(strategy, item.signals),
+    visible: isVisibleByStrategy(strategy, item.signals),
+  }))
+    .filter((row) => row.visible)
+    .sort((left, right) => compareByStrategy(strategy, left, right))
+    .slice(0, limit)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function compareByStrategy(strategy: AlgorithmStrategyDefinition, left: AlgorithmSignalItem & { score: number }, right: AlgorithmSignalItem & { score: number }) {
+  const sortRules = strategy.sort.length ? strategy.sort : [{ field: 'urgencyScore', direction: 'desc' as const, nulls: 'last' as const }];
+  for (const rule of sortRules) {
+    const leftValue = rule.field === 'urgencyScore' ? left.score : signalComparable(left.signals[rule.field]);
+    const rightValue = rule.field === 'urgencyScore' ? right.score : signalComparable(right.signals[rule.field]);
+    const compared = compareNullable(leftValue, rightValue, rule.nulls);
+    if (compared !== 0) return rule.direction === 'desc' ? -compared : compared;
+  }
+  return left.label.localeCompare(right.label);
+}
+
+function scoreAlgorithmStrategy(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>) {
+  let score = numberOrZero(signals.urgencyScore);
+  for (const [key, weight] of Object.entries(strategy.weights)) {
+    score += signalWeightValue(signals[key]) * weight;
+  }
+  for (const condition of strategy.conditions) {
+    if (conditionMatches(condition, signals)) score += condition.weight ?? 1;
+  }
+  return round1(score);
+}
+
+function isVisibleByStrategy(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>) {
+  const hideMatched = strategy.visibility.hideWhen.some((condition) => conditionMatches(condition, signals));
+  if (hideMatched) return false;
+  if (strategy.visibility.mode === 'hide_by_default') {
+    if (!strategy.visibility.showWhen.some((condition) => conditionMatches(condition, signals))) return false;
+  }
+  const waitingHours = numberOrZero(signals.waitingHours);
+  if (strategy.cooldown.reappearAfterHours !== undefined && waitingHours < strategy.cooldown.reappearAfterHours) return false;
+  if (strategy.cooldown.archiveAfterDays !== undefined && waitingHours > strategy.cooldown.archiveAfterDays * 24) return false;
+  return true;
+}
+
+function explainScore(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>, score: number) {
+  const reasons = Object.entries(strategy.weights)
+    .filter(([key]) => signalWeightValue(signals[key]) !== 0)
+    .map(([key, weight]) => `${key} contributed ${round1(signalWeightValue(signals[key]) * weight)}.`);
+  for (const condition of strategy.conditions) {
+    if (conditionMatches(condition, signals)) reasons.push(condition.reason ?? `${condition.field} matched ${condition.operator}.`);
+  }
+  const band = scoreBandFor(strategy, score);
+  if (band) reasons.unshift(`Score ${score} is in "${band.label}".`);
+  if (reasons.length === 0) reasons.push(`Score ${score} came from default urgency and sort signals.`);
+  return reasons.slice(0, 8);
+}
+
+function explainVisibility(strategy: AlgorithmStrategyDefinition, signals: Record<string, unknown>, visible: boolean) {
+  if (!visible) {
+    const matched = strategy.visibility.hideWhen.find((condition) => conditionMatches(condition, signals));
+    if (matched) return [matched.reason ?? `${matched.field} matched hide condition ${matched.operator}.`];
+    if (strategy.visibility.mode === 'hide_by_default') return ['Strategy is hide_by_default and no showWhen condition matched.'];
+    const waitingHours = numberOrZero(signals.waitingHours);
+    if (strategy.cooldown.reappearAfterHours !== undefined && waitingHours < strategy.cooldown.reappearAfterHours) {
+      return [`Task reappears after ${strategy.cooldown.reappearAfterHours} hours; current age is ${round1(waitingHours)} hours.`];
+    }
+    if (strategy.cooldown.archiveAfterDays !== undefined && waitingHours > strategy.cooldown.archiveAfterDays * 24) {
+      return [`Task is older than the ${strategy.cooldown.archiveAfterDays} day visibility boundary.`];
+    }
+  }
+  const matchedShow = strategy.visibility.showWhen.find((condition) => conditionMatches(condition, signals));
+  return [matchedShow?.reason ?? 'Task is visible under the current strategy visibility policy.'];
+}
+
+function scoreBandFor(strategy: AlgorithmStrategyDefinition, score: number) {
+  return strategy.scoreBands.find((band) => score >= band.min && score <= band.max) ?? null;
+}
+
+function conditionMatches(condition: { field: string; operator: string; value?: unknown }, signals: Record<string, unknown>) {
+  const actual = signals[condition.field];
+  const expected = condition.value;
+  switch (condition.operator) {
+    case 'exists': return actual !== undefined && actual !== null && actual !== '';
+    case 'not_exists': return actual === undefined || actual === null || actual === '';
+    case '=': return String(actual).toLowerCase() === String(expected).toLowerCase();
+    case '!=': return String(actual).toLowerCase() !== String(expected).toLowerCase();
+    case '>': return numberOrZero(actual) > numberOrZero(expected);
+    case '>=': return numberOrZero(actual) >= numberOrZero(expected);
+    case '<': return numberOrZero(actual) < numberOrZero(expected);
+    case '<=': return numberOrZero(actual) <= numberOrZero(expected);
+    case 'contains': return String(actual ?? '').toLowerCase().includes(String(expected ?? '').toLowerCase());
+    case 'in': return Array.isArray(expected) && expected.map((item) => String(item).toLowerCase()).includes(String(actual).toLowerCase());
+    case 'not_in': return Array.isArray(expected) && !expected.map((item) => String(item).toLowerCase()).includes(String(actual).toLowerCase());
+    default: return false;
+  }
+}
+
+function serviceRequestSignals(row: any): Record<string, unknown> {
+  const metadata = asRecord(row.metadata);
+  const workflow = asRecord(metadata.workflow);
+  const params = asRecord(workflow.params);
+  const snapshot = asRecord(row.taskStateSnapshot);
+  const resolver = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
+  const customer = row.customer;
+  const createdAt = row.createdAt instanceof Date ? row.createdAt : parseDate(row.createdAt);
+  const waitingHours = createdAt ? round1((Date.now() - createdAt.getTime()) / 3_600_000) : 0;
+  const isOpenTask = !ALGORITHM_CLOSED_TASK_STATUSES.includes(String(row.status) as (typeof ALGORITHM_CLOSED_TASK_STATUSES)[number]);
+  const commentCount = numberOrZero(row._count?.comments);
+  const latestNoteAt = Array.isArray(row.comments) ? row.comments[0]?.createdAt ?? null : null;
+  const productSignalText = JSON.stringify([
+    params.product,
+    params.productFamily,
+    params.productRole,
+    params.productCategory,
+    resolver.product_mentions,
+    resolver.product_context,
+    resolver.productContext,
+  ]).toLowerCase();
+  const hasProductSpecificity = productSignalText.length > 20 && productSignalText !== '[null,null,null,null,null,null,null]';
+  return {
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    assignedMemberId: row.assignedMemberId ?? null,
+    priority: row.priority,
+    source: row.source,
+    sourceCallId: row.sourceCallId ?? null,
+    sourceEmailId: row.sourceEmailId ?? null,
+    matchedRuleId: row.matchedRuleId ?? null,
+    axis: row.axis,
+    status: row.status,
+    customerName: customer ? customerDisplayLabel(customer) : row.title,
+    callIntent: stringOrNull(params.callIntent) ?? stringOrNull(resolver.call_intent) ?? stringOrNull(resolver.intent),
+    intent: stringOrNull(params.intent) ?? stringOrNull(params.taskIntent) ?? stringOrNull(resolver.call_intent) ?? stringOrNull(row.axis),
+    psychTags: Array.isArray(resolver.psych_tags) ? resolver.psych_tags.join(',') : '',
+    operationalIntent: stringOrNull(params.operationalIntent) ?? stringOrNull(params.intent),
+    repeatCount: numberOrZero(row.repeatCount),
+    totalSpent: customer ? numberOrZero(customer.totalSpent) : 0,
+    ordersCount: customer ? numberOrZero(customer.ordersCount) : 0,
+    lastOrderAt: customer?.lastOrderAt ?? null,
+    lastCallAt: row.sourceCallId ? row.createdAt : null,
+    latestNoteAt,
+    customerMatched: Boolean(customer),
+    hasOpenTask: isOpenTask,
+    openTasksCount: isOpenTask ? 1 : 0,
+    openRequestsCount: row.axis === 'account' && isOpenTask ? 1 : 0,
+    notesCount: commentCount,
+    purchaseIntent: includesSignal(params, resolver, ['purchase', 'buy', 'reorder', 'sale']),
+    refundOrPaymentIssue: includesSignal(params, resolver, ['refund', 'payment', 'price', 'pricing']),
+    shippingIssue: includesSignal(params, resolver, ['shipping', 'delivery', 'tracking', 'freight']),
+    complaint: includesSignal(params, resolver, ['complaint', 'angry', 'upset', 'frustrated']),
+    callNow: Boolean(row.sourceCallId) || includesSignal(params, resolver, ['callback', 'call back', 'phone']),
+    noteFirst: commentCount === 0,
+    scheduleFirst: Boolean(row.dueAt) || includesSignal(params, resolver, ['schedule', 'appointment', 'follow up']),
+    emailFirst: Boolean(row.sourceEmailId) || includesSignal(params, resolver, ['email']),
+    reviewOrderFirst: Boolean(customer?.lastOrderAt) || numberOrZero(customer?.ordersCount) > 0,
+    complaintTone: includesSignal(params, resolver, ['complaint', 'angry', 'upset', 'frustrated']),
+    refundRisk: includesSignal(params, resolver, ['refund', 'return', 'chargeback', 'payment']),
+    shippingConcern: includesSignal(params, resolver, ['shipping', 'delivery', 'tracking', 'freight']),
+    customerHistory: Boolean(customer) && (numberOrZero(customer.ordersCount) > 0 || numberOrZero(customer.totalSpent) > 0),
+    productSpecificity: hasProductSpecificity,
+    openTaskPenalty: isOpenTask,
+    unmatchedCustomerPenalty: !customer,
+    recentCallBoost: Boolean(row.sourceCallId) && waitingHours <= 168,
+    olderThanSevenDaysPenalty: waitingHours > 168,
+    lastOrderValue: numberOrZero(asRecord(metadata.latestOrder).totalPrice ?? asRecord(metadata.order).totalPrice),
+    latestOrderValue: numberOrZero(asRecord(metadata.latestOrder).totalPrice ?? asRecord(metadata.order).totalPrice),
+    waitingHours,
+    urgencyScore: urgencySignalFromPriority(row.priority),
+  };
+}
+
+function customerSignals(customer: any): Record<string, unknown> {
+  const primarySegment = Array.isArray(customer.segmentMemberships) ? customer.segmentMemberships[0]?.segment : null;
+  const openRequests = Array.isArray(customer.serviceRequests) ? customer.serviceRequests : [];
+  const latestOrder = Array.isArray(customer.orders) ? customer.orders[0] : null;
+  const latestCallTask = openRequests.find((request: any) => Boolean(request.sourceCallId));
+  const latestUpdatedTask = openRequests[0] ?? null;
+  const latestOrderValue = numberOrZero(latestOrder?.totalPrice ?? customer.averageOrderValue);
+  const lastOrderAt = customer.lastOrderAt ?? customer.insight?.lastOrderAt ?? latestOrder?.processedAt ?? latestOrder?.createdAt ?? null;
+  return {
+    customerName: customerDisplayLabel(customer),
+    ordersCount: numberOrZero(customer.ordersCount),
+    totalSpent: numberOrZero(customer.totalSpent),
+    lastOrderAt,
+    lastCallAt: latestCallTask?.updatedAt ?? null,
+    repeatCount: numberOrZero(customer.ordersCount),
+    segmentPriority: Math.max(numberOrZero(primarySegment?.priorityGlobal), numberOrZero(primarySegment?.priority)),
+    membershipScore: numberOrZero(customer.segmentMemberships?.[0]?.score),
+    openTasksCount: openRequests.length,
+    openRequestsCount: openRequests.length,
+    notesCount: 0,
+    openFollowUp: openRequests.length > 0,
+    latestOrderValue,
+    lastCallRecency: latestCallTask?.updatedAt ? round1((Date.now() - latestCallTask.updatedAt.getTime()) / 86_400_000) : 0,
+    notesSignal: Boolean(latestUpdatedTask?.updatedAt),
+    urgencyScore: numberOrZero(customer.insight?.healthScore) || Math.min(100, numberOrZero(customer.ordersCount) * 5 + numberOrZero(customer.totalSpent) / 500),
+  };
+}
+
+function simulationReorderLineItems(order: { id: string; lineItems: unknown }) {
+  return recordArray(order.lineItems).map((item, index) => {
+    const quantity = Math.max(1, numberOrZero(item.quantity ?? item.qty) || 1);
+    const unitPrice = numberOrZero(item.unitPrice ?? item.unit_price ?? item.price ?? item.original_unit_price);
+    const sourceKey = stringOrNull(item.id) ?? stringOrNull(item.line_item_id) ?? stringOrNull(item.key) ?? stringOrNull(item.sku) ?? `${index + 1}`;
+    return {
+      id: stringOrNull(item.id) ?? stringOrNull(item.line_item_id) ?? `${order.id}-line-${index + 1}`,
+      sourceKey,
+      sku: stringOrNull(item.sku) ?? stringOrNull(item.variant_sku) ?? '',
+      shopifyVariantId: stringOrNull(item.shopifyVariantId) ?? stringOrNull(item.variantId) ?? stringOrNull(item.variant_id) ?? stringOrNull(item.variant_admin_graphql_api_id),
+      name: stringOrNull(item.title) ?? stringOrNull(item.name) ?? stringOrNull(item.product_title) ?? `Line item ${index + 1}`,
+      variantTitle: stringOrNull(item.variant_title) ?? stringOrNull(item.variantTitle),
+      quantity,
+      unitPrice,
+    };
+  });
+}
+
+function reorderSimulationSignals(
+  order: {
+    customerId: string | null;
+    financialStatus: string | null;
+    fulfillmentStatus: string | null;
+    cancelledAt: Date | null;
+    processedAt: Date | null;
+    createdAt: Date;
+    totalPrice: unknown;
+  },
+  item: ReturnType<typeof simulationReorderLineItems>[number],
+  variant: { availableForSale: boolean; product?: { productType: string | null } | null } | null,
+): Record<string, unknown> {
+  const lastPurchasedAt = order.processedAt ?? order.createdAt;
+  const purchasedAgeDays = Math.max(0, (Date.now() - lastPurchasedAt.getTime()) / 86_400_000);
+  const fulfillment = String(order.fulfillmentStatus ?? '').toLowerCase();
+  return {
+    orderStatus: orderStatusForAlgorithm(order.financialStatus, order.fulfillmentStatus, order.cancelledAt),
+    fulfillmentStatus: order.fulfillmentStatus ?? 'unknown',
+    productType: variant?.product?.productType ?? '',
+    variantAvailable: Boolean(variant?.availableForSale),
+    customerOwnsOrder: Boolean(order.customerId),
+    lastPurchasedAt,
+    processedAt: lastPurchasedAt,
+    totalPrice: numberOrZero(order.totalPrice),
+    lineItemTitle: item.name,
+    recentPurchase: purchasedAgeDays <= 180,
+    repeatableItem: Boolean(item.sku || item.shopifyVariantId),
+    blockedFulfillment: Boolean(order.cancelledAt) || fulfillment.includes('cancel'),
+    urgencyScore: variant?.availableForSale ? 50 : 0,
+  };
+}
+
+async function customersForMailContacts(
+  prisma: PrismaService,
+  tenantId: string,
+  contacts: Array<{ customerId: string | null; normalizedEmail: string; email: string }>,
+) {
+  const customerIds = uniqueStrings(contacts.map((contact) => contact.customerId));
+  const emails = uniqueStrings(contacts.flatMap((contact) => [contact.normalizedEmail, contact.email?.toLowerCase()]));
+  const customers = await prisma.db.customer.findMany({
+    where: {
+      tenantId,
+      OR: [
+        ...(customerIds.length > 0 ? [{ id: { in: customerIds } }] : []),
+        ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
+      ],
+    },
+    include: {
+      segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 5 },
+    },
+    take: Math.max(contacts.length * 2, 50),
+  });
+  return {
+    byId: new Map(customers.map((customer) => [customer.id, customer])),
+    byEmail: new Map(customers.flatMap((customer) => {
+      const email = customer.email?.trim().toLowerCase();
+      return email ? [[email, customer] as const] : [];
+    })),
+  };
+}
+
+function mailAudienceSimulationSignals(
+  contact: {
+    isSendable: boolean;
+    consentStates: Array<{ state: string }>;
+    suppressions: Array<{ isActive: boolean; reason: string; expiresAt: Date | null }>;
+    metadata: unknown;
+    createdAt: Date;
+    lastActivityAt: Date | null;
+  },
+  customer: {
+    totalSpent: unknown;
+    ordersCount: number;
+    lastOrderAt: Date | null;
+    segmentMemberships?: Array<{ segmentId: string; segment?: { id: string; name: string } | null }>;
+  } | null,
+): Record<string, unknown> {
+  const consentStatus = contact.consentStates[0]?.state ?? 'unknown';
+  const suppressed = Boolean(activeMailSuppressionReason(contact.suppressions)) || !contact.isSendable;
+  const segmentIds = uniqueStrings((customer?.segmentMemberships ?? []).flatMap((membership) => [membership.segmentId, membership.segment?.id, membership.segment?.name]));
+  const daysSinceOrder = customer?.lastOrderAt ? (Date.now() - customer.lastOrderAt.getTime()) / 86_400_000 : null;
+  const daysSinceActivity = contact.lastActivityAt ? (Date.now() - contact.lastActivityAt.getTime()) / 86_400_000 : null;
+  return {
+    consentStatus,
+    suppressed,
+    lastOrderAt: customer?.lastOrderAt ?? null,
+    segmentIds,
+    campaignHistory: numberOrZero(asRecord(contact.metadata).campaignHistory),
+    emailDeliverability: contact.isSendable ? 'sendable' : 'blocked',
+    consent: contact.isSendable && consentStatus !== 'unsubscribed' && !suppressed,
+    segmentMatch: segmentIds.length,
+    recency: daysSinceOrder === null ? 0 : Math.max(0, 180 - daysSinceOrder),
+    purchaseHistory: numberOrZero(customer?.ordersCount) + numberOrZero(customer?.totalSpent) / 500,
+    engagement: daysSinceActivity === null ? 0 : Math.max(0, 90 - daysSinceActivity),
+    totalSpent: numberOrZero(customer?.totalSpent),
+    createdAt: contact.createdAt,
+    urgencyScore: contact.isSendable && consentStatus !== 'unsubscribed' && !suppressed ? 50 : 0,
+  };
+}
+
+function mailSendSafetySimulationSignals(input: {
+  email: string;
+  isSendable: boolean;
+  consentState: string;
+  suppressionReason: string | null;
+  contact?: {
+    isSendable: boolean;
+    consentStates?: Array<{ state: string }>;
+    suppressions?: Array<{ isActive: boolean; reason: string; expiresAt: Date | null }>;
+  } | null;
+  createdAt: Date;
+}): Record<string, unknown> {
+  const consentStatus = input.contact?.consentStates?.[0]?.state ?? input.consentState ?? 'unknown';
+  const suppressed = Boolean(input.suppressionReason) || Boolean(activeMailSuppressionReason(input.contact?.suppressions ?? [])) || !input.isSendable || input.contact?.isSendable === false;
+  return {
+    consentStatus,
+    suppressed,
+    providerMode: 'disabled',
+    templateApproved: true,
+    rateLimitState: 'ok',
+    idempotencyKey: `simulation:${input.email}`,
+    templateApproval: true,
+    suppression: suppressed ? -1 : 1,
+    rateLimit: 1,
+    providerReadiness: 0,
+    priority: suppressed || consentStatus === 'unsubscribed' ? 0 : 50,
+    createdAt: input.createdAt,
+    urgencyScore: suppressed || consentStatus === 'unsubscribed' ? 0 : 50,
+  };
+}
+
+function activeMailSuppressionReason(suppressions: Array<{ isActive: boolean; reason: string; expiresAt: Date | null }> | undefined) {
+  const now = Date.now();
+  return suppressions?.find((suppression) => suppression.isActive && (!suppression.expiresAt || suppression.expiresAt.getTime() > now))?.reason ?? null;
+}
+
+function orderStatusForAlgorithm(financialStatus: string | null, fulfillmentStatus: string | null, cancelledAt: Date | null) {
+  if (cancelledAt) return 'cancelled';
+  const fulfillment = String(fulfillmentStatus ?? '').toLowerCase();
+  if (['fulfilled', 'complete', 'completed'].includes(fulfillment)) return 'fulfilled';
+  const financial = String(financialStatus ?? '').toLowerCase();
+  if (['paid', 'authorized', 'partially_paid'].includes(financial)) return 'paid';
+  return 'pending';
+}
+
+function includesSignal(params: Record<string, unknown>, resolver: Record<string, unknown>, needles: string[]) {
+  const haystack = JSON.stringify({ params, resolver }).toLowerCase();
+  return needles.some((needle) => haystack.includes(needle));
+}
+
+function urgencySignalFromPriority(priority: unknown) {
+  const normalized = String(priority ?? '').toLowerCase();
+  if (normalized.includes('critical')) return 90;
+  if (normalized.includes('high')) return 70;
+  if (normalized.includes('medium')) return 40;
+  return 20;
+}
+
+function customerDisplayLabel(customer: any) {
+  return [customer.companyName, customer.legalName, [customer.firstName, customer.lastName].filter(Boolean).join(' '), customer.email, customer.phone, customer.id]
+    .find((value) => typeof value === 'string' && value.trim())
+    ?.trim() ?? customer.id;
+}
+
+function signalWeightValue(value: unknown) {
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (value instanceof Date) return value.getTime() / 86_400_000;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+    return value.trim() ? 1 : 0;
+  }
+  return 0;
+}
+
+function signalComparable(value: unknown) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : value.toLowerCase();
+  }
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  return null;
+}
+
+function compareNullable(left: string | number | null, right: string | number | null, nulls: 'first' | 'last') {
+  if (left === null && right === null) return 0;
+  if (left === null) return nulls === 'first' ? -1 : 1;
+  if (right === null) return nulls === 'first' ? 1 : -1;
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  return String(left).localeCompare(String(right));
+}
+
+function hashJson(value: unknown) {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function numberOrZero(value: unknown) {
+  return numberOrNull(value) ?? 0;
+}
+
+function numberOrNull(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'bigint') return Number(value);
+  if (value && typeof value === 'object' && 'toNumber' in value && typeof (value as { toNumber: () => number }).toNumber === 'function') {
+    return (value as { toNumber: () => number }).toNumber();
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+  return null;
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
 type WorkflowActionContext = {
   eventId: string;
   trigger: WorkflowTriggerFireInput['trigger'];
@@ -4379,6 +6099,16 @@ const MCP_REQUIRED_TOOLS: WorkflowMcpCapabilitiesResponse['tools'][number]['name
   'rollback_frontend_customization',
   'preview_frontend_source_patch',
   'validate_frontend_source_patch_proof',
+  'list_algorithm_surfaces',
+  'get_algorithm_contract',
+  'draft_algorithm_change',
+  'validate_algorithm_change',
+  'simulate_algorithm_change',
+  'compare_algorithm_versions',
+  'publish_algorithm_version',
+  'rollback_algorithm_version',
+  'explain_customer_ranking',
+  'explain_task_visibility',
 ];
 
 const MCP_REQUIRED_ACTIONS: WorkflowRuleAction['action'][] = [

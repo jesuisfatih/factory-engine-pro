@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { normalizeShopDomain } from './shopify-domain.js';
 
 export interface ShopifyCredentials {
   shopifyDomain: string;
@@ -233,15 +234,6 @@ export class ShopifyClientService {
       || this.config.get<string>('SHOPIFY_ADMIN_TOKEN')?.trim()
       || null;
   }
-}
-
-function normalizeShopDomain(value: string | null) {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  return trimmed
-    .replace(/^https?:\/\//i, '')
-    .replace(/\/.*$/, '')
-    .toLowerCase();
 }
 
 function parseJson(text: string): Record<string, unknown> | null {

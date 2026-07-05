@@ -5,6 +5,7 @@ import type {
   PersonSegmentDailyGroup,
   PersonMiniOrder,
   PersonPerformance30d,
+  PersonCardStrategyProof,
   PersonTaskTransferResult,
   PersonTransferTarget,
   PersonTaskBriefDetail,
@@ -27,6 +28,9 @@ export interface TaskBrief {
   modelUsed: string;
   confidence: number;
   transcriptSnippet?: string;
+  ctaPriority?: string[];
+  modalActionOrder?: string[];
+  strategyProof?: PersonCardStrategyProof;
 }
 export interface Card {
   kind: 'task' | 'customer';
@@ -74,6 +78,12 @@ export interface Card {
   miniOrder?: PersonMiniOrder;
   /** Rolling 30-day customer signal summary. */
   performance30d?: PersonPerformance30d;
+  /** Runtime strategy output that safely reorders staff CTAs. */
+  ctaPriority?: string[];
+  /** Runtime strategy output that safely reorders modal action guidance. */
+  modalActionOrder?: string[];
+  /** Proof that a versioned strategy affected this card. */
+  strategyProof?: PersonCardStrategyProof;
 }
 
 export type DailyCallItem = PersonDailyCallItem;

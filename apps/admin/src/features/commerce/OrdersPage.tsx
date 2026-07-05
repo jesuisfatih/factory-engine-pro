@@ -21,7 +21,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { OrderSortBy, OrderSurface, TransferOrderToMemberInput } from '@factory-engine-pro/contracts';
+import type { AccountInvoiceStatus, OrderSortBy, OrderSurface, SaveAccountInvoiceInput, TransferOrderToMemberInput } from '@factory-engine-pro/contracts';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
@@ -80,6 +80,21 @@ interface OrderStats {
   fulfillmentRate: number;
   pickupCount: number;
   designFileCount: number;
+}
+
+interface AccountInvoiceRow {
+  id: string;
+  invoiceNumber: string;
+  status: string;
+  issuedAt: string;
+  dueAt: string;
+  totalAmount: number;
+  amountPaid: number;
+  amountDue: number;
+  currency: string;
+  fileUrl: string | null;
+  externalPaymentUrl: string | null;
+  payment: { state: string; label: string; amountDue: number; url: string | null };
 }
 
 interface OrderDetailResponse {
@@ -566,6 +581,8 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
               )}
             </section>
 
+            <InvoicePanel order={order} />
+
             <section className="modal-section">
               <h3>{t('orders.modal.transfer_title', { defaultValue: 'Personele aktar' })}</h3>
               <label className="field-label" htmlFor="order-transfer-member">{t('orders.modal.target_member', { defaultValue: 'Target staff member' })}</label>
@@ -634,6 +651,247 @@ function fetchOrderDetail(orderId: string) {
 
 function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
+}
+
+function InvoicePanel({ order }: { order: OrderRow }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const queryKey = ['commerce', 'orders', order.id, 'invoices'];
+  const invoices = useQuery({
+    queryKey,
+    queryFn: () => adminApi.orderInvoices(order.id) as Promise<AccountInvoiceRow[]>,
+  });
+  const [draft, setDraft] = useState({
+    invoiceNumber: '',
+    dueAt: '',
+    fileUrl: '',
+    externalPaymentUrl: '',
+    notes: '',
+  });
+  const [fileDrafts, setFileDrafts] = useState<Record<string, { fileUrl: string; externalPaymentUrl: string }>>({});
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>({});
+
+  const refreshInvoices = async () => {
+    await queryClient.invalidateQueries({ queryKey });
+    await queryClient.invalidateQueries({ queryKey: ['commerce', 'orders', order.id, 'detail'] });
+  };
+
+  const createInvoice = useMutation({
+    mutationFn: () => {
+      const input: SaveAccountInvoiceInput = {
+        orderId: order.id,
+        invoiceNumber: draft.invoiceNumber.trim() || undefined,
+        status: 'unpaid',
+        dueAt: draft.dueAt ? new Date(`${draft.dueAt}T12:00:00.000Z`).toISOString() : undefined,
+        discountAmount: 0,
+        shippingAmount: 0,
+        taxAmount: 0,
+        amountPaid: 0,
+        currency: order.currency || 'USD',
+        fileUrl: draft.fileUrl.trim() || null,
+        externalPaymentUrl: draft.externalPaymentUrl.trim() || null,
+        notes: draft.notes.trim() || null,
+      };
+      return adminApi.createInvoice(input) as Promise<AccountInvoiceRow>;
+    },
+    onSuccess: async () => {
+      toast.success(t('orders.invoice.created', { defaultValue: 'Invoice created' }));
+      setDraft({ invoiceNumber: '', dueAt: '', fileUrl: '', externalPaymentUrl: '', notes: '' });
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AccountInvoiceStatus }) => (
+      adminApi.updateInvoiceStatus(id, { status }) as Promise<AccountInvoiceRow>
+    ),
+    onSuccess: async () => {
+      toast.success(t('orders.invoice.status_saved', { defaultValue: 'Invoice status updated' }));
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
+  const updateFile = useMutation({
+    mutationFn: ({ id, fileUrl, externalPaymentUrl }: { id: string; fileUrl: string; externalPaymentUrl: string }) => (
+      adminApi.updateInvoiceFile(id, {
+        fileUrl: fileUrl.trim() || null,
+        externalPaymentUrl: externalPaymentUrl.trim() || null,
+      }) as Promise<AccountInvoiceRow>
+    ),
+    onSuccess: async () => {
+      toast.success(t('orders.invoice.file_saved', { defaultValue: 'Invoice links updated' }));
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
+  const recordPayment = useMutation({
+    mutationFn: ({ id, amount }: { id: string; amount: number }) => (
+      adminApi.recordInvoicePayment(id, { amount, method: 'manual', note: 'Recorded from order invoice panel' }) as Promise<AccountInvoiceRow>
+    ),
+    onSuccess: async (_row, variables) => {
+      toast.success(t('orders.invoice.payment_saved', { defaultValue: 'Payment recorded' }));
+      setPaymentDrafts((current) => ({ ...current, [variables.id]: '' }));
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
+  const duplicateInvoice = useMutation({
+    mutationFn: (id: string) => adminApi.duplicateInvoice(id) as Promise<AccountInvoiceRow>,
+    onSuccess: async () => {
+      toast.success(t('orders.invoice.duplicated', { defaultValue: 'Invoice duplicated' }));
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
+  return (
+    <section className="modal-section">
+      <h3>{t('orders.invoice.title', { defaultValue: 'Invoices' })}</h3>
+      <p className="muted">
+        {t('orders.invoice.body', { defaultValue: 'Create and maintain real invoice records for this order. Customer portal only shows persisted invoices.' })}
+      </p>
+
+      <div className="order-invoice-create">
+        <input
+          value={draft.invoiceNumber}
+          onChange={(event) => setDraft((current) => ({ ...current, invoiceNumber: event.target.value }))}
+          placeholder={t('orders.invoice.number_placeholder', { defaultValue: 'Invoice number' })}
+        />
+        <input
+          type="date"
+          value={draft.dueAt}
+          onChange={(event) => setDraft((current) => ({ ...current, dueAt: event.target.value }))}
+          aria-label={t('orders.invoice.due_date', { defaultValue: 'Due date' })}
+        />
+        <input
+          value={draft.fileUrl}
+          onChange={(event) => setDraft((current) => ({ ...current, fileUrl: event.target.value }))}
+          placeholder={t('orders.invoice.file_placeholder', { defaultValue: 'Invoice file URL' })}
+        />
+        <input
+          value={draft.externalPaymentUrl}
+          onChange={(event) => setDraft((current) => ({ ...current, externalPaymentUrl: event.target.value }))}
+          placeholder={t('orders.invoice.pay_placeholder', { defaultValue: 'Payment URL' })}
+        />
+        <textarea
+          rows={2}
+          value={draft.notes}
+          onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
+          placeholder={t('orders.invoice.notes_placeholder', { defaultValue: 'Billing note visible to staff' })}
+        />
+        <button type="button" className="btn primary" onClick={() => createInvoice.mutate()} disabled={createInvoice.isPending}>
+          {createInvoice.isPending ? <Loader2 size={13} className="spin" /> : <FileText size={13} />}
+          {t('orders.invoice.create', { defaultValue: 'Create invoice' })}
+        </button>
+      </div>
+
+      {invoices.isLoading && <div className="muted">{t('common.loading')}</div>}
+      {invoices.isError && (
+        <div className="inline-error">
+          {apiErrorMessage(invoices.error)}
+          <button type="button" className="btn ghost" onClick={() => invoices.refetch()}>
+            <RefreshCw size={13} /> {t('common.retry')}
+          </button>
+        </div>
+      )}
+      {invoices.isSuccess && invoices.data.length === 0 && (
+        <div className="pricing-list-empty">
+          <div className="name">{t('orders.invoice.empty_title', { defaultValue: 'No invoice yet' })}</div>
+          <div className="muted">{t('orders.invoice.empty_body', { defaultValue: 'Create one here before customers can download or pay it from the portal.' })}</div>
+        </div>
+      )}
+      {invoices.isSuccess && invoices.data.length > 0 && (
+        <div className="compact-list invoice-list">
+          {invoices.data.map((invoice) => {
+            const fileDraft = fileDrafts[invoice.id] ?? { fileUrl: invoice.fileUrl ?? '', externalPaymentUrl: invoice.externalPaymentUrl ?? '' };
+            const paymentAmount = paymentDrafts[invoice.id] ?? '';
+            const parsedPayment = Number(paymentAmount);
+            return (
+              <div key={invoice.id} className="invoice-row">
+                <div className="invoice-row-head">
+                  <div>
+                    <strong>{invoice.invoiceNumber}</strong>
+                    <span className="muted">
+                      {invoiceStatusLabel(invoice.status)} - {fmtMoney(invoice.amountDue, invoice.currency)} due - {invoice.dueAt ? fmtDate(invoice.dueAt) : 'No due date'}
+                    </span>
+                  </div>
+                  <span className={`status-pill ${invoice.status === 'paid' ? 'success' : invoice.status === 'void' ? 'danger' : 'warn'}`}>
+                    {invoice.payment.label}
+                  </span>
+                </div>
+                <div className="order-stats-grid">
+                  <Metric icon={<FileText size={12} />} label="Total" value={fmtMoney(invoice.totalAmount, invoice.currency)} />
+                  <Metric icon={<CreditCard size={12} />} label="Paid" value={fmtMoney(invoice.amountPaid, invoice.currency)} />
+                  <Metric label="Issued" value={fmtDate(invoice.issuedAt)} />
+                </div>
+                <div className="invoice-link-grid">
+                  <input
+                    value={fileDraft.fileUrl}
+                    onChange={(event) => setFileDrafts((current) => ({ ...current, [invoice.id]: { ...fileDraft, fileUrl: event.target.value } }))}
+                    placeholder="Invoice file URL"
+                  />
+                  <input
+                    value={fileDraft.externalPaymentUrl}
+                    onChange={(event) => setFileDrafts((current) => ({ ...current, [invoice.id]: { ...fileDraft, externalPaymentUrl: event.target.value } }))}
+                    placeholder="Payment URL"
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => updateFile.mutate({ id: invoice.id, fileUrl: fileDraft.fileUrl, externalPaymentUrl: fileDraft.externalPaymentUrl })}
+                    disabled={updateFile.isPending}
+                  >
+                    Save links
+                  </button>
+                </div>
+                <div className="invoice-action-row">
+                  {invoice.fileUrl && (
+                    <a className="btn ghost" href={invoice.fileUrl} target="_blank" rel="noreferrer">
+                      <Download size={13} /> File
+                    </a>
+                  )}
+                  {invoice.externalPaymentUrl && (
+                    <a className="btn ghost" href={invoice.externalPaymentUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink size={13} /> Pay link
+                    </a>
+                  )}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={paymentAmount}
+                    onChange={(event) => setPaymentDrafts((current) => ({ ...current, [invoice.id]: event.target.value }))}
+                    placeholder="Payment amount"
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => recordPayment.mutate({ id: invoice.id, amount: parsedPayment })}
+                    disabled={!Number.isFinite(parsedPayment) || parsedPayment <= 0 || recordPayment.isPending}
+                  >
+                    <CreditCard size={13} /> Record payment
+                  </button>
+                  <button type="button" className="btn ghost" onClick={() => updateStatus.mutate({ id: invoice.id, status: 'paid' })} disabled={updateStatus.isPending || invoice.status === 'paid'}>
+                    Mark paid
+                  </button>
+                  <button type="button" className="btn ghost" onClick={() => updateStatus.mutate({ id: invoice.id, status: 'void' })} disabled={updateStatus.isPending || invoice.status === 'void'}>
+                    Void
+                  </button>
+                  <button type="button" className="btn ghost" onClick={() => duplicateInvoice.mutate(invoice.id)} disabled={duplicateInvoice.isPending}>
+                    Duplicate
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function orderQuery(surface: OrderSurface, search: string, filters: OrderFilters) {
@@ -818,6 +1076,12 @@ function fmtDateTime(value: string | null) {
 function labelStatus(value: string | null) {
   if (!value) return '-';
   return value.replace(/_/g, ' ');
+}
+
+function invoiceStatusLabel(value: string | null) {
+  if (!value) return 'Unknown';
+  if (value === 'unpaid') return 'Due';
+  return labelStatus(value);
 }
 
 function paymentTone(value: string | null) {

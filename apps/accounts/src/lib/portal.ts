@@ -1,5 +1,14 @@
 import type {
   AccountAddressInput,
+  AccountCartAddItemInput,
+  AccountCartCheckoutInput,
+  AccountCartCreateInput,
+  AccountDocumentCategory,
+  AccountDocumentListQuery,
+  AccountInvoiceDownloadAction,
+  AccountInvoiceListQuery,
+  AccountInvoicePayAction,
+  AccountOrderListQuery,
   CreateAccountSupportTicketInput,
   UpdateAccountPasswordInput,
   UpdateAccountProfileInput,
@@ -9,6 +18,7 @@ import { accountsApi } from '@/lib/api';
 export type AddressType = 'shipping' | 'billing';
 export type AccountAddress = AccountAddressInput;
 
+export type BuyerOrderLineItem = { id: string; sku: string; name: string; qty: number; unitPriceUsd: number; canReorder: boolean; reason: string };
 export type BuyerOrder = {
   id: string;
   orderNumber: string;
@@ -16,17 +26,135 @@ export type BuyerOrder = {
   placedBy: string;
   status: OrderStatusValue;
   totalUsd: number;
+  currency: string;
+  fulfillmentStatus: string | null;
+  financialStatus: string | null;
+  canReorder: boolean;
   itemsCount: number;
-  items: Array<{ sku: string; name: string; qty: number; unitPriceUsd: number }>;
+  items: BuyerOrderLineItem[];
 };
 export type OrderStatusValue = 'pending' | 'paid' | 'fulfilled' | 'cancelled';
 
+export type BuyerListMeta = {
+  count: number;
+  pageCount: number;
+  limit: number;
+  cursor: string | null;
+  nextCursor: string | null;
+};
+
+export type BuyerPage<T> = {
+  data: T[];
+  meta: BuyerListMeta;
+};
+
+export type BuyerOrderDetailLineItem = BuyerOrderLineItem & {
+  variantTitle: string | null;
+  lineTotalUsd: number;
+  reorderReason: string;
+  properties: Array<{ name: string; value: string }>;
+  designFiles: Array<{ id: string; name: string; url: string | null; sku: string | null }>;
+};
+
+export type BuyerOrderDetail = Omit<BuyerOrder, 'items'> & {
+  subtotalUsd: number;
+  taxUsd: number;
+  shippingUsd: number;
+  discountsUsd: number;
+  refundedUsd: number;
+  tags: string[];
+  notes: string | null;
+  shippingAddress: PortalAddressDisplay | null;
+  billingAddress: PortalAddressDisplay | null;
+  tracking: { carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; status: string };
+  designFiles: Array<{ id: string; name: string; url: string | null; sku: string | null }>;
+  items: BuyerOrderDetailLineItem[];
+  pickup: { id: string; status: string; qrPayload: string; shelfCode: string | null } | null;
+};
+
+export type PortalAddressDisplay = {
+  name: string | null;
+  company: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  province: string | null;
+  zip: string | null;
+  country: string | null;
+  phone: string | null;
+  formatted: string;
+};
+
 export type ReorderTemplate = {
   id: string;
+  orderId: string;
   name: string;
   useCount: number;
   lastUsedAt: string | null;
   items: BuyerOrder['items'];
+  canReorder: boolean;
+};
+
+export type ReorderResult = {
+  cartId: string;
+  originOrderId: string;
+  action: 'checkout' | 'review_portal_cart' | 'unavailable';
+  message: string;
+  checkoutUrl: string | null;
+  checkoutError: string | null;
+  resolvedCount: number;
+  skippedCount: number;
+  items: Array<{ id: string; sku: string; name: string; qty: number; unitPriceUsd: number; lineTotalUsd: number; reorderable: boolean; reason: string }>;
+};
+
+export type BuyerCartItem = {
+  id: string;
+  originOrderId: string | null;
+  productTitle: string;
+  variantTitle: string | null;
+  sku: string | null;
+  quantity: number;
+  unitPriceUsd: number;
+  lineTotalUsd: number;
+  reorderable: boolean;
+  reason: string;
+  properties: Array<{ name: string; value: string }>;
+  designFiles: Array<{ id: string; name: string; url: string | null }>;
+};
+
+export type BuyerCartActivity = {
+  id: string;
+  action: string;
+  label: string;
+  detail: string | null;
+  actorType: string;
+  createdAt: string;
+};
+
+export type BuyerCart = {
+  id: string;
+  status: 'review_required' | 'unavailable' | 'checkout_ready' | string;
+  originOrderId: string | null;
+  originOrderNumber: string | null;
+  currency: string;
+  subtotalUsd: number;
+  totalUsd: number;
+  itemCount: number;
+  checkoutUrl: string | null;
+  checkoutError: string | null;
+  checkoutAction: 'checkout' | 'review_cart' | 'unavailable';
+  createdAt: string;
+  updatedAt: string;
+  items: BuyerCartItem[];
+  activities: BuyerCartActivity[];
+};
+
+export type BuyerCartCheckoutResult = {
+  action: 'checkout' | 'review_cart' | 'account_review' | 'unavailable';
+  message: string;
+  checkoutUrl: string | null;
+  checkoutError: string | null;
+  cart: BuyerCart;
 };
 
 export type BuyerProduct = {
@@ -70,27 +198,55 @@ export type PickupOrder = {
 
 export type BuyerInvoice = {
   id: string;
-  orderId: string;
+  orderId: string | null;
   invoiceNumber: string;
-  orderNumber: string;
+  orderNumber: string | null;
   status: InvoiceStatus;
   issuedAt: string;
   dueAt: string;
   totalUsd: number;
   paidUsd: number;
+  balanceUsd: number;
+  hasFile: boolean;
+  canPay: boolean;
 };
 export type InvoiceStatus = 'paid' | 'unpaid' | 'overdue' | 'partial';
 
-export type DocumentCategory = 'contract' | 'certificate' | 'tax' | 'license' | 'other';
+export type BuyerInvoiceDetail = BuyerInvoice & {
+  subtotalUsd: number;
+  discountUsd: number;
+  shippingUsd: number;
+  taxUsd: number;
+  currency: string;
+  notes: string | null;
+  fileUrl: string | null;
+  payment: { state: string; amountDue: number; url: string | null; label: string };
+  items: Array<{ id: string; sku: string | null; name: string; quantity: number; unitPriceUsd: number; totalUsd: number }>;
+  payments: Array<{ id: string; amountUsd: number; method: string; recordedAt: string }>;
+  activities: Array<{ id: string; label: string; detail: string; createdAt: string }>;
+};
+
+export type BuyerInvoiceDownloadAction = AccountInvoiceDownloadAction;
+export type BuyerInvoicePayAction = AccountInvoicePayAction;
+
+export type DocumentCategory = AccountDocumentCategory;
 export type BuyerDocument = {
   id: string;
   name: string;
   category: DocumentCategory;
   mimeType: string;
-  sizeBytes: number;
+  sizeBytes: number | null;
   uploadedAt: string;
   uploadedBy: string;
-  requestId: string;
+  documentKind: 'account_file' | 'invoice_file' | 'order_design_file';
+  addedAs: string;
+  relatedLabel: string | null;
+  orderId: string | null;
+  orderNumber: string | null;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  downloadMode: 'api' | 'url';
+  downloadUrl: string | null;
 };
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -144,8 +300,44 @@ export function deleteAccountAddress(idOrType: string) {
   return accountsApi.deleteAccountAddress(type) as Promise<{ ok: true }>;
 }
 
-export function fetchBuyerOrders() {
-  return accountsApi.accountOrders() as Promise<BuyerOrder[]>;
+export function fetchBuyerOrders(query: Partial<AccountOrderListQuery> = {}) {
+  return accountsApi.accountOrders(query) as Promise<BuyerPage<BuyerOrder>>;
+}
+
+export function fetchBuyerOrder(id: string) {
+  return accountsApi.accountOrder(id) as Promise<BuyerOrderDetail>;
+}
+
+export function reorderOrder(id: string, quantity?: number) {
+  return accountsApi.accountOrderReorder(id, quantity ? { quantity } : {}) as Promise<ReorderResult>;
+}
+
+export function reorderLineItem(orderId: string, lineItemId: string, quantity?: number) {
+  return accountsApi.accountOrderLineItemReorder(orderId, lineItemId, quantity ? { quantity } : {}) as Promise<ReorderResult>;
+}
+
+export function fetchActiveCart() {
+  return accountsApi.accountActiveCart() as Promise<BuyerCart | null>;
+}
+
+export function createCart(input: AccountCartCreateInput = {}) {
+  return accountsApi.accountCreateCart(input) as Promise<BuyerCart>;
+}
+
+export function addCartItem(cartId: string, input: AccountCartAddItemInput) {
+  return accountsApi.accountCartAddItem(cartId, input) as Promise<BuyerCart>;
+}
+
+export function updateCartItem(cartId: string, itemId: string, quantity: number) {
+  return accountsApi.accountCartUpdateItem(cartId, itemId, { quantity }) as Promise<BuyerCart>;
+}
+
+export function removeCartItem(cartId: string, itemId: string) {
+  return accountsApi.accountCartRemoveItem(cartId, itemId) as Promise<BuyerCart>;
+}
+
+export function checkoutCart(cartId: string, input: AccountCartCheckoutInput = {}) {
+  return accountsApi.accountCartCheckout(cartId, input) as Promise<BuyerCartCheckoutResult>;
 }
 
 export function fetchReorderTemplates() {
@@ -164,15 +356,37 @@ export function fetchPickups() {
   return accountsApi.accountPickups() as Promise<PickupOrder[]>;
 }
 
-export function fetchInvoices() {
-  return accountsApi.accountInvoices() as Promise<BuyerInvoice[]>;
+export function fetchInvoices(query: Partial<AccountInvoiceListQuery> = {}) {
+  return accountsApi.accountInvoices(query) as Promise<BuyerPage<BuyerInvoice>>;
 }
 
-export function fetchDocuments() {
-  return accountsApi.accountDocuments() as Promise<BuyerDocument[]>;
+export function fetchInvoice(id: string) {
+  return accountsApi.accountInvoice(id) as Promise<BuyerInvoiceDetail>;
+}
+
+export function downloadInvoice(id: string) {
+  return accountsApi.accountInvoiceDownload(id) as Promise<BuyerInvoiceDownloadAction>;
+}
+
+export function payInvoice(id: string) {
+  return accountsApi.accountInvoicePay(id) as Promise<BuyerInvoicePayAction>;
+}
+
+export function openAccountActionUrl(url: string) {
+  const baseUrl = import.meta.env.VITE_API_URL ?? window.location.origin;
+  const resolved = /^https?:\/\//i.test(url) ? url : new URL(url, baseUrl).toString();
+  window.open(resolved, '_blank', 'noopener,noreferrer');
+}
+
+export function fetchDocuments(query: Partial<AccountDocumentListQuery> = {}) {
+  return accountsApi.accountDocuments(query) as Promise<BuyerPage<BuyerDocument>>;
 }
 
 export async function downloadDocument(doc: BuyerDocument) {
+  if (doc.downloadMode === 'url' && doc.downloadUrl) {
+    openAccountActionUrl(doc.downloadUrl);
+    return;
+  }
   const blob = await accountsApi.accountDocumentDownload(doc.id);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -191,7 +405,7 @@ export function saveProfile(input: UpdateAccountProfileInput) {
 }
 
 export function updateAccountPassword(input: UpdateAccountPasswordInput) {
-  return accountsApi.updateAccountPassword(input) as Promise<{ ok: true; request_id: string }>;
+  return accountsApi.updateAccountPassword(input) as Promise<{ ok: true }>;
 }
 
 export function fetchSupportTickets() {

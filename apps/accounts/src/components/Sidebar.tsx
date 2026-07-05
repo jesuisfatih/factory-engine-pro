@@ -21,7 +21,9 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_commerce',
     children: [
+      { to: '/', matchPrefix: '/', i18nKey: 'nav.home', id: 'nav-home', icon: LayoutDashboard },
       { to: '/orders', matchPrefix: '/orders', i18nKey: 'nav.orders', id: 'nav-orders', icon: ShoppingCart },
+      { to: '/cart', matchPrefix: '/cart', i18nKey: 'nav.cart', id: 'nav-cart', icon: ShoppingCart },
       { to: '/products', matchPrefix: '/products', i18nKey: 'nav.products', id: 'nav-products', icon: Tag },
       { to: '/reorder', matchPrefix: '/reorder', i18nKey: 'nav.reorder', id: 'nav-reorder', icon: RotateCw },
     ],
@@ -89,7 +91,9 @@ export function Sidebar({ collapsed }: Props) {
             <div className="group-label">{t(section.groupKey)}</div>
             {section.children.map((leaf) => {
               const Icon = leaf.icon;
-              const active = router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
+              const active = leaf.matchPrefix === '/'
+                ? router === '/'
+                : router === leaf.matchPrefix || router.startsWith(`${leaf.matchPrefix}/`);
               return (
                 <Link
                   key={leaf.to}

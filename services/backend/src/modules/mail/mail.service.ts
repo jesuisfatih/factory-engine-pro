@@ -1,23 +1,51 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 import type { Prisma } from '@prisma/client';
-import type { MailListQuery, MailProviderHealthResponse } from '@factory-engine-pro/contracts';
+import {
+  mailCenterSettingsSchema,
+  patchMailCenterSettingsSchema,
+  type AddMailSuppressionInput,
+  type MailCenterSettings,
+  type MailDeliveryLogQuery,
+  type MailDlqListQuery,
+  type MailListQuery,
+  type MailProviderEventDto,
+  type MailProviderEventLogResponse,
+  type MailProviderEventQuery,
+  type MailProviderMode,
+  type MailProviderHealthResponse,
+  type MailSettingsAuditQuery,
+  type MailSuppressionListQuery,
+  type PatchMailCenterSettingsInput,
+} from '@factory-engine-pro/contracts';
 import { CryptoService } from '../../shared/crypto.service.js';
+import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { MAIL_OUTBOUND_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { MailRepository } from './mail.repository.js';
+import {
+  parseResendWebhookEvent,
+  requiredResendWebhookHeader,
+  safeResendWebhookHeaders,
+  verifyResendSvixSignature,
+  type ResendWebhookEvent,
+} from './resend-webhook.js';
 
 export const MAIL_OUTBOUND_JOB = 'mail.deliver';
 
 export interface TransactionalMailInput {
   eventKey: string;
+  category?: string;
   to: string;
   subject: string;
   html: string;
   text?: string | null;
+  templateId?: string | null;
+  templateVersionId?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -30,8 +58,34 @@ export interface WorkflowMailInput {
   metadata?: Record<string, unknown>;
 }
 
+export interface ResendWebhookInput {
+  tenantSlug: string;
+  rawBody: string;
+  headers: Record<string, string>;
+}
+
+type MailSettingsCategory = 'system' | 'system.b2b' | 'marketing';
+type MarketingMailType = 'campaigns' | 'flows' | 'drips' | 'transactionalMarketing';
+type MailSendDecision =
+  | {
+      allowed: true;
+      reason: 'critical-bypass' | 'category-enabled';
+      providerMode: MailProviderMode;
+      category: MailSettingsCategory;
+    }
+  | {
+      allowed: false;
+      status: 'queued_disabled' | 'skipped';
+      reason: string;
+      providerMode: MailProviderMode;
+      category: MailSettingsCategory;
+      field: string;
+    };
+
 @Injectable()
 export class MailService {
+  private static readonly MAIL_IDEMPOTENCY_WINDOW_MS = 60_000;
+
   constructor(
     private readonly repository: MailRepository,
     private readonly config: ConfigService,
@@ -46,7 +100,10 @@ export class MailService {
     const context = this.tenantContext.require();
     const delivery = await this.repository.createDelivery({
       eventKey: input.eventKey,
+      category: input.category,
       recipientEmail: input.to,
+      templateId: input.templateId ?? null,
+      templateVersionId: input.templateVersionId ?? null,
       subject: input.subject,
       html: input.html,
       text: input.text,
@@ -67,57 +124,558 @@ export class MailService {
     return this.deliverQueued(delivery.id);
   }
 
+  async recordDisabledDelivery(input: TransactionalMailInput & {
+    category?: string;
+    errorMessage?: string;
+  }) {
+    const delivery = await this.repository.createDelivery({
+      eventKey: input.eventKey,
+      category: input.category ?? 'system',
+      recipientEmail: input.to,
+      templateId: input.templateId ?? null,
+      templateVersionId: input.templateVersionId ?? null,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+      status: 'queued_disabled',
+      provider: 'disabled',
+      errorMessage: input.errorMessage ?? 'Mail provider is disabled for this tenant.',
+      metadata: {
+        ...(input.metadata ?? {}),
+        providerMode: 'disabled',
+        sendingEnabled: false,
+      } as Prisma.InputJsonValue,
+    });
+    this.logger.warn('mail', 'queued_disabled', 'Mail delivery recorded while provider is disabled', {
+      mail_delivery_id: delivery.id,
+      event_key: input.eventKey,
+    });
+    return delivery;
+  }
+
   async sendWorkflowMail(input: WorkflowMailInput) {
     const templateHint = input.templateId?.trim() || null;
-    const template = templateHint
-      ? await this.prisma.db.emailTemplate.findFirst({
-          where: {
-            OR: [
-              { id: templateHint },
-              { slug: { equals: templateHint, mode: 'insensitive' } },
-              { eventKey: { equals: templateHint, mode: 'insensitive' } },
-            ],
-          },
-          orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
-        })
-      : null;
     const variables = input.variables ?? {};
-    const subject = template
-      ? renderTemplate(template.subject, variables)
-      : `Workflow email: ${input.eventKey}`;
-    const html = template
-      ? renderTemplate(template.html, variables)
-      : `<p>Workflow email action matched for <strong>${escapeHtml(input.eventKey)}</strong>.</p>`;
-    const text = template?.text
-      ? renderTemplate(template.text, variables)
-      : `Workflow email action matched for ${input.eventKey}.`;
+    const idempotencyKey = deriveMailIdempotencyKey(input.eventKey, input.to, templateHint, variables);
+    const duplicate = await this.repository.findRecentIdempotencyKey(
+      idempotencyKey,
+      new Date(Date.now() - MailService.MAIL_IDEMPOTENCY_WINDOW_MS),
+    );
+    if (duplicate?.deliveryId) {
+      const previousDelivery = await this.repository.findById(duplicate.deliveryId);
+      if (previousDelivery) return previousDelivery;
+    }
+    const resolved = await this.resolveWorkflowMailTemplate(input.eventKey, templateHint);
+    if (!resolved) {
+      const delivery = await this.recordDisabledDelivery({
+        eventKey: input.eventKey,
+        category: 'system',
+        to: input.to,
+        subject: `Workflow email blocked: ${input.eventKey}`,
+        html: `<p>No active published email template is bound for <strong>${escapeHtml(input.eventKey)}</strong>.</p>`,
+        text: `No active published email template is bound for ${input.eventKey}.`,
+        errorMessage: 'No active published email template is bound for this workflow mail event.',
+        metadata: {
+          ...(input.metadata ?? {}),
+          source: 'workflow_send_mail_blocked',
+          sendingEnabled: false,
+          providerMode: 'disabled',
+          templateId: templateHint,
+          templateFound: false,
+          failClosed: true,
+          customerId: input.customerId ?? null,
+        },
+      });
+      await this.repository.recordIdempotencyKey({
+        idempotencyKey,
+        eventKey: input.eventKey,
+        recipientEmail: input.to,
+        deliveryId: delivery.id,
+      });
+      return delivery;
+    }
+    const subject = renderTemplate(resolved.revision.subject, variables);
+    const renderedCss = resolved.revision.css ? renderTemplate(resolved.revision.css, variables) : null;
+    const html = renderEmailHtml(renderTemplate(resolved.revision.html, variables, { escapeHtml: true }), renderedCss);
+    const text = resolved.revision.text
+      ? renderTemplate(resolved.revision.text, variables)
+      : null;
 
-    return this.sendTransactional({
+    const delivery = await this.sendTransactional({
       eventKey: input.eventKey,
       to: input.to,
       subject,
       html,
       text,
+      templateId: resolved.templateId,
+      templateVersionId: resolved.revision.id,
       metadata: {
         ...(input.metadata ?? {}),
         source: 'workflow_send_mail',
         sendingEnabled: true,
-        providerMode: 'resend',
-        templateId: template?.id ?? templateHint,
-        templateFound: Boolean(template),
+        provider: 'resend',
+        templateId: resolved.templateId,
+        templateVersionId: resolved.revision.id,
+        templateSource: resolved.source,
+        templateFound: true,
         customerId: input.customerId ?? null,
       },
     });
+    await this.repository.recordIdempotencyKey({
+      idempotencyKey,
+      eventKey: input.eventKey,
+      recipientEmail: input.to,
+      deliveryId: delivery.id,
+    });
+    return delivery;
+  }
+
+  private async resolveWorkflowMailTemplate(eventKey: string, templateHint: string | null) {
+    if (templateHint) {
+      const hintedBinding = await this.resolveActiveBinding(templateHint);
+      if (hintedBinding) return hintedBinding;
+      const template = await this.prisma.db.emailTemplate.findFirst({
+        where: {
+          isArchived: false,
+          OR: [
+            { id: templateHint },
+            { slug: { equals: templateHint, mode: 'insensitive' } },
+          ],
+        },
+        include: { publishedVersion: true },
+        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+      });
+      if (template?.publishedVersion) {
+        return {
+          source: 'explicit_template' as const,
+          templateId: template.id,
+          revision: template.publishedVersion,
+        };
+      }
+      return null;
+    }
+    return this.resolveActiveBinding(eventKey);
+  }
+
+  private async resolveActiveBinding(eventKey: string) {
+    const binding = await this.prisma.db.emailTemplateBinding.findFirst({
+      where: { eventKey, isEnabled: true },
+      include: {
+        template: true,
+        templateVersion: true,
+      },
+    });
+    if (!binding || binding.template.isArchived || binding.templateVersion.status !== 'published') return null;
+    return {
+      source: 'event_binding' as const,
+      templateId: binding.templateId,
+      revision: binding.templateVersion,
+    };
   }
 
   list(query: MailListQuery) {
     return this.repository.list(query);
   }
 
+  deliveryLog(query: MailDeliveryLogQuery) {
+    return this.repository.listPage(query);
+  }
+
+  async providerEvents(query: MailProviderEventQuery): Promise<MailProviderEventLogResponse> {
+    const page = await this.repository.listProviderEventPage(query);
+    return {
+      data: page.data.map(toProviderEventDto),
+      meta: page.meta,
+    };
+  }
+
+  listTemplateRevisionTestProofs(templateVersionId: string) {
+    return this.repository.list({
+      templateVersionId,
+      source: 'email_template_test_send',
+      limit: 25,
+    });
+  }
+
   async findOne(id: string) {
     const delivery = await this.repository.findById(id);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
     return delivery;
+  }
+
+  async listSuppression(query: MailSuppressionListQuery) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.mailSuppression.findMany({
+      where: {
+        tenantId,
+        ...(query.active !== undefined && { isActive: query.active }),
+        ...(query.scope && { scope: query.scope }),
+        ...(query.category && { category: query.category }),
+        ...(query.campaignId && { campaignId: query.campaignId }),
+        ...(query.flowId && { flowId: query.flowId }),
+        ...(query.templateId && { templateId: query.templateId }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: query.limit,
+      include: {
+        contact: {
+          select: { id: true, email: true, normalizedEmail: true, name: true, isSendable: true },
+        },
+      },
+    });
+  }
+
+  async addSuppression(input: AddMailSuppressionInput) {
+    const tenantId = this.tenantId();
+    const normalizedEmail = input.email.trim().toLowerCase();
+    if (!normalizedEmail) throw new BadRequestException('Email is required');
+    const scope = input.scope ?? 'global';
+    const category = scope === 'category' ? input.category?.trim() : null;
+    const campaignId = scope === 'campaign' ? input.campaignId?.trim() : null;
+    const flowId = scope === 'flow' ? input.flowId?.trim() : null;
+    const templateId = scope === 'template' ? input.templateId?.trim() : null;
+    if (scope === 'category' && !category) throw new BadRequestException('Category suppression requires category.');
+    if (scope === 'campaign' && !campaignId) throw new BadRequestException('Campaign suppression requires campaignId.');
+    if (scope === 'flow' && !flowId) throw new BadRequestException('Flow suppression requires flowId.');
+    if (scope === 'template' && !templateId) throw new BadRequestException('Template suppression requires templateId.');
+
+    let contact = await this.prisma.db.mailContact.findFirst({
+      where: { tenantId, normalizedEmail },
+    });
+    if (!contact) {
+      contact = await this.prisma.db.mailContact.create({
+        data: {
+          id: prefixedId('mcon'),
+          tenantId,
+          email: normalizedEmail,
+          normalizedEmail,
+          isSendable: scope === 'global' ? false : true,
+          metadata: { source: 'mail_center_suppression' },
+        },
+      });
+    } else if (scope === 'global') {
+      await this.prisma.db.mailContact.updateMany({
+        where: { tenantId, id: contact.id },
+        data: { isSendable: false },
+      });
+    }
+
+    const existing = await this.prisma.db.mailSuppression.findFirst({
+      where: {
+        tenantId,
+        contactId: contact.id,
+        channel: 'email',
+        scope,
+        category,
+        campaignId,
+        flowId,
+        templateId,
+        isActive: true,
+      },
+    });
+    const data = {
+      scope,
+      category,
+      campaignId,
+      flowId,
+      templateId,
+      isActive: true,
+      reason: input.reason || 'manual',
+      source: 'admin-ui',
+      notes: input.notes ?? null,
+      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    };
+    if (existing) {
+      await this.prisma.db.mailSuppression.updateMany({
+        where: { tenantId, id: existing.id },
+        data,
+      });
+      return this.prisma.db.mailSuppression.findFirst({
+        where: { tenantId, id: existing.id },
+        include: { contact: { select: { id: true, email: true, normalizedEmail: true, name: true, isSendable: true } } },
+      });
+    }
+
+    return this.prisma.db.mailSuppression.create({
+      data: {
+        id: prefixedId('msup'),
+        tenantId,
+        contactId: contact.id,
+        channel: 'email',
+        ...data,
+      },
+      include: { contact: { select: { id: true, email: true, normalizedEmail: true, name: true, isSendable: true } } },
+    });
+  }
+
+  async unsuppress(id: string) {
+    const tenantId = this.tenantId();
+    const row = await this.prisma.db.mailSuppression.findFirst({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Suppression record not found');
+    await this.prisma.db.mailSuppression.updateMany({
+      where: { tenantId, id },
+      data: { isActive: false },
+    });
+    if (row.scope === 'global') {
+      const activeGlobal = await this.prisma.db.mailSuppression.count({
+        where: { tenantId, contactId: row.contactId, channel: row.channel, scope: 'global', isActive: true, id: { not: id } },
+      });
+      if (activeGlobal === 0) {
+        await this.prisma.db.mailContact.updateMany({
+          where: { tenantId, id: row.contactId },
+          data: { isSendable: true },
+        });
+      }
+    }
+    return this.prisma.db.mailSuppression.findFirst({
+      where: { tenantId, id },
+      include: { contact: { select: { id: true, email: true, normalizedEmail: true, name: true, isSendable: true } } },
+    });
+  }
+
+  async listDlq(query: MailDlqListQuery) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.mailDlq.findMany({
+      where: {
+        tenantId,
+        ...(query.status !== 'all' && { status: query.status }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: query.limit,
+    });
+  }
+
+  async retryDlq(id: string) {
+    const tenantId = this.tenantId();
+    const row = await this.prisma.db.mailDlq.findFirst({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Mail DLQ item not found');
+    await this.prisma.db.mailDlq.updateMany({ where: { tenantId, id }, data: { status: 'retrying', resolvedAt: null } });
+    if (!row.lastDeliveryId) throw new BadRequestException('DLQ item is not linked to a delivery');
+    try {
+      const delivery = await this.deliverQueued(row.lastDeliveryId);
+      await this.prisma.db.mailDlq.updateMany({ where: { tenantId, id }, data: { status: 'resolved', resolvedAt: new Date() } });
+      return { success: true, delivery };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.prisma.db.mailDlq.updateMany({
+        where: { tenantId, id },
+        data: { status: 'pending', errorMessage: message.slice(0, 1000) },
+      });
+      throw error;
+    }
+  }
+
+  async discardDlq(id: string) {
+    const tenantId = this.tenantId();
+    const row = await this.prisma.db.mailDlq.findFirst({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Mail DLQ item not found');
+    await this.prisma.db.mailDlq.updateMany({
+      where: { tenantId, id },
+      data: { status: 'discarded', resolvedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  async mailCenterSettings() {
+    return {
+      settings: await this.loadMailCenterSettings(),
+      criticalEvents: CRITICAL_MAIL_EVENTS,
+    };
+  }
+
+  async patchMailCenterSettings(input: PatchMailCenterSettingsInput) {
+    const parsed = patchMailCenterSettingsSchema.parse(input);
+    const before = await this.loadMailCenterSettings();
+    const next = sanitizeMailSettings({
+      providerMode: parsed.providerMode ?? before.providerMode,
+      categorySystem: { ...before.categorySystem, ...(parsed.categorySystem ?? {}) },
+      categoryB2b: { ...before.categoryB2b, ...(parsed.categoryB2b ?? {}) },
+      categoryMarketing: { ...before.categoryMarketing, ...(parsed.categoryMarketing ?? {}) },
+    });
+    const changedBy = this.tenantContext.get()?.principalId ?? 'system';
+    const tenantId = this.tenantId();
+    const existing = await this.prisma.db.mailCenterSetting.findFirst({ where: { tenantId } });
+    if (existing) {
+      await this.prisma.db.mailCenterSetting.updateMany({
+        where: { tenantId, id: existing.id },
+        data: {
+          providerMode: next.providerMode,
+          categorySystem: next.categorySystem as Prisma.InputJsonValue,
+          categoryB2b: next.categoryB2b as Prisma.InputJsonValue,
+          categoryMarketing: next.categoryMarketing as Prisma.InputJsonValue,
+          updatedBy: changedBy,
+        },
+      });
+    } else {
+      await this.prisma.db.mailCenterSetting.create({
+        data: {
+          id: prefixedId('mcset'),
+          tenantId,
+          providerMode: next.providerMode,
+          categorySystem: next.categorySystem as Prisma.InputJsonValue,
+          categoryB2b: next.categoryB2b as Prisma.InputJsonValue,
+          categoryMarketing: next.categoryMarketing as Prisma.InputJsonValue,
+          updatedBy: changedBy,
+        },
+      });
+    }
+    await this.writeSettingsAudit(before, next, changedBy);
+    return { success: true, settings: next };
+  }
+
+  async resetMailCenterSettings() {
+    const before = await this.loadMailCenterSettings();
+    const next = defaultMailCenterSettings();
+    const changedBy = this.tenantContext.get()?.principalId ?? 'system';
+    const tenantId = this.tenantId();
+    const existing = await this.prisma.db.mailCenterSetting.findFirst({ where: { tenantId } });
+    if (existing) {
+      await this.prisma.db.mailCenterSetting.updateMany({
+        where: { tenantId, id: existing.id },
+        data: {
+          providerMode: next.providerMode,
+          categorySystem: next.categorySystem as Prisma.InputJsonValue,
+          categoryB2b: next.categoryB2b as Prisma.InputJsonValue,
+          categoryMarketing: next.categoryMarketing as Prisma.InputJsonValue,
+          updatedBy: changedBy,
+        },
+      });
+    } else {
+      await this.prisma.db.mailCenterSetting.create({
+        data: {
+          id: prefixedId('mcset'),
+          tenantId,
+          providerMode: next.providerMode,
+          categorySystem: next.categorySystem as Prisma.InputJsonValue,
+          categoryB2b: next.categoryB2b as Prisma.InputJsonValue,
+          categoryMarketing: next.categoryMarketing as Prisma.InputJsonValue,
+          updatedBy: changedBy,
+        },
+      });
+    }
+    await this.prisma.db.mailSettingsAuditLog.create({
+      data: {
+        id: prefixedId('msal'),
+        tenantId,
+        category: 'all',
+        field: 'reset-to-defaults',
+        oldValue: before as Prisma.InputJsonValue,
+        newValue: next as Prisma.InputJsonValue,
+        changedBy,
+      },
+    });
+    return { success: true, settings: next };
+  }
+
+  async settingsAudit(query: MailSettingsAuditQuery) {
+    const tenantId = this.tenantId();
+    return this.prisma.db.mailSettingsAuditLog.findMany({
+      where: { tenantId },
+      orderBy: { changedAt: 'desc' },
+      take: query.limit,
+    });
+  }
+
+  private async evaluateDeliverySendDecision(delivery: {
+    eventKey: string;
+    category: string;
+    metadata: Prisma.JsonValue;
+  }): Promise<MailSendDecision> {
+    const settings = await this.loadMailCenterSettings();
+    const category = resolveSettingsCategory(delivery.eventKey, delivery.category);
+    const base = {
+      providerMode: settings.providerMode,
+      category,
+    };
+
+    if (settings.providerMode === 'disabled') {
+      return {
+        ...base,
+        allowed: false,
+        status: 'queued_disabled',
+        reason: 'Provider mode is disabled. Delivery proof was recorded without contacting the recipient.',
+        field: 'providerMode',
+      };
+    }
+
+    if (settings.providerMode === 'test' && !isSystemTestDelivery(delivery.eventKey, delivery.metadata)) {
+      return {
+        ...base,
+        allowed: false,
+        status: 'queued_disabled',
+        reason: 'Provider mode is test-only. This non-test delivery was recorded without contacting the recipient.',
+        field: 'providerMode',
+      };
+    }
+
+    if (isCriticalMailEvent(delivery.eventKey)) {
+      return { ...base, allowed: true, reason: 'critical-bypass' };
+    }
+
+    if (category === 'marketing') {
+      if (!settings.categoryMarketing.enabled) {
+        return {
+          ...base,
+          allowed: false,
+          status: 'skipped',
+          reason: 'Marketing mail is disabled by tenant send controls.',
+          field: 'categoryMarketing.enabled',
+        };
+      }
+      const type = marketingTypeForEvent(delivery.eventKey);
+      if (type && settings.categoryMarketing.types[type] === false) {
+        return {
+          ...base,
+          allowed: false,
+          status: 'skipped',
+          reason: `Marketing ${type} mail is disabled by tenant send controls.`,
+          field: `categoryMarketing.types.${type}`,
+        };
+      }
+      return { ...base, allowed: true, reason: 'category-enabled' };
+    }
+
+    if (category === 'system.b2b') {
+      if (!settings.categoryB2b.enabled) {
+        return {
+          ...base,
+          allowed: false,
+          status: 'skipped',
+          reason: 'Account mail is disabled by tenant send controls.',
+          field: 'categoryB2b.enabled',
+        };
+      }
+      if (settings.categoryB2b.subcategories[delivery.eventKey] === false) {
+        return {
+          ...base,
+          allowed: false,
+          status: 'skipped',
+          reason: 'This account mail event is disabled by tenant send controls.',
+          field: `categoryB2b.subcategories.${delivery.eventKey}`,
+        };
+      }
+      return { ...base, allowed: true, reason: 'category-enabled' };
+    }
+
+    if (!settings.categorySystem.enabled) {
+      return {
+        ...base,
+        allowed: false,
+        status: 'skipped',
+        reason: 'System mail is disabled by tenant send controls.',
+        field: 'categorySystem.enabled',
+      };
+    }
+    if (settings.categorySystem.subcategories[delivery.eventKey] === false) {
+      return {
+        ...base,
+        allowed: false,
+        status: 'skipped',
+        reason: 'This system mail event is disabled by tenant send controls.',
+        field: `categorySystem.subcategories.${delivery.eventKey}`,
+      };
+    }
+    return { ...base, allowed: true, reason: 'category-enabled' };
   }
 
   async retryDelivery(id: string) {
@@ -141,9 +699,105 @@ export class MailService {
     });
   }
 
+  async receiveResendWebhook(input: ResendWebhookInput) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug: input.tenantSlug },
+      include: { config: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found for this Resend webhook.');
+
+    const webhookSecret = this.resolveResendWebhookSecret(tenant.config?.resendWebhookSecretEncrypted);
+    if (!webhookSecret) throw new BadRequestException('Resend webhook signing secret is not configured for this tenant.');
+
+    verifyResendSvixSignature(input.rawBody, input.headers, webhookSecret);
+    const event = parseResendWebhookEvent(input.rawBody);
+    const providerEventId = requiredResendWebhookHeader(input.headers, 'svix-id');
+    const requestId = this.tenantContext.get()?.requestId ?? `resend-webhook-${providerEventId}`;
+
+    return this.tenantContext.run({ requestId, tenantId: tenant.id, permissions: [] }, async () => {
+      const tenantId = tenant.id;
+      const duplicate = await this.prisma.db.mailProviderEvent.findFirst({
+        where: { tenantId, provider: 'resend', providerEventId },
+      });
+      if (duplicate) {
+        return {
+          accepted: true,
+          status: 'duplicate',
+          eventId: duplicate.id,
+          deliveryId: duplicate.deliveryId,
+          eventType: duplicate.eventType,
+        };
+      }
+
+      const delivery = await this.resolveResendWebhookDelivery(event);
+      const ignoredReason = delivery ? null : 'delivery_not_matched';
+      let stored: { id: string; deliveryId: string | null; eventType: string };
+      try {
+        stored = await this.prisma.db.mailProviderEvent.create({
+          data: {
+            id: prefixedId('mpev'),
+            tenantId,
+            provider: 'resend',
+            providerEventId,
+            providerMessageId: event.providerMessageId,
+            deliveryId: delivery?.id ?? null,
+            eventType: event.type,
+            recipientEmail: event.recipientEmail,
+            subject: event.subject,
+            payload: event.payload as Prisma.InputJsonValue,
+            headers: safeResendWebhookHeaders(input.headers) as Prisma.InputJsonValue,
+            occurredAt: event.occurredAt,
+            ignoredReason,
+          },
+        });
+      } catch (error) {
+        if (!isUniqueConstraint(error)) throw error;
+        const racedDuplicate = await this.prisma.db.mailProviderEvent.findFirst({
+          where: { tenantId, provider: 'resend', providerEventId },
+        });
+        if (!racedDuplicate) throw error;
+        return {
+          accepted: true,
+          status: 'duplicate',
+          eventId: racedDuplicate.id,
+          deliveryId: racedDuplicate.deliveryId,
+          eventType: racedDuplicate.eventType,
+        };
+      }
+
+      await this.applyResendProviderEvent(event, delivery);
+      await this.prisma.db.mailProviderEvent.updateMany({
+        where: { tenantId, id: stored.id },
+        data: { processedAt: new Date() },
+      });
+
+      this.logger.log('mail', 'resend_webhook_processed', 'Resend provider event processed', {
+        mail_provider_event_id: stored.id,
+        mail_delivery_id: delivery?.id ?? null,
+        event_type: event.type,
+        ignored_reason: ignoredReason,
+      });
+
+      return {
+        accepted: true,
+        status: ignoredReason ? 'stored_unmatched' : 'processed',
+        eventId: stored.id,
+        deliveryId: delivery?.id ?? null,
+        eventType: event.type,
+      };
+    });
+  }
+
   async health(): Promise<MailProviderHealthResponse> {
     const startedAt = Date.now();
+    const settings = await this.loadMailCenterSettings();
+    const providerModeReason = settings.providerMode === 'live'
+      ? null
+      : settings.providerMode === 'test'
+        ? 'Provider mode is test-only. Only explicit System Mail test messages can contact recipients.'
+        : 'Provider mode is disabled. Delivery records are proof-only and no customer email is sent.';
     const credentials = await this.resolveResendApiKeyWithSource();
+    const operational = await this.mailOperationalHealth();
     const checkedAt = new Date().toISOString();
     if (!credentials.key) {
       return {
@@ -158,6 +812,8 @@ export class MailService {
         providerStatus: null,
         domainCount: null,
         error: 'Resend API key is not configured for this tenant.',
+        disabledReason: providerModeReason ?? 'Provider key is missing. Delivery records can still be recorded as disabled proof, but customer email is not sent.',
+        ...operational,
       };
     }
 
@@ -184,6 +840,8 @@ export class MailService {
           providerStatus: response.status,
           domainCount: Array.isArray(body?.data) ? body.data.length : null,
           error: null,
+          disabledReason: providerModeReason,
+          ...operational,
         };
       }
 
@@ -206,6 +864,8 @@ export class MailService {
         providerStatus: response.status,
         domainCount: null,
         error: message,
+        disabledReason: message,
+        ...operational,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -222,8 +882,56 @@ export class MailService {
         providerStatus: null,
         domainCount: null,
         error: message.slice(0, 300),
+        disabledReason: message.slice(0, 300),
+        ...operational,
       };
     }
+  }
+
+  private async mailOperationalHealth(): Promise<Pick<MailProviderHealthResponse, 'queueCounts' | 'dlq' | 'deliveryWindow'>> {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const tenantId = this.tenantId();
+    const [queueCountsRaw, dlq, byStatusRows, byCategoryRows] = await Promise.all([
+      this.outboundQueue?.getJobCounts().catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn('mail', 'queue_health_failed', 'Mail queue counts could not be read', { error: message });
+        return {};
+      }) ?? {},
+      Promise.all([
+        this.prisma.db.mailDlq.count({ where: { tenantId, status: 'pending' } }),
+        this.prisma.db.mailDlq.count({ where: { tenantId, status: 'retrying' } }),
+        this.prisma.db.mailDlq.count({ where: { tenantId, status: 'resolved' } }),
+        this.prisma.db.mailDlq.count({ where: { tenantId, status: 'discarded' } }),
+      ]).then(([pending, retrying, resolved, discarded]) => ({ pending, retrying, resolved, discarded })),
+      this.prisma.db.mailDelivery.groupBy({
+        by: ['status'],
+        where: { tenantId, createdAt: { gte: since } },
+        _count: { _all: true },
+      }),
+      this.prisma.db.mailDelivery.groupBy({
+        by: ['category'],
+        where: { tenantId, createdAt: { gte: since } },
+        _count: { _all: true },
+      }),
+    ]);
+    const queueCounts = queueCountsRaw as Record<string, unknown>;
+
+    return {
+      queueCounts: {
+        waiting: numberFromUnknown(queueCounts.waiting),
+        active: numberFromUnknown(queueCounts.active),
+        completed: numberFromUnknown(queueCounts.completed),
+        failed: numberFromUnknown(queueCounts.failed),
+        delayed: numberFromUnknown(queueCounts.delayed),
+        paused: numberFromUnknown(queueCounts.paused),
+      },
+      dlq,
+      deliveryWindow: {
+        hours: 24,
+        byStatus: Object.fromEntries(byStatusRows.map((row) => [row.status, row._count._all])),
+        byCategory: Object.fromEntries(byCategoryRows.map((row) => [row.category, row._count._all])),
+      },
+    };
   }
 
   async sendInvitation(input: {
@@ -282,6 +990,27 @@ export class MailService {
     const existing = await this.repository.findById(deliveryId);
     if (!existing) throw new NotFoundException('Mail delivery not found');
     if (existing.status === 'sent') return existing;
+    if (existing.status === 'queued_disabled') return existing;
+
+    const sendDecision = await this.evaluateDeliverySendDecision(existing);
+    if (!sendDecision.allowed) {
+      const metadata = {
+        sendControl: sendDecision,
+        providerMode: sendDecision.providerMode,
+        sendingEnabled: false,
+      } as Prisma.InputJsonValue;
+      this.logger.warn('mail', 'send_control_blocked', sendDecision.reason, {
+        mail_delivery_id: existing.id,
+        event_key: existing.eventKey,
+        category: sendDecision.category,
+        provider_mode: sendDecision.providerMode,
+        field: sendDecision.field ?? null,
+      });
+      if (sendDecision.status === 'queued_disabled') {
+        return this.repository.markQueuedDisabled(existing.id, sendDecision.reason, metadata);
+      }
+      return this.repository.markSkipped(existing.id, sendDecision.reason, metadata);
+    }
 
     const delivery = await this.repository.markSending(deliveryId);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
@@ -306,6 +1035,12 @@ export class MailService {
           subject: delivery.subject,
           html: delivery.html,
           text: delivery.text ?? undefined,
+          tags: [
+            { name: 'delivery_id', value: tagValue(delivery.id) },
+            { name: 'tenant_id', value: tagValue(delivery.tenantId) },
+            { name: 'category', value: tagValue(delivery.category) },
+            { name: 'event_key', value: tagValue(delivery.eventKey) },
+          ],
         }),
       });
       const payload = await response.json().catch(() => null) as { id?: string; message?: string; name?: string } | null;
@@ -321,16 +1056,95 @@ export class MailService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.repository.markFailed(delivery.id, message);
+      await this.recordDlq(delivery.id, message);
       this.logger.error('mail', 'send_failed', message, { mail_delivery_id: delivery.id, event_key: delivery.eventKey });
       throw error;
     }
   }
 
+  async loadMailCenterSettings(): Promise<MailCenterSettings> {
+    const tenantId = this.tenantId();
+    const row = await this.prisma.db.mailCenterSetting.findFirst({ where: { tenantId } });
+    if (!row) return defaultMailCenterSettings();
+    return sanitizeMailSettings({
+      providerMode: row.providerMode,
+      categorySystem: row.categorySystem,
+      categoryB2b: row.categoryB2b,
+      categoryMarketing: row.categoryMarketing,
+    });
+  }
+
+  private async writeSettingsAudit(before: MailCenterSettings, after: MailCenterSettings, changedBy: string) {
+    const rows = diffSettings(before, after);
+    if (rows.length === 0) return;
+    const tenantId = this.tenantId();
+    await this.prisma.db.mailSettingsAuditLog.createMany({
+      data: rows.map((row) => ({
+        id: prefixedId('msal'),
+        tenantId,
+        category: row.category,
+        field: row.field,
+        oldValue: row.oldValue as Prisma.InputJsonValue,
+        newValue: row.newValue as Prisma.InputJsonValue,
+        changedBy,
+      })),
+    });
+  }
+
+  private async recordDlq(deliveryId: string, message: string) {
+    const delivery = await this.repository.findById(deliveryId);
+    if (!delivery) return;
+    const tenantId = this.tenantId();
+    const existing = await this.prisma.db.mailDlq.findFirst({ where: { tenantId, lastDeliveryId: deliveryId } });
+    const payload = {
+      deliveryId,
+      subject: delivery.subject,
+      category: delivery.category,
+      metadata: delivery.metadata,
+      attemptCount: delivery.attemptCount,
+    };
+    if (existing) {
+      await this.prisma.db.mailDlq.updateMany({
+        where: { tenantId, id: existing.id },
+        data: {
+          status: 'pending',
+          provider: delivery.provider,
+          errorMessage: message.slice(0, 1000),
+          payload: payload as Prisma.InputJsonValue,
+          resolvedAt: null,
+        },
+      });
+      return;
+    }
+    await this.prisma.db.mailDlq.create({
+      data: {
+        id: prefixedId('mdlq'),
+        tenantId,
+        eventKey: delivery.eventKey,
+        recipientEmail: delivery.recipientEmail,
+        status: 'pending',
+        provider: delivery.provider,
+        errorMessage: message.slice(0, 1000),
+        lastDeliveryId: delivery.id,
+        payload: payload as Prisma.InputJsonValue,
+      },
+    });
+  }
+
   private async resolveBrandName() {
-    const tenantBrand = await this.prisma.db.tenantConfig.findFirst({ select: { workspaceName: true } });
+    const tenantBrand = await this.prisma.db.tenantConfig.findFirst({
+      where: { tenantId: this.tenantId() },
+      select: { workspaceName: true },
+    });
     if (tenantBrand?.workspaceName?.trim()) return tenantBrand.workspaceName.trim();
     const workspaceName = this.config.get<string>('WORKSPACE_NAME') ?? this.config.get<string>('BRAND_NAME');
     return workspaceName?.trim() || 'Factory Engine Pro';
+  }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new Error('Tenant context is required');
+    return tenantId;
   }
 
   private async resolveResendApiKey() {
@@ -338,12 +1152,158 @@ export class MailService {
   }
 
   private async resolveResendApiKeyWithSource(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {
-    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({ select: { resendApiKeyEncrypted: true } });
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
+      where: { tenantId: this.tenantId() },
+      select: { resendApiKeyEncrypted: true },
+    });
     const tenantKey = this.crypto.decrypt(tenantConfig?.resendApiKeyEncrypted)?.trim();
     if (tenantKey) return { key: tenantKey, source: 'tenant_config' };
     const envKey = this.config.get<string>('RESEND_API_KEY')?.trim();
     if (envKey) return { key: envKey, source: 'env' };
     return { key: null, source: 'none' };
+  }
+
+  private resolveResendWebhookSecret(encryptedTenantSecret: string | null | undefined) {
+    const tenantSecret = this.crypto.decrypt(encryptedTenantSecret)?.trim();
+    if (tenantSecret) return tenantSecret;
+    return this.config.get<string>('RESEND_WEBHOOK_SECRET')?.trim() || null;
+  }
+
+  private async resolveResendWebhookDelivery(event: ResendWebhookEvent) {
+    const tenantId = this.tenantId();
+    const taggedDeliveryId = textValue(asRecord(event.data.tags).delivery_id);
+    if (taggedDeliveryId) {
+      const tagged = await this.prisma.db.mailDelivery.findFirst({ where: { tenantId, id: taggedDeliveryId } });
+      if (tagged) return tagged;
+    }
+    if (event.providerMessageId) {
+      return this.prisma.db.mailDelivery.findFirst({
+        where: { tenantId, provider: 'resend', providerMessageId: event.providerMessageId },
+      });
+    }
+    return null;
+  }
+
+  private async applyResendProviderEvent(
+    event: ResendWebhookEvent,
+    delivery: Awaited<ReturnType<MailService['resolveResendWebhookDelivery']>>,
+  ) {
+    if (delivery) {
+      const currentMetadata = asRecord(delivery.metadata);
+      const providerEvents = asRecord(currentMetadata.providerEvents);
+      const counts = asRecord(providerEvents.counts);
+      const currentCount = typeof counts[event.type] === 'number' ? counts[event.type] as number : 0;
+      const happenedAt = event.occurredAt ?? new Date();
+      const nextProviderEvents: Record<string, unknown> = {
+        ...providerEvents,
+        provider: 'resend',
+        lastEventType: event.type,
+        lastEventAt: happenedAt.toISOString(),
+        counts: { ...counts, [event.type]: currentCount + 1 },
+      };
+      const timestampField = providerTimestampField(event.type);
+      if (timestampField) nextProviderEvents[timestampField] = happenedAt.toISOString();
+
+      const data: Prisma.MailDeliveryUpdateManyMutationInput = {
+        metadata: {
+          ...currentMetadata,
+          providerEvents: nextProviderEvents,
+        } as Prisma.InputJsonValue,
+      };
+      if (event.type === 'email.delivered' || event.type === 'email.sent') {
+        data.status = 'sent';
+        data.provider = 'resend';
+        data.sentAt = delivery.sentAt ?? happenedAt;
+        data.errorMessage = null;
+      }
+      if (event.type === 'email.failed' || event.type === 'email.bounced') {
+        data.status = 'failed';
+        data.errorMessage = eventFailureMessage(event);
+      }
+      if (event.type === 'email.suppressed') {
+        data.status = 'skipped';
+        data.errorMessage = eventFailureMessage(event);
+      }
+      await this.prisma.db.mailDelivery.updateMany({ where: { tenantId: delivery.tenantId, id: delivery.id }, data });
+    }
+
+    if (event.recipientEmail && shouldSuppressForProviderEvent(event.type)) {
+      await this.suppressRecipientFromProvider(event);
+    }
+  }
+
+  private async suppressRecipientFromProvider(event: ResendWebhookEvent) {
+    const normalizedEmail = event.recipientEmail?.trim().toLowerCase();
+    if (!normalizedEmail) return;
+    const tenantId = this.tenantId();
+    let contact = await this.prisma.db.mailContact.findFirst({ where: { tenantId, normalizedEmail } });
+    if (!contact) {
+      contact = await this.prisma.db.mailContact.create({
+        data: {
+          id: prefixedId('mcon'),
+          tenantId,
+          email: normalizedEmail,
+          normalizedEmail,
+          isSendable: false,
+          metadata: {
+            source: 'resend_webhook',
+            lastProviderEvent: event.type,
+            providerMessageId: event.providerMessageId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } else {
+      await this.prisma.db.mailContact.updateMany({
+        where: { tenantId, id: contact.id },
+        data: {
+          isSendable: false,
+          metadata: {
+            ...asRecord(contact.metadata),
+            lastProviderEvent: event.type,
+            providerMessageId: event.providerMessageId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    const existing = await this.prisma.db.mailSuppression.findFirst({
+      where: {
+        tenantId,
+        contactId: contact.id,
+        channel: 'email',
+        scope: 'global',
+        category: null,
+        campaignId: null,
+        flowId: null,
+        templateId: null,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const data = {
+      scope: 'global',
+      category: null,
+      campaignId: null,
+      flowId: null,
+      templateId: null,
+      isActive: true,
+      reason: providerSuppressionReason(event.type),
+      source: 'resend_webhook',
+      notes: eventFailureMessage(event),
+      expiresAt: null,
+    };
+    if (existing) {
+      await this.prisma.db.mailSuppression.updateMany({ where: { tenantId, id: existing.id }, data });
+      return;
+    }
+    await this.prisma.db.mailSuppression.create({
+      data: {
+        id: prefixedId('msup'),
+        tenantId,
+        contactId: contact.id,
+        channel: 'email',
+        ...data,
+      },
+    });
   }
 
   private async resolveFromAddress() {
@@ -374,14 +1334,166 @@ function providerMessage(body: { error?: { message?: unknown }; message?: unknow
   return fallback.trim().slice(0, 300) || null;
 }
 
-function renderTemplate(source: string, variables: Record<string, unknown>) {
+function providerTimestampField(eventType: string) {
+  const map: Record<string, string> = {
+    'email.sent': 'sentAt',
+    'email.delivered': 'deliveredAt',
+    'email.opened': 'openedAt',
+    'email.clicked': 'clickedAt',
+    'email.bounced': 'bouncedAt',
+    'email.complained': 'complainedAt',
+    'email.failed': 'failedAt',
+    'email.suppressed': 'suppressedAt',
+    'email.delivery_delayed': 'deliveryDelayedAt',
+  };
+  return map[eventType] ?? null;
+}
+
+function eventFailureMessage(event: ResendWebhookEvent) {
+  const bounce = asRecord(event.data.bounce);
+  const failure = asRecord(event.data.failure);
+  return (
+    textValue(bounce.message) ||
+    textValue(failure.message) ||
+    textValue(event.data.reason) ||
+    textValue(event.data.error) ||
+    `Provider reported ${event.type}`
+  ).slice(0, 1000);
+}
+
+function shouldSuppressForProviderEvent(eventType: string) {
+  return eventType === 'email.bounced' || eventType === 'email.complained' || eventType === 'email.suppressed';
+}
+
+function providerSuppressionReason(eventType: string) {
+  if (eventType === 'email.complained') return 'provider_spam_complaint';
+  if (eventType === 'email.suppressed') return 'provider_suppressed';
+  return 'provider_hard_bounce';
+}
+
+function resolveSettingsCategory(eventKey: string, storedCategory: string): MailSettingsCategory {
+  const normalizedCategory = storedCategory.toLowerCase();
+  if (normalizedCategory === 'marketing') return 'marketing';
+  if (normalizedCategory === 'system.b2b' || normalizedCategory === 'b2b' || normalizedCategory === 'account') return 'system.b2b';
+
+  const normalizedEvent = eventKey.toLowerCase();
+  if (['marketing.', 'campaigns.', 'flows.', 'mail_marketing.'].some((prefix) => normalizedEvent.startsWith(prefix))) {
+    return 'marketing';
+  }
+  if (['b2b.', 'tax_exempt.', 'pricing.'].some((prefix) => normalizedEvent.startsWith(prefix))) {
+    return 'system.b2b';
+  }
+  return 'system';
+}
+
+function marketingTypeForEvent(eventKey: string): MarketingMailType | null {
+  const normalized = eventKey.toLowerCase();
+  if (normalized.startsWith('campaigns.') || normalized.startsWith('marketing.campaign') || normalized.includes('campaign')) return 'campaigns';
+  if (normalized.startsWith('flows.') || normalized.startsWith('marketing.flow') || normalized.includes('flow')) return 'flows';
+  if (normalized.includes('drip')) return 'drips';
+  if (normalized.includes('transactional')) return 'transactionalMarketing';
+  return null;
+}
+
+function isSystemTestDelivery(eventKey: string, metadata: unknown) {
+  return eventKey === 'system.test' || textValue(asRecord(metadata).source) === 'mail_center_test';
+}
+
+function toProviderEventDto(row: Awaited<ReturnType<MailRepository['listProviderEventPage']>>['data'][number]): MailProviderEventDto {
+  const payload = asRecord(row.payload);
+  const headers = asRecord(row.headers);
+  return {
+    id: row.id,
+    provider: row.provider,
+    providerEventId: row.providerEventId,
+    providerMessageId: row.providerMessageId,
+    deliveryId: row.deliveryId,
+    eventType: row.eventType,
+    recipientEmail: row.recipientEmail,
+    subject: row.subject,
+    occurredAt: row.occurredAt?.toISOString() ?? null,
+    receivedAt: row.receivedAt.toISOString(),
+    processedAt: row.processedAt?.toISOString() ?? null,
+    ignoredReason: row.ignoredReason,
+    delivery: row.delivery ? {
+      id: row.delivery.id,
+      status: row.delivery.status,
+      eventKey: row.delivery.eventKey,
+      category: row.delivery.category,
+      recipientEmail: row.delivery.recipientEmail,
+      subject: row.delivery.subject,
+      providerMessageId: row.delivery.providerMessageId,
+    } : null,
+    proof: {
+      matchedDelivery: Boolean(row.delivery),
+      storedPayloadKeys: Object.keys(payload).sort(),
+      storedHeaderKeys: Object.keys(headers).sort(),
+    },
+  };
+}
+
+function isCriticalMailEvent(eventKey: string) {
+  return (CRITICAL_MAIL_EVENTS as readonly string[]).includes(eventKey);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function textValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function tagValue(value: string) {
+  const sanitized = value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 256);
+  return sanitized || 'unknown';
+}
+
+function numberFromUnknown(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function renderTemplate(source: string, variables: Record<string, unknown>, options: { escapeHtml?: boolean } = {}) {
   return source.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, key: string) => {
     const value = key.split('.').reduce<unknown>((current, part) => {
       if (!current || typeof current !== 'object') return undefined;
       return (current as Record<string, unknown>)[part];
     }, variables);
-    return value === undefined || value === null ? '' : String(value);
+    if (value === undefined || value === null) return '';
+    const rendered = String(value);
+    return options.escapeHtml ? escapeHtml(rendered) : rendered;
   });
+}
+
+function renderEmailHtml(html: string, css: string | null) {
+  return css?.trim() ? `<style>${css}</style>${html}` : html;
+}
+
+function deriveMailIdempotencyKey(
+  eventKey: string,
+  recipientEmail: string,
+  templateHint: string | null,
+  variables: Record<string, unknown>,
+) {
+  const hash = createHash('sha256')
+    .update(stableJson({ templateHint, variables }))
+    .digest('hex')
+    .slice(0, 24);
+  return `${eventKey}:${recipientEmail.trim().toLowerCase()}:${hash}`;
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(sortJson(value));
+}
+
+function sortJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJson);
+  if (!value || typeof value !== 'object') return value;
+  return Object.keys(value as Record<string, unknown>).sort().reduce<Record<string, unknown>>((acc, key) => {
+    acc[key] = sortJson((value as Record<string, unknown>)[key]);
+    return acc;
+  }, {});
 }
 
 function rootDomain(value: string) {
@@ -400,4 +1512,72 @@ function escapeHtml(value: string) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+const CRITICAL_MAIL_EVENTS = [
+  'identity.password_reset',
+  'identity.member_invitation',
+  'identity.customer_invitation',
+] as const;
+
+function defaultMailCenterSettings(): MailCenterSettings {
+  return mailCenterSettingsSchema.parse({});
+}
+
+function sanitizeMailSettings(value: unknown): MailCenterSettings {
+  const parsed = mailCenterSettingsSchema.parse(value);
+  for (const eventKey of CRITICAL_MAIL_EVENTS) {
+    parsed.categorySystem.subcategories[eventKey] = true;
+  }
+  parsed.categoryMarketing.compliance.unsubscribeFooter = true;
+  parsed.categoryMarketing.compliance.physicalAddressFooter = true;
+  return parsed;
+}
+
+function diffSettings(before: MailCenterSettings, after: MailCenterSettings) {
+  const rows: Array<{ category: string; field: string; oldValue: unknown; newValue: unknown }> = [];
+  if (before.providerMode !== after.providerMode) {
+    rows.push({
+      category: 'provider',
+      field: 'mode',
+      oldValue: before.providerMode,
+      newValue: after.providerMode,
+    });
+  }
+  collectDiff(rows, 'system', before.categorySystem, after.categorySystem);
+  collectDiff(rows, 'system.b2b', before.categoryB2b, after.categoryB2b);
+  collectDiff(rows, 'marketing', before.categoryMarketing, after.categoryMarketing);
+  return rows;
+}
+
+function collectDiff(
+  rows: Array<{ category: string; field: string; oldValue: unknown; newValue: unknown }>,
+  category: string,
+  before: unknown,
+  after: unknown,
+  prefix = '',
+) {
+  const beforeObject = isRecord(before) ? before : {};
+  const afterObject = isRecord(after) ? after : {};
+  const keys = new Set([...Object.keys(beforeObject), ...Object.keys(afterObject)]);
+  for (const key of keys) {
+    const field = prefix ? `${prefix}.${key}` : key;
+    const oldValue = beforeObject[key];
+    const newValue = afterObject[key];
+    if (isRecord(oldValue) && isRecord(newValue)) {
+      collectDiff(rows, category, oldValue, newValue, field);
+      continue;
+    }
+    if (JSON.stringify(oldValue ?? null) !== JSON.stringify(newValue ?? null)) {
+      rows.push({ category, field, oldValue: oldValue ?? null, newValue: newValue ?? null });
+    }
+  }
+}
+
+function isUniqueConstraint(error: unknown) {
+  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

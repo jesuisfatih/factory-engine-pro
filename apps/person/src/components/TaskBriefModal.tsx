@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
@@ -126,6 +126,8 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const [note, setNote] = useState('');
   const [scheduleAt, setScheduleAt] = useState(() => initialScheduleValue());
   const [scheduleNote, setScheduleNote] = useState('');
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
+  const scheduleRef = useRef<HTMLInputElement | null>(null);
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
     onSuccess: (result) => {
@@ -206,7 +208,10 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const actionTone = staffActionTone(actionInput);
   const actionLabel = staffActionLabel(actionInput);
   const primaryBrief = staffBriefLine(actionInput);
-  const directActions = directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions);
+  const ctaPriority = liveCard.ctaPriority ?? liveCard.aiBrief?.ctaPriority ?? [];
+  const modalActionOrder = liveCard.modalActionOrder ?? liveCard.aiBrief?.modalActionOrder ?? [];
+  const directActions = directiveActions(actionLabel, liveCard.phone, liveCard.aiBrief?.suggestedActions, modalActionOrder);
+  const footerActions = orderedFooterActions(ctaPriority);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
   const purchaseSummary = latestOrder
@@ -442,6 +447,8 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                         {detail ? <span className="rule-trace-count">{detail.notes.length} saved</span> : null}
                       </div>
                       <textarea
+                        ref={noteRef}
+                        id="task-note-input"
                         className="brief-edit"
                         rows={3}
                         placeholder="Save a task note to customer history..."
@@ -471,7 +478,7 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
                         <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
                       </div>
                       <div className="brief-schedule-grid">
-                        <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                        <input ref={scheduleRef} id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
                         <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
                         <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
                           <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
@@ -527,22 +534,44 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
         </div>
 
         {showField('footer') ? <footer className="modal-foot" style={sectionStyle('footer', 150)}>
-          <button type="button" className="btn"><MoreHorizontal size={13} /> More</button>
-          <button type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>
-          <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> {frontendCopy(override, 'callNowButton', 'Call now')}</button>
-          <button type="button" className="btn primary" onClick={onClose}>
-            <CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}
-          </button>
+          {footerActions.map((action) => {
+            if (action === 'call') {
+              return <button key={action} type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> {frontendCopy(override, 'callNowButton', 'Call now')}</button>;
+            }
+            if (action === 'note') {
+              return <button key={action} type="button" className="btn" onClick={() => noteRef.current?.focus()}><StickyNote size={13} /> {frontendCopy(override, 'noteButton', 'Note')}</button>;
+            }
+            if (action === 'schedule') {
+              return <button key={action} type="button" className="btn" onClick={() => scheduleRef.current?.focus()}><CalendarClock size={13} /> {frontendCopy(override, 'scheduleButton', 'Schedule')}</button>;
+            }
+            if (action === 'email') {
+              return <a key={action} className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={13} /> {frontendCopy(override, 'emailButton', 'Email')}</a>;
+            }
+            if (action === 'customer_detail') {
+              return <a key={action} className="btn" href={customerDetailUrl}><ExternalLink size={13} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>;
+            }
+            if (action === 'snooze') {
+              return <button key={action} type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>;
+            }
+            if (action === 'done') {
+              return <button key={action} type="button" className="btn primary" onClick={onClose}><CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}</button>;
+            }
+            return <button key={action} type="button" className="btn"><MoreHorizontal size={13} /> More</button>;
+          })}
         </footer> : null}
       </div>
     </div>
   );
 }
 
-function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined) {
+function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined, modalActionOrder: string[] = []) {
   const normalized = actionLabel.toLowerCase();
   const callStep = phone ? `Call ${phone} now.` : 'Find a valid phone number before closing this follow-up.';
   const cleaned = (suggestedActions ?? []).map((action) => personSafeText(action).trim()).filter(Boolean);
+  const ordered = modalActionOrder
+    .map((action) => modalActionText(action, callStep, cleaned))
+    .filter((action): action is string => Boolean(action));
+  if (ordered.length >= 2) return uniqueActions(ordered).slice(0, 3);
   if (cleaned.length >= 2) return [callStep, ...cleaned].slice(0, 3);
   if (normalized.includes('payment') || normalized.includes('refund')) {
     return [
@@ -580,6 +609,50 @@ function directiveActions(actionLabel: string, phone: string | undefined, sugges
     ];
   }
   return [callStep, ...cleaned, 'Save the result before leaving this screen.'].slice(0, 4);
+}
+
+function modalActionText(action: string, callStep: string, suggestedActions: string[]) {
+  const firstSuggested = suggestedActions[0] ?? 'Review the customer context before calling.';
+  const secondSuggested = suggestedActions[1] ?? 'Ask the customer what is still pending.';
+  const map: Record<string, string> = {
+    call_customer: callStep,
+    confirm_need: secondSuggested,
+    capture_outcome: 'Save the exact result before leaving this task.',
+    check_order: 'Check the latest Shopify order before promising a next step.',
+    schedule_follow_up: 'Schedule the next follow-up time if the customer is not ready now.',
+    add_note: 'Add a clear internal note with the promise, owner, and next date.',
+    review_context: firstSuggested,
+    review_shopify_orders: 'Review Shopify order history before discussing price, refund, or reorder details.',
+    open_customer_history: 'Open the customer history and scan recent calls, notes, and orders.',
+    ask_specific_question: secondSuggested,
+    state_reason: firstSuggested,
+    confirm_next_step: 'Confirm the single next accountable step with the customer.',
+    save_outcome: 'Save the outcome so the next person sees exactly what happened.',
+    archive_if_not_needed: 'Archive only if the transcript has no real customer follow-up need.',
+  };
+  return map[action];
+}
+
+function uniqueActions(actions: string[]) {
+  const seen = new Set<string>();
+  return actions.filter((action) => {
+    const key = action.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function orderedFooterActions(ctaPriority: string[]) {
+  const supported = ['call', 'note', 'schedule', 'email', 'customer_detail', 'snooze', 'done', 'more'];
+  const defaults = ['more', 'snooze', 'call', 'done'];
+  const ordered = [...ctaPriority, ...defaults].filter((action) => supported.includes(action));
+  const seen = new Set<string>();
+  return ordered.filter((action) => {
+    if (seen.has(action)) return false;
+    seen.add(action);
+    return true;
+  }).slice(0, 5);
 }
 
 function callSignalText(detail: TaskBriefDetail | undefined) {

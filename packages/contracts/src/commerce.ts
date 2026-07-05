@@ -79,6 +79,68 @@ export const transferOrderToMemberSchema = z.object({
 });
 export type TransferOrderToMemberInput = z.infer<typeof transferOrderToMemberSchema>;
 
+export const accountInvoiceStatusSchema = z.enum(['draft', 'unpaid', 'partial', 'paid', 'overdue', 'void']);
+export type AccountInvoiceStatus = z.infer<typeof accountInvoiceStatusSchema>;
+
+export const accountInvoiceLineItemSchema = z.object({
+  id: z.string().trim().optional(),
+  sku: z.string().trim().optional(),
+  name: z.string().trim().min(1),
+  quantity: z.coerce.number().int().min(1).default(1),
+  unitPrice: z.coerce.number().min(0).default(0),
+  total: z.coerce.number().min(0).optional(),
+});
+export type AccountInvoiceLineItemInput = z.infer<typeof accountInvoiceLineItemSchema>;
+
+export const saveAccountInvoiceSchema = z.object({
+  customerId: z.string().trim().optional(),
+  orderId: z.string().trim().optional(),
+  invoiceNumber: z.string().trim().optional(),
+  status: accountInvoiceStatusSchema.default('unpaid'),
+  issuedAt: z.string().datetime().optional(),
+  dueAt: z.string().datetime().nullable().optional(),
+  subtotal: z.coerce.number().min(0).optional(),
+  discountAmount: z.coerce.number().min(0).default(0),
+  shippingAmount: z.coerce.number().min(0).default(0),
+  taxAmount: z.coerce.number().min(0).default(0),
+  totalAmount: z.coerce.number().min(0).optional(),
+  amountPaid: z.coerce.number().min(0).default(0),
+  currency: z.string().trim().length(3).default('USD'),
+  fileUrl: z.string().trim().min(1).nullable().optional(),
+  externalPaymentUrl: z.string().trim().min(1).nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  lineItems: z.array(accountInvoiceLineItemSchema).optional(),
+});
+export type SaveAccountInvoiceInput = z.infer<typeof saveAccountInvoiceSchema>;
+
+export const accountInvoiceQuerySchema = pageQuerySchema.extend({
+  customerId: z.string().trim().optional(),
+  orderId: z.string().trim().optional(),
+  status: accountInvoiceStatusSchema.optional(),
+  search: z.string().trim().optional(),
+});
+export type AccountInvoiceQuery = z.infer<typeof accountInvoiceQuerySchema>;
+
+export const updateAccountInvoiceStatusSchema = z.object({
+  status: accountInvoiceStatusSchema,
+  amountPaid: z.coerce.number().min(0).optional(),
+  note: z.string().trim().max(1000).optional(),
+});
+export type UpdateAccountInvoiceStatusInput = z.infer<typeof updateAccountInvoiceStatusSchema>;
+
+export const updateAccountInvoiceFileSchema = z.object({
+  fileUrl: z.string().trim().min(1).nullable(),
+  externalPaymentUrl: z.string().trim().min(1).nullable().optional(),
+});
+export type UpdateAccountInvoiceFileInput = z.infer<typeof updateAccountInvoiceFileSchema>;
+
+export const recordAccountInvoicePaymentSchema = z.object({
+  amount: z.coerce.number().positive(),
+  method: z.string().trim().max(60).default('manual'),
+  note: z.string().trim().max(1000).optional(),
+});
+export type RecordAccountInvoicePaymentInput = z.infer<typeof recordAccountInvoicePaymentSchema>;
+
 export const customerCommerceQuerySchema = pageQuerySchema.extend({
   status: z.string().trim().optional(),
   segment: z.string().trim().optional(),

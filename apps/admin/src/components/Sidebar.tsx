@@ -68,8 +68,8 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_transactional_mail',
     children: [
-      { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: 'settings.read' },
-      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: 'settings.read' },
+      { to: '/system-mail', matchPrefix: '/system-mail', i18nKey: 'nav.system_mail', id: 'nav-system-mail', icon: Mail, permission: MEMBER_PERMISSIONS.mailDeliveryRead },
+      { to: '/mail-marketing', matchPrefix: '/mail-marketing', i18nKey: 'nav.mail_marketing', id: 'nav-mail-marketing', icon: Mail, permission: MEMBER_PERMISSIONS.mailMarketingContactRead },
     ],
   },
   {

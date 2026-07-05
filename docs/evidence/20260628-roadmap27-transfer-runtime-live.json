@@ -1,0 +1,64 @@
+﻿{
+  "generatedAt": "2026-06-28T17:07:01.622Z",
+  "buildSha": "85a3e30fa335eacb15a5e2e13efb02c904ce2217",
+  "nodeVersion": "v20.20.2",
+  "pnpmVersion": "10.23.0",
+  "pm2": [
+    {
+      "name": "factory-engine-pro-person",
+      "pid": 224142,
+      "status": "online",
+      "cwd": "/app/apps/person",
+      "restarts": 0,
+      "script": "/app/node_modules/.pnpm/vite@5.4.21_@types+node@24.13.2/node_modules/vite/bin/vite.js",
+      "args": [
+        "preview",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "3002"
+      ]
+    },
+    {
+      "name": "factory-engine-pro-api",
+      "pid": 254845,
+      "status": "online",
+      "cwd": "/app/services/backend",
+      "restarts": 0,
+      "script": "/app/services/backend/dist/services/backend/src/main.js",
+      "args": []
+    }
+  ],
+  "health": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "service": "factory-engine-pro-backend"
+    }
+  },
+  "routeLines": [
+    "2026-06-28T16:50:02: \u001b[32m[Nest] 219369  - \u001b[39m06/28/2026, 4:50:02 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/transfer-targets, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T16:50:02: \u001b[32m[Nest] 219369  - \u001b[39m06/28/2026, 4:50:02 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/transfer, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T16:55:49: \u001b[32m[Nest] 234493  - \u001b[39m06/28/2026, 4:55:49 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/transfer-targets, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T16:55:49: \u001b[32m[Nest] 234493  - \u001b[39m06/28/2026, 4:55:49 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/transfer, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T16:56:36: \u001b[32m[Nest] 237108  - \u001b[39m06/28/2026, 4:56:36 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/transfer-targets, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T16:56:36: \u001b[32m[Nest] 237108  - \u001b[39m06/28/2026, 4:56:36 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/transfer, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T17:03:41: \u001b[32m[Nest] 254845  - \u001b[39m06/28/2026, 5:03:41 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/transfer-targets, GET} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m",
+    "2026-06-28T17:03:41: \u001b[32m[Nest] 254845  - \u001b[39m06/28/2026, 5:03:41 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/v1/person/workspace/tasks/:id/transfer, POST} route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m"
+  ],
+  "transferLogs": [
+    "2026-06-28T17:06:00: \u001b[32m[Nest] 254845  - \u001b[39m06/28/2026, 5:06:00 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[AppLogger] \u001b[39m\u001b[32m{\"request_id\":\"d9c6661b-6331-4ed7-b3a5-de1e08d59e7d\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"principal_type\":\"member\",\"module\":\"person_workspace\",\"action\":\"task.transfer\",\"message\":\"Person workspace task transferred\",\"service_request_id\":\"sr_roadmap27_transfer_task\",\"customer_id\":\"cust_roadmap27_transfer\",\"from_member_id\":\"tmbr_ten_dtfbank_linda_marroquin\",\"to_member_id\":\"tmbr_ten_dtfbank_ihsan_taskiran\",\"from_axis\":\"support\",\"to_axis\":\"sales\"}\u001b[39m"
+  ],
+  "recentErrors": [
+    "2026-06-28T16:56:49: {\"request_id\":\"e3d3c078-5732-41c3-ab0e-267d05f49838\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":null,\"principal_type\":null,\"module\":\"http\",\"action\":\"exception\",\"status\":500,\"message\":\"Configuration key \\\"JWT_ACCESS_SECRET\\\" does not exist\",\"stack\":\"TypeError: Configuration key \\\"JWT_ACCESS_SECRET\\\" does not exist\\n    at ConfigService.getOrThrow (/app/node_modules/.pnpm/@nestjs+config@4.0.4_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__rxjs@7.8.2/node_modules/@nestjs/config/dist/config.service.js:132:19)\\n    at AuthSessionService.issue (/app/services/backend/src/modules/auth/auth-session.service.ts:25:29)\\n    at AuthService.loginMember (/app/services/backend/src/modules/auth/auth.service.ts:95:26)\\n    at async /app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/router/router-execution-context.js:47:62\\n    at async /app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/router/router-proxy.js:9:17\"}",
+    "2026-06-28T16:56:49: {\"request_id\":\"de4a0436-fd3d-439c-929c-cea6dd5829f9\",\"tenant_id\":\"ten_dtfbank\",\"principal_id\":null,\"principal_type\":null,\"module\":\"http\",\"action\":\"exception\",\"status\":500,\"message\":\"Configuration key \\\"JWT_ACCESS_SECRET\\\" does not exist\",\"stack\":\"TypeError: Configuration key \\\"JWT_ACCESS_SECRET\\\" does not exist\\n    at ConfigService.getOrThrow (/app/node_modules/.pnpm/@nestjs+config@4.0.4_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__rxjs@7.8.2/node_modules/@nestjs/config/dist/config.service.js:132:19)\\n    at JwtAuthGuard.canActivate (/app/services/backend/src/shared/auth.guard.ts:38:27)\\n    at GuardsConsumer.tryActivate (/app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/guards/guards-consumer.js:15:34)\\n    at canActivateFn (/app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/router/router-execution-context.js:138:59)\\n    at /app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/router/router-execution-context.js:42:37\\n    at /app/node_modules/.pnpm/@nestjs+core@11.1.27_@nestjs+common@11.1.27_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+_678d8367b6ebdd1429d0393fb65d07e5/node_modules/@nestjs/core/router/router-proxy.js:9:23\\n    at /opt/datadog-packages/datadog-apm-library-js/5.99.0/node_modules/dd-trace/packages/datadog-instrumentations/src/router.js:72:25\\n    at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)\\n    at Layer.handleRequest (/opt/datadog-packages/datadog-apm-library-js/5.99.0/node_modules/dd-trace/packages/datadog-instrumentations/src/router.js:281:21)\\n    at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/route.js:157:13)\"}"
+  ],
+  "gates": {
+    "buildShaPresent": true,
+    "apiOnline": true,
+    "personOnline": true,
+    "healthOk": true,
+    "transferRoutesMapped": true,
+    "structuredTransferLogExists": true
+  }
+}

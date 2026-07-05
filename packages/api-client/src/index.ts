@@ -2,6 +2,17 @@ import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contract
 import type {
   AcceptInvitationInput,
   AccountAddressInput,
+  AccountCartAddItemInput,
+  AccountCartCheckoutInput,
+  AccountCartCreateInput,
+  AccountCartUpdateItemInput,
+  AccountDocumentListQuery,
+  AccountInvoiceListQuery,
+  AccountInvoiceDownloadAction,
+  AccountInvoicePayAction,
+  AccountOrderListQuery,
+  AccountInvoiceQuery,
+  AccountReorderInput,
   AiHealthResponse,
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
@@ -124,14 +135,61 @@ import type {
   CloseServiceRequestInput,
   RejectB2BAccessInput,
   PreviewSegmentInput,
+  RecordAccountInvoicePaymentInput,
   RecordCustomerAxisNoAutoReassignInput,
   MailProviderHealthResponse,
+  MailProviderEventLogResponse,
+  MailProviderEventQuery,
   MailMarketingContactQuery,
+  MailMarketingAnalyticsQuery,
+  MailMarketingAnalyticsCohortResponse,
+  MailMarketingAnalyticsDimensionResponse,
+  MailMarketingAnalyticsFunnelResponse,
+  MailMarketingAnalyticsOverviewResponse,
+  MailContactDetailDto,
+  MailAudienceSnapshotDiffResponse,
+  MailAudienceFilterInput,
+  MailAudiencePreviewResponse,
+  MailAudienceSnapshotMemberQuery,
+  MailAudienceSnapshotMembersResponse,
+  MailAudienceSnapshotQuery,
+  MailCampaignDto,
+  MailCampaignQuery,
+  MailFlowEventsResponse,
+  MailFlowRunsResponse,
+  MailFlowSimulationResponse,
+  MailFlowValidationResponse,
+  MailFlowWebhookDestinationDto,
+  MailMarketingFlowDto,
   MailMarketingSettingsInput,
+  ApproveMailFlowWebhookDestinationInput,
+  UpsertMailContactConsentInput,
+  CreateMailAudienceSnapshotInput,
+  AddMailSuppressionInput,
+  MailDeliveryLogQuery,
+  MailDlqListQuery,
+  MailListQuery,
+  MailSettingsAuditQuery,
+  MailSuppressionListQuery,
+  PatchMailCenterSettingsInput,
+  ResetMailCenterSettingsInput,
+  ActivateEmailTemplateInput,
+  ApproveEmailTemplateRevisionInput,
+  MailTemplateBlockDto,
+  MailTemplateBlockQuery,
   MailTemplateQuery,
+  MailTemplatePreviewProfileDto,
+  MailTemplatePreviewProfileQuery,
+  MailTemplateSnippetDto,
+  MailTemplateSnippetQuery,
   PatchEmailTemplateInput,
+  PatchMailTemplateBlockInput,
+  PatchMailTemplatePreviewProfileInput,
+  PatchMailTemplateSnippetInput,
+  ProposeEmailTemplateAiEditInput,
   PatchMailAudienceInput,
   PatchMailFlowInput,
+  PatchMailFlowWebhookDestinationInput,
   MovePersonQueueCardInput,
   PersonDailyOperationRange,
   PersonFrontendCustomizationRuntime,
@@ -152,8 +210,22 @@ import type {
   SavePersonCustomerNoteInput,
   SavePersonTaskNoteInput,
   SaveEmailTemplateInput,
+  SaveMailTemplateBlockInput,
+  SaveMailTemplatePreviewProfileInput,
+  SaveMailTemplateSnippetInput,
+  EmailTemplateAiEditProposalResponse,
+  SaveAccountInvoiceInput,
   SaveMailAudienceInput,
+  SaveMailCampaignInput,
   SaveMailFlowInput,
+  SaveMailFlowWebhookDestinationInput,
+  TestEmailTemplateRevisionInput,
+  SimulateMailFlowInput,
+  TriggerMailFlowEventInput,
+  ValidateMailFlowInput,
+  UpdateAccountInvoiceFileInput,
+  UpdateAccountInvoiceStatusInput,
+  UpdateEmailTemplateRevisionSourceInput,
   SavePersonEmailDraftInput,
   SendPersonEmailInput,
   SubmitCommissionRequestInput,
@@ -193,6 +265,17 @@ export class ApiClientError extends Error {
   ) {
     super(message);
   }
+}
+
+function analyticsParams(input: MailMarketingAnalyticsQuery) {
+  const params = new URLSearchParams();
+  params.set('days', String(input.days ?? 30));
+  params.set('limit', String(input.limit ?? 25));
+  if (input.campaignId) params.set('campaignId', input.campaignId);
+  if (input.templateId) params.set('templateId', input.templateId);
+  if (input.audienceId) params.set('audienceId', input.audienceId);
+  if (input.flowId) params.set('flowId', input.flowId);
+  return params.toString();
 }
 
 function queryString(params: Record<string, unknown>) {
@@ -372,8 +455,44 @@ export class ApiClient {
     return this.delete(`/accounts/addresses/${encodeURIComponent(type)}`);
   }
 
-  accountOrders() {
-    return this.get('/accounts/orders');
+  accountOrders(input: Partial<AccountOrderListQuery> = {}) {
+    return this.get(`/accounts/orders${queryString(input)}`);
+  }
+
+  accountOrder(id: string) {
+    return this.get(`/accounts/orders/${encodeURIComponent(id)}`);
+  }
+
+  accountOrderReorder(id: string, input: AccountReorderInput = {}) {
+    return this.post(`/accounts/orders/${encodeURIComponent(id)}/reorder`, input);
+  }
+
+  accountOrderLineItemReorder(orderId: string, lineItemId: string, input: AccountReorderInput = {}) {
+    return this.post(`/accounts/orders/${encodeURIComponent(orderId)}/line-items/${encodeURIComponent(lineItemId)}/reorder`, input);
+  }
+
+  accountActiveCart() {
+    return this.get('/accounts/cart/active');
+  }
+
+  accountCreateCart(input: AccountCartCreateInput = {}) {
+    return this.post('/accounts/cart', input);
+  }
+
+  accountCartAddItem(cartId: string, input: AccountCartAddItemInput) {
+    return this.post(`/accounts/cart/${encodeURIComponent(cartId)}/items`, input);
+  }
+
+  accountCartUpdateItem(cartId: string, itemId: string, input: AccountCartUpdateItemInput) {
+    return this.patch(`/accounts/cart/${encodeURIComponent(cartId)}/items/${encodeURIComponent(itemId)}`, input);
+  }
+
+  accountCartRemoveItem(cartId: string, itemId: string) {
+    return this.delete(`/accounts/cart/${encodeURIComponent(cartId)}/items/${encodeURIComponent(itemId)}`);
+  }
+
+  accountCartCheckout(cartId: string, input: AccountCartCheckoutInput = {}) {
+    return this.post(`/accounts/cart/${encodeURIComponent(cartId)}/checkout`, input);
   }
 
   accountReorderTemplates() {
@@ -392,12 +511,24 @@ export class ApiClient {
     return this.get('/accounts/pickup');
   }
 
-  accountInvoices() {
-    return this.get('/accounts/invoices');
+  accountInvoices(input: Partial<AccountInvoiceListQuery> = {}) {
+    return this.get(`/accounts/invoices${queryString(input)}`);
   }
 
-  accountDocuments() {
-    return this.get('/accounts/documents');
+  accountInvoice(id: string) {
+    return this.get(`/accounts/invoices/${encodeURIComponent(id)}`);
+  }
+
+  accountInvoiceDownload(id: string) {
+    return this.get<AccountInvoiceDownloadAction>(`/accounts/invoices/${encodeURIComponent(id)}/download`);
+  }
+
+  accountInvoicePay(id: string) {
+    return this.post<AccountInvoicePayAction>(`/accounts/invoices/${encodeURIComponent(id)}/pay`, {});
+  }
+
+  accountDocuments(input: Partial<AccountDocumentListQuery> = {}) {
+    return this.get(`/accounts/documents${queryString(input)}`);
   }
 
   accountDocumentDownload(id: string) {
@@ -426,6 +557,48 @@ export class ApiClient {
 
   orderDetail(id: string) {
     return this.get(`/orders/${encodeURIComponent(id)}/detail`);
+  }
+
+  orderInvoices(id: string) {
+    return this.get(`/orders/${encodeURIComponent(id)}/invoices`);
+  }
+
+  invoices(input: Partial<AccountInvoiceQuery> = {}) {
+    const params = new URLSearchParams();
+    if (input.customerId) params.set('customerId', input.customerId);
+    if (input.orderId) params.set('orderId', input.orderId);
+    if (input.status) params.set('status', input.status);
+    if (input.search) params.set('search', input.search);
+    params.set('limit', String(input.limit ?? 50));
+    return this.get(`/orders/invoices?${params.toString()}`);
+  }
+
+  invoice(id: string) {
+    return this.get(`/orders/invoices/${encodeURIComponent(id)}`);
+  }
+
+  createInvoice(input: SaveAccountInvoiceInput) {
+    return this.post('/orders/invoices', input);
+  }
+
+  updateInvoiceStatus(id: string, input: UpdateAccountInvoiceStatusInput) {
+    return this.post(`/orders/invoices/${encodeURIComponent(id)}/status`, input);
+  }
+
+  updateInvoiceFile(id: string, input: UpdateAccountInvoiceFileInput) {
+    return this.post(`/orders/invoices/${encodeURIComponent(id)}/file`, input);
+  }
+
+  recordInvoicePayment(id: string, input: RecordAccountInvoicePaymentInput) {
+    return this.post(`/orders/invoices/${encodeURIComponent(id)}/record-payment`, input);
+  }
+
+  duplicateInvoice(id: string) {
+    return this.post(`/orders/invoices/${encodeURIComponent(id)}/duplicate`, {});
+  }
+
+  markOverdueInvoices() {
+    return this.post('/orders/invoices/mark-overdue', {});
   }
 
   transferOrder(id: string, input: TransferOrderToMemberInput) {
@@ -872,8 +1045,45 @@ export class ApiClient {
     return this.requestBlob(`/b2b-access/${id}/certificate`);
   }
 
-  mailDeliveries(query = '') {
-    return this.get(`/mail/deliveries${query}`);
+  mailDeliveries(query: string | MailListQuery = '') {
+    if (typeof query === 'string') return this.get(`/mail/deliveries${query}`);
+    const params = new URLSearchParams();
+    if (query.status) params.set('status', query.status);
+    if (query.eventKey) params.set('eventKey', query.eventKey);
+    if (query.recipient) params.set('recipient', query.recipient);
+    if (query.category) params.set('category', query.category);
+    if (query.templateId) params.set('templateId', query.templateId);
+    if (query.templateVersionId) params.set('templateVersionId', query.templateVersionId);
+    if (query.source) params.set('source', query.source);
+    params.set('limit', String(query.limit ?? 50));
+    return this.get(`/mail/deliveries?${params.toString()}`);
+  }
+
+  mailDeliveryLog(query: Partial<MailDeliveryLogQuery> = {}) {
+    const params = new URLSearchParams();
+    if (query.status) params.set('status', query.status);
+    if (query.eventKey) params.set('eventKey', query.eventKey);
+    if (query.recipient) params.set('recipient', query.recipient);
+    if (query.category) params.set('category', query.category);
+    if (query.templateId) params.set('templateId', query.templateId);
+    if (query.templateVersionId) params.set('templateVersionId', query.templateVersionId);
+    if (query.source) params.set('source', query.source);
+    if (query.search) params.set('search', query.search);
+    if (query.cursor) params.set('cursor', query.cursor);
+    params.set('limit', String(query.limit ?? 10));
+    return this.get(`/mail/delivery-log?${params.toString()}`);
+  }
+
+  mailProviderEvents(query: Partial<MailProviderEventQuery> = {}) {
+    const params = new URLSearchParams();
+    if (query.eventType) params.set('eventType', query.eventType);
+    if (query.recipient) params.set('recipient', query.recipient);
+    if (query.deliveryId) params.set('deliveryId', query.deliveryId);
+    if (query.providerMessageId) params.set('providerMessageId', query.providerMessageId);
+    if (query.search) params.set('search', query.search);
+    if (query.cursor) params.set('cursor', query.cursor);
+    params.set('limit', String(query.limit ?? 10));
+    return this.get<MailProviderEventLogResponse>(`/mail/provider-events?${params.toString()}`);
   }
 
   mailDelivery(id: string) {
@@ -882,6 +1092,59 @@ export class ApiClient {
 
   retryMailDelivery(id: string) {
     return this.post(`/mail/deliveries/${id}/retry`, {});
+  }
+
+  mailSuppression(input: MailSuppressionListQuery = { limit: 100 }) {
+    const params = new URLSearchParams();
+    if (input.active !== undefined) params.set('active', String(input.active));
+    if (input.scope) params.set('scope', input.scope);
+    if (input.category) params.set('category', input.category);
+    if (input.campaignId) params.set('campaignId', input.campaignId);
+    if (input.flowId) params.set('flowId', input.flowId);
+    if (input.templateId) params.set('templateId', input.templateId);
+    params.set('limit', String(input.limit ?? 100));
+    return this.get(`/mail/suppression?${params.toString()}`);
+  }
+
+  addMailSuppression(input: AddMailSuppressionInput) {
+    return this.post('/mail/suppression', input);
+  }
+
+  unsuppressMail(id: string) {
+    return this.post(`/mail/suppression/${encodeURIComponent(id)}/unsuppress`, {});
+  }
+
+  mailDlq(input: MailDlqListQuery = { status: 'pending', limit: 100 }) {
+    const params = new URLSearchParams();
+    params.set('status', input.status ?? 'pending');
+    params.set('limit', String(input.limit ?? 100));
+    return this.get(`/mail/dlq?${params.toString()}`);
+  }
+
+  retryMailDlq(id: string) {
+    return this.post(`/mail/dlq/${encodeURIComponent(id)}/retry`, {});
+  }
+
+  discardMailDlq(id: string) {
+    return this.post(`/mail/dlq/${encodeURIComponent(id)}/discard`, {});
+  }
+
+  mailSettings() {
+    return this.get('/mail/settings');
+  }
+
+  updateMailSettings(input: PatchMailCenterSettingsInput) {
+    return this.patch('/mail/settings', input);
+  }
+
+  resetMailSettings(input: ResetMailCenterSettingsInput) {
+    return this.post('/mail/settings/reset', input);
+  }
+
+  mailSettingsAudit(input: MailSettingsAuditQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    params.set('limit', String(input.limit ?? 50));
+    return this.get(`/mail/settings/audit?${params.toString()}`);
   }
 
   mailHealth() {
@@ -904,12 +1167,112 @@ export class ApiClient {
     return this.get(`/email-templates/variants/${encodeURIComponent(id)}`);
   }
 
+  emailTemplatePreviewProfiles(input: MailTemplatePreviewProfileQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.templateId) params.set('templateId', input.templateId);
+    if (input.eventKey) params.set('eventKey', input.eventKey);
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailTemplatePreviewProfileDto[]>(`/email-templates/preview-profiles?${params.toString()}`);
+  }
+
+  createEmailTemplatePreviewProfile(input: SaveMailTemplatePreviewProfileInput) {
+    return this.post<MailTemplatePreviewProfileDto>('/email-templates/preview-profiles', input);
+  }
+
+  updateEmailTemplatePreviewProfile(profileId: string, input: PatchMailTemplatePreviewProfileInput) {
+    return this.patch<MailTemplatePreviewProfileDto>(`/email-templates/preview-profiles/${encodeURIComponent(profileId)}`, input);
+  }
+
+  deleteEmailTemplatePreviewProfile(profileId: string) {
+    return this.delete<{ ok: true }>(`/email-templates/preview-profiles/${encodeURIComponent(profileId)}`);
+  }
+
+  emailTemplateSnippets(input: MailTemplateSnippetQuery = { includeArchived: false, limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.templateType) params.set('templateType', input.templateType);
+    if (input.includeArchived !== undefined) params.set('includeArchived', String(input.includeArchived));
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailTemplateSnippetDto[]>(`/email-templates/snippets?${params.toString()}`);
+  }
+
+  createEmailTemplateSnippet(input: SaveMailTemplateSnippetInput) {
+    return this.post<MailTemplateSnippetDto>('/email-templates/snippets', input);
+  }
+
+  updateEmailTemplateSnippet(snippetId: string, input: PatchMailTemplateSnippetInput) {
+    return this.patch<MailTemplateSnippetDto>(`/email-templates/snippets/${encodeURIComponent(snippetId)}`, input);
+  }
+
+  deleteEmailTemplateSnippet(snippetId: string) {
+    return this.delete<{ ok: true }>(`/email-templates/snippets/${encodeURIComponent(snippetId)}`);
+  }
+
+  emailTemplateBlocks(input: MailTemplateBlockQuery = { includeArchived: false, limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.category) params.set('category', input.category);
+    if (input.includeArchived !== undefined) params.set('includeArchived', String(input.includeArchived));
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailTemplateBlockDto[]>(`/email-templates/blocks?${params.toString()}`);
+  }
+
+  createEmailTemplateBlock(input: SaveMailTemplateBlockInput) {
+    return this.post<MailTemplateBlockDto>('/email-templates/blocks', input);
+  }
+
+  updateEmailTemplateBlock(blockId: string, input: PatchMailTemplateBlockInput) {
+    return this.patch<MailTemplateBlockDto>(`/email-templates/blocks/${encodeURIComponent(blockId)}`, input);
+  }
+
+  deleteEmailTemplateBlock(blockId: string) {
+    return this.delete<{ ok: true }>(`/email-templates/blocks/${encodeURIComponent(blockId)}`);
+  }
+
   createEmailTemplate(input: SaveEmailTemplateInput) {
     return this.post('/email-templates/events/' + encodeURIComponent(input.eventKey) + '/variants', input);
   }
 
   updateEmailTemplate(id: string, input: PatchEmailTemplateInput) {
     return this.patch(`/email-templates/variants/${encodeURIComponent(id)}`, input);
+  }
+
+  duplicateEmailTemplate(id: string) {
+    return this.post(`/email-templates/variants/${encodeURIComponent(id)}/duplicate`, {});
+  }
+
+  activateEmailTemplate(eventKey: string, input: ActivateEmailTemplateInput) {
+    return this.post(`/email-templates/events/${encodeURIComponent(eventKey)}/activate`, input);
+  }
+
+  duplicateEmailTemplateRevision(revisionId: string) {
+    return this.post(`/email-templates/revisions/${encodeURIComponent(revisionId)}/duplicate`, {});
+  }
+
+  updateEmailTemplateRevisionSource(revisionId: string, input: UpdateEmailTemplateRevisionSourceInput) {
+    return this.patch(`/email-templates/revisions/${encodeURIComponent(revisionId)}/source`, input);
+  }
+
+  proposeEmailTemplateAiEdit(revisionId: string, input: ProposeEmailTemplateAiEditInput) {
+    return this.post<EmailTemplateAiEditProposalResponse>(`/email-templates/revisions/${encodeURIComponent(revisionId)}/assistant/propose`, input);
+  }
+
+  approveEmailTemplateRevision(revisionId: string, input: ApproveEmailTemplateRevisionInput = {}) {
+    return this.post(`/email-templates/revisions/${encodeURIComponent(revisionId)}/approve`, input);
+  }
+
+  publishEmailTemplateRevision(revisionId: string) {
+    return this.post(`/email-templates/revisions/${encodeURIComponent(revisionId)}/publish`, {});
+  }
+
+  previewEmailTemplateRevision(revisionId: string, variables: Record<string, unknown> = {}) {
+    return this.post(`/email-templates/revisions/${encodeURIComponent(revisionId)}/preview`, { variables });
+  }
+
+  testEmailTemplateRevision(revisionId: string, input: TestEmailTemplateRevisionInput) {
+    return this.post(`/email-templates/revisions/${encodeURIComponent(revisionId)}/test-send`, input);
+  }
+
+  deleteEmailTemplateRevision(revisionId: string) {
+    return this.delete(`/email-templates/revisions/${encodeURIComponent(revisionId)}`);
   }
 
   mailMarketingOverview() {
@@ -936,6 +1299,14 @@ export class ApiClient {
     return this.get(`/mail-marketing/contacts?${params.toString()}`);
   }
 
+  mailMarketingContact(contactId: string) {
+    return this.get<MailContactDetailDto>(`/mail-marketing/contacts/${encodeURIComponent(contactId)}`);
+  }
+
+  updateMailMarketingContactConsent(contactId: string, input: UpsertMailContactConsentInput) {
+    return this.post(`/mail-marketing/contacts/${encodeURIComponent(contactId)}/consent`, input);
+  }
+
   mailMarketingTemplates(query: string | MailTemplateQuery = '') {
     if (typeof query === 'string') return this.get(`/mail-marketing/templates${query}`);
     const params = new URLSearchParams();
@@ -958,6 +1329,10 @@ export class ApiClient {
     return this.get('/mail-marketing/audiences');
   }
 
+  previewMailMarketingAudience(input: MailAudienceFilterInput) {
+    return this.post<MailAudiencePreviewResponse>('/mail-marketing/audiences/preview', input);
+  }
+
   createMailMarketingAudience(input: SaveMailAudienceInput) {
     return this.post('/mail-marketing/audiences', input);
   }
@@ -966,20 +1341,151 @@ export class ApiClient {
     return this.patch(`/mail-marketing/audiences/${encodeURIComponent(id)}`, input);
   }
 
+  mailMarketingAudienceSnapshots(audienceId: string, input: MailAudienceSnapshotQuery = { limit: 25 }) {
+    const params = new URLSearchParams();
+    params.set('limit', String(input.limit ?? 25));
+    return this.get(`/mail-marketing/audiences/${encodeURIComponent(audienceId)}/snapshots?${params.toString()}`);
+  }
+
+  createMailMarketingAudienceSnapshot(audienceId: string, input: CreateMailAudienceSnapshotInput = {}) {
+    return this.post(`/mail-marketing/audiences/${encodeURIComponent(audienceId)}/snapshots`, input);
+  }
+
+  mailMarketingAudienceSnapshotMembers(snapshotId: string, input: MailAudienceSnapshotMemberQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.search) params.set('search', input.search);
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailAudienceSnapshotMembersResponse>(`/mail-marketing/audiences/snapshots/${encodeURIComponent(snapshotId)}?${params.toString()}`);
+  }
+
+  mailMarketingAudienceSnapshotDiff(snapshotId: string, input: MailAudienceSnapshotMemberQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.search) params.set('search', input.search);
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailAudienceSnapshotDiffResponse>(`/mail-marketing/audiences/snapshots/${encodeURIComponent(snapshotId)}/diff?${params.toString()}`);
+  }
+
+  mailMarketingCampaigns(input: MailCampaignQuery = { limit: 50 }) {
+    const params = new URLSearchParams();
+    if (input.status) params.set('status', input.status);
+    params.set('limit', String(input.limit ?? 50));
+    return this.get<MailCampaignDto[]>(`/mail-marketing/campaigns?${params.toString()}`);
+  }
+
+  createMailMarketingCampaign(input: SaveMailCampaignInput) {
+    return this.post<MailCampaignDto>('/mail-marketing/campaigns', input);
+  }
+
+  queueMailMarketingCampaign(id: string) {
+    return this.post<MailCampaignDto>(`/mail-marketing/campaigns/${encodeURIComponent(id)}/queue`, {});
+  }
+
+  approveMailMarketingCampaign(id: string) {
+    return this.post<MailCampaignDto>(`/mail-marketing/campaigns/${encodeURIComponent(id)}/approve`, {});
+  }
+
+  pauseMailMarketingCampaign(id: string) {
+    return this.post<MailCampaignDto>(`/mail-marketing/campaigns/${encodeURIComponent(id)}/pause`, {});
+  }
+
+  cancelMailMarketingCampaign(id: string) {
+    return this.post<MailCampaignDto>(`/mail-marketing/campaigns/${encodeURIComponent(id)}/cancel`, {});
+  }
+
+  mailMarketingAnalyticsOverview(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsOverviewResponse>(`/mail-marketing/analytics/overview?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsCampaigns(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsDimensionResponse>(`/mail-marketing/analytics/campaigns?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsTemplates(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsDimensionResponse>(`/mail-marketing/analytics/templates?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsAudiences(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsDimensionResponse>(`/mail-marketing/analytics/audiences?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsFlows(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsDimensionResponse>(`/mail-marketing/analytics/flows?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsFunnel(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsFunnelResponse>(`/mail-marketing/analytics/funnel?${analyticsParams(input)}`);
+  }
+
+  mailMarketingAnalyticsCohorts(input: MailMarketingAnalyticsQuery = { days: 30, limit: 25 }) {
+    return this.get<MailMarketingAnalyticsCohortResponse>(`/mail-marketing/analytics/cohorts?${analyticsParams(input)}`);
+  }
+
+  mailMarketingWebhookDestinations() {
+    return this.get<MailFlowWebhookDestinationDto[]>('/mail-marketing/flows/webhook-destinations');
+  }
+
+  createMailMarketingWebhookDestination(input: SaveMailFlowWebhookDestinationInput) {
+    return this.post<MailFlowWebhookDestinationDto>('/mail-marketing/flows/webhook-destinations', input);
+  }
+
+  updateMailMarketingWebhookDestination(id: string, input: PatchMailFlowWebhookDestinationInput) {
+    return this.patch<MailFlowWebhookDestinationDto>(`/mail-marketing/flows/webhook-destinations/${encodeURIComponent(id)}`, input);
+  }
+
+  approveMailMarketingWebhookDestination(id: string, input: ApproveMailFlowWebhookDestinationInput) {
+    return this.post<MailFlowWebhookDestinationDto>(`/mail-marketing/flows/webhook-destinations/${encodeURIComponent(id)}/approve-live`, input);
+  }
+
+  revokeMailMarketingWebhookDestinationApproval(id: string) {
+    return this.post<MailFlowWebhookDestinationDto>(`/mail-marketing/flows/webhook-destinations/${encodeURIComponent(id)}/revoke-live`, {});
+  }
+
   mailMarketingFlows() {
-    return this.get('/mail-marketing/flows');
+    return this.get<MailMarketingFlowDto[]>('/mail-marketing/flows');
+  }
+
+  mailMarketingFlow(id: string) {
+    return this.get<MailMarketingFlowDto>(`/mail-marketing/flows/${encodeURIComponent(id)}`);
   }
 
   createMailMarketingFlow(input: SaveMailFlowInput) {
-    return this.post('/mail-marketing/flows', input);
+    return this.post<MailMarketingFlowDto>('/mail-marketing/flows', input);
   }
 
   updateMailMarketingFlow(id: string, input: PatchMailFlowInput) {
-    return this.patch(`/mail-marketing/flows/${encodeURIComponent(id)}`, input);
+    return this.patch<MailMarketingFlowDto>(`/mail-marketing/flows/${encodeURIComponent(id)}`, input);
+  }
+
+  validateMailMarketingFlow(id: string, input: ValidateMailFlowInput = { version: 'latest' }) {
+    return this.post<MailFlowValidationResponse>(`/mail-marketing/flows/${encodeURIComponent(id)}/validate`, input);
+  }
+
+  simulateMailMarketingFlow(id: string, input: SimulateMailFlowInput = { version: 'latest', payload: {}, target: {} }) {
+    return this.post<MailFlowSimulationResponse>(`/mail-marketing/flows/${encodeURIComponent(id)}/simulate`, input);
   }
 
   publishMailMarketingFlow(id: string) {
-    return this.post(`/mail-marketing/flows/${encodeURIComponent(id)}/publish`, {});
+    return this.post<MailMarketingFlowDto>(`/mail-marketing/flows/${encodeURIComponent(id)}/publish`, {});
+  }
+
+  pauseMailMarketingFlow(id: string) {
+    return this.post<MailMarketingFlowDto>(`/mail-marketing/flows/${encodeURIComponent(id)}/pause`, {});
+  }
+
+  resumeMailMarketingFlow(id: string) {
+    return this.post<MailMarketingFlowDto>(`/mail-marketing/flows/${encodeURIComponent(id)}/resume`, {});
+  }
+
+  mailMarketingFlowRuns(id: string) {
+    return this.get<MailFlowRunsResponse>(`/mail-marketing/flows/${encodeURIComponent(id)}/runs`);
+  }
+
+  mailMarketingFlowEvents(id: string) {
+    return this.get<MailFlowEventsResponse>(`/mail-marketing/flows/${encodeURIComponent(id)}/events`);
+  }
+
+  triggerMailMarketingFlowEvent(input: TriggerMailFlowEventInput) {
+    return this.post('/mail-marketing/flows/events', input);
   }
 
   aircallUsers() {

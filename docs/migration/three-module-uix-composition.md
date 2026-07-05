@@ -27,6 +27,44 @@ The composition rule is:
 
 Anything that increases density without reducing confusion is moved down, hidden behind detail, or removed from the primary screen.
 
+## 2026-07-05 Product Composition Brainstorm: Useful, Ordered, Efficient
+
+This is the latest product-composition decision. It exists because the hardest requirement is not "add more UI." The hardest requirement is to make the three modules usable under real work pressure, without forcing the user to decode the backend. The implementer must brainstorm the work composition first, then add UI. A route that has correct data but creates confusion is still incomplete.
+
+The composition standard for all three modules:
+- The first viewport must answer what is happening now, why it matters, and what the safest next action is.
+- A count, card, badge, table column, tab, or modal section is allowed only when it reduces the user's next decision cost.
+- Every module has one dominant mental model. Do not mix release work, recipient work, and buyer self-service into the same visual rhythm.
+- The primary screen is for work. Proof, history, raw source, provider traces, internal ids, and debug evidence are required, but they sit after the decision layer.
+- If the same number appears twice with different meanings, collapse it into one decision number and move the rest to detail.
+- If two CTAs compete visually, the route has not been composed yet.
+- If a customer, operator, or admin must open a modal to understand the basic page state, the first viewport failed.
+- Empty, loading, error, disabled, long-list, light mode, dark mode, laptop, and narrow/mobile states are part of the composition, not polish.
+
+The three-module brainstorming lock:
+
+| Module | Composition target | First viewport must make obvious | Primary action rule | What moves down or behind detail |
+| --- | --- | --- | --- | --- |
+| Mail Template | Protected release lane | Active customer email, draft-only changes, readiness blockers, rendered preview, test/approval/publish state, provider mode. | Show exactly one next release action for the current state: create draft, save, test, approve, publish, or activate. | Raw HTML/CSS, variable JSON, revision diff, provider trace, old delivery proof, audit history. |
+| Mail Marketing | Recipient decision room | Who qualifies, who is blocked, whether the list is live preview or frozen snapshot, final eligible count, approved template, delivery mode. | Show exactly one next pipeline action: preview, freeze, choose template, review blockers, queue proof, or send only when enabled. | Raw flow graph, webhook body, provider payload, per-recipient debug trace, broad analytics, old execution history. |
+| Customer Portal | Buyer account desk | Recent orders, open/payable invoices, reorder-ready items, active cart or review request, readable blocker reasons, customer-safe next action. | Show exactly one customer-safe next action: view order, reorder, continue cart, pay/download invoice, or contact staff. | Raw Shopify JSON, tenant/provider/source/routing words, staff notes, marketing internals, debug proof. |
+
+Route-level brainstorming must happen before layout work:
+1. Write the sentence: "This route exists so [role] can [one job] without confusing [dangerous state] with [safe state]."
+2. Choose the one first-viewport business state that prevents that confusion.
+3. Choose the one primary action that follows from that state.
+4. Remove or demote every metric, field, section, tab, or modal panel that does not help that action.
+5. Define how loading, empty, error, disabled, and long-list states keep the same hierarchy.
+6. Define what the user must never see in that role's primary surface.
+
+The practical UIX test:
+- Can a first-time user explain the page and the next action in five seconds?
+- Can they complete the main job without opening raw proof, logs, source, or history?
+- Can they tell the difference between draft/live, preview/snapshot, proof/sent, payable/placeholder, checkout/review, and eligible/blocked?
+- Does the page still read correctly in light mode, dark mode, laptop width, and narrow/mobile width?
+
+If any answer is no, do not add more features to the route. Recompose the screen first.
+
 ## 2026-07-05 Authoritative UIX Decision Board: Useful Before Rich
 
 This section is the current decision record. It is intentionally placed near the top because the file contains multiple brainstorming passes below. When there is any doubt, this board wins.
@@ -40,6 +78,178 @@ The composition process before implementation is:
 4. Choose the business state that prevents that misunderstanding.
 5. Put that state and one safe next action in the first viewport.
 6. Move proof, raw payloads, history, source, and advanced controls below the decision layer.
+
+### 2026-07-05 UIX Composition Operating Rule: Regular Work, Not Feature Dump
+
+Before any code or layout change, the implementer must add or update a short markdown composition memo for the route. This is not optional documentation after the fact. It is the thinking step that decides whether the screen will be orderly, usable, efficient, and hard to misunderstand.
+
+The memo must answer these questions in plain business language:
+- What is the user trying to finish on this screen?
+- What is the one misunderstanding that would create the most business damage?
+- Which state, number, or blocker prevents that misunderstanding?
+- Which one action is the safe next action from that state?
+- Which useful details would slow the user down and must move lower, behind detail, or into proof?
+
+The common screen rhythm for all three modules is:
+1. State strip: the current business state and consequence.
+2. Action strip: one dominant next action, with disabled reasons shown beside unavailable actions.
+3. Work surface: the smallest complete set of records needed to act.
+4. Context surface: customer/template/audience/order details that explain the decision.
+5. Proof surface: logs, raw provider proof, source, revision history, webhook proof, and audit.
+
+Do not invert that order. A proof-first route is a backend console, not a product screen.
+
+The route fails UIX review when:
+- the same count appears in multiple places with unclear meaning;
+- two primary buttons look equally important;
+- disabled actions do not explain the blocker;
+- technical vocabulary appears before business vocabulary;
+- the first useful action is hidden behind a modal;
+- a long list renders without search, page size, grouping, or virtualization;
+- dark mode, light mode, laptop, or narrow/mobile changes the screen hierarchy;
+- small pale metadata carries the main meaning for phone, total, order id, customer state, invoice state, reorder state, or blocker reason.
+
+Three-module composition memo:
+
+| Module | Why the user opens it | Main confusion to remove | First useful composition | Efficient route behavior |
+| --- | --- | --- | --- | --- |
+| Mail Template | To safely change a customer-facing email. | Draft/test/approval/publish/active states looking like equal actions. | Active binding, draft/revision state, rendered preview, readiness blockers, provider mode, test/approval proof, one release CTA. | Release step is staged; source, diff, variables, provider payload, and audit live below the preview/release decision. |
+| Mail Marketing | To decide who can be contacted and whether execution is proof-only or live. | Live preview, frozen snapshot, blocked recipients, proof-only, and real delivery looking like one number. | Delivery mode, audience definition, live preview, frozen snapshot, blocked/suppressed count, final eligible count, approved template, one pipeline CTA. | Recipient truth comes before analytics; raw graph, webhook body, provider payload, and per-recipient trace stay in proof/detail. |
+| Customer Portal | To let the buyer self-serve orders, invoices, reorder, cart, files, and review states. | Review request looking like checkout success, placeholder invoice looking payable, or blocked reorder looking broken. | Recent orders, payable invoices, reorder-ready items, active cart/review state, readable blockers, one customer-safe CTA. | Customer-safe language only; raw Shopify payloads, tenant/provider/source/routing words, staff notes, and marketing internals never appear in the buyer work surface. |
+
+### 2026-07-05 Final Composition Lock: No-Confusion Route Shape
+
+This is the implementation lock for the next UI pass. Do not start from old screens, table names, endpoint lists, or "all fields we have." Start from the user's mental load. Each route must make one decision obvious, then show enough context to trust that decision, then expose proof only after the work surface is already understandable.
+
+The route is not acceptable if a first-time user must open a modal, compare repeated counters, read raw provider/source data, or understand internal implementation words before knowing what to do.
+
+| Module | User's real question | First viewport composition | One primary action | Demoted below/behind detail |
+| --- | --- | --- | --- | --- |
+| Mail Template | "Will this change the email customers receive?" | Event/template identity, active binding, draft state, rendered preview, readiness blockers, test proof, approval/publish state, provider mode. | The next release step only: create draft, save draft, test, approve, publish, or activate. | Raw HTML/CSS, variables JSON, revision diff, provider trace, old delivery proof, audit history. |
+| Mail Marketing | "Who will receive this, who is blocked, and is delivery real?" | Delivery mode, live audience preview, frozen snapshot, blocked/suppressed/invalid count, final eligible count, approved template, current pipeline state. | The next pipeline step only: preview, freeze, choose template, review blockers, queue disabled proof, or send when enabled. | Raw flow graph, webhook body, provider payload, per-recipient trace, broad analytics, old execution history. |
+| Customer Portal | "What can I do now with orders, invoices, reorder, cart, files, or review?" | Account context, recent orders, payable invoices, reorder-ready items, active cart/review state, readable blocker reasons. | The next customer-safe action only: view order, reorder item/order, continue cart, pay/download invoice, or contact staff. | Raw Shopify JSON, tenant/provider/source/routing words, staff notes, marketing internals, debug proof. |
+
+### 2026-07-05 Concrete Composition Brainstorm: Think Before Adding UI
+
+This is the required brainstorming output before new UI is added in the three modules. It is not a design polish note. It is the product composition that prevents user confusion. The implementer must start with the user's job, then decide what belongs in the first viewport, then decide what is proof/detail. Do not start from old routes, backend model names, or every field that exists.
+
+Shared composition hypothesis:
+- Users do not want "mail", "marketing", or "portal" complexity. They want to release an email safely, contact the right people safely, or complete an account action safely.
+- Every first viewport has one "now" state, one blocker story, and one next safe action.
+- Every module uses the same rhythm: Now, Context, Proof.
+- A feature that adds information but does not reduce confusion is moved lower or behind detail.
+- Tables are allowed only when the user is choosing from a list. They are not the default composition for account-critical or release-critical work.
+
+#### Mail Template Brainstorm: Protected Release Lane
+
+The operator's mental load is release safety. The screen must make accidental production change feel impossible.
+
+| Screen | User question | First viewport | Primary action | Hidden/lower detail |
+| --- | --- | --- | --- | --- |
+| Template library | "Which customer email needs work?" | Search, event family, active/draft/test/approval state, last meaningful change, readiness blocker. | Open the template that needs the next release step. | Old revisions, raw delivery proof, internal event ids. |
+| Template detail | "Will this change what customers receive?" | Active version, draft version, rendered preview, variable readiness, test proof, approval state, provider mode, event binding target. | Exactly one state-derived action: create draft, save, test, approve, publish, or activate. | Raw HTML/CSS, variable JSON, revision diff, provider trace, audit. |
+| Test and approval proof | "Can I trust this before activation?" | Test recipient/profile, rendered subject/body result, missing variables, approval result, activation summary. | Approve or return to draft with reason. | Raw provider response and historical tests. |
+
+Composition decisions:
+- Rendered preview is primary; source editing is secondary.
+- Draft, test, approval, publish, and activation cannot look like equal buttons.
+- Active binding must be read-only until the release step explicitly changes it.
+- Empty state explains that creating a draft does not affect live customer mail.
+- Error state names the failed business step: preview render, test proof, approval, publish, or activation.
+
+#### Mail Marketing Brainstorm: Recipient Decision Room
+
+The operator's mental load is recipient truth. The screen must make it impossible to confuse a moving preview, a frozen snapshot, blocked recipients, and real delivery.
+
+| Screen | User question | First viewport | Primary action | Hidden/lower detail |
+| --- | --- | --- | --- | --- |
+| Marketing overview | "What needs attention before anyone is contacted?" | Provider mode, work queue, stale snapshots, missing approved templates, blocked/suppressed count, failed/skipped proof. | Open the next unsafe/unready item. | Broad analytics, raw events, old execution history. |
+| Audience builder | "Who qualifies and who is excluded?" | Business-language criteria, live preview count, exclusion reasons, consent/suppression summary, sample recipients. | Freeze snapshot when preview is acceptable. | Raw query, flow graph, per-recipient debug. |
+| Campaign send lane | "Who will actually receive this?" | Frozen snapshot, final eligible count, blocked count, selected approved template, provider mode, delivery readiness. | Queue disabled proof or send only when all blockers are clear and sending is enabled. | Provider payload, delivery trace, deep analytics. |
+| Flow/webhook lane | "What will this automation do, and is outbound data allowed?" | Business nodes, trigger, approved template/action, destination readiness, proof-only/live-requested state. | Validate or request exact live approval. | Webhook body, secret proof, raw flow JSON, provider event payload. |
+
+Composition decisions:
+- Live preview and frozen snapshot must have different visual treatment.
+- Blocked, suppressed, unsubscribed, invalid, and frequency-capped people are never counted as reachable.
+- Disabled-provider proof cannot use copy that suggests a customer email was sent.
+- Analytics is useful after eligibility and delivery mode are understood, not before.
+- Empty state points to the next setup step: contacts, audience, approved template, or provider mode.
+- Error state names the failed business step: preview, snapshot, blocker review, queue, send, or webhook readiness.
+
+#### Customer Portal Brainstorm: Buyer Account Desk
+
+The buyer's mental load is account action. The screen must not expose staff operations, raw Shopify payloads, or fake success states.
+
+| Screen | User question | First viewport | Primary action | Hidden/lower detail |
+| --- | --- | --- | --- | --- |
+| Account home | "What can I do now?" | Open invoices, recent orders, reorder-ready items, active cart/review state, readable blockers. | Continue the one most useful account action. | Staff notes, marketing internals, raw Shopify payload. |
+| Orders | "Where is my order and what happened?" | Search, page size, recent order rows, status, total, tracking/payment hint, reorder eligibility. | View order or reorder eligible item/order. | Full timeline, raw fulfillment/refund payloads, internal ids. |
+| Order detail | "Can I trust this order detail and reorder from it?" | Status, total, fulfillment/tracking, line items, item properties, files/proofs, invoice/payment state, reorder reason. | Reorder eligible item/order or contact staff when blocked. | Audit proof, internal reconciliation, raw properties JSON. |
+| Invoices | "Can I pay or download this invoice?" | Payable/paid/overdue/void state, amount, due date, download/pay availability, blocker reason. | Pay or download only when backed by real persisted state. | Provider/payment trace, internal finance proof. |
+| Reorder/cart | "Will this create a real checkout or a review request?" | Eligible items, unavailable reasons, persisted cart state, checkout URL state, review-request state. | Continue cart, checkout, or request review with clear consequence. | Cart activity proof and internal Shopify response. |
+| Documents | "Which file can I safely open?" | File type split, search, page size, invoice/design/account-doc grouping, safe open/download action. | Open/download one allowed file. | Storage metadata, raw file source payload. |
+
+Composition decisions:
+- The portal is customer-facing. It never shows tenant, provider, source, workflow, queue, routing, campaign, suppression, staff note, or raw Shopify JSON terms.
+- Review request, checkout success, payable invoice, placeholder invoice, eligible reorder, and blocked reorder must look different.
+- Order, invoice, reorder, and customer-account detail uses centered modal or full page, not a narrow side drawer.
+- Lists default to 10 rows and expose intentional page-size choices: 50, 100, 150.
+- Empty state gives a useful account step: search another order, browse products, contact staff, or check account email.
+- Error state names the failed business step: order load, invoice load, reorder eligibility, cart creation, checkout creation, or file download.
+
+#### Cross-Module Composition Decisions
+
+- Top KPI cards are allowed only when each number changes the next action. Decorative metrics are removed.
+- Repeated numbers are collapsed into one decision number plus drill-down.
+- A modal opens with the recommended action and why, then context, then proof.
+- Primary actions keep a consistent location inside each route family.
+- Secondary actions are quiet and cannot visually compete with the primary action.
+- Long lists must have server-backed search, paging, grouping, or virtualization before real volume is rendered.
+- Empty, loading, error, disabled, and loaded states are designed before API binding is considered complete.
+- Light mode, dark mode, laptop width, and narrow/mobile width must preserve the same hierarchy.
+
+#### Composition Brainstorm Sequence
+
+Before implementation, write this in the task note or PR for every route:
+
+1. The screen exists so `[role]` can `[one job]` without confusing `[dangerous wrong state]` with `[safe/current state]`.
+2. The first viewport must answer `[current state]`, `[safe next action]`, and `[blocker reason]`.
+3. The page must not need `[raw proof/detail]` to explain the action.
+4. The longest list on the page uses `[search/page size/grouping/virtualization]` before rendering real volume.
+5. The empty state points to `[first valid action]`; the error state names `[failed business step]`.
+
+If any bracket cannot be filled with plain business language, the route is not ready for UI work.
+
+#### Module-Specific Composition Shape
+
+Mail Template uses a protected release-lane shape:
+- Header: selected event/template family, active version, draft version, provider mode.
+- Decision strip: readiness blockers, test proof, approval state, activation target.
+- Main area: rendered customer preview first; source editing and variables second.
+- Proof tray: revisions, diffs, delivery proof, provider trace, audit.
+
+Mail Marketing uses a recipient-control-room shape:
+- Header: delivery mode, campaign/flow state, live preview, frozen snapshot, blocked count, eligible count.
+- Decision strip: approved template, consent/suppression readiness, pipeline blocker.
+- Main area: the active pipeline step owns the page: audience, snapshot, template, blockers, queue/proof, delivery evidence.
+- Proof tray: per-recipient trace, flow config, provider events, analytics drilldown.
+
+Customer Portal uses a buyer-account-desk shape:
+- Header: account identity only when it helps the action.
+- Decision strip: open invoices, recent orders, reorder-ready items, active cart or review state.
+- Main area: action cards and searchable/paged business lists, not raw history dumps.
+- Proof/detail: order timeline, invoice activity, cart outcome, document/file proof.
+
+#### Usability Failure Conditions
+
+Stop and recompose the route when any of these are true:
+- two CTAs look equally important;
+- the same number appears in multiple places with different meanings;
+- a disabled button does not explain its blocker beside the button;
+- a customer-facing screen exposes internal words or raw payloads;
+- an operator must read logs/source/history before understanding the primary action;
+- light mode, dark mode, laptop width, or narrow/mobile layout changes the information hierarchy;
+- the page is feature-rich but the user cannot explain the next action in five seconds.
 
 ### 2026-07-05 Brainstorming Mandate: Compose The Work, Not The Data
 
@@ -127,6 +337,21 @@ The route-level gate is:
 - Light mode, dark mode, laptop width, and mobile width preserve the same hierarchy.
 
 If this gate conflicts with a feature request, the composition wins first. The feature can still exist, but it must sit in the correct layer: decision, context, or proof.
+
+#### Repeatable Proof Gate
+
+UIX signoff cannot depend on one person saying the page looked acceptable. Every meaningful change in these three modules must be backed by repeatable proof:
+
+- API proof that the surface is using real tenant data, not mock or static rows.
+- Light mode screenshot.
+- Dark mode screenshot.
+- Desktop/laptop-width screenshot.
+- Narrow/mobile screenshot.
+- A manifest that records which route, theme, viewport, and surface was checked.
+
+The current harness is `pnpm evidence:mail-rollout`. It writes a manifest under `docs/evidence/mail-rollout/<run-id>/` and treats skipped browser/API proof as incomplete, not passed.
+
+The proof gate exists for the same reason as the composition gate: a powerful module can still fail if it is visually confusing, unreadable in dark mode, unusable on a narrow screen, or secretly disconnected from live data.
 
 #### Three-Module Brainstorm Before UI
 
@@ -672,6 +897,8 @@ UIX is a release gate:
 - No unbounded table dumps.
 - No equal-weight button clusters for actions with different consequences.
 - No internal terminology in customer-facing copy.
+- Customer-facing copy must pass the rollout harness copy proof: no tenant, provider, workflow, queue, source, routing, axis, rule, suppression, staff-note, raw-payload, metadata, debug, campaign, audience, or flow vocabulary in the buyer decision layer.
+- Customer-facing response contracts must pass the rollout harness contract proof: no `source*`, tenant/provider/workflow/routing/source internals, raw payload fields, staff-only notes, request ids, debug fields, secrets, or tokens in buyer-facing TypeScript surfaces.
 - No raw payloads in the first decision layer.
 - No modal that starts with history/debug data instead of the recommended action.
 - No light-only, dark-only, or wide-screen-only implementation.

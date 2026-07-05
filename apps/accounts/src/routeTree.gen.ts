@@ -24,6 +24,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as CartRouteImport } from './routes/cart'
 import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RegisterTokenRouteImport } from './routes/register.$token'
@@ -103,6 +104,11 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AddressesRoute = AddressesRouteImport.update({
   id: '/addresses',
   path: '/addresses',
@@ -122,6 +128,7 @@ const RegisterTokenRoute = RegisterTokenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
+  '/cart': typeof CartRoute
   '/documents': typeof DocumentsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invoices': typeof InvoicesRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
+  '/cart': typeof CartRoute
   '/documents': typeof DocumentsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invoices': typeof InvoicesRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
+  '/cart': typeof CartRoute
   '/documents': typeof DocumentsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invoices': typeof InvoicesRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/addresses'
+    | '/cart'
     | '/documents'
     | '/forgot-password'
     | '/invoices'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/addresses'
+    | '/cart'
     | '/documents'
     | '/forgot-password'
     | '/invoices'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/addresses'
+    | '/cart'
     | '/documents'
     | '/forgot-password'
     | '/invoices'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddressesRoute: typeof AddressesRoute
+  CartRoute: typeof CartRoute
   DocumentsRoute: typeof DocumentsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InvoicesRoute: typeof InvoicesRoute
@@ -370,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/addresses': {
       id: '/addresses'
       path: '/addresses'
@@ -409,6 +429,7 @@ const RegisterRouteWithChildren = RegisterRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddressesRoute: AddressesRoute,
+  CartRoute: CartRoute,
   DocumentsRoute: DocumentsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InvoicesRoute: InvoicesRoute,

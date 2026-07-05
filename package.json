@@ -11,6 +11,10 @@
     "dev:accounts": "pnpm --filter @factory-engine-pro/accounts dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
+    "evidence:mail-rollout": "node scripts/mail-rollout-proof.mjs",
+    "evidence:resend-webhook": "node scripts/resend-webhook-proof.mjs",
+    "evidence:mail-webhook-readiness": "node scripts/mail-webhook-readiness-proof.mjs",
+    "evidence:mail-signoff": "node scripts/mail-rollout-signoff.mjs",
     "db:generate": "pnpm --filter @factory-engine-pro/backend prisma:generate",
     "db:migrate": "pnpm --filter @factory-engine-pro/backend prisma:migrate",
     "db:deploy": "pnpm --filter @factory-engine-pro/backend prisma:deploy"
