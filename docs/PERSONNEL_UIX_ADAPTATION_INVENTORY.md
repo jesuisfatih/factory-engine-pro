@@ -83,3 +83,6 @@ Rules for this adaptation:
   calling-list note endpoint still enforces assigned-workspace customer scope;
   the archive endpoint only accepts real Shopify customers and preserves the
   same staff note write permission used by the existing personnel note flow.
+- Task Brief modal call summary no longer labels raw analysis fields as
+  `Intent` or `Urgency`. Staff now sees display-contract language: issue,
+  next step, checks, signals, and friction.

@@ -231,6 +231,9 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const matchHint = customerMatched
     ? 'Use order and note history before calling.'
     : 'Confirm phone or email before promising order, refund, or pricing details.';
+  const summarySignals = detail?.aiPsychAnalysis?.motivators.map(personSafeText).filter(Boolean) ?? [];
+  const summaryFriction = detail?.aiPsychAnalysis?.objections.map(personSafeText).filter(Boolean) ?? [];
+  const summaryChecks = liveCard.displayActions.length > 0 ? liveCard.displayActions : directActions;
 
   return (
     <div
@@ -402,13 +405,14 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
 
                   {showField('callSummary') ? <div className="brief-block" style={sectionStyle('callSummary', 100)}>
                     <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'callSummaryLabel', 'Call summary')}</span></div>
-                    {detail?.aiPsychAnalysis ? (
+                    {liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.aiPsychAnalysis ? (
                       <div className="brief-psych">
-                        <div><span>Intent</span><strong>{labelize(detail.aiPsychAnalysis.communicationStyle)}</strong></div>
-                        <div><span>Urgency</span><strong>{labelize(detail.aiPsychAnalysis.decisionMakingStyle)}</strong></div>
-                        <div><span>Motivators</span><strong>{detail.aiPsychAnalysis.motivators.map(personSafeText).join(', ') || 'None'}</strong></div>
-                        <div><span>Objections</span><strong>{detail.aiPsychAnalysis.objections.map(personSafeText).join(', ') || 'None'}</strong></div>
-                        <p>{callSignal}</p>
+                        <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.aiPsychAnalysis?.communicationStyle || 'Not captured')}</strong></div>
+                        <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief || 'Save the next customer outcome')}</strong></div>
+                        <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Review order and call context'}</strong></div>
+                        <div><span>Signals</span><strong>{summarySignals.join(', ') || 'None captured'}</strong></div>
+                        <div><span>Friction</span><strong>{summaryFriction.join(', ') || 'None captured'}</strong></div>
+                        <p>{personSafeText(liveCard.displayReason || callSignal)}</p>
                       </div>
                     ) : (
                       <div className="brief-val brief-val-muted">No call summary is attached to this customer yet.</div>
