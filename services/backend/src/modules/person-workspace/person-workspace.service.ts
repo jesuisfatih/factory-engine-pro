@@ -4,7 +4,7 @@ import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, transcriptResol
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
-  PersonAiPsychAnalysis,
+  PersonCallSummary,
   PersonCustomerRisk,
   PersonCustomerArchiveQuery,
   PersonDailyCallItem,
@@ -1348,8 +1348,7 @@ export class PersonWorkspaceService {
         actorType: comment.actorType,
         createdAt: comment.createdAt.toISOString(),
       })).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
-      aiPsychAnalysis: latestAiPsychAnalysis(aircallRows),
-      rule: null,
+      callSummary: latestCallSummary(aircallRows),
       customerDetailUrl: customerId ? `/staff/customers?customerId=${encodeURIComponent(customerId)}` : null,
     };
   }
@@ -4041,13 +4040,13 @@ function taskTimeline(
     .slice(0, 50);
 }
 
-function latestAiPsychAnalysis(calls: Array<{
+function latestCallSummary(calls: Array<{
   eventTimestamp: Date;
   resolvedAt: Date | null;
   resolverModel: string | null;
   resolverOutput: Prisma.JsonValue | null;
   transcriptRaw: string | null;
-}>): PersonAiPsychAnalysis | null {
+}>): PersonCallSummary | null {
   const call = calls.find((row) => row.resolverOutput) ?? calls.find((row) => row.transcriptRaw);
   if (!call) return null;
   if (call.resolverModel === 'local-rule-fallback' && call.transcriptRaw && isNonCatalogPromoPatchInquiry(call.transcriptRaw)) {

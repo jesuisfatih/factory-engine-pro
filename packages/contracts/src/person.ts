@@ -218,15 +218,6 @@ export const personTaskNoteSchema = z.object({
 });
 export type PersonTaskNote = z.infer<typeof personTaskNoteSchema>;
 
-export const personTaskRuleLinkSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  status: z.string(),
-  trigger: z.string(),
-  canvasUrl: z.string(),
-});
-export type PersonTaskRuleLink = z.infer<typeof personTaskRuleLinkSchema>;
-
 export const personTaskShopifyCustomerSchema = z.object({
   customerId: z.string().nullable(),
   shopifyCustomerId: z.string().nullable(),
@@ -235,7 +226,7 @@ export const personTaskShopifyCustomerSchema = z.object({
 });
 export type PersonTaskShopifyCustomer = z.infer<typeof personTaskShopifyCustomerSchema>;
 
-export const personAiPsychAnalysisSchema = z.object({
+export const personCallSummarySchema = z.object({
   communicationStyle: z.string().nullable(),
   decisionMakingStyle: z.string().nullable(),
   trustLevel: z.number().nullable(),
@@ -248,7 +239,7 @@ export const personAiPsychAnalysisSchema = z.object({
   talkTrack: z.string().nullable(),
   generatedAt: z.string().nullable(),
 });
-export type PersonAiPsychAnalysis = z.infer<typeof personAiPsychAnalysisSchema>;
+export type PersonCallSummary = z.infer<typeof personCallSummarySchema>;
 
 export const personTaskBriefDetailSchema = z.object({
   card: personQueueCardSchema,
@@ -257,8 +248,7 @@ export const personTaskBriefDetailSchema = z.object({
   timeline: z.array(personTaskTimelineEntrySchema),
   performance30d: personPerformance30dSchema,
   notes: z.array(personTaskNoteSchema),
-  aiPsychAnalysis: personAiPsychAnalysisSchema.nullable(),
-  rule: personTaskRuleLinkSchema.nullable(),
+  callSummary: personCallSummarySchema.nullable(),
   customerDetailUrl: z.string().nullable(),
 });
 export type PersonTaskBriefDetail = z.infer<typeof personTaskBriefDetailSchema>;

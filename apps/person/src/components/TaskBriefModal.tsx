@@ -227,8 +227,8 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
   const matchHint = customerMatched
     ? 'Use order and note history before calling.'
     : 'Confirm phone or email before promising order, refund, or pricing details.';
-  const summarySignals = detail?.aiPsychAnalysis?.motivators.map(personSafeText).filter(Boolean) ?? [];
-  const summaryFriction = detail?.aiPsychAnalysis?.objections.map(personSafeText).filter(Boolean) ?? [];
+  const summarySignals = detail?.callSummary?.motivators.map(personSafeText).filter(Boolean) ?? [];
+  const summaryFriction = detail?.callSummary?.objections.map(personSafeText).filter(Boolean) ?? [];
   const summaryChecks = liveCard.displayActions.length > 0 ? liveCard.displayActions : directActions;
   const callExcerpt = personSafeText(liveCard.callExcerpt);
 
@@ -402,9 +402,9 @@ export function TaskBriefModal({ card, customization, summary, onClose }: Props)
 
                   {showField('callSummary') ? <div className="brief-block" style={sectionStyle('callSummary', 100)}>
                     <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'callSummaryLabel', 'Call summary')}</span></div>
-                    {liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.aiPsychAnalysis ? (
+                    {liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.callSummary ? (
                       <div className="brief-psych">
-                        <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.aiPsychAnalysis?.communicationStyle || 'Not captured')}</strong></div>
+                        <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.callSummary?.communicationStyle || 'Not captured')}</strong></div>
                         <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief || 'Save the next customer outcome')}</strong></div>
                         <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Review order and call context'}</strong></div>
                         <div><span>Signals</span><strong>{summarySignals.join(', ') || 'None captured'}</strong></div>
@@ -680,7 +680,7 @@ function orderedFooterActions(ctaPriority: string[]) {
 }
 
 function callSignalText(detail: TaskBriefDetail | undefined) {
-  const analysis = detail?.aiPsychAnalysis;
+  const analysis = detail?.callSummary;
   if (!analysis) return 'No call signal is attached yet. Use the action plan above and save the result.';
   const parts = [
     analysis.motivators.length ? `Motivators: ${analysis.motivators.map(personSafeText).join(', ')}.` : null,
