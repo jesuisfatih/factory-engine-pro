@@ -22,7 +22,7 @@ export const DEFAULT_URGENCY_SCORING_CONFIG = {
   segmentWeight: 1.5,
   repeatCountWeight: 1,
   intentWeight: 1,
-  aiUrgencyWeight: 2,
+  signalUrgencyWeight: 2,
   waitingHoursWeight: 0.25,
   intentScores: {
     complaint: 20,
@@ -32,7 +32,7 @@ export const DEFAULT_URGENCY_SCORING_CONFIG = {
     support: 8,
     follow_up: 8,
   },
-  aiUrgencyScores: {
+  signalUrgencyScores: {
     critical: 30,
     high: 20,
     medium: 10,
@@ -40,15 +40,17 @@ export const DEFAULT_URGENCY_SCORING_CONFIG = {
   },
 } as const;
 
-export const urgencyScoringConfigSchema = z.object({
+const urgencyScoringConfigBaseSchema = z.object({
   segmentWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.segmentWeight),
   repeatCountWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.repeatCountWeight),
   intentWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.intentWeight),
-  aiUrgencyWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyWeight),
+  signalUrgencyWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.signalUrgencyWeight),
   waitingHoursWeight: z.coerce.number().min(0).max(100).default(DEFAULT_URGENCY_SCORING_CONFIG.waitingHoursWeight),
   intentScores: z.record(z.string(), z.coerce.number().min(0).max(100)).default(DEFAULT_URGENCY_SCORING_CONFIG.intentScores),
-  aiUrgencyScores: z.record(z.string(), z.coerce.number().min(0).max(100)).default(DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyScores),
+  signalUrgencyScores: z.record(z.string(), z.coerce.number().min(0).max(100)).default(DEFAULT_URGENCY_SCORING_CONFIG.signalUrgencyScores),
 });
+
+export const urgencyScoringConfigSchema = z.preprocess(normalizeUrgencyScoringConfigInput, urgencyScoringConfigBaseSchema);
 export type UrgencyScoringConfig = z.infer<typeof urgencyScoringConfigSchema>;
 
 export const personUrgencyBreakdownSchema = z.object({
@@ -57,12 +59,22 @@ export const personUrgencyBreakdownSchema = z.object({
   repeatCount: z.number(),
   intent: z.string().nullable(),
   intentScore: z.number(),
-  aiUrgency: z.string().nullable(),
-  aiUrgencyScore: z.number(),
+  signalUrgency: z.string().nullable(),
+  signalUrgencyScore: z.number(),
   waitingHours: z.number(),
   weights: urgencyScoringConfigSchema,
 });
 export type PersonUrgencyBreakdown = z.infer<typeof personUrgencyBreakdownSchema>;
+
+function normalizeUrgencyScoringConfigInput(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  return {
+    ...record,
+    signalUrgencyWeight: record.signalUrgencyWeight ?? record.aiUrgencyWeight,
+    signalUrgencyScores: record.signalUrgencyScores ?? record.aiUrgencyScores,
+  };
+}
 
 export const personStrategyRuntimeProofSchema = z.object({
   surfaceId: algorithmSurfaceIdSchema,

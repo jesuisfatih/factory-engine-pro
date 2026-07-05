@@ -2448,7 +2448,7 @@ export class PersonWorkspaceService {
       axis: assignedAxis,
       createdAt: customer.lastOrderAt ?? membership.matchedAt,
       updatedAt: customer.updatedAt,
-      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
+      metadata: { workflow: { params: { intent: 'follow_up', signalUrgency: customer.insight?.churnRisk ?? undefined } } },
       taskStateSnapshot: {
         segment: {
           id: membership.segment.id,
@@ -2537,7 +2537,7 @@ export class PersonWorkspaceService {
       axis: assignedAxis,
       createdAt: customer?.lastOrderAt ?? row.createdAt,
       updatedAt: row.updatedAt,
-      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer?.insight?.churnRisk ?? undefined } } },
+      metadata: { workflow: { params: { intent: 'follow_up', signalUrgency: customer?.insight?.churnRisk ?? undefined } } },
       taskStateSnapshot: row.taskStateSnapshot,
       segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? 0,
       repeatCount,
@@ -2929,7 +2929,7 @@ export class PersonWorkspaceService {
       axis: 'account',
       createdAt: customer.lastOrderAt ?? customer.updatedAt,
       updatedAt: customer.updatedAt,
-      metadata: { workflow: { params: { intent: 'follow_up', aiUrgency: customer.insight?.churnRisk ?? undefined } } },
+      metadata: { workflow: { params: { intent: 'follow_up', signalUrgency: customer.insight?.churnRisk ?? undefined } } },
       taskStateSnapshot: {},
       segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? index,
       repeatCount: repeatCounts.get(customer.id) ?? 0,

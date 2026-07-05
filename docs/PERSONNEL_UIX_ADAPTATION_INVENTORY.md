@@ -205,6 +205,10 @@ Still requiring live evidence before final sign-off:
   snapshot, and internal brief metadata were removed. Backend derivation may
   still keep prompt/model/trace data privately, but shared client contracts only
   describe staff-safe response shapes.
+- Staff urgency breakdown and workspace scoring config now use
+  `signalUrgency` / `signalUrgencyWeight` / `signalUrgencyScores` instead of
+  `aiUrgency` names. Older stored config and metadata keys are still normalized
+  on read so live tenant settings do not break.
 - Daily card, Task Brief modal, Call Queue filters, and Calendar call-plan
   rendering now read staff-safe display fields and `callExcerpt`; they do not
   derive labels, steps, ordering, or statistics from raw brief metadata.

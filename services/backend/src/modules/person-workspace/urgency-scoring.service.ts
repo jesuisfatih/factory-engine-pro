@@ -40,8 +40,9 @@ export class UrgencyScoringService {
         ?? input.axis
         ?? input.source,
     );
-    const aiUrgency = normalizeKey(
-      stringValue(params.aiUrgency)
+    const signalUrgency = normalizeKey(
+      stringValue(params.signalUrgency)
+        ?? stringValue(params.aiUrgency)
         ?? stringValue(params.urgency)
         ?? stringValue(params.urgencyLevel)
         ?? stringValue(resolverOutput.urgency)
@@ -51,13 +52,13 @@ export class UrgencyScoringService {
     const segmentScore = Math.max(0, numberValue(input.segmentPriority) ?? segmentPriorityFromSnapshot(snapshot));
     const repeatCount = Math.max(0, input.repeatCount);
     const intentScore = intent ? scoreFromRecord(config.intentScores, intent) : 0;
-    const aiUrgencyScore = aiUrgency ? scoreFromRecord(config.aiUrgencyScores, aiUrgency) : 0;
+    const signalUrgencyScore = signalUrgency ? scoreFromRecord(config.signalUrgencyScores, signalUrgency) : 0;
     const waitHours = waitingHours(input.createdAt, input.now ?? new Date());
     const score = round1(
       segmentScore * config.segmentWeight
         + repeatCount * config.repeatCountWeight
         + intentScore * config.intentWeight
-        + aiUrgencyScore * config.aiUrgencyWeight
+        + signalUrgencyScore * config.signalUrgencyWeight
         + waitHours * config.waitingHoursWeight,
     );
 
@@ -67,8 +68,8 @@ export class UrgencyScoringService {
       repeatCount,
       intent,
       intentScore,
-      aiUrgency,
-      aiUrgencyScore,
+      signalUrgency,
+      signalUrgencyScore,
       waitingHours: waitHours,
       weights: config,
     };

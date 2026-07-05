@@ -50,7 +50,7 @@ const emptyMcpForm: McpTokenFormState = {
   canReadAircallTranscripts: true,
 };
 
-const URGENCY_WEIGHT_FIELDS = ['segmentWeight', 'repeatCountWeight', 'intentWeight', 'aiUrgencyWeight', 'waitingHoursWeight'] as const;
+const URGENCY_WEIGHT_FIELDS = ['segmentWeight', 'repeatCountWeight', 'intentWeight', 'signalUrgencyWeight', 'waitingHoursWeight'] as const;
 const INTENT_SCORE_FIELDS = ['complaint', 'escalation', 'reorder', 'sales', 'support', 'follow_up'] as const;
 const RESOLVER_URGENCY_SCORE_FIELDS = ['critical', 'high', 'medium', 'low'] as const;
 
@@ -244,11 +244,11 @@ export function WorkspaceSettingsPage() {
                     min="0"
                     max="100"
                     step="1"
-                    value={urgencyForm.aiUrgencyScores[field] ?? 0}
+                    value={urgencyForm.signalUrgencyScores[field] ?? 0}
                     disabled={!canWrite || save.isPending}
                     onChange={(event) => setUrgencyForm((current) => ({
                       ...current,
-                      aiUrgencyScores: { ...current.aiUrgencyScores, [field]: Number(event.target.value) },
+                      signalUrgencyScores: { ...current.signalUrgencyScores, [field]: Number(event.target.value) },
                     }))}
                   />
                 </div>
@@ -477,10 +477,10 @@ function defaultUrgencyConfig(): UrgencyScoringConfig {
     segmentWeight: DEFAULT_URGENCY_SCORING_CONFIG.segmentWeight,
     repeatCountWeight: DEFAULT_URGENCY_SCORING_CONFIG.repeatCountWeight,
     intentWeight: DEFAULT_URGENCY_SCORING_CONFIG.intentWeight,
-    aiUrgencyWeight: DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyWeight,
+    signalUrgencyWeight: DEFAULT_URGENCY_SCORING_CONFIG.signalUrgencyWeight,
     waitingHoursWeight: DEFAULT_URGENCY_SCORING_CONFIG.waitingHoursWeight,
     intentScores: { ...DEFAULT_URGENCY_SCORING_CONFIG.intentScores },
-    aiUrgencyScores: { ...DEFAULT_URGENCY_SCORING_CONFIG.aiUrgencyScores },
+    signalUrgencyScores: { ...DEFAULT_URGENCY_SCORING_CONFIG.signalUrgencyScores },
   };
 }
 
