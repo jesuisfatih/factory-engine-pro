@@ -243,33 +243,35 @@ function DashboardView() {
           />
         )}
         {ruleStats.isSuccess && ruleStats.data.rows.length > 0 && (
-          <table className="data-table" id="active-rule-stats-table">
-            <thead>
-              <tr>
-                <th>Rule</th>
-                <th>Fire</th>
-                <th>Match</th>
-                <th>Avg latency</th>
-                <th>Tasks</th>
-                <th>Health</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ruleStats.data.rows.map((row) => (
-                <tr key={row.ruleId}>
-                  <td>
-                    <div className="name">{row.ruleName}</div>
-                    <div className="muted">{row.trigger} - p{row.priority} - last {row.lastFiredAt ? formatDateTime(row.lastFiredAt) : 'never'}</div>
-                  </td>
-                  <td>{row.fireCount}</td>
-                  <td>{row.matchRate.toFixed(1)}% ({row.matchCount})</td>
-                  <td>{formatLatency(row.avgLatencyMs)}</td>
-                  <td>{row.taskCreatedCount}</td>
-                  <td><span className={healthPill(row.health)}>{row.health}</span></td>
+          <div className="admin-table-scroll">
+            <table className="data-table" id="active-rule-stats-table">
+              <thead>
+                <tr>
+                  <th>Rule</th>
+                  <th>Fire</th>
+                  <th>Match</th>
+                  <th>Avg latency</th>
+                  <th>Tasks</th>
+                  <th>Health</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ruleStats.data.rows.map((row) => (
+                  <tr key={row.ruleId}>
+                    <td>
+                      <div className="name">{row.ruleName}</div>
+                      <div className="muted">{row.trigger} - p{row.priority} - last {row.lastFiredAt ? formatDateTime(row.lastFiredAt) : 'never'}</div>
+                    </td>
+                    <td>{row.fireCount}</td>
+                    <td>{row.matchRate.toFixed(1)}% ({row.matchCount})</td>
+                    <td>{formatLatency(row.avgLatencyMs)}</td>
+                    <td>{row.taskCreatedCount}</td>
+                    <td><span className={healthPill(row.health)}>{row.health}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
