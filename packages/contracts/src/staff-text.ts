@@ -4,6 +4,14 @@ const DELIMITED_SUFFIX = '(?=$|[^A-Za-z0-9])';
 export function staffSafeDisplayText(value: unknown): string {
   const raw = value === null || value === undefined ? '' : String(value);
   const cleaned = [
+    [/call[\s._-]+analysis/gi, 'call summary'],
+    [/segment[\s._-]+priority/gi, 'customer priority'],
+    [/stale[\s._-]+follow[\s._-]+up/gi, 'follow-up'],
+    [/admin[\s._-]+transfer/gi, 'transferred'],
+    [/service[\s._-]+requests?/gi, 'customer request'],
+    [/create[\s._-]+task/gi, 'create follow-up'],
+    [/matched[\s._-]+rules?/gi, 'matched routing'],
+    [/rule[\s._-]+trace/gi, 'routing detail'],
     [/ai[\s._-]+workflow[\s._-]+rules?/gi, 'call routing'],
     [/ai[\s._-]+workflow/gi, 'follow-up'],
     [/workflow[\s._-]+rules?/gi, 'call routing'],
@@ -14,6 +22,8 @@ export function staffSafeDisplayText(value: unknown): string {
     [/sales[\s._-]+axis/gi, 'purchase intent focus'],
     [/shopify[\s._-]+segments?/gi, 'Shopify customer list'],
     [/customer[\s._-]+segments?/gi, 'customer list'],
+    [/transcript[\s._-]+snippets?/gi, 'call excerpt'],
+    [/transcript[\s._-]+previews?/gi, 'call preview'],
     [/transcript[\s._-]+resolver/gi, 'call summary'],
     [/ai[\s._-]+resolver/gi, 'call summary'],
     [/ai[\s._-]+model/gi, 'call model'],
