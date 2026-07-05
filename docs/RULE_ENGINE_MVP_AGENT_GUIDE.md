@@ -1185,6 +1185,15 @@ Frontend MCP changes use a safe runtime customization DSL before source-file pat
 
 The DSL supports slots, block types, live data bindings, and visibility conditions. It must not include raw HTML, scripts, arbitrary CSS, secrets, deploy commands, or backend schema changes.
 
+Current staff queue focus slots are available around the native command center:
+
+```text
+focus.before
+focus.after
+```
+
+Use these only for staff-safe guidance or live-data stat blocks bound to `summary` fields. Do not fake counts, do not expose internal implementation terms, and do not use them to replace the native Today focus panel.
+
 Staff UI text must stay business-facing. Prefer:
 
 ```text

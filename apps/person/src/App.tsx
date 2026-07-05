@@ -54,6 +54,7 @@ export default function App() {
     enabled: authed,
   });
   const frontendCustomization = frontendCustomizationQuery.data ?? null;
+  const frontendCustomizationReady = !authed || frontendCustomizationQuery.isSuccess || frontendCustomizationQuery.isError;
   const shellViewer = initialPersonSession?.principal
     ? {
         id: initialPersonSession.principal.id,
@@ -91,6 +92,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (authed && !frontendCustomizationReady) return;
     if (authed && isStaffAuthPath(window.location.pathname)) {
       const target = navigation.defaultNavId ?? 'queue';
       window.history.replaceState(null, '', `/staff/${target}`);
@@ -104,7 +106,7 @@ export default function App() {
       window.history.replaceState(null, '', '/staff/login');
       setAuthScreen('login');
     }
-  }, [authed, navigation.defaultNavId]);
+  }, [authed, frontendCustomizationReady, navigation.defaultNavId]);
 
   if (shouldHandOffToAdmin) return null;
 

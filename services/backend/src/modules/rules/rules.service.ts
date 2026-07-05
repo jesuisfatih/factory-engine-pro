@@ -6138,7 +6138,15 @@ const MCP_OUTCOME_ACTIONS: WorkflowRuleAction['action'][] = [
 
 const FRONTEND_MCP_FORBIDDEN_STAFF_TERMS = [
   'AI',
+  'workflow',
   'workflow rule',
+  'rule',
+  'axis',
+  'sales',
+  'support',
+  'commission',
+  'debug',
+  'resolver',
   'sales axis',
   'support axis',
   'internal resolver',
@@ -6233,6 +6241,8 @@ const FRONTEND_MCP_PREFERRED_STAFF_TERMS = [
 const FRONTEND_MCP_ALLOWED_SLOTS: FrontendCustomizationSlot[] = [
   'kpi.before',
   'kpi.after',
+  'focus.before',
+  'focus.after',
   'daily.header',
   'daily.before_list',
   'daily.card.after_brief',
@@ -6367,6 +6377,15 @@ const FRONTEND_MCP_SURFACES: FrontendMcpSurfaceContract[] = [
         requiredFields: FRONTEND_MCP_REQUIRED_ELEMENT_FIELDS['kpi.row'],
         currentSupport: 'Add safe KPI/stat/message blocks and use typed overrides for labels and density.',
         nextSafeSupport: 'Source patch lane only for deeper KPI order changes.',
+      },
+      {
+        elementId: 'today.focus',
+        label: 'Today focus',
+        slots: ['focus.before', 'focus.after'],
+        fields: [],
+        requiredFields: [],
+        currentSupport: 'Add safe staff instructions or stat blocks around the native Today focus command center using live summary bindings.',
+        nextSafeSupport: 'Source patch lane only for native Today focus layout changes.',
       },
       {
         elementId: 'daily.card',
