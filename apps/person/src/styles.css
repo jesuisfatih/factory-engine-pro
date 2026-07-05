@@ -177,7 +177,7 @@ button { font-family: inherit; }
 .page-head h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
 .page-head .meta { font-size: 12px; color: var(--text-faint); }
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .kpi {
   min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 11px;
 }
@@ -1553,7 +1553,7 @@ button { font-family: inherit; }
 
 @media (min-width: 1281px) {
   .ops-grid:not(.archive) {
-    grid-template-columns: minmax(420px, .95fr) minmax(480px, 1.05fr);
+    grid-template-columns: minmax(0, 1fr);
   }
   .pin-board-panel { grid-column: 1 / -1; }
   .missed-v2,
@@ -1847,7 +1847,7 @@ button { font-family: inherit; }
   min-width: 0;
   flex: 0 1 auto;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .segment-group-subname {
@@ -1861,7 +1861,7 @@ button { font-family: inherit; }
 }
 
 .segment-group-priority {
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .segment-group-meta {
@@ -1886,7 +1886,7 @@ button { font-family: inherit; }
 
 .daily-title {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .daily-meta {
@@ -1902,7 +1902,7 @@ button { font-family: inherit; }
 
 .segment-customer-card .row1 .title {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .segment-customer-card .summary {
@@ -1912,7 +1912,7 @@ button { font-family: inherit; }
 .card-meta {
   gap: 14px;
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .quick-action {
