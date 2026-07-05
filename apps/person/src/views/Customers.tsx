@@ -2,6 +2,7 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
+import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
 import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerArchiveNote, saveCustomerNote } from '../api/live';
 import type { CustomerArchivePage, CustomerRow } from '../types';
 import { Icon } from '../components/Icon';
@@ -91,6 +92,11 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
       if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
     },
   });
+  const customerDetailMain = useMemo(() => {
+    if (!detailCustomerId) return undefined;
+    const customer = customers.find((candidate) => candidate.id === detailCustomerId);
+    return customer ? customerRowMainInfo(customer, archive) : undefined;
+  }, [archive, customers, detailCustomerId]);
 
   const columns = useMemo<ColumnDef<CustomerRow>[]>(() => [
     {
@@ -250,6 +256,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         isCallingCustomer={dialCustomer.isPending}
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
+        main={customerDetailMain}
       />
       {noteTarget ? (
         <CustomerNoteModal
@@ -271,6 +278,34 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
 
 function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
+}
+
+function customerRowMainInfo(customer: CustomerRow, archive: boolean): CustomerDetailMainInfo {
+  return {
+    reason: archive
+      ? 'Shopify archive customer. Review orders, calls, notes, and requests before taking action.'
+      : 'Regular calling list contact. Review the customer history and choose the next outreach.',
+    segmentLabel: customer.segment.name,
+    segmentColor: customer.segment.color,
+    urgencyScore: customer.urgencyScore ?? 0,
+    churnRisk: customer.lifecycle === 'churned' ? 'lost' : customer.lifecycle === 'at_risk' ? 'at_risk' : null,
+    productTags: [customer.segment.name],
+    phone: customer.phone || null,
+    email: customer.email || null,
+    orderLabel: customer.ordersCount > 0
+      ? `${customer.ordersCount} orders | ${fmtMoney(customer.totalSpent)}`
+      : 'No linked order yet',
+    ordersCount: customer.ordersCount,
+    totalSpent: customer.totalSpent,
+    lastCallLabel: customer.lastContact || 'No recent contact captured',
+    lastCallSummary: null,
+    lastContact: customer.lastContact,
+    owner: null,
+    openTasksCount: 0,
+    openRequestsCount: 0,
+    notesCount: 0,
+    latestNote: null,
+  };
 }
 
 function ArchiveSearchToolbar({

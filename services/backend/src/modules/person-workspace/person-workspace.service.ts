@@ -798,7 +798,7 @@ export class PersonWorkspaceService {
     const row = await this.requireServiceRequest(id);
     await this.assertServiceRequestScoped(row, member.id);
     if (!this.isDailyWorkflowTask(row)) {
-      throw new BadRequestException('Only call-analysis daily tasks can be archived from this list');
+      throw new BadRequestException('Only recent call follow-ups can be archived from this list');
     }
 
     const archivedAt = new Date().toISOString();
@@ -913,7 +913,7 @@ export class PersonWorkspaceService {
   async toggleCustomerPin(id: string, input: TogglePersonQueuePinInput) {
     const member = await this.currentMember();
     const assignments = await this.axisAssignments(member.id);
-    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your axis scope');
+    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your workspace scope');
 
     const customer = await this.prisma.db.customer.findFirst({ where: { id } });
     if (!customer) throw new NotFoundException('Customer not found');
@@ -1044,11 +1044,11 @@ export class PersonWorkspaceService {
     if (!target) throw new NotFoundException('Transfer target teammate not found');
 
     const targetAxes = transferAxesForRoles(target.roleAssignments.map((assignment) => assignment.role));
-    if (targetAxes.length === 0) throw new BadRequestException('Transfer target does not have a transferable workspace axis');
+    if (targetAxes.length === 0) throw new BadRequestException('Transfer target does not have a transferable workspace focus');
 
     const fromAxis = axisOrNull(row.axis);
     const toAxis = input.targetAxis ?? (isTransferAxis(fromAxis) ? fromAxis : null) ?? targetAxes[0];
-    if (!targetAxes.includes(toAxis)) throw new BadRequestException(`Transfer target cannot receive ${toAxis} work`);
+    if (!targetAxes.includes(toAxis)) throw new BadRequestException(`Transfer target cannot receive ${staffFocusLabel(toAxis)} work`);
 
     const tenantId = this.tenantId();
     const transferredAt = new Date();
@@ -2177,7 +2177,7 @@ export class PersonWorkspaceService {
       !this.isServiceRequestScoped(row, assignments, memberId)
       && !(await this.isDailyWorkflowOperatorScoped(row, memberId))
     ) {
-      throw new ForbiddenException('Customer is outside your axis scope');
+      throw new ForbiddenException('Customer is outside your workspace scope');
     }
   }
 
@@ -2621,7 +2621,7 @@ export class PersonWorkspaceService {
       where: { id },
       include: serviceRequestInclude,
     });
-    if (!row) throw new NotFoundException('Service request not found');
+    if (!row) throw new NotFoundException('Follow-up not found');
     return row;
   }
 

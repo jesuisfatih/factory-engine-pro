@@ -1536,6 +1536,33 @@ button { font-family: inherit; }
 .customer-detail-card h3 { margin: 0 0 12px; font-size: 15px; font-weight: 850; }
 .customer-detail-card p { margin: 10px 0 0; color: var(--text); line-height: 1.45; }
 .customer-detail-card blockquote { margin: 10px 0 0; border-left: 3px solid #0f766e; padding-left: 10px; color: var(--muted, var(--text-muted)); }
+.customer-detail-main-card { display: grid; gap: 12px; }
+.customer-detail-main-reason {
+  grid-column: 1 / -1;
+  border-color: #93C5FD;
+  background: #EFF6FF;
+}
+.customer-detail-main-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+.cd-main-chip,
+.churn-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.cd-main-chip.product { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+.cd-main-chip.segment { color: #FFFFFF; }
+.cd-main-chip.urgency { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
+.churn-badge.risk { background: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
+.churn-badge.lost { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
 .customer-detail-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .customer-detail-row + .customer-detail-row, .customer-detail-kv + .customer-detail-kv { margin-top: 10px; }
 .customer-detail-row strong, .customer-detail-row span, .customer-detail-kv span, .customer-detail-kv strong { display: block; }
@@ -1970,6 +1997,35 @@ button { font-family: inherit; }
 
 :root[data-theme="dark"] .customer-detail-summary {
   background: var(--border);
+}
+
+:root[data-theme="dark"] .customer-detail-main-reason {
+  background: #0E2433;
+  border-color: #1E4564;
+}
+
+:root[data-theme="dark"] .cd-main-chip.product {
+  background: #0E2620;
+  border-color: #1E4D3D;
+  color: #BBF7D0;
+}
+
+:root[data-theme="dark"] .cd-main-chip.urgency {
+  background: #0E2433;
+  border-color: #1E4564;
+  color: #BFDBFE;
+}
+
+:root[data-theme="dark"] .churn-badge.risk {
+  background: #2A2113;
+  border-color: #92400E;
+  color: #FDE68A;
+}
+
+:root[data-theme="dark"] .churn-badge.lost {
+  background: #2A1414;
+  border-color: #7F1D1D;
+  color: #FECACA;
 }
 
 :root[data-theme="dark"] .customer-detail-backdrop {

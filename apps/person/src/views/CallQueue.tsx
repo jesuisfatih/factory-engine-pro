@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
+import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
 import { ChevronDown, GripVertical, Loader2, Phone, RefreshCw, StickyNote, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
@@ -58,6 +59,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     () => groups.flatMap((group) => group.items.filter((item) => item.customerRisk !== 'none')),
     [groups],
   );
+  const customerDetailMain = useMemo(() => {
+    if (!detailCustomerId) return undefined;
+    const item = groups.flatMap((group) => group.items).find((candidate) => candidate.customerId === detailCustomerId);
+    return item ? priorityItemMainInfo(item) : undefined;
+  }, [detailCustomerId, groups]);
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
     mutationFn: reorderDailyCalls,
@@ -343,6 +349,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         isCallingCustomer={dialCustomer.isPending}
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
+        main={customerDetailMain}
       />
       {noteCustomer && (
         <CustomerNoteModal
@@ -840,6 +847,45 @@ function priorityCustomerBrief(item: DailyCallItem) {
   if (item.ordersCount > 0) return `${item.ordersCount} previous orders - good purchase follow-up candidate.`;
   if (item.latestCall) return `${recentCall} - call history needs a human next step.`;
   return 'Assigned priority customer - review history and choose the next outreach.';
+}
+
+function priorityItemMainInfo(item: DailyCallItem): CustomerDetailMainInfo {
+  const latestOrder = item.latestOrder
+    ? `${item.latestOrder.orderNumber ?? item.latestOrder.id} | ${fmtMoney(item.latestOrder.totalPrice, item.latestOrder.currency)}`
+    : item.ordersCount > 0
+      ? `${item.ordersCount} orders | ${fmtMoney(item.totalSpent)}`
+      : 'No linked order yet';
+  const lastCallLabel = item.latestCall
+    ? `${relativeTime(item.latestCall.at)} | ${item.latestCall.phone ?? item.latestCall.email ?? 'call captured'}`
+    : item.displayCallSnapshot || 'No recent call captured';
+  return {
+    reason: personSafeText(item.displayReason || item.reason || priorityCustomerBrief(item)),
+    segmentLabel: personSafeText(item.segment.name),
+    segmentColor: item.segment.color,
+    urgencyScore: item.urgencyScore,
+    churnRisk: item.customerRisk === 'lost' || item.customerRisk === 'at_risk' ? item.customerRisk : null,
+    productTags: [item.displayBadges[0]?.label, item.displayCustomerSummary]
+      .map((value) => personSafeText(value))
+      .filter(Boolean)
+      .slice(0, 3),
+    phone: item.phone,
+    email: item.email,
+    orderLabel: latestOrder,
+    ordersCount: item.ordersCount,
+    totalSpent: item.totalSpent,
+    lastCallLabel,
+    lastCallSummary: personSafeText(item.latestCall?.summary ?? item.displayCallSnapshot) || null,
+    lastContact: item.lastContact,
+    owner: null,
+    openTasksCount: item.openTasksCount,
+    openRequestsCount: item.openRequestsCount,
+    notesCount: item.notesCount,
+    latestNote: item.latestNote,
+  };
+}
+
+function fmtMoney(value: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
 function priorityUrgencyClass(score: number) {

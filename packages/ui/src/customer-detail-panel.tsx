@@ -4,6 +4,7 @@ import type { CustomerDetailPanelDto, CustomerDetailTab } from '@factory-engine-
 import {
   ClipboardList,
   Headphones,
+  LayoutDashboard,
   Mail,
   MessageSquare,
   NotebookText,
@@ -14,6 +15,28 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+
+export interface CustomerDetailMainInfo {
+  reason: string;
+  segmentLabel: string;
+  segmentColor: string;
+  urgencyScore: number;
+  churnRisk: 'lost' | 'at_risk' | null;
+  productTags: string[];
+  phone: string | null;
+  email: string | null;
+  orderLabel: string;
+  ordersCount: number;
+  totalSpent: number;
+  lastCallLabel: string;
+  lastCallSummary: string | null;
+  lastContact: string;
+  owner: string | null;
+  openTasksCount: number;
+  openRequestsCount: number;
+  notesCount: number;
+  latestNote: { body: string; authorName: string; createdAt: string } | null;
+}
 
 export interface CustomerDetailPanelProps {
   open: boolean;
@@ -26,6 +49,8 @@ export interface CustomerDetailPanelProps {
   isCallingCustomer?: boolean;
   callMessage?: string | null;
   staffTerminology?: boolean;
+  main?: CustomerDetailMainInfo;
+  mainContent?: ReactNode;
 }
 
 const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>> = {
@@ -39,6 +64,8 @@ const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: Lucid
   tasks: { label: 'Tasks', Icon: ClipboardList },
 };
 
+type PanelTab = CustomerDetailTab | 'main';
+
 export function CustomerDetailPanel({
   open,
   detail,
@@ -50,13 +77,23 @@ export function CustomerDetailPanel({
   isCallingCustomer = false,
   callMessage,
   staffTerminology = false,
+  main,
+  mainContent,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
-  const visibleTabs = useMemo<CustomerDetailTab[]>(
-    () => (detail?.visibleTabs ?? ['profile']).filter((tab) => tab !== 'commission'),
-    [visibleKey, detail],
+  const visibleTabs = useMemo<PanelTab[]>(
+    () => {
+      const tabs = (detail?.visibleTabs ?? ['profile']).filter((tab) => tab !== 'commission');
+      return main ? ['main', ...tabs] : tabs;
+    },
+    [visibleKey, detail, main],
   );
-  const [activeTab, setActiveTab] = useState<CustomerDetailTab>('profile');
+  const [activeTab, setActiveTab] = useState<PanelTab>('profile');
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveTab(main ? 'main' : 'profile');
+  }, [main, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +168,7 @@ export function CustomerDetailPanel({
 
             <nav className="customer-detail-tabs" aria-label="Customer detail tabs">
               {visibleTabs.map((tab) => {
-                const config = TAB_CONFIG[tab];
+                const config = tab === 'main' ? { label: 'Main', Icon: LayoutDashboard } : TAB_CONFIG[tab];
                 if (!config) return null;
                 return (
                   <button
@@ -147,11 +184,70 @@ export function CustomerDetailPanel({
             </nav>
 
             <main className="customer-detail-body">
-              {renderTab(detail, activeTab, onRetry, staffTerminology)}
+              {activeTab === 'main' && main
+                ? <MainTab main={main} mainContent={mainContent} />
+                : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology)}
             </main>
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function MainTab({ main, mainContent }: { main: CustomerDetailMainInfo; mainContent?: ReactNode }) {
+  if (mainContent) {
+    return <div className="customer-detail-main-card">{mainContent}</div>;
+  }
+  return (
+    <div className="customer-detail-grid">
+      <section className="customer-detail-card customer-detail-main-reason">
+        <h3>Why this customer is open</h3>
+        <p>{main.reason}</p>
+        <div className="customer-detail-main-chips">
+          {main.productTags.map((tag) => <span key={tag} className="cd-main-chip product">{tag}</span>)}
+          {main.churnRisk ? (
+            <span className={`churn-badge ${main.churnRisk === 'lost' ? 'lost' : 'risk'}`}>
+              {main.churnRisk === 'lost' ? 'Lost risk' : 'At risk'}
+            </span>
+          ) : null}
+          <span className="cd-main-chip segment" style={{ background: main.segmentColor }}>{main.segmentLabel}</span>
+          <span className="cd-main-chip urgency" title="Urgency score">U{main.urgencyScore}</span>
+        </div>
+      </section>
+      <section className="customer-detail-card">
+        <h3>Contact</h3>
+        <KeyValue label="Phone" value={main.phone ?? 'No phone'} />
+        <KeyValue label="Email" value={main.email ?? 'No email'} />
+        <KeyValue label="Last contact" value={date(main.lastContact)} />
+        <KeyValue label="Latest call" value={main.lastCallLabel} />
+        <KeyValue label="Owner" value={main.owner ?? 'Unassigned'} />
+      </section>
+      <section className="customer-detail-card">
+        <h3>Orders</h3>
+        <KeyValue label="Latest order" value={main.orderLabel} />
+        <KeyValue label="Total orders" value={String(main.ordersCount)} />
+        <KeyValue label="Total spent" value={money(main.totalSpent)} />
+      </section>
+      <section className="customer-detail-card">
+        <h3>Open work</h3>
+        <KeyValue label="Follow-ups" value={String(main.openTasksCount)} />
+        <KeyValue label="Customer requests" value={String(main.openRequestsCount)} />
+        <KeyValue label="Notes" value={String(main.notesCount)} />
+      </section>
+      {main.lastCallSummary ? (
+        <section className="customer-detail-card">
+          <h3>Last call summary</h3>
+          <p>{main.lastCallSummary}</p>
+        </section>
+      ) : null}
+      {main.latestNote ? (
+        <section className="customer-detail-card">
+          <h3>Latest note</h3>
+          <p>{main.latestNote.body}</p>
+          <div className="customer-detail-muted">{main.latestNote.authorName} - {date(main.latestNote.createdAt)}</div>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -224,7 +320,7 @@ function OrdersTab({ detail, onRetry, staffTerminology }: { detail: CustomerDeta
     return (
       <EmptyTab
         title="Historical Shopify orders unavailable"
-        body={`Shopify reports ${detail.customer.metrics.ordersCount} historical orders totaling ${money(detail.customer.metrics.lifetimeRevenue)}, but the current Admin token exposes no individual order rows.`}
+        body={`Shopify reports ${detail.customer.metrics.ordersCount} historical orders totaling ${money(detail.customer.metrics.lifetimeRevenue)}, but individual order rows are not available in this customer file yet.`}
         onRetry={onRetry}
       />
     );
@@ -448,7 +544,9 @@ function money(value: number) {
 
 function date(value: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function dateTime(value: string | null) {
