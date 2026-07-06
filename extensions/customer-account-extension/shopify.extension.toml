@@ -9,6 +9,10 @@ handle = "factory-engine-account-desk"
   target = "customer-account.page.render"
   module = "./src/CustomerAccountPage.tsx"
 
+  [[extensions.targeting]]
+  target = "customer-account.profile.block.render"
+  module = "./src/AccountPortalBlock.tsx"
+
   [extensions.capabilities]
   network_access = true
 
