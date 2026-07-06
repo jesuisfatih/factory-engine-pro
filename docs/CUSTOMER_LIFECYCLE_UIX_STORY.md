@@ -67,6 +67,7 @@ Kabul:
 - Login olamayan Shopify musterisi icin net register veya request invitation yolu vardir.
 - B2B olmayan musteri B2B-only ozellikleri yanlis kullanamaz.
 - Shopify Customer Account extension once link-status okur; portal hesabi yoksa teknik hata yerine register/request/sign-in aksiyonlari gosterir.
+- Accounts web portal her route acilisinda gercek `/auth/me` principal permission'larini okur; izinsiz Team, Cart, Reorder veya Invoice URL'leri teknik 403 yerine musteri dostu access state gosterir.
 
 ## 3. B2B Access Request
 
@@ -403,6 +404,7 @@ Bu lifecycle %100 sayilmaz, ta ki asagidakiler gercek veriyle calisana kadar:
 - Shopify header login/register/request bloklari dogru accounts route'larina gider.
 - Login/register/forgot/request sayfalari auth chrome ile sade calisir.
 - Standard musteri ile B2B musteri UI yetkileri ayridir.
+- Route-level permission gate vardir; sidebar'da saklanan B2B-only ekranlar URL ile acilsa bile veri cekmeden access state'e duser.
 - Customer portal home gercek context verisiyle dolar.
 - Orders list ve order detail gercek customer scope ile calisir.
 - Tum order reorder ve tek line item reorder cart olusturur.

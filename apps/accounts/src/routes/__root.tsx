@@ -1,8 +1,9 @@
 import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
-import { readSession } from '@/lib/api';
+import { accountsTokenStore, readSession } from '@/lib/api';
+import { accountRouteAccess, useCurrentPrincipal } from '@/lib/current-principal';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/$/, key: 'nav.home' },
@@ -33,6 +34,7 @@ function RootLayout() {
 
   const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
   const hasSession = Boolean(readSession()?.accessToken);
+  const principalQuery = useCurrentPrincipal();
 
   if (isAuth) {
     if (hasSession) {
@@ -51,15 +53,50 @@ function RootLayout() {
     return null;
   }
 
+  if (principalQuery.isLoading && !principalQuery.data) {
+    return <PortalGate title="Checking your portal access" body="Loading your live account permissions." />;
+  }
+
+  if (principalQuery.isError && !principalQuery.data) {
+    return (
+      <PortalGate
+        title="Please sign in again"
+        body="Your account session could not be verified."
+        action={<button className="btn primary" type="button" onClick={() => { accountsTokenStore.clear(); window.location.assign('/login'); }}>Sign in</button>}
+      />
+    );
+  }
+
+  const access = accountRouteAccess(pathname, principalQuery.data);
+
   return (
     <div className={`layout${collapsed ? ' collapsed' : ''}`}>
       <Sidebar collapsed={collapsed} />
       <div className="main">
         <Topbar titleI18nKey={titleKey} onToggleSidebar={() => setCollapsed((current) => !current)} />
-        <div className="content"><Outlet /></div>
+        <div className="content">
+          {access.allowed ? <Outlet /> : (
+            <div className="preview-empty">
+              <div className="title">{access.title}</div>
+              <div className="note">{access.body}</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 export const Route = createRootRoute({ component: RootLayout });
+
+function PortalGate({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+  return (
+    <div className="auth-shell">
+      <div className="preview-empty">
+        <div className="title">{title}</div>
+        <div className="note">{body}</div>
+        {action ? <div style={{ marginTop: 14 }}>{action}</div> : null}
+      </div>
+    </div>
+  );
+}
