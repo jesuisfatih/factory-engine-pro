@@ -1487,7 +1487,7 @@ button { font-family: inherit; }
 .missed-v2-head h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
 .missed-v2-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
 .missed-v2-list { display: flex; flex-direction: column; background: rgba(245, 196, 81, .05); }
-.missed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
+.missed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: flex-start; gap: 10px 12px; width: 100%; padding: 11px 16px; background: none; border: none; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; }
 .missed-row:last-child { border-bottom: none; }
 .missed-row:hover { background: var(--surface-2); }
 .missed-avatar { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; color: #fff; font-size: 13px; font-weight: 750; flex-shrink: 0; }
@@ -1522,7 +1522,7 @@ button { font-family: inherit; }
   -webkit-box-orient: vertical;
 }
 .note-sep { display: inline-block; margin: 0 5px; font-size: 14px; line-height: 1; font-weight: 700; color: var(--text-faint); vertical-align: -1px; }
-.missed-action { margin-left: 0; justify-self: end; max-width: 180px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+.missed-action { grid-column: 2; margin-left: 0; justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
 .missed-action.red { color: #dc2626; background: rgba(239, 68, 68, .1); }
 .missed-action.amber { color: #b45309; background: rgba(245, 158, 11, .14); }
 .missed-action.blue { color: #2563eb; background: rgba(59, 130, 246, .12); }
@@ -1538,7 +1538,7 @@ button { font-family: inherit; }
 .churn-v2-head h2 { flex: 1; }
 .churn-v2-icon { background: rgba(239, 68, 68, .14); color: #dc2626; }
 .churn-v2-badge { color: #dc2626; background: rgba(239, 68, 68, .12); }
-.churn-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-self: end; min-width: 0; max-width: 190px; flex-shrink: 0; }
+.churn-actions { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; justify-self: start; gap: 6px; min-width: 0; max-width: 100%; flex-shrink: 0; }
 .churn-cadence { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
 .followup-v2 { border-left-color: rgba(37, 99, 235, .5); }
 .followup-v2 .followup-body { background: rgba(59, 130, 246, .045); }
