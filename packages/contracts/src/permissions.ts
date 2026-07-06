@@ -228,4 +228,24 @@ export const DEFAULT_CUSTOMER_ROLES = [
       [CUSTOMER_PERMISSIONS.cartWrite]: true,
     },
   },
+  {
+    slug: 'b2b_accounting',
+    name: 'Accounting',
+    description: 'Review invoices, documents, and order history without checkout access',
+    permissions: {
+      [CUSTOMER_PERMISSIONS.accountRead]: true,
+      [CUSTOMER_PERMISSIONS.ordersRead]: true,
+      [CUSTOMER_PERMISSIONS.invoicesRead]: true,
+    },
+  },
+  {
+    slug: 'b2b_viewer',
+    name: 'Viewer',
+    description: 'Read account profile, order history, invoices, and documents',
+    permissions: {
+      [CUSTOMER_PERMISSIONS.accountRead]: true,
+      [CUSTOMER_PERMISSIONS.ordersRead]: true,
+      [CUSTOMER_PERMISSIONS.invoicesRead]: true,
+    },
+  },
 ] as const;

@@ -407,6 +407,10 @@ export class ApiClient {
     return this.get('/identity/sub-users');
   }
 
+  customerRoleOptions() {
+    return this.get('/identity/customer-role-options');
+  }
+
   createSubUser(input: CreateSubUserInput) {
     return this.post('/identity/sub-users', input);
   }

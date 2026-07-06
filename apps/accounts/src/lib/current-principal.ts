@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AuthSession } from '@factory-engine-pro/contracts';
+import { CUSTOMER_PERMISSIONS, type AuthSession } from '@factory-engine-pro/contracts';
 import { accountsApi, readSession } from '@/lib/api';
 
 type Principal = AuthSession['principal'];
@@ -32,7 +32,9 @@ export function principalInitials(principal: Principal | undefined) {
 
 export function customerRoleLabel(principal: Principal | undefined) {
   const permissions = new Set(principal?.permissions ?? []);
-  if (permissions.has('spending_limits.write')) return 'B2B Admin';
-  if (permissions.has('orders.create')) return 'B2B User';
+  if (permissions.has(CUSTOMER_PERMISSIONS.subUsersWrite)) return 'B2B Admin';
+  if (permissions.has(CUSTOMER_PERMISSIONS.cartWrite) || permissions.has(CUSTOMER_PERMISSIONS.ordersReorder)) return 'Buyer';
+  if (permissions.has(CUSTOMER_PERMISSIONS.invoicesRead)) return 'Accounting';
+  if (permissions.has(CUSTOMER_PERMISSIONS.accountRead)) return 'Viewer';
   return principal ? 'Customer user' : 'No session';
 }

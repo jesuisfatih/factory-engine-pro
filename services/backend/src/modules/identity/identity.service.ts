@@ -89,6 +89,23 @@ export class IdentityService {
     return this.repository.listCustomerRoles();
   }
 
+  async listCustomerRoleOptionsForCurrentPrincipal() {
+    const context = this.tenantContext.require();
+    if (!['customer_user', 'sub_user'].includes(context.principalType ?? '')) {
+      throw new BadRequestException('Customer role options are only available in the account portal');
+    }
+    await this.ensureDefaultRoles();
+    const roles = await this.repository.listCustomerRoles();
+    return roles.map((role) => ({
+      id: role.id,
+      slug: role.slug,
+      name: role.name,
+      description: role.description,
+      isSystem: role.isSystem,
+      permissions: role.permissions,
+    }));
+  }
+
   async listMembers(search?: string) {
     return (await this.repository.listMembers(search)).map(stripPasswordHash);
   }

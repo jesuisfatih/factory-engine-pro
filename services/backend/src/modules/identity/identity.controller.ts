@@ -61,6 +61,12 @@ export class IdentityController {
     return this.identity.listCustomerRoles();
   }
 
+  @Get('customer-role-options')
+  @RequirePermission(CUSTOMER_PERMISSIONS.subUsersRead)
+  customerRoleOptions() {
+    return this.identity.listCustomerRoleOptionsForCurrentPrincipal();
+  }
+
   @Get('members')
   @RequirePermission(MEMBER_PERMISSIONS.membersRead)
   members(@Query(new ZodValidationPipe(identityListQuerySchema)) query: IdentityListQuery) {

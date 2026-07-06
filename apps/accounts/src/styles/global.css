@@ -804,6 +804,45 @@ a { color: inherit; text-decoration: none; }
   display: grid; grid-template-columns: 1fr 360px;
   gap: 14px; align-items: flex-start;
 }
+.team-page-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 16px; align-items: flex-start;
+}
+.team-create-card { padding: 16px; align-self: start; }
+.team-create-card h3 {
+  margin: 0 0 4px; font-size: 14px; font-weight: 700;
+  color: var(--text); display: flex; align-items: center; gap: 8px;
+}
+.team-create-card > .muted { margin: 0 0 14px; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.team-role-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.team-role-empty {
+  background: var(--surface-2); border: 1px dashed var(--border-strong);
+  border-radius: 8px; padding: 12px; color: var(--text-muted); font-size: 12px;
+}
+.team-role-options { display: flex; flex-direction: column; gap: 8px; }
+.team-role-option {
+  width: 100%; display: flex; align-items: flex-start; gap: 10px;
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; cursor: pointer; text-align: left;
+}
+.team-role-option:hover { border-color: var(--accent); }
+.team-role-option.selected { background: var(--accent-soft); border-color: var(--accent); }
+.team-role-check {
+  width: 24px; min-width: 24px; height: 24px; border-radius: 999px;
+  display: grid; place-items: center; background: var(--surface);
+  border: 1px solid var(--border-strong); color: var(--accent);
+  font-size: 8px; font-weight: 800; text-transform: uppercase;
+}
+.team-role-option.selected .team-role-check { background: var(--accent); color: #fff; border-color: var(--accent); }
+.team-role-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.team-role-body strong { font-size: 12px; color: var(--text); }
+.team-role-body small { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.team-permission-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.team-permission-list em {
+  font-style: normal; font-size: 10px; color: var(--text-muted);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 2px 7px;
+}
 .team-spending { font-size: 11px; }
 .team-spending-bar {
   background: var(--surface-3); border-radius: 999px;
@@ -848,7 +887,7 @@ a { color: inherit; text-decoration: none; }
 .team-detail-audit li .muted { color: var(--text-faint); flex-shrink: 0; }
 
 @media (max-width: 1024px) {
-  .team-shell, .support-shell { grid-template-columns: 1fr; }
+  .team-shell, .team-page-grid, .support-shell { grid-template-columns: 1fr; }
   .support-form, .team-detail { position: static; }
 }
 
