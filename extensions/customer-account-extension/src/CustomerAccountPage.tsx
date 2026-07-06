@@ -68,6 +68,31 @@ type AccountContext = {
   };
 };
 
+type AccountLinkStatus = {
+  shopDomain: string;
+  shopifyCustomerId: string;
+  hasPortalAccount: boolean;
+  status: 'portal_ready' | 'portal_account_required' | 'customer_sync_required' | string;
+  customer: null | {
+    id: string;
+    email: string | null;
+    companyName: string;
+    status: string;
+  };
+  customerUser: null | {
+    id: string;
+    email: string;
+    status: string;
+  };
+  b2bAccessRequest: null | {
+    id: string;
+    status: string;
+    submittedAt: string;
+    reviewedAt: string | null;
+  };
+  message: string;
+};
+
 function CustomerAccountPage() {
   const { sessionToken } = useApi();
   const settings = useSettings<{ api_base_url?: string; accounts_url?: string }>();
@@ -76,6 +101,7 @@ function CustomerAccountPage() {
   const configError = apiBaseError(apiBaseUrl);
   const [loading, setLoading] = useState(true);
   const [context, setContext] = useState<AccountContext | null>(null);
+  const [linkStatus, setLinkStatus] = useState<AccountLinkStatus | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -88,6 +114,12 @@ function CustomerAccountPage() {
     setError('');
     try {
       const token = await sessionToken.get();
+      const status = await apiFetch<AccountLinkStatus>(apiBaseUrl, '/link-status', token);
+      setLinkStatus(status);
+      if (!status.hasPortalAccount) {
+        setContext(null);
+        return;
+      }
       const payload = await apiFetch<AccountContext>(apiBaseUrl, '/context', token);
       setContext(payload);
     } catch (loadError) {
@@ -143,7 +175,7 @@ function CustomerAccountPage() {
   if (!context) {
     return (
       <Page title="Account desk">
-        <EmptyState accountsUrl={accountsUrl} />
+        <AccountSetupState linkStatus={linkStatus} accountsUrl={accountsUrl} />
       </Page>
     );
   }
@@ -308,15 +340,33 @@ function CartState({ cart, accountsUrl }: { cart: AccountContext['activeCart']; 
   );
 }
 
-function EmptyState({ accountsUrl }: { accountsUrl: string }) {
+function AccountSetupState({ linkStatus, accountsUrl }: { linkStatus: AccountLinkStatus | null; accountsUrl: string }) {
+  const hasPendingRequest = linkStatus?.b2bAccessRequest?.status === 'pending';
+  const title = linkStatus?.status === 'customer_sync_required'
+    ? 'Portal account is not linked yet'
+    : hasPendingRequest
+      ? 'B2B access request is under review'
+      : 'Set up your buying portal';
+  const body = hasPendingRequest
+    ? 'Your B2B access request has been received. The buying portal opens after the account is approved and activated.'
+    : 'This Shopify customer account can be connected to Factory Engine for order detail, invoices, item-level reorder, and B2B team access.';
   return (
     <Card padding>
       <BlockStack spacing="base">
-        <Heading level={2}>No account activity yet</Heading>
-        <Text appearance="subdued">
-          Orders, invoices, reorder templates, and cart state will appear here once they are linked to this customer.
-        </Text>
-        {accountsUrl ? <Button to={accountsUrl}>Open full portal</Button> : null}
+        <Heading level={2}>{title}</Heading>
+        <Text appearance="subdued">{body}</Text>
+        {linkStatus?.b2bAccessRequest ? (
+          <Banner status={hasPendingRequest ? 'info' : 'warning'} title="B2B access status">
+            <TextBlock>
+              Request {linkStatus.b2bAccessRequest.status} - submitted {formatDate(linkStatus.b2bAccessRequest.submittedAt)}
+            </TextBlock>
+          </Banner>
+        ) : null}
+        <InlineStack spacing="base">
+          {accountsUrl ? <Button to={`${accountsUrl}/request-invitation`}>Request B2B access</Button> : null}
+          {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/register`}>Create portal login</Button> : null}
+          {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/login`}>Sign in</Button> : null}
+        </InlineStack>
       </BlockStack>
     </Card>
   );
@@ -332,4 +382,9 @@ function customerCartStatus(status: string) {
   if (status === 'review_required') return 'account review required';
   if (status === 'unavailable') return 'some items are unavailable';
   return status.replace(/_/g, ' ');
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }

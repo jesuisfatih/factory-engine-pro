@@ -66,6 +66,7 @@ Kabul:
 - `Customer` kaydi ile `CustomerUser` karistirilmaz.
 - Login olamayan Shopify musterisi icin net register veya request invitation yolu vardir.
 - B2B olmayan musteri B2B-only ozellikleri yanlis kullanamaz.
+- Shopify Customer Account extension once link-status okur; portal hesabi yoksa teknik hata yerine register/request/sign-in aksiyonlari gosterir.
 
 ## 3. B2B Access Request
 
@@ -120,6 +121,7 @@ UIX beklentisi:
 
 Gercek veri kaynaklari:
 
+- `GET /customer-account/link-status`
 - `GET /customer-account/context`
 - profile
 - recent orders
