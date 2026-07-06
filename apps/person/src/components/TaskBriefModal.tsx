@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
-  Pencil, RotateCcw, MoreHorizontal, ShoppingBag, DollarSign, Tags,
+  Pencil, RotateCcw, ShoppingBag, DollarSign, Tags,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
 import type { Card as CardData, TaskBriefDetail } from '../types';
-import { humanize, personSafeText, staffActionLabel, staffActionTone, staffBriefLine } from '../lib/personTerminology';
+import { humanize, personSafeText, staffActionLabel, staffBriefLine } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
@@ -152,8 +152,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
   const [note, setNote] = useState('');
   const [scheduleAt, setScheduleAt] = useState(() => initialScheduleValue());
   const [scheduleNote, setScheduleNote] = useState('');
-  const noteRef = useRef<HTMLTextAreaElement | null>(null);
-  const scheduleRef = useRef<HTMLInputElement | null>(null);
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
     onSuccess: (result) => {
@@ -252,16 +250,13 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
     urgencyScore: liveCard.urgencyScore,
   };
   const primaryBadge = liveCard.displayBadges[0];
-  const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
   const actionLabel = personSafeText(primaryBadge?.label) || staffActionLabel(actionInput);
   const primaryBrief = personSafeText(liveCard.displayOutcome) || staffBriefLine(actionInput);
-  const ctaPriority = liveCard.ctaPriority ?? [];
   const modalActionOrder = liveCard.modalActionOrder ?? [];
   const safeDisplayActions = liveCard.displayActions.map((action) => personSafeText(action)).filter(Boolean);
   const directActions = safeDisplayActions.length > 0
     ? orderedDisplayActions(safeDisplayActions, modalActionOrder)
     : directiveActions(actionLabel, liveCard.phone, undefined, modalActionOrder);
-  const footerActions = orderedFooterActions(ctaPriority);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
   const purchaseSummary = personSafeText(liveCard.displayCommerceSnapshot) || (latestOrder
@@ -269,7 +264,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
     : liveCard.ordersCount
       ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
       : 'No linked Shopify order yet');
-  const confidenceLabel = 'Live data';
   const matchLabel = customerMatched ? 'Matched customer' : 'Caller not matched yet';
   const matchHint = customerMatched
     ? 'Use order and note history before calling.'
@@ -337,39 +331,14 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
               <>
                 {hasBrief ? (
                   <>
-                    <section className={`brief-command tone-${actionTone}`} style={sectionStyle('hero', 10)}>
-                      <div className="brief-command-main">
-                        <span>{frontendCopy(override, 'heroKicker', 'Do this now')}</span>
-                        <strong>{frontendCopy(override, 'actionLabel', actionLabel)}</strong>
-                        <p>{frontendCopy(override, 'requiredAction', primaryBrief)}</p>
-                      </div>
-                      <div className="brief-command-score">U{liveCard.urgencyScore}</div>
-                    </section>
-                    {showField('steps') ? (
-                      <div className="brief-directives" style={sectionStyle('customAfterSteps', 15)}>
-                        {directActions.slice(0, 3).map((action, index) => (
-                          <div key={`${action}-${index}`} className="brief-directive">
-                            <span>{index + 1}</span>
-                            <strong>{action}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    <div className="brief-section-shell" style={sectionStyle('customHero', 20)}>
-                      <FrontendCustomizationSlotView customization={customization} slot="modal.hero" context={customizationContext} />
-                    </div>
-                    <div className="brief-section-shell" style={sectionStyle('customAfterSteps', 35)}>
-                      <FrontendCustomizationSlotView customization={customization} slot="modal.after_steps" context={customizationContext} />
-                    </div>
-
-                    {showField('reasonField') ? <div style={sectionStyle('reasonField', 40)}><NarrativeField label={frontendCopy(override, 'reasonLabel', 'Reason for this call')} suggestedValue={initial.why} value={why} onChange={setWhy} multiLine /></div> : null}
-                    {showField('moodField') ? <div style={sectionStyle('moodField', 50)}><NarrativeField label={frontendCopy(override, 'moodLabel', 'Customer mood or issue')} suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine /></div> : null}
-                    {showField('outcomeField') ? <div style={sectionStyle('outcomeField', 60)}><NarrativeField label={frontendCopy(override, 'outcomeRequiredLabel', 'Outcome required')} suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine /></div> : null}
+                    {showField('reasonField') ? <div style={sectionStyle('reasonField', 10)}><NarrativeField label={frontendCopy(override, 'reasonLabel', "Why you're calling")} suggestedValue={initial.why} value={why} onChange={setWhy} multiLine /></div> : null}
+                    {showField('moodField') ? <div style={sectionStyle('moodField', 20)}><NarrativeField label={frontendCopy(override, 'moodLabel', "What they're upset about")} suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine /></div> : null}
+                    {showField('outcomeField') ? <div style={sectionStyle('outcomeField', 30)}><NarrativeField label={frontendCopy(override, 'outcomeRequiredLabel', 'Your goal')} suggestedValue={initial.goal} value={goal} onChange={setGoal} multiLine /></div> : null}
 
                     {directActions.length && showField('extraChecks') ? (
                       <div className="brief-block" style={sectionStyle('extraChecks', 70)}>
                         <div className="brief-block-head">
-                          <span className="lbl">{frontendCopy(override, 'extraChecksLabel', 'Extra checks')}</span>
+                          <span className="lbl">{frontendCopy(override, 'extraChecksLabel', 'Suggested actions')}</span>
                         </div>
                         <ul className="brief-actions-list">
                           {directActions.map((action) => <li key={action}>{personSafeText(action)}</li>)}
@@ -380,11 +349,14 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                     {callExcerpt && showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
-                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
+                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Transcript snippet')}</span>
                         </div>
                         <div className="brief-transcript">{callExcerpt}</div>
                       </div>
                     ) : null}
+                    <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 85)}>
+                      <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
+                    </div>
                   </>
                 ) : (
                   <div className="brief-block">
@@ -444,10 +416,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                     )}
                   </div> : null}
                 </div> : null}
-                <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 105)}>
-                  <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
-                </div>
-
                 {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
                     <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and follow-up history')}</span>
@@ -479,7 +447,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                         {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
                       </div>
                       <textarea
-                        ref={noteRef}
                         id="task-note-input"
                         className="brief-edit"
                         rows={3}
@@ -564,7 +531,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                   <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
                 </div>
                 <div className="brief-schedule-grid side">
-                  <input ref={scheduleRef} id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                  <input id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
                   <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
                   <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
                     <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
@@ -578,30 +545,21 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
 
         {showField('footer') ? <footer className="modal-foot" style={sectionStyle('footer', 150)}>
           {snoozeMutation.isError ? <span className="danger-text modal-foot-error">{friendlyError(snoozeMutation.error)}</span> : null}
-          {footerActions.map((action) => {
-            if (action === 'call') {
-              return <button key={action} type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> {frontendCopy(override, 'callNowButton', 'Call now')}</button>;
-            }
-            if (action === 'note') {
-              return <button key={action} type="button" className="btn" onClick={() => noteRef.current?.focus()}><StickyNote size={13} /> {frontendCopy(override, 'noteButton', 'Note')}</button>;
-            }
-            if (action === 'schedule') {
-              return <button key={action} type="button" className="btn" onClick={() => scheduleRef.current?.focus()}><CalendarClock size={13} /> {frontendCopy(override, 'scheduleButton', 'Schedule')}</button>;
-            }
-            if (action === 'email') {
-              return <a key={action} className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={13} /> {frontendCopy(override, 'emailButton', 'Email')}</a>;
-            }
-            if (action === 'customer_detail') {
-              return <a key={action} className="btn" href={customerDetailUrl}><ExternalLink size={13} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>;
-            }
-            if (action === 'snooze') {
-              return <button key={action} type="button" className="btn" onClick={() => snoozeMutation.mutate()} disabled={!isTaskCard || snoozeMutation.isPending}><AlarmClockOff size={13} /> {snoozeMutation.isPending ? 'Snoozing' : 'Snooze'}</button>;
-            }
-            if (action === 'done') {
-              return <button key={action} type="button" className="btn primary" onClick={onClose}><CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}</button>;
-            }
-            return <button key={action} type="button" className="btn"><MoreHorizontal size={13} /> More</button>;
-          })}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => snoozeMutation.mutate()}
+            disabled={!isTaskCard || snoozeMutation.isPending}
+            title="Move this follow-up to tomorrow 09:00"
+          >
+            <AlarmClockOff size={13} /> {snoozeMutation.isPending ? 'Snoozing' : frontendCopy(override, 'snoozeButton', 'Snooze to tomorrow')}
+          </button>
+          <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}>
+            <Phone size={13} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callNowButton', 'Call now')}
+          </button>
+          <button type="button" className="btn primary" onClick={onClose}>
+            <CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}
+          </button>
         </footer> : null}
       </div>
   );
@@ -619,12 +577,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
       {modalContent}
     </div>
   );
-}
-
-function displayToneClass(tone: string | undefined) {
-  if (tone === 'warning') return 'warn';
-  if (tone === 'danger' || tone === 'success' || tone === 'info') return tone;
-  return 'info';
 }
 
 function orderedDisplayActions(actions: string[], modalActionOrder: string[] = []) {
@@ -718,18 +670,6 @@ function uniqueActions(actions: string[]) {
     seen.add(key);
     return true;
   });
-}
-
-function orderedFooterActions(ctaPriority: string[]) {
-  const supported = ['call', 'note', 'schedule', 'email', 'customer_detail', 'snooze', 'done', 'more'];
-  const defaults = ['more', 'snooze', 'call', 'done'];
-  const ordered = [...ctaPriority, ...defaults].filter((action) => supported.includes(action));
-  const seen = new Set<string>();
-  return ordered.filter((action) => {
-    if (seen.has(action)) return false;
-    seen.add(action);
-    return true;
-  }).slice(0, 5);
 }
 
 function callSignalText(detail: TaskBriefDetail | undefined) {

@@ -113,7 +113,7 @@ async function captureTaskModal(browser, session, theme) {
     await page.locator('[data-daily-task-id]').first().waitFor({ timeout: BROWSER_TIMEOUT_MS });
     await page.locator('[data-daily-task-id] .card').first().click({ timeout: BROWSER_TIMEOUT_MS });
     await page.locator('.brief-modal').waitFor({ timeout: BROWSER_TIMEOUT_MS });
-    await expectVisibleText(page, ['Do this now', 'Reason for this call', 'Customer mood or issue', 'Outcome required']);
+    await expectVisibleText(page, ["Why you're calling", "What they're upset about", 'Your goal', 'Suggested actions']);
     const proof = await staffTextProof(page);
     const screenshot = await screenshot(page, `task-brief-modal-${theme}.png`);
     return {
