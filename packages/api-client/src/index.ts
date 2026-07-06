@@ -230,6 +230,7 @@ import type {
   UpdateEmailTemplateRevisionSourceInput,
   SavePersonEmailDraftInput,
   SendPersonEmailInput,
+  SendAccountInvoiceInput,
   SubmitCommissionRequestInput,
   SchedulePersonTaskFollowUpInput,
   SweepOverdueServiceRequestsInput,
@@ -601,6 +602,10 @@ export class ApiClient {
 
   recordInvoicePayment(id: string, input: RecordAccountInvoicePaymentInput) {
     return this.post(`/orders/invoices/${encodeURIComponent(id)}/record-payment`, input);
+  }
+
+  sendInvoice(id: string, input: SendAccountInvoiceInput = {}) {
+    return this.post(`/orders/invoices/${encodeURIComponent(id)}/send`, input);
   }
 
   duplicateInvoice(id: string) {

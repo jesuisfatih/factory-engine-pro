@@ -8,6 +8,7 @@ import {
   type RecordAccountInvoicePaymentInput,
   type ResolveReorderInput,
   type SaveAccountInvoiceInput,
+  type SendAccountInvoiceInput,
   type TransferOrderToMemberInput,
   type UpdateAccountInvoiceFileInput,
   type UpdateAccountInvoiceStatusInput,
@@ -16,6 +17,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { MailService } from '../mail/mail.service.js';
 import { classifyFulfillment } from './order-fulfillment-classifier.js';
 import { defaultOrderOrderBy, type CommerceOrderOrderBy, type CommerceOrderWithRelations, OrdersRepository } from './orders.repository.js';
 
@@ -39,6 +41,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly mail: MailService,
   ) {}
 
   async list(query: OrderListQuery) {
@@ -309,6 +312,47 @@ export class OrdersService {
       status,
     });
     return this.invoice(invoiceId);
+  }
+
+  async sendInvoice(invoiceId: string, input: SendAccountInvoiceInput) {
+    const invoice = await this.requireInvoice(invoiceId);
+    if (invoice.status === 'draft') throw new BadRequestException('Publish the invoice before sending it to the customer');
+    if (invoice.status === 'void') throw new BadRequestException('Voided invoices cannot be sent to the customer');
+    const email = invoice.customer.email?.trim();
+    if (!email) throw new BadRequestException('Customer email is required before sending an invoice');
+    const total = money(invoice.totalAmount);
+    const paid = money(invoice.amountPaid);
+    const delivery = await this.mail.sendAccountInvoiceDelivered({
+      to: email,
+      recipientName: customerDisplayName(invoice.customer),
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      amountDue: Math.max(0, roundMoney(total - paid)),
+      currency: invoice.currency,
+      dueAt: invoice.dueAt,
+      invoiceUrl: invoice.fileUrl,
+      paymentUrl: invoice.externalPaymentUrl,
+      note: input.note ?? invoice.notes,
+    });
+    await this.recordInvoiceActivity(invoice.id, 'invoice_sent', {
+      mailDeliveryId: delivery.id,
+      status: delivery.status,
+      recipientEmail: delivery.recipientEmail,
+      note: input.note ?? null,
+    });
+    this.logger.log('orders', 'invoice.send', 'Account invoice delivery queued', {
+      invoice_id: invoice.id,
+      mail_delivery_id: delivery.id,
+      recipient_email: delivery.recipientEmail,
+    });
+    return {
+      invoice: await this.invoice(invoice.id),
+      delivery: {
+        id: delivery.id,
+        status: delivery.status,
+        recipientEmail: delivery.recipientEmail,
+      },
+    };
   }
 
   async duplicateInvoice(invoiceId: string) {
@@ -639,6 +683,7 @@ export class OrdersService {
             : dueAt.getTime() < Date.now() && invoice.status !== 'draft'
               ? 'overdue'
               : invoice.status;
+    const lastDelivery = invoiceLastDelivery(invoice);
     const base = {
       id: invoice.id,
       customerId: invoice.customerId,
@@ -662,6 +707,7 @@ export class OrdersService {
       externalPaymentUrl: invoice.externalPaymentUrl,
       notes: invoice.notes,
       payment: invoicePaymentState(invoice),
+      lastDelivery,
       createdAt: invoice.createdAt.toISOString(),
       updatedAt: invoice.updatedAt.toISOString(),
     };
@@ -1023,6 +1069,27 @@ function assertInvoiceUrl(value: string | null | undefined, label: string) {
 
 function isInvoiceWebUrl(value: string | null | undefined) {
   return typeof value === 'string' && /^https?:\/\//i.test(value.trim());
+}
+
+function customerDisplayName(customer: InvoiceRecord['customer']) {
+  return [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim()
+    || customer.companyName
+    || customer.email
+    || 'Customer';
+}
+
+function invoiceLastDelivery(invoice: InvoiceRecord) {
+  const activity = invoice.activities.find((entry) => entry.action === 'invoice_sent');
+  if (!activity) return null;
+  const metadata = activity.metadata && typeof activity.metadata === 'object' && !Array.isArray(activity.metadata)
+    ? activity.metadata as Record<string, unknown>
+    : {};
+  return {
+    id: stringValue(metadata.mailDeliveryId),
+    status: stringValue(metadata.status) ?? 'recorded',
+    recipientEmail: stringValue(metadata.recipientEmail),
+    sentAt: activity.createdAt.toISOString(),
+  };
 }
 
 function isUrl(value: string) {

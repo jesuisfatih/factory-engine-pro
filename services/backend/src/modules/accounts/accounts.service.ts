@@ -1781,6 +1781,8 @@ function invoiceActivityLabel(action: string) {
       return 'Invoice status updated';
     case 'invoice_payment_recorded':
       return 'Payment recorded';
+    case 'invoice_sent':
+      return 'Invoice sent';
     case 'invoice_duplicated':
       return 'Invoice copied';
     case 'invoice_marked_overdue':
@@ -1794,6 +1796,9 @@ function invoiceActivityDetail(action: string, value: unknown) {
   const data = objectRecord(value) ?? {};
   if (action === 'invoice_payment_recorded' && data.amount !== undefined) {
     return `${fmtMoney(money(data.amount))} payment recorded.`;
+  }
+  if (action === 'invoice_sent') {
+    return data.recipientEmail ? `Invoice email sent to ${String(data.recipientEmail)}.` : 'Invoice email delivery was recorded.';
   }
   if (data.status) return `Status: ${String(data.status).replace(/_/g, ' ')}.`;
   if (data.fileUrl || data.externalPaymentUrl) return 'Invoice file or payment link changed.';

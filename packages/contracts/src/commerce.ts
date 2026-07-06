@@ -141,6 +141,11 @@ export const recordAccountInvoicePaymentSchema = z.object({
 });
 export type RecordAccountInvoicePaymentInput = z.infer<typeof recordAccountInvoicePaymentSchema>;
 
+export const sendAccountInvoiceSchema = z.object({
+  note: z.string().trim().max(1000).optional(),
+});
+export type SendAccountInvoiceInput = z.infer<typeof sendAccountInvoiceSchema>;
+
 export const customerCommerceQuerySchema = pageQuerySchema.extend({
   status: z.string().trim().optional(),
   segment: z.string().trim().optional(),

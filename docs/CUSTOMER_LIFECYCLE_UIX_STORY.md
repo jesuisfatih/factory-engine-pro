@@ -279,6 +279,7 @@ Kabul:
 - SubUser permission yoksa invoice goruntuleyemez.
 - Fatura dosyasi varsa download calisir.
 - Payment link varsa odeme CTA'i calisir.
+- Admin order invoice panelinden resmi faturayi musteriye gonderebilir; `b2b.invoice_delivered.user` delivery log'u ve invoice activity kaniti olusur.
 
 ## 9. Team ve SubUser Lifecycle
 
@@ -412,6 +413,7 @@ Bu lifecycle %100 sayilmaz, ta ki asagidakiler gercek veriyle calisana kadar:
 - B2B tier discount cart ve checkout hazirlikta ayni hesaplanir.
 - Invoices sadece resmi fatura kayitlarini gosterir.
 - Invoice download/payment aksiyonlari state'e gore calisir.
+- Admin invoice send aksiyonu customer-facing mail delivery proof uretir ve musteri invoice timeline'inda "Invoice sent" olarak gorunur.
 - Team/sub-user role ve permission akisi B2B owner icin calisir.
 - Billing-only sub-user sadece fatura ve belge gorur.
 - Buyer sub-user reorder/cart kullanabilir ama admin izinlerini goremez.

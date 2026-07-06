@@ -999,6 +999,66 @@ export class MailService {
     });
   }
 
+  async sendAccountInvoiceDelivered(input: {
+    to: string;
+    recipientName: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    amountDue: number;
+    currency: string;
+    dueAt?: Date | null;
+    invoiceUrl?: string | null;
+    paymentUrl?: string | null;
+    portalUrl?: string | null;
+    note?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const portalUrl = input.portalUrl?.trim()
+      || `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/invoices`;
+    const amountDue = formatCurrency(input.amountDue, input.currency);
+    const dueDate = input.dueAt ? input.dueAt.toLocaleDateString('en-US', { dateStyle: 'medium' }) : null;
+    const note = input.note?.trim();
+    const subject = `${brand} invoice ${input.invoiceNumber}`;
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>Your invoice <strong>${escapeHtml(input.invoiceNumber)}</strong> is ready in the <strong>${escapeHtml(brand)}</strong> account portal.</p>`,
+      `<p><strong>Amount due:</strong> ${escapeHtml(amountDue)}${dueDate ? ` · <strong>Due:</strong> ${escapeHtml(dueDate)}` : ''}</p>`,
+      note ? `<p><strong>Billing note:</strong> ${escapeHtml(note)}</p>` : '',
+      input.paymentUrl ? `<p><a href="${escapeHtml(input.paymentUrl)}">Open secure payment link</a></p>` : '',
+      input.invoiceUrl ? `<p><a href="${escapeHtml(input.invoiceUrl)}">Download invoice file</a></p>` : '',
+      portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">Review invoice in your account portal</a></p>` : '',
+      '<p>If you have questions, reply to this email or contact billing from your account portal.</p>',
+    ].filter(Boolean).join('');
+    const text = [
+      `Hello ${input.recipientName},`,
+      `Your invoice ${input.invoiceNumber} is ready in the ${brand} account portal.`,
+      `Amount due: ${amountDue}${dueDate ? ` · Due: ${dueDate}` : ''}`,
+      note ? `Billing note: ${note}` : '',
+      input.paymentUrl ? `Payment link: ${input.paymentUrl}` : '',
+      input.invoiceUrl ? `Invoice file: ${input.invoiceUrl}` : '',
+      portalUrl ? `Account portal: ${portalUrl}` : '',
+      'If you have questions, reply to this email or contact billing from your account portal.',
+    ].filter(Boolean).join('\n\n');
+    return this.sendTransactional({
+      eventKey: 'b2b.invoice_delivered.user',
+      category: 'system.b2b',
+      to: input.to,
+      subject,
+      html,
+      text,
+      metadata: {
+        invoiceId: input.invoiceId,
+        invoiceNumber: input.invoiceNumber,
+        amountDue: input.amountDue,
+        currency: input.currency,
+        dueAt: input.dueAt?.toISOString() ?? null,
+        invoiceUrl: input.invoiceUrl ?? null,
+        paymentUrl: input.paymentUrl ?? null,
+        portalUrl: portalUrl || null,
+      },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'
@@ -1547,6 +1607,18 @@ function escapeHtml(value: string) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function formatCurrency(value: number, currency: string) {
+  try {
+    return value.toLocaleString('en-US', {
+      style: 'currency',
+      currency: currency || 'USD',
+      maximumFractionDigits: 2,
+    });
+  } catch {
+    return `${currency || 'USD'} ${value.toFixed(2)}`;
+  }
 }
 
 const CRITICAL_MAIL_EVENTS = [

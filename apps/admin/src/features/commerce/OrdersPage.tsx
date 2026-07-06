@@ -13,6 +13,7 @@ import {
   Package,
   RefreshCw,
   Search,
+  Send,
   ShoppingBag,
   Truck,
   X,
@@ -95,6 +96,7 @@ interface AccountInvoiceRow {
   fileUrl: string | null;
   externalPaymentUrl: string | null;
   payment: { state: string; label: string; amountDue: number; url: string | null };
+  lastDelivery: { id: string | null; status: string; recipientEmail: string | null; sentAt: string } | null;
 }
 
 interface OrderDetailResponse {
@@ -748,6 +750,17 @@ function InvoicePanel({ order }: { order: OrderRow }) {
     onError: (error) => toast.error(apiErrorMessage(error)),
   });
 
+  const sendInvoice = useMutation({
+    mutationFn: (id: string) => adminApi.sendInvoice(id, {}) as Promise<{ invoice: AccountInvoiceRow; delivery: { status: string; recipientEmail: string } }>,
+    onSuccess: async (result) => {
+      toast.success(t('orders.invoice.sent', {
+        defaultValue: `Invoice delivery ${result.delivery.status}`,
+      }));
+      await refreshInvoices();
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  });
+
   return (
     <section className="modal-section">
       <h3>{t('orders.invoice.title', { defaultValue: 'Invoices' })}</h3>
@@ -828,6 +841,14 @@ function InvoicePanel({ order }: { order: OrderRow }) {
                   <Metric icon={<CreditCard size={12} />} label="Paid" value={fmtMoney(invoice.amountPaid, invoice.currency)} />
                   <Metric label="Issued" value={fmtDate(invoice.issuedAt)} />
                 </div>
+                {invoice.lastDelivery ? (
+                  <div className="invoice-delivery-proof">
+                    <strong>Customer email</strong>
+                    <span>
+                      Last delivery {invoice.lastDelivery.status} to {invoice.lastDelivery.recipientEmail ?? 'customer'} on {fmtDate(invoice.lastDelivery.sentAt)}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="invoice-link-grid">
                   <input
                     value={fileDraft.fileUrl}
@@ -877,6 +898,15 @@ function InvoicePanel({ order }: { order: OrderRow }) {
                   </button>
                   <button type="button" className="btn ghost" onClick={() => updateStatus.mutate({ id: invoice.id, status: 'paid' })} disabled={updateStatus.isPending || invoice.status === 'paid'}>
                     Mark paid
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => sendInvoice.mutate(invoice.id)}
+                    disabled={sendInvoice.isPending || invoice.status === 'draft' || invoice.status === 'void'}
+                    title={invoice.status === 'draft' ? 'Publish the invoice before sending it.' : 'Send this invoice to the customer email on file.'}
+                  >
+                    <Send size={13} /> Send to customer
                   </button>
                   <button type="button" className="btn ghost" onClick={() => updateStatus.mutate({ id: invoice.id, status: 'void' })} disabled={updateStatus.isPending || invoice.status === 'void'}>
                     Void

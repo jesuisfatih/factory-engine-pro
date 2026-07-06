@@ -7,6 +7,7 @@ import {
   recordAccountInvoicePaymentSchema,
   resolveReorderSchema,
   saveAccountInvoiceSchema,
+  sendAccountInvoiceSchema,
   transferOrderToMemberSchema,
   updateAccountInvoiceFileSchema,
   updateAccountInvoiceStatusSchema,
@@ -16,6 +17,7 @@ import {
   type RecordAccountInvoicePaymentInput,
   type ResolveReorderInput,
   type SaveAccountInvoiceInput,
+  type SendAccountInvoiceInput,
   type TransferOrderToMemberInput,
   type UpdateAccountInvoiceFileInput,
   type UpdateAccountInvoiceStatusInput,
@@ -101,6 +103,15 @@ export class OrdersController {
     @Body(new ZodValidationPipe(recordAccountInvoicePaymentSchema)) body: RecordAccountInvoicePaymentInput,
   ) {
     return this.orders.recordInvoicePayment(invoiceId, body);
+  }
+
+  @Post('invoices/:invoiceId/send')
+  @RequirePermission(MEMBER_PERMISSIONS.ordersWrite)
+  sendInvoice(
+    @Param('invoiceId') invoiceId: string,
+    @Body(new ZodValidationPipe(sendAccountInvoiceSchema)) body: SendAccountInvoiceInput,
+  ) {
+    return this.orders.sendInvoice(invoiceId, body);
   }
 
   @Post('invoices/:invoiceId/duplicate')

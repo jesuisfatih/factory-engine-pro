@@ -480,6 +480,20 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .invoice-link-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
 .invoice-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .invoice-action-row input { width: 130px; }
+.invoice-delivery-proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
+  background: var(--info-soft);
+  color: var(--info);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.invoice-delivery-proof strong { color: var(--info); }
+.invoice-delivery-proof span { color: var(--text-muted); }
 .order-history-list > div.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .field-label { display: block; margin: 10px 0 5px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: .35px; }
 .inline-error { color: var(--danger); font-size: 11px; margin-top: 5px; }
