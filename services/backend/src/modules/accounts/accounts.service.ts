@@ -11,6 +11,9 @@ import type {
   AccountInvoiceListQuery,
   AccountOrderListQuery,
   AccountReorderInput,
+  AccountSupportCloseInput,
+  AccountSupportReopenInput,
+  AccountSupportReplyInput,
   CreateAccountSupportTicketInput,
   PrincipalType,
   UpdateAccountPasswordInput,
@@ -49,6 +52,9 @@ type AccountCartRecord = Prisma.AccountReorderCartGetPayload<{
 }>;
 type AccountCartCatalogVariant = Prisma.CatalogVariantGetPayload<{
   include: { product: true };
+}>;
+type AccountSupportTicketRecord = Prisma.ServiceRequestGetPayload<{
+  include: { comments: true };
 }>;
 
 type AccountDocumentItem = {
@@ -913,27 +919,7 @@ export class AccountsService {
       orderBy: { updatedAt: 'desc' },
       take: 100,
     });
-    return rows.map((ticket) => ({
-      id: ticket.id,
-      ticketNumber: ticket.id,
-      subject: ticket.title,
-      description: ticket.description ?? '',
-      category: supportCategory(metadata(ticket.metadata).category),
-      priority: supportPriority(ticket.priority),
-      relatedTo: stringValue(metadata(ticket.metadata).relatedTo),
-      status: supportStatus(ticket.status),
-      updatedAt: isoDate(ticket.updatedAt),
-      responses: ticket.comments
-        .filter((comment) => !comment.internal)
-        .map((comment) => ({
-          id: comment.id,
-          author: comment.actorId === actor.principalId ? 'You' : 'Support team',
-          at: isoDate(comment.createdAt),
-          body: comment.body,
-          fromMe: comment.actorId === actor.principalId,
-        })),
-      satisfactionRating: null,
-    }));
+    return rows.map((ticket) => this.supportTicketDto(actor, ticket));
   }
 
   async createSupportTicket(input: CreateAccountSupportTicketInput) {
@@ -970,6 +956,99 @@ export class AccountsService {
     });
     this.logger.log('accounts', 'support.create', 'Customer support ticket created', { service_request_id: ticket.id });
     return (await this.supportTickets()).find((item) => item.id === ticket.id) ?? ticket;
+  }
+
+  async replySupportTicket(id: string, input: AccountSupportReplyInput) {
+    const actor = await this.currentActor();
+    const ticket = await this.requireCustomerSupportTicket(actor, id);
+    if (ticket.status === 'closed') throw new BadRequestException('Closed customer requests cannot receive new replies. Reopen it first.');
+
+    await this.prisma.db.serviceRequestComment.create({
+      data: {
+        id: prefixedId('srcm'),
+        tenantId: this.tenantId(),
+        serviceRequestId: ticket.id,
+        actorId: actor.principalId,
+        actorType: actor.principalType,
+        body: input.body,
+        internal: false,
+        attachmentsJson: [],
+      },
+    });
+    await this.prisma.db.serviceRequest.updateMany({
+      where: { id: ticket.id, customerId: actor.customerId, surface: 'customer_facing' },
+      data: {
+        status: ticket.status === 'resolved' ? 'reopened' : 'open',
+        closedAt: null,
+        resolutionCode: null,
+        resolutionNote: null,
+      },
+    });
+    this.logger.log('accounts', 'support.reply', 'Customer support ticket reply added', { service_request_id: ticket.id });
+    return this.supportTicketDto(actor, await this.requireCustomerSupportTicket(actor, id));
+  }
+
+  async closeSupportTicket(id: string, input: AccountSupportCloseInput) {
+    const actor = await this.currentActor();
+    const ticket = await this.requireCustomerSupportTicket(actor, id);
+    if (ticket.status !== 'closed') {
+      if (input.note?.trim()) {
+        await this.prisma.db.serviceRequestComment.create({
+          data: {
+            id: prefixedId('srcm'),
+            tenantId: this.tenantId(),
+            serviceRequestId: ticket.id,
+            actorId: actor.principalId,
+            actorType: actor.principalType,
+            body: input.note.trim(),
+            internal: false,
+            attachmentsJson: [],
+          },
+        });
+      }
+      await this.prisma.db.serviceRequest.updateMany({
+        where: { id: ticket.id, customerId: actor.customerId, surface: 'customer_facing' },
+        data: {
+          status: 'closed',
+          closedAt: new Date(),
+          resolutionCode: 'customer_closed',
+          resolutionNote: input.note?.trim() || 'Closed from customer portal',
+        },
+      });
+      this.logger.log('accounts', 'support.close', 'Customer support ticket closed from portal', { service_request_id: ticket.id });
+    }
+    return this.supportTicketDto(actor, await this.requireCustomerSupportTicket(actor, id));
+  }
+
+  async reopenSupportTicket(id: string, input: AccountSupportReopenInput) {
+    const actor = await this.currentActor();
+    const ticket = await this.requireCustomerSupportTicket(actor, id);
+    if (!['resolved', 'closed'].includes(ticket.status)) return this.supportTicketDto(actor, ticket);
+    if (input.reason?.trim()) {
+      await this.prisma.db.serviceRequestComment.create({
+        data: {
+          id: prefixedId('srcm'),
+          tenantId: this.tenantId(),
+          serviceRequestId: ticket.id,
+          actorId: actor.principalId,
+          actorType: actor.principalType,
+          body: input.reason.trim(),
+          internal: false,
+          attachmentsJson: [],
+        },
+      });
+    }
+    await this.prisma.db.serviceRequest.updateMany({
+      where: { id: ticket.id, customerId: actor.customerId, surface: 'customer_facing' },
+      data: {
+        status: 'reopened',
+        closedAt: null,
+        resolutionCode: null,
+        resolutionNote: null,
+      },
+    });
+    this.logger.log('accounts', 'support.reopen', 'Customer support ticket reopened from portal', { service_request_id: ticket.id });
+    return this.supportTicketDto(actor, await this.requireCustomerSupportTicket(actor, id));
   }
 
   private async customerOrders(actor: AccountActor, take: number) {
@@ -1361,6 +1440,46 @@ export class AccountsService {
       checkoutUrl: cart.checkoutUrl,
       checkoutError: cart.checkoutError,
       cart: this.buyerCart(cart),
+    };
+  }
+
+  private async requireCustomerSupportTicket(actor: AccountActor, id: string) {
+    const ticket = await this.prisma.db.serviceRequest.findFirst({
+      where: { id, customerId: actor.customerId, surface: 'customer_facing' },
+      include: { comments: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!ticket) throw new NotFoundException('Customer request not found');
+    return ticket;
+  }
+
+  private supportTicketDto(actor: AccountActor, ticket: AccountSupportTicketRecord) {
+    const publicComments = ticket.comments.filter((comment) => !comment.internal);
+    const firstStaffReply = publicComments.find((comment) => comment.actorId !== actor.principalId);
+    const firstResponseMinutes = firstStaffReply
+      ? Math.max(0, Math.round((firstStaffReply.createdAt.getTime() - ticket.createdAt.getTime()) / 60000))
+      : null;
+    return {
+      id: ticket.id,
+      ticketNumber: ticket.id,
+      subject: ticket.title,
+      description: ticket.description ?? '',
+      category: supportCategory(metadata(ticket.metadata).category),
+      priority: supportPriority(ticket.priority),
+      relatedTo: stringValue(metadata(ticket.metadata).relatedTo),
+      status: supportStatus(ticket.status),
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: isoDate(ticket.updatedAt),
+      updatedAtIso: ticket.updatedAt.toISOString(),
+      firstResponseMinutes,
+      responses: publicComments.map((comment) => ({
+        id: comment.id,
+        author: comment.actorId === actor.principalId ? 'You' : 'Support team',
+        at: isoDate(comment.createdAt),
+        atIso: comment.createdAt.toISOString(),
+        body: comment.body,
+        fromMe: comment.actorId === actor.principalId,
+      })),
+      satisfactionRating: null,
     };
   }
 

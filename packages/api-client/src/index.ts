@@ -13,6 +13,9 @@ import type {
   AccountOrderListQuery,
   AccountInvoiceQuery,
   AccountReorderInput,
+  AccountSupportCloseInput,
+  AccountSupportReopenInput,
+  AccountSupportReplyInput,
   AiHealthResponse,
   AircallBackfillRecentInput,
   AircallBackfillRecentResponse,
@@ -552,6 +555,18 @@ export class ApiClient {
 
   createAccountSupportTicket(input: CreateAccountSupportTicketInput) {
     return this.post('/accounts/support', input);
+  }
+
+  replyAccountSupportTicket(id: string, input: AccountSupportReplyInput) {
+    return this.post(`/accounts/support/${encodeURIComponent(id)}/replies`, input);
+  }
+
+  closeAccountSupportTicket(id: string, input: AccountSupportCloseInput = {}) {
+    return this.post(`/accounts/support/${encodeURIComponent(id)}/close`, input);
+  }
+
+  reopenAccountSupportTicket(id: string, input: AccountSupportReopenInput = {}) {
+    return this.post(`/accounts/support/${encodeURIComponent(id)}/reopen`, input);
   }
 
   orders(query = '') {

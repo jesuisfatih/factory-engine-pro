@@ -11,6 +11,9 @@ import {
   accountInvoiceListQuerySchema,
   accountOrderListQuerySchema,
   accountReorderSchema,
+  accountSupportCloseSchema,
+  accountSupportReopenSchema,
+  accountSupportReplySchema,
   createAccountSupportTicketSchema,
   CUSTOMER_PERMISSIONS,
   updateAccountPasswordSchema,
@@ -25,6 +28,9 @@ import {
   type AccountInvoiceListQuery,
   type AccountOrderListQuery,
   type AccountReorderInput,
+  type AccountSupportCloseInput,
+  type AccountSupportReopenInput,
+  type AccountSupportReplyInput,
   type CreateAccountSupportTicketInput,
   type UpdateAccountPasswordInput,
   type UpdateAccountProfileInput,
@@ -226,5 +232,32 @@ export class AccountsController {
   @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
   createSupportTicket(@Body(new ZodValidationPipe(createAccountSupportTicketSchema)) body: CreateAccountSupportTicketInput) {
     return this.accounts.createSupportTicket(body);
+  }
+
+  @Post('support/:id/replies')
+  @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
+  replySupportTicket(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(accountSupportReplySchema)) body: AccountSupportReplyInput,
+  ) {
+    return this.accounts.replySupportTicket(id, body);
+  }
+
+  @Post('support/:id/close')
+  @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
+  closeSupportTicket(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(accountSupportCloseSchema)) body: AccountSupportCloseInput,
+  ) {
+    return this.accounts.closeSupportTicket(id, body);
+  }
+
+  @Post('support/:id/reopen')
+  @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
+  reopenSupportTicket(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(accountSupportReopenSchema)) body: AccountSupportReopenInput,
+  ) {
+    return this.accounts.reopenSupportTicket(id, body);
   }
 }

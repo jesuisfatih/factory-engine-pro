@@ -348,28 +348,50 @@ Kabul:
 - Belgeler sadece kendi customer scope'unda gelir.
 - Dosya yoksa anlamli empty state gorunur.
 
-## 11. Support ve Customer Request
+## 11. Customer Request Thread
 
 Musteri kendi talebiyle request acabilir. Sistem otomatik support case acmaz; musteri talebi veya personel karari gerekir.
 
 Hikaye:
 
-1. Musteri Support sayfasina girer.
+1. Musteri Requests sayfasina girer.
 2. Siparis, fatura, urun veya genel konu secer.
 3. Talebini yazar.
 4. Talep customer request olarak kaydedilir.
-5. Personel gerekirse bununla ilgili is yapar.
+5. Talep `source='customer_self_service'` ve `surface='customer_facing'` ile `service_requests` satirina kaydedilir.
+6. Ilk musteri mesaji `service_request_comments.internal=false` olarak thread'e eklenir.
+7. Admin/personel talebi kendi panelinde customer request olarak gorur.
+8. Musteri ayni thread'e cevap yazabilir, talebi kapatabilir veya kapali/cozulmus talebi yeniden acabilir.
 
 UIX beklentisi:
 
-- Support ekrani musteriye "ne istiyorsun?" sorusunu net sormalidir.
+- Requests ekrani musteriye "ne istiyorsun?" sorusunu net sormalidir.
 - Ticket status musteri dilinde olmali.
 - Otomatik arka plan terimleri gosterilmemeli.
+- Cevap yazma, kapatma ve yeniden acma butonlari gercek API aksiyonu olmalidir.
+- Ortalama cevap suresi statik sayi olamaz; public thread'deki ilk personel cevabindan hesaplanir.
+
+Gercek endpointler:
+
+- `GET /accounts/support`
+- `POST /accounts/support`
+- `POST /accounts/support/:id/replies`
+- `POST /accounts/support/:id/close`
+- `POST /accounts/support/:id/reopen`
+
+Tenant ve ownership:
+
+- Customer portal sadece kendi `customerId` scope'undaki `customer_facing` talepleri gorur.
+- Cevap, kapatma ve yeniden acma endpointleri ayni ownership kontrolunden gecmeden calismaz.
+- Internal comment musteriye gosterilmez.
 
 Kabul:
 
 - Request sadece musteri aksiyonu ile acilir.
 - Musteri kendi request gecmisini gorur.
+- Musteri request thread'ine cevap ekler, sayfa yenilendiginde cevap kalir.
+- Musteri talebini kapatir, status customer dilinde closed olur.
+- Musteri kapali/cozulmus talebi yeniden acar, status yeniden aktif olur.
 - Personel/admin request'i takip edebilir.
 
 ## 12. Lifecycle State Machine

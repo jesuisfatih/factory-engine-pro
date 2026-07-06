@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import { apiErrorMessage } from '@/lib/api';
 import {
-  fetchSupportTickets, createSupportTicket,
+  fetchSupportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, reopenSupportTicket,
   type SupportTicket, type TicketStatus, type TicketPriority, type TicketCategory,
 } from '@/lib/portal';
 
@@ -29,9 +29,29 @@ const CATEGORIES: TicketCategory[] = ['billing', 'shipping', 'product', 'account
 const PRIORITIES: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
 const FILTER_VALUES: ('all' | TicketStatus)[] = ['all', 'open', 'in_progress', 'resolved', 'closed'];
 
-function TicketRow({ ticket, expanded, onToggle }: { ticket: SupportTicket; expanded: boolean; onToggle: () => void }) {
+function TicketRow({
+  ticket,
+  expanded,
+  busy,
+  onToggle,
+  onReply,
+  onClose,
+  onReopen,
+}: {
+  ticket: SupportTicket;
+  expanded: boolean;
+  busy: boolean;
+  onToggle: () => void;
+  onReply: (id: string, body: string) => void;
+  onClose: (id: string) => void;
+  onReopen: (id: string) => void;
+}) {
   const { t } = useTranslation();
+  const [replyBody, setReplyBody] = useState('');
   const Icon = CATEGORY_ICON[ticket.category];
+  const canReply = ticket.status !== 'closed';
+  const canClose = ticket.status !== 'closed';
+  const canReopen = ticket.status === 'resolved' || ticket.status === 'closed';
   return (
     <div className={`support-ticket${expanded ? ' expanded' : ''}`} id={`ticket-${ticket.id}`}>
       <button type="button" className="support-ticket-head" onClick={onToggle} aria-expanded={expanded}>
@@ -85,16 +105,36 @@ function TicketRow({ ticket, expanded, onToggle }: { ticket: SupportTicket; expa
           )}
 
           <div className="ticket-actions">
-            {ticket.status !== 'closed' && (
-              <button type="button" className="btn primary">
-                <Send size={12} /> {t('support.ticket_reply')}
+            {canReply && (
+              <div className="ticket-reply-box">
+                <textarea
+                  value={replyBody}
+                  onChange={(event) => setReplyBody(event.target.value)}
+                  placeholder={t('support.reply_placeholder')}
+                  rows={3}
+                />
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={busy || !replyBody.trim()}
+                  onClick={() => {
+                    onReply(ticket.id, replyBody);
+                    setReplyBody('');
+                  }}
+                >
+                  <Send size={12} /> {t('support.ticket_reply')}
+                </button>
+              </div>
+            )}
+            {canReopen && (
+              <button type="button" className="btn" disabled={busy} onClick={() => onReopen(ticket.id)}>
+                {t('support.ticket_reopen')}
               </button>
             )}
-            {ticket.status === 'resolved' && (
-              <button type="button" className="btn">{t('support.ticket_reopen')}</button>
-            )}
-            {ticket.status === 'in_progress' && (
-              <button type="button" className="btn ghost">{t('support.ticket_close')}</button>
+            {canClose && (
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => onClose(ticket.id)}>
+                {t('support.ticket_close')}
+              </button>
             )}
           </div>
         </div>
@@ -130,6 +170,33 @@ function SupportView() {
     onError: (error) => toast.error('Submit failed', { description: apiErrorMessage(error) }),
   });
 
+  const reply = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => replySupportTicket(id, { body }),
+    onSuccess: (ticket) => {
+      toast.success('Reply saved', { description: ticket.subject });
+      qc.invalidateQueries({ queryKey: QK_TICKETS });
+    },
+    onError: (error) => toast.error('Reply failed', { description: apiErrorMessage(error) }),
+  });
+
+  const close = useMutation({
+    mutationFn: (id: string) => closeSupportTicket(id),
+    onSuccess: (ticket) => {
+      toast.success('Request closed', { description: ticket.subject });
+      qc.invalidateQueries({ queryKey: QK_TICKETS });
+    },
+    onError: (error) => toast.error('Close failed', { description: apiErrorMessage(error) }),
+  });
+
+  const reopen = useMutation({
+    mutationFn: (id: string) => reopenSupportTicket(id),
+    onSuccess: (ticket) => {
+      toast.success('Request reopened', { description: ticket.subject });
+      qc.invalidateQueries({ queryKey: QK_TICKETS });
+    },
+    onError: (error) => toast.error('Reopen failed', { description: apiErrorMessage(error) }),
+  });
+
   const filtered = tickets
     .filter((ticket) => statusFilter === 'all' || ticket.status === statusFilter)
     .filter((ticket) => {
@@ -141,6 +208,14 @@ function SupportView() {
   const open = tickets.filter((t) => t.status === 'open').length;
   const inProgress = tickets.filter((t) => t.status === 'in_progress').length;
   const resolved = tickets.filter((t) => t.status === 'resolved').length;
+  const avgResponse = formatAverageResponse(tickets.map((ticket) => ticket.firstResponseMinutes).filter((value): value is number => typeof value === 'number'));
+  const busyTicketId = reply.isPending
+    ? reply.variables?.id ?? null
+    : close.isPending
+      ? close.variables ?? null
+      : reopen.isPending
+        ? reopen.variables ?? null
+        : null;
 
   const toggleTicket = (id: string) => setExpandedTickets((current) => {
     const next = new Set(current);
@@ -157,7 +232,7 @@ function SupportView() {
         <div className="kpi"><div className="label">{t('support.kpi_open')}</div><div className="val">{open}</div><div className="sub">awaiting reply</div></div>
         <div className="kpi"><div className="label">{t('support.kpi_in_progress')}</div><div className="val">{inProgress}</div><div className="sub">being handled</div></div>
         <div className="kpi"><div className="label">{t('support.kpi_resolved')}</div><div className="val">{resolved}</div><div className="sub">closed loop</div></div>
-        <div className="kpi"><div className="label">{t('support.kpi_avg_response')}</div><div className="val">2h 14m</div><div className="sub">rolling 7d</div></div>
+        <div className="kpi"><div className="label">{t('support.kpi_avg_response')}</div><div className="val">{avgResponse}</div><div className="sub">{avgResponse === 'N/A' ? 'no staff replies yet' : 'from ticket thread'}</div></div>
       </div>
 
       <div className="support-shell">
@@ -256,7 +331,11 @@ function SupportView() {
                   key={ticket.id}
                   ticket={ticket}
                   expanded={expandedTickets.has(ticket.id)}
+                  busy={busyTicketId === ticket.id}
                   onToggle={() => toggleTicket(ticket.id)}
+                  onReply={(id, body) => reply.mutate({ id, body })}
+                  onClose={(id) => close.mutate(id)}
+                  onReopen={(id) => reopen.mutate(id)}
                 />
               ))}
             </div>
@@ -265,6 +344,15 @@ function SupportView() {
       </div>
     </>
   );
+}
+
+function formatAverageResponse(values: number[]) {
+  if (values.length === 0) return 'N/A';
+  const minutes = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
 export const Route = createFileRoute('/support')({ component: SupportView });

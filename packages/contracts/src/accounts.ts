@@ -43,6 +43,21 @@ export const createAccountSupportTicketSchema = z.object({
 });
 export type CreateAccountSupportTicketInput = z.infer<typeof createAccountSupportTicketSchema>;
 
+export const accountSupportReplySchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+});
+export type AccountSupportReplyInput = z.infer<typeof accountSupportReplySchema>;
+
+export const accountSupportCloseSchema = z.object({
+  note: z.string().trim().max(1000).optional(),
+});
+export type AccountSupportCloseInput = z.infer<typeof accountSupportCloseSchema>;
+
+export const accountSupportReopenSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
+});
+export type AccountSupportReopenInput = z.infer<typeof accountSupportReopenSchema>;
+
 export const accountReorderSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(999).optional(),
 });

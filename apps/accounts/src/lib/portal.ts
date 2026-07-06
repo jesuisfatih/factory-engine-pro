@@ -9,6 +9,9 @@ import type {
   AccountInvoiceListQuery,
   AccountInvoicePayAction,
   AccountOrderListQuery,
+  AccountSupportCloseInput,
+  AccountSupportReopenInput,
+  AccountSupportReplyInput,
   CreateAccountSupportTicketInput,
   UpdateAccountPasswordInput,
   UpdateAccountProfileInput,
@@ -261,8 +264,11 @@ export type SupportTicket = {
   priority: TicketPriority;
   relatedTo: string | null;
   status: TicketStatus;
+  createdAt: string;
   updatedAt: string;
-  responses: Array<{ id: string; author: string; at: string; body: string; fromMe: boolean }>;
+  updatedAtIso: string;
+  firstResponseMinutes: number | null;
+  responses: Array<{ id: string; author: string; at: string; atIso: string; body: string; fromMe: boolean }>;
   satisfactionRating: number | null;
 };
 
@@ -427,6 +433,18 @@ export function createSupportTicket(input: {
     ...(input.relatedTo.trim() ? { relatedTo: input.relatedTo.trim() } : {}),
   };
   return accountsApi.createAccountSupportTicket(payload) as Promise<SupportTicket>;
+}
+
+export function replySupportTicket(id: string, input: AccountSupportReplyInput) {
+  return accountsApi.replyAccountSupportTicket(id, input) as Promise<SupportTicket>;
+}
+
+export function closeSupportTicket(id: string, input: AccountSupportCloseInput = {}) {
+  return accountsApi.closeAccountSupportTicket(id, input) as Promise<SupportTicket>;
+}
+
+export function reopenSupportTicket(id: string, input: AccountSupportReopenInput = {}) {
+  return accountsApi.reopenAccountSupportTicket(id, input) as Promise<SupportTicket>;
 }
 
 export function uniqueVendors(products: BuyerProduct[]) {

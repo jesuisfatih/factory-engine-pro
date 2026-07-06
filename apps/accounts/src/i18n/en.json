@@ -24,7 +24,7 @@
     "tracking": "Tracking",
     "pickup": "Pickup",
     "invoices": "Invoices",
-    "support": "Support"
+    "support": "Requests"
   },
   "common": {
     "search_placeholder": "Search orders, designs, invoices…",
@@ -90,14 +90,14 @@
     }
   },
   "support": {
-    "title": "Support",
-    "subtitle": "Service requests, SLA timers and product knowledge base",
+    "title": "Customer requests",
+    "subtitle": "Requests you opened with the DTF Bank team",
     "kpi_open": "Open",
     "kpi_in_progress": "In progress",
     "kpi_resolved": "Resolved",
     "kpi_avg_response": "Avg. response",
-    "form_title": "New service request",
-    "form_subtitle": "Pick a category and we route it to the right desk.",
+    "form_title": "New customer request",
+    "form_subtitle": "Pick a category and describe what you need. Your thread stays visible here.",
     "field_category": "Category",
     "field_subject": "Subject",
     "field_priority": "Priority",
@@ -111,6 +111,7 @@
     "list_filter_resolved": "Resolved",
     "list_filter_closed": "Closed",
     "search_placeholder": "Search by subject or ticket #…",
+    "reply_placeholder": "Write a reply for the team...",
     "ticket_reply": "Reply",
     "ticket_reopen": "Reopen",
     "ticket_close": "Close",
