@@ -27,7 +27,6 @@ export function PinPanel({ pinned, onUnpin }: Props) {
           type="button"
           onClick={() => onUnpin(row.original)}
           className="pin-btn pinned"
-          style={{ float: 'right' }}
         >
           Unpin
         </button>

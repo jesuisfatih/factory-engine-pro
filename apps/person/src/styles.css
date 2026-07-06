@@ -2547,7 +2547,51 @@ button { font-family: inherit; }
 .queue-wrap .pin-board-panel .pin-panel {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
+}
+
+.queue-wrap .pin-board-panel .pin-panel .table {
+  display: block;
+  width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.queue-wrap .pin-board-panel .pin-panel thead {
+  display: none;
+}
+
+.queue-wrap .pin-board-panel .pin-panel tbody {
+  display: grid;
+  gap: 8px;
+}
+
+.queue-wrap .pin-board-panel .pin-panel tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.queue-wrap .pin-board-panel .pin-panel td {
+  display: block;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.queue-wrap .pin-board-panel .pin-panel td:last-child {
+  width: auto;
+  text-align: right;
+}
+
+.queue-wrap .pin-board-panel .pin-panel tr:hover td {
+  background: transparent;
 }
 
 .queue-wrap .missed-v2-head {
