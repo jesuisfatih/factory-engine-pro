@@ -537,7 +537,7 @@ button { font-family: inherit; }
 .call-btn svg { flex-shrink: 0; }
 
 /* ─── Right rail (pin board) ─────────────────────────────── */
-.with-rail { display: grid; grid-template-columns: 1fr 280px; gap: 12px; min-height: 0; }
+.with-rail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-height: 0; }
 .pin-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; min-height: 0; }
 .pin-panel h2 { font-size: 12px; font-weight: 700; color: var(--text); margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; }
 .pin-panel .badge { font-size: 10px; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 10px; }
