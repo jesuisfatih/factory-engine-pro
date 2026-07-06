@@ -55,6 +55,24 @@ function initialScheduleValue() {
   return dateTimeLocal(value);
 }
 
+function riskTier(priority: number) {
+  if (priority >= 9) return { label: 'High priority', tone: 'danger' as const };
+  if (priority >= 7) return { label: 'Needs attention', tone: 'warn' as const };
+  if (priority >= 5) return { label: 'Customer follow-up', tone: 'success' as const };
+  return { label: 'Routine', tone: 'info' as const };
+}
+
+function sourceLabel(source: CardData['source']) {
+  const map: Record<CardData['source'], string> = {
+    manual: 'Manual',
+    call_analysis: 'Call summary',
+    segment_priority: 'Customer list',
+    stale_follow_up: 'Follow-up',
+    admin_transfer: 'Team transfer',
+  };
+  return map[source] ?? 'Follow-up';
+}
+
 interface NarrativeFieldProps {
   label: string;
   suggestedValue: string;
@@ -206,6 +224,25 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
     if (!scheduleAt) return;
     scheduleMutation.mutate();
   };
+
+  const snoozeMutation = useMutation({
+    mutationFn: () => {
+      const next = new Date();
+      next.setDate(next.getDate() + 1);
+      next.setHours(9, 0, 0, 0);
+      return scheduleTaskFollowUp(card.id, {
+        scheduledAt: next.toISOString(),
+        note: 'Snoozed: follow up tomorrow morning',
+      });
+    },
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKey, next);
+      queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['person', 'cal', 'events'] });
+      onClose();
+    },
+  });
+
   const actionInput = {
     intent: liveCard.callIntent ?? liveCard.urgencyBreakdown.intent,
     tags: liveCard.psychTags,
@@ -241,12 +278,24 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
   const summaryFriction = detail?.callSummary?.objections.map(personSafeText).filter(Boolean) ?? [];
   const summaryChecks = safeDisplayActions.length > 0 ? safeDisplayActions : directActions;
   const callExcerpt = personSafeText(liveCard.callExcerpt);
+  const tier = riskTier(liveCard.priority);
+  const safeTitle = personSafeText(liveCard.displayTitle || liveCard.title);
+  const safeSegment = personSafeText(liveCard.displayCustomerSummary || liveCard.segment);
+  const safeSource = sourceLabel(liveCard.source);
 
   const modalContent = (
       <div className={`modal-card brief-modal ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
         <header className="modal-head">
           <div>
-            {showField('title') ? <h2 id="task-brief-title">{personSafeText(liveCard.displayTitle || liveCard.title)}</h2> : null}
+            <div className="brief-eyebrow">
+              <span className={`brief-source brief-source-${liveCard.source}`}>
+                <Activity size={10} /> {safeSource}
+              </span>
+              <span className={`brief-tier tier-${tier.tone}`}>{tier.label} - P{liveCard.priority}</span>
+              {showField('segmentChip') ? <span className="chip" style={{ background: liveCard.segmentColor }}>{personSafeText(liveCard.segment)}</span> : null}
+              <span className="brief-urgency">U{liveCard.urgencyScore}</span>
+            </div>
+            {showField('title') ? <h2 id="task-brief-title" style={{ marginTop: 6 }}>{safeTitle}</h2> : null}
             <div className="brief-identity">
               {liveCard.phone && showField('phone') ? <span><Phone size={11} /> {liveCard.phone}</span> : null}
               {liveCard.email && showField('email') ? <span><Mail size={11} /> {liveCard.email}</span> : null}
@@ -288,51 +337,27 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
               <>
                 {hasBrief ? (
                   <>
-                    <section className={`brief-showcase tone-${actionTone}`} style={sectionStyle('hero', 10)}>
-                      <div className="brief-showcase-main">
-                        <span className="brief-showcase-kicker">{frontendCopy(override, 'heroKicker', 'Do this now')}</span>
-                        <h3>{frontendCopy(override, 'actionLabel', actionLabel)}</h3>
+                    <section className={`brief-command tone-${actionTone}`} style={sectionStyle('hero', 10)}>
+                      <div className="brief-command-main">
+                        <span>{frontendCopy(override, 'heroKicker', 'Do this now')}</span>
+                        <strong>{frontendCopy(override, 'actionLabel', actionLabel)}</strong>
                         <p>{frontendCopy(override, 'requiredAction', primaryBrief)}</p>
-                        {showField('steps') ? (
-                          <div className="brief-showcase-actions">
-                            {directActions.slice(0, 3).map((action, index) => (
-                              <div key={`${action}-${index}`} className="brief-showcase-step">
-                                <span>{index + 1}</span>
-                                <strong>{action}</strong>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
                       </div>
-                      <div className="brief-showcase-score">
-                        <span>{frontendCopy(override, 'urgencyLabel', 'Urgency')}</span>
-                        <strong>U{liveCard.urgencyScore}</strong>
-                        <em>{confidenceLabel}</em>
-                      </div>
+                      <div className="brief-command-score">U{liveCard.urgencyScore}</div>
                     </section>
+                    {showField('steps') ? (
+                      <div className="brief-directives" style={sectionStyle('customAfterSteps', 15)}>
+                        {directActions.slice(0, 3).map((action, index) => (
+                          <div key={`${action}-${index}`} className="brief-directive">
+                            <span>{index + 1}</span>
+                            <strong>{action}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="brief-section-shell" style={sectionStyle('customHero', 20)}>
                       <FrontendCustomizationSlotView customization={customization} slot="modal.hero" context={customizationContext} />
                     </div>
-
-                    {showField('snapshotGrid') ? <div className="brief-snapshot-grid" style={sectionStyle('snapshotGrid', 30)}>
-                      <div className="brief-snapshot-card snapshot-call">
-                        <span>{frontendCopy(override, 'whatHappenedLabel', 'What happened')}</span>
-                        <strong>{why || primaryBrief}</strong>
-                      </div>
-                      <div className="brief-snapshot-card snapshot-match">
-                        <span>{frontendCopy(override, 'customerMatchLabel', 'Customer match')}</span>
-                        <strong>{matchLabel}</strong>
-                        <em>{matchHint}</em>
-                      </div>
-                      <div className="brief-snapshot-card snapshot-order">
-                        <span>{frontendCopy(override, 'purchaseHistoryLabel', 'Purchase history')}</span>
-                        <strong>{purchaseSummary}</strong>
-                      </div>
-                      <div className="brief-snapshot-card snapshot-outcome">
-                        <span>{frontendCopy(override, 'outcomeLabel', 'Outcome to save')}</span>
-                        <strong>{goal || 'Save the next accountable result.'}</strong>
-                      </div>
-                    </div> : null}
                     <div className="brief-section-shell" style={sectionStyle('customAfterSteps', 35)}>
                       <FrontendCustomizationSlotView customization={customization} slot="modal.after_steps" context={customizationContext} />
                     </div>
@@ -479,20 +504,6 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                         </div>
                       ) : null}
                     </form> : null}
-
-                    {showField('scheduleForm') ? <form className="brief-block" style={sectionStyle('scheduleForm', 130)} onSubmit={submitSchedule}>
-                      <div className="brief-block-head">
-                        <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
-                      </div>
-                      <div className="brief-schedule-grid">
-                        <input ref={scheduleRef} id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
-                        <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
-                        <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
-                          <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
-                        </button>
-                      </div>
-                      {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
-                    </form> : null}
                   </>
                 ) : null}
               </>
@@ -502,10 +513,10 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
           {showField('customerSidePanel') ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
             <div className="brief-card">
               <div className="brief-card-head"><Tags size={12} /> {frontendCopy(override, 'customerLabel', 'Customer')}</div>
-              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{personSafeText(liveCard.displayTitle || liveCard.title)}</span></div>
+              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{safeTitle}</span></div>
               {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
               {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
-              <div className="brief-card-row"><span className="lbl">Context</span><span className="val">{personSafeText(liveCard.displayCustomerSummary || liveCard.segment)}</span></div>
+              <div className="brief-card-row"><span className="lbl">Context</span><span className="val">{safeSegment}</span></div>
             </div>
 
             <div className="brief-stats">
@@ -527,6 +538,16 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
               </div>
             </div>
 
+            {showField('snapshotGrid') ? (
+              <div className="brief-card brief-card-meta" style={sectionStyle('snapshotGrid', 141)}>
+                <div className="brief-card-head"><Activity size={12} /> {frontendCopy(override, 'whatHappenedLabel', 'Live customer context')}</div>
+                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'customerMatchLabel', 'Customer match')}</span><span className="val">{matchLabel}</span></div>
+                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'purchaseHistoryLabel', 'Purchase history')}</span><span className="val">{purchaseSummary}</span></div>
+                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'outcomeLabel', 'Outcome')}</span><span className="val">{goal || primaryBrief}</span></div>
+                <div className="brief-val brief-val-muted">{matchHint}</div>
+              </div>
+            ) : null}
+
             <div className="brief-quick-actions">
               <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callButton', 'Call')}</button>
               <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> {frontendCopy(override, 'emailButton', 'Email')}</a>
@@ -537,10 +558,26 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
             <div className="brief-quick-actions">
               <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>
             </div>
+            {isTaskCard && showField('scheduleForm') ? (
+              <form className="brief-block brief-side-schedule" style={sectionStyle('scheduleForm', 145)} onSubmit={submitSchedule}>
+                <div className="brief-block-head">
+                  <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
+                </div>
+                <div className="brief-schedule-grid side">
+                  <input ref={scheduleRef} id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                  <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
+                  <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
+                    <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
+                  </button>
+                </div>
+                {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
+              </form>
+            ) : null}
           </aside> : null}
         </div>
 
         {showField('footer') ? <footer className="modal-foot" style={sectionStyle('footer', 150)}>
+          {snoozeMutation.isError ? <span className="danger-text modal-foot-error">{friendlyError(snoozeMutation.error)}</span> : null}
           {footerActions.map((action) => {
             if (action === 'call') {
               return <button key={action} type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={13} /> {frontendCopy(override, 'callNowButton', 'Call now')}</button>;
@@ -558,7 +595,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
               return <a key={action} className="btn" href={customerDetailUrl}><ExternalLink size={13} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>;
             }
             if (action === 'snooze') {
-              return <button key={action} type="button" className="btn"><AlarmClockOff size={13} /> Snooze</button>;
+              return <button key={action} type="button" className="btn" onClick={() => snoozeMutation.mutate()} disabled={!isTaskCard || snoozeMutation.isPending}><AlarmClockOff size={13} /> {snoozeMutation.isPending ? 'Snoozing' : 'Snooze'}</button>;
             }
             if (action === 'done') {
               return <button key={action} type="button" className="btn primary" onClick={onClose}><CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}</button>;
