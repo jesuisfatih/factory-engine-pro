@@ -74,7 +74,7 @@ interface PricingDraft {
 }
 
 const QK = ['commerce', 'pricing-rules'] as const;
-const TARGET_TYPES: TargetType[] = ['all', 'customer', 'customer_user', 'customer_tag', 'segment', 'buyer_intent', 'anonymous'];
+const TARGET_TYPES: TargetType[] = ['all', 'customer', 'customer_user', 'customer_role', 'customer_tag', 'segment', 'buyer_intent', 'anonymous'];
 const SCOPE_TYPES: ScopeType[] = ['all', 'products', 'variants', 'collections', 'tags'];
 const DISCOUNT_TYPES: DiscountType[] = ['percentage', 'fixed_amount', 'fixed_price', 'qty_break'];
 const EXECUTION_MODES: PricingExecutionMode[] = ['draft_order', 'native_basic', 'shopify_function', 'display_only'];
@@ -380,7 +380,7 @@ function draftFromRule(rule: PricingRuleRow): PricingDraft {
     id: rule.id,
     name: rule.name,
     description: rule.description ?? '',
-    targetType: rule.targetType,
+    targetType: rule.targetType === 'customer_group' ? 'customer_role' : rule.targetType,
     targetValue: targetValue(rule),
     scopeType: rule.scopeType,
     scopeValue: scopeValue(rule),
@@ -429,6 +429,7 @@ function buildPayload(draft: PricingDraft) {
 function targetPayload(draft: PricingDraft) {
   if (draft.targetType === 'customer') return { targetCustomerId: draft.targetValue || undefined };
   if (draft.targetType === 'customer_user') return { targetCustomerUserId: draft.targetValue || undefined };
+  if (draft.targetType === 'customer_role' || draft.targetType === 'customer_group') return { targetCustomerGroup: draft.targetValue || undefined };
   if (draft.targetType === 'customer_tag') return { targetTags: splitCsv(draft.targetValue) };
   if (draft.targetType === 'segment') return { targetCustomerGroup: draft.targetValue || undefined };
   return {};
@@ -453,6 +454,7 @@ function splitCsv(value: string) {
 function targetValue(rule: PricingRuleRow) {
   if (rule.targetType === 'customer') return rule.targetCustomerName ?? rule.targetCustomerId ?? '';
   if (rule.targetType === 'customer_user') return rule.targetCustomerUserId ?? '';
+  if (rule.targetType === 'customer_role' || rule.targetType === 'customer_group') return rule.targetCustomerGroup ?? '';
   if (rule.targetType === 'customer_tag') return rule.targetTags.join(', ');
   if (rule.targetType === 'segment') return rule.targetCustomerGroup ?? '';
   return '';
@@ -486,7 +488,8 @@ function label(value: string) {
 
 function targetPlaceholder(targetType: TargetType) {
   if (targetType === 'customer_tag') return 'vip, wholesale';
-  if (targetType === 'segment') return 'vip';
+  if (targetType === 'customer_role' || targetType === 'customer_group') return 'b2b-owner, billing-only';
+  if (targetType === 'segment') return 'seg_... or Shopify segment name';
   if (targetType === 'customer') return 'cust_...';
   if (targetType === 'customer_user') return 'cusr_...';
   return '—';

@@ -3,6 +3,15 @@ import type { CalculatePricesInput } from '@factory-engine-pro/contracts';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { type PricingRuleWithRelations, PricingRepository } from './pricing.repository.js';
 
+type PricingTargetContext = {
+  customerId?: string;
+  customerUserId?: string;
+  customerTags: string[];
+  customerRoleKeys: string[];
+  customerSegmentKeys: string[];
+  cartTotal: number;
+};
+
 @Injectable()
 export class PricingCalculatorService {
   constructor(
@@ -13,19 +22,48 @@ export class PricingCalculatorService {
   async calculate(input: CalculatePricesInput) {
     const [rules, customer, customerUser] = await Promise.all([
       this.repository.activeRules(),
-      input.customerId ? this.prisma.db.customer.findFirst({ where: { id: input.customerId }, include: { insight: true } }) : null,
-      input.customerUserId ? this.prisma.db.customerUser.findFirst({ where: { id: input.customerUserId }, include: { customer: { include: { insight: true } } } }) : null,
+      input.customerId
+        ? this.prisma.db.customer.findFirst({
+          where: { id: input.customerId },
+          include: { insight: true, segmentMemberships: { include: { segment: true } } },
+        })
+        : null,
+      input.customerUserId
+        ? this.prisma.db.customerUser.findFirst({
+          where: { id: input.customerUserId },
+          include: {
+            roleAssignments: { include: { role: true } },
+            customer: { include: { insight: true, segmentMemberships: { include: { segment: true } } } },
+          },
+        })
+        : null,
     ]);
+    const customerRecord = customer ?? customerUser?.customer ?? null;
+    const customerTags = uniqueKeys([
+      ...(input.customerTags ?? []),
+      ...(customer?.tags ?? []),
+      ...(customerUser?.customer.tags ?? []),
+    ]);
+    const customerRoleKeys = uniqueKeys([
+      ...(input.customerRoleKeys ?? []),
+      ...(customerUser?.roleAssignments.flatMap((assignment) => collectRoleKeys(assignment.role)) ?? []),
+    ]);
+    const customerSegmentKeys = uniqueKeys([
+      ...(input.customerSegmentKeys ?? []),
+      ...(customerRecord ? collectSegmentKeys(customerRecord.insight?.rfmSegment ?? null, customerRecord.segmentMemberships) : []),
+    ]);
+    const cartTotal = input.cartTotal ?? input.items.reduce((sum, current) => sum + (current.basePrice ?? 0) * current.quantity, 0);
 
     const items = await Promise.all(input.items.map(async (item) => {
       const variant = await this.resolveVariant(item.variantId, item.shopifyVariantId, item.sku);
       const basePrice = item.basePrice ?? money(variant?.price);
-      const context = {
+      const context: PricingTargetContext = {
         customerId: input.customerId,
         customerUserId: input.customerUserId,
-        customerTags: [...(input.customerTags ?? []), ...(customer?.tags ?? []), ...(customerUser?.customer.tags ?? [])],
-        segment: customer?.insight?.rfmSegment ?? customerUser?.customer.insight?.rfmSegment ?? null,
-        cartTotal: input.cartTotal ?? input.items.reduce((sum, current) => sum + (current.basePrice ?? 0) * current.quantity, 0),
+        customerTags,
+        customerRoleKeys,
+        customerSegmentKeys,
+        cartTotal,
       };
       const productTags = [...item.tags, ...(variant?.product.tags ?? [])];
       const applicable = rules
@@ -77,18 +115,71 @@ export class PricingCalculatorService {
 
 function targetApplies(
   rule: PricingRuleWithRelations,
-  context: { customerId?: string; customerUserId?: string; customerTags: string[]; segment: string | null; cartTotal: number },
+  context: PricingTargetContext,
 ) {
   if (rule.targetType === 'all') return true;
   if (rule.targetType === 'anonymous') return !context.customerId && !context.customerUserId;
   if (rule.targetType === 'customer') return Boolean(rule.targetCustomerId && rule.targetCustomerId === context.customerId);
   if (rule.targetType === 'customer_user') return Boolean(rule.targetCustomerUserId && rule.targetCustomerUserId === context.customerUserId);
   if (rule.targetType === 'customer_tag') {
-    return rule.targetTags.some((tag) => context.customerTags.map((value) => value.toLowerCase()).includes(tag.toLowerCase()));
+    return targetListMatches(rule.targetTags, context.customerTags);
   }
-  if (rule.targetType === 'segment') return Boolean(rule.targetCustomerGroup && rule.targetCustomerGroup === context.segment);
+  if (rule.targetType === 'segment') return ruleTargetMatches(rule, context.customerSegmentKeys);
+  if (rule.targetType === 'customer_group' || rule.targetType === 'customer_role') {
+    return ruleTargetMatches(rule, context.customerRoleKeys);
+  }
   if (rule.targetType === 'buyer_intent') return context.cartTotal > 0;
   return false;
+}
+
+function collectRoleKeys(role: { id: string; slug: string; name: string }) {
+  return [role.id, role.slug, role.name];
+}
+
+function collectSegmentKeys(
+  insightSegment: string | null,
+  memberships: Array<{
+    segmentId: string;
+    shopifySegmentRef: string | null;
+    segment: { id: string; name: string; lifecycleStage: string | null };
+  }>,
+) {
+  return [
+    insightSegment,
+    ...memberships.flatMap((membership) => [
+      membership.segmentId,
+      membership.shopifySegmentRef,
+      membership.segment.id,
+      membership.segment.name,
+      membership.segment.lifecycleStage,
+    ]),
+  ];
+}
+
+function ruleTargetMatches(rule: PricingRuleWithRelations, values: string[]) {
+  return targetListMatches([rule.targetCustomerGroup, ...rule.targetTags], values);
+}
+
+function targetListMatches(targets: Array<string | null>, values: string[]) {
+  const normalizedValues = new Set(values.map(normalizeKey).filter(Boolean));
+  return targets.some((target) => {
+    const normalizedTarget = normalizeKey(target);
+    return normalizedTarget ? normalizedValues.has(normalizedTarget) : false;
+  });
+}
+
+function uniqueKeys(values: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  return values.filter((value): value is string => {
+    const normalized = normalizeKey(value);
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+function normalizeKey(value: string | null | undefined) {
+  return String(value ?? '').trim().toLowerCase();
 }
 
 function scopeApplies(

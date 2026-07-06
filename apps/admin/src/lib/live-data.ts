@@ -522,7 +522,7 @@ function toPricingPayload(rule: PricingRule) {
 
 function pricingTargetType(value: PricingTargetType): TargetType {
   if (value === 'tag') return 'customer_tag';
-  if (value === 'role') return 'customer_group';
+  if (value === 'role') return 'customer_role';
   return value;
 }
 

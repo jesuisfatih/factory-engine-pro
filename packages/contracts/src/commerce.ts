@@ -484,6 +484,7 @@ export const targetTypeSchema = z.enum([
   'customer',
   'customer_user',
   'customer_group',
+  'customer_role',
   'customer_tag',
   'segment',
   'buyer_intent',
@@ -585,6 +586,8 @@ export const calculatePricesSchema = z.object({
   customerId: z.string().trim().optional(),
   customerUserId: z.string().trim().optional(),
   customerTags: z.array(z.string().trim()).default([]),
+  customerRoleKeys: z.array(z.string().trim()).default([]),
+  customerSegmentKeys: z.array(z.string().trim()).default([]),
   cartTotal: z.coerce.number().min(0).optional(),
   items: z.array(calculatePricingItemSchema).min(1),
 });

@@ -91,6 +91,7 @@ type AccountActor = {
   spendingLimitCents: number | null;
   spendingUsedCents: number;
   roleNames: string[];
+  roleKeys: string[];
   customer: CustomerUserRecord['customer'];
 };
 
@@ -1411,6 +1412,8 @@ export class AccountsService {
       customerId: actor.customerId,
       customerUserId: actor.principalType === 'customer_user' ? actor.principalId : undefined,
       customerTags: actor.customer.tags ?? [],
+      customerRoleKeys: actor.roleKeys,
+      customerSegmentKeys: [],
       cartTotal,
       items: items.map(({ variant, quantity }) => ({
         variantId: variant.id,
@@ -1603,6 +1606,7 @@ export class AccountsService {
       spendingLimitCents: user.spendingLimitCents,
       spendingUsedCents: user.spendingUsedCents,
       roleNames: user.roleAssignments.map((assignment) => assignment.role.name),
+      roleKeys: user.roleAssignments.flatMap((assignment) => accountRoleKeys(assignment.role)),
       customer: user.customer,
     };
   }
@@ -1621,6 +1625,7 @@ export class AccountsService {
       spendingLimitCents: user.spendingLimitCents,
       spendingUsedCents: user.spendingUsedCents,
       roleNames: user.roleAssignments.map((assignment) => assignment.role.name),
+      roleKeys: user.roleAssignments.flatMap((assignment) => accountRoleKeys(assignment.role)),
       customer: user.customer,
     };
   }
@@ -2354,6 +2359,10 @@ function money(value: unknown) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function accountRoleKeys(role: { id: string; slug: string; name: string }) {
+  return [role.id, role.slug, role.name];
 }
 
 function fmtMoney(value: number) {

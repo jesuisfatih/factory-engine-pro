@@ -247,6 +247,9 @@ Kabul:
 - Quantity tier degisince fiyat yeniden hesaplanir.
 - Shopify tarafina bagimli olmayan internal cart fiyat karari ayrica tutulur.
 - Catalog add-to-cart, eski order reorder ve line-item reorder ayni pricing resolver'i kullanir.
+- Role bazli rule `customer_role` hedef tipiyle calisir; resolver CustomerUser/SubUser role id, slug ve name anahtarlarini okur.
+- Segment bazli rule sadece RFM string'ine bakmaz; gercek `SegmentCustomerMembership` kaydindaki segment id, Shopify segment ref, segment name ve lifecycle stage anahtarlarini da eslestirir.
+- Eski `customer_group` pricing kayitlari migration gerektirmeden customer role hedefi gibi calismaya devam eder.
 
 ## 8. Invoices: Admin Tarafindan Girilen Faturalar
 

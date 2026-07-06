@@ -506,6 +506,7 @@
       "customer_tag": "Customer tag",
       "segment": "Segment",
       "customer_group": "Customer group",
+      "customer_role": "Customer role",
       "buyer_intent": "Buyer intent",
       "anonymous": "Anonymous"
     },
