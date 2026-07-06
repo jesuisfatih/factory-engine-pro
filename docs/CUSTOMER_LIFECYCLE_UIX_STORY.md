@@ -315,6 +315,7 @@ UIX beklentisi:
 - Hazir rol onerileri olmali: Billing only, Buyer, Account admin.
 - Advanced izinler gerekiyorsa acilabilir ama default sade olmali.
 - Yazma ve goruntuleme izinleri ayrilmalidir.
+- `subusers.read` ile `subusers.write` ayni sey degildir: read-only kullanici ekip listesini gorebilir, invite/create formu ve role degistirme aksiyonu gormez.
 
 Gercek veri kaynaklari:
 
@@ -330,6 +331,8 @@ Kabul:
 - B2B owner sub-user olusturabilir.
 - Sub-user sadece izin verilen alanlari gorur.
 - Yazma izni olmayan kisi order/cart/fatura aksiyonu alamaz.
+- Team read-only kullanici backend 403'e carpmadan, musteri dostu "view-only team access" state'i gorur.
+- Team create formu sadece `subusers.write` permission'i olan CustomerUser icin render edilir.
 - Team degisiklikleri auditlenir.
 
 ## 10. Profile, Addresses ve Documents

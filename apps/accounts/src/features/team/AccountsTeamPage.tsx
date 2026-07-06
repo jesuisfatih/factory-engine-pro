@@ -47,16 +47,17 @@ const PERMISSION_LABELS: Record<string, string> = {
 export function AccountsTeamPage() {
   const principal = useCurrentPrincipal().data;
   const permissions = new Set(principal?.permissions ?? []);
-  const canManageTeam = permissions.has(CUSTOMER_PERMISSIONS.subUsersRead);
+  const canViewTeam = permissions.has(CUSTOMER_PERMISSIONS.subUsersRead);
+  const canManageTeam = permissions.has(CUSTOMER_PERMISSIONS.subUsersWrite);
   const query = useQuery({
     queryKey: SUB_USERS_QK,
     queryFn: () => accountsApi.subUsers() as Promise<SubUser[]>,
-    enabled: canManageTeam,
+    enabled: canViewTeam,
   });
   const rolesQuery = useQuery({
     queryKey: ROLE_OPTIONS_QK,
     queryFn: () => accountsApi.customerRoleOptions() as Promise<CustomerRole[]>,
-    enabled: canManageTeam,
+    enabled: canViewTeam,
   });
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -121,19 +122,20 @@ export function AccountsTeamPage() {
     return { total: subUsers.length, active, invited, spendingCap };
   }, [subUsers]);
   const canSubmit = Boolean(
-    form.firstName.trim()
+    canManageTeam
+      && form.firstName.trim()
       && form.lastName.trim()
       && form.email.trim()
       && form.roleIds.length > 0
       && (form.sendInvite || form.password.length >= 8),
   );
 
-  if (!canManageTeam) {
+  if (!canViewTeam) {
     return (
       <>
         <PageHeader titleI18nKey="team.title" subtitleI18nKey="team.subtitle" />
         <StateCard
-          title="Team management is reserved for account owners"
+          title="Company team is not available for this login"
           body="Ask the account owner to invite team members or change your company role."
         />
       </>
@@ -160,7 +162,14 @@ export function AccountsTeamPage() {
           </div>
           {query.isLoading && <StateCard title="Loading team" body="Fetching company team members from the account API." />}
           {query.isError && <ErrorCard title="Could not load team" error={query.error} retry={() => query.refetch()} />}
-          {query.isSuccess && subUsers.length === 0 && <StateCard title="No team members yet" body="Invite the first teammate and choose exactly what they can see or change." />}
+          {query.isSuccess && subUsers.length === 0 && (
+            <StateCard
+              title="No team members yet"
+              body={canManageTeam
+                ? 'Invite the first teammate and choose exactly what they can see or change.'
+                : 'You can view company team seats, but only an account owner can invite or change members.'}
+            />
+          )}
           {query.isSuccess && subUsers.length > 0 && (
             <div className="data-card">
               <table className="data-table">
@@ -185,44 +194,51 @@ export function AccountsTeamPage() {
           )}
         </section>
 
-        <form className="data-card team-create-card" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-          <h3><ShieldCheck size={16} /> Invite company member</h3>
-          <p className="muted">Choose the real portal permissions before sending the invitation.</p>
-          {rolesQuery.isError && <ErrorCard title="Could not load roles" error={rolesQuery.error} retry={() => rolesQuery.refetch()} />}
-          <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
-          <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
-          <Field label="Email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
-          <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
-          <Field label="Spending cap USD" value={form.spendingLimit} onChange={(spendingLimit) => setForm({ ...form, spendingLimit })} />
-          <div className="field">
-            <label>Company role</label>
-            {rolesQuery.isLoading ? <div className="team-role-empty">Loading roles...</div> : (
-              <div className="team-role-options">
-                {roles.map((role) => (
-                  <RoleOption
-                    key={role.id}
-                    role={role}
-                    selected={form.roleIds.includes(role.id)}
-                    onToggle={() => setForm((current) => ({
-                      ...current,
-                      roleIds: current.roleIds.includes(role.id)
-                        ? current.roleIds.filter((id) => id !== role.id)
-                        : [...current.roleIds, role.id],
-                    }))}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.sendInvite} onChange={(event) => setForm({ ...form, sendInvite: event.target.checked })} />
-            Send invite link
-          </label>
-          {!form.sendInvite && <Field label="Initial password" value={form.password} onChange={(password) => setForm({ ...form, password })} type="password" />}
-          <button className="btn primary" type="submit" disabled={!canSubmit || create.isPending || rolesQuery.isLoading}>
-            <Plus size={14} /> {create.isPending ? 'Creating...' : 'Create team member'}
-          </button>
-        </form>
+        {canManageTeam ? (
+          <form className="data-card team-create-card" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+            <h3><ShieldCheck size={16} /> Invite company member</h3>
+            <p className="muted">Choose the real portal permissions before sending the invitation.</p>
+            {rolesQuery.isError && <ErrorCard title="Could not load roles" error={rolesQuery.error} retry={() => rolesQuery.refetch()} />}
+            <Field label="First name" value={form.firstName} onChange={(firstName) => setForm({ ...form, firstName })} />
+            <Field label="Last name" value={form.lastName} onChange={(lastName) => setForm({ ...form, lastName })} />
+            <Field label="Email" value={form.email} onChange={(email) => setForm({ ...form, email })} />
+            <Field label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
+            <Field label="Spending cap USD" value={form.spendingLimit} onChange={(spendingLimit) => setForm({ ...form, spendingLimit })} />
+            <div className="field">
+              <label>Company role</label>
+              {rolesQuery.isLoading ? <div className="team-role-empty">Loading roles...</div> : (
+                <div className="team-role-options">
+                  {roles.map((role) => (
+                    <RoleOption
+                      key={role.id}
+                      role={role}
+                      selected={form.roleIds.includes(role.id)}
+                      onToggle={() => setForm((current) => ({
+                        ...current,
+                        roleIds: current.roleIds.includes(role.id)
+                          ? current.roleIds.filter((id) => id !== role.id)
+                          : [...current.roleIds, role.id],
+                      }))}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={form.sendInvite} onChange={(event) => setForm({ ...form, sendInvite: event.target.checked })} />
+              Send invite link
+            </label>
+            {!form.sendInvite && <Field label="Initial password" value={form.password} onChange={(password) => setForm({ ...form, password })} type="password" />}
+            <button className="btn primary" type="submit" disabled={!canSubmit || create.isPending || rolesQuery.isLoading}>
+              <Plus size={14} /> {create.isPending ? 'Creating...' : 'Create team member'}
+            </button>
+          </form>
+        ) : (
+          <StateCard
+            title="View-only team access"
+            body="You can review company team seats, but inviting people or changing roles is reserved for the account owner."
+          />
+        )}
       </div>
     </>
   );
