@@ -15,6 +15,7 @@
     "evidence:resend-webhook": "node scripts/resend-webhook-proof.mjs",
     "evidence:mail-webhook-readiness": "node scripts/mail-webhook-readiness-proof.mjs",
     "evidence:mail-signoff": "node scripts/mail-rollout-signoff.mjs",
+    "evidence:person-staff-copy": "node scripts/person-staff-copy-proof.mjs",
     "db:generate": "pnpm --filter @factory-engine-pro/backend prisma:generate",
     "db:migrate": "pnpm --filter @factory-engine-pro/backend prisma:migrate",
     "db:deploy": "pnpm --filter @factory-engine-pro/backend prisma:deploy"
