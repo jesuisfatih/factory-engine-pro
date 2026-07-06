@@ -27,9 +27,10 @@ export class B2BAccessService {
   ) {}
 
   async create(input: CreateB2BAccessRequestInput, file?: UploadFile) {
-    const existing = await this.repository.findPendingByEmail(input.email);
+    const shopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
+    const existing = await this.repository.findPendingByIdentity(input.email, shopifyCustomerId);
     if (existing) {
-      throw new ConflictException('You already have a pending application with this email address.');
+      throw new ConflictException('You already have a pending B2B access request for this account.');
     }
     const passwordHash = await this.password.hash(input.password);
     const metadata = cleanMetadata({
@@ -40,6 +41,7 @@ export class B2BAccessService {
       formHandle: input.formHandle ?? null,
       formName: input.formName ?? null,
       shop: input.shop ?? null,
+      shopifyCustomerId,
       merchantContext: input.merchantContext ?? null,
     });
     const request = await this.repository.create({
@@ -54,6 +56,7 @@ export class B2BAccessService {
       estimatedMonthlyVolume: input.estimatedMonthlyVolume ?? null,
       message: input.message ?? null,
       passwordHash,
+      shopifyCustomerId,
       metadata,
     });
     if (file) {
@@ -229,4 +232,9 @@ export class B2BAccessService {
 
 function cleanMetadata(metadata: Record<string, unknown>) {
     return Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '')) as unknown as Prisma.InputJsonValue;
+}
+
+function cleanOptionalString(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }

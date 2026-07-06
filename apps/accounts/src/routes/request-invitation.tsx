@@ -32,7 +32,7 @@ const BENEFIT_ICONS = [Tag, ShieldCheck, Truck, MapPin] as const;
 
 function RequestInvitationView() {
   const { t } = useTranslation();
-  const [form, setForm] = useState<FormShape>(EMPTY);
+  const [form, setForm] = useState<FormShape>(() => initialFormFromSearch());
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +110,11 @@ function RequestInvitationView() {
                 password: form.password,
                 message: form.message || undefined,
                 flowIntent: 'request-invitation',
-                sourceSurface: 'accounts-request-invitation',
+                sourceSurface: searchParam('sourceSurface') || 'accounts-request-invitation',
                 sourcePath: '/request-invitation',
+                sourceUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+                shop: searchParam('shop') || undefined,
+                shopifyCustomerId: searchParam('shopifyCustomerId') || undefined,
               }, form.taxCertificate ?? undefined);
               setSubmitted(true);
             } catch (requestError) {
@@ -221,6 +224,27 @@ function RequestInvitationView() {
 }
 
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
+
+function initialFormFromSearch(): FormShape {
+  const firstName = searchParam('firstName');
+  const lastName = searchParam('lastName');
+  const companyName = searchParam('companyName');
+  return {
+    ...EMPTY,
+    firstName,
+    lastName,
+    email: searchParam('email'),
+    phone: searchParam('phone'),
+    companyName,
+    legalName: companyName,
+    message: searchParam('message'),
+  };
+}
+
+function searchParam(name: string) {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get(name)?.trim() ?? '';
+}
 
 function BrandBlock({ hero = false }: { hero?: boolean }) {
   const brandQuery = useWorkspaceBrand();

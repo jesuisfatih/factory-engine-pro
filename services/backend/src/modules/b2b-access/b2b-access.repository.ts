@@ -11,8 +11,16 @@ export class B2BAccessRepository {
     private readonly tenantContext: TenantContextService,
   ) {}
 
-  findPendingByEmail(email: string) {
-    return this.prisma.db.b2BAccessRequest.findFirst({ where: { email, status: 'pending' } });
+  findPendingByIdentity(email: string, shopifyCustomerId?: string | null) {
+    return this.prisma.db.b2BAccessRequest.findFirst({
+      where: {
+        status: 'pending',
+        OR: [
+          { email },
+          ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
+        ],
+      },
+    });
   }
 
   create(data: {

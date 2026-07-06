@@ -48,6 +48,7 @@ export const customerRegisterSchema = z.object({
   phone: z.string().trim().min(3).optional(),
   companyName: z.string().trim().min(1),
   taxId: z.string().trim().optional(),
+  shopifyCustomerId: z.string().trim().optional(),
   billingAddress: z.record(z.string(), z.unknown()).optional(),
   shippingAddress: z.record(z.string(), z.unknown()).optional(),
 });

@@ -19,6 +19,7 @@ import {
 } from '@shopify/ui-extensions-react/customer-account';
 import { useCallback, useEffect, useState } from 'react';
 import { apiBaseError, apiFetch } from './api';
+import { buildPortalLink, portalParamsFromStatus } from './portal-links';
 
 export default reactExtension(
   'customer-account.page.render',
@@ -77,6 +78,9 @@ type AccountLinkStatus = {
     id: string;
     email: string | null;
     companyName: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
     status: string;
   };
   customerUser: null | {
@@ -164,7 +168,7 @@ function CustomerAccountPage() {
             </Banner>
             <InlineStack spacing="base">
               <Button kind="secondary" onPress={load}>Try again</Button>
-              {accountsUrl ? <Button to={accountsUrl}>Open full portal</Button> : null}
+              {accountsUrl ? <Button to={buildPortalLink(accountsUrl, '/', portalParamsFromStatus(linkStatus))}>Open full portal</Button> : null}
             </InlineStack>
           </BlockStack>
         </Card>
@@ -181,10 +185,11 @@ function CustomerAccountPage() {
   }
 
   const companyName = context.profile.companyName || context.profile.company || 'Your account';
+  const portalParams = portalParamsFromStatus(linkStatus);
   const primaryAction = context.activeCart?.checkoutUrl
     ? { label: 'Continue checkout', href: context.activeCart.checkoutUrl }
     : accountsUrl
-      ? { label: 'Open full portal', href: accountsUrl }
+      ? { label: 'Open full portal', href: buildPortalLink(accountsUrl, '/', portalParams) }
       : null;
 
   return (
@@ -206,12 +211,12 @@ function CustomerAccountPage() {
         </Card>
 
         <Grid columns={['fill', 'fill', 'fill']} spacing="base">
-          <RecentOrders orders={context.orders} accountsUrl={accountsUrl} />
-          <OpenInvoices invoices={context.invoices} accountsUrl={accountsUrl} />
-          <ReorderReady templates={context.reorderTemplates} accountsUrl={accountsUrl} />
+          <RecentOrders orders={context.orders} accountsUrl={accountsUrl} portalParams={portalParams} />
+          <OpenInvoices invoices={context.invoices} accountsUrl={accountsUrl} portalParams={portalParams} />
+          <ReorderReady templates={context.reorderTemplates} accountsUrl={accountsUrl} portalParams={portalParams} />
         </Grid>
 
-        <CartState cart={context.activeCart} accountsUrl={accountsUrl} />
+        <CartState cart={context.activeCart} accountsUrl={accountsUrl} portalParams={portalParams} />
       </BlockStack>
     </Page>
   );
@@ -240,7 +245,15 @@ function Metric({ label, value, detail }: { label: string; value: string; detail
   );
 }
 
-function RecentOrders({ orders, accountsUrl }: { orders: AccountContext['orders']; accountsUrl: string }) {
+function RecentOrders({
+  orders,
+  accountsUrl,
+  portalParams,
+}: {
+  orders: AccountContext['orders'];
+  accountsUrl: string;
+  portalParams: Record<string, string>;
+}) {
   return (
     <Card padding>
       <BlockStack spacing="base">
@@ -258,13 +271,21 @@ function RecentOrders({ orders, accountsUrl }: { orders: AccountContext['orders'
             {order.canReorder ? <Badge status="success">Reorder ready</Badge> : <Badge>View</Badge>}
           </InlineLayout>
         ))}
-        {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/orders`}>View orders</Button> : null}
+        {accountsUrl ? <Button kind="secondary" to={buildPortalLink(accountsUrl, '/orders', portalParams)}>View orders</Button> : null}
       </BlockStack>
     </Card>
   );
 }
 
-function OpenInvoices({ invoices, accountsUrl }: { invoices: AccountContext['invoices']; accountsUrl: string }) {
+function OpenInvoices({
+  invoices,
+  accountsUrl,
+  portalParams,
+}: {
+  invoices: AccountContext['invoices'];
+  accountsUrl: string;
+  portalParams: Record<string, string>;
+}) {
   const openInvoices = invoices.filter((invoice) => invoice.status !== 'paid');
   return (
     <Card padding>
@@ -285,13 +306,21 @@ function OpenInvoices({ invoices, accountsUrl }: { invoices: AccountContext['inv
             </Badge>
           </InlineLayout>
         ))}
-        {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/invoices`}>Review invoices</Button> : null}
+        {accountsUrl ? <Button kind="secondary" to={buildPortalLink(accountsUrl, '/invoices', portalParams)}>Review invoices</Button> : null}
       </BlockStack>
     </Card>
   );
 }
 
-function ReorderReady({ templates, accountsUrl }: { templates: AccountContext['reorderTemplates']; accountsUrl: string }) {
+function ReorderReady({
+  templates,
+  accountsUrl,
+  portalParams,
+}: {
+  templates: AccountContext['reorderTemplates'];
+  accountsUrl: string;
+  portalParams: Record<string, string>;
+}) {
   const ready = templates.filter((template) => template.canReorder);
   return (
     <Card padding>
@@ -309,17 +338,25 @@ function ReorderReady({ templates, accountsUrl }: { templates: AccountContext['r
             </InlineLayout>
           </BlockStack>
         ))}
-        {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/reorder`}>Start reorder</Button> : null}
+        {accountsUrl ? <Button kind="secondary" to={buildPortalLink(accountsUrl, '/reorder', portalParams)}>Start reorder</Button> : null}
       </BlockStack>
     </Card>
   );
 }
 
-function CartState({ cart, accountsUrl }: { cart: AccountContext['activeCart']; accountsUrl: string }) {
+function CartState({
+  cart,
+  accountsUrl,
+  portalParams,
+}: {
+  cart: AccountContext['activeCart'];
+  accountsUrl: string;
+  portalParams: Record<string, string>;
+}) {
   const action = cart?.checkoutUrl
     ? { label: 'Continue checkout', href: cart.checkoutUrl }
     : accountsUrl
-      ? { label: 'Open cart review', href: `${accountsUrl}/cart` }
+      ? { label: 'Open cart review', href: buildPortalLink(accountsUrl, '/cart', portalParams) }
       : null;
   return (
     <Card padding>
@@ -342,6 +379,7 @@ function CartState({ cart, accountsUrl }: { cart: AccountContext['activeCart']; 
 
 function AccountSetupState({ linkStatus, accountsUrl }: { linkStatus: AccountLinkStatus | null; accountsUrl: string }) {
   const hasPendingRequest = linkStatus?.b2bAccessRequest?.status === 'pending';
+  const portalParams = portalParamsFromStatus(linkStatus);
   const title = linkStatus?.status === 'customer_sync_required'
     ? 'Portal account is not linked yet'
     : hasPendingRequest
@@ -363,9 +401,9 @@ function AccountSetupState({ linkStatus, accountsUrl }: { linkStatus: AccountLin
           </Banner>
         ) : null}
         <InlineStack spacing="base">
-          {accountsUrl ? <Button to={`${accountsUrl}/request-invitation`}>Request B2B access</Button> : null}
-          {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/register`}>Create portal login</Button> : null}
-          {accountsUrl ? <Button kind="secondary" to={`${accountsUrl}/login`}>Sign in</Button> : null}
+          {accountsUrl ? <Button to={buildPortalLink(accountsUrl, '/request-invitation', portalParams)}>Request B2B access</Button> : null}
+          {accountsUrl ? <Button kind="secondary" to={buildPortalLink(accountsUrl, '/register', portalParams)}>Create portal login</Button> : null}
+          {accountsUrl ? <Button kind="secondary" to={buildPortalLink(accountsUrl, '/login', portalParams)}>Sign in</Button> : null}
         </InlineStack>
       </BlockStack>
     </Card>

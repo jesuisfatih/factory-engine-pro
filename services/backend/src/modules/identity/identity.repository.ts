@@ -161,6 +161,7 @@ export class IdentityRepository {
     email?: string;
     phone?: string;
     taxId?: string;
+    shopifyCustomerId?: string;
     billingAddress?: Prisma.InputJsonValue;
     shippingAddress?: Prisma.InputJsonValue;
   }) {
@@ -169,6 +170,7 @@ export class IdentityRepository {
         id: prefixedId('cust'),
         tenantId: this.tenantId(),
         companyName: data.companyName,
+        shopifyCustomerId: data.shopifyCustomerId,
         email: data.email,
         phone: data.phone,
         taxId: data.taxId,

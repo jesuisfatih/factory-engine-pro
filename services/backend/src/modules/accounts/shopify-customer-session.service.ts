@@ -49,7 +49,7 @@ export class ShopifyCustomerSessionService {
 
     const customer = await this.prisma.db.customer.findFirst({
       where: { shopifyCustomerId, status: { notIn: ['disabled', 'archived'] } },
-      select: { id: true, email: true, companyName: true, status: true },
+      select: { id: true, email: true, companyName: true, firstName: true, lastName: true, phone: true, status: true },
     });
     const customerUser = customer
       ? await this.prisma.db.customerUser.findFirst({

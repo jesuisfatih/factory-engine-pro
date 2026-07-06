@@ -266,6 +266,7 @@ export const createB2BAccessRequestSchema = z.object({
   formHandle: z.string().trim().optional(),
   formName: z.string().trim().optional(),
   shop: z.string().trim().optional(),
+  shopifyCustomerId: z.string().trim().optional(),
   merchantContext: z.string().trim().optional(),
 });
 export type CreateB2BAccessRequestInput = z.infer<typeof createB2BAccessRequestSchema>;

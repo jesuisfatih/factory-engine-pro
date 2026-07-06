@@ -1,5 +1,6 @@
 import {
   reactExtension,
+  useApi,
   useSettings,
   Badge,
   Banner,
@@ -11,6 +12,9 @@ import {
   Text,
   TextBlock,
 } from '@shopify/ui-extensions-react/customer-account';
+import { useCallback, useEffect, useState } from 'react';
+import { apiBaseError, apiFetch } from './api';
+import { buildPortalLink, portalParamsFromStatus, type PortalLinkStatusContext } from './portal-links';
 
 export default reactExtension(
   'customer-account.profile.block.render',
@@ -18,8 +22,26 @@ export default reactExtension(
 );
 
 function AccountPortalBlock() {
-  const settings = useSettings<{ accounts_url?: string }>();
+  const { sessionToken } = useApi();
+  const settings = useSettings<{ accounts_url?: string; api_base_url?: string }>();
   const accountsUrl = normalizePortalUrl(settings.accounts_url);
+  const apiBaseUrl = settings.api_base_url?.trim();
+  const [linkStatus, setLinkStatus] = useState<PortalLinkStatusContext | null>(null);
+
+  const loadStatus = useCallback(async () => {
+    if (apiBaseError(apiBaseUrl)) return;
+    try {
+      const token = await sessionToken.get();
+      setLinkStatus(await apiFetch<PortalLinkStatusContext>(apiBaseUrl, '/link-status', token));
+    } catch {
+      setLinkStatus(null);
+    }
+  }, [apiBaseUrl, sessionToken]);
+
+  useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
   if (!accountsUrl) {
     return (
       <Card padding>
@@ -32,6 +54,7 @@ function AccountPortalBlock() {
       </Card>
     );
   }
+  const portalParams = portalParamsFromStatus(linkStatus);
 
   return (
     <Card padding>
@@ -49,9 +72,9 @@ function AccountPortalBlock() {
           </Text>
         </BlockStack>
         <InlineStack spacing="base">
-          <Button to={accountsUrl}>Open portal</Button>
-          <Button kind="secondary" to={`${accountsUrl}/request-invitation`}>Request B2B access</Button>
-          <Button kind="secondary" to={`${accountsUrl}/login`}>Sign in</Button>
+          <Button to={buildPortalLink(accountsUrl, '/', portalParams)}>Open portal</Button>
+          <Button kind="secondary" to={buildPortalLink(accountsUrl, '/request-invitation', portalParams)}>Request B2B access</Button>
+          <Button kind="secondary" to={buildPortalLink(accountsUrl, '/login', portalParams)}>Sign in</Button>
         </InlineStack>
       </BlockStack>
     </Card>

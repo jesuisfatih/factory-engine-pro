@@ -117,11 +117,19 @@ export class AuthService {
     const adminPermissions = adminRole.permissions;
 
     try {
-      const customer = await this.identityRepository.createCustomer({
+      const shopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
+      const existingCustomer = shopifyCustomerId
+        ? await this.prisma.db.customer.findFirst({ where: { shopifyCustomerId } })
+        : null;
+      if (existingCustomer?.email && existingCustomer.email.toLowerCase() !== input.email.toLowerCase()) {
+        throw new BadRequestException('This Shopify customer is already linked to a different portal email.');
+      }
+      const customer = existingCustomer ?? await this.identityRepository.createCustomer({
         companyName: input.companyName,
         email: input.email,
         phone: input.phone,
         taxId: input.taxId,
+        shopifyCustomerId: shopifyCustomerId ?? undefined,
         billingAddress: input.billingAddress as Prisma.InputJsonValue | undefined,
         shippingAddress: input.shippingAddress as Prisma.InputJsonValue | undefined,
       });
@@ -371,4 +379,9 @@ export class AuthService {
       revokedAt: row.revokedAt?.toISOString() ?? null,
     };
   }
+}
+
+function cleanOptionalString(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }

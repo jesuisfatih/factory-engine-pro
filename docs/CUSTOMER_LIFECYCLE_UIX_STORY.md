@@ -65,6 +65,8 @@ Kabul:
 
 - `Customer` kaydi ile `CustomerUser` karistirilmaz.
 - Login olamayan Shopify musterisi icin net register veya request invitation yolu vardir.
+- Shopify Customer Account extension register/request/login linklerini acarken shop, Shopify customer id, e-posta, telefon ve sirket context'ini accounts formuna tasir.
+- Accounts register akisi Shopify customer id geldiyse yeni duplicate Customer yaratmaz; mevcut Shopify Customer kaydina CustomerUser baglar.
 - B2B olmayan musteri B2B-only ozellikleri yanlis kullanamaz.
 - Shopify Customer Account extension once link-status okur; portal hesabi yoksa teknik hata yerine register/request/sign-in aksiyonlari gosterir.
 - Accounts web portal her route acilisinda gercek `/auth/me` principal permission'larini okur; izinsiz Team, Cart, Reorder veya Invoice URL'leri teknik 403 yerine musteri dostu access state gosterir.
@@ -90,12 +92,15 @@ UIX beklentisi:
 - Dosya yukleme varsa hangi dosyanin neden istendigi yazmali.
 - Submit sonrasi "ne olacak" net olmalidir.
 - Tekrarlayan request varsa musteriye zaten bekleyen basvuru oldugu soylenmeli.
+- Shopify Customer Account icinden gelindiyse form bos baslamamali; e-posta, telefon ve sirket context'i otomatik dolmali.
+- Admin pending request incelerken request'in hangi Shopify customer/account yuzeyinden geldigini metadata ve `shopifyCustomerId` ile gorebilmelidir.
 
 Kabul:
 
 - Basvuru gercek API ile kaydedilir.
 - Admin tarafinda pending olarak gorunur.
 - Onay sonrasi CustomerUser ve rol baglantisi olusur.
+- Shopify customer context'i varsa `B2BAccessRequest.shopifyCustomerId` doludur ve duplicate pending kontrolu e-posta ile birlikte bu id uzerinden de calisir.
 - Onay veya red karari customer-facing mail delivery proof ile kaydedilir.
 - Red durumunda musteriye anlasilir mesaj doner ve admin karar ekraninda bu delivery kaniti gorunur.
 
@@ -433,6 +438,7 @@ flowchart TD
 Bu lifecycle %100 sayilmaz, ta ki asagidakiler gercek veriyle calisana kadar:
 
 - Shopify header login/register/request bloklari dogru accounts route'larina gider.
+- Shopify Customer Account extension linkleri accounts portalina customer context tasir; form ve backend bu context'i kaybetmez.
 - Login/register/forgot/request sayfalari auth chrome ile sade calisir.
 - Standard musteri ile B2B musteri UI yetkileri ayridir.
 - Route-level permission gate vardir; sidebar'da saklanan B2B-only ekranlar URL ile acilsa bile veri cekmeden access state'e duser.

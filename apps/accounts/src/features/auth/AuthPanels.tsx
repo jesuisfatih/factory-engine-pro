@@ -86,13 +86,7 @@ export function AccountsLoginPanel() {
 
 export function AccountsRegisterPanel() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '',
-    companyName: '', taxId: '',
-    billingAddress1: '', billingAddress2: '', billingCity: '', billingState: '', billingPostalCode: '', billingCountry: 'US',
-    shippingSameAsBilling: true,
-    shippingAddress1: '', shippingAddress2: '', shippingCity: '', shippingState: '', shippingPostalCode: '', shippingCountry: 'US',
-  });
+  const [form, setForm] = useState(() => initialRegisterFormFromSearch());
   const [error, setError] = useState<string | null>(null);
   const register = useMutation({
     mutationFn: () => accountsApi.customerRegister({
@@ -103,6 +97,7 @@ export function AccountsRegisterPanel() {
       phone: form.phone || undefined,
       companyName: form.companyName,
       taxId: form.taxId || undefined,
+      shopifyCustomerId: readSearchParam('shopifyCustomerId') || undefined,
       billingAddress: {
         address1: form.billingAddress1,
         address2: form.billingAddress2,
@@ -331,6 +326,37 @@ function Brand({ hero = false }: { hero?: boolean }) {
 }
 
 const REMEMBERED_EMAIL_KEY = 'factory-engine-pro.accounts.remembered-email';
+
+function initialRegisterFormFromSearch() {
+  return {
+    email: readSearchParam('email'),
+    password: '',
+    confirmPassword: '',
+    firstName: readSearchParam('firstName'),
+    lastName: readSearchParam('lastName'),
+    phone: readSearchParam('phone'),
+    companyName: readSearchParam('companyName'),
+    taxId: '',
+    billingAddress1: '',
+    billingAddress2: '',
+    billingCity: '',
+    billingState: '',
+    billingPostalCode: '',
+    billingCountry: 'US',
+    shippingSameAsBilling: true,
+    shippingAddress1: '',
+    shippingAddress2: '',
+    shippingCity: '',
+    shippingState: '',
+    shippingPostalCode: '',
+    shippingCountry: 'US',
+  };
+}
+
+function readSearchParam(name: string) {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get(name)?.trim() ?? '';
+}
 
 function readRememberedEmail() {
   try {

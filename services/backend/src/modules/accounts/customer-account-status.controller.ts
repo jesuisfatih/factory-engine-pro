@@ -25,6 +25,9 @@ export class CustomerAccountStatusController {
         id: session.customer.id,
         email: session.customer.email,
         companyName: session.customer.companyName,
+        firstName: session.customer.firstName,
+        lastName: session.customer.lastName,
+        phone: session.customer.phone,
         status: session.customer.status,
       } : null,
       customerUser: session.customerUser ? {
