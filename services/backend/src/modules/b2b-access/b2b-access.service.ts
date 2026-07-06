@@ -79,7 +79,8 @@ export class B2BAccessService {
   }
 
   async list(status?: string) {
-    return (await this.repository.list(status)).map((request) => this.present(request));
+    const requests = await this.repository.list(status);
+    return Promise.all(requests.map((request) => this.present(request)));
   }
 
   async findOne(id: string) {
@@ -155,6 +156,7 @@ export class B2BAccessService {
         delivery: delivery.status,
         deliveryId: delivery.id,
       },
+      decisionDelivery: this.presentDecisionDelivery(delivery),
     };
   }
 
@@ -162,14 +164,25 @@ export class B2BAccessService {
     const request = await this.repository.findById(id);
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
+    const decisionDelivery = await this.mail.sendB2BApplicationRejected({
+      to: request.email,
+      recipientName: `${request.firstName} ${request.lastName}`.trim(),
+      companyName: request.companyName,
+      reviewNotes: input.reviewNotes,
+      requestId: request.id,
+    });
     await this.repository.update(id, {
       status: 'rejected',
       reviewedAt: new Date(),
       reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
       reviewNotes: input.reviewNotes ?? null,
     });
-    this.logger.log('b2b_access', 'reject', 'B2B access request rejected', { b2b_request_id: id });
-    return { success: true };
+    this.logger.log('b2b_access', 'reject', 'B2B access request rejected', {
+      b2b_request_id: id,
+      mail_delivery_id: decisionDelivery.id,
+      mail_delivery_status: decisionDelivery.status,
+    });
+    return { success: true, decisionDelivery: this.presentDecisionDelivery(decisionDelivery) };
   }
 
   async certificate(id: string) {
@@ -184,9 +197,33 @@ export class B2BAccessService {
     };
   }
 
-  private present(request: any) {
+  private async present(request: any) {
     const { passwordHash: _passwordHash, ...safe } = request;
-    return safe;
+    const decisionDelivery = await this.repository.findLatestDecisionDelivery(request.id);
+    return {
+      ...safe,
+      decisionDelivery: decisionDelivery ? this.presentDecisionDelivery(decisionDelivery) : null,
+    };
+  }
+
+  private presentDecisionDelivery(delivery: {
+    id: string;
+    eventKey: string;
+    status: string;
+    recipientEmail: string;
+    createdAt: Date;
+    sentAt: Date | null;
+    errorMessage: string | null;
+  }) {
+    return {
+      id: delivery.id,
+      eventKey: delivery.eventKey,
+      status: delivery.status,
+      recipientEmail: delivery.recipientEmail,
+      createdAt: delivery.createdAt.toISOString(),
+      sentAt: delivery.sentAt?.toISOString() ?? null,
+      errorMessage: delivery.errorMessage,
+    };
   }
 }
 

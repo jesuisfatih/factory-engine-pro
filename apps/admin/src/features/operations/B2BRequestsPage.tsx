@@ -37,6 +37,17 @@ interface B2BRequest {
   submittedAt: string;
   files: B2BFile[];
   metadata: Record<string, unknown>;
+  decisionDelivery: DecisionDelivery | null;
+}
+
+interface DecisionDelivery {
+  id: string;
+  eventKey: string;
+  status: string;
+  recipientEmail: string;
+  createdAt: string;
+  sentAt: string | null;
+  errorMessage: string | null;
 }
 
 interface ApproveResult {
@@ -47,7 +58,14 @@ interface ApproveResult {
     token: string;
     expiresAt: string;
     delivery: string;
+    deliveryId: string;
   };
+  decisionDelivery: DecisionDelivery | null;
+}
+
+interface RejectResult {
+  success: true;
+  decisionDelivery: DecisionDelivery;
 }
 
 const QK = ['operations', 'b2b-access'] as const;
@@ -60,7 +78,7 @@ export function B2BRequestsPage() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
-  const [lastApproval, setLastApproval] = useState<ApproveResult | null>(null);
+  const [lastDecision, setLastDecision] = useState<ApproveResult | RejectResult | null>(null);
   const requests = useQuery({ queryKey: [...QK, status], queryFn: () => adminApi.b2bAccessRequests(`?status=${status}`) as Promise<B2BRequest[]> });
   const detail = useQuery({
     queryKey: [...QK, 'detail', selectedId],
@@ -82,7 +100,7 @@ export function B2BRequestsPage() {
   const selected = detail.data ?? rows.find((row) => row.id === selectedId) ?? null;
   useEffect(() => {
     setReviewNotes(selected?.reviewNotes ?? '');
-    setLastApproval(null);
+    setLastDecision(null);
   }, [selected?.id]);
 
   const approve = useMutation({
@@ -91,7 +109,7 @@ export function B2BRequestsPage() {
       return adminApi.approveB2BAccessRequest(selected.id) as Promise<ApproveResult>;
     },
     onSuccess: (result) => {
-      setLastApproval(result);
+      setLastDecision(result);
       toast.success(t('b2b_access.approved'));
       invalidateB2B(qc);
     },
@@ -101,9 +119,10 @@ export function B2BRequestsPage() {
   const reject = useMutation({
     mutationFn: () => {
       if (!selected) throw new Error('Select an application first');
-      return adminApi.rejectB2BAccessRequest(selected.id, { reviewNotes: reviewNotes || undefined });
+      return adminApi.rejectB2BAccessRequest(selected.id, { reviewNotes: reviewNotes || undefined }) as Promise<RejectResult>;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setLastDecision(result);
       toast.success(t('b2b_access.rejected'));
       invalidateB2B(qc);
     },
@@ -227,14 +246,12 @@ export function B2BRequestsPage() {
                   ))}
                 </div>
 
-                {lastApproval && (
-                  <div className="modal-section" style={{ marginTop: 14, borderColor: 'var(--success)' }}>
-                    <h3>{t('b2b_access.approval_result')}</h3>
-                    <DetailLine label="Customer" value={lastApproval.customerId} />
-                    <DetailLine label="Customer user" value={lastApproval.customerUserId} />
-                    <DetailLine label="Invite delivery" value={lastApproval.invitation.delivery} />
-                    <DetailLine label="Invite expires" value={fmtDate(lastApproval.invitation.expiresAt)} />
-                  </div>
+                {(selected.status !== 'pending' || lastDecision) && (
+                  <DecisionOutcome
+                    request={selected}
+                    decision={lastDecision}
+                    reviewNotes={reviewNotes}
+                  />
                 )}
 
                 {canWrite && selected.status === 'pending' && (
@@ -260,6 +277,55 @@ export function B2BRequestsPage() {
         </div>
       )}
     </>
+  );
+}
+
+function DecisionOutcome({
+  request,
+  decision,
+  reviewNotes,
+}: {
+  request: B2BRequest;
+  decision: ApproveResult | RejectResult | null;
+  reviewNotes: string;
+}) {
+  const approvedDecision = decision && 'customerId' in decision ? decision : null;
+  const delivery = decision?.decisionDelivery ?? request.decisionDelivery;
+  const customerId = approvedDecision?.customerId ?? request.resolvedCustomerId;
+  const customerUserId = approvedDecision?.customerUserId ?? request.resolvedCustomerUserId;
+  const tone = request.status === 'rejected' ? 'var(--danger)' : 'var(--success)';
+  return (
+    <div className="modal-section" style={{ marginTop: 14, borderColor: tone }}>
+      <h3>Decision outcome</h3>
+      {request.status === 'approved' || customerId || customerUserId ? (
+        <>
+          <DetailLine label="Portal customer" value={customerId ?? '-'} />
+          <DetailLine label="Portal user" value={customerUserId ?? '-'} />
+          {approvedDecision?.invitation ? (
+            <>
+              <DetailLine label="Invitation delivery" value={approvedDecision.invitation.delivery} />
+              <DetailLine label="Invitation delivery id" value={approvedDecision.invitation.deliveryId} />
+              <DetailLine label="Invitation expires" value={fmtDate(approvedDecision.invitation.expiresAt)} />
+            </>
+          ) : null}
+        </>
+      ) : null}
+      {request.status === 'rejected' ? (
+        <DetailLine label="Customer message" value={(request.reviewNotes ?? reviewNotes) || 'Application could not be approved at this time.'} />
+      ) : null}
+      {delivery ? (
+        <>
+          <DetailLine label="Decision email" value={`${delivery.status} / ${delivery.recipientEmail}`} />
+          <DetailLine label="Delivery id" value={delivery.id} />
+          <DetailLine label="Delivery event" value={delivery.eventKey} />
+          <DetailLine label="Delivery recorded" value={fmtDate(delivery.createdAt)} />
+          {delivery.sentAt ? <DetailLine label="Sent at" value={fmtDate(delivery.sentAt)} /> : null}
+          {delivery.errorMessage ? <DetailLine label="Delivery error" value={delivery.errorMessage} /> : null}
+        </>
+      ) : (
+        <div className="muted">No decision email has been recorded yet.</div>
+      )}
+    </div>
   );
 }
 

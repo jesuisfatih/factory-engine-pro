@@ -73,6 +73,7 @@ import type {
   CreateSubUserInput,
   BackfillWorkflowRuleInput,
   ActiveWorkflowRuleStatsResponse,
+  ApproveB2BAccessResponse,
   CustomerLoginInput,
   CustomerRegisterInput,
   ForgotPasswordInput,
@@ -133,6 +134,7 @@ import type {
   BulkServiceRequestsInput,
   ChangeServiceRequestStatusInput,
   CloseServiceRequestInput,
+  RejectB2BAccessResponse,
   RejectB2BAccessInput,
   PreviewSegmentInput,
   RecordAccountInvoicePaymentInput,
@@ -1046,11 +1048,11 @@ export class ApiClient {
   }
 
   approveB2BAccessRequest(id: string) {
-    return this.post(`/b2b-access/${id}/approve`, {});
+    return this.post<ApproveB2BAccessResponse>(`/b2b-access/${id}/approve`, {});
   }
 
   rejectB2BAccessRequest(id: string, input: RejectB2BAccessInput) {
-    return this.post(`/b2b-access/${id}/reject`, input);
+    return this.post<RejectB2BAccessResponse>(`/b2b-access/${id}/reject`, input);
   }
 
   b2bAccessCertificate(id: string) {

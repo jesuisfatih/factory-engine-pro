@@ -71,6 +71,25 @@ export class B2BAccessRepository {
     });
   }
 
+  findLatestDecisionDelivery(requestId: string) {
+    return this.prisma.db.mailDelivery.findFirst({
+      where: {
+        eventKey: { in: ['b2b_access.approved', 'b2b.application_rejected.user'] },
+        metadata: { path: ['requestId'], equals: requestId },
+      },
+      select: {
+        id: true,
+        eventKey: true,
+        status: true,
+        recipientEmail: true,
+        createdAt: true,
+        sentAt: true,
+        errorMessage: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async update(id: string, data: Prisma.B2BAccessRequestUpdateManyMutationInput) {
     await this.prisma.db.b2BAccessRequest.updateMany({ where: { id }, data });
     return this.findById(id);

@@ -964,6 +964,41 @@ export class MailService {
     });
   }
 
+  async sendB2BApplicationRejected(input: {
+    to: string;
+    recipientName: string;
+    companyName: string;
+    reviewNotes?: string | null;
+    requestId: string;
+  }) {
+    const brand = await this.resolveBrandName();
+    const note = input.reviewNotes?.trim();
+    const subject = `${brand} B2B access application update`;
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>Thank you for applying for B2B access with <strong>${escapeHtml(brand)}</strong>.</p>`,
+      `<p>We could not approve the application for <strong>${escapeHtml(input.companyName)}</strong> at this time.</p>`,
+      note ? `<p><strong>Review note:</strong> ${escapeHtml(note)}</p>` : '',
+      '<p>If your account details change, you can submit a new application from the customer portal.</p>',
+    ].filter(Boolean).join('');
+    const text = [
+      `Hello ${input.recipientName},`,
+      `Thank you for applying for B2B access with ${brand}.`,
+      `We could not approve the application for ${input.companyName} at this time.`,
+      note ? `Review note: ${note}` : '',
+      'If your account details change, you can submit a new application from the customer portal.',
+    ].filter(Boolean).join('\n\n');
+    return this.sendTransactional({
+      eventKey: 'b2b.application_rejected.user',
+      category: 'system.b2b',
+      to: input.to,
+      subject,
+      html,
+      text,
+      metadata: { requestId: input.requestId, companyName: input.companyName },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'

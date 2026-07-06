@@ -94,7 +94,8 @@ Kabul:
 - Basvuru gercek API ile kaydedilir.
 - Admin tarafinda pending olarak gorunur.
 - Onay sonrasi CustomerUser ve rol baglantisi olusur.
-- Red durumunda musteriye anlasilir mesaj doner.
+- Onay veya red karari customer-facing mail delivery proof ile kaydedilir.
+- Red durumunda musteriye anlasilir mesaj doner ve admin karar ekraninda bu delivery kaniti gorunur.
 
 ## 4. Customer Portal Home
 

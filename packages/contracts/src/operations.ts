@@ -279,3 +279,34 @@ export const rejectB2BAccessSchema = z.object({
   reviewNotes: z.string().trim().max(2000).optional(),
 });
 export type RejectB2BAccessInput = z.infer<typeof rejectB2BAccessSchema>;
+
+export const b2bAccessDecisionDeliverySchema = z.object({
+  id: z.string(),
+  eventKey: z.string(),
+  status: z.string(),
+  recipientEmail: emailSchema,
+  createdAt: z.string().datetime(),
+  sentAt: z.string().datetime().nullable(),
+  errorMessage: z.string().nullable(),
+});
+export type B2BAccessDecisionDelivery = z.infer<typeof b2bAccessDecisionDeliverySchema>;
+
+export const approveB2BAccessResponseSchema = z.object({
+  success: z.literal(true),
+  customerId: z.string(),
+  customerUserId: z.string(),
+  invitation: z.object({
+    token: z.string(),
+    expiresAt: z.string().datetime(),
+    delivery: z.string(),
+    deliveryId: z.string(),
+  }),
+  decisionDelivery: b2bAccessDecisionDeliverySchema.nullable(),
+});
+export type ApproveB2BAccessResponse = z.infer<typeof approveB2BAccessResponseSchema>;
+
+export const rejectB2BAccessResponseSchema = z.object({
+  success: z.literal(true),
+  decisionDelivery: b2bAccessDecisionDeliverySchema,
+});
+export type RejectB2BAccessResponse = z.infer<typeof rejectB2BAccessResponseSchema>;
