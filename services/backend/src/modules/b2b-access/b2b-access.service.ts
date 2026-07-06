@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { CreateB2BAccessRequestInput, RejectB2BAccessInput } from '@factory-engine-pro/contracts';
-import { AuthTokenService } from '../../shared/auth-token.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -20,7 +19,6 @@ export class B2BAccessService {
   constructor(
     private readonly repository: B2BAccessRepository,
     private readonly password: PasswordService,
-    private readonly authTokens: AuthTokenService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
     private readonly mail: MailService,
@@ -97,17 +95,30 @@ export class B2BAccessService {
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
     const existingUser = await this.repository.findCustomerUserByEmail(request.email);
-    if (existingUser) throw new ConflictException('A customer user with this email already exists');
-
-    const customer = await this.repository.findCustomerByEmail(request.email)
+    const shopifyCustomerId = cleanOptionalString(request.shopifyCustomerId ?? undefined);
+    const customer = await this.repository.findCustomerByIdentity(request.email, shopifyCustomerId)
       ?? await this.repository.createCustomer({
         companyName: request.companyName,
         legalName: request.legalName,
         email: request.email,
         phone: request.phone,
         status: 'active',
+        shopifyCustomerId,
       });
-    const user = await this.repository.createCustomerUser({
+    if (shopifyCustomerId && customer.shopifyCustomerId && customer.shopifyCustomerId !== shopifyCustomerId) {
+      throw new ConflictException('This application belongs to a different Shopify customer record.');
+    }
+    if (existingUser && existingUser.customerId !== customer.id) {
+      throw new ConflictException('This email is already linked to another portal customer.');
+    }
+    await this.repository.updateCustomerFromB2BRequest(customer.id, {
+      email: request.email,
+      phone: request.phone,
+      companyName: request.companyName,
+      legalName: request.legalName,
+      shopifyCustomerId,
+    });
+    const user = existingUser ?? await this.repository.createCustomerUser({
       customerId: customer.id,
       email: request.email,
       firstName: request.firstName,
@@ -115,27 +126,20 @@ export class B2BAccessService {
       phone: request.phone,
       passwordHash: request.passwordHash,
     });
+    if (existingUser) {
+      await this.repository.activateCustomerUserForB2B(user.id, user.passwordHash ? null : request.passwordHash);
+    }
     const adminRole = await this.repository.findCustomerRoleBySlug('b2b_admin');
     if (!adminRole) throw new BadRequestException('Default b2b_admin role is missing');
     await this.repository.assignCustomerRole(user.id, adminRole.id);
-    const tenantId = this.tenantContext.require().tenantId;
-    if (!tenantId) throw new BadRequestException('Tenant context is required');
-    const invitationToken = await this.authTokens.create({
-      tenantId,
-      kind: 'invitation',
-      principalType: 'customer_user',
-      principalId: user.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      metadata: { source: 'b2b_access_approval', requestId: request.id },
-      createdById: this.tenantContext.get()?.principalId,
-    });
-    const delivery = await this.mail.sendInvitation({
+    const delivery = await this.mail.sendB2BApplicationApproved({
       to: user.email,
       recipientName: `${user.firstName} ${user.lastName}`.trim(),
-      token: invitationToken,
-      surface: 'accounts',
-      eventKey: 'b2b_access.approved',
-      metadata: { requestId: request.id, customerId: customer.id, customerUserId: user.id },
+      companyName: request.companyName,
+      requestId: request.id,
+      customerId: customer.id,
+      customerUserId: user.id,
+      existingPortalAccount: Boolean(existingUser),
     });
     await this.repository.update(id, {
       status: 'approved',
@@ -153,12 +157,7 @@ export class B2BAccessService {
       success: true,
       customerId: customer.id,
       customerUserId: user.id,
-      invitation: {
-        token: invitationToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        delivery: delivery.status,
-        deliveryId: delivery.id,
-      },
+      invitation: null,
       decisionDelivery: this.presentDecisionDelivery(delivery),
     };
   }

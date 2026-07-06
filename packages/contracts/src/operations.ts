@@ -301,7 +301,7 @@ export const approveB2BAccessResponseSchema = z.object({
     expiresAt: z.string().datetime(),
     delivery: z.string(),
     deliveryId: z.string(),
-  }),
+  }).nullable(),
   decisionDelivery: b2bAccessDecisionDeliverySchema.nullable(),
 });
 export type ApproveB2BAccessResponse = z.infer<typeof approveB2BAccessResponseSchema>;

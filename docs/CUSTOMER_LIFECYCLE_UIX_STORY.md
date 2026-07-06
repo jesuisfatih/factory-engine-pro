@@ -103,6 +103,8 @@ Kabul:
 - Shopify customer context'i varsa `B2BAccessRequest.shopifyCustomerId` doludur ve duplicate pending kontrolu e-posta ile birlikte bu id uzerinden de calisir.
 - Onay veya red karari customer-facing mail delivery proof ile kaydedilir.
 - Red durumunda musteriye anlasilir mesaj doner ve admin karar ekraninda bu delivery kaniti gorunur.
+- Shopify customer id ile gelen basvuruda admin onayi ayni `Customer` kaydini kullanir; yeni duplicate Customer olusturmaz.
+- Musteri daha once portal hesabini acmissa B2B onayi conflict'e dusmez; mevcut `CustomerUser` B2B owner rolune yukseltilir ve approval mail proof'u kaydedilir.
 
 ## 4. Customer Portal Home
 

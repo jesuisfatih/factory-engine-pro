@@ -964,6 +964,54 @@ export class MailService {
     });
   }
 
+  async sendB2BApplicationApproved(input: {
+    to: string;
+    recipientName: string;
+    companyName: string;
+    requestId: string;
+    customerId: string;
+    customerUserId: string;
+    existingPortalAccount: boolean;
+  }) {
+    const brand = await this.resolveBrandName();
+    const baseUrl = this.config.get<string>('ACCOUNTS_URL')?.replace(/\/+$/, '') || '';
+    const loginUrl = `${baseUrl}/login`;
+    const subject = `${brand} B2B access approved`;
+    const accountText = input.existingPortalAccount
+      ? 'Your existing portal account now has B2B access.'
+      : 'Your portal account is ready with B2B access.';
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>Your B2B access application for <strong>${escapeHtml(input.companyName)}</strong> has been approved.</p>`,
+      `<p>${escapeHtml(accountText)}</p>`,
+      loginUrl ? `<p><a href="${escapeHtml(loginUrl)}">Open your account portal</a></p>` : '',
+      '<p>You can now review orders, invoices, reorder options, team users, and account pricing from the portal.</p>',
+    ].filter(Boolean).join('');
+    const text = [
+      `Hello ${input.recipientName},`,
+      `Your B2B access application for ${input.companyName} has been approved.`,
+      accountText,
+      loginUrl ? `Open your account portal: ${loginUrl}` : '',
+      'You can now review orders, invoices, reorder options, team users, and account pricing from the portal.',
+    ].filter(Boolean).join('\n\n');
+    return this.sendTransactional({
+      eventKey: 'b2b.application_approved.user',
+      category: 'system.b2b',
+      to: input.to,
+      subject,
+      html,
+      text,
+      metadata: {
+        requestId: input.requestId,
+        customerId: input.customerId,
+        customerUserId: input.customerUserId,
+        companyName: input.companyName,
+        existingPortalAccount: input.existingPortalAccount,
+        loginUrl,
+      },
+    });
+  }
+
   async sendB2BApplicationRejected(input: {
     to: string;
     recipientName: string;

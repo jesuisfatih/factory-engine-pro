@@ -82,7 +82,7 @@ export class B2BAccessRepository {
   findLatestDecisionDelivery(requestId: string) {
     return this.prisma.db.mailDelivery.findFirst({
       where: {
-        eventKey: { in: ['b2b_access.approved', 'b2b.application_rejected.user'] },
+        eventKey: { in: ['b2b_access.approved', 'b2b.application_approved.user', 'b2b.application_rejected.user'] },
         metadata: { path: ['requestId'], equals: requestId },
       },
       select: {
@@ -103,8 +103,15 @@ export class B2BAccessRepository {
     return this.findById(id);
   }
 
-  findCustomerByEmail(email: string) {
-    return this.prisma.db.customer.findFirst({ where: { email } });
+  findCustomerByIdentity(email: string, shopifyCustomerId?: string | null) {
+    return this.prisma.db.customer.findFirst({
+      where: {
+        OR: [
+          ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
+          { email },
+        ],
+      },
+    });
   }
 
   findCustomerUserByEmail(email: string) {
@@ -117,6 +124,7 @@ export class B2BAccessRepository {
     email: string;
     phone?: string | null;
     status?: string;
+    shopifyCustomerId?: string | null;
   }) {
     return this.prisma.db.customer.create({
       data: {
@@ -127,6 +135,27 @@ export class B2BAccessRepository {
         email: data.email,
         phone: data.phone,
         status: data.status ?? 'active',
+        shopifyCustomerId: data.shopifyCustomerId,
+      },
+    });
+  }
+
+  updateCustomerFromB2BRequest(customerId: string, data: {
+    email: string;
+    phone?: string | null;
+    companyName: string;
+    legalName?: string | null;
+    shopifyCustomerId?: string | null;
+  }) {
+    return this.prisma.db.customer.updateMany({
+      where: { id: customerId },
+      data: {
+        email: data.email,
+        phone: data.phone,
+        companyName: data.companyName,
+        legalName: data.legalName,
+        ...(data.shopifyCustomerId ? { shopifyCustomerId: data.shopifyCustomerId } : {}),
+        status: 'active',
       },
     });
   }
@@ -167,6 +196,16 @@ export class B2BAccessRepository {
         roleId,
       }],
       skipDuplicates: true,
+    });
+  }
+
+  activateCustomerUserForB2B(customerUserId: string, passwordHash: string | null) {
+    return this.prisma.db.customerUser.updateMany({
+      where: { id: customerUserId },
+      data: {
+        status: 'active',
+        ...(passwordHash ? { passwordHash } : {}),
+      },
     });
   }
 

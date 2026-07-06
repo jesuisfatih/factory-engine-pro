@@ -59,7 +59,7 @@ interface ApproveResult {
     expiresAt: string;
     delivery: string;
     deliveryId: string;
-  };
+  } | null;
   decisionDelivery: DecisionDelivery | null;
 }
 
