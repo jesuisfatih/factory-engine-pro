@@ -1587,8 +1587,17 @@ button { font-family: inherit; }
 }
 .card-v2 .action-badge,
 .card-v2 .chip,
+.card-v2 .product-chip,
 .card-v2 .priority {
+  min-width: 0;
   max-width: 100%;
+}
+.card-v2 .chip,
+.card-v2 .product-chip,
+.card-v2 .priority {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-v2 .action-badge span {
   min-width: 0;
@@ -1604,7 +1613,7 @@ button { font-family: inherit; }
 .card.urgency-low,
 .daily-card.urgency-low { border-left: 3px solid var(--border); }
 .card-foot { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 9px; margin-top: 9px; }
-.card-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: stretch; gap: 7px 10px; font-size: 11.5px; font-weight: 550; color: var(--text-muted); min-width: 0; }
+.card-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); align-items: stretch; gap: 7px 10px; font-size: 11.5px; font-weight: 550; color: var(--text-muted); min-width: 0; }
 .card-meta > span {
   display: inline-flex;
   align-items: center;
@@ -1620,7 +1629,7 @@ button { font-family: inherit; }
   border-radius: 7px;
   padding: 6px 8px;
 }
-.card-actions { display: flex; align-items: center; gap: 6px; margin-left: 0; flex-shrink: 1; flex-wrap: wrap; justify-content: flex-end; }
+.card-actions { display: flex; align-items: center; gap: 6px; margin-left: 0; flex-shrink: 1; flex-wrap: wrap; justify-content: flex-start; }
 .sig-ic { display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 21px; border-radius: 7px; flex-shrink: 0; }
 .sig-ic.green { background: rgba(34, 197, 94, .14); color: #15803d; }
 .sig-ic.indigo { background: rgba(99, 102, 241, .14); color: #4f46e5; }
@@ -2567,6 +2576,25 @@ button { font-family: inherit; }
 .queue-wrap .card-actions,
 .queue-wrap .segment-customer-actions {
   min-width: 0;
+}
+
+.queue-wrap .quick-action,
+.queue-wrap .pin-btn,
+.queue-wrap .archive-btn,
+.queue-wrap .transfer-btn,
+.queue-wrap .call-btn {
+  min-width: 0;
+}
+
+.queue-wrap .quick-action span,
+.queue-wrap .pin-btn,
+.queue-wrap .archive-btn span,
+.queue-wrap .transfer-btn span,
+.queue-wrap .call-btn span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 1600px) {

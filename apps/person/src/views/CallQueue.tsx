@@ -380,7 +380,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                         <span className="missed-main">
                           <span className="missed-name">{personSafeText(card.displayTitle || card.title)}</span>
                           <span className="missed-sub">
-                            {tags.map((tag) => <span key={tag} className="missed-chip">{tag}</span>)}
+                            {tags.map((tag) => <span key={tag} className="missed-chip">{personSafeText(tag)}</span>)}
                             <span className="missed-note"><NoteText text={personSafeText(note)} /></span>
                           </span>
                         </span>
