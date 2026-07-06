@@ -24,6 +24,7 @@ import { AppLogger } from '../../shared/logger.service.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { PricingCalculatorService } from '../pricing/pricing-calculator.service.js';
 import { algorithmScore, algorithmScoreBand, algorithmVisible } from '../rules/algorithm-runtime.js';
 import { RulesService } from '../rules/rules.service.js';
 import { AccountsCheckoutService, type AccountCheckoutAttempt } from './accounts-checkout.service.js';
@@ -101,6 +102,7 @@ export class AccountsService {
     private readonly password: PasswordService,
     private readonly logger: AppLogger,
     private readonly checkout: AccountsCheckoutService,
+    private readonly pricing: PricingCalculatorService,
     private readonly rules: RulesService,
   ) {}
 
@@ -273,14 +275,19 @@ export class AccountsService {
 
     if (existing) {
       const nextQuantity = existing.quantity + quantity;
+      const [priced] = await this.calculateAccountPrices(actor, [{ variant, quantity: nextQuantity }]);
       await this.prisma.db.accountReorderCartItem.updateMany({
         where: { id: existing.id, cartId: cart.id },
         data: {
           quantity: nextQuantity,
-          unitPrice: variant.price,
-          lineTotal: roundMoney(money(variant.price) * nextQuantity),
+          unitPrice: priced.finalPrice,
+          lineTotal: roundMoney(priced.finalPrice * nextQuantity),
           reorderable: variant.availableForSale,
           reason: variant.availableForSale ? 'Ready for portal review' : 'Variant is not currently available',
+          metadata: {
+            ...metadata(existing.metadata),
+            ...pricingMetadata(priced, money(variant.compareAtPrice ?? variant.price)),
+          } as Prisma.InputJsonValue,
         },
       });
       await this.recordCartActivity(actor, cart, {
@@ -290,6 +297,7 @@ export class AccountsService {
         metadata: { itemId: existing.id, catalogVariantId: variant.id, quantity: nextQuantity },
       });
     } else {
+      const [priced] = await this.calculateAccountPrices(actor, [{ variant, quantity }]);
       const item = await this.prisma.db.accountReorderCartItem.create({
         data: {
           id: prefixedId('arci'),
@@ -301,15 +309,18 @@ export class AccountsService {
           variantTitle: variant.title,
           sku: variant.sku,
           quantity,
-          unitPrice: variant.price,
-          lineTotal: roundMoney(money(variant.price) * quantity),
+          unitPrice: priced.finalPrice,
+          lineTotal: roundMoney(priced.finalPrice * quantity),
           shopifyVariantId: variant.shopifyVariantId,
           catalogVariantId: variant.id,
           reorderable: variant.availableForSale,
           reason: variant.availableForSale ? 'Ready for portal review' : 'Variant is not currently available',
           propertiesJson: [],
           designFilesJson: [],
-          metadata: { source: 'catalog_add' },
+          metadata: {
+            source: 'catalog_add',
+            ...pricingMetadata(priced, money(variant.compareAtPrice ?? variant.price)),
+          },
         },
       });
       await this.recordCartActivity(actor, cart, {
@@ -338,11 +349,22 @@ export class AccountsService {
       });
       return this.recalculateCart(cart.id);
     }
+    const variant = item.catalogVariantId
+      ? await this.prisma.db.catalogVariant.findFirst({ where: { id: item.catalogVariantId }, include: { product: true } })
+      : null;
+    const [priced] = variant
+      ? await this.calculateAccountPrices(actor, [{ variant, quantity: input.quantity }])
+      : [{ finalPrice: money(item.unitPrice), discountAmount: 0, appliedRule: null, basePrice: money(item.unitPrice) }];
     await this.prisma.db.accountReorderCartItem.updateMany({
       where: { id: item.id, cartId: cart.id },
       data: {
         quantity: input.quantity,
-        lineTotal: roundMoney(money(item.unitPrice) * input.quantity),
+        unitPrice: priced.finalPrice,
+        lineTotal: roundMoney(priced.finalPrice * input.quantity),
+        metadata: {
+          ...metadata(item.metadata),
+          ...pricingMetadata(priced, variant ? money(variant.compareAtPrice ?? variant.price) : money(item.unitPrice)),
+        } as Prisma.InputJsonValue,
       },
     });
     await this.recordCartActivity(actor, cart, {
@@ -470,17 +492,17 @@ export class AccountsService {
   }
 
   async products() {
+    const actor = await this.currentActor();
     const products = await this.prisma.db.catalogProduct.findMany({
       where: { status: 'active' },
       include: { variants: true },
       orderBy: { title: 'asc' },
       take: 120,
     });
-    return products.flatMap((product, productIndex) => {
+    const entries = products.flatMap((product, productIndex) => {
       const variants = product.variants.length > 0 ? product.variants : [null];
       return variants.map((variant, variantIndex) => {
         const listPrice = money(variant?.compareAtPrice ?? variant?.price ?? 0);
-        const yourPrice = money(variant?.price ?? 0);
         const variantTitle = variant?.title && !['default title', 'default'].includes(variant.title.toLowerCase())
           ? ` - ${variant.title}`
           : '';
@@ -488,17 +510,36 @@ export class AccountsService {
           id: variant?.id ?? product.id,
           productId: product.id,
           variantId: variant?.id ?? null,
+          variant: variant ? { ...variant, product } : null,
           name: `${product.title}${variantTitle}`,
           sku: variant?.sku ?? product.handle ?? product.shopifyProductId,
           vendor: product.vendor ?? 'Catalog',
           listPriceUsd: listPrice,
-          yourPriceUsd: yourPrice,
+          yourPriceUsd: money(variant?.price ?? 0),
           inStock: variant?.availableForSale ?? true,
           inventoryQuantity: variant?.inventoryQuantity ?? null,
           imageUrl: firstImageUrl(product.images),
           imageBg: swatch(productIndex + variantIndex),
         };
       });
+    });
+    const pricedInputs: Array<{ variant: AccountCartCatalogVariant; quantity: number }> = [];
+    const priceIndexByEntry = new Map<number, number>();
+    entries.forEach((entry, index) => {
+      if (!entry.variant) return;
+      priceIndexByEntry.set(index, pricedInputs.length);
+      pricedInputs.push({ variant: entry.variant, quantity: 1 });
+    });
+    const priced = await this.calculateAccountPrices(actor, pricedInputs);
+    return entries.map(({ variant, ...entry }, index) => {
+      if (!variant) return entry;
+      const price = priced[priceIndexByEntry.get(index) ?? -1] ?? { finalPrice: entry.yourPriceUsd, discountAmount: 0, appliedRule: null, basePrice: entry.yourPriceUsd };
+      return {
+        ...entry,
+        yourPriceUsd: price.finalPrice,
+        pricingLabel: price.appliedRule ? price.appliedRule.name : null,
+        discountUsd: price.discountAmount,
+      };
     });
   }
 
@@ -1122,7 +1163,7 @@ export class AccountsService {
       if (variant.sku) variantByKey.set(variant.sku, variant);
     }
 
-    const resolved = items.map((item) => {
+    const resolved = await Promise.all(items.map(async (item) => {
       const variant = (item.shopifyVariantId ? variantByKey.get(item.shopifyVariantId) : null) ?? (item.sku ? variantByKey.get(item.sku) : null) ?? null;
       const baseReorderable = Boolean(variant?.availableForSale);
       const signals = reorderEligibilitySignals(order, item, variant, actor, baseReorderable);
@@ -1130,7 +1171,10 @@ export class AccountsService {
       const strategyBand = algorithmScoreBand(strategy, strategyScore);
       const strategyVisible = algorithmVisible(strategy, signals);
       const reorderable = baseReorderable && strategyVisible;
-      const unitPriceUsd = reorderable && variant ? money(variant.price) : item.unitPriceUsd;
+      const [priced] = reorderable && variant
+        ? await this.calculateAccountPrices(actor, [{ variant, quantity: item.qty }])
+        : [{ finalPrice: item.unitPriceUsd, discountAmount: 0, appliedRule: null, basePrice: item.unitPriceUsd }];
+      const unitPriceUsd = priced.finalPrice;
       const lineTotalUsd = roundMoney(unitPriceUsd * item.qty);
       return {
         item,
@@ -1138,10 +1182,13 @@ export class AccountsService {
         reorderable,
         unitPriceUsd,
         lineTotalUsd,
+        pricing: pricingMetadata(priced, variant ? money(variant.compareAtPrice ?? variant.price) : item.unitPriceUsd),
         strategyScore,
         strategyBand,
         reason: reorderable
-          ? 'Ready for portal review'
+          ? priced.appliedRule
+            ? `B2B pricing applied: ${priced.appliedRule.name}`
+            : 'Ready for portal review'
           : !strategyVisible
             ? 'This item is not currently eligible under account reorder rules'
           : variant
@@ -1150,7 +1197,7 @@ export class AccountsService {
               ? item.reorderReason
               : 'Current catalog variant could not be matched by SKU or variant id',
       };
-    });
+    }));
 
     const reorderableItems = resolved.filter((entry) => entry.reorderable);
     const subtotal = roundMoney(reorderableItems.reduce((sum, entry) => sum + entry.lineTotalUsd, 0));
@@ -1198,6 +1245,7 @@ export class AccountsService {
           designFilesJson: entry.item.designFiles as Prisma.InputJsonValue,
           metadata: {
             originalLineItemId: entry.item.id,
+            ...entry.pricing,
             reorderStrategy: {
               surfaceId: strategy.surfaceId,
               score: entry.strategyScore,
@@ -1356,6 +1404,33 @@ export class AccountsService {
     });
   }
 
+  private async calculateAccountPrices(actor: AccountActor, items: Array<{ variant: AccountCartCatalogVariant; quantity: number }>) {
+    if (items.length === 0) return [];
+    const cartTotal = items.reduce((sum, item) => sum + money(item.variant.price) * item.quantity, 0);
+    const result = await this.pricing.calculate({
+      customerId: actor.customerId,
+      customerUserId: actor.principalType === 'customer_user' ? actor.principalId : undefined,
+      customerTags: actor.customer.tags ?? [],
+      cartTotal,
+      items: items.map(({ variant, quantity }) => ({
+        variantId: variant.id,
+        shopifyVariantId: variant.shopifyVariantId ?? undefined,
+        productId: variant.productId,
+        shopifyProductId: variant.product.shopifyProductId ?? undefined,
+        sku: variant.sku ?? undefined,
+        tags: variant.product.tags ?? [],
+        quantity,
+        basePrice: money(variant.price),
+      })),
+    });
+    return result.items.map((item) => ({
+      basePrice: item.basePrice,
+      finalPrice: item.finalPrice,
+      discountAmount: item.discountAmount,
+      appliedRule: item.appliedRule,
+    }));
+  }
+
   private async recalculateCart(cartId: string) {
     const items = await this.prisma.db.accountReorderCartItem.findMany({ where: { cartId } });
     const reorderable = items.filter((item) => item.reorderable);
@@ -1381,27 +1456,36 @@ export class AccountsService {
   }
 
   private buyerCart(cart: AccountCartRecord) {
-    const items = cart.items.map((item) => ({
-      id: item.id,
-      originOrderId: item.sourceOrderId,
-      productTitle: item.productTitle,
-      variantTitle: item.variantTitle,
-      sku: item.sku,
-      quantity: item.quantity,
-      unitPriceUsd: money(item.unitPrice),
-      lineTotalUsd: money(item.lineTotal),
-      reorderable: item.reorderable,
-      reason: item.reason ?? (item.reorderable ? 'Ready for portal review' : 'Availability needs review'),
-      properties: jsonArray(item.propertiesJson).map((property, index) => ({
-        name: stringValue(property.name ?? property.key ?? property.label) ?? `Property ${index + 1}`,
-        value: stringValue(property.value ?? property.text ?? property.url) ?? '',
-      })),
-      designFiles: jsonArray(item.designFilesJson).map((file, index) => ({
-        id: stringValue(file.id ?? file.fileId ?? file.key) ?? `${item.id}-file-${index + 1}`,
-        name: stringValue(file.name ?? file.filename ?? file.originalFilename ?? file.value) ?? `Design file ${index + 1}`,
-        url: stringValue(file.url ?? file.previewUrl ?? file.downloadUrl ?? file.value),
-      })),
-    }));
+    const items = cart.items.map((item) => {
+      const pricing = objectRecord(metadata(item.metadata).pricing);
+      const unitPrice = money(item.unitPrice);
+      const discount = money(pricing?.discountAmount);
+      const listPrice = money(pricing?.listPrice) || unitPrice + discount || unitPrice;
+      return {
+        id: item.id,
+        originOrderId: item.sourceOrderId,
+        productTitle: item.productTitle,
+        variantTitle: item.variantTitle,
+        sku: item.sku,
+        quantity: item.quantity,
+        listPriceUsd: listPrice,
+        unitPriceUsd: unitPrice,
+        discountUsd: discount,
+        pricingLabel: stringValue(pricing?.ruleName),
+        lineTotalUsd: money(item.lineTotal),
+        reorderable: item.reorderable,
+        reason: item.reason ?? (item.reorderable ? 'Ready for portal review' : 'Availability needs review'),
+        properties: jsonArray(item.propertiesJson).map((property, index) => ({
+          name: stringValue(property.name ?? property.key ?? property.label) ?? `Property ${index + 1}`,
+          value: stringValue(property.value ?? property.text ?? property.url) ?? '',
+        })),
+        designFiles: jsonArray(item.designFilesJson).map((file, index) => ({
+          id: stringValue(file.id ?? file.fileId ?? file.key) ?? `${item.id}-file-${index + 1}`,
+          name: stringValue(file.name ?? file.filename ?? file.originalFilename ?? file.value) ?? `Design file ${index + 1}`,
+          url: stringValue(file.url ?? file.previewUrl ?? file.downloadUrl ?? file.value),
+        })),
+      };
+    });
     const checkoutAction = cart.checkoutUrl
       ? 'checkout'
       : items.some((item) => item.reorderable)
@@ -2065,6 +2149,23 @@ function supportPriority(priority: string) {
 function supportCategory(value: unknown) {
   const text = stringValue(value);
   return text && ['billing', 'shipping', 'product', 'account', 'other'].includes(text) ? text : 'other';
+}
+
+function pricingMetadata(
+  price: { basePrice: number; finalPrice: number; discountAmount: number; appliedRule: { id: string; name: string; discountType: string; priority: number } | null },
+  listPrice: number,
+) {
+  return {
+    pricing: {
+      listPrice: roundMoney(Math.max(listPrice, price.basePrice)),
+      basePrice: roundMoney(price.basePrice),
+      finalPrice: roundMoney(price.finalPrice),
+      discountAmount: roundMoney(price.discountAmount),
+      ruleId: price.appliedRule?.id ?? null,
+      ruleName: price.appliedRule?.name ?? null,
+      discountType: price.appliedRule?.discountType ?? null,
+    },
+  };
 }
 
 function firstFulfillment(value: unknown) {

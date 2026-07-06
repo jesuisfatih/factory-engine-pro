@@ -206,6 +206,8 @@ Kabul:
 - Tek item reorder cart olusturur.
 - Checkout hazir degilse sebep musteriye okunabilir sekilde doner.
 - Checkout hazirsa checkout linki uretilir veya shop/payment akisi acilir.
+- Reorder cart item fiyatlari B2B pricing resolver'dan gelir; catalog fiyatini direkt yazmak yasaktir.
+- Checkout draft order olusturulurken cart'taki final unit price Shopify `priceOverride` olarak tasinir.
 
 ## 7. B2B Pricing ve Tier Discount
 
@@ -219,7 +221,8 @@ Hikaye:
 4. Sistem musteriye ait rol, segment, product ve quantity bilgisini okur.
 5. Fiyat/discount native olarak hesaplanir.
 6. Musteri liste fiyat, kendi fiyat, indirim ve minimum/tier gerekcesini gorur.
-7. Checkout'a giderken ayni fiyat karari korunur.
+7. Cart quantity degisirse tier yeniden hesaplanir.
+8. Checkout'a giderken ayni fiyat karari korunur.
 
 UIX beklentisi:
 
@@ -235,6 +238,7 @@ Gercek veri kaynaklari:
 - Customer / CustomerUser / CustomerRole
 - AccountReorderCart
 - Checkout pricing attempt
+- Shopify DraftOrder `priceOverride`
 
 Kabul:
 
@@ -242,6 +246,7 @@ Kabul:
 - Rule disabled ise indirim uygulanmaz.
 - Quantity tier degisince fiyat yeniden hesaplanir.
 - Shopify tarafina bagimli olmayan internal cart fiyat karari ayrica tutulur.
+- Catalog add-to-cart, eski order reorder ve line-item reorder ayni pricing resolver'i kullanir.
 
 ## 8. Invoices: Admin Tarafindan Girilen Faturalar
 

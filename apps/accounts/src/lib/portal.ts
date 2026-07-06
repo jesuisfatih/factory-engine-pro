@@ -117,7 +117,10 @@ export type BuyerCartItem = {
   variantTitle: string | null;
   sku: string | null;
   quantity: number;
+  listPriceUsd: number;
   unitPriceUsd: number;
+  discountUsd: number;
+  pricingLabel: string | null;
   lineTotalUsd: number;
   reorderable: boolean;
   reason: string;
@@ -169,6 +172,8 @@ export type BuyerProduct = {
   vendor: string;
   listPriceUsd: number;
   yourPriceUsd: number;
+  discountUsd?: number;
+  pricingLabel?: string | null;
   inStock: boolean;
   inventoryQuantity: number | null;
   imageUrl: string | null;

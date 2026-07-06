@@ -145,6 +145,7 @@ function ProductsView() {
                     {discount > 0 && <span className="catalog-list-price">{fmtMoney(product.listPriceUsd)}</span>}
                     <strong>{fmtMoney(product.yourPriceUsd)}</strong>
                   </div>
+                  {product.pricingLabel ? <div className="muted" style={{ fontSize: 11 }}>{product.pricingLabel}</div> : null}
                   <div className="catalog-actions">
                     <span className={`pill ${product.inStock ? 'success' : 'danger'}`}>
                       {product.inStock ? t('products.in_stock') : t('products.out_of_stock')}
@@ -194,7 +195,7 @@ function ProductsView() {
                     </td>
                     <td className="muted">{product.vendor}</td>
                     <td>{fmtMoney(product.listPriceUsd)}</td>
-                    <td><strong>{fmtMoney(product.yourPriceUsd)}</strong></td>
+                    <td><strong>{fmtMoney(product.yourPriceUsd)}</strong>{product.pricingLabel ? <div className="muted" style={{ fontSize: 11 }}>{product.pricingLabel}</div> : null}</td>
                     <td>
                       {discount > 0
                         ? <span className="pill success">{t('products.discount_off', { percent: discount })}</span>

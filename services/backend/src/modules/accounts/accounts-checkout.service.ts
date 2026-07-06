@@ -17,6 +17,7 @@ type AccountCheckoutCart = {
     shopifyVariantId: string | null;
     reorderable: boolean;
     propertiesJson: Prisma.JsonValue;
+    metadata: Prisma.JsonValue;
   }>;
 };
 
@@ -86,6 +87,10 @@ export class AccountsCheckoutService {
       .map((item) => ({
         variantId: shopifyVariantGid(item.shopifyVariantId!),
         quantity: Math.max(1, item.quantity),
+        priceOverride: {
+          amount: money(item.unitPrice).toFixed(2),
+          currencyCode: cart.currency || 'USD',
+        },
         customAttributes: lineItemCustomAttributes(item),
       }));
 
@@ -209,12 +214,25 @@ function checkoutNote(cart: AccountCheckoutCart, actor: AccountCheckoutActor, no
 }
 
 function lineItemCustomAttributes(item: AccountCheckoutCart['items'][number]) {
+  const pricing = pricingMetadata(item.metadata);
   const attrs = [
     { key: 'factory_engine_cart_item_id', value: item.id },
     ...(item.sku ? [{ key: 'sku', value: item.sku }] : []),
+    ...(pricing.ruleName ? [{ key: 'factory_engine_pricing_rule', value: pricing.ruleName }] : []),
+    ...(pricing.discountAmount > 0 ? [{ key: 'factory_engine_discount', value: pricing.discountAmount.toFixed(2) }] : []),
     ...normalizedPropertyAttributes(item.propertiesJson),
   ];
   return attrs.slice(0, 20);
+}
+
+function pricingMetadata(value: Prisma.JsonValue) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { ruleName: null as string | null, discountAmount: 0 };
+  const pricing = (value as Record<string, unknown>).pricing;
+  if (!pricing || typeof pricing !== 'object' || Array.isArray(pricing)) return { ruleName: null as string | null, discountAmount: 0 };
+  const record = pricing as Record<string, unknown>;
+  const ruleName = typeof record.ruleName === 'string' ? record.ruleName : null;
+  const discountAmount = Number(record.discountAmount ?? 0);
+  return { ruleName, discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0 };
 }
 
 function normalizedPropertyAttributes(value: Prisma.JsonValue) {
@@ -232,4 +250,9 @@ function normalizedPropertyAttributes(value: Prisma.JsonValue) {
 function numberOrNull(value: string | null | undefined) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function money(value: unknown) {
+  if (value === null || value === undefined) return 0;
+  return Number(value);
 }

@@ -174,7 +174,11 @@ function CartView() {
                           <button type="button" disabled={updateQty.isPending} onClick={() => updateQty.mutate({ itemId: item.id, quantity: item.quantity + 1 })}><Plus size={12} /></button>
                         </div>
                       </td>
-                      <td>{fmtMoney(item.unitPriceUsd, cart.currency)}</td>
+                      <td>
+                        {item.discountUsd > 0 && <div className="catalog-list-price">{fmtMoney(item.listPriceUsd, cart.currency)}</div>}
+                        <strong>{fmtMoney(item.unitPriceUsd, cart.currency)}</strong>
+                        {item.pricingLabel ? <div className="muted">{item.pricingLabel}</div> : null}
+                      </td>
                       <td><strong>{fmtMoney(item.lineTotalUsd, cart.currency)}</strong></td>
                       <td><span className={`pill ${item.reorderable ? 'success' : 'danger'}`}>{item.reorderable ? 'Ready' : 'Review'}</span><div className="muted">{item.reason}</div></td>
                       <td style={{ textAlign: 'right' }}>
