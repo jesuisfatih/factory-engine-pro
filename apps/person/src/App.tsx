@@ -130,8 +130,8 @@ export default function App() {
     switch (current) {
       case 'queue': return <CallQueueView />;
       case 'daily-archive': return <CallQueueView range="archive" archive />;
-      case 'customers': return <CustomersView />;
-      case 'customer-archive': return <CustomersView archive />;
+      case 'customers': return <CustomersView customization={frontendCustomization} />;
+      case 'customer-archive': return <CustomersView archive customization={frontendCustomization} />;
       case 'messaging': return <MessagesView />;
       case 'calendar': return <CalendarView />;
       case 'notes': return <NotesView />;

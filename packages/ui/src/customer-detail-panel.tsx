@@ -52,6 +52,14 @@ export interface CustomerDetailPanelProps {
   staffTerminology?: boolean;
   main?: CustomerDetailMainInfo;
   mainContent?: ReactNode;
+  customization?: CustomerDetailPanelCustomization | null;
+}
+
+export interface CustomerDetailPanelCustomization {
+  visibleFields?: string[];
+  hiddenFields?: string[];
+  copyOverrides?: Record<string, string>;
+  className?: string;
 }
 
 const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: LucideIcon }>> = {
@@ -80,6 +88,7 @@ export function CustomerDetailPanel({
   staffTerminology = false,
   main,
   mainContent,
+  customization,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
   const visibleTabs = useMemo<PanelTab[]>(
@@ -90,6 +99,12 @@ export function CustomerDetailPanel({
     [visibleKey, detail, main],
   );
   const [activeTab, setActiveTab] = useState<PanelTab>('profile');
+  const showCustomerName = customerDetailFieldVisible(customization, 'customerName', true, true);
+  const showPhone = customerDetailFieldVisible(customization, 'phone', true, true);
+  const showEmail = customerDetailFieldVisible(customization, 'email');
+  const showLatestOrder = customerDetailFieldVisible(customization, 'latestOrder');
+  const showLatestCall = customerDetailFieldVisible(customization, 'latestCall');
+  const showOpenFollowUp = customerDetailFieldVisible(customization, 'openFollowUp');
 
   useEffect(() => {
     if (!open) return;
@@ -107,18 +122,18 @@ export function CustomerDetailPanel({
 
   return (
     <div className="customer-detail-backdrop" role="presentation">
-      <section className="customer-detail-panel" role="dialog" aria-modal="true" aria-label="Customer detail panel">
+      <section className={`customer-detail-panel${customization?.className ? ` ${customization.className}` : ''}`} role="dialog" aria-modal="true" aria-label="Customer detail panel">
         <header className="customer-detail-header">
           <div className="customer-detail-title">
-            <span className="customer-detail-kicker">Customer 360</span>
-            <h2>{detail?.customer.name ?? 'Customer detail'}</h2>
+            <span className="customer-detail-kicker">{customerDetailCopy(customization, 'kicker', 'Customer 360')}</span>
+            <h2>{showCustomerName ? detail?.customer.name ?? 'Customer detail' : 'Customer detail'}</h2>
             <div className="customer-detail-sub">
-              <span>{detail?.customer.email ?? 'No email'}</span>
-              <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span>
+              {showEmail ? <span>{detail?.customer.email ?? 'No email'}</span> : null}
+              {showPhone ? <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span> : null}
             </div>
           </div>
           <div className="customer-detail-header-actions">
-            {detail?.customer.phone ? (
+            {showPhone && detail?.customer.phone ? (
               onCallCustomer ? (
                 <button
                   type="button"
@@ -160,17 +175,18 @@ export function CustomerDetailPanel({
         {!isLoading && !error && detail && (
           <>
             <div className="customer-detail-summary">
-              <Metric label="Revenue" value={money(detail.customer.metrics.lifetimeRevenue)} />
-              <Metric label="Orders" value={String(detail.customer.metrics.ordersCount)} />
-              <Metric label="Calls" value={String(detail.customer.metrics.callsCount)} />
-              <Metric label="Open requests" value={String(detail.customer.metrics.openSupportCount)} />
-              <Metric label="Tasks" value={String(detail.customer.metrics.openTaskCount)} />
+              {showLatestOrder ? <Metric label={customerDetailCopy(customization, 'revenueMetric', 'Revenue')} value={money(detail.customer.metrics.lifetimeRevenue)} /> : null}
+              {showLatestOrder ? <Metric label={customerDetailCopy(customization, 'ordersMetric', 'Orders')} value={String(detail.customer.metrics.ordersCount)} /> : null}
+              {showLatestCall ? <Metric label={customerDetailCopy(customization, 'callsMetric', 'Calls')} value={String(detail.customer.metrics.callsCount)} /> : null}
+              {showOpenFollowUp ? <Metric label={customerDetailCopy(customization, 'openRequestsMetric', 'Open requests')} value={String(detail.customer.metrics.openSupportCount)} /> : null}
+              {showOpenFollowUp ? <Metric label={customerDetailCopy(customization, 'tasksMetric', 'Tasks')} value={String(detail.customer.metrics.openTaskCount)} /> : null}
             </div>
 
             <nav className="customer-detail-tabs" aria-label="Customer detail tabs">
               {visibleTabs.map((tab) => {
                 const config = tab === 'main' ? { label: 'Main', Icon: LayoutDashboard } : TAB_CONFIG[tab];
                 if (!config) return null;
+                const tabLabel = customerDetailCopy(customization, `tab.${tab}`, config.label);
                 return (
                   <button
                     key={tab}
@@ -178,7 +194,7 @@ export function CustomerDetailPanel({
                     className={tab === activeTab ? 'active' : ''}
                     onClick={() => setActiveTab(tab)}
                   >
-                    <config.Icon size={14} /> {config.label}
+                    <config.Icon size={14} /> {tabLabel}
                   </button>
                 );
               })}
@@ -186,7 +202,7 @@ export function CustomerDetailPanel({
 
             <main className="customer-detail-body">
               {activeTab === 'main' && main
-                ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} />
+                ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} customization={customization} />
                 : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology)}
             </main>
           </>
@@ -196,11 +212,27 @@ export function CustomerDetailPanel({
   );
 }
 
-function MainTab({ main, mainContent, staffTerminology }: { main: CustomerDetailMainInfo; mainContent?: ReactNode; staffTerminology: boolean }) {
+function MainTab({
+  main,
+  mainContent,
+  staffTerminology,
+  customization,
+}: {
+  main: CustomerDetailMainInfo;
+  mainContent?: ReactNode;
+  staffTerminology: boolean;
+  customization?: CustomerDetailPanelCustomization | null;
+}) {
   if (mainContent) {
     return <div className="customer-detail-main-card">{mainContent}</div>;
   }
   const productTags = main.productTags.map((tag) => staffPanelText(tag, staffTerminology)).filter(Boolean);
+  const showPhone = customerDetailFieldVisible(customization, 'phone', true, true);
+  const showEmail = customerDetailFieldVisible(customization, 'email');
+  const showLatestOrder = customerDetailFieldVisible(customization, 'latestOrder');
+  const showLatestCall = customerDetailFieldVisible(customization, 'latestCall');
+  const showOpenFollowUp = customerDetailFieldVisible(customization, 'openFollowUp');
+  const showLatestNote = customerDetailFieldVisible(customization, 'latestNote');
   return (
     <div className="customer-detail-grid">
       <section className="customer-detail-card customer-detail-main-reason">
@@ -219,31 +251,31 @@ function MainTab({ main, mainContent, staffTerminology }: { main: CustomerDetail
       </section>
       <section className="customer-detail-card">
         <h3>Contact</h3>
-        <KeyValue label="Phone" value={main.phone ?? 'No phone'} />
-        <KeyValue label="Email" value={main.email ?? 'No email'} />
+        {showPhone ? <KeyValue label="Phone" value={main.phone ?? 'No phone'} /> : null}
+        {showEmail ? <KeyValue label="Email" value={main.email ?? 'No email'} /> : null}
         <KeyValue label="Last contact" value={date(main.lastContact)} />
-        <KeyValue label="Latest call" value={staffPanelText(main.lastCallLabel, staffTerminology)} />
+        {showLatestCall ? <KeyValue label="Latest call" value={staffPanelText(main.lastCallLabel, staffTerminology)} /> : null}
         <KeyValue label="Owner" value={staffPanelText(main.owner ?? 'Unassigned', staffTerminology)} />
       </section>
-      <section className="customer-detail-card">
+      {showLatestOrder ? <section className="customer-detail-card">
         <h3>Orders</h3>
         <KeyValue label="Latest order" value={staffPanelText(main.orderLabel, staffTerminology)} />
         <KeyValue label="Total orders" value={String(main.ordersCount)} />
         <KeyValue label="Total spent" value={money(main.totalSpent)} />
-      </section>
-      <section className="customer-detail-card">
+      </section> : null}
+      {showOpenFollowUp ? <section className="customer-detail-card">
         <h3>Open work</h3>
         <KeyValue label="Open tasks" value={String(main.openTasksCount)} />
         <KeyValue label="Customer requests" value={String(main.openRequestsCount)} />
         <KeyValue label="Notes" value={String(main.notesCount)} />
-      </section>
-      {main.lastCallSummary ? (
+      </section> : null}
+      {showLatestCall && main.lastCallSummary ? (
         <section className="customer-detail-card">
           <h3>Last call summary</h3>
           <p>{staffPanelText(main.lastCallSummary, staffTerminology)}</p>
         </section>
       ) : null}
-      {main.latestNote ? (
+      {showLatestNote && main.latestNote ? (
         <section className="customer-detail-card">
           <h3>Latest note</h3>
           <p>{staffPanelText(main.latestNote.body, staffTerminology)}</p>
@@ -585,6 +617,27 @@ function customerFocusLabel(value: string) {
 function staffPanelText(value: string, staffTerminology: boolean) {
   if (!staffTerminology) return value;
   return staffSafeDisplayText(value);
+}
+
+function customerDetailFieldVisible(
+  customization: CustomerDetailPanelCustomization | null | undefined,
+  field: string,
+  defaultVisible = true,
+  required = false,
+) {
+  if (required) return true;
+  if (!customization) return defaultVisible;
+  if (customization.visibleFields?.length) return customization.visibleFields.includes(field);
+  if (customization.hiddenFields?.includes(field)) return false;
+  return defaultVisible;
+}
+
+function customerDetailCopy(
+  customization: CustomerDetailPanelCustomization | null | undefined,
+  key: string,
+  fallback: string,
+) {
+  return staffSafeDisplayText(customization?.copyOverrides?.[key] ?? fallback);
 }
 
 function normalizeAddress(value: unknown) {

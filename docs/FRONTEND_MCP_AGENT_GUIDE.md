@@ -458,7 +458,7 @@ Element map:
 | Priority group header | `priority.group.header` | add owner/group context | Priority is assigned customer groups, not recent calls. |
 | Priority customer card | `priority.card.after_summary`, `priority.card.footer`, `elementId: "priority.card"` | add customer blocks; override fields, copy, density, urgency tone | Required fields: `customerName`, `phone`, `latestOrder`, `latestCall`, `openFollowUp`, `latestNote`. |
 | Call modal | `modal.hero`, `modal.after_steps`, `modal.customer_context`, `elementId: "task.modal"` | add modal blocks; override labels and approved section order | Required fields: `title`, `phone`, `hero`, `steps`. |
-| Customer detail popup | `elementId: "customer.detail.popup"` | source patch lane for now; contract exposes required fields | Keep centered popup; never reintroduce right drawer. |
+| Customer detail popup | `elementId: "customer.detail.popup"` | runtime field/copy overrides for customer name, phone, email, latest order, latest call, open follow-up, latest note; source patch lane only for new native sections | Keep centered popup; never reintroduce right drawer. |
 | Staff sidebar | source: `NAV`, `Sidebar.tsx`, `App.tsx`; runtime: `navigationOverrides` | typed `navigationOverrides` for labels/order/groups/badges/default nav; source patch lane for new routes/icons/shell behavior | Rename/order/group requests are valid product requests and should not be faked with CSS or overlay blocks. |
 
 ## Element Overrides
@@ -910,10 +910,17 @@ Main source files:
 Primary endpoints:
 
 - `GET /api/v1/person/workspace/daily-operations`
-- `POST /api/v1/person/workspace/daily-calls/reorder`
-- `POST /api/v1/person/workspace/daily-calls/:id/archive`
-- `GET /api/v1/person/workspace/tasks/:id`
+- `PATCH /api/v1/person/workspace/daily-call-order`
+- `POST /api/v1/person/workspace/tasks/:id/archive`
+- `POST /api/v1/person/workspace/tasks/sync`
+- `POST /api/v1/person/workspace/aircall/dial`
+- `GET /api/v1/person/workspace/tasks/:id/brief`
 - `POST /api/v1/person/workspace/tasks/:id/notes`
+- `POST /api/v1/person/workspace/tasks/:id/calendar`
+- `GET /api/v1/person/workspace/customers/:id/detail`
+- `GET /api/v1/person/workspace/customer-archive`
+- `GET /api/v1/person/workspace/customer-archive/:id/detail`
+- `GET /api/v1/person/workspace/frontend-customization`
 
 Required behavior:
 

@@ -2,9 +2,11 @@ import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tan
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
+import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
+import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { dialAircall, fetchCustomerArchive, fetchCustomerArchiveDetail, fetchCustomerDetail, fetchCustomers, friendlyError, saveCustomerArchiveNote, saveCustomerNote } from '../api/live';
 import type { CustomerArchivePage, CustomerRow } from '../types';
+import { frontendElementClassName, frontendElementOverride } from '../components/FrontendCustomization';
 import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
 import { personSafeText } from '../lib/personTerminology';
@@ -21,7 +23,13 @@ function fmtMoney(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 }
 
-export function CustomersView({ archive = false }: { archive?: boolean }) {
+export function CustomersView({
+  archive = false,
+  customization,
+}: {
+  archive?: boolean;
+  customization?: FrontendCustomizationRuntimeDto | null;
+}) {
   const qc = useQueryClient();
   const [archivePage, setArchivePage] = useState(0);
   const [archivePageSize, setArchivePageSize] = useState<ArchivePageSize>(DEFAULT_ARCHIVE_PAGE_SIZE);
@@ -104,6 +112,23 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
     const customer = customers.find((candidate) => candidate.id === detailCustomerId);
     return customer ? customerRowMainInfo(customer, archive) : undefined;
   }, [archive, customers, detailCustomerId]);
+  const customerDetailCustomization = useMemo<CustomerDetailPanelCustomization | null>(() => {
+    const override = frontendElementOverride(customization, 'customer.detail.popup', {
+      customerDetail: detailQuery.data,
+      summary: {
+        archive,
+        totalCustomers: archiveResult?.total ?? customers.length,
+        pageSize: archivePageSize,
+      },
+    });
+    if (!override) return null;
+    return {
+      visibleFields: override.visibleFields,
+      hiddenFields: override.hiddenFields,
+      copyOverrides: override.copyOverrides,
+      className: frontendElementClassName(override, customerDetailMain?.urgencyScore),
+    };
+  }, [archive, archivePageSize, archiveResult?.total, customerDetailMain?.urgencyScore, customers.length, customization, detailQuery.data]);
 
   const columns = useMemo<ColumnDef<CustomerRow>[]>(() => [
     {
@@ -267,6 +292,7 @@ export function CustomersView({ archive = false }: { archive?: boolean }) {
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
         main={customerDetailMain}
+        customization={customerDetailCustomization}
       />
       {noteTarget ? (
         <CustomerNoteModal

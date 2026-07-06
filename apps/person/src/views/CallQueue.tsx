@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
-import type { CustomerDetailMainInfo } from '@factory-engine-pro/ui';
+import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
@@ -64,6 +64,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const pinned = data?.pinBoard ?? [];
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
+  const summary = data?.summary;
   const filteredDaily = useMemo(() => filterDailyCards(daily, dailyFilter), [daily, dailyFilter]);
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
@@ -98,6 +99,19 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     }
     return detailMatchedCard ? cardMainInfo(detailMatchedCard) : undefined;
   }, [detailCustomerId, detailMatchedCard, groups]);
+  const customerDetailCustomization = useMemo<CustomerDetailPanelCustomization | null>(() => {
+    const override = frontendElementOverride(frontendCustomization, 'customer.detail.popup', {
+      customerDetail: customerDetailQuery.data,
+      summary,
+    });
+    if (!override) return null;
+    return {
+      visibleFields: override.visibleFields,
+      hiddenFields: override.hiddenFields,
+      copyOverrides: override.copyOverrides,
+      className: frontendElementClassName(override, customerDetailMain?.urgencyScore),
+    };
+  }, [customerDetailMain?.urgencyScore, customerDetailQuery.data, frontendCustomization, summary]);
 
   const reorderDaily = useMutation<unknown, Error, { segmentId?: string; range: DailyOperationRange; orderedItemIds: string[] }, { previous?: DailyOperations }>({
     mutationFn: reorderDailyCalls,
@@ -189,7 +203,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const selectedCard = daily.find((card) => card.id === selectedId)
     ?? pinned.find((card) => card.id === selectedId)
     ?? (deepLinkCard?.id === selectedId ? deepLinkCard : null);
-  const summary = data?.summary;
   const empty = !isLoading && (archive ? daily.length === 0 : daily.length === 0 && priority.length === 0 && pinned.length === 0);
   const priorityCustomerCount = groups.reduce((total, group) => total + group.totalCustomers, 0);
   const openRequestsCount = summary?.openRequestsCount ?? 0;
@@ -589,6 +602,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
         main={customerDetailMain}
+        customization={customerDetailCustomization}
         mainContent={detailMatchedCard ? (
           <TaskBriefContent
             card={detailMatchedCard}
@@ -943,6 +957,7 @@ function SegmentCustomerCard({
           {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
         </div>
         {frontendFieldVisible(override, 'reason') ? <div className="summary">{personSafeText(item.displayReason || item.reason)}</div> : null}
+        <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
         <div className="card-foot">
           <div className="card-meta">
             {frontendFieldVisible(override, 'phone') ? <span title={frontendCopy(override, 'phoneLabel', 'Phone')}><span className="sig-ic green"><Phone size={11} /></span> {item.phone || 'No phone'}</span> : null}
