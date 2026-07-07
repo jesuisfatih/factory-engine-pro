@@ -1,22 +1,31 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound, PackageCheck, Truck, Users2, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Eye, EyeOff, KeyRound, Lock, Mail, PackageCheck, ShieldCheck, Truck, Users2 } from 'lucide-react';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 const LOGIN_FEATURES = [
-  { icon: PackageCheck, title: 'Live order history', body: 'Review synced Shopify orders, invoices and pickup status.' },
-  { icon: Users2, title: 'Team controls', body: 'Create sub-users and keep buyer access scoped to your company.' },
-  { icon: Truck, title: 'Tracking workspace', body: 'Follow shipping and pickup milestones from one portal.' },
+  { icon: PackageCheck, title: 'Wholesale pricing', body: 'Contract rates and volume breaks stay visible before checkout.', tone: 'green' },
+  { icon: BadgeCheck, title: 'Net terms', body: 'Approved buyers can manage invoices, balances, and payment timing.', tone: 'amber' },
+  { icon: Users2, title: 'Team purchasing', body: 'Buyers, managers, and admins work from one controlled account.', tone: 'blue' },
 ] as const;
 
-const LOGIN_TRUST = ['Wholesale pricing', 'Secure access', 'Priority support'] as const;
+const LOGIN_TRUST = [
+  { icon: ShieldCheck, label: 'Secure checkout' },
+  { icon: Truck, label: 'Order tracking' },
+  { icon: BadgeCheck, label: 'Priority support' },
+] as const;
 
 export function AccountsLoginPanel() {
   const rememberedEmail = readRememberedEmail();
+  const brandQuery = useWorkspaceBrand();
+  const currentWorkspaceName = workspaceName(brandQuery.data?.workspaceName);
+  const currentWorkspaceBadge = workspaceBadge(brandQuery.data?.brandBadge, currentWorkspaceName);
+  const brandLogo = brandQuery.data?.brandLogo;
   const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [error, setError] = useState<string | null>(null);
   const login = useMutation({
@@ -37,50 +46,135 @@ export function AccountsLoginPanel() {
   };
 
   return (
-    <div className="invite-shell">
-      <aside className="invite-hero">
-        <Brand hero />
-        <div className="invite-hero-body">
-          <div className="eyebrow">B2B portal</div>
-          <h1>Welcome back to your buying workspace.</h1>
-          <p>Orders, sub-users, spending caps and B2B pricing live behind this sign-in.</p>
-        </div>
-        <div className="auth-feature-stack">
-          {LOGIN_FEATURES.map(({ icon: Icon, title, body }) => (
-            <div className="auth-feature-card" key={title}>
-              <Icon size={15} />
-              <div><strong>{title}</strong><span>{body}</span></div>
+    <main className="auth-page">
+      <div className="auth-stage">
+        <section className="auth-brand-panel" aria-label={`${currentWorkspaceName} account workspace`}>
+          <div>
+            <div className="auth-brand-row">
+              <div className="auth-brand-mark">
+                {brandLogo
+                  ? <img src={brandLogo} alt="" className="auth-brand-mark-img" aria-hidden="true" />
+                  : currentWorkspaceBadge.charAt(0)}
+              </div>
+              <div className="auth-brand-name">
+                <span>{currentWorkspaceName}</span>
+                <small>Company Portal</small>
+              </div>
             </div>
-          ))}
-        </div>
-        <div className="auth-trust-pills">
-          {LOGIN_TRUST.map((item) => <span key={item}><BadgeCheck size={11} />{item}</span>)}
-        </div>
-      </aside>
-      <main className="invite-form" style={{ maxWidth: 560, margin: '0 auto', alignSelf: 'center' }}>
-        <Brand />
-        <h2>Welcome back</h2>
-        <p className="muted">Buyer and sub-buyer accounts use the same login.</p>
-        <AuthForm onSubmit={submit}>
-          {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
-          <EmailField id="accounts-login-email" value={email} onChange={(next) => { setEmail(next); if (error) setError(null); }} />
-          <PasswordInput id="accounts-login-password" label="Password" value={password} onChange={(next) => { setPassword(next); if (error) setError(null); }} required />
-          <div className="auth-row">
-            <label className="auth-check" htmlFor="accounts-remember-me">
-              <input id="accounts-remember-me" type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
-              <span>Remember me</span>
-            </label>
-            <a href="/forgot-password" className="auth-text-link">Forgot password?</a>
+
+            <div className="auth-brand-copy">
+              <span className="auth-eyebrow">B2B account workspace</span>
+              <h1>Order and track every DTF job from one place.</h1>
+              <p>Wholesale ordering, payment terms, team access, and support are kept together for repeat purchasing.</p>
+            </div>
           </div>
-          <AuthSubmit pending={login.isPending}>Sign in <ArrowRight size={14} /></AuthSubmit>
-        </AuthForm>
-        <div className="auth-divider"><span>or</span></div>
-        <div className="auth-link-grid">
-          <a href="/register" className="btn" style={{ justifyContent: 'center', textDecoration: 'none' }}>Create Account</a>
-          <a href="/request-invitation" className="btn ghost" style={{ justifyContent: 'center', textDecoration: 'none' }}>Request B2B Access</a>
-        </div>
-      </main>
-    </div>
+
+          <div className="auth-benefit-list">
+            {LOGIN_FEATURES.map(({ icon: Icon, title, body, tone }) => (
+              <div className={`auth-benefit-card tone-${tone}`} key={title}>
+                <Icon aria-hidden="true" />
+                <div>
+                  <strong>{title}</strong>
+                  <span>{body}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="auth-trust-strip" aria-label="Account benefits">
+            {LOGIN_TRUST.map(({ icon: Icon, label }) => (
+              <span key={label}><Icon aria-hidden="true" />{label}</span>
+            ))}
+          </div>
+        </section>
+
+        <section className="auth-form-panel" aria-label="Sign in">
+          <div className="auth-card">
+            <div className="auth-logo-wrap">
+              {brandLogo
+                ? <img src={brandLogo} alt={currentWorkspaceName} className="auth-logo-img" />
+                : <div className="auth-logo-mark">{currentWorkspaceBadge.charAt(0)}</div>}
+            </div>
+
+            <div className="auth-heading">
+              <h2>Welcome back</h2>
+              <p>Sign in to your {currentWorkspaceName} account.</p>
+            </div>
+
+            {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
+
+            <form onSubmit={submit} className="auth-login-form">
+              <div className="form-group">
+                <label className="form-label" htmlFor="accounts-login-email">Email</label>
+                <div className="auth-input-wrap">
+                  <Mail aria-hidden="true" />
+                  <input
+                    id="accounts-login-email"
+                    className="form-input auth-input"
+                    type="email"
+                    value={email}
+                    onChange={(event) => { setEmail(event.target.value); if (error) setError(null); }}
+                    placeholder="you@company.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <div className="auth-label-row">
+                  <label className="form-label" htmlFor="accounts-login-password">Password</label>
+                  <a href="/forgot-password">Forgot password?</a>
+                </div>
+                <div className="auth-input-wrap">
+                  <Lock aria-hidden="true" />
+                  <input
+                    id="accounts-login-password"
+                    className="form-input auth-input auth-password-input"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => { setPassword(event.target.value); if (error) setError(null); }}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((current) => !current)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="auth-form-row">
+                <label className="auth-checkbox-row" htmlFor="accounts-remember-me">
+                  <input id="accounts-remember-me" type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+                  <span>Remember me</span>
+                </label>
+              </div>
+
+              <button type="submit" className="auth-submit" disabled={login.isPending}>
+                <ArrowRight aria-hidden="true" />
+                {login.isPending ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="auth-divider"><span /><b>or</b><span /></div>
+
+            <div className="auth-link-grid">
+              <a href="/register" className="auth-secondary-link secondary"><Users2 aria-hidden="true" />Create Account</a>
+              <a href="/request-invitation" className="auth-secondary-link ghost"><ArrowRight aria-hidden="true" />Request B2B Access</a>
+            </div>
+          </div>
+
+          <p className="auth-footer">&copy; {new Date().getFullYear()} {currentWorkspaceName}. All rights reserved.</p>
+        </section>
+      </div>
+    </main>
   );
 }
 
@@ -319,7 +413,7 @@ function Brand({ hero = false }: { hero?: boolean }) {
         : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
       <div>
         <div className="name">{name}</div>
-        <div className="muted">Buyer portal</div>
+        <div className="muted">Company Portal</div>
       </div>
     </div>
   );
