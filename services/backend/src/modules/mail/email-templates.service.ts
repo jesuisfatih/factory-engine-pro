@@ -23,6 +23,7 @@ import {
   updateEmailTemplateRevisionSourceSchema,
   type ActivateEmailTemplateInput,
   type ApproveEmailTemplateRevisionInput,
+  type EmailTemplateWorkspaceResponse,
   type EmailTemplateAiEditMode,
   type MailTemplateBlockQuery,
   type MailTemplateQuery,
@@ -55,6 +56,394 @@ import {
   type MarketingComplianceContext,
 } from './mail-compliance.js';
 
+interface CoreTransactionalTemplateDefinition {
+  eventKey: string;
+  title: string;
+  description: string;
+  folderKey: string;
+  subject: string;
+  previewText: string;
+  html: string;
+  css: string;
+  text: string;
+  variables: string[];
+  sampleVariables: Record<string, unknown>;
+}
+
+interface EmailTemplateWorkspaceEvent {
+  eventKey: string;
+  templateCount: number;
+  publishedCount: number;
+  title?: string;
+  description?: string;
+  folderKey?: string;
+  variables?: string[];
+  sampleVariables?: Record<string, unknown>;
+}
+
+const CORE_TRANSACTIONAL_TEMPLATE_EVENTS: CoreTransactionalTemplateDefinition[] = [
+  {
+    eventKey: 'identity.member_invitation',
+    title: 'Member invitation',
+    description: 'Sent when an admin invites an internal member to the back panel or staff workspace.',
+    folderKey: 'identity',
+    subject: '{{brand_name}} invitation',
+    previewText: 'Accept your workspace invitation and set your password.',
+    html: transactionalShell({
+      eyebrow: 'Workspace invitation',
+      title: 'You have been invited to {{brand_name}}',
+      body: 'Hi {{recipient_name}}, use the secure button below to accept your invitation and set your password.',
+      ctaLabel: 'Accept invitation',
+      ctaUrl: '{{action_url}}',
+      secondary: 'This invitation expires in {{expires_in_days}} days.',
+    }),
+    css: transactionalCss('#1d4ed8'),
+    text: 'Hi {{recipient_name}}, accept your {{brand_name}} invitation: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'invitation_url', 'expires_in_days'],
+    sampleVariables: {
+      brand_name: 'DTF Bank',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://app.example.com/reset-password?flow=invitation&token=preview',
+      invitation_url: 'https://app.example.com/reset-password?flow=invitation&token=preview',
+      expires_in_days: 7,
+    },
+  },
+  {
+    eventKey: 'identity.customer_invitation',
+    title: 'Customer portal invitation',
+    description: 'Sent when a customer or sub-user is invited into the accounts portal.',
+    folderKey: 'identity',
+    subject: '{{brand_name}} account invitation',
+    previewText: 'Create your buyer portal password and access your account.',
+    html: transactionalShell({
+      eyebrow: 'Buyer portal invitation',
+      title: 'Your {{brand_name}} account is ready',
+      body: 'Hi {{recipient_name}}, accept this invitation to access orders, invoices, reorder tools, and team purchasing controls.',
+      ctaLabel: 'Create password',
+      ctaUrl: '{{action_url}}',
+      secondary: 'This invitation expires in {{expires_in_days}} days.',
+    }),
+    css: transactionalCss('#1d4ed8'),
+    text: 'Hi {{recipient_name}}, create your {{brand_name}} account password: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'invitation_url', 'expires_in_days'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/reset-password?flow=invitation&token=preview',
+      invitation_url: 'https://accounts.example.com/reset-password?flow=invitation&token=preview',
+      expires_in_days: 7,
+    },
+  },
+  {
+    eventKey: 'identity.password_reset',
+    title: 'Password reset',
+    description: 'Sent when a member, staff user, customer user, or sub-user requests a password reset.',
+    folderKey: 'identity',
+    subject: '{{brand_name}} password reset',
+    previewText: 'Use the secure link to reset your password.',
+    html: transactionalShell({
+      eyebrow: 'Password reset',
+      title: 'Reset your {{brand_name}} password',
+      body: 'Hi {{recipient_name}}, use the secure button below to reset your password.',
+      ctaLabel: 'Reset password',
+      ctaUrl: '{{action_url}}',
+      secondary: 'This link expires in {{expires_in_minutes}} minutes.',
+    }),
+    css: transactionalCss('#334155'),
+    text: 'Hi {{recipient_name}}, reset your {{brand_name}} password: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'reset_url', 'expires_in_minutes', 'surface'],
+    sampleVariables: {
+      brand_name: 'DTF Bank',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/reset-password?token=preview',
+      reset_url: 'https://accounts.example.com/reset-password?token=preview',
+      expires_in_minutes: 30,
+      surface: 'accounts',
+    },
+  },
+  {
+    eventKey: 'b2b_access.approved',
+    title: 'B2B access invitation approved',
+    description: 'Legacy-compatible B2B access approval invite event for customer portal onboarding.',
+    folderKey: 'b2b',
+    subject: '{{brand_name}} B2B access is ready',
+    previewText: 'Your B2B buyer workspace is ready.',
+    html: transactionalShell({
+      eyebrow: 'B2B access',
+      title: 'Your B2B access is ready',
+      body: 'Hi {{recipient_name}}, your buyer workspace is ready. Use the secure button to finish setup.',
+      ctaLabel: 'Open account',
+      ctaUrl: '{{action_url}}',
+      secondary: 'You can review orders, invoices, reorder options, and team users from the portal.',
+    }),
+    css: transactionalCss('#1d4ed8'),
+    text: 'Hi {{recipient_name}}, your {{brand_name}} B2B access is ready: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'invitation_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/reset-password?flow=invitation&token=preview',
+      invitation_url: 'https://accounts.example.com/reset-password?flow=invitation&token=preview',
+    },
+  },
+  {
+    eventKey: 'b2b.application_received.user',
+    title: 'B2B application received',
+    description: 'Confirms to the applicant that the B2B request was received.',
+    folderKey: 'b2b',
+    subject: 'We received your {{brand_name}} B2B application',
+    previewText: 'Your B2B request is queued for review.',
+    html: transactionalShell({
+      eyebrow: 'Application received',
+      title: 'We received your B2B application',
+      body: 'Hi {{recipient_name}}, your request for {{company_name}} is now in review.',
+      ctaLabel: 'Open portal',
+      ctaUrl: '{{portal_url}}',
+      secondary: 'Reference: {{request_id}}',
+    }),
+    css: transactionalCss('#0f766e'),
+    text: 'Hi {{recipient_name}}, we received your B2B application for {{company_name}}. Reference: {{request_id}}',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'request_id', 'portal_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      request_id: 'REQ-1001',
+      portal_url: 'https://accounts.example.com',
+    },
+  },
+  {
+    eventKey: 'b2b.application_received.internal',
+    title: 'B2B application internal alert',
+    description: 'Notifies admins that a new B2B request needs review.',
+    folderKey: 'b2b',
+    subject: 'New B2B application: {{company_name}}',
+    previewText: 'A new B2B request needs review.',
+    html: transactionalShell({
+      eyebrow: 'Internal alert',
+      title: 'New B2B application',
+      body: '{{company_name}} submitted a B2B request. Review the request and approve or reject it from the admin panel.',
+      ctaLabel: 'Review request',
+      ctaUrl: '{{admin_url}}',
+      secondary: 'Reference: {{request_id}}',
+    }),
+    css: transactionalCss('#0f766e'),
+    text: 'New B2B application from {{company_name}}. Review: {{admin_url}}',
+    variables: ['company_name', 'request_id', 'admin_url'],
+    sampleVariables: {
+      company_name: 'Acme Prints',
+      request_id: 'REQ-1001',
+      admin_url: 'https://app.example.com/b2b-requests',
+    },
+  },
+  {
+    eventKey: 'b2b.application_approved.user',
+    title: 'B2B application approved',
+    description: 'Sent when a B2B application is approved and portal access is available.',
+    folderKey: 'b2b',
+    subject: '{{brand_name}} B2B access approved',
+    previewText: 'Your B2B account is approved.',
+    html: transactionalShell({
+      eyebrow: 'Approved',
+      title: 'Your B2B account is approved',
+      body: 'Hi {{recipient_name}}, your B2B access application for {{company_name}} has been approved. {{account_text}}',
+      ctaLabel: 'Open account portal',
+      ctaUrl: '{{action_url}}',
+      secondary: 'You can now review orders, invoices, reorder options, team users, and account pricing.',
+    }),
+    css: transactionalCss('#1d4ed8'),
+    text: 'Hi {{recipient_name}}, your B2B access application for {{company_name}} has been approved. Open: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'account_text', 'login_url', 'portal_url', 'action_url', 'request_id'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      account_text: 'Your portal account is ready with B2B access.',
+      login_url: 'https://accounts.example.com/login',
+      portal_url: 'https://accounts.example.com/login',
+      action_url: 'https://accounts.example.com/login',
+      request_id: 'REQ-1001',
+    },
+  },
+  {
+    eventKey: 'b2b.application_rejected.user',
+    title: 'B2B application rejected',
+    description: 'Sent when a B2B application is reviewed but cannot be approved.',
+    folderKey: 'b2b',
+    subject: '{{brand_name}} B2B application update',
+    previewText: 'Your B2B application has an update.',
+    html: transactionalShell({
+      eyebrow: 'Application update',
+      title: 'We reviewed your B2B application',
+      body: 'Hi {{recipient_name}}, we could not approve the application for {{company_name}} at this time.',
+      ctaLabel: 'Open portal',
+      ctaUrl: '{{portal_url}}',
+      secondary: 'Review note: {{review_note}}',
+    }),
+    css: transactionalCss('#b45309'),
+    text: 'Hi {{recipient_name}}, we could not approve the B2B application for {{company_name}}. Review note: {{review_note}}',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'review_note', 'request_id', 'portal_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      review_note: 'Please update the company details and submit again.',
+      request_id: 'REQ-1001',
+      portal_url: 'https://accounts.example.com/request-invitation',
+    },
+  },
+  {
+    eventKey: 'b2b.invoice_delivered.user',
+    title: 'Invoice delivered',
+    description: 'Sent when an invoice is delivered to a buyer portal user.',
+    folderKey: 'b2b',
+    subject: '{{brand_name}} invoice {{invoice_number}}',
+    previewText: 'Your invoice is ready in the account portal.',
+    html: transactionalShell({
+      eyebrow: 'Invoice',
+      title: 'Invoice {{invoice_number}} is ready',
+      body: 'Hi {{recipient_name}}, your invoice is ready. Amount due: {{amount_due}}.',
+      ctaLabel: 'Review invoice',
+      ctaUrl: '{{action_url}}',
+      secondary: 'Due date: {{due_date}}. {{billing_note}}',
+    }),
+    css: transactionalCss('#0f766e'),
+    text: 'Hi {{recipient_name}}, invoice {{invoice_number}} is ready. Amount due: {{amount_due}}. Open: {{action_url}}',
+    variables: ['brand_name', 'recipient_name', 'invoice_number', 'amount_due', 'currency', 'due_date', 'invoice_url', 'payment_url', 'portal_url', 'action_url', 'billing_note'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      invoice_number: 'INV-1001',
+      amount_due: '$482.00',
+      currency: 'USD',
+      due_date: 'Jul 30, 2026',
+      invoice_url: 'https://accounts.example.com/invoices/INV-1001',
+      payment_url: 'https://pay.example.com/invoice/INV-1001',
+      portal_url: 'https://accounts.example.com/invoices',
+      action_url: 'https://accounts.example.com/invoices',
+      billing_note: 'Please pay by the due date.',
+    },
+  },
+  {
+    eventKey: 'b2b.custom_pricing_changed.user',
+    title: 'Custom pricing changed',
+    description: 'Sent when a buyer account pricing configuration changes.',
+    folderKey: 'b2b',
+    subject: '{{brand_name}} pricing update',
+    previewText: 'Your account pricing has been updated.',
+    html: transactionalShell({
+      eyebrow: 'Pricing update',
+      title: 'Your account pricing was updated',
+      body: 'Hi {{recipient_name}}, your B2B pricing terms were updated for {{company_name}}.',
+      ctaLabel: 'Review pricing',
+      ctaUrl: '{{portal_url}}',
+      secondary: 'Pricing tier: {{pricing_tier}}',
+    }),
+    css: transactionalCss('#1d4ed8'),
+    text: 'Hi {{recipient_name}}, your {{brand_name}} B2B pricing was updated. Review: {{portal_url}}',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'pricing_tier', 'portal_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      pricing_tier: 'Wholesale',
+      portal_url: 'https://accounts.example.com/pricing',
+    },
+  },
+  {
+    eventKey: 'orders.order_confirmation.user',
+    title: 'Order confirmation',
+    description: 'Sent after an order is confirmed.',
+    folderKey: 'orders',
+    subject: '{{brand_name}} order {{order_number}} confirmed',
+    previewText: 'Your order has been confirmed.',
+    html: transactionalShell({
+      eyebrow: 'Order confirmation',
+      title: 'Order {{order_number}} is confirmed',
+      body: 'Hi {{recipient_name}}, we confirmed your order for {{order_total}}.',
+      ctaLabel: 'View order',
+      ctaUrl: '{{order_url}}',
+      secondary: 'Status: {{order_status}}',
+    }),
+    css: transactionalCss('#0f766e'),
+    text: 'Hi {{recipient_name}}, order {{order_number}} is confirmed. View: {{order_url}}',
+    variables: ['brand_name', 'recipient_name', 'order_number', 'order_total', 'order_status', 'order_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      order_number: '1001',
+      order_total: '$482.00',
+      order_status: 'confirmed',
+      order_url: 'https://accounts.example.com/orders/1001',
+    },
+  },
+  {
+    eventKey: 'orders.order_shipped.user',
+    title: 'Order shipped',
+    description: 'Sent when an order shipment is available.',
+    folderKey: 'orders',
+    subject: '{{brand_name}} order {{order_number}} shipped',
+    previewText: 'Tracking is available for your order.',
+    html: transactionalShell({
+      eyebrow: 'Shipping update',
+      title: 'Order {{order_number}} shipped',
+      body: 'Hi {{recipient_name}}, your order has shipped.',
+      ctaLabel: 'Track order',
+      ctaUrl: '{{tracking_url}}',
+      secondary: 'Carrier: {{carrier}}. Tracking: {{tracking_number}}.',
+    }),
+    css: transactionalCss('#0f766e'),
+    text: 'Hi {{recipient_name}}, order {{order_number}} shipped. Track: {{tracking_url}}',
+    variables: ['brand_name', 'recipient_name', 'order_number', 'tracking_url', 'carrier', 'tracking_number'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      order_number: '1001',
+      tracking_url: 'https://carrier.example.com/TK1001',
+      carrier: 'UPS',
+      tracking_number: 'TK1001',
+    },
+  },
+];
+
+function transactionalShell(input: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  secondary: string;
+}) {
+  return [
+    '<!doctype html><html><body class="mail-body">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mail-canvas"><tr><td align="center">',
+    '<table role="presentation" width="680" cellpadding="0" cellspacing="0" class="mail-card">',
+    `<tr><td class="mail-header"><div class="mail-eyebrow">${input.eyebrow}</div><h1>${input.title}</h1></td></tr>`,
+    `<tr><td class="mail-copy"><p>${input.body}</p><p class="mail-secondary">${input.secondary}</p></td></tr>`,
+    `<tr><td class="mail-action"><a href="${input.ctaUrl}">${input.ctaLabel}</a></td></tr>`,
+    '<tr><td class="mail-footer">This message was sent from {{brand_name}}.</td></tr>',
+    '</table></td></tr></table>',
+    '</body></html>',
+  ].join('');
+}
+
+function transactionalCss(accent: string) {
+  return [
+    '.mail-body{margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#172033;}',
+    '.mail-canvas{padding:32px 16px;background:#eef2f7;}',
+    '.mail-card{max-width:680px;background:#ffffff;border:1px solid #dbe4ef;border-radius:24px;overflow:hidden;}',
+    `.mail-header{padding:30px 32px 14px;border-top:6px solid ${accent};}`,
+    `.mail-eyebrow{display:inline-block;padding:6px 10px;border-radius:999px;background:#eff6ff;color:${accent};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}`,
+    '.mail-header h1{margin:16px 0 0;font-size:30px;line-height:1.15;color:#111827;}',
+    '.mail-copy{padding:4px 32px 10px;color:#334155;font-size:15px;line-height:1.7;}',
+    '.mail-copy p{margin:0 0 14px;}',
+    '.mail-secondary{color:#64748b;}',
+    '.mail-action{padding:0 32px 30px;}',
+    `.mail-action a{display:inline-block;background:${accent};color:#fff;text-decoration:none;padding:13px 20px;border-radius:999px;font-weight:700;}`,
+    '.mail-footer{padding:18px 32px 28px;color:#64748b;font-size:12px;line-height:1.5;border-top:1px solid #e5eaf2;}',
+  ].join('\n');
+}
+
 @Injectable()
 export class EmailTemplatesService {
   constructor(
@@ -66,12 +455,25 @@ export class EmailTemplatesService {
     private readonly logger: AppLogger,
   ) {}
 
-  async workspace() {
+  async workspace(): Promise<EmailTemplateWorkspaceResponse> {
+    await this.ensureCoreTransactionalTemplates();
     const [templates, provider] = await Promise.all([
       this.repository.list({ limit: 200 }),
       this.providerSummary(),
     ]);
-    const events = new Map<string, { eventKey: string; templateCount: number; publishedCount: number }>();
+    const events = new Map<string, EmailTemplateWorkspaceEvent>();
+    for (const definition of CORE_TRANSACTIONAL_TEMPLATE_EVENTS) {
+      events.set(definition.eventKey, {
+        eventKey: definition.eventKey,
+        templateCount: 0,
+        publishedCount: 0,
+        title: definition.title,
+        description: definition.description,
+        folderKey: definition.folderKey,
+        variables: definition.variables,
+        sampleVariables: definition.sampleVariables,
+      });
+    }
     for (const row of templates) {
       const current = events.get(row.eventKey) ?? { eventKey: row.eventKey, templateCount: 0, publishedCount: 0 };
       current.templateCount += 1;
@@ -84,6 +486,46 @@ export class EmailTemplatesService {
       events: [...events.values()].sort((left, right) => left.eventKey.localeCompare(right.eventKey)),
       provider,
     };
+  }
+
+  private async ensureCoreTransactionalTemplates() {
+    for (const definition of CORE_TRANSACTIONAL_TEMPLATE_EVENTS) {
+      const existing = await this.repository.findByEventKey(definition.eventKey);
+      if (existing.length > 0) continue;
+      const created = await this.repository.create({
+        name: definition.title,
+        slug: slug(definition.eventKey),
+        description: definition.description,
+        eventKey: definition.eventKey,
+        templateType: 'transactional',
+        folderKey: definition.folderKey,
+        subject: definition.subject,
+        previewText: definition.previewText,
+        html: definition.html,
+        css: definition.css,
+        text: definition.text,
+        variables: definition.variables,
+        metadata: {
+          source: 'system_default',
+          editable: true,
+          eventTitle: definition.title,
+          sampleVariables: definition.sampleVariables,
+        } as unknown as Prisma.InputJsonValue,
+      });
+      const revision = created.versions[0];
+      if (!revision) continue;
+      const published = await this.repository.publishRevision(revision.id, {
+        lintSummary: { source: 'system_default', generatedAt: new Date().toISOString() },
+        spamScore: 0,
+      });
+      if (published.publishedVersionId) {
+        await this.repository.activateVariant(definition.eventKey, published.id, published.publishedVersionId);
+      }
+      this.logger.log('mail_template', 'ensure_system_default', 'Transactional email template default created', {
+        template_id: published.id,
+        event_key: definition.eventKey,
+      });
+    }
   }
 
   async list(query: MailTemplateQuery) {

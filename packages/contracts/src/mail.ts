@@ -913,7 +913,16 @@ export interface EmailTemplateDto {
 export interface EmailTemplateWorkspaceResponse {
   sendingEnabled: false;
   templates: EmailTemplateDto[];
-  events: Array<{ eventKey: string; templateCount: number; publishedCount: number }>;
+  events: Array<{
+    eventKey: string;
+    templateCount: number;
+    publishedCount: number;
+    title?: string;
+    description?: string;
+    folderKey?: string;
+    variables?: string[];
+    sampleVariables?: Record<string, unknown>;
+  }>;
   provider: { mode: MailProviderMode; message: string };
 }
 

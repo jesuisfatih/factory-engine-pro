@@ -58,6 +58,15 @@ export interface WorkflowMailInput {
   metadata?: Record<string, unknown>;
 }
 
+interface RenderedTransactionalTemplate {
+  subject: string;
+  html: string;
+  text?: string | null;
+  templateId?: string | null;
+  templateVersionId?: string | null;
+  templateSource: 'event_binding' | 'fallback';
+}
+
 export interface ResendWebhookInput {
   tenantSlug: string;
   rawBody: string;
@@ -270,6 +279,31 @@ export class MailService {
       source: 'event_binding' as const,
       templateId: binding.templateId,
       revision: binding.templateVersion,
+    };
+  }
+
+  private async renderTransactionalEventTemplate(input: {
+    eventKey: string;
+    variables: Record<string, unknown>;
+    fallback: { subject: string; html: string; text?: string | null };
+  }): Promise<RenderedTransactionalTemplate> {
+    const resolved = await this.resolveActiveBinding(input.eventKey);
+    if (!resolved) {
+      return {
+        ...input.fallback,
+        templateId: null,
+        templateVersionId: null,
+        templateSource: 'fallback',
+      };
+    }
+    const renderedCss = resolved.revision.css ? renderTemplate(resolved.revision.css, input.variables) : null;
+    return {
+      subject: renderTemplate(resolved.revision.subject, input.variables),
+      html: renderEmailHtml(renderTemplate(resolved.revision.html, input.variables, { escapeHtml: true }), renderedCss),
+      text: resolved.revision.text ? renderTemplate(resolved.revision.text, input.variables) : input.fallback.text ?? null,
+      templateId: resolved.templateId,
+      templateVersionId: resolved.revision.id,
+      templateSource: resolved.source,
     };
   }
 
@@ -954,13 +988,39 @@ export class MailService {
       `<p><a href="${escapeHtml(invitationUrl)}">Accept invitation and set your password</a></p>`,
       '<p>This invitation expires in 7 days.</p>',
     ].join('');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: input.eventKey,
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        action_url: invitationUrl,
+        invitation_url: invitationUrl,
+        reset_url: invitationUrl,
+        expires_in_days: 7,
+        surface: input.surface,
+      },
+      fallback: {
+        subject,
+        html,
+        text: `Hello ${input.recipientName}, accept your ${brand} invitation: ${invitationUrl}`,
+      },
+    });
     return this.sendTransactional({
       eventKey: input.eventKey,
       to: input.to,
-      subject,
-      html,
-      text: `Hello ${input.recipientName}, accept your ${brand} invitation: ${invitationUrl}`,
-      metadata: { ...(input.metadata ?? {}), invitationUrl },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: {
+        ...(input.metadata ?? {}),
+        invitationUrl,
+        templateSource: rendered.templateSource,
+      },
     });
   }
 
@@ -994,13 +1054,36 @@ export class MailService {
       loginUrl ? `Open your account portal: ${loginUrl}` : '',
       'You can now review orders, invoices, reorder options, team users, and account pricing from the portal.',
     ].filter(Boolean).join('\n\n');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.application_approved.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        companyName: input.companyName,
+        company_name: input.companyName,
+        account_text: accountText,
+        login_url: loginUrl,
+        portal_url: loginUrl,
+        action_url: loginUrl,
+        request_id: input.requestId,
+        customer_id: input.customerId,
+        customer_user_id: input.customerUserId,
+        existing_portal_account: input.existingPortalAccount,
+      },
+      fallback: { subject, html, text },
+    });
     return this.sendTransactional({
       eventKey: 'b2b.application_approved.user',
       category: 'system.b2b',
       to: input.to,
-      subject,
-      html,
-      text,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
       metadata: {
         requestId: input.requestId,
         customerId: input.customerId,
@@ -1008,6 +1091,7 @@ export class MailService {
         companyName: input.companyName,
         existingPortalAccount: input.existingPortalAccount,
         loginUrl,
+        templateSource: rendered.templateSource,
       },
     });
   }
@@ -1036,14 +1120,35 @@ export class MailService {
       note ? `Review note: ${note}` : '',
       'If your account details change, you can submit a new application from the customer portal.',
     ].filter(Boolean).join('\n\n');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.application_rejected.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        companyName: input.companyName,
+        company_name: input.companyName,
+        review_note: note ?? '',
+        request_id: input.requestId,
+      },
+      fallback: { subject, html, text },
+    });
     return this.sendTransactional({
       eventKey: 'b2b.application_rejected.user',
       category: 'system.b2b',
       to: input.to,
-      subject,
-      html,
-      text,
-      metadata: { requestId: input.requestId, companyName: input.companyName },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: {
+        requestId: input.requestId,
+        companyName: input.companyName,
+        templateSource: rendered.templateSource,
+      },
     });
   }
 
@@ -1087,13 +1192,38 @@ export class MailService {
       portalUrl ? `Account portal: ${portalUrl}` : '',
       'If you have questions, reply to this email or contact billing from your account portal.',
     ].filter(Boolean).join('\n\n');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.invoice_delivered.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        invoice_id: input.invoiceId,
+        invoice_number: input.invoiceNumber,
+        amount_due: amountDue,
+        amount_due_value: input.amountDue,
+        currency: input.currency,
+        due_date: dueDate ?? '',
+        due_at: input.dueAt?.toISOString() ?? '',
+        invoice_url: input.invoiceUrl ?? '',
+        payment_url: input.paymentUrl ?? '',
+        portal_url: portalUrl,
+        action_url: input.paymentUrl ?? portalUrl,
+        billing_note: note ?? '',
+      },
+      fallback: { subject, html, text },
+    });
     return this.sendTransactional({
       eventKey: 'b2b.invoice_delivered.user',
       category: 'system.b2b',
       to: input.to,
-      subject,
-      html,
-      text,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
       metadata: {
         invoiceId: input.invoiceId,
         invoiceNumber: input.invoiceNumber,
@@ -1103,6 +1233,7 @@ export class MailService {
         invoiceUrl: input.invoiceUrl ?? null,
         paymentUrl: input.paymentUrl ?? null,
         portalUrl: portalUrl || null,
+        templateSource: rendered.templateSource,
       },
     });
   }
@@ -1119,13 +1250,38 @@ export class MailService {
       `<p><a href="${escapeHtml(resetUrl)}">Reset password</a></p>`,
       '<p>This link expires in 30 minutes.</p>',
     ].join('');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'identity.password_reset',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        action_url: resetUrl,
+        reset_url: resetUrl,
+        expires_in_minutes: 30,
+        surface: input.surface,
+      },
+      fallback: {
+        subject: `${brand} password reset`,
+        html,
+        text: `Reset your ${brand} password: ${resetUrl}`,
+      },
+    });
     return this.sendTransactional({
       eventKey: 'identity.password_reset',
       to: input.to,
-      subject: `${brand} password reset`,
-      html,
-      text: `Reset your ${brand} password: ${resetUrl}`,
-      metadata: { surface: input.surface, resetUrl },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: {
+        surface: input.surface,
+        resetUrl,
+        templateSource: rendered.templateSource,
+      },
     });
   }
 

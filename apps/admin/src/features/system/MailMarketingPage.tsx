@@ -5,7 +5,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { AlertTriangle, FileText, Mail, PlayCircle, RefreshCw, Send, Users, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
-import type { EmailTemplateAiEditMode, EmailTemplateAiEditProposalResponse, EmailTemplateDto, MailAudienceFilterInput, MailAudiencePreviewResponse, MailAudienceSnapshotDiffResponse, MailAudienceSnapshotDto, MailAudienceSnapshotMembersResponse, MailCampaignDto, MailContactDetailDto, MailFlowSimulationResponse, MailFlowValidationResponse, MailFlowWebhookDestinationDto, MailMarketingAnalyticsCohortResponse, MailMarketingAnalyticsFunnelResponse, MailMarketingAnalyticsOverviewResponse, MailMarketingFlowDto, MailMarketingOverviewResponse, MailMarketingSettingsInput, MailProviderMode, MailTemplateBlockDto, MailTemplatePreviewProfileDto, MailTemplateSnippetDto, SaveEmailTemplateInput, SaveMailAudienceInput, SaveMailCampaignInput, SaveMailFlowInput, SaveMailFlowWebhookDestinationInput } from '@factory-engine-pro/contracts';
+import type { EmailTemplateAiEditMode, EmailTemplateAiEditProposalResponse, EmailTemplateDto, EmailTemplateWorkspaceResponse, MailAudienceFilterInput, MailAudiencePreviewResponse, MailAudienceSnapshotDiffResponse, MailAudienceSnapshotDto, MailAudienceSnapshotMembersResponse, MailCampaignDto, MailContactDetailDto, MailFlowSimulationResponse, MailFlowValidationResponse, MailFlowWebhookDestinationDto, MailMarketingAnalyticsCohortResponse, MailMarketingAnalyticsFunnelResponse, MailMarketingAnalyticsOverviewResponse, MailMarketingFlowDto, MailMarketingOverviewResponse, MailMarketingSettingsInput, MailProviderMode, MailTemplateBlockDto, MailTemplatePreviewProfileDto, MailTemplateSnippetDto, SaveEmailTemplateInput, SaveMailAudienceInput, SaveMailCampaignInput, SaveMailFlowInput, SaveMailFlowWebhookDestinationInput } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
@@ -87,6 +87,7 @@ interface MailDeliveryProof {
 }
 
 type EmailTemplateDetail = EmailTemplateDto & { versions: EmailTemplateVersion[] };
+type MailTemplateWorkspaceEvent = EmailTemplateWorkspaceResponse['events'][number];
 
 interface MailAudience {
   id: string;
@@ -205,6 +206,7 @@ const QK = {
   overview: ['mail-marketing', 'overview'] as const,
   contacts: ['mail-marketing', 'contacts'] as const,
   templates: ['mail-marketing', 'templates'] as const,
+  templateWorkspace: ['mail-templates', 'workspace'] as const,
   audiences: ['mail-marketing', 'audiences'] as const,
   campaigns: ['mail-marketing', 'campaigns'] as const,
   analytics: ['mail-marketing', 'analytics', 'overview'] as const,
@@ -357,6 +359,11 @@ export function MailMarketingPage() {
     queryFn: () => adminApi.mailMarketingTemplates({ limit: 100 }) as Promise<EmailTemplate[]>,
     retry: false,
   });
+  const templateWorkspace = useQuery({
+    queryKey: QK.templateWorkspace,
+    queryFn: () => adminApi.emailTemplateWorkspace() as Promise<EmailTemplateWorkspaceResponse>,
+    retry: false,
+  });
   const templateDetail = useQuery({
     queryKey: ['mail-marketing', 'template-detail', selectedTemplateId],
     queryFn: () => adminApi.emailTemplate(selectedTemplateId || '') as Promise<EmailTemplateDetail>,
@@ -463,7 +470,7 @@ export function MailMarketingPage() {
   const audienceFilters = useMemo(() => buildAudienceFilters(audienceDraft), [audienceDraft]);
 
   const refresh = () => {
-    [overview, contacts, contactDetail, templates, audiences, audienceSnapshots, campaignSnapshots, campaigns, analytics, analyticsFunnel, analyticsCohorts, flows, webhookDestinations, bootstrap, previewProfiles, reusableSnippets, reusableBlocks, templateDeliveries].forEach((query) => query.refetch());
+    [overview, contacts, contactDetail, templates, templateWorkspace, audiences, audienceSnapshots, campaignSnapshots, campaigns, analytics, analyticsFunnel, analyticsCohorts, flows, webhookDestinations, bootstrap, previewProfiles, reusableSnippets, reusableBlocks, templateDeliveries].forEach((query) => query.refetch());
   };
 
   useEffect(() => {
@@ -513,7 +520,11 @@ export function MailMarketingPage() {
     },
     onSuccess: async () => {
       toast.success('Template created');
-      await Promise.all([qc.invalidateQueries({ queryKey: QK.templates }), qc.invalidateQueries({ queryKey: QK.overview })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
+        qc.invalidateQueries({ queryKey: QK.overview }),
+      ]);
     },
     onError: (error) => toast.error('Template create failed', { description: apiErrorMessage(error) }),
   });
@@ -748,7 +759,11 @@ export function MailMarketingPage() {
     mutationFn: (templateId: string) => adminApi.duplicateEmailTemplate(templateId),
     onSuccess: async () => {
       toast.success('Template duplicated');
-      await Promise.all([qc.invalidateQueries({ queryKey: QK.templates }), qc.invalidateQueries({ queryKey: QK.overview })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
+        qc.invalidateQueries({ queryKey: QK.overview }),
+      ]);
     },
     onError: (error) => toast.error('Duplicate failed', { description: apiErrorMessage(error) }),
   });
@@ -759,6 +774,7 @@ export function MailMarketingPage() {
       toast.success('Draft revision created');
       await Promise.all([
         qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
         qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] }),
       ]);
     },
@@ -769,7 +785,10 @@ export function MailMarketingPage() {
     mutationFn: (revisionId: string) => adminApi.approveEmailTemplateRevision(revisionId, { comment: 'Approved from Mail Marketing workspace' }),
     onSuccess: async () => {
       toast.success('Revision approved');
-      await qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
+        qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] }),
+      ]);
     },
     onError: (error) => toast.error('Approve failed', { description: apiErrorMessage(error) }),
   });
@@ -780,6 +799,7 @@ export function MailMarketingPage() {
       toast.success('Revision published');
       await Promise.all([
         qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
         qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] }),
       ]);
     },
@@ -792,6 +812,7 @@ export function MailMarketingPage() {
       toast.success('Template activated');
       await Promise.all([
         qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
         qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] }),
       ]);
     },
@@ -816,6 +837,7 @@ export function MailMarketingPage() {
       setRevisionPreview(null);
       await Promise.all([
         qc.invalidateQueries({ queryKey: QK.templates }),
+        qc.invalidateQueries({ queryKey: QK.templateWorkspace }),
         qc.invalidateQueries({ queryKey: ['mail-marketing', 'template-detail', selectedTemplateId] }),
       ]);
     },
@@ -1123,7 +1145,7 @@ export function MailMarketingPage() {
   };
 
   const counts = overview.data?.counts;
-  const hasError = overview.isError || contacts.isError || templates.isError || audiences.isError || campaigns.isError || analytics.isError || analyticsFunnel.isError || analyticsCohorts.isError || flows.isError || bootstrap.isError;
+  const hasError = overview.isError || contacts.isError || templates.isError || templateWorkspace.isError || audiences.isError || campaigns.isError || analytics.isError || analyticsFunnel.isError || analyticsCohorts.isError || flows.isError || bootstrap.isError;
 
   useEffect(() => {
     if (!selectedAudienceId && audiences.data?.[0]) setSelectedAudienceId(audiences.data[0].id);
@@ -1187,7 +1209,7 @@ export function MailMarketingPage() {
       {hasError && (
         <StateBlock
           title="Mail Marketing data could not load"
-          body={[overview.error, contacts.error, templates.error, audiences.error, campaigns.error, analytics.error, analyticsFunnel.error, analyticsCohorts.error, flows.error, bootstrap.error].filter(Boolean).map(apiErrorMessage)[0] ?? 'Request failed'}
+          body={[overview.error, contacts.error, templates.error, templateWorkspace.error, audiences.error, campaigns.error, analytics.error, analyticsFunnel.error, analyticsCohorts.error, flows.error, bootstrap.error].filter(Boolean).map(apiErrorMessage)[0] ?? 'Request failed'}
           action={<button className="btn" type="button" onClick={refresh}><RefreshCw size={14} /> Retry</button>}
         />
       )}
@@ -1223,8 +1245,9 @@ export function MailMarketingPage() {
       )}
       {!hasError && tab === 'templates' && (
         <TemplatesPanel
-          loading={templates.isLoading}
-          rows={templates.data ?? []}
+          loading={templates.isLoading || templateWorkspace.isLoading}
+          rows={(templateWorkspace.data?.templates ?? templates.data ?? []) as EmailTemplate[]}
+          events={templateWorkspace.data?.events ?? []}
           canTemplateWrite={canTemplateWrite}
           canTemplateApprove={canTemplateApprove}
           canTemplatePublish={canTemplatePublish}
@@ -2033,6 +2056,72 @@ function TemplateDraftComposer({
   );
 }
 
+function TemplateEventCatalog({
+  events,
+  rowsByEvent,
+  canCreate,
+  onOpen,
+  onCreateDraft,
+}: {
+  events: MailTemplateWorkspaceEvent[];
+  rowsByEvent: Map<string, EmailTemplate[]>;
+  canCreate: boolean;
+  onOpen: (templateId: string) => void;
+  onCreateDraft: (event: MailTemplateWorkspaceEvent) => void;
+}) {
+  const sorted = [...events].sort((left, right) => {
+    const leftKey = `${eventFolderRank(left.folderKey)}:${left.eventKey}`;
+    const rightKey = `${eventFolderRank(right.folderKey)}:${right.eventKey}`;
+    return leftKey.localeCompare(rightKey);
+  });
+  if (sorted.length === 0) {
+    return (
+      <div className="data-card" style={{ padding: 12, marginBottom: 12 }}>
+        <div className="name">Transactional event catalog</div>
+        <div className="muted" style={{ marginTop: 4 }}>No event catalog is available yet.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="data-card" style={{ padding: 12, marginBottom: 12 }}>
+      <div className="orders-toolbar" style={{ justifyContent: 'space-between', marginBottom: 10, gap: 12 }}>
+        <div>
+          <div className="name">Transactional event catalog</div>
+          <div className="muted">Edit invitation, password, B2B, invoice, and order templates by business event.</div>
+        </div>
+        <span className="pill info">{sorted.length} events</span>
+      </div>
+      <div className="template-event-grid">
+        {sorted.map((event) => {
+          const rows = rowsByEvent.get(event.eventKey) ?? [];
+          const active = rows.find((row) => row.activeBinding) ?? rows.find((row) => row.publishedVersionId) ?? rows[0] ?? null;
+          const tone = active?.activeBinding ? 'success' : active?.publishedVersionId ? 'info' : rows.length > 0 ? 'warn' : 'danger';
+          return (
+            <button
+              key={event.eventKey}
+              type="button"
+              className={`template-event-card ${tone}`}
+              onClick={() => active ? onOpen(active.id) : onCreateDraft(event)}
+            >
+              <span className="event-top">
+                <span className="event-title">{event.title || humanizeKey(event.eventKey)}</span>
+                <span className={`pill ${tone}`}>{active?.activeBinding ? 'Active' : active?.publishedVersionId ? 'Published' : rows.length > 0 ? 'Draft' : 'Missing'}</span>
+              </span>
+              <span className="event-key">{event.eventKey}</span>
+              <span className="event-desc">{event.description || 'Transactional customer email.'}</span>
+              <span className="event-bottom">
+                <span>{event.templateCount} variants</span>
+                <span>{event.publishedCount} published</span>
+                <span>{active ? 'Open' : canCreate ? 'Create draft' : 'No access'}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TemplateAssistantPanel({
   revisionId,
   draft,
@@ -2147,6 +2236,7 @@ function TemplateAssistantPanel({
 function TemplatesPanel({
   loading,
   rows,
+  events,
   canTemplateWrite,
   canTemplateApprove,
   canTemplatePublish,
@@ -2223,6 +2313,7 @@ function TemplatesPanel({
 }: {
   loading: boolean;
   rows: EmailTemplate[];
+  events: MailTemplateWorkspaceEvent[];
   canTemplateWrite: boolean;
   canTemplateApprove: boolean;
   canTemplatePublish: boolean;
@@ -2299,12 +2390,21 @@ function TemplatesPanel({
 }) {
   if (loading) return <StateBlock title="Loading templates" body="Reading live email template workspace." />;
   const createBlockedReason = templateDraftBlockedReason(templateDraft);
+  const rowsByEvent = new Map<string, EmailTemplate[]>();
+  for (const row of rows) rowsByEvent.set(row.eventKey, [...(rowsByEvent.get(row.eventKey) ?? []), row]);
   return (
     <div className="two-col" style={{ gridTemplateColumns: 'minmax(0, .9fr) minmax(420px, 1.1fr)' }}>
       <section className="section">
         <h3>
           <span>Template library</span>
         </h3>
+        <TemplateEventCatalog
+          events={events}
+          rowsByEvent={rowsByEvent}
+          canCreate={canTemplateWrite}
+          onOpen={(templateId) => onSelect(templateId)}
+          onCreateDraft={(event) => onTemplateDraftChange(draftFromTemplateEvent(event))}
+        />
         <TemplateDraftComposer
           draft={templateDraft}
           onDraftChange={onTemplateDraftChange}
@@ -3878,6 +3978,43 @@ function buildTemplateInputFromDraft(draft: TemplateDraft): SaveEmailTemplateInp
       releaseLane: 'draft_only',
     },
   };
+}
+
+function draftFromTemplateEvent(event: MailTemplateWorkspaceEvent): TemplateDraft {
+  const title = event.title || humanizeKey(event.eventKey);
+  const actionUrl = event.eventKey.includes('password') ? '{{reset_url}}' : event.eventKey.includes('invoice') ? '{{portal_url}}' : '{{action_url}}';
+  return {
+    name: `${title} variant`,
+    eventKey: event.eventKey,
+    templateType: 'transactional',
+    folderKey: event.folderKey || event.eventKey.split('.')[0] || 'transactional',
+    subject: event.eventKey.includes('invoice')
+      ? '{{brand_name}} invoice {{invoice_number}}'
+      : `{{brand_name}} | ${title}`,
+    previewText: event.description || 'Transactional customer email.',
+    html: [
+      '<!doctype html><html><body style="margin:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#172033;">',
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#eef2f7;"><tr><td align="center">',
+      '<table role="presentation" width="680" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #dbe4ef;border-radius:24px;overflow:hidden;">',
+      '<tr><td style="padding:30px 32px 14px;border-top:6px solid #1d4ed8;"><div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Transactional email</div><h1 style="margin:16px 0 0;font-size:30px;line-height:1.15;color:#111827;">',
+      title,
+      '</h1></td></tr>',
+      '<tr><td style="padding:4px 32px 10px;color:#334155;font-size:15px;line-height:1.7;"><p>Hi {{recipient_name}},</p><p>',
+      event.description || 'Please review the account update below.',
+      '</p></td></tr>',
+      `<tr><td style="padding:0 32px 30px;"><a href="${actionUrl}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:13px 20px;border-radius:999px;font-weight:700;">Review details</a></td></tr>`,
+      '<tr><td style="padding:18px 32px 28px;color:#64748b;font-size:12px;line-height:1.5;border-top:1px solid #e5eaf2;">This message was sent from {{brand_name}}.</td></tr>',
+      '</table></td></tr></table></body></html>',
+    ].join(''),
+    text: `Hi {{recipient_name}}, ${event.description || title} ${actionUrl}`,
+    variables: (event.variables ?? ['brand_name', 'recipient_name', 'action_url']).join(', '),
+  };
+}
+
+function eventFolderRank(folderKey: string | undefined) {
+  const order = ['identity', 'b2b', 'orders', 'marketing', 'general'];
+  const index = order.indexOf(folderKey || 'general');
+  return index === -1 ? 99 : index;
 }
 
 function templateDraftBlockedReason(draft: TemplateDraft) {
