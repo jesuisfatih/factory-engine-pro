@@ -155,7 +155,7 @@ export class StorefrontService {
     };
   }
 
-  private async resolveTenant(query: StorefrontQuery) {
+  async resolveTenant(query: StorefrontQuery) {
     const shop = cleanShopDomain(query.shop);
     const contextTenantId = this.tenantContext.get()?.tenantId;
     if (contextTenantId) {

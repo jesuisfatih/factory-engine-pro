@@ -1,5 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import {
+  BadgeDollarSign,
+  CalendarClock,
+  CircleCheck,
+  Headphones,
+  Truck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
 import { useWorkspaceBrand, workspaceName } from '@/lib/workspace-brand';
 
@@ -18,6 +27,14 @@ interface BenefitConfig {
   title: string;
   description: string;
 }
+
+const BENEFIT_ICONS: Record<string, LucideIcon> = {
+  '$': BadgeDollarSign,
+  NET: CalendarClock,
+  TEAM: Users,
+  VIP: Headphones,
+  SHIP: Truck,
+};
 
 interface RequestPageConfig {
   title: string;
@@ -512,7 +529,7 @@ function RequestInvitationView() {
                           flexShrink: 0,
                         }}
                       >
-                        {item.icon}
+                        {renderBenefitIcon(item)}
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
@@ -695,6 +712,11 @@ function RequestInvitationView() {
 }
 
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
+
+function renderBenefitIcon(item: BenefitConfig) {
+  const Icon = BENEFIT_ICONS[item.icon] ?? CircleCheck;
+  return <Icon size={22} strokeWidth={2} aria-hidden="true" />;
+}
 
 function currentSearchParams() {
   if (typeof window === 'undefined') return new URLSearchParams();

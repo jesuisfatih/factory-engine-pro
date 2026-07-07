@@ -1,0 +1,487 @@
+{% if block.settings.enabled %}
+  {% assign root_id = 'factory-storefront-form-' | append: block.id %}
+  {% assign resolved_handle = block.settings.custom_form_handle | strip | default: block.settings.form_choice %}
+  {% assign alignment = block.settings.alignment | default: 'center' %}
+
+  <style>
+    #{{ root_id }} {
+      --factory-form-bg-color: {{ block.settings.bg_color }};
+      --factory-form-bg-opacity: {{ block.settings.bg_opacity }}%;
+      --factory-form-text: {{ block.settings.text_color }};
+      --factory-form-muted: {{ block.settings.muted_text_color }};
+      --factory-form-accent: {{ block.settings.accent_color }};
+      --factory-form-accent-hover: {{ block.settings.accent_hover_color }};
+      --factory-form-button-text: {{ block.settings.button_text_color }};
+      --factory-form-border-color: {{ block.settings.border_color }};
+      --factory-form-border-opacity: {{ block.settings.border_opacity }}%;
+      --factory-form-field-bg: {{ block.settings.field_bg_color }};
+      --factory-form-field-border: {{ block.settings.field_border_color }};
+      --factory-form-radius: {{ block.settings.border_radius }}px;
+      --factory-form-field-radius: {{ block.settings.field_radius }}px;
+      --factory-form-button-radius: {{ block.settings.button_radius }}px;
+      --factory-form-card-padding: {{ block.settings.card_padding }}px;
+      --factory-form-max-width: {{ block.settings.max_width }}px;
+      --factory-form-border-width: {{ block.settings.border_width }}px;
+      --factory-form-shadow-opacity: {{ block.settings.shadow_opacity }}%;
+      --factory-form-desktop-columns: 2;
+      width: 100%;
+      max-width: var(--factory-form-max-width);
+      margin: 0 auto;
+      padding: var(--factory-form-card-padding);
+      border: var(--factory-form-border-width) solid color-mix(in srgb, var(--factory-form-border-color) var(--factory-form-border-opacity), transparent);
+      border-radius: var(--factory-form-radius);
+      background:
+        linear-gradient(
+          145deg,
+          color-mix(in srgb, var(--factory-form-bg-color) var(--factory-form-bg-opacity), transparent),
+          color-mix(in srgb, #f5f8ff 52%, transparent)
+        );
+      color: var(--factory-form-text);
+      box-shadow: 0 24px 70px color-mix(in srgb, #081F6F var(--factory-form-shadow-opacity), transparent);
+      box-sizing: border-box;
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+    }
+
+    #{{ root_id }}[data-align='left'] {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    #{{ root_id }}[data-align='right'] {
+      margin-left: auto;
+      margin-right: 0;
+    }
+
+    #{{ root_id }} .factory-form-title {
+      margin: 0 0 6px;
+      font-size: 30px;
+      line-height: 1.1;
+      font-weight: 750;
+      color: var(--factory-form-text);
+      letter-spacing: 0;
+    }
+
+    #{{ root_id }} .factory-form-subtitle {
+      margin: 0 0 20px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--factory-form-muted);
+    }
+
+    #{{ root_id }} .factory-form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    #{{ root_id }} .factory-form-fields {
+      display: grid;
+      gap: 12px;
+    }
+
+    #{{ root_id }} .factory-form-field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    #{{ root_id }} label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--factory-form-text);
+      letter-spacing: 0;
+    }
+
+    #{{ root_id }} input,
+    #{{ root_id }} select,
+    #{{ root_id }} textarea,
+    #{{ root_id }} button {
+      width: 100%;
+      border-radius: var(--factory-form-field-radius);
+      border: 1px solid var(--factory-form-field-border);
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    #{{ root_id }} input,
+    #{{ root_id }} select,
+    #{{ root_id }} textarea {
+      padding: 12px 14px;
+      background: var(--factory-form-field-bg);
+      color: var(--factory-form-text);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    #{{ root_id }} input:focus,
+    #{{ root_id }} select:focus,
+    #{{ root_id }} textarea:focus {
+      border-color: var(--factory-form-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--factory-form-accent) 14%, transparent);
+    }
+
+    #{{ root_id }} input::placeholder,
+    #{{ root_id }} textarea::placeholder {
+      color: var(--factory-form-muted);
+    }
+
+    #{{ root_id }} textarea {
+      min-height: 132px;
+      resize: vertical;
+    }
+
+    #{{ root_id }} button {
+      margin-top: 8px;
+      padding: 14px 18px;
+      border-radius: var(--factory-form-button-radius);
+      border-color: var(--factory-form-accent);
+      background: var(--factory-form-accent);
+      color: var(--factory-form-button-text);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    #{{ root_id }} button:hover:not(:disabled) {
+      background: var(--factory-form-accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--factory-form-accent) 18%, transparent);
+    }
+
+    #{{ root_id }} button:disabled {
+      cursor: wait;
+      opacity: 0.72;
+      transform: none;
+    }
+
+    #{{ root_id }} .factory-form-submit {
+      grid-column: 1 / -1;
+    }
+
+    #{{ root_id }} .factory-form-help {
+      font-size: 12px;
+      color: var(--factory-form-muted);
+    }
+
+    #{{ root_id }} .factory-form-message {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: var(--factory-form-field-radius);
+      font-size: 14px;
+      display: none;
+    }
+
+    #{{ root_id }} .factory-form-message-title {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    #{{ root_id }} .factory-form-message[data-state='success'] {
+      display: block;
+      background: #ecfdf3;
+      color: #0e7c42;
+      border: 1px solid #b7ebc6;
+    }
+
+    #{{ root_id }} .factory-form-message[data-state='error'] {
+      display: block;
+      background: #fef3f2;
+      color: #b42318;
+      border: 1px solid #fecdca;
+    }
+
+    #{{ root_id }} .factory-form-loading {
+      font-size: 14px;
+      color: var(--factory-form-muted);
+    }
+
+    @media (max-width: 640px) {
+      #{{ root_id }} {
+        padding: max(18px, calc(var(--factory-form-card-padding) - 8px));
+      }
+
+      #{{ root_id }} .factory-form-title {
+        font-size: 24px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      #{{ root_id }} .factory-form-fields {
+        grid-template-columns: repeat(var(--factory-form-desktop-columns), minmax(0, 1fr));
+      }
+
+      #{{ root_id }} .factory-form-field[data-span='2'] {
+        grid-column: span 2;
+      }
+
+      #{{ root_id }} .factory-form-field[data-start-new-row='true'][data-span='1'] {
+        grid-column: 1 / span 1;
+      }
+
+      #{{ root_id }} .factory-form-field[data-start-new-row='true'][data-span='2'] {
+        grid-column: 1 / span 2;
+      }
+    }
+  </style>
+
+  <div
+    id="{{ root_id }}"
+    data-api-url="{{ block.settings.api_url | escape }}"
+    data-api-base-path="{{ block.settings.api_base_path | escape }}"
+    data-form-handle="{{ resolved_handle | escape }}"
+    data-align="{{ alignment | escape }}"
+    data-shop="{{ shop.permanent_domain | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    <h2 class="factory-form-title">{{ block.settings.heading | escape }}</h2>
+    <p class="factory-form-subtitle">{{ block.settings.intro_text | escape }}</p>
+    <div class="factory-form-loading">Loading form...</div>
+    <div class="factory-form-grid"></div>
+    <div class="factory-form-message"></div>
+  </div>
+
+  <script>
+    (function() {
+      var root = document.getElementById({{ root_id | json }});
+      if (!root || root.dataset.factoryFormHydrated === '1') return;
+      root.dataset.factoryFormHydrated = '1';
+
+      var apiUrl = (root.getAttribute('data-api-url') || '').replace(/\/$/, '');
+      var apiBasePath = root.getAttribute('data-api-base-path') || '/apps/eagle/forms/public';
+      var handle = root.getAttribute('data-form-handle') || '';
+      var shop = root.getAttribute('data-shop') || '';
+      var loadingNode = root.querySelector('.factory-form-loading');
+      var gridNode = root.querySelector('.factory-form-grid');
+      var messageNode = root.querySelector('.factory-form-message');
+
+      if (!handle) {
+        setMessage('error', 'Form block is not configured yet. Select a form handle.');
+        if (loadingNode) loadingNode.style.display = 'none';
+        return;
+      }
+
+      fetch(buildUrl(handle), { method: 'GET', credentials: 'same-origin' })
+        .then(function(response) {
+          return response.json().then(function(data) {
+            return { ok: response.ok, data: data };
+          });
+        })
+        .then(function(result) {
+          if (!result.ok) {
+            throw new Error(result.data && result.data.message ? result.data.message : 'Form could not be loaded.');
+          }
+          renderForm(result.data || {});
+        })
+        .catch(function(error) {
+          setMessage('error', error && error.message ? error.message : 'Form could not be loaded.');
+        })
+        .finally(function() {
+          if (loadingNode) loadingNode.style.display = 'none';
+        });
+
+      function buildUrl(formHandle, suffix) {
+        var basePath = apiBasePath.replace(/\/$/, '');
+        var base = (apiUrl ? apiUrl + basePath : basePath) + '/' + encodeURIComponent(formHandle);
+        var next = suffix ? base + suffix : base;
+        return next + '?shop=' + encodeURIComponent(shop);
+      }
+
+      function setMessage(state, text, title) {
+        if (!messageNode) return;
+        messageNode.setAttribute('data-state', state || '');
+        messageNode.textContent = '';
+        if (title) {
+          var titleNode = document.createElement('strong');
+          titleNode.className = 'factory-form-message-title';
+          titleNode.textContent = title;
+          messageNode.appendChild(titleNode);
+        }
+        if (text) {
+          var textNode = document.createElement('span');
+          textNode.textContent = text;
+          messageNode.appendChild(textNode);
+        }
+      }
+
+      function createField(field, desktopColumns) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'factory-form-field';
+        var desktopSpan = Math.min(Number(field && field.layout ? field.layout.desktopSpan : 1) === 2 ? 2 : 1, desktopColumns);
+        var startNewRow = field && field.layout && field.layout.startNewRow === true;
+        wrapper.setAttribute('data-span', String(desktopSpan));
+        wrapper.setAttribute('data-start-new-row', startNewRow ? 'true' : 'false');
+
+        var label = document.createElement('label');
+        label.setAttribute('for', root.id + '-' + field.key);
+        label.textContent = field.label + (field.required ? ' *' : '');
+        wrapper.appendChild(label);
+
+        var input;
+        if (field.type === 'textarea') {
+          input = document.createElement('textarea');
+        } else if (field.type === 'select') {
+          input = document.createElement('select');
+          var blank = document.createElement('option');
+          blank.value = '';
+          blank.textContent = 'Select';
+          input.appendChild(blank);
+          (field.options || []).forEach(function(option) {
+            var optionNode = document.createElement('option');
+            optionNode.value = option;
+            optionNode.textContent = option;
+            input.appendChild(optionNode);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = field.type === 'file' ? 'file' : field.type;
+        }
+
+        input.name = field.key;
+        input.id = root.id + '-' + field.key;
+        if (field.placeholder && field.type !== 'select' && field.type !== 'file') input.placeholder = field.placeholder;
+        if (field.accept && field.type === 'file') input.accept = field.accept;
+        if (field.required) input.required = true;
+        wrapper.appendChild(input);
+
+        if (field.helpText) {
+          var help = document.createElement('div');
+          help.className = 'factory-form-help';
+          help.textContent = field.helpText;
+          wrapper.appendChild(help);
+        }
+
+        return wrapper;
+      }
+
+      function renderForm(config) {
+        if (!gridNode) return;
+        var titleNode = root.querySelector('.factory-form-title');
+        var subtitleNode = root.querySelector('.factory-form-subtitle');
+        var desktopColumns = Number(config && config.layout ? config.layout.desktopColumns : 2) === 1 ? 1 : 2;
+        root.style.setProperty('--factory-form-desktop-columns', String(desktopColumns));
+        if (titleNode && config.name) titleNode.textContent = config.name;
+        if (subtitleNode && config.description) subtitleNode.textContent = config.description;
+
+        var form = document.createElement('form');
+        form.className = 'factory-form-grid';
+        var fieldsGrid = document.createElement('div');
+        fieldsGrid.className = 'factory-form-fields';
+        (Array.isArray(config.fields) ? config.fields : []).forEach(function(field) {
+          fieldsGrid.appendChild(createField(field, desktopColumns));
+        });
+        form.appendChild(fieldsGrid);
+
+        var submit = document.createElement('button');
+        submit.type = 'submit';
+        submit.className = 'factory-form-submit';
+        submit.textContent = config.submitLabel || 'Submit';
+        form.appendChild(submit);
+
+        form.addEventListener('submit', function(event) {
+          event.preventDefault();
+          setMessage('', '');
+          submit.disabled = true;
+          submit.textContent = 'Sending...';
+
+          var formData = new FormData(form);
+          formData.append('sourceUrl', window.location.href);
+          formData.append('sourcePath', window.location.pathname);
+          formData.append('shop', shop);
+
+          fetch(buildUrl(handle, '/submit'), {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+          })
+            .then(function(response) {
+              return response.json().then(function(data) {
+                return { ok: response.ok, data: data };
+              });
+            })
+            .then(function(result) {
+              if (!result.ok) {
+                throw new Error(result.data && result.data.message ? result.data.message : 'Submission failed.');
+              }
+              form.reset();
+              setMessage(
+                'success',
+                (result.data && result.data.message) || config.successMessage || 'Submitted.',
+                (result.data && result.data.title) || config.successTitle || ''
+              );
+            })
+            .catch(function(error) {
+              setMessage('error', error && error.message ? error.message : 'Submission failed.');
+            })
+            .finally(function() {
+              submit.disabled = false;
+              submit.textContent = config.submitLabel || 'Submit';
+            });
+        });
+
+        gridNode.innerHTML = '';
+        gridNode.appendChild(form);
+      }
+    })();
+  </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Storefront Form",
+  "target": "section",
+  "settings": [
+    { "type": "checkbox", "id": "enabled", "label": "Enable block", "default": true },
+    { "type": "header", "content": "Connection" },
+    { "type": "text", "id": "api_url", "label": "API URL override", "default": "" },
+    { "type": "text", "id": "api_base_path", "label": "API base path", "default": "/apps/eagle/forms/public" },
+    {
+      "type": "select",
+      "id": "form_choice",
+      "label": "Default forms",
+      "default": "artwork-updates-request",
+      "options": [
+        { "value": "artwork-updates-request", "label": "Artwork Updates Request" },
+        { "value": "order-tracking-request", "label": "Order Tracking Request" },
+        { "value": "tax-exempt-for-businesses", "label": "Tax Exempt for Businesses" }
+      ]
+    },
+    { "type": "text", "id": "custom_form_handle", "label": "Custom form handle" },
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "heading", "label": "Fallback heading", "default": "Storefront Form" },
+    { "type": "textarea", "id": "intro_text", "label": "Fallback intro text", "default": "Select a form in the block settings or type a custom handle from the admin forms screen." },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "Alignment",
+      "default": "center",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ]
+    },
+    { "type": "header", "content": "Theme" },
+    { "type": "color", "id": "bg_color", "label": "Pearl background", "default": "#FFFFFF" },
+    { "type": "range", "id": "bg_opacity", "label": "Background opacity", "min": 35, "max": 100, "step": 5, "default": 90 },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#081F6F" },
+    { "type": "color", "id": "muted_text_color", "label": "Muted text color", "default": "#4F5F86" },
+    { "type": "color", "id": "accent_color", "label": "Button color", "default": "#081F6F" },
+    { "type": "color", "id": "accent_hover_color", "label": "Button hover color", "default": "#12308C" },
+    { "type": "color", "id": "button_text_color", "label": "Button text", "default": "#FFFFFF" },
+    { "type": "color", "id": "border_color", "label": "Border color", "default": "#081F6F" },
+    { "type": "range", "id": "border_opacity", "label": "Border opacity", "min": 0, "max": 100, "step": 5, "default": 20 },
+    { "type": "color", "id": "field_bg_color", "label": "Field background", "default": "#FFFFFF" },
+    { "type": "color", "id": "field_border_color", "label": "Field border", "default": "#CFD8EA" },
+    { "type": "header", "content": "Sizing" },
+    { "type": "range", "id": "max_width", "label": "Max width", "min": 520, "max": 1200, "step": 20, "default": 860 },
+    { "type": "range", "id": "card_padding", "label": "Card padding", "min": 16, "max": 56, "step": 4, "default": 28 },
+    { "type": "range", "id": "border_width", "label": "Border width", "min": 0, "max": 3, "step": 1, "default": 1 },
+    { "type": "range", "id": "border_radius", "label": "Card radius", "min": 0, "max": 36, "step": 2, "default": 20 },
+    { "type": "range", "id": "field_radius", "label": "Field radius", "min": 0, "max": 24, "step": 2, "default": 12 },
+    { "type": "range", "id": "button_radius", "label": "Button radius", "min": 0, "max": 24, "step": 2, "default": 12 },
+    { "type": "range", "id": "shadow_opacity", "label": "Shadow opacity", "min": 0, "max": 35, "step": 5, "default": 10 }
+  ]
+}
+{% endschema %}

@@ -9,5 +9,6 @@ import { B2BAccessService } from './b2b-access.service.js';
   imports: [SharedModule, MailModule],
   controllers: [B2BAccessController],
   providers: [B2BAccessRepository, B2BAccessService],
+  exports: [B2BAccessService],
 })
 export class B2BAccessModule {}
