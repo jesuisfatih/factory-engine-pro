@@ -28,7 +28,9 @@ export class B2BAccessService {
 
   async create(input: CreateB2BAccessRequestInput, file?: UploadFile) {
     await this.ensureTenantForPublicCreate(input);
-    const shopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
+    const submittedShopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
+    const matchedCustomer = await this.repository.findCustomerByIdentity(input.email, submittedShopifyCustomerId);
+    const shopifyCustomerId = submittedShopifyCustomerId ?? cleanOptionalString(matchedCustomer?.shopifyCustomerId ?? undefined);
     const existing = await this.repository.findPendingByIdentity(input.email, shopifyCustomerId);
     if (existing) {
       throw new ConflictException('You already have a pending B2B access request for this account.');
@@ -43,6 +45,7 @@ export class B2BAccessService {
       formName: input.formName ?? null,
       shop: input.shop ?? null,
       shopifyCustomerId,
+      matchedCustomerId: matchedCustomer?.id ?? null,
       merchantContext: input.merchantContext ?? null,
     });
     const request = await this.repository.create({
@@ -74,6 +77,8 @@ export class B2BAccessService {
       request_id: request.id,
       applicant_email: input.email,
       company_name: input.companyName,
+      matched_customer_id: matchedCustomer?.id ?? null,
+      shopify_customer_id: shopifyCustomerId,
     });
     await this.sendReceivedNotifications({
       requestId: request.id,
@@ -109,8 +114,10 @@ export class B2BAccessService {
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
     const existingUser = await this.repository.findCustomerUserByEmail(request.email);
-    const shopifyCustomerId = cleanOptionalString(request.shopifyCustomerId ?? undefined);
-    const customer = await this.repository.findCustomerByIdentity(request.email, shopifyCustomerId)
+    const requestShopifyCustomerId = cleanOptionalString(request.shopifyCustomerId ?? undefined);
+    const matchedCustomer = await this.repository.findCustomerByIdentity(request.email, requestShopifyCustomerId);
+    const shopifyCustomerId = requestShopifyCustomerId ?? cleanOptionalString(matchedCustomer?.shopifyCustomerId ?? undefined);
+    const customer = matchedCustomer
       ?? await this.repository.createCustomer({
         companyName: request.companyName,
         legalName: request.legalName,
@@ -146,6 +153,12 @@ export class B2BAccessService {
     const adminRole = await this.repository.findCustomerRoleBySlug('b2b_admin');
     if (!adminRole) throw new BadRequestException('Default b2b_admin role is missing');
     await this.repository.assignCustomerRole(user.id, adminRole.id);
+    const ownershipBackfill = await this.repository.backfillApprovedCustomerOwnership({
+      customerId: customer.id,
+      customerUserId: user.id,
+      email: request.email,
+      shopifyCustomerId,
+    });
     const delivery = await this.mail.sendB2BApplicationApproved({
       to: user.email,
       recipientName: `${user.firstName} ${user.lastName}`.trim(),
@@ -161,16 +174,20 @@ export class B2BAccessService {
       reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
       resolvedCustomerId: customer.id,
       resolvedCustomerUserId: user.id,
+      ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
     });
     this.logger.log('b2b_access', 'approve', 'B2B access request approved', {
       b2b_request_id: id,
       customer_id: customer.id,
       customer_user_id: user.id,
+      shopify_customer_id: shopifyCustomerId,
+      ownership_backfill: ownershipBackfill,
     });
     return {
       success: true,
       customerId: customer.id,
       customerUserId: user.id,
+      ownershipBackfill,
       invitation: null,
       decisionDelivery: this.presentDecisionDelivery(delivery),
     };

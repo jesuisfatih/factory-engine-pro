@@ -12,11 +12,13 @@ export class B2BAccessRepository {
   ) {}
 
   findPendingByIdentity(email: string, shopifyCustomerId?: string | null) {
+    const tenantId = this.tenantId();
     return this.prisma.db.b2BAccessRequest.findFirst({
       where: {
+        tenantId,
         status: 'pending',
         OR: [
-          { email },
+          { email: { equals: email, mode: 'insensitive' } },
           ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
         ],
       },
@@ -82,7 +84,15 @@ export class B2BAccessRepository {
   findLatestDecisionDelivery(requestId: string) {
     return this.prisma.db.mailDelivery.findFirst({
       where: {
-        eventKey: { in: ['b2b_access.approved', 'b2b.application_approved.user', 'b2b.application_rejected.user'] },
+        eventKey: {
+          in: [
+            'b2b_access.approved',
+            'b2b.application_received.user',
+            'b2b.application_received.internal',
+            'b2b.application_approved.user',
+            'b2b.application_rejected.user',
+          ],
+        },
         metadata: { path: ['requestId'], equals: requestId },
       },
       select: {
@@ -101,6 +111,7 @@ export class B2BAccessRepository {
   listInternalReviewRecipients() {
     return this.prisma.db.member.findMany({
       where: {
+        tenantId: this.tenantId(),
         status: 'active',
         roleAssignments: {
           some: {
@@ -125,18 +136,25 @@ export class B2BAccessRepository {
   }
 
   findCustomerByIdentity(email: string, shopifyCustomerId?: string | null) {
+    const tenantId = this.tenantId();
     return this.prisma.db.customer.findFirst({
       where: {
+        tenantId,
         OR: [
           ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
-          { email },
+          { email: { equals: email, mode: 'insensitive' } },
         ],
       },
     });
   }
 
   findCustomerUserByEmail(email: string) {
-    return this.prisma.db.customerUser.findFirst({ where: { email } });
+    return this.prisma.db.customerUser.findFirst({
+      where: {
+        tenantId: this.tenantId(),
+        email: { equals: email, mode: 'insensitive' },
+      },
+    });
   }
 
   createCustomer(data: {
@@ -228,6 +246,70 @@ export class B2BAccessRepository {
         ...(passwordHash ? { passwordHash } : {}),
       },
     });
+  }
+
+  async backfillApprovedCustomerOwnership(input: {
+    customerId: string;
+    customerUserId: string;
+    email: string;
+    shopifyCustomerId?: string | null;
+  }) {
+    const tenantId = this.tenantId();
+    const orderMatchers: Prisma.CommerceOrderWhereInput[] = [
+      { email: { equals: input.email, mode: 'insensitive' } },
+    ];
+    if (input.shopifyCustomerId) orderMatchers.unshift({ shopifyCustomerId: input.shopifyCustomerId });
+
+    const eligibleOrders = await this.prisma.db.commerceOrder.findMany({
+      where: {
+        tenantId,
+        OR: orderMatchers,
+        AND: [
+          { OR: [{ customerId: null }, { customerId: input.customerId }] },
+          { OR: [{ customerUserId: null }, { customerUserId: input.customerUserId }] },
+        ],
+      },
+      select: { id: true },
+      take: 5000,
+    });
+    const orderIds = eligibleOrders.map((order) => order.id);
+    if (orderIds.length === 0) {
+      return { ordersMatched: 0, ordersUpdated: 0, pickupOrdersUpdated: 0 };
+    }
+
+    const orders = await this.prisma.db.commerceOrder.updateMany({
+      where: {
+        tenantId,
+        id: { in: orderIds },
+      },
+      data: {
+        customerId: input.customerId,
+        customerUserId: input.customerUserId,
+      },
+    });
+    const pickupOrders = await this.prisma.db.commercePickupOrder.updateMany({
+      where: {
+        tenantId,
+        OR: [
+          { orderId: { in: orderIds } },
+          { customerEmail: { equals: input.email, mode: 'insensitive' } },
+        ],
+        AND: [
+          { OR: [{ customerId: null }, { customerId: input.customerId }] },
+          { OR: [{ customerUserId: null }, { customerUserId: input.customerUserId }] },
+        ],
+      },
+      data: {
+        customerId: input.customerId,
+        customerUserId: input.customerUserId,
+      },
+    });
+
+    return {
+      ordersMatched: orderIds.length,
+      ordersUpdated: orders.count,
+      pickupOrdersUpdated: pickupOrders.count,
+    };
   }
 
   private tenantId() {

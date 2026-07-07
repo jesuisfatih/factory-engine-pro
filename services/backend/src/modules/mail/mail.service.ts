@@ -1968,10 +1968,24 @@ function formatCurrency(value: number, currency: string) {
   }
 }
 
-const CRITICAL_MAIL_EVENTS = [
+const CRITICAL_SYSTEM_MAIL_EVENTS = [
   'identity.password_reset',
   'identity.member_invitation',
   'identity.customer_invitation',
+  'b2b_access.approved',
+] as const;
+
+const CRITICAL_B2B_MAIL_EVENTS = [
+  'b2b.application_received.user',
+  'b2b.application_received.internal',
+  'b2b.application_approved.user',
+  'b2b.application_rejected.user',
+  'b2b.invoice_delivered.user',
+] as const;
+
+const CRITICAL_MAIL_EVENTS = [
+  ...CRITICAL_SYSTEM_MAIL_EVENTS,
+  ...CRITICAL_B2B_MAIL_EVENTS,
 ] as const;
 
 function defaultMailCenterSettings(): MailCenterSettings {
@@ -1980,8 +1994,11 @@ function defaultMailCenterSettings(): MailCenterSettings {
 
 function sanitizeMailSettings(value: unknown): MailCenterSettings {
   const parsed = mailCenterSettingsSchema.parse(value);
-  for (const eventKey of CRITICAL_MAIL_EVENTS) {
+  for (const eventKey of CRITICAL_SYSTEM_MAIL_EVENTS) {
     parsed.categorySystem.subcategories[eventKey] = true;
+  }
+  for (const eventKey of CRITICAL_B2B_MAIL_EVENTS) {
+    parsed.categoryB2b.subcategories[eventKey] = true;
   }
   parsed.categoryMarketing.compliance.unsubscribeFooter = true;
   parsed.categoryMarketing.compliance.physicalAddressFooter = true;

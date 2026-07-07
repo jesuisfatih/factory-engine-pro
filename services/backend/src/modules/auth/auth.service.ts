@@ -118,11 +118,29 @@ export class AuthService {
 
     try {
       const shopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
-      const existingCustomer = shopifyCustomerId
-        ? await this.prisma.db.customer.findFirst({ where: { shopifyCustomerId } })
+      const existingCustomers = await this.prisma.db.customer.findMany({
+        where: {
+          tenantId,
+          OR: [
+            ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
+            { email: { equals: input.email, mode: 'insensitive' } },
+          ],
+        },
+        take: 2,
+      });
+      const linkedByShopify = shopifyCustomerId
+        ? existingCustomers.find((customer) => customer.shopifyCustomerId === shopifyCustomerId)
         : null;
+      const linkedByEmail = existingCustomers.find((customer) => customer.email?.toLowerCase() === input.email.toLowerCase()) ?? null;
+      if (linkedByShopify && linkedByEmail && linkedByShopify.id !== linkedByEmail.id) {
+        throw new BadRequestException('This storefront email is already linked to a different portal customer.');
+      }
+      const existingCustomer = linkedByShopify ?? linkedByEmail ?? null;
       if (existingCustomer?.email && existingCustomer.email.toLowerCase() !== input.email.toLowerCase()) {
         throw new BadRequestException('This Shopify customer is already linked to a different portal email.');
+      }
+      if (existingCustomer?.shopifyCustomerId && shopifyCustomerId && existingCustomer.shopifyCustomerId !== shopifyCustomerId) {
+        throw new BadRequestException('This portal email is already linked to a different Shopify customer.');
       }
       const customer = existingCustomer ?? await this.identityRepository.createCustomer({
         companyName: input.companyName,
@@ -133,6 +151,21 @@ export class AuthService {
         billingAddress: input.billingAddress as Prisma.InputJsonValue | undefined,
         shippingAddress: input.shippingAddress as Prisma.InputJsonValue | undefined,
       });
+      if (existingCustomer) {
+        await this.prisma.db.customer.updateMany({
+          where: { id: existingCustomer.id },
+          data: {
+            companyName: input.companyName,
+            email: input.email,
+            phone: input.phone,
+            taxId: input.taxId,
+            ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
+            ...(input.billingAddress ? { billingAddress: input.billingAddress as Prisma.InputJsonValue } : {}),
+            ...(input.shippingAddress ? { shippingAddress: input.shippingAddress as Prisma.InputJsonValue } : {}),
+            status: 'active',
+          },
+        });
+      }
       const user = await this.identityRepository.createCustomerUser({
         customerId: customer.id,
         email: input.email,
@@ -143,6 +176,12 @@ export class AuthService {
         status: 'active',
       });
       await this.identityRepository.setCustomerUserRoles(user.id, [adminRoleId]);
+      await this.backfillRegisteredCustomerOwnership({
+        customerId: customer.id,
+        customerUserId: user.id,
+        email: input.email,
+        shopifyCustomerId,
+      });
       return this.sessions.issue(tenantId, {
         id: user.id,
         email: user.email,
@@ -333,6 +372,51 @@ export class AuthService {
     const tenantId = this.tenantContext.get()?.tenantId;
     if (!tenantId) throw new BadRequestException('x-tenant-id header is required');
     return tenantId;
+  }
+
+  private async backfillRegisteredCustomerOwnership(input: {
+    customerId: string;
+    customerUserId: string;
+    email: string;
+    shopifyCustomerId?: string | null;
+  }) {
+    const tenantId = this.requireTenant();
+    const matchers: Prisma.CommerceOrderWhereInput[] = [
+      { email: { equals: input.email, mode: 'insensitive' } },
+    ];
+    if (input.shopifyCustomerId) matchers.unshift({ shopifyCustomerId: input.shopifyCustomerId });
+    const orders = await this.prisma.db.commerceOrder.findMany({
+      where: {
+        tenantId,
+        OR: matchers,
+        AND: [
+          { OR: [{ customerId: null }, { customerId: input.customerId }] },
+          { OR: [{ customerUserId: null }, { customerUserId: input.customerUserId }] },
+        ],
+      },
+      select: { id: true },
+      take: 5000,
+    });
+    if (orders.length === 0) return;
+    const orderIds = orders.map((order) => order.id);
+    await this.prisma.db.commerceOrder.updateMany({
+      where: { tenantId, id: { in: orderIds } },
+      data: { customerId: input.customerId, customerUserId: input.customerUserId },
+    });
+    await this.prisma.db.commercePickupOrder.updateMany({
+      where: {
+        tenantId,
+        OR: [
+          { orderId: { in: orderIds } },
+          { customerEmail: { equals: input.email, mode: 'insensitive' } },
+        ],
+        AND: [
+          { OR: [{ customerId: null }, { customerId: input.customerId }] },
+          { OR: [{ customerUserId: null }, { customerUserId: input.customerUserId }] },
+        ],
+      },
+      data: { customerId: input.customerId, customerUserId: input.customerUserId },
+    });
   }
 
   private async assertPassword(principal: PrincipalRecord | null, password: string, email: string, surface: string) {
