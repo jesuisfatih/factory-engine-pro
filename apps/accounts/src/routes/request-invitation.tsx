@@ -1,266 +1,860 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ArrowLeft, Tag, Truck, ShieldCheck, MapPin, Upload } from 'lucide-react';
+import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
-import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
+import { useWorkspaceBrand, workspaceName } from '@/lib/workspace-brand';
 
-interface FormShape {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  companyName: string;
-  legalName: string;
-  website: string;
-  industry: string;
-  estimatedMonthlyVolume: string;
-  password: string;
-  confirmPassword: string;
-  taxCertificate: File | null;
-  message: string;
+type FieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password';
+
+interface FormFieldConfig {
+  key: string;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  half?: boolean;
 }
 
-const EMPTY: FormShape = {
-  firstName: '', lastName: '', email: '', phone: '',
-  companyName: '', legalName: '', website: '',
-  industry: 'Apparel', estimatedMonthlyVolume: '',
-  password: '', confirmPassword: '', taxCertificate: null, message: '',
+interface BenefitConfig {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface RequestPageConfig {
+  title: string;
+  subtitle: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  primaryColor: string;
+  primaryGradientEnabled?: boolean;
+  primaryGradientFrom?: string;
+  primaryGradientTo?: string;
+  primaryGradientAngle?: number;
+  fontColor: string;
+  formPanelMode: string;
+  formPanelBackgroundType: string;
+  formPanelBackgroundPreset: string;
+  formPanelBackgroundColor: string;
+  formPanelGradientFrom: string;
+  formPanelGradientTo: string;
+  formPanelGradientAngle: number;
+  formPanelPattern: string;
+  formPanelTextColor: string;
+  formPanelMutedTextColor: string;
+  formPanelInputBackgroundColor: string;
+  formPanelInputTextColor: string;
+  formPanelInputBorderColor: string;
+  formPanelBorderColor: string;
+  boxShadow: boolean;
+  benefits: BenefitConfig[];
+  industries: string[];
+  volumeOptions: string[];
+  formFields: FormFieldConfig[];
+  successTitle: string;
+  successMessage: string;
+}
+
+const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
+  title: 'Request B2B Access',
+  subtitle: 'Tell us about your business to get started',
+  heroTitle: '',
+  heroSubtitle: '',
+  primaryColor: '#081F6F',
+  primaryGradientEnabled: false,
+  primaryGradientFrom: '#081F6F',
+  primaryGradientTo: '#F8FBFF',
+  primaryGradientAngle: 160,
+  fontColor: '#2c3e50',
+  formPanelMode: 'standard',
+  formPanelBackgroundType: 'gradient',
+  formPanelBackgroundPreset: 'pearl',
+  formPanelBackgroundColor: '#FFFFFF',
+  formPanelGradientFrom: '#FFFFFF',
+  formPanelGradientTo: '#F6F8FC',
+  formPanelGradientAngle: 135,
+  formPanelPattern: 'none',
+  formPanelTextColor: '#172033',
+  formPanelMutedTextColor: '#667085',
+  formPanelInputBackgroundColor: '#FFFFFF',
+  formPanelInputTextColor: '#172033',
+  formPanelInputBorderColor: '#D4E3ED',
+  formPanelBorderColor: '#E3E8F0',
+  boxShadow: true,
+  benefits: [
+    { icon: '$', title: 'Wholesale Pricing', description: 'Up to 40% off retail prices' },
+    { icon: 'NET', title: 'Net 30 Terms', description: 'Flexible payment options' },
+    { icon: 'TEAM', title: 'Team Management', description: 'Add unlimited team members' },
+    { icon: 'VIP', title: 'Priority Support', description: 'Dedicated account manager' },
+    { icon: 'SHIP', title: 'Free Shipping', description: 'On orders over $500' },
+  ],
+  industries: [
+    'Apparel & Fashion',
+    'Promotional Products',
+    'Sports & Athletics',
+    'Corporate Branding',
+    'Screen Printing Shop',
+    'Embroidery Business',
+    'Sign & Banner Shop',
+    'Reseller/Distributor',
+    'Other',
+  ],
+  volumeOptions: [
+    'Just starting out',
+    '100-500 transfers/month',
+    '500-1000 transfers/month',
+    '1000-5000 transfers/month',
+    '5000+ transfers/month',
+  ],
+  formFields: [
+    { key: 'firstName', label: 'First Name', type: 'text', required: true, half: true },
+    { key: 'lastName', label: 'Last Name', type: 'text', required: true, half: true },
+    { key: 'email', label: 'Email Address', type: 'email', required: true, half: true },
+    { key: 'phone', label: 'Phone Number', type: 'tel', required: false, half: true },
+    { key: 'companyName', label: 'Company Name', type: 'text', required: true, half: true },
+    { key: 'legalName', label: 'Legal Name', type: 'text', required: true, half: true },
+    { key: 'website', label: 'Website', type: 'url', required: false, half: true },
+    { key: 'industry', label: 'Industry', type: 'select', required: false, half: true },
+    { key: 'estimatedMonthlyVolume', label: 'Estimated Monthly Volume', type: 'select', required: false },
+    { key: 'taxCertificate', label: 'Tax Exemption Certificate', type: 'file', required: false },
+    { key: 'password', label: 'Password', type: 'password', required: true, half: true },
+    { key: 'confirmPassword', label: 'Confirm Password', type: 'password', required: true, half: true },
+    { key: 'message', label: 'Additional Information', type: 'textarea', required: false },
+  ],
+  successTitle: 'Application Submitted!',
+  successMessage:
+    'Thank you for your interest! Our team will review your application and get back to you within 1-2 business days.',
 };
 
-const BENEFIT_ICONS = [Tag, ShieldCheck, Truck, MapPin] as const;
+const STATIC_COLORS = {
+  textSecondary: '#6b7c93',
+  textMuted: '#94a3b8',
+  card: '#ffffff',
+  input: '#f7fafc',
+  inputBorder: '#d4e3ed',
+  red: '#e74c3c',
+  green: '#27ae60',
+};
+
+const KNOWN_REQUEST_KEYS = new Set([
+  'email',
+  'firstName',
+  'lastName',
+  'phone',
+  'companyName',
+  'legalName',
+  'website',
+  'industry',
+  'estimatedMonthlyVolume',
+  'message',
+  'password',
+  'confirmPassword',
+  'taxCertificate',
+]);
+
+const PLACEHOLDERS: Record<string, string> = {
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'you@company.com',
+  phone: '(555) 123-4567',
+  companyName: 'Your company name',
+  legalName: 'Registered legal name',
+  website: 'https://yourcompany.com',
+  password: 'Minimum 6 characters',
+  confirmPassword: 'Repeat your password',
+  message: 'Tell us about your business and how we can help...',
+};
+
+const DEFAULT_PRIMARY_COLOR = '#081F6F';
+const DEFAULT_GRADIENT_TO = '#F8FBFF';
 
 function RequestInvitationView() {
-  const { t } = useTranslation();
-  const [form, setForm] = useState<FormShape>(() => initialFormFromSearch());
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const brandQuery = useWorkspaceBrand();
+  const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const logoUrl = brandQuery.data?.brandLogo ?? '';
+  const search = useMemo(() => currentSearchParams(), []);
+  const shop = normalizeShopDomain(search.get('shop') || search.get('store') || '');
+  const merchantHint = (search.get('merchantId') || search.get('merchant_id') || '').trim();
+  const emailFromUrl = (search.get('email') || '').trim();
+  const emailLocked = emailFromUrl.length > 0;
+  const [pageConfig] = useState<RequestPageConfig>(DEFAULT_REQUEST_PAGE_CONFIG);
+  const [formData, setFormData] = useState<Record<string, string>>(() => ({
+    email: emailFromUrl,
+    firstName: (search.get('firstName') || '').trim(),
+    lastName: (search.get('lastName') || '').trim(),
+    phone: (search.get('phone') || '').trim(),
+    companyName: (search.get('companyName') || '').trim(),
+    legalName: (search.get('companyName') || '').trim(),
+    message: (search.get('message') || '').trim(),
+  }));
+  const [files, setFiles] = useState<Record<string, File | null>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const benefits = t('auth.invite.hero_benefits', { returnObjects: true }) as string[];
-  const industries = t('auth.invite.industries', { returnObjects: true }) as string[];
-  const update = (patch: Partial<FormShape>) => setForm((current) => ({ ...current, ...patch }));
+  const colors = makeColors(pageConfig.primaryColor || DEFAULT_PRIMARY_COLOR);
+  const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
+  const boxShadowEnabled = pageConfig.boxShadow !== false;
+  const heroTitle = pageConfig.heroTitle || `${brandName} Partner Program`;
+  const heroSubtitle =
+    pageConfig.heroSubtitle ||
+    'Join our exclusive B2B network and unlock premium wholesale benefits.';
+  const heroBackground = getConfiguredGradient(
+    pageConfig,
+    `linear-gradient(160deg, ${colors.primary} 0%, ${colors.gradientOne} 60%, ${colors.gradientTwo} 100%)`,
+  );
+  const actionBackground = getConfiguredGradient(
+    pageConfig,
+    `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`,
+  );
+  const formPanelModeSettings = getFormPanelModeSettings(pageConfig.formPanelMode);
+  const formPanelBackgroundStyle = getFormPanelBackgroundStyle(pageConfig, colors.primary);
+  const formPanelTextColor = normalizeHexColor(pageConfig.formPanelTextColor, fontColor);
+  const formPanelMutedTextColor = normalizeHexColor(
+    pageConfig.formPanelMutedTextColor,
+    STATIC_COLORS.textSecondary,
+  );
+  const formPanelInputBackgroundColor = normalizeHexColor(
+    pageConfig.formPanelInputBackgroundColor,
+    STATIC_COLORS.input,
+  );
+  const formPanelInputTextColor = normalizeHexColor(pageConfig.formPanelInputTextColor, fontColor);
+  const formPanelInputBorderColor = normalizeHexColor(
+    pageConfig.formPanelInputBorderColor,
+    STATIC_COLORS.inputBorder,
+  );
+  const formPanelBorderColor = normalizeHexColor(pageConfig.formPanelBorderColor, '#E3E8F0');
+  const isGlassFormPanel = pageConfig.formPanelMode === 'glass';
+  const isOutlinedFormPanel = pageConfig.formPanelMode === 'outlined';
 
-  const canSubmit = form.firstName && form.lastName && form.email && form.companyName && form.legalName
-    && form.password && form.password === form.confirmPassword;
+  const inputStyle: CSSProperties = {
+    width: '100%',
+    padding: formPanelModeSettings.inputPadding,
+    border: `1px solid ${formPanelInputBorderColor}`,
+    borderRadius: formPanelModeSettings.inputRadius,
+    fontSize: 14,
+    fontFamily: 'Inter, system-ui, sans-serif',
+    color: formPanelInputTextColor,
+    background: formPanelInputBackgroundColor,
+    outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+  };
 
-  if (submitted) {
-    return (
-      <div className="auth-card" style={{ maxWidth: 480 }}>
-        <BrandBlock />
-        <div className="auth-icon-circle success">
-          <CheckCircle2 size={32} />
+  const labelStyle: CSSProperties = {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 500,
+    color: formPanelMutedTextColor,
+    marginBottom: 6,
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleFileChange = (field: string, file: File | null) => {
+    setFiles((current) => ({
+      ...current,
+      [field]: file,
+    }));
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if ((formData.password || '') !== (formData.confirmPassword || '')) {
+      setError('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
+
+    if ((formData.password || '').length < 6) {
+      setError('Password must be at least 6 characters.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const mergedMessage = mergeRequestMessage(pageConfig, formData, files);
+      await accountsApi.submitB2BAccessRequest({
+        email: valueOf(formData.email),
+        firstName: valueOf(formData.firstName),
+        lastName: valueOf(formData.lastName),
+        companyName: valueOf(formData.companyName),
+        legalName: valueOf(formData.legalName),
+        password: valueOf(formData.password),
+        phone: optionalValue(formData.phone),
+        website: optionalValue(formData.website),
+        industry: optionalValue(formData.industry),
+        estimatedMonthlyVolume: optionalValue(formData.estimatedMonthlyVolume),
+        message: optionalValue(mergedMessage),
+        flowIntent: 'request-invitation',
+        sourceSurface: (search.get('sourceSurface') || 'accounts-request-invitation').trim(),
+        sourcePath: '/request-invitation',
+        sourceUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+        formHandle: 'request-invitation',
+        formName: pageConfig.title,
+        shop: optionalValue(shop),
+        shopifyCustomerId: optionalValue(search.get('shopifyCustomerId') || ''),
+        merchantContext: optionalValue(merchantHint),
+      }, files.taxCertificate ?? undefined);
+      setSuccess(true);
+    } catch (submitError) {
+      setError(apiErrorMessage(submitError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderField = (field: FormFieldConfig) => {
+    const isRequired = Boolean(field.required);
+    const value = formData[field.key] || '';
+    const isLockedEmailField = field.key === 'email' && emailLocked;
+
+    if (field.type === 'file') {
+      return (
+        <div key={field.key}>
+          <label style={labelStyle}>
+            {field.label}
+            {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
+          </label>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(inputEvent) => handleFileChange(field.key, inputEvent.target.files?.[0] || null)}
+            disabled={loading}
+            required={isRequired}
+            style={{ ...inputStyle, padding: '8px 12px' }}
+          />
+          <p style={{ fontSize: 12, color: formPanelMutedTextColor, marginTop: 4, marginBottom: 0 }}>
+            PDF, JPEG, PNG or WebP (max 10MB)
+          </p>
         </div>
-        <h2>{t('auth.invite.success_title')}</h2>
-        <p className="muted">{t('auth.invite.success_body', { email: form.email })}</p>
-        <a className="btn primary" href="/login" style={{ marginTop: 16, justifyContent: 'center' }}>
-          <ArrowLeft size={14} /> {t('auth.invite.back_to_login')}
-        </a>
+      );
+    }
+
+    if (field.type === 'select') {
+      const options = getSelectOptions(pageConfig, field.key);
+      return (
+        <div key={field.key}>
+          <label style={labelStyle}>
+            {field.label}
+            {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
+          </label>
+          <select
+            value={value}
+            onChange={(inputEvent) => handleChange(field.key, inputEvent.target.value)}
+            disabled={loading}
+            required={isRequired}
+            style={inputStyle}
+          >
+            <option value="">Select {field.label.toLowerCase()}</option>
+            {options.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    if (field.type === 'textarea') {
+      return (
+        <div key={field.key}>
+          <label style={labelStyle}>
+            {field.label}
+            {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
+          </label>
+          <textarea
+            rows={3}
+            value={value}
+            onChange={(inputEvent) => handleChange(field.key, inputEvent.target.value)}
+            disabled={loading}
+            required={isRequired}
+            placeholder={getPlaceholder(field)}
+            style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div key={field.key}>
+        <label style={labelStyle}>
+          {field.label}
+          {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
+        </label>
+        <input
+          type={field.type}
+          value={value}
+          onChange={(inputEvent) => handleChange(field.key, inputEvent.target.value)}
+          disabled={loading}
+          readOnly={isLockedEmailField}
+          required={isRequired}
+          minLength={field.key === 'password' || field.key === 'confirmPassword' ? 6 : undefined}
+          placeholder={getPlaceholder(field)}
+          style={{
+            ...inputStyle,
+            ...(isLockedEmailField
+              ? {
+                  opacity: 0.7,
+                  cursor: 'not-allowed',
+                  background: rgbaFromHex(formPanelInputBorderColor, 0.22, '#D4E3ED'),
+                }
+              : {}),
+          }}
+        />
+        {isLockedEmailField ? (
+          <p style={{ fontSize: 11, color: colors.primary, marginTop: 4, marginBottom: 0 }}>
+            Email linked from your storefront session.
+          </p>
+        ) : null}
       </div>
     );
-  }
+  };
+
+  const renderFormFields = () => {
+    const rows: ReactNode[] = [];
+    const fields = pageConfig.formFields || [];
+    let index = 0;
+    while (index < fields.length) {
+      const current = fields[index];
+      const next = fields[index + 1];
+      if (current.half && next?.half) {
+        rows.push(
+          <div
+            key={`row-${current.key}-${next.key}`}
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: formPanelModeSettings.fieldGap }}
+          >
+            {renderField(current)}
+            {renderField(next)}
+          </div>,
+        );
+        index += 2;
+        continue;
+      }
+      rows.push(renderField(current));
+      index += 1;
+    }
+    return rows;
+  };
 
   return (
-    <div className="invite-shell">
-      <aside className="invite-hero">
-        <BrandBlock hero />
-
-        <div className="invite-hero-body">
-          <div className="eyebrow">{t('auth.invite.hero_eyebrow')}</div>
-          <h1>{t('auth.invite.hero_title')}</h1>
-          <p>{t('auth.invite.hero_subtitle')}</p>
-
-          <ul className="invite-benefits">
-            {benefits.map((benefit, index) => {
-              const Icon = BENEFIT_ICONS[index % BENEFIT_ICONS.length];
-              return (
-                <li key={benefit}>
-                  <span className="ico"><Icon size={14} /></span>
-                  {benefit}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </aside>
-
-      <main className="invite-form">
-        <header>
-          <h2>{t('auth.invite.form_title')}</h2>
-          <p className="muted">{t('auth.invite.form_subtitle')}</p>
-        </header>
-
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            setError(null);
-            if (!canSubmit) return;
-            setSubmitting(true);
-            try {
-              await accountsApi.submitB2BAccessRequest({
-                firstName: form.firstName,
-                lastName: form.lastName,
-                email: form.email,
-                phone: form.phone || undefined,
-                companyName: form.companyName,
-                legalName: form.legalName || form.companyName,
-                website: form.website || undefined,
-                industry: form.industry || undefined,
-                estimatedMonthlyVolume: form.estimatedMonthlyVolume || undefined,
-                password: form.password,
-                message: form.message || undefined,
-                flowIntent: 'request-invitation',
-                sourceSurface: searchParam('sourceSurface') || 'accounts-request-invitation',
-                sourcePath: '/request-invitation',
-                sourceUrl: typeof window !== 'undefined' ? window.location.href : undefined,
-                shop: searchParam('shop') || undefined,
-                shopifyCustomerId: searchParam('shopifyCustomerId') || undefined,
-              }, form.taxCertificate ?? undefined);
-              setSubmitted(true);
-            } catch (requestError) {
-              setError(apiErrorMessage(requestError));
-            } finally {
-              setSubmitting(false);
-            }
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
+        padding: 20,
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+      }}
+    >
+      <div style={{ width: '100%', maxWidth: 980, position: 'relative', zIndex: 1 }}>
+        <div
+          style={{
+            background: STATIC_COLORS.card,
+            borderRadius: 20,
+            overflow: 'hidden',
+            boxShadow: boxShadowEnabled
+              ? `0 8px 40px ${colors.primaryLight}, 0 2px 8px rgba(0,0,0,0.04)`
+              : 'none',
+            border: `1px solid ${colors.primaryLight}`,
           }}
         >
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="iv-first">{t('auth.invite.field_first')}</label>
-              <input id="iv-first" value={form.firstName} onChange={(event) => update({ firstName: event.target.value })} required />
+          <div style={{ display: 'flex', minHeight: 620 }}>
+            <div
+              style={{
+                flex: '0 0 38%',
+                padding: '44px 32px',
+                background: heroBackground,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                color: '#fff',
+              }}
+            >
+              <div style={{ marginBottom: 36 }}>
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={brandName}
+                    style={{ maxWidth: 140, maxHeight: 50, objectFit: 'contain', marginBottom: 10 }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 44 }}>E</span>
+                )}
+                <h3 style={{ fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: 22, lineHeight: 1.3, letterSpacing: -0.3 }}>
+                  {heroTitle}
+                </h3>
+                <p style={{ opacity: 0.8, fontSize: 14, lineHeight: 1.6, marginTop: 8 }}>
+                  {heroSubtitle}
+                </p>
+              </div>
+
+              {pageConfig.benefits.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  {pageConfig.benefits.map((item) => (
+                    <div key={`${item.title}-${item.description}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div
+                        style={{
+                          background: 'rgba(255,255,255,0.18)',
+                          borderRadius: 12,
+                          width: 42,
+                          height: 42,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
+                        <div style={{ fontSize: 12, opacity: 0.75 }}>{item.description}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <div className="field">
-              <label htmlFor="iv-last">{t('auth.invite.field_last')}</label>
-              <input id="iv-last" value={form.lastName} onChange={(event) => update({ lastName: event.target.value })} required />
+
+            <div
+              style={{
+                flex: 1,
+                padding: formPanelModeSettings.panelPadding,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                overflowY: 'auto',
+                maxHeight: '90vh',
+                borderLeft: isOutlinedFormPanel ? `1px solid ${formPanelBorderColor}` : undefined,
+                boxShadow: isGlassFormPanel ? 'inset 1px 0 0 rgba(255,255,255,0.55)' : undefined,
+                backdropFilter: isGlassFormPanel ? 'blur(12px)' : undefined,
+                ...formPanelBackgroundStyle,
+              }}
+            >
+              {success ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '50%',
+                      background: 'rgba(39, 174, 96, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 16px',
+                      fontSize: 28,
+                      color: STATIC_COLORS.green,
+                    }}
+                  >
+                    OK
+                  </div>
+                  <h4 style={{ fontWeight: 700, marginBottom: 8, color: formPanelTextColor, fontSize: 20 }}>
+                    {pageConfig.successTitle || 'Application Submitted!'}
+                  </h4>
+                  <p style={{ color: formPanelMutedTextColor, marginBottom: 16, lineHeight: 1.6 }}>
+                    {pageConfig.successMessage || 'Thank you for your interest. Our team will review your application and get back to you.'}
+                  </p>
+                  <div
+                    style={{
+                      background: colors.primarySoft,
+                      borderRadius: 10,
+                      padding: '12px 16px',
+                      color: colors.primary,
+                      marginBottom: 20,
+                      fontSize: 14,
+                      border: `1px solid ${colors.primaryBorder}`,
+                    }}
+                  >
+                    Check your inbox for updates at <strong>{formData.email}</strong>
+                  </div>
+                  <a
+                    href="/login"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: 44,
+                      padding: '0 28px',
+                      borderRadius: 10,
+                      background: colors.primary,
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Back to Login
+                  </a>
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 20 }}>
+                    <h4 style={{ fontWeight: 700, marginBottom: 4, color: formPanelTextColor, fontSize: 19 }}>
+                      {pageConfig.title || 'Request B2B Access'}
+                    </h4>
+                    <p style={{ color: formPanelMutedTextColor, marginBottom: 0, fontSize: 14 }}>
+                      {pageConfig.subtitle || 'Tell us about your business to get started'}
+                    </p>
+                  </div>
+
+                  {!emailLocked ? (
+                    <div
+                      style={{
+                        background: colors.primarySoft,
+                        border: `1px solid ${colors.primaryBorder}`,
+                        borderRadius: 10,
+                        padding: '10px 14px',
+                        marginBottom: 12,
+                        fontSize: 13,
+                        color: formPanelMutedTextColor,
+                      }}
+                    >
+                      If you already have a storefront account, use the same email address here.
+                    </div>
+                  ) : null}
+
+                  {error ? (
+                    <div
+                      style={{
+                        background: 'rgba(231,76,60,0.06)',
+                        border: '1px solid rgba(231,76,60,0.2)',
+                        borderRadius: 10,
+                        padding: '10px 14px',
+                        marginBottom: 12,
+                        fontSize: 13,
+                        color: STATIC_COLORS.red,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>{error}</span>
+                      <button
+                        type="button"
+                        onClick={() => setError('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: STATIC_COLORS.textMuted, fontSize: 16, padding: 0, lineHeight: 1 }}
+                        aria-label="Dismiss"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <form onSubmit={handleSubmit}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: formPanelModeSettings.fieldGap }}>
+                      {renderFormFields()}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      style={{
+                        width: '100%',
+                        height: formPanelModeSettings.buttonHeight,
+                        marginTop: 22,
+                        border: 'none',
+                        borderRadius: formPanelModeSettings.inputRadius,
+                        background: actionBackground,
+                        color: '#fff',
+                        fontSize: 15,
+                        fontWeight: 600,
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.6 : 1,
+                        transition: 'opacity 0.2s, box-shadow 0.2s',
+                        boxShadow: boxShadowEnabled ? `0 4px 14px ${colors.shadow}` : 'none',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                      }}
+                    >
+                      {loading ? 'Submitting Application...' : 'Submit Application'}
+                    </button>
+
+                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: 16, marginBottom: 0, fontSize: 14 }}>
+                      Already have an account?{' '}
+                      <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
+                        Sign in
+                      </a>
+                    </p>
+                  </form>
+                </>
+              )}
             </div>
           </div>
-
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="iv-email">{t('auth.invite.field_email')}</label>
-              <input id="iv-email" type="email" value={form.email} onChange={(event) => update({ email: event.target.value })} required />
-            </div>
-            <div className="field">
-              <label htmlFor="iv-phone">{t('auth.invite.field_phone')}</label>
-              <input id="iv-phone" value={form.phone} onChange={(event) => update({ phone: event.target.value })} />
-            </div>
-          </div>
-
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="iv-company">{t('auth.invite.field_company')}</label>
-              <input id="iv-company" value={form.companyName} onChange={(event) => update({ companyName: event.target.value })} required />
-            </div>
-            <div className="field">
-              <label htmlFor="iv-legal">{t('auth.invite.field_legal')}</label>
-              <input id="iv-legal" value={form.legalName} onChange={(event) => update({ legalName: event.target.value })} />
-            </div>
-          </div>
-
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="iv-website">{t('auth.invite.field_website')}</label>
-              <input id="iv-website" type="url" value={form.website} onChange={(event) => update({ website: event.target.value })} placeholder="https://" />
-            </div>
-            <div className="field">
-              <label htmlFor="iv-industry">{t('auth.invite.field_industry')}</label>
-              <select id="iv-industry" value={form.industry} onChange={(event) => update({ industry: event.target.value })}>
-                {industries.map((industry) => (
-                  <option key={industry} value={industry}>{industry}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="iv-volume">{t('auth.invite.field_volume')}</label>
-            <input id="iv-volume" value={form.estimatedMonthlyVolume} onChange={(event) => update({ estimatedMonthlyVolume: event.target.value })} placeholder="e.g. $5,000 / month" />
-          </div>
-
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="iv-pwd">{t('auth.invite.field_password')}</label>
-              <input id="iv-pwd" type="password" value={form.password} onChange={(event) => update({ password: event.target.value })} required />
-            </div>
-            <div className="field">
-              <label htmlFor="iv-pwd-confirm">{t('auth.invite.field_confirm')}</label>
-              <input id="iv-pwd-confirm" type="password" value={form.confirmPassword} onChange={(event) => update({ confirmPassword: event.target.value })} required />
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="iv-tax">{t('auth.invite.field_tax_cert')}</label>
-            <label className="upload-dropzone" htmlFor="iv-tax">
-              <Upload size={14} />
-              <span>{form.taxCertificate?.name ?? 'Click to upload'}</span>
-              <input
-                id="iv-tax"
-                type="file"
-                accept="application/pdf"
-                style={{ display: 'none' }}
-                onChange={(event) => update({ taxCertificate: event.target.files?.[0] ?? null })}
-              />
-            </label>
-          </div>
-
-          <div className="field">
-            <label htmlFor="iv-message">{t('auth.invite.field_message')}</label>
-            <textarea id="iv-message" rows={3} value={form.message} onChange={(event) => update({ message: event.target.value })} />
-          </div>
-
-          {error ? <div className="error-state">{error}</div> : null}
-
-          <button type="submit" className="save-btn" disabled={!canSubmit || submitting} style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}>
-            {submitting ? t('common.loading') : t('auth.invite.submit')}
-          </button>
-
-          <a href="/login" className="auth-link" style={{ justifyContent: 'center' }}>
-            {t('auth.invite.back_to_login')}
-          </a>
-        </form>
-      </main>
+        </div>
+      </div>
     </div>
   );
 }
 
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
 
-function initialFormFromSearch(): FormShape {
-  const firstName = searchParam('firstName');
-  const lastName = searchParam('lastName');
-  const companyName = searchParam('companyName');
+function currentSearchParams() {
+  if (typeof window === 'undefined') return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
+}
+
+function valueOf(value: string | undefined) {
+  return (value || '').trim();
+}
+
+function optionalValue(value: string | undefined) {
+  const trimmed = valueOf(value);
+  return trimmed ? trimmed : undefined;
+}
+
+function normalizeShopDomain(value: string | null) {
+  if (!value) return '';
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return '';
+  return trimmed.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+}
+
+function normalizeHexColor(value: string | null | undefined, fallback = DEFAULT_PRIMARY_COLOR) {
+  if (value && /^#[0-9a-fA-F]{6}$/.test(value.trim())) return value.trim();
+  if (value && /^[0-9a-fA-F]{6}$/.test(value.trim())) return `#${value.trim()}`;
+  return fallback;
+}
+
+function hexToRgb(hex: string) {
+  const safeHex = normalizeHexColor(hex).replace('#', '');
   return {
-    ...EMPTY,
-    firstName,
-    lastName,
-    email: searchParam('email'),
-    phone: searchParam('phone'),
-    companyName,
-    legalName: companyName,
-    message: searchParam('message'),
+    r: Number.parseInt(safeHex.slice(0, 2), 16),
+    g: Number.parseInt(safeHex.slice(2, 4), 16),
+    b: Number.parseInt(safeHex.slice(4, 6), 16),
   };
 }
 
-function searchParam(name: string) {
-  if (typeof window === 'undefined') return '';
-  return new URLSearchParams(window.location.search).get(name)?.trim() ?? '';
+function darken(hex: string, amount: number) {
+  const { r, g, b } = hexToRgb(hex);
+  const factor = 1 - amount;
+  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
 }
 
-function BrandBlock({ hero = false }: { hero?: boolean }) {
-  const brandQuery = useWorkspaceBrand();
-  const name = workspaceName(brandQuery.data?.workspaceName);
-  const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
-  const className = hero ? 'invite-brand' : 'auth-brand';
-  const size = hero ? 44 : 40;
-  return (
-    <div className={className}>
-      {brandQuery.data?.brandLogo
-        ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: size, height: size }} />
-        : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
-      <div>
-        <div className="name">{name}</div>
-        <div className="muted">Buyer portal</div>
-      </div>
-    </div>
-  );
+function makeColors(primary: string) {
+  const safePrimary = normalizeHexColor(primary);
+  const { r, g, b } = hexToRgb(safePrimary);
+  return {
+    primary: safePrimary,
+    primaryLight: `rgba(${r}, ${g}, ${b}, 0.08)`,
+    primarySoft: `rgba(${r}, ${g}, ${b}, 0.08)`,
+    primaryBorder: `rgba(${r}, ${g}, ${b}, 0.25)`,
+    gradientOne: darken(safePrimary, 0.15),
+    gradientTwo: darken(safePrimary, 0.3),
+    shadow: `rgba(${r}, ${g}, ${b}, 0.3)`,
+    backgroundLight: `rgba(${r}, ${g}, ${b}, 0.06)`,
+  };
+}
+
+function normalizeGradientAngle(value: number | undefined, fallback = 160) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(360, Math.max(0, Math.round(parsed)));
+}
+
+function getConfiguredGradient(pageConfig: RequestPageConfig, fallbackGradient: string) {
+  if (!pageConfig.primaryGradientEnabled) return fallbackGradient;
+  const primaryColor = normalizeHexColor(pageConfig.primaryColor);
+  const from = normalizeHexColor(pageConfig.primaryGradientFrom, primaryColor);
+  const to = normalizeHexColor(pageConfig.primaryGradientTo, DEFAULT_GRADIENT_TO);
+  const angle = normalizeGradientAngle(pageConfig.primaryGradientAngle);
+  return `linear-gradient(${angle}deg, ${from} 0%, ${to} 100%)`;
+}
+
+function rgbaFromHex(hex: string, alpha: number, fallback = DEFAULT_PRIMARY_COLOR) {
+  const { r, g, b } = hexToRgb(normalizeHexColor(hex, fallback));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getFormPanelBackgroundStyle(pageConfig: RequestPageConfig, primaryColor: string): CSSProperties {
+  const type = pageConfig.formPanelBackgroundType || 'solid';
+  const backgroundColor = normalizeHexColor(pageConfig.formPanelBackgroundColor, '#FFFFFF');
+  const from = normalizeHexColor(pageConfig.formPanelGradientFrom, backgroundColor);
+  const to = normalizeHexColor(pageConfig.formPanelGradientTo, '#F6F8FC');
+  const angle = normalizeGradientAngle(pageConfig.formPanelGradientAngle, 135);
+  const gradient = `linear-gradient(${angle}deg, ${from} 0%, ${to} 100%)`;
+  const patternColor = rgbaFromHex(primaryColor, 0.12);
+  const subtlePatternColor = rgbaFromHex(primaryColor, 0.07);
+  const style: CSSProperties = { backgroundColor };
+
+  if (type === 'gradient') {
+    style.backgroundImage = gradient;
+    return style;
+  }
+
+  if (type !== 'pattern') return style;
+
+  if (pageConfig.formPanelPattern === 'dots') {
+    style.backgroundImage = `radial-gradient(circle at 1px 1px, ${patternColor} 1px, transparent 0), ${gradient}`;
+    style.backgroundSize = '18px 18px, auto';
+    return style;
+  }
+
+  if (pageConfig.formPanelPattern === 'diagonal') {
+    style.backgroundImage = `repeating-linear-gradient(135deg, ${subtlePatternColor} 0 1px, transparent 1px 12px), ${gradient}`;
+    style.backgroundSize = 'auto, auto';
+    return style;
+  }
+
+  if (pageConfig.formPanelPattern === 'grid') {
+    style.backgroundImage = `linear-gradient(${subtlePatternColor} 1px, transparent 1px), linear-gradient(90deg, ${subtlePatternColor} 1px, transparent 1px), ${gradient}`;
+    style.backgroundSize = '28px 28px, 28px 28px, auto';
+    return style;
+  }
+
+  style.backgroundImage = gradient;
+  return style;
+}
+
+function getFormPanelModeSettings(mode: string) {
+  if (mode === 'compact') {
+    return { panelPadding: '28px 30px', inputPadding: '9px 12px', inputRadius: 8, fieldGap: 12, buttonHeight: 44 };
+  }
+  if (mode === 'spacious') {
+    return { panelPadding: '48px 44px', inputPadding: '12px 15px', inputRadius: 12, fieldGap: 16, buttonHeight: 50 };
+  }
+  if (mode === 'glass') {
+    return { panelPadding: '38px 38px', inputPadding: '10px 14px', inputRadius: 12, fieldGap: 14, buttonHeight: 46 };
+  }
+  return { panelPadding: '36px 36px', inputPadding: '10px 14px', inputRadius: mode === 'outlined' ? 8 : 10, fieldGap: 14, buttonHeight: 46 };
+}
+
+function getSelectOptions(pageConfig: RequestPageConfig, fieldKey: string) {
+  if (fieldKey === 'industry') return pageConfig.industries || [];
+  if (fieldKey === 'estimatedMonthlyVolume') return pageConfig.volumeOptions || [];
+  return [];
+}
+
+function getPlaceholder(field: FormFieldConfig) {
+  return PLACEHOLDERS[field.key] || `Enter ${field.label.toLowerCase()}`;
+}
+
+function mergeRequestMessage(
+  pageConfig: RequestPageConfig,
+  formData: Record<string, string>,
+  files: Record<string, File | null>,
+) {
+  const userMessage = (formData.message || '').trim();
+  const extraLines = pageConfig.formFields
+    .filter((field) => !KNOWN_REQUEST_KEYS.has(field.key))
+    .map((field) => {
+      if (field.type === 'file') {
+        const file = files[field.key];
+        return file ? `${field.label}: ${file.name}` : null;
+      }
+      const value = (formData[field.key] || '').trim();
+      return value ? `${field.label}: ${value}` : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  if (!extraLines.length) return userMessage;
+  const customMessage = ['Additional Form Responses:', ...extraLines].join('\n');
+  return userMessage ? `${userMessage}\n\n${customMessage}` : customMessage;
 }
