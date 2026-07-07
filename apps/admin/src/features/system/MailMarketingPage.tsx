@@ -2087,7 +2087,7 @@ function TemplateEventCatalog({
       <div className="orders-toolbar" style={{ justifyContent: 'space-between', marginBottom: 10, gap: 12 }}>
         <div>
           <div className="name">Transactional event catalog</div>
-          <div className="muted">Edit invitation, password, B2B, invoice, and order templates by business event.</div>
+          <div className="muted">Edit auth, user invitation, B2B, tax exemption, support, storefront form, discount, invoice, and order templates by business event.</div>
         </div>
         <span className="pill info">{sorted.length} events</span>
       </div>
@@ -4012,7 +4012,7 @@ function draftFromTemplateEvent(event: MailTemplateWorkspaceEvent): TemplateDraf
 }
 
 function eventFolderRank(folderKey: string | undefined) {
-  const order = ['identity', 'b2b', 'orders', 'marketing', 'general'];
+  const order = ['identity', 'auth', 'users', 'b2b', 'tax_exempt', 'support', 'forms', 'discount', 'orders', 'marketing', 'general'];
   const index = order.indexOf(folderKey || 'general');
   return index === -1 ? 99 : index;
 }

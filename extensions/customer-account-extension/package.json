@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@shopify/ui-extensions": "2025.10.13",
+    "@shopify/ui-extensions": "2025.7.4",
     "@shopify/ui-extensions-react": "2025.7.4",
     "react": "^18.3.1",
     "react-reconciler": "^0.29.2"
@@ -18,7 +18,7 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "@shopify/ui-extensions": "2025.10.13",
+    "@shopify/ui-extensions": "2025.7.4",
     "@shopify/ui-extensions-react": "2025.7.4"
   }
 }

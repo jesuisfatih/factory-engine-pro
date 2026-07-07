@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { CreateB2BAccessRequestInput, RejectB2BAccessInput } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PasswordService } from '../../shared/password.service.js';
+import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { MailService } from '../mail/mail.service.js';
 import { B2BAccessRepository } from './b2b-access.repository.js';
@@ -19,12 +20,14 @@ export class B2BAccessService {
   constructor(
     private readonly repository: B2BAccessRepository,
     private readonly password: PasswordService,
+    private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
     private readonly mail: MailService,
   ) {}
 
   async create(input: CreateB2BAccessRequestInput, file?: UploadFile) {
+    await this.ensureTenantForPublicCreate(input);
     const shopifyCustomerId = cleanOptionalString(input.shopifyCustomerId);
     const existing = await this.repository.findPendingByIdentity(input.email, shopifyCustomerId);
     if (existing) {
@@ -71,6 +74,17 @@ export class B2BAccessService {
       request_id: request.id,
       applicant_email: input.email,
       company_name: input.companyName,
+    });
+    await this.sendReceivedNotifications({
+      requestId: request.id,
+      email: input.email,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      phone: input.phone ?? null,
+      companyName: input.companyName,
+      sourceSurface: input.sourceSurface ?? 'accounts-request-invitation',
+      sourcePath: input.sourcePath ?? null,
+      sourceUrl: input.sourceUrl ?? null,
     });
     return {
       success: true,
@@ -227,6 +241,72 @@ export class B2BAccessService {
       errorMessage: delivery.errorMessage,
     };
   }
+
+  private async ensureTenantForPublicCreate(input: CreateB2BAccessRequestInput) {
+    if (this.tenantContext.get()?.tenantId) return;
+    const shop = cleanShopDomain(input.shop);
+    if (!shop) {
+      throw new BadRequestException('Store context is required for B2B access requests.');
+    }
+    const config = await this.prisma.tenantConfig.findFirst({
+      where: {
+        OR: [
+          { shopifyDomain: { equals: shop, mode: 'insensitive' } },
+          { shopifyDomain: { equals: `https://${shop}`, mode: 'insensitive' } },
+          { shopifyDomain: { equals: `http://${shop}`, mode: 'insensitive' } },
+        ],
+      },
+      select: { tenantId: true },
+    });
+    if (!config?.tenantId) {
+      throw new BadRequestException('This storefront is not connected to a B2B workspace yet.');
+    }
+    this.tenantContext.set({ tenantId: config.tenantId });
+  }
+
+  private async sendReceivedNotifications(input: {
+    requestId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    companyName: string;
+    sourceSurface?: string | null;
+    sourcePath?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    const applicantName = `${input.firstName} ${input.lastName}`.trim() || input.email;
+    try {
+      await this.mail.sendB2BApplicationReceived({
+        to: input.email,
+        recipientName: applicantName,
+        companyName: input.companyName,
+        requestId: input.requestId,
+        sourceSurface: input.sourceSurface,
+        sourcePath: input.sourcePath,
+        sourceUrl: input.sourceUrl,
+      });
+      const recipients = await this.repository.listInternalReviewRecipients();
+      await Promise.all(recipients.map((recipient) => this.mail.sendB2BApplicationReceivedInternal({
+        to: recipient.email,
+        recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+        applicantName,
+        applicantEmail: input.email,
+        applicantPhone: input.phone,
+        companyName: input.companyName,
+        requestId: input.requestId,
+        sourceSurface: input.sourceSurface,
+        sourcePath: input.sourcePath,
+        sourceUrl: input.sourceUrl,
+      })));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error('b2b_access', 'received_mail_failed', message, {
+        request_id: input.requestId,
+        applicant_email: input.email,
+      });
+    }
+  }
 }
 
 function cleanMetadata(metadata: Record<string, unknown>) {
@@ -236,4 +316,10 @@ function cleanMetadata(metadata: Record<string, unknown>) {
 function cleanOptionalString(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function cleanShopDomain(value: string | undefined) {
+  const trimmed = value?.trim().toLowerCase();
+  if (!trimmed) return null;
+  return trimmed.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 }

@@ -1,0 +1,9 @@
+api_version = "2025-10"
+
+[[extensions]]
+type = "theme"
+name = "Factory Engine B2B Access"
+handle = "factory-engine-b2b-access"
+
+  [extensions.capabilities]
+  block_progress = true

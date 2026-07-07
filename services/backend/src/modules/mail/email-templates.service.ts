@@ -406,6 +406,511 @@ const CORE_TRANSACTIONAL_TEMPLATE_EVENTS: CoreTransactionalTemplateDefinition[] 
   },
 ];
 
+const LEGACY_TRANSACTIONAL_TEMPLATE_EVENTS: CoreTransactionalTemplateDefinition[] = [
+  legacyTransactionalEvent({
+    eventKey: 'auth.password_reset_requested.user',
+    title: 'Password reset requested',
+    description: 'Legacy storefront/account password reset request event.',
+    folderKey: 'auth',
+    subject: '{{brand_name}} password reset',
+    previewText: 'Use the secure link to reset your password.',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'reset_url', 'expires_in_minutes'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/reset-password?token=preview',
+      reset_url: 'https://accounts.example.com/reset-password?token=preview',
+      expires_in_minutes: 30,
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'auth.password_reset_completed.user',
+    title: 'Password reset completed',
+    description: 'Legacy account security confirmation after a password reset is completed.',
+    folderKey: 'auth',
+    subject: '{{brand_name}} password updated',
+    previewText: 'Your account password was changed.',
+    variables: ['brand_name', 'recipient_name', 'login_url', 'support_email'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      login_url: 'https://accounts.example.com/login',
+      support_email: 'support@example.com',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'users.invitation_sent.user',
+    title: 'User invitation sent',
+    description: 'Legacy company user invitation event.',
+    folderKey: 'users',
+    subject: 'You have been invited to {{brand_name}}',
+    previewText: 'Finish your account setup from the secure invite link.',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'invitation_url', 'inviter_name'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/invite',
+      invitation_url: 'https://accounts.example.com/invite',
+      inviter_name: 'Account Team',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'users.invitation_reminder.user',
+    title: 'User invitation reminder',
+    description: 'Legacy company user invitation reminder event.',
+    folderKey: 'users',
+    subject: 'Reminder: complete your {{brand_name}} invitation',
+    previewText: 'Your invite is still waiting to be accepted.',
+    variables: ['brand_name', 'recipient_name', 'action_url', 'invitation_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      action_url: 'https://accounts.example.com/invite',
+      invitation_url: 'https://accounts.example.com/invite',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'users.email_verification_requested.user',
+    title: 'Email verification requested',
+    description: 'Legacy email verification code event.',
+    folderKey: 'users',
+    subject: 'Verify your {{brand_name}} email address',
+    previewText: 'Confirm the email address on your account.',
+    variables: ['brand_name', 'recipient_name', 'verification_code', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      verification_code: '481926',
+      action_url: 'https://accounts.example.com/verify-email',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'users.account_activated.user',
+    title: 'Account activated',
+    description: 'Legacy customer account activation confirmation.',
+    folderKey: 'users',
+    subject: 'Your {{brand_name}} account is active',
+    previewText: 'You can sign in and start using your account.',
+    variables: ['brand_name', 'recipient_name', 'login_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      login_url: 'https://accounts.example.com/login',
+      action_url: 'https://accounts.example.com/login',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.invitation_sent.user',
+    title: 'B2B invitation sent',
+    description: 'Legacy B2B customer invitation event.',
+    folderKey: 'b2b',
+    subject: 'Your {{brand_name}} B2B invitation is ready',
+    previewText: 'Accept the invite to join the account.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'action_url', 'discount_code', 'inviter_name'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      action_url: 'https://accounts.example.com/invite',
+      discount_code: 'B2B-ACME',
+      inviter_name: 'Sales Team',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.invitation_reminder.user',
+    title: 'B2B invitation reminder',
+    description: 'Legacy B2B invitation reminder event.',
+    folderKey: 'b2b',
+    subject: 'Reminder: your {{brand_name}} B2B invite is waiting',
+    previewText: 'You can still complete the invitation securely.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'action_url', 'discount_code'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      action_url: 'https://accounts.example.com/invite',
+      discount_code: 'B2B-ACME',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.invitation_accepted.internal',
+    title: 'B2B invitation accepted internal',
+    description: 'Legacy internal notification when a B2B invitation is accepted.',
+    folderKey: 'b2b',
+    subject: 'B2B invitation accepted: {{company_name}}',
+    previewText: 'The invited user completed onboarding.',
+    variables: ['brand_name', 'recipient_name', 'recipient_email', 'company_name', 'accepted_at', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      recipient_email: 'jane@example.com',
+      company_name: 'Acme Prints',
+      accepted_at: '2026-07-07T12:00:00Z',
+      admin_url: 'https://app.example.com/b2b-access',
+      action_url: 'https://app.example.com/b2b-access',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'tax_exempt.request_received.user',
+    title: 'Tax exemption request received',
+    description: 'Legacy tax exemption request acknowledgement.',
+    folderKey: 'tax_exempt',
+    subject: 'We received your {{brand_name}} tax exemption request',
+    previewText: 'Your request is in review.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'request_id', 'review_timeline'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      request_id: 'REQ-1001',
+      review_timeline: '1-2 business days',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'tax_exempt.request_received.internal',
+    title: 'Tax exemption request internal alert',
+    description: 'Legacy internal tax exemption request notification.',
+    folderKey: 'tax_exempt',
+    subject: 'New tax exemption request: {{company_name}}',
+    previewText: 'A tax exemption request needs review.',
+    variables: ['brand_name', 'company_name', 'applicant_name', 'applicant_email', 'request_id', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      company_name: 'Acme Prints',
+      applicant_name: 'Jane Doe',
+      applicant_email: 'jane@example.com',
+      request_id: 'REQ-1001',
+      admin_url: 'https://app.example.com/b2b-access',
+      action_url: 'https://app.example.com/b2b-access',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'tax_exempt.request_approved.user',
+    title: 'Tax exemption request approved',
+    description: 'Legacy tax exemption approval event.',
+    folderKey: 'tax_exempt',
+    subject: 'Your {{brand_name}} tax exemption request was approved',
+    previewText: 'Your tax status has been updated.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'login_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      login_url: 'https://accounts.example.com/login',
+      action_url: 'https://accounts.example.com/login',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'tax_exempt.request_rejected.user',
+    title: 'Tax exemption request rejected',
+    description: 'Legacy tax exemption rejection event.',
+    folderKey: 'tax_exempt',
+    subject: 'Update on your {{brand_name}} tax exemption request',
+    previewText: 'The team reviewed your request.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'review_notes', 'support_email'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      review_notes: 'Please upload a valid resale certificate.',
+      support_email: 'support@example.com',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'support.ticket_created.user',
+    title: 'Support ticket created',
+    description: 'Legacy customer support request acknowledgement.',
+    folderKey: 'support',
+    subject: 'We received your support request {{ticket_number}}',
+    previewText: 'Your ticket number is ready for follow-up.',
+    variables: ['brand_name', 'recipient_name', 'ticket_number', 'ticket_subject', 'ticket_message', 'support_email'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      ticket_number: 'TKT-1001',
+      ticket_subject: 'Order tracking request',
+      ticket_message: 'My order has not moved in transit.',
+      support_email: 'support@example.com',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'support.ticket_created.internal',
+    title: 'Support ticket created internal',
+    description: 'Legacy internal support ticket alert.',
+    folderKey: 'support',
+    subject: 'New support ticket {{ticket_number}}',
+    previewText: 'A new customer request needs attention.',
+    variables: ['brand_name', 'ticket_number', 'ticket_subject', 'ticket_message', 'customer_name', 'customer_email', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      ticket_number: 'TKT-1001',
+      ticket_subject: 'Order tracking request',
+      ticket_message: 'My shipment has not moved.',
+      customer_name: 'Jane Doe',
+      customer_email: 'jane@example.com',
+      admin_url: 'https://app.example.com/support',
+      action_url: 'https://app.example.com/support',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'support.reply_added.user',
+    title: 'Support reply added',
+    description: 'Legacy support reply notification.',
+    folderKey: 'support',
+    subject: 'There is a reply on {{ticket_number}}',
+    previewText: 'Open the thread to read the latest update.',
+    variables: ['brand_name', 'recipient_name', 'ticket_number', 'ticket_subject', 'reply_message', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      ticket_number: 'TKT-1001',
+      ticket_subject: 'Order tracking request',
+      reply_message: 'Your shipment is out for delivery.',
+      action_url: 'https://accounts.example.com/requests/TKT-1001',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'support.reply_added.internal',
+    title: 'Support reply added internal',
+    description: 'Legacy internal alert when a customer replies to support.',
+    folderKey: 'support',
+    subject: 'Customer replied to {{ticket_number}}',
+    previewText: 'Keep the thread moving for the customer.',
+    variables: ['brand_name', 'ticket_number', 'ticket_subject', 'reply_message', 'customer_name', 'customer_email', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      ticket_number: 'TKT-1001',
+      ticket_subject: 'Order tracking request',
+      reply_message: 'Can you send a tracking update?',
+      customer_name: 'Jane Doe',
+      customer_email: 'jane@example.com',
+      admin_url: 'https://app.example.com/support',
+      action_url: 'https://app.example.com/support',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'support.ticket_closed.user',
+    title: 'Support ticket closed',
+    description: 'Legacy customer support ticket closure confirmation.',
+    folderKey: 'support',
+    subject: 'Your support ticket {{ticket_number}} was closed',
+    previewText: 'Reply if you need anything else.',
+    variables: ['brand_name', 'recipient_name', 'ticket_number', 'ticket_subject', 'support_email'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      ticket_number: 'TKT-1001',
+      ticket_subject: 'Order tracking request',
+      support_email: 'support@example.com',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.artwork-updates-request.submitted.user',
+    title: 'Artwork updates request submitted',
+    description: 'Legacy storefront artwork update form acknowledgement.',
+    folderKey: 'forms',
+    subject: 'We received your {{form_name}}',
+    previewText: 'Our team will review the attached details.',
+    variables: ['brand_name', 'recipient_name', 'form_name', 'form_handle', 'request_summary', 'source_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      form_name: 'Artwork Updates Request',
+      form_handle: 'artwork-updates-request',
+      request_summary: 'Please update the chest logo.',
+      source_url: 'https://store.example.com/pages/artwork-updates',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.artwork-updates-request.submitted.internal',
+    title: 'Artwork updates request internal alert',
+    description: 'Legacy internal artwork update form notification.',
+    folderKey: 'forms',
+    subject: 'New {{form_name}} submission',
+    previewText: 'Review the submitted file and notes.',
+    variables: ['brand_name', 'form_name', 'form_handle', 'submitter_name', 'submitter_email', 'request_summary', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      form_name: 'Artwork Updates Request',
+      form_handle: 'artwork-updates-request',
+      submitter_name: 'Jane Doe',
+      submitter_email: 'jane@example.com',
+      request_summary: 'Please update the chest logo.',
+      admin_url: 'https://app.example.com/support',
+      action_url: 'https://app.example.com/support',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.order-tracking-request.submitted.user',
+    title: 'Order tracking request submitted',
+    description: 'Legacy storefront order tracking form acknowledgement.',
+    folderKey: 'forms',
+    subject: 'We received your tracking request',
+    previewText: 'We are checking the latest status now.',
+    variables: ['brand_name', 'recipient_name', 'form_name', 'order_number', 'request_summary'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      form_name: 'Order Tracking Request',
+      order_number: '#1001',
+      request_summary: 'My shipment has not moved.',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.order-tracking-request.submitted.internal',
+    title: 'Order tracking request internal alert',
+    description: 'Legacy internal order tracking form notification.',
+    folderKey: 'forms',
+    subject: 'New order tracking request {{order_number}}',
+    previewText: 'A customer needs a tracking update.',
+    variables: ['brand_name', 'order_number', 'submitter_name', 'submitter_email', 'request_summary', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      order_number: '#1001',
+      submitter_name: 'Jane Doe',
+      submitter_email: 'jane@example.com',
+      request_summary: 'My shipment has not moved.',
+      admin_url: 'https://app.example.com/support',
+      action_url: 'https://app.example.com/support',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.tax-exempt-for-businesses.submitted.user',
+    title: 'Tax exempt form submitted',
+    description: 'Legacy storefront tax exempt form acknowledgement.',
+    folderKey: 'forms',
+    subject: 'We received your tax exemption request',
+    previewText: 'We will review the form and follow up.',
+    variables: ['brand_name', 'recipient_name', 'form_name', 'company_name', 'request_summary'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      form_name: 'Tax Exempt for Businesses',
+      company_name: 'Acme Prints',
+      request_summary: 'Please review our resale certificate.',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'forms.tax-exempt-for-businesses.submitted.internal',
+    title: 'Tax exempt form internal alert',
+    description: 'Legacy internal tax exempt form notification.',
+    folderKey: 'forms',
+    subject: 'New tax exempt form submission: {{company_name}}',
+    previewText: 'The review queue has a new tax exemption request.',
+    variables: ['brand_name', 'form_name', 'company_name', 'submitter_name', 'submitter_email', 'request_summary', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      form_name: 'Tax Exempt for Businesses',
+      company_name: 'Acme Prints',
+      submitter_name: 'Jane Doe',
+      submitter_email: 'jane@example.com',
+      request_summary: 'Please review our resale certificate.',
+      admin_url: 'https://app.example.com/b2b-access',
+      action_url: 'https://app.example.com/b2b-access',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'discount.invitation_sent.user',
+    title: 'Discount invitation sent',
+    description: 'Legacy discount-backed account invitation.',
+    folderKey: 'discount',
+    subject: 'Your {{brand_name}} discount access is ready',
+    previewText: 'Use the invite to finish setting up access.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'discount_code', 'temporary_password', 'login_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      discount_code: 'B2B-ACME-9F21',
+      temporary_password: 'TempPass123!',
+      login_url: 'https://accounts.example.com/login',
+      action_url: 'https://accounts.example.com/login',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'discount.invitation_reminder.user',
+    title: 'Discount invitation reminder',
+    description: 'Legacy discount-backed invitation reminder.',
+    folderKey: 'discount',
+    subject: 'Reminder: your {{brand_name}} discount is waiting',
+    previewText: 'Your invite is still active.',
+    variables: ['brand_name', 'recipient_name', 'company_name', 'discount_code', 'login_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      recipient_name: 'Jane Doe',
+      company_name: 'Acme Prints',
+      discount_code: 'B2B-ACME-9F21',
+      login_url: 'https://accounts.example.com/login',
+      action_url: 'https://accounts.example.com/login',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.quote_requested.internal',
+    title: 'B2B quote requested internal',
+    description: 'Legacy internal notification when a B2B customer requests a quote.',
+    folderKey: 'b2b',
+    subject: 'New B2B quote request {{quote_number}}',
+    previewText: 'A customer requested a quote.',
+    variables: ['brand_name', 'quote_id', 'quote_number', 'company_name', 'customer_name', 'customer_email', 'request_summary', 'item_count', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      quote_id: 'quo_1001',
+      quote_number: 'Q-1001',
+      company_name: 'Acme Prints',
+      customer_name: 'Jane Doe',
+      customer_email: 'jane@example.com',
+      request_summary: 'Needs pricing for 12 reorder items.',
+      item_count: 12,
+      admin_url: 'https://app.example.com/b2b-quotes',
+      action_url: 'https://app.example.com/b2b-quotes',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.quote_approved.internal',
+    title: 'B2B quote approved internal',
+    description: 'Legacy internal notification when a customer accepts a quote.',
+    folderKey: 'b2b',
+    subject: 'B2B quote accepted {{quote_number}}',
+    previewText: 'Sales and fulfillment can proceed.',
+    variables: ['brand_name', 'quote_id', 'quote_number', 'company_name', 'customer_name', 'customer_email', 'total', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      quote_id: 'quo_1001',
+      quote_number: 'Q-1001',
+      company_name: 'Acme Prints',
+      customer_name: 'Jane Doe',
+      customer_email: 'jane@example.com',
+      total: '$482.00',
+      admin_url: 'https://app.example.com/b2b-quotes',
+      action_url: 'https://app.example.com/b2b-quotes',
+    },
+  }),
+  legacyTransactionalEvent({
+    eventKey: 'b2b.quote_rejected.internal',
+    title: 'B2B quote rejected internal',
+    description: 'Legacy internal notification when a customer declines a quote.',
+    folderKey: 'b2b',
+    subject: 'B2B quote declined {{quote_number}}',
+    previewText: 'The customer declined the quote.',
+    variables: ['brand_name', 'quote_id', 'quote_number', 'company_name', 'customer_name', 'customer_email', 'admin_url', 'action_url'],
+    sampleVariables: {
+      brand_name: 'Eagle DTF Print',
+      quote_id: 'quo_1001',
+      quote_number: 'Q-1001',
+      company_name: 'Acme Prints',
+      customer_name: 'Jane Doe',
+      customer_email: 'jane@example.com',
+      admin_url: 'https://app.example.com/b2b-quotes',
+      action_url: 'https://app.example.com/b2b-quotes',
+    },
+  }),
+];
+
+const TRANSACTIONAL_TEMPLATE_EVENTS = dedupeTemplateDefinitions([
+  ...CORE_TRANSACTIONAL_TEMPLATE_EVENTS,
+  ...LEGACY_TRANSACTIONAL_TEMPLATE_EVENTS,
+]);
+
 function transactionalShell(input: {
   eyebrow: string;
   title: string;
@@ -444,6 +949,66 @@ function transactionalCss(accent: string) {
   ].join('\n');
 }
 
+function legacyTransactionalEvent(input: {
+  eventKey: string;
+  title: string;
+  description: string;
+  folderKey: string;
+  subject: string;
+  previewText: string;
+  variables: string[];
+  sampleVariables: Record<string, unknown>;
+}): CoreTransactionalTemplateDefinition {
+  return {
+    eventKey: input.eventKey,
+    title: input.title,
+    description: input.description,
+    folderKey: input.folderKey,
+    subject: input.subject,
+    previewText: input.previewText,
+    html: transactionalShell({
+      eyebrow: input.folderKey.replace(/[_-]+/g, ' '),
+      title: input.title,
+      body: 'Hi {{recipient_name}}, this message was generated for {{brand_name}} from the {{event_key}} event.',
+      ctaLabel: 'Open details',
+      ctaUrl: '{{action_url}}',
+      secondary: '{{request_summary}}{{review_notes}}{{ticket_message}}{{reply_message}}',
+    }),
+    css: transactionalCss(legacyAccent(input.folderKey)),
+    text: `${input.title}: {{action_url}}`,
+    variables: [...new Set(['brand_name', 'recipient_name', 'event_key', 'action_url', ...input.variables])],
+    sampleVariables: {
+      event_key: input.eventKey,
+      action_url: input.sampleVariables.action_url ?? input.sampleVariables.login_url ?? input.sampleVariables.admin_url ?? 'https://example.com',
+      recipient_name: input.sampleVariables.recipient_name ?? 'Jane Doe',
+      request_summary: '',
+      review_notes: '',
+      ticket_message: '',
+      reply_message: '',
+      ...input.sampleVariables,
+    },
+  };
+}
+
+function legacyAccent(folderKey: string) {
+  if (folderKey === 'b2b' || folderKey === 'users') return '#1d4ed8';
+  if (folderKey === 'tax_exempt' || folderKey === 'discount') return '#b45309';
+  if (folderKey === 'support') return '#334155';
+  if (folderKey === 'forms') return '#0f766e';
+  return '#334155';
+}
+
+function dedupeTemplateDefinitions(definitions: CoreTransactionalTemplateDefinition[]) {
+  const seen = new Set<string>();
+  const output: CoreTransactionalTemplateDefinition[] = [];
+  for (const definition of definitions) {
+    if (seen.has(definition.eventKey)) continue;
+    seen.add(definition.eventKey);
+    output.push(definition);
+  }
+  return output;
+}
+
 @Injectable()
 export class EmailTemplatesService {
   constructor(
@@ -462,7 +1027,7 @@ export class EmailTemplatesService {
       this.providerSummary(),
     ]);
     const events = new Map<string, EmailTemplateWorkspaceEvent>();
-    for (const definition of CORE_TRANSACTIONAL_TEMPLATE_EVENTS) {
+    for (const definition of TRANSACTIONAL_TEMPLATE_EVENTS) {
       events.set(definition.eventKey, {
         eventKey: definition.eventKey,
         templateCount: 0,
@@ -489,7 +1054,7 @@ export class EmailTemplatesService {
   }
 
   private async ensureCoreTransactionalTemplates() {
-    for (const definition of CORE_TRANSACTIONAL_TEMPLATE_EVENTS) {
+    for (const definition of TRANSACTIONAL_TEMPLATE_EVENTS) {
       const existing = await this.repository.findByEventKey(definition.eventKey);
       if (existing.length > 0) continue;
       const created = await this.repository.create({

@@ -1096,6 +1096,149 @@ export class MailService {
     });
   }
 
+  async sendB2BApplicationReceived(input: {
+    to: string;
+    recipientName: string;
+    companyName: string;
+    requestId: string;
+    sourceSurface?: string | null;
+    sourcePath?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const portalUrl = `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/login`;
+    const subject = `We received your ${brand} B2B application`;
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>We received the B2B access application for <strong>${escapeHtml(input.companyName)}</strong>.</p>`,
+      '<p>Our team will review the request and follow up with the next step.</p>',
+      portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">Open account portal</a></p>` : '',
+      `<p>Reference: ${escapeHtml(input.requestId)}</p>`,
+    ].filter(Boolean).join('');
+    const text = [
+      `Hello ${input.recipientName},`,
+      `We received the B2B access application for ${input.companyName}.`,
+      'Our team will review the request and follow up with the next step.',
+      portalUrl ? `Portal: ${portalUrl}` : '',
+      `Reference: ${input.requestId}`,
+    ].filter(Boolean).join('\n\n');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.application_received.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        companyName: input.companyName,
+        company_name: input.companyName,
+        requestId: input.requestId,
+        request_id: input.requestId,
+        portal_url: portalUrl,
+        login_url: portalUrl,
+        action_url: portalUrl,
+        review_timeline: '1-2 business days',
+        source_surface: input.sourceSurface ?? '',
+        source_path: input.sourcePath ?? '',
+        source_url: input.sourceUrl ?? '',
+      },
+      fallback: { subject, html, text },
+    });
+    return this.sendTransactional({
+      eventKey: 'b2b.application_received.user',
+      category: 'system.b2b',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: {
+        requestId: input.requestId,
+        companyName: input.companyName,
+        sourceSurface: input.sourceSurface ?? null,
+        sourcePath: input.sourcePath ?? null,
+        sourceUrl: input.sourceUrl ?? null,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
+  async sendB2BApplicationReceivedInternal(input: {
+    to: string;
+    recipientName: string;
+    applicantName: string;
+    applicantEmail: string;
+    applicantPhone?: string | null;
+    companyName: string;
+    requestId: string;
+    sourceSurface?: string | null;
+    sourcePath?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const adminUrl = `${(this.config.get<string>('ADMIN_URL') ?? '').replace(/\/+$/, '')}/b2b-access`;
+    const subject = `New B2B application: ${input.companyName}`;
+    const html = [
+      `<p>${escapeHtml(input.applicantName)} submitted a B2B application for <strong>${escapeHtml(input.companyName)}</strong>.</p>`,
+      `<p><strong>Email:</strong> ${escapeHtml(input.applicantEmail)}</p>`,
+      input.applicantPhone ? `<p><strong>Phone:</strong> ${escapeHtml(input.applicantPhone)}</p>` : '',
+      `<p><strong>Reference:</strong> ${escapeHtml(input.requestId)}</p>`,
+      adminUrl ? `<p><a href="${escapeHtml(adminUrl)}">Review request</a></p>` : '',
+    ].filter(Boolean).join('');
+    const text = [
+      `${input.applicantName} submitted a B2B application for ${input.companyName}.`,
+      `Email: ${input.applicantEmail}`,
+      input.applicantPhone ? `Phone: ${input.applicantPhone}` : '',
+      `Reference: ${input.requestId}`,
+      adminUrl ? `Review: ${adminUrl}` : '',
+    ].filter(Boolean).join('\n\n');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.application_received.internal',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        applicantName: input.applicantName,
+        applicant_name: input.applicantName,
+        applicantEmail: input.applicantEmail,
+        applicant_email: input.applicantEmail,
+        applicantPhone: input.applicantPhone ?? '',
+        phone: input.applicantPhone ?? '',
+        companyName: input.companyName,
+        company_name: input.companyName,
+        requestId: input.requestId,
+        request_id: input.requestId,
+        admin_url: adminUrl,
+        action_url: adminUrl,
+        source_surface: input.sourceSurface ?? '',
+        source_path: input.sourcePath ?? '',
+        source_url: input.sourceUrl ?? '',
+      },
+      fallback: { subject, html, text },
+    });
+    return this.sendTransactional({
+      eventKey: 'b2b.application_received.internal',
+      category: 'system.b2b',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: {
+        requestId: input.requestId,
+        companyName: input.companyName,
+        applicantEmail: input.applicantEmail,
+        sourceSurface: input.sourceSurface ?? null,
+        sourcePath: input.sourcePath ?? null,
+        sourceUrl: input.sourceUrl ?? null,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
   async sendB2BApplicationRejected(input: {
     to: string;
     recipientName: string;

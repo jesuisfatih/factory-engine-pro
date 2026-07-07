@@ -98,6 +98,27 @@ export class B2BAccessRepository {
     });
   }
 
+  listInternalReviewRecipients() {
+    return this.prisma.db.member.findMany({
+      where: {
+        status: 'active',
+        roleAssignments: {
+          some: {
+            role: { slug: { in: ['owner', 'admin'] } },
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      take: 25,
+    });
+  }
+
   async update(id: string, data: Prisma.B2BAccessRequestUpdateManyMutationInput) {
     await this.prisma.db.b2BAccessRequest.updateMany({ where: { id }, data });
     return this.findById(id);

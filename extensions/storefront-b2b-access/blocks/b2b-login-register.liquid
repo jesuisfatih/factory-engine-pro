@@ -1,0 +1,267 @@
+{% comment %}
+  Factory Engine B2B Login Register
+  Storefront header app block. It keeps the legacy Eagle two-button behavior:
+  - Login opens the Factory Engine accounts portal through the Shopify app proxy.
+  - Register opens the B2B request page with shop and customer email context.
+  The inline script only hydrates customer name, badge, and dynamic URLs.
+{% endcomment %}
+
+{% if block.settings.enabled %}
+{%- assign fe_block_id = 'fe-b2b-access-' | append: block.id | handleize -%}
+{%- assign fe_accounts_url = block.settings.accounts_url | default: 'https://accounts.dtfbank.com' | remove: '/$' -%}
+{%- capture fe_cfg -%}
+{
+  "shop": {{ shop.permanent_domain | json }},
+  "customerEmail": {% if customer %}{{ customer.email | json }}{% else %}""{% endif %},
+  "accountsUrl": {{ fe_accounts_url | json }}
+}
+{%- endcapture -%}
+
+<div
+  id="{{ fe_block_id }}"
+  class="fe-b2b-access"
+  data-factory-engine-block="b2b-login-register"
+  data-config='{{ fe_cfg | strip_newlines | escape }}'
+  style="
+    --fe-b2b-shell-bg: {{ block.settings.control_bg }};
+    --fe-b2b-border: {{ block.settings.border_color }};
+    --fe-b2b-divider: {{ block.settings.divider_color }};
+    --fe-b2b-login-bg: {{ block.settings.login_bg_color }};
+    --fe-b2b-login-bg-hover: {{ block.settings.login_bg_hover }};
+    --fe-b2b-login-text: {{ block.settings.login_text_color }};
+    --fe-b2b-register-bg: {{ block.settings.register_bg_color }};
+    --fe-b2b-register-bg-hover: {{ block.settings.register_bg_hover }};
+    --fe-b2b-register-text: {{ block.settings.register_text_color }};
+    --fe-b2b-radius: {{ block.settings.border_radius }}px;
+    --fe-b2b-font-size: {{ block.settings.font_size }}px;
+    --fe-b2b-font-weight: {{ block.settings.font_weight }};
+    --fe-b2b-pad-x: {{ block.settings.padding_x }}px;
+    --fe-b2b-pad-y: {{ block.settings.padding_y }}px;
+    --fe-b2b-badge: {{ block.settings.badge_color }};
+  "
+  {{ block.shopify_attributes }}
+>
+  <div class="fe-b2b-access__control" role="group" aria-label="B2B account access">
+    <a
+      class="fe-b2b-access__button fe-b2b-access__button--login"
+      data-role="login"
+      href="/apps/eagle/handoff?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&customer_email={{ customer.email | url_encode }}{% endif %}"
+      title="{% if customer %}Open B2B Portal{% else %}B2B Portal Login{% endif %}"
+    >
+      {% if block.settings.show_icon %}
+      <svg class="fe-b2b-access__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        {% if customer %}
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        {% else %}
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+        {% endif %}
+      </svg>
+      {% endif %}
+      <span data-role="name">{% if customer %}{{ block.settings.logged_in_text }}{% else %}{{ block.settings.logged_out_text }}{% endif %}</span>
+      <span class="fe-b2b-access__badge" data-role="badge">0</span>
+    </a>
+
+    {% if block.settings.show_register %}
+    <a
+      class="fe-b2b-access__button fe-b2b-access__button--register"
+      data-role="register"
+      href="{{ fe_accounts_url }}/request-invitation?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&email={{ customer.email | url_encode }}{% endif %}&sourceSurface=shopify-header-block"
+      title="Apply for B2B access"
+    >
+      <span>{{ block.settings.register_text }}</span>
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  #{{ fe_block_id }} {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+  }
+  #{{ fe_block_id }} .fe-b2b-access__control {
+    display: inline-grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 2px;
+    background: var(--fe-b2b-shell-bg, #ffffff);
+    border: 1px solid var(--fe-b2b-border, #d8dee8);
+    border-radius: var(--fe-b2b-radius, 10px);
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: var(--fe-b2b-pad-y, 8px) var(--fe-b2b-pad-x, 14px);
+    border-radius: max(6px, calc(var(--fe-b2b-radius, 10px) - 4px));
+    font-size: var(--fe-b2b-font-size, 14px);
+    font-weight: var(--fe-b2b-font-weight, 600);
+    line-height: 1.1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button:hover {
+    transform: translateY(-1px);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button--login {
+    background: var(--fe-b2b-login-bg, #111827);
+    color: var(--fe-b2b-login-text, #ffffff);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button--login:hover {
+    background: var(--fe-b2b-login-bg-hover, #273244);
+    color: var(--fe-b2b-login-text, #ffffff);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button--register {
+    background: var(--fe-b2b-register-bg, #ffffff);
+    color: var(--fe-b2b-register-text, #111827);
+    border-left: 1px solid var(--fe-b2b-divider, #d8dee8);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button--register:hover {
+    background: var(--fe-b2b-register-bg-hover, #f4f7fb);
+    color: var(--fe-b2b-register-text, #111827);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__button--register[hidden] {
+    display: none;
+  }
+  #{{ fe_block_id }} .fe-b2b-access__control:has(.fe-b2b-access__button--register[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #{{ fe_block_id }} .fe-b2b-access__icon {
+    width: {{ block.settings.icon_size }}px;
+    height: {{ block.settings.icon_size }}px;
+    flex: 0 0 auto;
+  }
+  #{{ fe_block_id }} .fe-b2b-access__badge {
+    display: none;
+    min-width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--fe-b2b-badge, #ef4444);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  #{{ fe_block_id }} .fe-b2b-access__badge.is-visible {
+    display: inline-flex;
+  }
+  @media (max-width: 420px) {
+    #{{ fe_block_id }},
+    #{{ fe_block_id }} .fe-b2b-access__control {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    var root = document.getElementById({{ fe_block_id | json }});
+    if (!root || root.dataset.factoryEngineHydrated === "1") return;
+    root.dataset.factoryEngineHydrated = "1";
+
+    var cfg = {};
+    try { cfg = JSON.parse(root.dataset.config || "{}"); } catch (_) { cfg = {}; }
+    var proxy = "/apps/eagle";
+    var shop = String(cfg.shop || "");
+    var customerEmail = String(cfg.customerEmail || "");
+    var loginBtn = root.querySelector('[data-role="login"]');
+    var registerBtn = root.querySelector('[data-role="register"]');
+    var nameLabel = root.querySelector('[data-role="name"]');
+    var badge = root.querySelector('[data-role="badge"]');
+
+    function withContext(url) {
+      if (!url) return url;
+      var parts = url.split("?");
+      var params = new URLSearchParams(parts[1] || "");
+      if (shop && !params.get("shop")) params.set("shop", shop);
+      if (customerEmail && !params.get("email")) params.set("email", customerEmail);
+      return parts[0] + "?" + params.toString();
+    }
+
+    function applyContext(data) {
+      if (data && data.onboarding) {
+        if (registerBtn && data.onboarding.ctaHref) registerBtn.href = withContext(data.onboarding.ctaHref);
+        if (loginBtn && data.onboarding.loginHref) loginBtn.dataset.accountsHref = withContext(data.onboarding.loginHref);
+      }
+      if (data && data.marketing && loginBtn) {
+        loginBtn.title = data.marketing.subheadline || data.marketing.headline || loginBtn.title;
+      }
+    }
+
+    function applySession(data) {
+      if (data && data.isAuthenticated && data.company && registerBtn) registerBtn.hidden = true;
+      if (data && data.user && nameLabel) {
+        var name = ((data.user.firstName || "") + " " + (data.user.lastName || "")).trim();
+        if (name) nameLabel.textContent = name;
+      } else if (data && data.company && data.company.name && nameLabel) {
+        nameLabel.textContent = data.company.name;
+      }
+    }
+
+    function applyDashboard(data) {
+      if (data && data.context && data.context.company && data.context.company.name && nameLabel) {
+        nameLabel.textContent = data.context.company.name;
+      }
+      if (data && data.stats && badge) {
+        var count = Number(data.stats.pendingCarts || 0) + Number(data.stats.invoicesDue || 0);
+        if (count > 0) {
+          badge.classList.add("is-visible");
+          badge.textContent = String(count);
+        }
+      }
+    }
+
+    var query = "?shop=" + encodeURIComponent(shop) + (customerEmail ? "&email=" + encodeURIComponent(customerEmail) : "");
+    fetch(proxy + "/features/b2b-context" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applyContext).catch(function () {});
+    fetch(proxy + "/session" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applySession).catch(function () {});
+    fetch(proxy + "/dashboard" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applyDashboard).catch(function () {});
+  })();
+</script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "B2B Login Register",
+  "target": "section",
+  "settings": [
+    { "type": "checkbox", "id": "enabled", "label": "Enable B2B Login/Register", "default": true },
+    { "type": "text", "id": "accounts_url", "label": "Accounts portal URL", "default": "https://accounts.dtfbank.com" },
+    { "type": "text", "id": "logged_in_text", "label": "Login text when linked", "default": "B2B Portal" },
+    { "type": "text", "id": "logged_out_text", "label": "Login text", "default": "B2B Login" },
+    { "type": "checkbox", "id": "show_register", "label": "Show register button", "default": true },
+    { "type": "text", "id": "register_text", "label": "Register text", "default": "B2B Register" },
+    { "type": "checkbox", "id": "show_icon", "label": "Show icon", "default": true },
+    { "type": "range", "id": "icon_size", "label": "Icon size", "min": 12, "max": 28, "step": 2, "default": 18 },
+    { "type": "color", "id": "control_bg", "label": "Outer background", "default": "#ffffff" },
+    { "type": "color", "id": "border_color", "label": "Outer border", "default": "#d8dee8" },
+    { "type": "color", "id": "divider_color", "label": "Center divider", "default": "#d8dee8" },
+    { "type": "color", "id": "login_bg_color", "label": "Login background", "default": "#111827" },
+    { "type": "color", "id": "login_bg_hover", "label": "Login background hover", "default": "#273244" },
+    { "type": "color", "id": "login_text_color", "label": "Login text", "default": "#ffffff" },
+    { "type": "color", "id": "register_bg_color", "label": "Register background", "default": "#ffffff" },
+    { "type": "color", "id": "register_bg_hover", "label": "Register background hover", "default": "#f4f7fb" },
+    { "type": "color", "id": "register_text_color", "label": "Register text", "default": "#111827" },
+    { "type": "color", "id": "badge_color", "label": "Badge color", "default": "#ef4444" },
+    { "type": "range", "id": "border_radius", "label": "Border radius", "min": 0, "max": 24, "step": 2, "default": 10 },
+    { "type": "range", "id": "padding_x", "label": "Padding X", "min": 4, "max": 24, "step": 2, "default": 14 },
+    { "type": "range", "id": "padding_y", "label": "Padding Y", "min": 4, "max": 16, "step": 2, "default": 8 },
+    { "type": "range", "id": "font_size", "label": "Font size", "min": 11, "max": 18, "step": 1, "default": 14 },
+    { "type": "select", "id": "font_weight", "label": "Font weight", "default": "600", "options": [
+      { "value": "400", "label": "Normal" },
+      { "value": "500", "label": "Medium" },
+      { "value": "600", "label": "Semi-bold" },
+      { "value": "700", "label": "Bold" }
+    ] }
+  ]
+}
+{% endschema %}
