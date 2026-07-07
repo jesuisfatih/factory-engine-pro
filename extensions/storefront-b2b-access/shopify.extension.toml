@@ -1,6 +1,7 @@
 api_version = "2025-10"
 
 [[extensions]]
+uid = "acecaaf7-ba84-84a4-3d02-d62f5cd3f3ee97392ad7"
 type = "theme"
 name = "Factory Engine B2B Access"
 handle = "factory-engine-b2b-access"
