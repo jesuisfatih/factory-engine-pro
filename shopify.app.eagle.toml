@@ -1,0 +1,39 @@
+# Eagle DTF Print Shopify App Configuration
+
+client_id = "c0f76a3c461f0e77e8ecf7e9afdeda4b"
+name = "FE Eagle DTF Print"
+application_url = "https://api.eagledtfprint.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/create"]
+  uri = "https://api.eagledtfprint.com/api/v1/webhooks/orders/create"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/paid"]
+  uri = "https://api.eagledtfprint.com/api/v1/webhooks/orders/paid"
+
+  [[webhooks.subscriptions]]
+  topics = ["customers/create"]
+  uri = "https://api.eagledtfprint.com/api/v1/webhooks/customers/create"
+
+[access_scopes]
+scopes = "read_content,read_customers,read_inventory,read_orders,read_products,read_shipping,read_themes,write_content,write_customers,write_discounts,write_inventory,write_orders,write_price_rules,write_products,write_shipping,write_themes"
+
+[app_proxy]
+url = "https://api.eagledtfprint.com/api/v1/storefront"
+subpath = "eagle"
+prefix = "apps"
+
+[auth]
+redirect_urls = [
+  "https://api.eagledtfprint.com/api/v1/auth/shopify/callback",
+  "https://api.eagledtfprint.com/api/auth/shopify/callback",
+  "https://app.eagledtfprint.com/api/auth/callback"
+]
