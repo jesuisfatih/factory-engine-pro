@@ -35,6 +35,7 @@ interface CustomerRow {
   churnRisk: string;
   customerUserCount: number;
   listCount: number;
+  taxExempt: boolean;
   updatedAt: string;
 }
 
@@ -51,6 +52,7 @@ interface CustomerStats {
   atRiskCount: number;
   vipCount: number;
   dormantCount: number;
+  taxExemptCount: number;
 }
 
 interface MemberRow {
@@ -74,11 +76,12 @@ export function CustomersPage() {
   const [segment, setSegment] = useState('');
   const [churnRisk, setChurnRisk] = useState('');
   const [tag, setTag] = useState('');
+  const [taxExempt, setTaxExempt] = useState('');
   const [sort, setSort] = useState<(typeof SORTS)[number]>('recent_order');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ownerCustomerId, setOwnerCustomerId] = useState('');
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
-  const query = useMemo(() => customerQuery({ search, segment, churnRisk, tag, sort }), [search, segment, churnRisk, tag, sort]);
+  const query = useMemo(() => customerQuery({ search, segment, churnRisk, tag, taxExempt, sort }), [search, segment, churnRisk, tag, taxExempt, sort]);
   const customers = useQuery({ queryKey: ['commerce', 'customers', query], queryFn: () => fetchCustomers(query) });
   const stats = useQuery({ queryKey: ['commerce', 'customers', 'stats'], queryFn: () => fetchCustomerStats() });
   const detail = useQuery({
@@ -154,6 +157,7 @@ export function CustomersPage() {
     setSegment('');
     setChurnRisk('');
     setTag('');
+    setTaxExempt('');
     setSort('recent_order');
   };
   const openCustomerDetail = (customerId: string) => {
@@ -168,7 +172,7 @@ export function CustomersPage() {
     window.history.pushState({}, '', url);
     setDetailCustomerId(null);
   };
-  const hasFilters = Boolean(search || segment || churnRisk || tag || sort !== 'recent_order');
+  const hasFilters = Boolean(search || segment || churnRisk || tag || taxExempt || sort !== 'recent_order');
   const selectedRows = rows.filter((row) => selected.has(row.id));
 
   return (
@@ -201,6 +205,7 @@ export function CustomersPage() {
         <Kpi label={t('customers.kpi_orders')} value={stats.data?.totalOrders ?? null} sub={t('customers.kpi_sub_orders')} />
         <Kpi label={t('customers.kpi_at_risk')} value={stats.data?.atRiskCount ?? null} sub={t('customers.kpi_sub_at_risk')} />
         <Kpi label={t('customers.kpi_vip')} value={stats.data?.vipCount ?? null} sub={t('customers.kpi_sub_vip')} />
+        <Kpi label="Tax exempt" value={stats.data?.taxExemptCount ?? null} sub="Shopify tax-exempt customers" />
       </div>
 
       <div className="customers-toolbar">
@@ -224,6 +229,11 @@ export function CustomersPage() {
         <select value={tag} aria-label={t('customers.filter_tag')} onChange={(event) => setTag(event.target.value)}>
           <option value="">{t('customers.filter_tag_all')}</option>
           {tagOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+        </select>
+        <select value={taxExempt} aria-label="Tax exempt filter" onChange={(event) => setTaxExempt(event.target.value)}>
+          <option value="">All tax statuses</option>
+          <option value="true">Tax exempt only</option>
+          <option value="false">Not tax exempt</option>
         </select>
         <select value={sort} aria-label={t('customers.sort_label')} onChange={(event) => setSort(event.target.value as (typeof SORTS)[number])}>
           {SORTS.map((value) => <option key={value} value={value}>{t(`customers.sort_${value}`)}</option>)}
@@ -299,6 +309,7 @@ export function CustomersPage() {
                     <div className="name">{customer.name ?? customer.companyName}</div>
                     <div className="muted">{customer.email ?? '—'}</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                      {customer.taxExempt && <span className="chip success">Tax exempt</span>}
                       {customer.tags.slice(0, 4).map((entry) => <span key={entry} className="chip">{entry}</span>)}
                     </div>
                   </td>
@@ -366,12 +377,13 @@ function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
 }
 
-function customerQuery(input: { search: string; segment: string; churnRisk: string; tag: string; sort: string }) {
+function customerQuery(input: { search: string; segment: string; churnRisk: string; tag: string; taxExempt: string; sort: string }) {
   const params = new URLSearchParams({ limit: '100', sort: input.sort });
   if (input.search.trim()) params.set('search', input.search.trim());
   if (input.segment) params.set('segment', input.segment);
   if (input.churnRisk) params.set('churnRisk', input.churnRisk);
   if (input.tag) params.set('tag', input.tag);
+  if (input.taxExempt) params.set('taxExempt', input.taxExempt);
   return `?${params.toString()}`;
 }
 

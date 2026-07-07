@@ -47,17 +47,39 @@ export class ShopifyCustomerSessionService {
 
     this.tenantContext.set({ tenantId: tenantConfig.tenantId });
 
-    const customer = await this.prisma.db.customer.findFirst({
+    let customer = await this.prisma.db.customer.findFirst({
       where: { shopifyCustomerId, status: { notIn: ['disabled', 'archived'] } },
       select: { id: true, email: true, companyName: true, firstName: true, lastName: true, phone: true, status: true },
     });
-    const customerUser = customer
+    let customerUser = customer
       ? await this.prisma.db.customerUser.findFirst({
           where: { customerId: customer.id, status: 'active' },
           orderBy: { updatedAt: 'desc' },
           select: { id: true, email: true, status: true },
         })
       : null;
+
+    if (!customerUser && customer?.email) {
+      const linkedUser = await this.prisma.db.customerUser.findFirst({
+        where: { email: { equals: customer.email, mode: 'insensitive' }, status: 'active' },
+        include: {
+          customer: {
+            select: { id: true, email: true, companyName: true, firstName: true, lastName: true, phone: true, status: true },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+      if (linkedUser?.customer?.status && !['disabled', 'archived'].includes(linkedUser.customer.status)) {
+        customer = linkedUser.customer;
+        customerUser = { id: linkedUser.id, email: linkedUser.email, status: linkedUser.status };
+        this.logger.log('accounts', 'shopify_customer_session.email_linked', 'Shopify customer session resolved through existing portal email', {
+          shopify_customer_id: shopifyCustomerId,
+          customer_id: customer.id,
+          customer_user_id: customerUser.id,
+          email: customer.email,
+        });
+      }
+    }
     const b2bAccessRequest = await this.prisma.db.b2BAccessRequest.findFirst({
       where: {
         OR: [

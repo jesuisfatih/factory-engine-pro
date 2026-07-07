@@ -151,6 +151,7 @@ export const customerCommerceQuerySchema = pageQuerySchema.extend({
   segment: z.string().trim().optional(),
   churnRisk: z.string().trim().optional(),
   tag: z.string().trim().optional(),
+  taxExempt: z.enum(['true', 'false']).optional(),
   sort: z.enum(['recent_order', 'total_spent', 'orders_count', 'health_score', 'name']).default('recent_order'),
 });
 export type CustomerCommerceQuery = z.infer<typeof customerCommerceQuerySchema>;

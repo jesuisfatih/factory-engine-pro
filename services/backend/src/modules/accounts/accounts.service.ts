@@ -1126,6 +1126,8 @@ export class AccountsService {
     const scopes: Prisma.CommerceOrderWhereInput[] = [{ customerId: actor.customerId }];
     if (actor.principalType === 'customer_user') scopes.push({ customerUserId: actor.principalId });
     if (actor.customer.shopifyCustomerId) scopes.push({ shopifyCustomerId: actor.customer.shopifyCustomerId });
+    const emails = uniqueStrings([actor.email, actor.customer.email]);
+    scopes.push(...emails.map((email) => ({ email: { equals: email, mode: Prisma.QueryMode.insensitive } })));
     return scopes;
   }
 
@@ -2302,6 +2304,10 @@ function stringValue(value: unknown) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
   return text || null;
+}
+
+function uniqueStrings(values: unknown[]) {
+  return Array.from(new Set(values.map(stringValue).filter((value): value is string => Boolean(value))));
 }
 
 function readablePropertyValue(value: unknown): string {

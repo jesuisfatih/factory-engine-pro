@@ -1207,6 +1207,11 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customers-table .chip {
   overflow-wrap: anywhere;
 }
+.customers-table .chip.success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
+}
 .customers-table .btn.ghost {
   width: 30px; height: 30px; padding: 0; justify-content: center;
 }

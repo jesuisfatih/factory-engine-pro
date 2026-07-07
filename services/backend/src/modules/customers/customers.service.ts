@@ -66,12 +66,13 @@ export class CustomersService {
 
   async stats(query: Partial<CustomerCommerceQuery> = {}) {
     const where = this.whereFromQuery({ limit: 100, sort: 'recent_order', ...query });
-    const [count, aggregate, atRiskCount, vipCount, dormantCount] = await Promise.all([
+    const [count, aggregate, atRiskCount, vipCount, dormantCount, taxExemptCount] = await Promise.all([
       this.repository.count(where),
       this.repository.aggregate(where),
       this.repository.count({ ...where, insight: { churnRisk: { in: ['high', 'critical'] } } }),
       this.repository.count({ ...where, insight: { clvTier: { in: ['vip', 'whale'] } } }),
       this.repository.count({ ...where, insight: { rfmSegment: 'dormant' } }),
+      this.repository.count(andWhere(where, taxExemptCustomerWhere(true))),
     ]);
     return {
       count,
@@ -81,6 +82,7 @@ export class CustomersService {
       atRiskCount,
       vipCount,
       dormantCount,
+      taxExemptCount,
     };
   }
 
@@ -727,6 +729,8 @@ export class CustomersService {
     if (query.segment) and.push({ insight: { rfmSegment: query.segment } });
     if (query.churnRisk) and.push({ insight: { churnRisk: query.churnRisk } });
     if (query.tag) and.push({ tags: { has: query.tag } });
+    if (query.taxExempt === 'true') and.push(taxExemptCustomerWhere(true));
+    if (query.taxExempt === 'false') and.push(taxExemptCustomerWhere(false));
     if (query.search) {
       and.push({
         OR: [
@@ -1013,6 +1017,7 @@ export class CustomersService {
       churnRisk: insight?.churnRisk ?? 'unknown',
       customerUserCount: customer._count.customerUsers,
       listCount: customer._count.listItems,
+      taxExempt: isTaxExemptCustomer(customer.rawData, customer.tags),
       syncedAt: customer.syncedAt?.toISOString() ?? null,
       updatedAt: customer.updatedAt.toISOString(),
     };
@@ -1254,6 +1259,39 @@ export class CustomersService {
 function money(value: unknown) {
   if (value === null || value === undefined) return 0;
   return Number(value);
+}
+
+function andWhere(...items: Prisma.CustomerWhereInput[]): Prisma.CustomerWhereInput {
+  const and = items.filter((item) => Object.keys(item).length > 0);
+  return and.length > 1 ? { AND: and } : and[0] ?? {};
+}
+
+function taxExemptCustomerWhere(expected: boolean): Prisma.CustomerWhereInput {
+  const positive: Prisma.CustomerWhereInput = {
+    OR: [
+      { rawData: { path: ['tax_exempt'], equals: true } },
+      { rawData: { path: ['taxExempt'], equals: true } },
+      { tags: { hasSome: ['tax-exempt', 'tax_exempt', 'Tax Exempt', 'tax exempt'] } },
+    ],
+  };
+  return expected ? positive : { NOT: positive };
+}
+
+function isTaxExemptCustomer(rawData: unknown, tagsValue: string[]) {
+  const data = jsonRecord(rawData);
+  const rawFlag = booleanish(data?.tax_exempt ?? data?.taxExempt);
+  if (rawFlag !== null) return rawFlag;
+  return tagsValue.some((tag) => ['tax-exempt', 'tax_exempt', 'tax exempt'].includes(tag.trim().toLowerCase()));
+}
+
+function booleanish(value: unknown) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lower = value.trim().toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+  }
+  return null;
 }
 
 function mapPersistedDetailOrder(order: {
