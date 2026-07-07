@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { AlertTriangle, FileText, Mail, PlayCircle, RefreshCw, Send, Users, Wand2 } from 'lucide-react';
+import { AlertTriangle, Code2, Eye, FileText, Mail, Monitor, PlayCircle, RefreshCw, Save, Send, Smartphone, Users, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
 import type { EmailTemplateAiEditMode, EmailTemplateAiEditProposalResponse, EmailTemplateDto, EmailTemplateWorkspaceResponse, MailAudienceFilterInput, MailAudiencePreviewResponse, MailAudienceSnapshotDiffResponse, MailAudienceSnapshotDto, MailAudienceSnapshotMembersResponse, MailCampaignDto, MailContactDetailDto, MailFlowSimulationResponse, MailFlowValidationResponse, MailFlowWebhookDestinationDto, MailMarketingAnalyticsCohortResponse, MailMarketingAnalyticsFunnelResponse, MailMarketingAnalyticsOverviewResponse, MailMarketingFlowDto, MailMarketingOverviewResponse, MailMarketingSettingsInput, MailProviderMode, MailTemplateBlockDto, MailTemplatePreviewProfileDto, MailTemplateSnippetDto, SaveEmailTemplateInput, SaveMailAudienceInput, SaveMailCampaignInput, SaveMailFlowInput, SaveMailFlowWebhookDestinationInput } from '@factory-engine-pro/contracts';
@@ -2233,6 +2233,193 @@ function TemplateAssistantPanel({
   );
 }
 
+function TemplateLiveEditorWorkspace({
+  detail,
+  canTemplateWrite,
+  editingRevisionId,
+  revisionSource,
+  revisionSourceDirty,
+  revisionPreview,
+  previewProfileVariables,
+  actionPending,
+  onEditRevision,
+  onRevisionSourceChange,
+  onSaveRevisionSource,
+  onPreviewRevision,
+}: {
+  detail: EmailTemplateDetail;
+  canTemplateWrite: boolean;
+  editingRevisionId: string;
+  revisionSource: { subject: string; previewText: string; html: string; css: string; text: string };
+  revisionSourceDirty: boolean;
+  revisionPreview: EmailTemplatePreviewResult | null;
+  previewProfileVariables: string;
+  actionPending: boolean;
+  onEditRevision: (version: EmailTemplateVersion) => void;
+  onRevisionSourceChange: (value: { subject: string; previewText: string; html: string; css: string; text: string }) => void;
+  onSaveRevisionSource: (revisionId: string) => void;
+  onPreviewRevision: (revisionId: string) => void;
+}) {
+  const versions = detail.versions.slice().sort((a, b) => b.versionNumber - a.versionNumber);
+  const version = versions.find((row) => row.id === editingRevisionId) ?? versions[0] ?? null;
+  if (!version) {
+    return <StateBlock title="No revision yet" body="Create a template revision before using the live editor workspace." />;
+  }
+
+  const isEditing = editingRevisionId === version.id;
+  const source = isEditing
+    ? revisionSource
+    : {
+        subject: version.subject,
+        previewText: version.previewText ?? '',
+        html: version.html,
+        css: version.css ?? '',
+        text: version.text ?? '',
+      };
+  const sourceBlockedReason = isEditing ? revisionSourceBlockedReason(revisionSource) : null;
+  const previewVariables = safePreviewVariables(previewProfileVariables);
+  const localHtml = applyLocalPreviewVariables(source.html, previewVariables.values);
+  const localCss = applyLocalPreviewVariables(source.css, previewVariables.values);
+  const savedPreview = revisionPreview?.revisionId === version.id ? revisionPreview : null;
+  const useSavedPreview = Boolean(savedPreview && !revisionSourceDirty);
+  const previewDocument = useSavedPreview ? savedPreview!.html : composeEmailPreviewDocument(localHtml, localCss);
+  const previewSubject = useSavedPreview ? savedPreview!.subject : applyLocalPreviewVariables(source.subject, previewVariables.values);
+  const previewText = useSavedPreview
+    ? savedPreview!.previewText
+    : applyLocalPreviewVariables(source.previewText, previewVariables.values);
+
+  return (
+    <section className="template-live-workspace">
+      <div className="template-live-header">
+        <div>
+          <div className="template-live-eyebrow"><Eye size={14} /> Live editor workspace</div>
+          <div className="template-live-title">{detail.name}</div>
+          <div className="template-live-subtitle">{detail.eventKey} - version {version.versionNumber}</div>
+        </div>
+        <div className="orders-toolbar" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <span className={`pill ${isEditing ? 'warn' : 'info'}`}>{isEditing ? 'Editing draft' : 'Read-only revision'}</span>
+          <span className={`pill ${useSavedPreview ? 'success' : revisionSourceDirty ? 'warn' : 'info'}`}>
+            {useSavedPreview ? 'Saved proof preview' : revisionSourceDirty ? 'Unsaved local preview' : 'Local preview'}
+          </span>
+          {savedPreview?.unresolvedVariables.length ? <span className="pill danger">{savedPreview.unresolvedVariables.length} missing values</span> : null}
+        </div>
+      </div>
+
+      <div className="template-workspace-grid">
+        <div className="template-editor-pane">
+          <div className="template-pane-title"><Code2 size={14} /> Source</div>
+          <div className="template-editor-scroll">
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Subject</label>
+              <input
+                value={source.subject}
+                disabled={!isEditing || actionPending}
+                onChange={(event) => onRevisionSourceChange({ ...revisionSource, subject: event.target.value })}
+              />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Preview text</label>
+              <input
+                value={source.previewText}
+                disabled={!isEditing || actionPending}
+                onChange={(event) => onRevisionSourceChange({ ...revisionSource, previewText: event.target.value })}
+              />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>HTML</label>
+              <textarea
+                className="template-source-textarea"
+                rows={13}
+                value={source.html}
+                disabled={!isEditing || actionPending}
+                spellCheck={false}
+                onChange={(event) => onRevisionSourceChange({ ...revisionSource, html: event.target.value })}
+              />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>CSS</label>
+              <textarea
+                className="template-source-textarea compact"
+                rows={5}
+                value={source.css}
+                disabled={!isEditing || actionPending}
+                spellCheck={false}
+                onChange={(event) => onRevisionSourceChange({ ...revisionSource, css: event.target.value })}
+              />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Text fallback</label>
+              <textarea
+                className="template-source-textarea compact"
+                rows={4}
+                value={source.text}
+                disabled={!isEditing || actionPending}
+                onChange={(event) => onRevisionSourceChange({ ...revisionSource, text: event.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="template-editor-actions">
+            {!isEditing ? (
+              <button className="btn primary" type="button" disabled={!canTemplateWrite || actionPending} onClick={() => onEditRevision(version)}>
+                Edit this version
+              </button>
+            ) : (
+              <>
+                <button className="btn primary" type="button" disabled={!canTemplateWrite || actionPending || Boolean(sourceBlockedReason)} onClick={() => onSaveRevisionSource(version.id)}>
+                  <Save size={14} /> Save source
+                </button>
+                <button className="btn" type="button" disabled={actionPending || revisionSourceDirty || revisionSource.html.trim().length < 1} onClick={() => onPreviewRevision(version.id)}>
+                  <Eye size={14} /> Render saved preview
+                </button>
+              </>
+            )}
+          </div>
+          {sourceBlockedReason && <div className="hint" style={{ color: 'var(--danger)' }}>{sourceBlockedReason}</div>}
+          {isEditing && revisionSourceDirty && <div className="hint">This preview updates locally while you type. Save source, then render saved preview before test proof or release.</div>}
+          {!previewVariables.ok && <div className="hint" style={{ color: 'var(--warning)' }}>Preview data JSON is invalid, so variables are shown as raw placeholders.</div>}
+        </div>
+
+        <div className="template-preview-pane">
+          <div className="template-preview-toolbar">
+            <div>
+              <div className="template-pane-title"><Monitor size={14} /> Preview</div>
+              <div className="template-preview-subject">{previewSubject || 'No subject'}</div>
+              {previewText && <div className="template-preview-text">{previewText}</div>}
+            </div>
+            <span className={`pill ${useSavedPreview ? 'success' : 'warn'}`}>{useSavedPreview ? 'Backend rendered' : 'Live local render'}</span>
+          </div>
+          {savedPreview?.unresolvedVariables.length ? (
+            <div className="error-state" style={{ marginBottom: 10 }}>
+              Missing preview values: {savedPreview.unresolvedVariables.join(', ')}
+            </div>
+          ) : null}
+          <div className="template-preview-devices">
+            <div className="template-preview-frame-shell desktop">
+              <div className="template-frame-label"><Monitor size={13} /> Desktop</div>
+              <iframe
+                title={`Email version ${version.versionNumber} live desktop preview`}
+                sandbox=""
+                srcDoc={previewDocument}
+                className="template-preview-frame"
+              />
+            </div>
+            <div className="template-preview-frame-shell mobile">
+              <div className="template-frame-label"><Smartphone size={13} /> Mobile</div>
+              <iframe
+                title={`Email version ${version.versionNumber} live mobile preview`}
+                sandbox=""
+                srcDoc={previewDocument}
+                className="template-preview-frame mobile"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TemplatesPanel({
   loading,
   rows,
@@ -2455,6 +2642,20 @@ function TemplatesPanel({
                 </div>
               )}
             </div>
+            <TemplateLiveEditorWorkspace
+              detail={detail}
+              canTemplateWrite={canTemplateWrite}
+              editingRevisionId={editingRevisionId}
+              revisionSource={revisionSource}
+              revisionSourceDirty={revisionSourceDirty}
+              revisionPreview={revisionPreview}
+              previewProfileVariables={previewProfileVariables}
+              actionPending={actionPending}
+              onEditRevision={onEditRevision}
+              onRevisionSourceChange={onRevisionSourceChange}
+              onSaveRevisionSource={onSaveRevisionSource}
+              onPreviewRevision={onPreviewRevision}
+            />
             <TemplateReleaseLane
               detail={detail}
               deliveryRows={deliveryRows}
@@ -4328,6 +4529,48 @@ function parsePreviewVariables(value: string) {
     throw new Error('Preview data must be a JSON object.');
   }
   return parsed as Record<string, unknown>;
+}
+
+function safePreviewVariables(value: string): { ok: boolean; values: Record<string, unknown> } {
+  try {
+    return { ok: true, values: parsePreviewVariables(value) };
+  } catch {
+    return { ok: false, values: {} };
+  }
+}
+
+function applyLocalPreviewVariables(source: string, variables: Record<string, unknown>) {
+  if (!source) return '';
+  return source.replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g, (match, path: string) => {
+    const value = readPreviewValue(variables, path);
+    if (value === undefined || value === null) return match;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return JSON.stringify(value);
+  });
+}
+
+function readPreviewValue(variables: Record<string, unknown>, path: string) {
+  return path.split('.').reduce<unknown>((current, part) => {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    return (current as Record<string, unknown>)[part];
+  }, variables);
+}
+
+function composeEmailPreviewDocument(html: string, css: string) {
+  const body = html.trim() || '<div style="padding:24px;color:#475569;">No HTML source yet.</div>';
+  const style = [
+    'body{margin:0;background:#f4f7fb;color:#111827;font-family:Arial,Helvetica,sans-serif;}',
+    'img{max-width:100%;height:auto;}',
+    'table{border-collapse:collapse;}',
+    css.trim(),
+  ].filter(Boolean).join('\n');
+  const headContent = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${style}</style>`;
+  if (/<html[\s>]/i.test(body)) {
+    if (/<head[\s>]/i.test(body)) return body.replace(/<head([^>]*)>/i, `<head$1>${headContent}`);
+    return body.replace(/<html([^>]*)>/i, `<html$1><head>${headContent}</head>`);
+  }
+  return `<!doctype html><html><head>${headContent}</head><body>${body}</body></html>`;
 }
 
 function stripHtml(value: string) {
