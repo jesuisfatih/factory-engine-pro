@@ -48,7 +48,7 @@ function PickupCard({ order, expanded, onToggle }: { order: PickupOrder; expande
                 {step.done ? <CheckCircle2 size={12} /> : <Circle size={12} />}
                 <div>
                   <div className="name">{step.label}</div>
-                  <div className="muted">{step.at ?? '—'}</div>
+                  <div className="muted">{step.at ?? '-'}</div>
                 </div>
               </li>
             ))}
@@ -72,7 +72,13 @@ function PickupCard({ order, expanded, onToggle }: { order: PickupOrder; expande
               {order.designFiles.map((file) => (
                 <li key={file.id}>
                   <FileImage size={11} /> {file.name}
-                  <a href={file.previewUrl}><ExternalLink size={11} /></a>
+                  {file.previewUrl ? (
+                    <a href={file.previewUrl} target="_blank" rel="noopener noreferrer" title="Open design preview">
+                      <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <span className="muted">Preview unavailable</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -141,8 +147,8 @@ function PickupView() {
                   <tr key={order.id}>
                     <td><strong>{order.orderNumber}</strong></td>
                     <td><span className="pill">{t(`pickup.status.${order.status}`)}</span></td>
-                    <td>{order.shelfCode ?? '—'}</td>
-                    <td className="muted">{order.pickupBy ?? '—'}</td>
+                    <td>{order.shelfCode ?? '-'}</td>
+                    <td className="muted">{order.pickupBy ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>

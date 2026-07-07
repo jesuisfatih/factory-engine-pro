@@ -32,7 +32,7 @@ function TrackingView() {
     return orders.filter((order) => {
       if (filter === 'in_transit' && order.status !== 'in_transit') return false;
       if (filter === 'delivered' && order.status !== 'delivered') return false;
-      if (text && !order.orderNumber.toLowerCase().includes(text)) return false;
+      if (text && !`${order.orderNumber} ${order.customerName} ${order.carrier} ${order.trackingNumber}`.toLowerCase().includes(text)) return false;
       return true;
     });
   }, [orders, search, filter]);
@@ -88,7 +88,7 @@ function TrackingView() {
                 <div className="name">{order.orderNumber}</div>
                 <div className="muted">{order.customerName}</div>
                 <div className="muted" style={{ fontSize: 10 }}>
-                  {order.trackingNumber !== '—' ? `${order.carrier} · ${order.trackingNumber}` : '—'}
+                  {hasTrackingNumber(order.trackingNumber) ? `${order.carrier} - ${order.trackingNumber}` : 'No tracking number yet'}
                 </div>
               </div>
               <span className={`pill ${STATUS_TONE[order.status]}`}>{t(`tracking.status.${order.status}`)}</span>
@@ -112,13 +112,13 @@ function TrackingView() {
                     <span className="ts-icon">{step.done ? <CheckCircle2 size={14} /> : <Circle size={14} />}</span>
                     <div>
                       <div className="name">{step.label}</div>
-                      <div className="muted">{step.at ?? '—'}</div>
+                      <div className="muted">{step.at ?? '-'}</div>
                     </div>
                   </li>
                 ))}
               </ol>
 
-              {selected.trackingNumber !== '—' && (
+              {hasTrackingNumber(selected.trackingNumber) && (
                 <div className="tracking-info">
                   <div>
                     <div className="label"><Truck size={11} /> {t('tracking.carrier')}</div>
@@ -128,9 +128,15 @@ function TrackingView() {
                     <div className="label"><Package size={11} /> {t('tracking.tracking_number')}</div>
                     <div className="val" style={{ fontFamily: 'ui-monospace, monospace' }}>{selected.trackingNumber}</div>
                   </div>
-                  <button type="button" className="btn">
-                    <ExternalLink size={12} /> {t('tracking.track_on_carrier')}
-                  </button>
+                  {selected.trackingUrl ? (
+                    <a className="btn" href={selected.trackingUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink size={12} /> {t('tracking.track_on_carrier')}
+                    </a>
+                  ) : (
+                    <button type="button" className="btn" disabled title="Carrier link is not available yet">
+                      <ExternalLink size={12} /> {t('tracking.track_on_carrier')}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -147,3 +153,8 @@ function TrackingView() {
 }
 
 export const Route = createFileRoute('/tracking')({ component: TrackingView });
+
+function hasTrackingNumber(value: string | null | undefined) {
+  const normalized = (value ?? '').trim();
+  return Boolean(normalized && normalized !== '-' && normalized !== '\u2014');
+}

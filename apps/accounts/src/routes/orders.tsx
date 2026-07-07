@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, ChevronDown, ChevronUp, FileText, RotateCw, Search } from 'lucide-react';
@@ -47,12 +47,22 @@ function ReorderNotice({ result }: { result: ReorderResult | null }) {
 }
 
 function OrderDetail({ orderId }: { orderId: string }) {
+  const queryClient = useQueryClient();
   const detail = useQuery({ queryKey: ['order-detail', orderId], queryFn: () => fetchBuyerOrder(orderId) });
   const [result, setResult] = useState<ReorderResult | null>(null);
-  const reorderAll = useMutation({ mutationFn: () => reorderOrder(orderId), onSuccess: setResult });
+  const reorderAll = useMutation({
+    mutationFn: () => reorderOrder(orderId),
+    onSuccess: (next) => {
+      setResult(next);
+      invalidateCartViews(queryClient);
+    },
+  });
   const reorderOne = useMutation({
     mutationFn: (lineItemId: string) => reorderLineItem(orderId, lineItemId),
-    onSuccess: setResult,
+    onSuccess: (next) => {
+      setResult(next);
+      invalidateCartViews(queryClient);
+    },
   });
 
   if (detail.isLoading) {
@@ -181,6 +191,7 @@ function OrderRow({ order, expanded, onToggle }: { order: BuyerOrder; expanded: 
 
 function OrdersView() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'all' | OrderStatusValue>('all');
   const [sort, setSort] = useState<'date' | 'total'>('date');
   const [search, setSearch] = useState('');
@@ -198,7 +209,13 @@ function OrdersView() {
     }),
   });
   const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates });
-  const quickReorder = useMutation({ mutationFn: (orderId: string) => reorderOrder(orderId), onSuccess: setQuickResult });
+  const quickReorder = useMutation({
+    mutationFn: (orderId: string) => reorderOrder(orderId),
+    onSuccess: (next) => {
+      setQuickResult(next);
+      invalidateCartViews(queryClient);
+    },
+  });
   const orders = orderPage?.data ?? [];
   const meta = orderPage?.meta ?? { count: 0, pageCount: 0, limit, cursor: null, nextCursor: null };
 
@@ -367,3 +384,8 @@ function OrdersView() {
 }
 
 export const Route = createFileRoute('/orders')({ component: OrdersView });
+
+function invalidateCartViews(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: ['active-cart'] });
+  void queryClient.invalidateQueries({ queryKey: ['home', 'cart'] });
+}

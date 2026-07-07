@@ -90,7 +90,9 @@ export function AccountsTeamPage() {
       roleIds: form.roleIds,
     }) as Promise<SubUser>,
     onSuccess: (subUser) => {
-      toast.success('Team member created', { description: subUser.invitation ? `Invite token: ${subUser.invitation.token}` : subUser.email });
+      toast.success('Team member created', {
+        description: subUser.invitation ? `Invitation sent to ${subUser.email}` : `${subUser.email} can sign in with the password you set.`,
+      });
       const defaultRole = rolesQuery.data?.find((role) => role.slug === 'b2b_user') ?? rolesQuery.data?.[0];
       setForm({
         firstName: '',

@@ -316,11 +316,11 @@ export function AccountsRegisterPanel() {
 
 export function AccountsForgotPasswordPanel() {
   const [email, setEmail] = useState('');
+  const [submittedEmail, setSubmittedEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [devToken, setDevToken] = useState<string | null>(null);
   const forgot = useMutation({
     mutationFn: () => accountsApi.forgotPassword({ email, surface: 'accounts' }),
-    onSuccess: (response: { devToken?: string }) => setDevToken(response.devToken ?? null),
+    onSuccess: () => setSubmittedEmail(email.trim()),
     onError: (err) => setError(apiErrorMessage(err)),
   });
   const submit = (event: React.FormEvent) => {
@@ -333,7 +333,7 @@ export function AccountsForgotPasswordPanel() {
     <div className="auth-card">
       <Brand />
       {forgot.isSuccess ? (
-        <SuccessPanel title="Check your inbox" body={devToken ? `Local reset token: ${devToken}` : `If ${email} exists, a reset link was queued.`} footer={<a className="auth-submit" href="/login" style={{ marginTop: 18, textDecoration: 'none' }}>Back to sign in</a>} />
+        <SuccessPanel title="Check your inbox" body={`If ${submittedEmail || email} exists, a reset link was sent to that inbox.`} footer={<a className="auth-submit" href="/login" style={{ marginTop: 18, textDecoration: 'none' }}>Back to sign in</a>} />
       ) : (
         <>
           <div className="auth-icon-circle"><KeyRound size={28} /></div>

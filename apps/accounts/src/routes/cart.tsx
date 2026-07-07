@@ -76,7 +76,10 @@ function CartView() {
   const queryClient = useQueryClient();
   const cartQuery = useQuery({ queryKey: QK, queryFn: fetchActiveCart });
   const cart = cartQuery.data ?? null;
-  const refresh = () => queryClient.invalidateQueries({ queryKey: QK });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: QK });
+    void queryClient.invalidateQueries({ queryKey: ['home', 'cart'] });
+  };
   const create = useMutation({
     mutationFn: () => createCart({ reason: 'Customer opened cart' }),
     onSuccess: () => { toast.success('Cart created'); refresh(); },

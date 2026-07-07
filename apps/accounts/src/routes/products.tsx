@@ -40,6 +40,7 @@ function ProductsView() {
     onSuccess: async () => {
       toast.success('Added to cart');
       await queryClient.invalidateQueries({ queryKey: ['active-cart'] });
+      await queryClient.invalidateQueries({ queryKey: ['home', 'cart'] });
     },
     onError: (error) => toast.error('Could not add item', { description: apiErrorMessage(error) }),
   });

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, RotateCw } from 'lucide-react';
@@ -28,10 +28,17 @@ function ReorderNotice({ result }: { result: ReorderResult | null }) {
 
 function ReorderView() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: templates = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchReorderTemplates });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [result, setResult] = useState<ReorderResult | null>(null);
-  const reorder = useMutation({ mutationFn: (orderId: string) => reorderOrder(orderId), onSuccess: setResult });
+  const reorder = useMutation({
+    mutationFn: (orderId: string) => reorderOrder(orderId),
+    onSuccess: (next) => {
+      setResult(next);
+      invalidateCartViews(queryClient);
+    },
+  });
 
   const selected: ReorderTemplate | null = templates.find((template) => template.id === selectedId) ?? templates[0] ?? null;
 
@@ -139,3 +146,8 @@ function ReorderView() {
 }
 
 export const Route = createFileRoute('/reorder')({ component: ReorderView });
+
+function invalidateCartViews(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: ['active-cart'] });
+  void queryClient.invalidateQueries({ queryKey: ['home', 'cart'] });
+}
