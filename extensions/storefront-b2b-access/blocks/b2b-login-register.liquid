@@ -1,9 +1,9 @@
 {% comment %}
   Factory Engine B2B Login Register
-  Storefront header app block. It keeps the legacy Eagle two-button behavior:
+  Storefront header app block. It keeps the legacy Eagle two-segment behavior:
   - Login opens the Factory Engine accounts portal through the Shopify app proxy.
   - Register opens the B2B request page with shop and customer email context.
-  The inline script only hydrates customer name, badge, and dynamic URLs.
+  The inline script only hydrates dynamic URLs.
 {% endcomment %}
 
 {% if block.settings.enabled %}
@@ -37,7 +37,6 @@
     --fe-b2b-font-weight: {{ block.settings.font_weight }};
     --fe-b2b-pad-x: {{ block.settings.padding_x }}px;
     --fe-b2b-pad-y: {{ block.settings.padding_y }}px;
-    --fe-b2b-badge: {{ block.settings.badge_color }};
   "
   {{ block.shopify_attributes }}
 >
@@ -57,11 +56,9 @@
         {% endif %}
       </svg>
       {% endif %}
-      <span data-role="name">{% if customer %}{{ block.settings.logged_in_text }}{% else %}{{ block.settings.logged_out_text }}{% endif %}</span>
-      <span class="fe-b2b-access__badge" data-role="badge">0</span>
+      <span data-role="name">{{ block.settings.logged_out_text }}</span>
     </a>
 
-    {% if block.settings.show_register %}
     <a
       class="fe-b2b-access__button fe-b2b-access__button--register"
       data-role="register"
@@ -70,7 +67,8 @@
     >
       <span>{{ block.settings.register_text }}</span>
     </a>
-    {% endif %}
+
+    <span class="fe-b2b-access__soon">{{ block.settings.coming_soon_text }}</span>
   </div>
 </div>
 
@@ -86,6 +84,7 @@
     align-items: stretch;
     max-width: 100%;
     overflow: hidden;
+    row-gap: 2px;
     padding: 2px;
     background: var(--fe-b2b-shell-bg, #ffffff);
     border: 1px solid var(--fe-b2b-border, #d8dee8);
@@ -131,29 +130,22 @@
   #{{ fe_block_id }} .fe-b2b-access__button--register[hidden] {
     display: none;
   }
-  #{{ fe_block_id }} .fe-b2b-access__control:has(.fe-b2b-access__button--register[hidden]) {
-    grid-template-columns: minmax(0, 1fr);
-  }
   #{{ fe_block_id }} .fe-b2b-access__icon {
     width: {{ block.settings.icon_size }}px;
     height: {{ block.settings.icon_size }}px;
     flex: 0 0 auto;
   }
-  #{{ fe_block_id }} .fe-b2b-access__badge {
-    display: none;
-    min-width: 18px;
-    height: 18px;
-    align-items: center;
-    justify-content: center;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: var(--fe-b2b-badge, #ef4444);
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 700;
-  }
-  #{{ fe_block_id }} .fe-b2b-access__badge.is-visible {
-    display: inline-flex;
+  #{{ fe_block_id }} .fe-b2b-access__soon {
+    grid-column: 1 / -1;
+    display: block;
+    padding: 0 8px 2px;
+    color: rgba(17, 24, 39, 0.58);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.15;
+    text-align: center;
+    white-space: nowrap;
   }
   @media (max-width: 420px) {
     #{{ fe_block_id }},
@@ -176,8 +168,6 @@
     var customerEmail = String(cfg.customerEmail || "");
     var loginBtn = root.querySelector('[data-role="login"]');
     var registerBtn = root.querySelector('[data-role="register"]');
-    var nameLabel = root.querySelector('[data-role="name"]');
-    var badge = root.querySelector('[data-role="badge"]');
 
     function withContext(url) {
       if (!url) return url;
@@ -198,33 +188,8 @@
       }
     }
 
-    function applySession(data) {
-      if (data && data.isAuthenticated && data.company && registerBtn) registerBtn.hidden = true;
-      if (data && data.user && nameLabel) {
-        var name = ((data.user.firstName || "") + " " + (data.user.lastName || "")).trim();
-        if (name) nameLabel.textContent = name;
-      } else if (data && data.company && data.company.name && nameLabel) {
-        nameLabel.textContent = data.company.name;
-      }
-    }
-
-    function applyDashboard(data) {
-      if (data && data.context && data.context.company && data.context.company.name && nameLabel) {
-        nameLabel.textContent = data.context.company.name;
-      }
-      if (data && data.stats && badge) {
-        var count = Number(data.stats.pendingCarts || 0) + Number(data.stats.invoicesDue || 0);
-        if (count > 0) {
-          badge.classList.add("is-visible");
-          badge.textContent = String(count);
-        }
-      }
-    }
-
     var query = "?shop=" + encodeURIComponent(shop) + (customerEmail ? "&email=" + encodeURIComponent(customerEmail) : "");
     fetch(proxy + "/features/b2b-context" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applyContext).catch(function () {});
-    fetch(proxy + "/session" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applySession).catch(function () {});
-    fetch(proxy + "/dashboard" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applyDashboard).catch(function () {});
   })();
 </script>
 {% endif %}
@@ -236,10 +201,10 @@
   "settings": [
     { "type": "checkbox", "id": "enabled", "label": "Enable B2B Login/Register", "default": true },
     { "type": "text", "id": "accounts_url", "label": "Accounts portal URL", "default": "https://accounts.dtfbank.com" },
-    { "type": "text", "id": "logged_in_text", "label": "Login text when linked", "default": "B2B Portal" },
+    { "type": "text", "id": "logged_in_text", "label": "Legacy linked login text", "default": "B2B Login" },
     { "type": "text", "id": "logged_out_text", "label": "Login text", "default": "B2B Login" },
-    { "type": "checkbox", "id": "show_register", "label": "Show register button", "default": true },
     { "type": "text", "id": "register_text", "label": "Register text", "default": "B2B Register" },
+    { "type": "text", "id": "coming_soon_text", "label": "Small note", "default": "Coming soon" },
     { "type": "checkbox", "id": "show_icon", "label": "Show icon", "default": true },
     { "type": "range", "id": "icon_size", "label": "Icon size", "min": 12, "max": 28, "step": 2, "default": 18 },
     { "type": "color", "id": "control_bg", "label": "Outer background", "default": "#ffffff" },
@@ -251,7 +216,6 @@
     { "type": "color", "id": "register_bg_color", "label": "Register background", "default": "#ffffff" },
     { "type": "color", "id": "register_bg_hover", "label": "Register background hover", "default": "#f4f7fb" },
     { "type": "color", "id": "register_text_color", "label": "Register text", "default": "#111827" },
-    { "type": "color", "id": "badge_color", "label": "Badge color", "default": "#ef4444" },
     { "type": "range", "id": "border_radius", "label": "Border radius", "min": 0, "max": 24, "step": 2, "default": 10 },
     { "type": "range", "id": "padding_x", "label": "Padding X", "min": 4, "max": 24, "step": 2, "default": 14 },
     { "type": "range", "id": "padding_y", "label": "Padding Y", "min": 4, "max": 16, "step": 2, "default": 8 },
