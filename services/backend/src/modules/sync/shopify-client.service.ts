@@ -53,9 +53,9 @@ export class ShopifyClientService {
       where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     }) : null;
-    const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
+    const shopifyDomain = normalizeShopDomain(tenantId ? config?.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
-    const envToken = config ? null : this.envAdminToken();
+    const envToken = tenantId ? null : this.envAdminToken();
     const source = tenantToken ? 'tenant_config' : envToken ? 'env' : 'none';
     const configured = Boolean(shopifyDomain && (tenantToken || envToken));
     return {
@@ -72,9 +72,9 @@ export class ShopifyClientService {
       where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     }) : null;
-    const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
+    const shopifyDomain = normalizeShopDomain(tenantId ? config?.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
-    const envToken = config ? null : this.envAdminToken();
+    const envToken = tenantId ? null : this.envAdminToken();
     const adminToken = tenantToken || envToken;
     if (!shopifyDomain || !adminToken) return null;
     return {
