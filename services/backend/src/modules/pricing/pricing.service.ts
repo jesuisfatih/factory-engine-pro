@@ -14,6 +14,7 @@ import { CryptoService } from '../../shared/crypto.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { PRICING_RULE_SYNC_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { MailService } from '../mail/mail.service.js';
 import { PricingCalculatorService } from './pricing-calculator.service.js';
 import { type PricingRuleWithRelations, PricingRepository } from './pricing.repository.js';
 import {
@@ -33,6 +34,7 @@ export class PricingService {
     private readonly tenantContext: TenantContextService,
     private readonly crypto: CryptoService,
     private readonly logger: AppLogger,
+    private readonly mail: MailService,
     @Inject(PRICING_RULE_SYNC_QUEUE) private readonly syncQueue: Queue | null,
   ) {}
 
@@ -61,6 +63,7 @@ export class PricingService {
       shopifySyncState: syncState,
     });
     await this.enqueueSyncIfNeeded(rule);
+    await this.notifyCustomPricingChanged([rule], `created:${rule.id}:${rule.updatedAt.toISOString()}`);
     this.logger.log('pricing', 'create_rule', 'Pricing rule created', { rule_id: rule.id, execution_mode: executionMode });
     return this.mapRule(await this.repository.getRequired(rule.id), true);
   }
@@ -80,6 +83,7 @@ export class PricingService {
       shopifySyncError: null,
     });
     await this.enqueueSyncIfNeeded(rule);
+    await this.notifyCustomPricingChanged([existing, rule], `updated:${rule.id}:${rule.updatedAt.toISOString()}`);
     return this.mapRule(rule, true);
   }
 
@@ -96,6 +100,7 @@ export class PricingService {
       shopifySyncError: null,
     });
     await this.enqueueSyncIfNeeded(rule);
+    await this.notifyCustomPricingChanged([rule], `toggled:${rule.id}:${rule.updatedAt.toISOString()}`);
     return this.mapRule(rule, true);
   }
 
@@ -197,6 +202,43 @@ export class PricingService {
     }
     const tenantId = this.tenantContext.require().tenantId;
     await this.syncQueue.add(PRICING_RULE_SYNC_JOB, { tenantId, ruleId: rule.id }, { attempts: 3, backoff: { type: 'exponential', delay: 10_000 } });
+  }
+
+  private async notifyCustomPricingChanged(rules: PricingRuleWithRelations[], eventId: string) {
+    const recipients = new Map<string, { email: string; firstName: string; lastName: string; rule: PricingRuleWithRelations }>();
+    for (const rule of rules) {
+      if (!isCustomerSpecificPricing(rule)) continue;
+      for (const recipient of await this.pricingRecipients(rule)) {
+        recipients.set(`${recipient.email.toLowerCase()}:${rule.id}`, { ...recipient, rule });
+      }
+    }
+    if (!recipients.size) return;
+    try {
+      await Promise.all([...recipients.values()].map((recipient) => this.mail.sendCustomPricingChanged({
+        to: recipient.email,
+        recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+        eventId: `${eventId}:${recipient.rule.id}`,
+        pricingName: recipient.rule.name,
+        pricingSummary: pricingSummary(recipient.rule),
+        active: recipient.rule.isActive,
+      })));
+    } catch (error) {
+      this.logger.warn('pricing', 'custom_pricing_mail_failed', 'Pricing change was saved but a customer notification could not be queued.', {
+        event_id: eventId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private async pricingRecipients(rule: PricingRuleWithRelations) {
+    if (rule.targetCustomerUser) return [rule.targetCustomerUser];
+    if (!rule.targetCustomerId) return [];
+    return this.prisma.db.customerUser.findMany({
+      where: { customerId: rule.targetCustomerId, status: 'active' },
+      select: { email: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      take: 25,
+    });
   }
 
   private async shopifyCredentials() {
@@ -378,6 +420,17 @@ export class PricingService {
 
 function discountCode(rule: PricingRuleWithRelations) {
   return `FEP-${rule.id.replace(/^prule_/, '').slice(0, 10).toUpperCase()}`;
+}
+
+function isCustomerSpecificPricing(rule: PricingRuleWithRelations) {
+  return rule.targetType === 'customer' && Boolean(rule.targetCustomerId || rule.targetCustomerUserId);
+}
+
+function pricingSummary(rule: PricingRuleWithRelations) {
+  if (rule.discountType === 'percentage') return `${money(rule.discountPercentage)}% account discount`;
+  if (rule.discountType === 'fixed_amount') return `A fixed amount adjustment applies to eligible items`;
+  if (rule.discountType === 'fixed_price') return `A fixed account price applies to eligible items`;
+  return 'Your account pricing was updated.';
 }
 
 function money(value: unknown) {

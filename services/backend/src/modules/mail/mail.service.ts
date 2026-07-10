@@ -1774,6 +1774,57 @@ export class MailService {
     });
   }
 
+  async sendCustomPricingChanged(input: {
+    to: string;
+    recipientName: string;
+    eventId: string;
+    pricingName: string;
+    pricingSummary: string;
+    active: boolean;
+  }) {
+    const brand = await this.resolveBrandName();
+    const portalUrl = `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/products`;
+    const changeLabel = input.active ? 'is now available' : 'is no longer active';
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.custom_pricing_changed.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        pricing_name: input.pricingName,
+        pricing_summary: input.pricingSummary,
+        pricing_active: input.active,
+        pricing_status: changeLabel,
+        portal_url: portalUrl,
+        action_url: portalUrl,
+      },
+      fallback: {
+        subject: `${brand} pricing update`,
+        html: [
+          `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+          `<p>Your account pricing <strong>${escapeHtml(input.pricingName)}</strong> ${escapeHtml(changeLabel)}.</p>`,
+          `<p>${escapeHtml(input.pricingSummary)}</p>`,
+          portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">Review account pricing</a></p>` : '',
+        ].filter(Boolean).join(''),
+        text: `Hello ${input.recipientName}, your account pricing ${input.pricingName} ${changeLabel}. ${input.pricingSummary}${portalUrl ? ` Review account pricing: ${portalUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'b2b.custom_pricing_changed.user',
+      category: 'system.b2b',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `pricing:changed:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: { pricingName: input.pricingName, active: input.active, templateSource: rendered.templateSource },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'
