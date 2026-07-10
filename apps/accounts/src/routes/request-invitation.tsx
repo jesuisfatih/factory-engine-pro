@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
-import { useWorkspaceBrand, workspaceName } from '@/lib/workspace-brand';
+import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 type FieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password';
 
@@ -186,6 +186,7 @@ const DEFAULT_GRADIENT_TO = '#F8FBFF';
 function RequestInvitationView() {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
+  const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const logoUrl = brandQuery.data?.brandLogo ?? '';
   const search = useMemo(() => currentSearchParams(), []);
   const shop = normalizeShopDomain(search.get('shop') || search.get('store') || '');
@@ -502,7 +503,7 @@ function RequestInvitationView() {
                     style={{ maxWidth: 140, maxHeight: 50, objectFit: 'contain', marginBottom: 10 }}
                   />
                 ) : (
-                  <span style={{ fontSize: 44 }}>E</span>
+                  <span style={{ fontSize: 44 }}>{brandBadge}</span>
                 )}
                 <h3 style={{ fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: 22, lineHeight: 1.3, letterSpacing: -0.3 }}>
                   {heroTitle}

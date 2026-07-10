@@ -130,17 +130,29 @@ export class MailService {
     });
 
     if (this.outboundQueue) {
-      await this.outboundQueue.add(
-        MAIL_OUTBOUND_JOB,
-        { tenantId: context.tenantId, deliveryId: delivery.id },
-        { attempts: 3, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 100, removeOnFail: 100 },
-      );
-      this.logger.log('mail', 'queued', 'Transactional email queued', { mail_delivery_id: delivery.id, event_key: input.eventKey });
-      return delivery;
+      try {
+        await this.outboundQueue.add(
+          MAIL_OUTBOUND_JOB,
+          { tenantId: context.tenantId, deliveryId: delivery.id },
+          { attempts: 3, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 100, removeOnFail: 100 },
+        );
+        this.logger.log('mail', 'queued', 'Transactional email queued', { mail_delivery_id: delivery.id, event_key: input.eventKey });
+        return delivery;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        await this.repository.markFailed(delivery.id, `Unable to queue email: ${message}`);
+        await this.recordDlq(delivery.id, `Unable to queue email: ${message}`);
+        this.logger.error('mail', 'queue_failed', message, { mail_delivery_id: delivery.id, event_key: input.eventKey });
+        return (await this.repository.findById(delivery.id)) ?? delivery;
+      }
     }
 
     this.logger.warn('mail', 'queue_missing', 'REDIS_URL is not configured; sending mail inline', { mail_delivery_id: delivery.id });
-    return this.deliverQueued(delivery.id);
+    try {
+      return await this.deliverQueued(delivery.id);
+    } catch {
+      return (await this.repository.findById(delivery.id)) ?? delivery;
+    }
   }
 
   async recordDisabledDelivery(input: TransactionalMailInput & {

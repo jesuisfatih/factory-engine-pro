@@ -491,6 +491,33 @@ export function MailMarketingPage() {
   }, [selectedTemplateId]);
 
   useEffect(() => {
+    if (selectedTemplateId) return;
+    const rows = (templateWorkspace.data?.templates ?? templates.data ?? []) as EmailTemplate[];
+    if (rows.length === 0) return;
+    const preferred = rows.find((row) => row.activeBinding)
+      ?? rows.find((row) => row.publishedVersionId)
+      ?? rows[0];
+    setSelectedTemplateId(preferred.id);
+  }, [selectedTemplateId, templateWorkspace.data?.templates, templates.data]);
+
+  useEffect(() => {
+    const detail = templateDetail.data;
+    if (!detail || editingRevisionId) return;
+    const version = detail.versions.find((row) => row.id === detail.activeBinding?.templateVersionId)
+      ?? detail.versions.find((row) => row.id === detail.publishedVersionId)
+      ?? detail.versions.slice().sort((left, right) => right.versionNumber - left.versionNumber)[0];
+    if (!version) return;
+    setEditingRevisionId(version.id);
+    setRevisionSource({
+      subject: version.subject,
+      previewText: version.previewText ?? '',
+      html: version.html,
+      css: version.css ?? '',
+      text: version.text ?? '',
+    });
+  }, [editingRevisionId, templateDetail.data]);
+
+  useEffect(() => {
     const rows = previewProfiles.data ?? [];
     if (selectedPreviewProfileId || rows.length === 0) return;
     const profile = rows.find((row) => row.isDefault) ?? rows[0];

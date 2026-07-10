@@ -159,6 +159,14 @@ export class B2BAccessService {
       email: request.email,
       shopifyCustomerId,
     });
+    await this.repository.update(id, {
+      status: 'approved',
+      reviewedAt: new Date(),
+      reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
+      resolvedCustomerId: customer.id,
+      resolvedCustomerUserId: user.id,
+      ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
+    });
     const delivery = await this.mail.sendB2BApplicationApproved({
       to: user.email,
       recipientName: `${user.firstName} ${user.lastName}`.trim(),
@@ -167,14 +175,6 @@ export class B2BAccessService {
       customerId: customer.id,
       customerUserId: user.id,
       existingPortalAccount: Boolean(existingUser),
-    });
-    await this.repository.update(id, {
-      status: 'approved',
-      reviewedAt: new Date(),
-      reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
-      resolvedCustomerId: customer.id,
-      resolvedCustomerUserId: user.id,
-      ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
     });
     this.logger.log('b2b_access', 'approve', 'B2B access request approved', {
       b2b_request_id: id,
@@ -197,18 +197,18 @@ export class B2BAccessService {
     const request = await this.repository.findById(id);
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
+    await this.repository.update(id, {
+      status: 'rejected',
+      reviewedAt: new Date(),
+      reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
+      reviewNotes: input.reviewNotes ?? null,
+    });
     const decisionDelivery = await this.mail.sendB2BApplicationRejected({
       to: request.email,
       recipientName: `${request.firstName} ${request.lastName}`.trim(),
       companyName: request.companyName,
       reviewNotes: input.reviewNotes,
       requestId: request.id,
-    });
-    await this.repository.update(id, {
-      status: 'rejected',
-      reviewedAt: new Date(),
-      reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
-      reviewNotes: input.reviewNotes ?? null,
     });
     this.logger.log('b2b_access', 'reject', 'B2B access request rejected', {
       b2b_request_id: id,
