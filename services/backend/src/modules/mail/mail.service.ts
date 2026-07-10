@@ -77,6 +77,12 @@ type SupportTicketEventKey =
   | 'support.reply_added.internal'
   | 'support.ticket_closed.user';
 
+type TaxExemptEventKey =
+  | 'tax_exempt.request_received.user'
+  | 'tax_exempt.request_received.internal'
+  | 'tax_exempt.request_approved.user'
+  | 'tax_exempt.request_rejected.user';
+
 export interface ResendWebhookInput {
   tenantSlug: string;
   rawBody: string;
@@ -1825,6 +1831,51 @@ export class MailService {
     });
   }
 
+  async sendTaxExemptEvent(input: {
+    eventKey: TaxExemptEventKey;
+    eventId: string;
+    to: string;
+    recipientName: string;
+    companyName: string;
+    requestId: string;
+    applicantEmail?: string | null;
+    reviewNotes?: string | null;
+    actionUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const fallback = taxExemptFallback(input, brand);
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: input.eventKey,
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        company_name: input.companyName,
+        applicant_email: input.applicantEmail ?? '',
+        email: input.applicantEmail ?? input.to,
+        request_id: input.requestId,
+        review_notes: input.reviewNotes ?? '',
+        login_url: input.actionUrl ?? '',
+        admin_url: input.actionUrl ?? '',
+        action_url: input.actionUrl ?? '',
+      },
+      fallback,
+    });
+    return this.sendTransactional({
+      eventKey: input.eventKey,
+      category: 'system.b2b',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `tax_exempt:${input.eventKey}:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: { requestId: input.requestId, companyName: input.companyName, templateSource: rendered.templateSource },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'
@@ -2433,6 +2484,45 @@ function supportTicketFallback(input: {
     subject: copy.subject,
     html,
     text: [copy.lead, message, actionUrl ? `Open request: ${actionUrl}` : ''].filter(Boolean).join('\n\n'),
+  };
+}
+
+function taxExemptFallback(input: {
+  eventKey: TaxExemptEventKey;
+  companyName: string;
+  requestId: string;
+  reviewNotes?: string | null;
+  actionUrl?: string | null;
+}, brand: string) {
+  const states: Record<TaxExemptEventKey, { subject: string; body: string }> = {
+    'tax_exempt.request_received.user': {
+      subject: `We received your ${brand} tax exemption request`,
+      body: `We received the tax exemption request for ${input.companyName}.`,
+    },
+    'tax_exempt.request_received.internal': {
+      subject: `New tax exemption request: ${input.companyName}`,
+      body: `A tax exemption request for ${input.companyName} needs review.`,
+    },
+    'tax_exempt.request_approved.user': {
+      subject: `${brand} tax exemption request approved`,
+      body: `The tax exemption request for ${input.companyName} was approved.`,
+    },
+    'tax_exempt.request_rejected.user': {
+      subject: `Update on your ${brand} tax exemption request`,
+      body: `The tax exemption request for ${input.companyName} was not approved at this time.`,
+    },
+  };
+  const copy = states[input.eventKey];
+  const html = [
+    `<p>${escapeHtml(copy.body)}</p>`,
+    input.reviewNotes ? `<p>${escapeHtml(input.reviewNotes)}</p>` : '',
+    `<p>Reference: ${escapeHtml(input.requestId)}</p>`,
+    input.actionUrl ? `<p><a href="${escapeHtml(input.actionUrl)}">Open account</a></p>` : '',
+  ].filter(Boolean).join('');
+  return {
+    subject: copy.subject,
+    html,
+    text: [copy.body, input.reviewNotes ?? '', `Reference: ${input.requestId}`, input.actionUrl ? `Open account: ${input.actionUrl}` : ''].filter(Boolean).join('\n\n'),
   };
 }
 

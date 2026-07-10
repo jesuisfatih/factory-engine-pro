@@ -204,23 +204,6 @@ export class StorefrontFormsService {
       shopifyCustomerId: optional(body.shopifyCustomerId),
     }, firstFile(filesByField.taxCertificate));
 
-    await this.sendFormSubmittedEmails(form, {
-      form_name: form.name,
-      form_handle: form.handle,
-      submitter_name: `${body.firstName || ''} ${body.lastName || ''}`.trim(),
-      submitter_email: body.email,
-      customer_name: `${body.firstName || ''} ${body.lastName || ''}`.trim(),
-      customer_email: body.email,
-      company_name: body.companyName,
-      request_summary: this.buildFormRequestSummary(form, body, filesByField),
-      field_summary_html: this.buildFormFieldSummaryHtml(form, body, filesByField),
-      source_surface: form.routing.sourceSurface || 'storefront-form',
-      source_path: body.sourcePath || '',
-      source_url: body.sourceUrl || '',
-      admin_url: this.adminUrl('/b2b-applications'),
-      action_url: this.adminUrl('/b2b-applications'),
-    });
-
     return {
       success: true,
       title: form.successTitle,

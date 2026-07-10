@@ -90,6 +90,7 @@ export class B2BAccessService {
       sourceSurface: input.sourceSurface ?? 'accounts-request-invitation',
       sourcePath: input.sourcePath ?? null,
       sourceUrl: input.sourceUrl ?? null,
+      formHandle: input.formHandle ?? null,
     });
     return {
       success: true,
@@ -167,15 +168,26 @@ export class B2BAccessService {
       resolvedCustomerUserId: user.id,
       ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
     });
-    const delivery = await this.mail.sendB2BApplicationApproved({
-      to: user.email,
-      recipientName: `${user.firstName} ${user.lastName}`.trim(),
-      companyName: request.companyName,
-      requestId: request.id,
-      customerId: customer.id,
-      customerUserId: user.id,
-      existingPortalAccount: Boolean(existingUser),
-    });
+    const delivery = isTaxExemptRequest(request)
+      ? await this.mail.sendTaxExemptEvent({
+        eventKey: 'tax_exempt.request_approved.user',
+        eventId: request.id,
+        to: user.email,
+        recipientName: `${user.firstName} ${user.lastName}`.trim() || user.email,
+        companyName: request.companyName,
+        requestId: request.id,
+        applicantEmail: request.email,
+        actionUrl: `${(process.env.ACCOUNTS_URL ?? '').replace(/\/+$/, '')}/login`,
+      })
+      : await this.mail.sendB2BApplicationApproved({
+        to: user.email,
+        recipientName: `${user.firstName} ${user.lastName}`.trim(),
+        companyName: request.companyName,
+        requestId: request.id,
+        customerId: customer.id,
+        customerUserId: user.id,
+        existingPortalAccount: Boolean(existingUser),
+      });
     this.logger.log('b2b_access', 'approve', 'B2B access request approved', {
       b2b_request_id: id,
       customer_id: customer.id,
@@ -203,13 +215,25 @@ export class B2BAccessService {
       reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
       reviewNotes: input.reviewNotes ?? null,
     });
-    const decisionDelivery = await this.mail.sendB2BApplicationRejected({
-      to: request.email,
-      recipientName: `${request.firstName} ${request.lastName}`.trim(),
-      companyName: request.companyName,
-      reviewNotes: input.reviewNotes,
-      requestId: request.id,
-    });
+    const decisionDelivery = isTaxExemptRequest(request)
+      ? await this.mail.sendTaxExemptEvent({
+        eventKey: 'tax_exempt.request_rejected.user',
+        eventId: request.id,
+        to: request.email,
+        recipientName: `${request.firstName} ${request.lastName}`.trim() || request.email,
+        companyName: request.companyName,
+        requestId: request.id,
+        applicantEmail: request.email,
+        reviewNotes: input.reviewNotes,
+        actionUrl: `${(process.env.ACCOUNTS_URL ?? '').replace(/\/+$/, '')}/request-invitation`,
+      })
+      : await this.mail.sendB2BApplicationRejected({
+        to: request.email,
+        recipientName: `${request.firstName} ${request.lastName}`.trim(),
+        companyName: request.companyName,
+        reviewNotes: input.reviewNotes,
+        requestId: request.id,
+      });
     this.logger.log('b2b_access', 'reject', 'B2B access request rejected', {
       b2b_request_id: id,
       mail_delivery_id: decisionDelivery.id,
@@ -291,9 +315,33 @@ export class B2BAccessService {
     sourceSurface?: string | null;
     sourcePath?: string | null;
     sourceUrl?: string | null;
+    formHandle?: string | null;
   }) {
     const applicantName = `${input.firstName} ${input.lastName}`.trim() || input.email;
     try {
+      if (input.formHandle === 'tax-exempt-for-businesses') {
+        await this.mail.sendTaxExemptEvent({
+          eventKey: 'tax_exempt.request_received.user',
+          eventId: input.requestId,
+          to: input.email,
+          recipientName: applicantName,
+          companyName: input.companyName,
+          requestId: input.requestId,
+          applicantEmail: input.email,
+        });
+        const recipients = await this.repository.listInternalReviewRecipients();
+        await Promise.all(recipients.map((recipient) => this.mail.sendTaxExemptEvent({
+          eventKey: 'tax_exempt.request_received.internal',
+          eventId: input.requestId,
+          to: recipient.email,
+          recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+          companyName: input.companyName,
+          requestId: input.requestId,
+          applicantEmail: input.email,
+          actionUrl: `${(process.env.ADMIN_URL ?? process.env.ADMIN_APP_URL ?? '').replace(/\/+$/, '')}/b2b-access`,
+        })));
+        return;
+      }
       await this.mail.sendB2BApplicationReceived({
         to: input.email,
         recipientName: applicantName,
@@ -328,6 +376,13 @@ export class B2BAccessService {
 
 function cleanMetadata(metadata: Record<string, unknown>) {
     return Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '')) as unknown as Prisma.InputJsonValue;
+}
+
+function isTaxExemptRequest(request: { metadata: unknown }) {
+  const metadata = request.metadata && typeof request.metadata === 'object' && !Array.isArray(request.metadata)
+    ? request.metadata as Record<string, unknown>
+    : {};
+  return metadata.formHandle === 'tax-exempt-for-businesses';
 }
 
 function cleanOptionalString(value: string | undefined) {
