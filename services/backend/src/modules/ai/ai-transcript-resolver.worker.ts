@@ -1,4 +1,5 @@
 import { HttpException, Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   transcriptResolverOutputSchema,
@@ -14,6 +15,7 @@ import {
   AI_TRANSCRIPT_RESOLVER_JOB,
   AI_TRANSCRIPT_RESOLVER_QUEUE_NAME,
   REDIS_CONNECTION,
+  queueName,
 } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -50,6 +52,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -58,7 +61,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
       return;
     }
     this.worker = new Worker<ResolverJobData>(
-      AI_TRANSCRIPT_RESOLVER_QUEUE_NAME,
+      queueName(this.config, AI_TRANSCRIPT_RESOLVER_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection, concurrency: 2 },
     );

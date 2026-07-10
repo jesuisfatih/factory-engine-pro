@@ -1,7 +1,8 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
-import { REDIS_CONNECTION } from '../../shared/queue.module.js';
+import { PRICING_RULE_SYNC_QUEUE_NAME, REDIS_CONNECTION, queueName } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { PricingService } from './pricing.service.js';
 import { PRICING_RULE_SYNC_JOB } from './pricing-sync.constants.js';
@@ -15,6 +16,7 @@ export class PricingSyncWorker implements OnModuleInit, OnModuleDestroy {
     private readonly pricing: PricingService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -23,7 +25,7 @@ export class PricingSyncWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker(
-      'pricing-rule-sync',
+      queueName(this.config, PRICING_RULE_SYNC_QUEUE_NAME),
       async (job) => {
         if (job.name !== PRICING_RULE_SYNC_JOB) return;
         const tenantId = String(job.data?.tenantId ?? '');

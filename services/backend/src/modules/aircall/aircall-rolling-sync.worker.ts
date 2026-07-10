@@ -8,6 +8,7 @@ import {
   AIRCALL_ROLLING_SYNC_QUEUE,
   AIRCALL_ROLLING_SYNC_QUEUE_NAME,
   REDIS_CONNECTION,
+  queueName,
 } from '../../shared/queue.module.js';
 import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -39,7 +40,7 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker<AircallRollingSyncJobData>(
-      AIRCALL_ROLLING_SYNC_QUEUE_NAME,
+      queueName(this.config, AIRCALL_ROLLING_SYNC_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection },
     );

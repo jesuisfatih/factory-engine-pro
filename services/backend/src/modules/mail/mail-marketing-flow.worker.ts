@@ -1,10 +1,12 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
 import {
   MAIL_MARKETING_FLOW_JOB,
   MAIL_MARKETING_FLOW_QUEUE_NAME,
   REDIS_CONNECTION,
+  queueName,
 } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { MailMarketingService } from './mail-marketing.service.js';
@@ -24,6 +26,7 @@ export class MailMarketingFlowWorker implements OnModuleInit, OnModuleDestroy {
     private readonly marketing: MailMarketingService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -32,7 +35,7 @@ export class MailMarketingFlowWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker<MailMarketingFlowJobData>(
-      MAIL_MARKETING_FLOW_QUEUE_NAME,
+      queueName(this.config, MAIL_MARKETING_FLOW_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection },
     );

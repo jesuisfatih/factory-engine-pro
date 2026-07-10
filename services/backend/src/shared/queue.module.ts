@@ -15,10 +15,15 @@ export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
 export const ROLLING_BACKFILL_QUEUE = Symbol('ROLLING_BACKFILL_QUEUE');
 export const WORKFLOW_SCHEDULED_ACTION_QUEUE = Symbol('WORKFLOW_SCHEDULED_ACTION_QUEUE');
+export const AUTH_EVENTS_QUEUE_NAME = 'auth.events';
+export const PRICING_RULE_SYNC_QUEUE_NAME = 'pricing-rule-sync';
+export const MAIL_OUTBOUND_QUEUE_NAME = 'mail-outbound';
+export const AIRCALL_INGEST_QUEUE_NAME = 'aircall-ingest';
 export const AI_TRANSCRIPT_RESOLVER_QUEUE_NAME = 'ai-transcript-resolver';
 export const AI_TRANSCRIPT_RESOLVER_JOB = 'resolve';
 export const AIRCALL_ROLLING_SYNC_QUEUE_NAME = 'aircall-rolling-sync';
 export const AIRCALL_ROLLING_SYNC_JOB = 'rolling_sync';
+export const SHOPIFY_SYNC_QUEUE_NAME = 'shopify-sync';
 export const SEGMENT_EVALUATION_QUEUE_NAME = 'segment-evaluation';
 export const SEGMENT_EVALUATION_JOB = 'segment_evaluation_job';
 export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
@@ -44,98 +49,98 @@ export const MAIL_MARKETING_CAMPAIGN_JOB = 'queue-campaign';
     },
     {
       provide: AUTH_EVENTS_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue('auth.events', { connection });
+        return new Queue(queueName(config, AUTH_EVENTS_QUEUE_NAME), { connection });
       },
     },
     {
       provide: PRICING_RULE_SYNC_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue('pricing-rule-sync', { connection });
+        return new Queue(queueName(config, PRICING_RULE_SYNC_QUEUE_NAME), { connection });
       },
     },
     {
       provide: MAIL_OUTBOUND_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue('mail-outbound', { connection });
+        return new Queue(queueName(config, MAIL_OUTBOUND_QUEUE_NAME), { connection });
       },
     },
     {
       provide: MAIL_MARKETING_FLOW_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(MAIL_MARKETING_FLOW_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, MAIL_MARKETING_FLOW_QUEUE_NAME), { connection });
       },
     },
     {
       provide: MAIL_MARKETING_CAMPAIGN_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(MAIL_MARKETING_CAMPAIGN_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, MAIL_MARKETING_CAMPAIGN_QUEUE_NAME), { connection });
       },
     },
     {
       provide: AIRCALL_INGEST_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue('aircall-ingest', { connection });
+        return new Queue(queueName(config, AIRCALL_INGEST_QUEUE_NAME), { connection });
       },
     },
     {
       provide: AIRCALL_ROLLING_SYNC_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(AIRCALL_ROLLING_SYNC_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, AIRCALL_ROLLING_SYNC_QUEUE_NAME), { connection });
       },
     },
     {
       provide: AI_TRANSCRIPT_RESOLVER_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(AI_TRANSCRIPT_RESOLVER_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, AI_TRANSCRIPT_RESOLVER_QUEUE_NAME), { connection });
       },
     },
     {
       provide: SHOPIFY_SYNC_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue('shopify-sync', { connection });
+        return new Queue(queueName(config, SHOPIFY_SYNC_QUEUE_NAME), { connection });
       },
     },
     {
       provide: SEGMENT_EVALUATION_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(SEGMENT_EVALUATION_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, SEGMENT_EVALUATION_QUEUE_NAME), { connection });
       },
     },
     {
       provide: ROLLING_BACKFILL_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(ROLLING_BACKFILL_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, ROLLING_BACKFILL_QUEUE_NAME), { connection });
       },
     },
     {
       provide: WORKFLOW_SCHEDULED_ACTION_QUEUE,
-      inject: [REDIS_CONNECTION],
-      useFactory: (connection: ConnectionOptions | null) => {
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
         if (!connection) return null;
-        return new Queue(WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME, { connection });
+        return new Queue(queueName(config, WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME), { connection });
       },
     },
   ],
@@ -156,6 +161,25 @@ export const MAIL_MARKETING_CAMPAIGN_JOB = 'queue-campaign';
   ],
 })
 export class QueueModule {}
+
+export function queueName(config: ConfigService, baseName: string): string {
+  const namespace = [
+    config.get<string>('FACTORY_ENGINE_QUEUE_NAMESPACE'),
+    config.get<string>('QUEUE_NAMESPACE'),
+    config.get<string>('TENANT_ID'),
+    config.get<string>('FACTORY_ENGINE_TENANT_ID'),
+    config.get<string>('TENANT_SLUG'),
+    config.get<string>('APP_SLUG'),
+  ]
+    .map((value) => value?.trim())
+    .find((value): value is string => Boolean(value));
+
+  return namespace ? `${safeQueueNamespace(namespace)}:${baseName}` : baseName;
+}
+
+function safeQueueNamespace(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_.:-]/g, '_');
+}
 
 function redisConnectionOptions(url: string): ConnectionOptions {
   const parsed = new URL(url);

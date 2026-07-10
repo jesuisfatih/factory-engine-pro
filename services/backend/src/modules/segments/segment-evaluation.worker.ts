@@ -1,10 +1,12 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
 import {
   REDIS_CONNECTION,
   SEGMENT_EVALUATION_JOB,
   SEGMENT_EVALUATION_QUEUE_NAME,
+  queueName,
 } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { SegmentsService } from './segments.service.js';
@@ -25,6 +27,7 @@ export class SegmentEvaluationWorker implements OnModuleInit, OnModuleDestroy {
     private readonly segments: SegmentsService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -33,7 +36,7 @@ export class SegmentEvaluationWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker<SegmentEvaluationJobData>(
-      SEGMENT_EVALUATION_QUEUE_NAME,
+      queueName(this.config, SEGMENT_EVALUATION_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection },
     );

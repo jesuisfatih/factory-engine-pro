@@ -1,7 +1,8 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
-import { REDIS_CONNECTION } from '../../shared/queue.module.js';
+import { AIRCALL_INGEST_QUEUE_NAME, REDIS_CONNECTION, queueName } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallIngestService, AIRCALL_INGEST_JOB } from './aircall-ingest.service.js';
 
@@ -14,6 +15,7 @@ export class AircallIngestWorker implements OnModuleInit, OnModuleDestroy {
     private readonly ingest: AircallIngestService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -22,7 +24,7 @@ export class AircallIngestWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker(
-      'aircall-ingest',
+      queueName(this.config, AIRCALL_INGEST_QUEUE_NAME),
       async (job) => {
         if (job.name !== AIRCALL_INGEST_JOB) return;
         const tenantId = String(job.data?.tenantId ?? '');

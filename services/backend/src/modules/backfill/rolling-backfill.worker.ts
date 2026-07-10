@@ -1,10 +1,12 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
 import {
   REDIS_CONNECTION,
   ROLLING_BACKFILL_JOB,
   ROLLING_BACKFILL_QUEUE_NAME,
+  queueName,
 } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { RollingBackfillService, type RollingBackfillJobData } from './rolling-backfill.service.js';
@@ -18,6 +20,7 @@ export class RollingBackfillWorker implements OnModuleInit, OnModuleDestroy {
     private readonly backfill: RollingBackfillService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   async onModuleInit() {
@@ -26,7 +29,7 @@ export class RollingBackfillWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker<RollingBackfillJobData>(
-      ROLLING_BACKFILL_QUEUE_NAME,
+      queueName(this.config, ROLLING_BACKFILL_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection },
     );

@@ -1,7 +1,8 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Worker, type ConnectionOptions } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
-import { REDIS_CONNECTION } from '../../shared/queue.module.js';
+import { REDIS_CONNECTION, SHOPIFY_SYNC_QUEUE_NAME, queueName } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { SHOPIFY_INITIAL_SYNC_JOB } from './shopify-sync.constants.js';
 import { SyncService } from './sync.service.js';
@@ -15,6 +16,7 @@ export class ShopifySyncWorker implements OnModuleInit, OnModuleDestroy {
     private readonly sync: SyncService,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -23,7 +25,7 @@ export class ShopifySyncWorker implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.worker = new Worker(
-      'shopify-sync',
+      queueName(this.config, SHOPIFY_SYNC_QUEUE_NAME),
       async (job) => {
         if (job.name !== SHOPIFY_INITIAL_SYNC_JOB) return;
         const tenantId = String(job.data?.tenantId ?? '');

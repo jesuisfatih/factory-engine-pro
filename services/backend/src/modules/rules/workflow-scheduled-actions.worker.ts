@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -7,6 +8,7 @@ import {
   WORKFLOW_SCHEDULED_ACTION_JOB,
   WORKFLOW_SCHEDULED_ACTION_QUEUE,
   WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME,
+  queueName,
 } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { RulesService } from './rules.service.js';
@@ -27,6 +29,7 @@ export class WorkflowScheduledActionsWorker implements OnModuleInit, OnModuleDes
     private readonly tenantContext: TenantContextService,
     private readonly rules: RulesService,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
   ) {}
 
   async onModuleInit() {
@@ -36,7 +39,7 @@ export class WorkflowScheduledActionsWorker implements OnModuleInit, OnModuleDes
     }
 
     this.worker = new Worker<WorkflowScheduledActionJobData>(
-      WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME,
+      queueName(this.config, WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME),
       (job) => this.process(job),
       { connection: this.connection },
     );
