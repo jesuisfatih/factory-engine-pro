@@ -43,13 +43,15 @@ export class SyncService {
   ) {}
 
   async status(): Promise<ShopifySyncStatus> {
-    return this.state.status(await this.shopify.credentialState()) as Promise<ShopifySyncStatus>;
+    const tenantId = this.tenantId();
+    return this.state.status(await this.shopify.credentialState(tenantId)) as Promise<ShopifySyncStatus>;
   }
 
   async testConnection(): Promise<ShopifyConnectionTestResponse> {
     const startedAt = Date.now();
-    const credentialState = await this.shopify.credentialState();
-    const credentials = await this.shopify.resolveCredentials();
+    const tenantId = this.tenantId();
+    const credentialState = await this.shopify.credentialState(tenantId);
+    const credentials = await this.shopify.resolveCredentials(tenantId);
     if (!credentials) {
       const response: ShopifyConnectionTestResponse = {
         ok: false,
@@ -219,7 +221,7 @@ export class SyncService {
   }
 
   async processInitialSync(job: InitialSyncJob) {
-    const credentials = await this.shopify.resolveCredentials();
+    const credentials = await this.shopify.resolveCredentials(job.tenantId);
     if (!credentials) {
       await Promise.all(job.resources.map((resource) => this.failResource(
         resource,
