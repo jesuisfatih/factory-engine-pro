@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CryptoService } from '../../shared/crypto.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { TenantContextService } from '../../shared/tenant-context.js';
 import { normalizeShopDomain } from './shopify-domain.js';
 
 export interface ShopifyCredentials {
@@ -43,12 +44,15 @@ export class ShopifyClientService {
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
     private readonly config: ConfigService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async credentialState(): Promise<ShopifyCredentialState> {
-    const config = await this.prisma.db.tenantConfig.findFirst({
+    const tenantId = this.tenantContext.get()?.tenantId;
+    const config = tenantId ? await this.prisma.db.tenantConfig.findUnique({
+      where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
-    });
+    }) : null;
     const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
     const envToken = config ? null : this.envAdminToken();
@@ -63,9 +67,11 @@ export class ShopifyClientService {
   }
 
   async resolveCredentials(): Promise<ShopifyCredentials | null> {
-    const config = await this.prisma.db.tenantConfig.findFirst({
+    const tenantId = this.tenantContext.get()?.tenantId;
+    const config = tenantId ? await this.prisma.db.tenantConfig.findUnique({
+      where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
-    });
+    }) : null;
     const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
     const envToken = config ? null : this.envAdminToken();
