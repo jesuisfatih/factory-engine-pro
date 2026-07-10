@@ -27,6 +27,7 @@ import {
   workflowMcpPublishRuleSchema,
   workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
+  workflowMcpUpdateRuleSchema,
   workflowMcpValidateRuleSchema,
   type ActiveWorkflowRuleStatsQuery,
   type AlgorithmMcpCompareVersionsInput,
@@ -54,6 +55,7 @@ import {
   type WorkflowMcpPublishRuleInput,
   type WorkflowMcpSimulateDeferredWorkflowRuleInput,
   type WorkflowMcpSimulateRuleInput,
+  type WorkflowMcpUpdateRuleInput,
   type WorkflowMcpValidateRuleInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
@@ -140,6 +142,12 @@ export class RulesController {
   @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
   mcpCreateDraft(@Body(new ZodValidationPipe(workflowMcpCreateDraftRuleSchema)) body: WorkflowMcpCreateDraftRuleInput) {
     return this.rules.createWorkflowRuleDraftFromMcp(body);
+  }
+
+  @Post('mcp/update')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsWrite)
+  mcpUpdate(@Body(new ZodValidationPipe(workflowMcpUpdateRuleSchema)) body: WorkflowMcpUpdateRuleInput) {
+    return this.rules.updateWorkflowRuleFromMcp(body);
   }
 
   @Post('mcp/publish')

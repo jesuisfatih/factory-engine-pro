@@ -378,6 +378,13 @@ export const customerDetailPanelSchema = z.object({
       createdAt: z.string(),
       tags: z.array(z.string()),
       lineItems: z.unknown(),
+      note: z.string().nullable(),
+      shippingAddress: z.unknown().nullable(),
+      billingAddress: z.unknown().nullable(),
+      discountCodes: z.unknown().nullable(),
+      fulfillments: z.unknown().nullable(),
+      refunds: z.unknown().nullable(),
+      designFiles: z.unknown(),
     })),
     aircallCalls: z.array(z.object({
       id: z.string(),

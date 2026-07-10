@@ -175,6 +175,21 @@ const workflowMcpRuleReferenceSchema = z.object(workflowMcpRuleReferenceFields).
 export const workflowMcpValidateRuleSchema = workflowMcpRuleReferenceSchema;
 export type WorkflowMcpValidateRuleInput = z.infer<typeof workflowMcpValidateRuleSchema>;
 
+export const workflowMcpUpdateRuleSchema = z.object({
+  ruleId: z.string().trim().min(1),
+  rule: z.union([saveWorkflowRuleSchema, workflowMcpRuleJsonSchema]).optional(),
+  ruleJson: workflowMcpRuleJsonSchema.optional(),
+}).superRefine((value, ctx) => {
+  const provided = [value.rule, value.ruleJson].filter((entry) => entry !== undefined && entry !== null).length;
+  if (provided !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of rule or ruleJson when updating a stored workflow rule.',
+    });
+  }
+});
+export type WorkflowMcpUpdateRuleInput = z.infer<typeof workflowMcpUpdateRuleSchema>;
+
 export const workflowMcpSimulateRuleSchema = z.object({
   ruleId: z.string().trim().min(1).optional(),
   draftId: workflowMcpDraftIdSchema.optional(),
@@ -1188,6 +1203,7 @@ export interface WorkflowMcpCapabilityTool {
     | 'validate_workflow_rule'
     | 'simulate_workflow_rule'
     | 'create_workflow_rule_draft'
+    | 'update_workflow_rule'
     | 'publish_workflow_rule'
     | 'list_aircall_transcripts'
     | 'download_aircall_transcript'

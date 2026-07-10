@@ -1046,7 +1046,7 @@ export class EmailTemplatesService {
       events.set(row.eventKey, current);
     }
     return {
-      sendingEnabled: false as const,
+      sendingEnabled: provider.mode === 'live',
       templates: templates.map(toTemplateDto),
       events: [...events.values()].sort((left, right) => left.eventKey.localeCompare(right.eventKey)),
       provider,
@@ -1113,7 +1113,7 @@ export class EmailTemplatesService {
     return {
       eventKey,
       templates: rows.map((template) => ({ ...toTemplateDto(template), versions: template.versions.map(toVersionDto) })),
-      sendingEnabled: false as const,
+      sendingEnabled: provider.mode === 'live',
       provider,
     };
   }
@@ -1368,7 +1368,8 @@ export class EmailTemplatesService {
         urls: asRecord(variables.urls),
       });
     const releaseProof = buildReleaseProof(revision, variables, validation.warnings);
-    const delivery = await this.mail.recordDisabledDelivery({
+    const provider = await this.providerSummary();
+    const deliveryInput = {
       eventKey: revision.template.eventKey,
       category: revision.template.templateType === 'marketing' ? 'marketing' : 'system',
       to: parsed.to,
@@ -1379,6 +1380,7 @@ export class EmailTemplatesService {
       text: rendered.text,
       metadata: {
         source: 'email_template_test_send',
+        explicitTest: true,
         templateId: revision.templateId,
         revisionId: revision.id,
         revisionNumber: revision.versionNumber,
@@ -1389,17 +1391,25 @@ export class EmailTemplatesService {
           footerInjected: rendered.footerInjected,
         },
       },
-    });
-    this.logger.warn('mail_template', 'test_send_disabled', 'Email template test-send recorded while mail provider is disabled', {
+    };
+    const delivery = provider.mode === 'disabled'
+      ? await this.mail.recordDisabledDelivery(deliveryInput)
+      : await this.mail.sendTransactional(deliveryInput);
+    this.logger.log('mail_template', 'test_send_queued', 'Email template test delivery queued', {
       revision_id: revisionId,
       mail_delivery_id: delivery.id,
+      provider_mode: provider.mode,
     });
     return {
-      sendingEnabled: false,
+      sendingEnabled: provider.mode === 'live',
       status: delivery.status,
       revisionId,
       deliveryId: delivery.id,
-      message: 'Mail provider is disabled for this tenant; a queued_disabled delivery record was created and no email was sent.',
+      message: provider.mode === 'disabled'
+        ? 'Mail provider is disabled for this tenant; a queued_disabled delivery record was created and no email was sent.'
+        : provider.mode === 'test'
+          ? 'Template test delivery was queued in test-only mode for the explicit recipient.'
+          : 'Template test delivery was queued for the explicit recipient.',
     };
   }
 

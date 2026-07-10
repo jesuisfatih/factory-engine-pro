@@ -98,6 +98,21 @@ server.registerTool(
 );
 
 server.registerTool(
+  'update_workflow_rule',
+  {
+    title: 'Update workflow rule',
+    description: 'Update a stored workflow rule through deterministic DSL validation and version audit. Validate and simulate the updated rule before publishing it.',
+    inputSchema: {
+      ruleId: z.string().trim().min(1),
+      rule: workflowRuleInputSchema.optional(),
+      ruleJson: z.string().trim().min(2).max(250_000).optional(),
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+  },
+  async (input) => jsonTool(await requestApi('POST', '/rules/mcp/update', input)),
+);
+
+server.registerTool(
   'archive_workflow_rule',
   {
     title: 'Archive workflow rule',

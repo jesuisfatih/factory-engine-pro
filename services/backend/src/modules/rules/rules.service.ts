@@ -34,6 +34,7 @@ import {
   saveAlgorithmStrategySchema,
   workflowMcpSimulateDeferredWorkflowRuleSchema,
   workflowMcpSimulateRuleSchema,
+  workflowMcpUpdateRuleSchema,
   workflowMcpValidateRuleSchema,
   WORKFLOW_ENUM_CATALOG,
   WORKFLOW_ENUM_COUNTS,
@@ -115,6 +116,7 @@ import {
   type WorkflowMcpSimulateDeferredWorkflowRuleResponse,
   type WorkflowMcpSimulateRuleInput,
   type WorkflowMcpSimulateRuleResponse,
+  type WorkflowMcpUpdateRuleInput,
   type WorkflowMcpValidateRuleInput,
   type WorkflowMcpValidateRuleResponse,
   type WorkflowOperationalContractProbeResponse,
@@ -2745,6 +2747,7 @@ export class RulesService {
         { name: 'validate_workflow_rule', description: 'Validate a workflow rule against the safe deterministic DSL.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'simulate_workflow_rule', description: 'Dry-run a stored or draft workflow rule against recent operational signals.', mutates: false, requiresPermission: 'settings.read' },
         { name: 'create_workflow_rule_draft', description: 'Persist a validated rule as draft only.', mutates: true, requiresPermission: 'settings.write' },
+        { name: 'update_workflow_rule', description: 'Update a stored rule through the same validation and version-audit path as the admin editor.', mutates: true, requiresPermission: 'settings.write' },
         { name: 'publish_workflow_rule', description: 'Publish a stored rule only after an attached successful simulation report.', mutates: true, requiresPermission: 'settings.write' },
         { name: 'list_aircall_transcripts', description: 'List Aircall transcript metadata without returning the full transcript text.', mutates: false, requiresPermission: 'aircall.users.read' },
         { name: 'download_aircall_transcript', description: 'Download one Aircall transcript and resolver output by call event id.', mutates: false, requiresPermission: 'aircall.users.read' },
@@ -4176,6 +4179,15 @@ export class RulesService {
     if (issues.length > 0) throw new BadRequestException(`MCP rule is not valid: ${issues.join('; ')}`);
     const created = await this.repository.create(ruleInput, this.editedByMemberId());
     return { rule: toDto(created), warnings: ['Rule is stored as draft. Run simulate_workflow_rule before publishing.'] };
+  }
+
+  async updateWorkflowRuleFromMcp(input: WorkflowMcpUpdateRuleInput): Promise<WorkflowRuleDto> {
+    const parsed = workflowMcpUpdateRuleSchema.parse(input);
+    const resolved = await this.resolveMcpRuleReference(parsed);
+    return this.updateRule(parsed.ruleId, {
+      ...resolved.rule,
+      comment: resolved.rule.comment ?? 'Updated through MCP workflow rule management.',
+    });
   }
 
   async publishWorkflowRuleFromMcp(input: WorkflowMcpPublishRuleInput): Promise<WorkflowMcpPublishRuleResponse> {

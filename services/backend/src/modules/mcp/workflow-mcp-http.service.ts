@@ -25,6 +25,7 @@ import {
   type WorkflowMcpDraftRuleInput,
   type WorkflowMcpSimulateDeferredWorkflowRuleInput,
   type WorkflowMcpSimulateRuleInput,
+  type WorkflowMcpUpdateRuleInput,
   type WorkflowMcpValidateRuleInput,
   type WorkflowRuleDto,
 } from '@factory-engine-pro/contracts';
@@ -188,6 +189,24 @@ export class WorkflowMcpHttpService implements OnModuleDestroy {
       async (input) => this.jsonTool(await this.withPermission(
         MEMBER_PERMISSIONS.settingsWrite,
         () => this.updateRuleStatus(input.ruleId, 'archived', input.comment ?? 'Archived through remote MCP rule management.'),
+      )),
+    );
+
+    server.registerTool(
+      'update_workflow_rule',
+      {
+        title: 'Update workflow rule',
+        description: 'Update a stored workflow rule through the deterministic DSL validation and version-audit path. Validate and simulate the updated rule before publishing it.',
+        inputSchema: {
+          ruleId: z.string().trim().min(1),
+          rule: workflowRuleInputSchema.optional(),
+          ruleJson: z.string().trim().min(2).max(250_000).optional(),
+        },
+        annotations: { readOnlyHint: false, openWorldHint: false },
+      },
+      async (input) => this.jsonTool(await this.withPermission(
+        MEMBER_PERMISSIONS.settingsWrite,
+        () => this.rules.updateWorkflowRuleFromMcp(input as WorkflowMcpUpdateRuleInput),
       )),
     );
 

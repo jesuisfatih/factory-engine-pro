@@ -55,7 +55,8 @@ For delayed staff work:
 1. Use natural-language goals like: "If a customer asks for Hydro1620 spare parts and still has not purchased after 15 days, show a follow-up task to Ihsan on that day."
 2. `draft_workflow_rule` should compile this into `create_task.timing.mode = deferred_materialization`.
 3. `simulate_deferred_workflow_rule` must show hidden scheduled actions and projected run times before publish.
-4. `list_scheduled_workflow_actions`, `get_scheduled_workflow_action`, and `explain_scheduled_workflow_action` inspect hidden pending work.
+4. `update_workflow_rule` changes an existing stored rule through the same validation and version-audit path as the admin editor. Re-simulate before publishing a changed rule.
+5. `list_scheduled_workflow_actions`, `get_scheduled_workflow_action`, and `explain_scheduled_workflow_action` inspect hidden pending work.
 5. `cancel_scheduled_workflow_action` cancels pending hidden work before it appears to staff.
 
 For frontend work:

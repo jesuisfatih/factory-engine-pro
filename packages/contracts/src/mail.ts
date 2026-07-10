@@ -855,7 +855,7 @@ export interface MailFlowWebhookDestinationDto {
 }
 
 export const mailMarketingSettingsSchema = z.object({
-  sendingEnabled: z.literal(false).default(false),
+  sendingEnabled: z.boolean().default(false),
   providerMode: mailProviderModeSchema.default('disabled'),
   defaultSenderName: z.string().trim().max(120).default('Factory Engine Pro'),
   defaultSenderEmail: emailSchema.optional().nullable(),
@@ -911,7 +911,7 @@ export interface EmailTemplateDto {
 }
 
 export interface EmailTemplateWorkspaceResponse {
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   templates: EmailTemplateDto[];
   events: Array<{
     eventKey: string;
@@ -999,7 +999,7 @@ export interface MailTemplateBlockDto {
 }
 
 export interface MailMarketingOverviewResponse {
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   counts: {
     contacts: number;
     sendableContacts: number;
@@ -1150,7 +1150,7 @@ export interface MailAudiencePreviewResponse {
   matchedContacts: number;
   sample: MailContactDto[];
   sourceSummary?: Record<string, unknown>;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
 }
 
 export interface MailAudienceSnapshotDto {
@@ -1186,7 +1186,7 @@ export interface MailAudienceSnapshotMembersResponse {
   snapshot: MailAudienceSnapshotDto;
   members: MailAudienceSnapshotMemberDto[];
   totalReturned: number;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
 }
 
 export interface MailAudienceSnapshotDiffResponse {
@@ -1205,7 +1205,7 @@ export interface MailAudienceSnapshotDiffResponse {
     added: MailContactDto[];
     removed: MailAudienceSnapshotMemberDto[];
   };
-  sendingEnabled: false;
+  sendingEnabled: boolean;
 }
 
 export interface MailFlowNodeDto {
@@ -1255,7 +1255,7 @@ export interface MailMarketingFlowDto {
   status: string;
   graph: Record<string, unknown>;
   metadata: Record<string, unknown>;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   activeVersion: MailFlowVersionDto | null;
   latestVersion: MailFlowVersionDto | null;
   nodeCount: number;
@@ -1293,7 +1293,7 @@ export interface MailFlowRunDto {
 export interface MailFlowRunsResponse {
   flowId: string;
   total: number;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   runs: MailFlowRunDto[];
 }
 
@@ -1312,7 +1312,7 @@ export interface MailFlowEventDto {
 export interface MailFlowEventsResponse {
   flowId: string;
   total: number;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   events: MailFlowEventDto[];
 }
 
@@ -1324,7 +1324,7 @@ export interface MailFlowValidationResponse {
   versionNumber: number | null;
   triggerType: string;
   providerMode: MailProviderMode;
-  sendingEnabled: false;
+  sendingEnabled: boolean;
   valid: boolean;
   publishable: boolean;
   issues: string[];
@@ -1356,8 +1356,8 @@ export interface MailFlowSimulationResponse {
   versionNumber: number | null;
   triggerType: string;
   providerMode: MailProviderMode;
-  sendingEnabled: false;
-  mode: 'proof_only';
+  sendingEnabled: boolean;
+  mode: 'proof_only' | 'live_ready';
   valid: boolean;
   blocked: boolean;
   target: {

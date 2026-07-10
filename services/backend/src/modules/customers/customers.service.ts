@@ -824,6 +824,13 @@ export class CustomersService {
       createdAt: Date;
       tags: string[];
       lineItems: Prisma.JsonValue;
+      notes: string | null;
+      shippingAddress: Prisma.JsonValue | null;
+      billingAddress: Prisma.JsonValue | null;
+      discountCodes: Prisma.JsonValue | null;
+      fulfillments: Prisma.JsonValue | null;
+      refunds: Prisma.JsonValue | null;
+      designFiles: Prisma.JsonValue;
     }>,
   ): Promise<CustomerDetailShopifyOrderDto[]> {
     if (localOrders.length > 0) return localOrders.map(mapPersistedDetailOrder);
@@ -918,16 +925,26 @@ export class CustomersService {
               createdAt
               displayFinancialStatus
               displayFulfillmentStatus
+              note
+              discountCodes
+              shippingAddress { firstName lastName company address1 address2 city province provinceCode zip country countryCodeV2 phone }
+              billingAddress { firstName lastName company address1 address2 city province provinceCode zip country countryCodeV2 phone }
               currentSubtotalPriceSet { shopMoney { amount currencyCode } }
               currentTotalDiscountsSet { shopMoney { amount currencyCode } }
               currentTotalTaxSet { shopMoney { amount currencyCode } }
               totalShippingPriceSet { shopMoney { amount currencyCode } }
               currentTotalPriceSet { shopMoney { amount currencyCode } }
+              fulfillments(first: 20) { id name status displayStatus createdAt updatedAt trackingInfo(first: 10) { company number url } }
+              refunds { id createdAt processedAt note totalRefundedSet { shopMoney { amount currencyCode } } }
               lineItems(first: 20) {
                 nodes {
+                  id
                   title
                   quantity
                   sku
+                  variantTitle
+                  originalUnitPriceSet { shopMoney { amount currencyCode } }
+                  customAttributes { key value }
                   variant { id legacyResourceId sku title product { id legacyResourceId title } }
                 }
               }
@@ -964,17 +981,27 @@ export class CustomersService {
             createdAt
             displayFinancialStatus
             displayFulfillmentStatus
+            note
+            discountCodes
+            shippingAddress { firstName lastName company address1 address2 city province provinceCode zip country countryCodeV2 phone }
+            billingAddress { firstName lastName company address1 address2 city province provinceCode zip country countryCodeV2 phone }
             currentSubtotalPriceSet { shopMoney { amount currencyCode } }
             currentTotalDiscountsSet { shopMoney { amount currencyCode } }
             currentTotalTaxSet { shopMoney { amount currencyCode } }
             totalShippingPriceSet { shopMoney { amount currencyCode } }
             currentTotalPriceSet { shopMoney { amount currencyCode } }
+            fulfillments(first: 20) { id name status displayStatus createdAt updatedAt trackingInfo(first: 10) { company number url } }
+            refunds { id createdAt processedAt note totalRefundedSet { shopMoney { amount currencyCode } } }
             customer { id legacyResourceId email phone }
             lineItems(first: 20) {
               nodes {
+                id
                 title
                 quantity
                 sku
+                variantTitle
+                originalUnitPriceSet { shopMoney { amount currencyCode } }
+                customAttributes { key value }
                 variant { id legacyResourceId sku title product { id legacyResourceId title } }
               }
             }
@@ -1311,6 +1338,13 @@ function mapPersistedDetailOrder(order: {
   createdAt: Date;
   tags: string[];
   lineItems: Prisma.JsonValue;
+  notes: string | null;
+  shippingAddress: Prisma.JsonValue | null;
+  billingAddress: Prisma.JsonValue | null;
+  discountCodes: Prisma.JsonValue | null;
+  fulfillments: Prisma.JsonValue | null;
+  refunds: Prisma.JsonValue | null;
+  designFiles: Prisma.JsonValue;
 }): CustomerDetailShopifyOrderDto {
   return {
     id: order.id,
@@ -1329,6 +1363,13 @@ function mapPersistedDetailOrder(order: {
     createdAt: order.createdAt.toISOString(),
     tags: order.tags,
     lineItems: order.lineItems,
+    note: order.notes,
+    shippingAddress: order.shippingAddress,
+    billingAddress: order.billingAddress,
+    discountCodes: order.discountCodes,
+    fulfillments: order.fulfillments,
+    refunds: order.refunds,
+    designFiles: order.designFiles,
   };
 }
 
@@ -1354,6 +1395,13 @@ function mapLiveShopifyOrder(raw: Record<string, unknown>): CustomerDetailShopif
     createdAt,
     tags: tags(raw.tags),
     lineItems: Array.isArray(raw.line_items) ? raw.line_items : [],
+    note: stringId(raw.note),
+    shippingAddress: objectOrNull(raw.shipping_address),
+    billingAddress: objectOrNull(raw.billing_address),
+    discountCodes: Array.isArray(raw.discount_codes) ? raw.discount_codes : null,
+    fulfillments: Array.isArray(raw.fulfillments) ? raw.fulfillments : null,
+    refunds: Array.isArray(raw.refunds) ? raw.refunds : null,
+    designFiles: [],
   };
 }
 
@@ -1379,6 +1427,13 @@ function mapGraphqlShopifyOrder(raw: Record<string, unknown>): CustomerDetailSho
     createdAt,
     tags: tags(raw.tags),
     lineItems: graphqlLineItems(raw.lineItems),
+    note: stringId(raw.note),
+    shippingAddress: objectOrNull(raw.shippingAddress),
+    billingAddress: objectOrNull(raw.billingAddress),
+    discountCodes: Array.isArray(raw.discountCodes) ? raw.discountCodes : null,
+    fulfillments: jsonRecord(raw.fulfillments).nodes ?? null,
+    refunds: jsonRecord(raw.refunds).nodes ?? null,
+    designFiles: [],
   };
 }
 
@@ -1438,9 +1493,18 @@ function graphqlLineItems(value: unknown) {
     const variant = jsonRecord(row.variant);
     const product = jsonRecord(variant.product);
     return {
+      id: stringId(row.id),
       title: stringId(row.title) ?? stringId(variant.title) ?? 'Line item',
       quantity: numeric(row.quantity),
       sku: stringId(row.sku ?? variant.sku),
+      variantTitle: stringId(row.variantTitle ?? variant.title),
+      unitPrice: moneySet(row.originalUnitPriceSet),
+      properties: jsonArray(row.customAttributes).flatMap((entry) => {
+        const attribute = jsonRecord(entry);
+        const key = stringId(attribute.key);
+        const value = stringId(attribute.value);
+        return key && value ? [{ key, value }] : [];
+      }),
       shopifyVariantId: stringId(variant.legacyResourceId ?? variant.id),
       shopifyProductId: stringId(product.legacyResourceId ?? product.id),
       productTitle: stringId(product.title),
@@ -1572,6 +1636,11 @@ function permissionEnabled(permissions: Record<string, unknown>, permission: str
 
 function jsonRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function objectOrNull(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
 }
 

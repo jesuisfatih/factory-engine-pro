@@ -46,6 +46,8 @@ export interface TransactionalMailInput {
   text?: string | null;
   templateId?: string | null;
   templateVersionId?: string | null;
+  fromName?: string | null;
+  replyTo?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -107,6 +109,11 @@ export class MailService {
 
   async sendTransactional(input: TransactionalMailInput) {
     const context = this.tenantContext.require();
+    const { transport: _ignoredTransport, ...metadata } = input.metadata ?? {};
+    const transport = {
+      fromName: safeMailHeader(input.fromName),
+      replyTo: safeEmailAddress(input.replyTo),
+    };
     const delivery = await this.repository.createDelivery({
       eventKey: input.eventKey,
       category: input.category,
@@ -116,7 +123,10 @@ export class MailService {
       subject: input.subject,
       html: input.html,
       text: input.text,
-      metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+      metadata: {
+        ...metadata,
+        ...(transport.fromName || transport.replyTo ? { transport } : {}),
+      } as Prisma.InputJsonValue,
     });
 
     if (this.outboundQueue) {
@@ -1464,7 +1474,8 @@ export class MailService {
     }
 
     try {
-      const from = await this.resolveFromAddress();
+      const transport = deliveryTransport(delivery.metadata);
+      const from = await this.resolveFromAddress(transport.fromName);
       const response = await fetch(`${this.resendBaseUrl()}/emails`, {
         method: 'POST',
         headers: {
@@ -1477,6 +1488,7 @@ export class MailService {
           subject: delivery.subject,
           html: delivery.html,
           text: delivery.text ?? undefined,
+          ...(transport.replyTo ? { reply_to: transport.replyTo } : {}),
           tags: [
             { name: 'delivery_id', value: tagValue(delivery.id) },
             { name: 'tenant_id', value: tagValue(delivery.tenantId) },
@@ -1748,8 +1760,8 @@ export class MailService {
     });
   }
 
-  private async resolveFromAddress() {
-    const brand = await this.resolveBrandName();
+  private async resolveFromAddress(overrideName?: string | null) {
+    const brand = overrideName ?? await this.resolveBrandName();
     const configured = this.config.get<string>('MAIL_FROM')?.trim();
     if (configured) return `${brand} <${configured}>`;
     const domain = rootDomain(this.config.get<string>('ADMIN_URL') ?? this.config.get<string>('ACCOUNTS_URL') ?? this.config.get<string>('API_URL') ?? '');
@@ -1838,7 +1850,30 @@ function marketingTypeForEvent(eventKey: string): MarketingMailType | null {
 }
 
 function isSystemTestDelivery(eventKey: string, metadata: unknown) {
-  return eventKey === 'system.test' || textValue(asRecord(metadata).source) === 'mail_center_test';
+  const data = asRecord(metadata);
+  return eventKey === 'system.test'
+    || textValue(data.source) === 'mail_center_test'
+    || (textValue(data.source) === 'email_template_test_send' && data.explicitTest === true);
+}
+
+function deliveryTransport(metadata: unknown) {
+  const value = asRecord(asRecord(metadata).transport);
+  return {
+    fromName: safeMailHeader(textValue(value.fromName)),
+    replyTo: safeEmailAddress(textValue(value.replyTo)),
+  };
+}
+
+function safeMailHeader(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+  return normalized ? normalized.slice(0, 120) : null;
+}
+
+function safeEmailAddress(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : null;
 }
 
 function toProviderEventDto(row: Awaited<ReturnType<MailRepository['listProviderEventPage']>>['data'][number]): MailProviderEventDto {

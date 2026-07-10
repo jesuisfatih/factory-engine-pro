@@ -51,6 +51,7 @@ The MCP surface exposes these tool concepts:
 - `read_workflow_agent_guide`
 - `list_workflow_rules`
 - `get_workflow_rule`
+- `update_workflow_rule`
 - `archive_workflow_rule`
 - `restore_workflow_rule`
 - `draft_workflow_rule`

@@ -153,17 +153,18 @@ export class MailMarketingService {
 
   async overview() {
     await this.repository.importContactsFromCustomers(750);
-    const [[contacts, sendableContacts], audiences, flows, campaigns, templates, recentEvents, provider] = await Promise.all([
+    const [[contacts, sendableContacts], audiences, flows, campaigns, templates, recentEvents, settings, provider] = await Promise.all([
       this.repository.contactCounts(),
       this.repository.listAudiences(),
       this.repository.listFlows(),
       this.repository.listCampaigns({ limit: 200 }),
       this.templates.countTemplates(),
       this.repository.recentEvents(10),
+      this.repository.ensureSettings(),
       this.mailProviderSummary(),
     ]);
     return {
-      sendingEnabled: false as const,
+      sendingEnabled: settings.sendingEnabled && provider.mode === 'live',
       counts: {
         contacts,
         sendableContacts,
@@ -424,20 +425,21 @@ export class MailMarketingService {
       ...asRecord(parsed.metadata),
       approvalPolicy: parsed.approvalPolicy,
     };
+    const provider = await this.mailProviderSummary();
     const updated = await this.repository.updateSettings({
-      providerMode: 'disabled',
+      sendingEnabled: parsed.sendingEnabled,
+      providerMode: provider.mode,
       defaultSenderName: parsed.defaultSenderName,
       defaultSenderEmail: parsed.defaultSenderEmail ?? null,
       quietHours: parsed.quietHours as Prisma.InputJsonValue,
       dailySendCap: parsed.dailySendCap,
       metadata: metadata as Prisma.InputJsonValue,
     });
-    this.logger.log('mail_marketing', 'settings_update', 'Mail Marketing settings updated with sending disabled', {
-      sending_enabled: false,
-      provider_mode: 'disabled',
+    this.logger.log('mail_marketing', 'settings_update', 'Mail Marketing settings updated', {
+      sending_enabled: updated.sendingEnabled && provider.mode === 'live',
+      provider_mode: provider.mode,
       approval_policy: parsed.approvalPolicy,
     });
-    const provider = await this.mailProviderSummary();
     return toSettingsDto(updated, provider.mode);
   }
 
@@ -742,12 +744,15 @@ export class MailMarketingService {
   }
 
   async previewAudience(input: SaveMailAudienceInput['filters']) {
-    const resolved = await this.resolveAudience(input);
+    const [resolved, sendingEnabled] = await Promise.all([
+      this.resolveAudience(input),
+      this.marketingDeliveryEnabled(),
+    ]);
     const matched = resolved.contacts;
     return {
       matchedContacts: matched.length,
       sample: matched.slice(0, 10).map(toContactDto),
-      sendingEnabled: false as const,
+      sendingEnabled,
       sourceSummary: resolved.sourceSummary,
     };
   }
@@ -958,11 +963,12 @@ export class MailMarketingService {
       limit: parsed.limit,
       search: parsed.search,
     });
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     return {
       snapshot: toSnapshotDto(snapshot),
       members: members.map(toSnapshotMemberDto),
       totalReturned: members.length,
-      sendingEnabled: false as const,
+      sendingEnabled,
     };
   }
 
@@ -987,6 +993,7 @@ export class MailMarketingService {
       ? removed.filter((member) => `${member.email} ${member.contact?.name ?? ''}`.toLowerCase().includes(search))
       : removed;
 
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     return {
       snapshot: toSnapshotDto(snapshot),
       current: {
@@ -1003,14 +1010,17 @@ export class MailMarketingService {
         added: filteredAdded.slice(0, parsed.limit).map(toContactDto),
         removed: filteredRemoved.slice(0, parsed.limit).map(toSnapshotMemberDto),
       },
-      sendingEnabled: false as const,
+      sendingEnabled,
     };
   }
 
   async campaigns(query: MailCampaignQuery) {
     const parsed = mailCampaignQuerySchema.parse(query);
     const rows = await this.repository.listCampaigns(parsed);
-    return rows.map(toCampaignDto);
+    const reconciled = await Promise.all(rows.map((row) => row.status === 'sending'
+      ? this.repository.reconcileCampaignDeliveryStats(row.id)
+      : row));
+    return reconciled.map(toCampaignDto);
   }
 
   async createCampaign(input: SaveMailCampaignInput) {
@@ -1175,6 +1185,23 @@ export class MailMarketingService {
     const members = await this.repository.snapshotMembers(snapshotId, 5000);
     const mailSettings = await this.mail.loadMailCenterSettings();
     const marketingSettings = mailSettings.categoryMarketing;
+    const marketingRuntime = await this.repository.ensureSettings();
+    if (!marketingRuntime.sendingEnabled) {
+      await this.repository.recordEvent({
+        eventType: 'campaign.queue_skipped',
+        status: 'skipped',
+        metadata: { campaignId: campaign.id, snapshotId, reason: 'mailMarketing.sendingEnabled' },
+      });
+      throw new BadRequestException('Marketing delivery is off for this workspace. Enable it in Mail Marketing settings after reviewing the audience and approval policy.');
+    }
+    if (mailSettings.providerMode !== 'live') {
+      await this.repository.recordEvent({
+        eventType: 'campaign.queue_skipped',
+        status: 'skipped',
+        metadata: { campaignId: campaign.id, snapshotId, reason: 'mailCenter.providerMode', providerMode: mailSettings.providerMode },
+      });
+      throw new BadRequestException(`Marketing delivery requires Mail Center live mode; current mode is ${mailSettings.providerMode}.`);
+    }
     if (!marketingSettings.enabled || marketingSettings.types.campaigns === false) {
       const field = !marketingSettings.enabled ? 'categoryMarketing.enabled' : 'categoryMarketing.types.campaigns';
       await this.repository.recordEvent({
@@ -1221,7 +1248,7 @@ export class MailMarketingService {
         continue;
       }
       const sendSignals = campaignSendSafetySignals(member, {
-        providerMode: 'disabled',
+        providerMode: mailSettings.providerMode,
         templateApproved: true,
         campaignId: campaign.id,
         templateId: campaign.template.id,
@@ -1249,7 +1276,7 @@ export class MailMarketingService {
         compliance,
         urls: asRecord(variables.urls),
       });
-      await this.mail.recordDisabledDelivery({
+      await this.mail.sendTransactional({
         eventKey: `mail.campaign.${campaign.id}`,
         category: 'marketing',
         to: member.email,
@@ -1259,15 +1286,15 @@ export class MailMarketingService {
         html: rendered.html,
         text: rendered.text,
         metadata: {
-          source: 'mail_campaign_queue_disabled',
+          source: 'mail_campaign_queue',
           campaignId: campaign.id,
           snapshotId,
           contactId: member.contactId,
           customerId: member.customerId,
           senderName: campaign.senderName,
           replyTo: campaign.replyTo,
-          providerMode: 'disabled',
-          sendingEnabled: false,
+          providerMode: mailSettings.providerMode,
+          sendingEnabled: true,
           sendSafety: {
             surfaceId: sendStrategy.surfaceId,
             score: algorithmScore(sendStrategy, sendSignals),
@@ -1282,6 +1309,7 @@ export class MailMarketingService {
       });
     }
     const updated = await this.repository.updateCampaignQueued(campaign.id, {
+      status: 'sending',
       snapshotId,
       recipientCount,
       queuedCount: recipientCount,
@@ -1291,26 +1319,34 @@ export class MailMarketingService {
       suppressedCount,
       metadata: {
         ...asRecord(campaign.metadata),
-        queuedDisabledAt: new Date().toISOString(),
-        providerMode: 'disabled',
+        queuedAt: new Date().toISOString(),
+        providerMode: mailSettings.providerMode,
+        eligibilitySkippedCount: skippedCount,
         skippedReasons,
       },
     });
     await this.repository.recordEvent({
-      eventType: 'campaign.queued_disabled',
-      status: 'queued_disabled',
+      eventType: 'campaign.queued',
+      status: 'queued',
       metadata: { campaignId: campaign.id, snapshotId, recipientCount, skippedCount, suppressedCount, skippedReasons },
     });
     return toCampaignDto(updated);
   }
 
   async flows() {
-    const rows = await this.repository.listFlows();
-    return rows.map(toFlowDto);
+    const [rows, enabled] = await Promise.all([
+      this.repository.listFlows(),
+      this.marketingDeliveryEnabled(),
+    ]);
+    return rows.map((row) => toFlowDto(row, enabled));
   }
 
   async getFlow(id: string) {
-    return toFlowDto(await this.repository.requireFlow(id));
+    const [flow, enabled] = await Promise.all([
+      this.repository.requireFlow(id),
+      this.marketingDeliveryEnabled(),
+    ]);
+    return toFlowDto(flow, enabled);
   }
 
   async createFlow(input: SaveMailFlowInput) {
@@ -1320,6 +1356,7 @@ export class MailMarketingService {
     validateMailFlowGraph(parsed.triggerType, nodes);
     if (parsed.status === 'published') await this.validateFlowPublishReferences(nodes);
     const summary = flowSummary(nodes);
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     const flow = await this.repository.createFlow({
       name: parsed.name,
       slug: parsed.slug ?? slug(parsed.name),
@@ -1340,10 +1377,10 @@ export class MailMarketingService {
       actionType: 'flow_created',
       status: 'recorded',
       message: `${nodes.length} flow nodes were stored in an immutable draft version.`,
-      payload: { triggerType: flow.triggerType, sendingEnabled: false, summary },
+      payload: { triggerType: flow.triggerType, sendingEnabled, summary },
     });
     this.logger.log('mail_marketing', 'flow_create', 'Mail flow created', { flow_id: flow.id, status: flow.status });
-    return toFlowDto(flow);
+    return toFlowDto(flow, sendingEnabled);
   }
 
   async updateFlow(id: string, input: PatchMailFlowInput) {
@@ -1353,6 +1390,7 @@ export class MailMarketingService {
     const nextGraph = parsed.graph !== undefined ? inputJson(parsed.graph, { nodes: [], edges: [] }) : undefined;
     const nextNodes = parsed.graph !== undefined ? normalizeFlowNodes(parsed.graph) : undefined;
     const nextSummary = nextNodes ? flowSummary(nextNodes) : undefined;
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     if (nextNodes) validateMailFlowGraph(nextTriggerType, nextNodes);
     const flow = await this.repository.updateFlow(id, {
       ...(parsed.name !== undefined && { name: parsed.name }),
@@ -1372,25 +1410,25 @@ export class MailMarketingService {
       actionType: 'flow_updated',
       status: 'recorded',
       message: nextNodes ? `${nextNodes.length} nodes were stored in a new draft version.` : 'Flow metadata was updated.',
-      payload: { sendingEnabled: false, ...(nextSummary && { summary: nextSummary }) },
+      payload: { sendingEnabled, ...(nextSummary && { summary: nextSummary }) },
     });
-    return toFlowDto(flow);
+    return toFlowDto(flow, sendingEnabled);
   }
 
   async validateFlow(id: string, input: ValidateMailFlowInput): Promise<MailFlowValidationResponse> {
     const parsed = validateMailFlowSchema.parse(input ?? {});
     const flow = await this.repository.requireFlow(id);
-    const provider = await this.mailProviderSummary();
-    return this.buildFlowValidationResult(flow, parsed.version, provider.mode);
+    const [provider, sendingEnabled] = await Promise.all([this.mailProviderSummary(), this.marketingDeliveryEnabled()]);
+    return this.buildFlowValidationResult(flow, parsed.version, provider.mode, sendingEnabled);
   }
 
   async simulateFlow(id: string, input: SimulateMailFlowInput): Promise<MailFlowSimulationResponse> {
     const parsed = simulateMailFlowSchema.parse(input ?? {});
     const flow = await this.repository.requireFlow(id);
-    const provider = await this.mailProviderSummary();
+    const [provider, sendingEnabled] = await Promise.all([this.mailProviderSummary(), this.marketingDeliveryEnabled()]);
     const selected = selectFlowVersion(flow, parsed.version);
     const nodes = selected.version?.nodes?.map(toStoredNodeInput) ?? [];
-    const validation = await this.buildFlowValidationResult(flow, parsed.version, provider.mode);
+    const validation = await this.buildFlowValidationResult(flow, parsed.version, provider.mode, sendingEnabled);
     const triggerType = parsed.triggerType ?? selected.version?.triggerType ?? flow.triggerType;
     const issues = [...validation.issues];
     const warnings = [...validation.warnings];
@@ -1408,8 +1446,8 @@ export class MailMarketingService {
       versionNumber: selected.version?.versionNumber ?? null,
       triggerType,
       providerMode: provider.mode,
-      sendingEnabled: false,
-      mode: 'proof_only',
+      sendingEnabled,
+      mode: sendingEnabled ? 'live_ready' : 'proof_only',
       valid: issues.length === 0,
       blocked: issues.length > 0,
       target: {
@@ -1420,7 +1458,7 @@ export class MailMarketingService {
       payloadKeys: Object.keys(parsed.payload).sort(),
       issues,
       warnings,
-      steps: nodes.map((node) => simulateFlowNode(node, provider.mode)),
+      steps: nodes.map((node) => simulateFlowNode(node, provider.mode, sendingEnabled)),
       checkedAt: new Date().toISOString(),
     };
   }
@@ -1433,14 +1471,15 @@ export class MailMarketingService {
     validateMailFlowGraph(latestVersion.triggerType, nodes);
     await this.validateFlowPublishReferences(nodes);
     const flow = await this.repository.publishFlow(id);
+    const [provider, sendingEnabled] = await Promise.all([this.mailProviderSummary(), this.marketingDeliveryEnabled()]);
     await this.repository.recordEvent({
-      eventType: 'flow.published_disabled',
+      eventType: 'flow.published',
       status: 'recorded',
       metadata: {
         flowId: flow.id,
         versionId: flow.activeVersion?.id ?? latestVersion.id,
-        providerMode: 'disabled',
-        sendingEnabled: false,
+        providerMode: provider.mode,
+        sendingEnabled,
       },
     });
     await this.repository.createFlowActionLog({
@@ -1448,14 +1487,17 @@ export class MailMarketingService {
       flowVersionId: flow.activeVersion?.id ?? latestVersion.id,
       actionType: 'flow_published',
       status: 'recorded',
-      message: 'Flow version was published. Delivery remains disabled, so runtime execution will be recorded as proof only.',
-      payload: { sendingEnabled: false, providerMode: 'disabled', summary: flow.activeVersion?.summary ?? flowSummary(nodes) },
+      message: sendingEnabled
+        ? 'Flow version was published and is eligible to deliver when its runtime checks pass.'
+        : 'Flow version was published. Delivery is off in Mail Marketing settings, so runtime emails will be skipped until it is enabled.',
+      payload: { sendingEnabled, providerMode: provider.mode, summary: flow.activeVersion?.summary ?? flowSummary(nodes) },
     });
-    return toFlowDto(flow);
+    return toFlowDto(flow, sendingEnabled);
   }
 
   async pauseFlow(id: string) {
     const flow = await this.repository.pauseFlow(id);
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     await this.repository.recordEvent({
       eventType: 'flow.paused',
       metadata: { flowId: flow.id, activeVersionId: flow.activeVersion?.id ?? null },
@@ -1466,81 +1508,115 @@ export class MailMarketingService {
       actionType: 'flow_paused',
       status: 'recorded',
       message: 'Flow was paused by an operator.',
-      payload: { sendingEnabled: false },
+      payload: { sendingEnabled },
     });
-    return toFlowDto(flow);
+    return toFlowDto(flow, sendingEnabled);
   }
 
   async resumeFlow(id: string) {
     const flow = await this.repository.resumeFlow(id);
+    const [provider, sendingEnabled] = await Promise.all([this.mailProviderSummary(), this.marketingDeliveryEnabled()]);
     await this.repository.recordEvent({
-      eventType: 'flow.resumed_disabled',
-      metadata: { flowId: flow.id, activeVersionId: flow.activeVersion?.id ?? null, sendingEnabled: false },
+      eventType: 'flow.resumed',
+      metadata: { flowId: flow.id, activeVersionId: flow.activeVersion?.id ?? null, sendingEnabled, providerMode: provider.mode },
     });
     await this.repository.createFlowActionLog({
       flowId: flow.id,
       flowVersionId: flow.activeVersion?.id ?? null,
       actionType: 'flow_resumed',
       status: 'recorded',
-      message: 'Flow was resumed. Delivery remains disabled for this tenant.',
-      payload: { sendingEnabled: false, providerMode: 'disabled' },
+      message: sendingEnabled
+        ? 'Flow was resumed and can deliver when each enrollment passes runtime checks.'
+        : 'Flow was resumed. Marketing delivery remains off until enabled in workspace settings.',
+      payload: { sendingEnabled, providerMode: provider.mode },
     });
-    return toFlowDto(flow);
+    return toFlowDto(flow, sendingEnabled);
   }
 
   async replayEnrollment(flowId: string, enrollmentId: string) {
     const flow = await this.repository.requireFlow(flowId);
-    const enrollment = await this.repository.flowEnrollment(flowId, enrollmentId);
-    if (!enrollment) throw new NotFoundException('Flow enrollment not found');
+    const source = await this.repository.flowEnrollmentForProcessing(enrollmentId);
+    if (!source || source.flowId !== flowId) throw new NotFoundException('Flow enrollment not found');
+    if (flow.status !== 'published' || !flow.activeVersionId || flow.activeVersionId !== source.flowVersionId || !source.flowVersion) {
+      throw new BadRequestException('Replay requires the same published flow version to remain active.');
+    }
+    const triggerNode = source.flowVersion.nodes.find((node) => node.nodeType === 'trigger');
+    const firstNodeKey = triggerNode?.nextNodeKey ?? firstNodeAfterTrigger(source.flowVersion.nodes, triggerNode?.nodeKey ?? null);
+    if (!firstNodeKey) throw new BadRequestException('Replay requires a runnable node after the flow trigger.');
+    const sendingEnabled = await this.marketingDeliveryEnabled();
+    const replayRun = await this.repository.createFlowRun({
+      flowId: flow.id,
+      flowVersionId: source.flowVersionId,
+      triggerType: flow.triggerType,
+      triggerEventType: 'operator.replay',
+      status: 'running',
+      enrollmentCount: 1,
+      metadata: inputJson({ replayOfEnrollmentId: source.id, replayedAt: new Date().toISOString(), sendingEnabled }, {}),
+    });
+    const replay = await this.repository.createFlowEnrollment({
+      flowId: flow.id,
+      flowVersionId: source.flowVersionId,
+      flowRunId: replayRun.id,
+      contactId: source.contactId,
+      customerId: source.customerId,
+      email: source.email,
+      currentNodeKey: firstNodeKey,
+      status: 'queued',
+      eventPayload: inputJson(source.eventPayload, {}),
+    });
     await this.repository.createFlowActionLog({
       flowId: flow.id,
-      flowVersionId: enrollment.flowVersionId,
-      flowRunId: enrollment.flowRunId,
-      enrollmentId: enrollment.id,
-      contactId: enrollment.contactId,
+      flowVersionId: replay.flowVersionId,
+      flowRunId: replay.flowRunId,
+      enrollmentId: replay.id,
+      contactId: replay.contactId,
       actionType: 'replay_enrollment',
-      nodeKey: enrollment.currentNodeKey,
-      status: 'skipped',
-      message: 'Enrollment replay was requested, but delivery is disabled for this tenant.',
-      payload: { sendingEnabled: false, providerMode: 'disabled' },
+      nodeKey: firstNodeKey,
+      status: 'queued',
+      message: 'Enrollment replay was queued from the active flow version.',
+      payload: { replayOfEnrollmentId: source.id, sendingEnabled },
     });
     await this.repository.recordEvent({
-      eventType: 'flow.enrollment_replay_skipped',
-      status: 'skipped',
-      metadata: { flowId, enrollmentId, reason: 'mail_marketing_delivery_disabled' },
+      eventType: 'flow.enrollment_replay_queued',
+      status: 'queued',
+      metadata: { flowId, enrollmentId, replayEnrollmentId: replay.id, replayRunId: replayRun.id, sendingEnabled },
     });
+    await this.enqueueFlowNode(replay.id, firstNodeKey);
     return {
       flowId: flow.id,
-      enrollmentId,
-      status: 'skipped',
-      sendingEnabled: false,
-      message: 'Mail Marketing delivery is disabled; enrollment replay was recorded but not executed.',
+      enrollmentId: replay.id,
+      status: 'queued',
+      sendingEnabled,
+      message: sendingEnabled
+        ? 'Enrollment replay was queued for the active flow version.'
+        : 'Enrollment replay was queued. Email nodes will record a skip until Marketing delivery is enabled.',
     };
   }
 
   async flowRuns(flowId: string) {
     await this.repository.requireFlow(flowId);
-    const rows = await this.repository.flowRuns(flowId);
+    const [rows, sendingEnabled] = await Promise.all([this.repository.flowRuns(flowId), this.marketingDeliveryEnabled()]);
     return {
       flowId,
       total: rows.length,
-      sendingEnabled: false,
+      sendingEnabled,
       runs: rows.map(toFlowRunDto),
     };
   }
 
   async flowEvents(flowId: string) {
     await this.repository.requireFlow(flowId);
-    const rows = await this.repository.flowEvents(flowId);
+    const [rows, sendingEnabled] = await Promise.all([this.repository.flowEvents(flowId), this.marketingDeliveryEnabled()]);
     return {
       flowId,
       total: rows.length,
-      sendingEnabled: false,
+      sendingEnabled,
       events: rows.map(toFlowEventDto),
     };
   }
 
   async handleDomainEvent(triggerType: string, payload: Record<string, unknown>) {
+    const sendingEnabled = await this.marketingDeliveryEnabled();
     const flows = await this.repository.publishedFlowsByTrigger(triggerType);
     let matched = 0;
     let enrollmentCount = 0;
@@ -1625,7 +1701,7 @@ export class MailMarketingService {
           nodeKey: triggerNode?.nodeKey ?? null,
           status: 'success',
           message: `Matched ${businessTriggerLabel(triggerType)}.`,
-          payload: inputJson({ triggerType, sendingEnabled: false, eventPayload: payload }, {}),
+          payload: inputJson({ triggerType, sendingEnabled, eventPayload: payload }, {}),
         });
         const nextNodeKey = triggerNode?.nextNodeKey ?? firstNodeAfterTrigger(version.nodes, triggerNode?.nodeKey ?? null);
         if (nextNodeKey) await this.enqueueFlowNode(enrollment.id, nextNodeKey);
@@ -1635,9 +1711,9 @@ export class MailMarketingService {
     await this.repository.recordEvent({
       eventType: 'flow.domain_event_ingested',
       status: matched > 0 ? 'matched' : 'skipped',
-      metadata: { triggerType, matched, enrollmentCount, sendingEnabled: false },
+      metadata: { triggerType, matched, enrollmentCount, sendingEnabled },
     });
-    return { triggerType, matched, enrollmentCount, sendingEnabled: false };
+    return { triggerType, matched, enrollmentCount, sendingEnabled };
   }
 
   private async flowEventAudienceTargets(payload: Record<string, unknown>): Promise<FlowEventTarget[]> {
@@ -1873,6 +1949,33 @@ export class MailMarketingService {
     }
     const mailSettings = await this.mail.loadMailCenterSettings();
     const marketingSettings = mailSettings.categoryMarketing;
+    const marketingRuntime = await this.repository.ensureSettings();
+    if (!marketingRuntime.sendingEnabled) {
+      await this.skipEnrollment(enrollment.id, enrollment.flowRunId, {
+        flowId: enrollment.flowId,
+        flowVersionId: enrollment.flowVersionId,
+        enrollmentId: enrollment.id,
+        contactId: enrollment.contactId,
+        nodeKey: node.nodeKey,
+        actionType: 'send_email',
+        message: 'Marketing delivery is off for this workspace. Enable it in Mail Marketing settings before running customer-facing flow email.',
+        payload: inputJson({ field: 'mailMarketing.sendingEnabled', templateId, sendingEnabled: false }, {}),
+      });
+      return false;
+    }
+    if (mailSettings.providerMode !== 'live') {
+      await this.skipEnrollment(enrollment.id, enrollment.flowRunId, {
+        flowId: enrollment.flowId,
+        flowVersionId: enrollment.flowVersionId,
+        enrollmentId: enrollment.id,
+        contactId: enrollment.contactId,
+        nodeKey: node.nodeKey,
+        actionType: 'send_email',
+        message: `Marketing delivery requires Mail Center live mode; current mode is ${mailSettings.providerMode}.`,
+        payload: inputJson({ field: 'mailCenter.providerMode', templateId, providerMode: mailSettings.providerMode, sendingEnabled: false }, {}),
+      });
+      return false;
+    }
     if (!marketingSettings.enabled || marketingSettings.types.flows === false) {
       const field = !marketingSettings.enabled ? 'categoryMarketing.enabled' : 'categoryMarketing.types.flows';
       await this.skipEnrollment(enrollment.id, enrollment.flowRunId, {
@@ -1936,7 +2039,7 @@ export class MailMarketingService {
     }
     const sendStrategy = await this.rules.algorithmRuntimeDefinition('mail_marketing.send_safety');
     const sendSignals = flowSendSafetySignals(enrollment, {
-      providerMode: 'disabled',
+      providerMode: mailSettings.providerMode,
       templateApproved: true,
       templateId,
       nodeKey: node.nodeKey,
@@ -1977,7 +2080,7 @@ export class MailMarketingService {
       });
       return false;
     }
-    const delivery = await this.mail.recordDisabledDelivery({
+    const delivery = await this.mail.sendTransactional({
       eventKey: `mail.flow.${enrollment.flowId}`,
       category: 'marketing',
       to: email,
@@ -1987,7 +2090,7 @@ export class MailMarketingService {
       templateId: rendered.templateId,
       templateVersionId: rendered.templateVersionId,
       metadata: {
-        source: 'mail_flow_node_disabled',
+        source: 'mail_flow_node',
         flowId: enrollment.flowId,
         flowVersionId: enrollment.flowVersionId,
         flowRunId: enrollment.flowRunId,
@@ -2015,9 +2118,9 @@ export class MailMarketingService {
       contactId: enrollment.contactId,
       actionType: 'send_email',
       nodeKey: node.nodeKey,
-      status: 'queued_disabled',
-      message: 'Email delivery was recorded in disabled mode; no customer email was sent.',
-      payload: { deliveryId: delivery.id, recipient: email, templateId: rendered.templateId, sendingEnabled: false },
+      status: 'queued',
+      message: 'Email delivery was queued for the marketing delivery worker.',
+      payload: { deliveryId: delivery.id, recipient: email, templateId: rendered.templateId, providerMode: mailSettings.providerMode, sendingEnabled: true },
     });
     return true;
   }
@@ -2119,6 +2222,7 @@ export class MailMarketingService {
     flow: MailFlowRecord,
     versionSelector: MailFlowVersionSelector,
     providerMode: MailProviderMode,
+    sendingEnabled: boolean,
   ): Promise<MailFlowValidationResponse> {
     const selected = selectFlowVersion(flow, versionSelector);
     const nodes = selected.version?.nodes?.map(toStoredNodeInput) ?? [];
@@ -2128,7 +2232,7 @@ export class MailMarketingService {
         ...(await this.flowPublishReferenceIssues(nodes)),
       ]
       : [`${versionSelector === 'active' ? 'Active' : 'Latest'} flow version was not found`];
-    const warnings = flowValidationWarnings(flow, selected.version, providerMode);
+    const warnings = flowValidationWarnings(flow, selected.version, providerMode, sendingEnabled);
     return {
       flowId: flow.id,
       flowName: flow.name,
@@ -2137,7 +2241,7 @@ export class MailMarketingService {
       versionNumber: selected.version?.versionNumber ?? null,
       triggerType: selected.version?.triggerType ?? flow.triggerType,
       providerMode,
-      sendingEnabled: false,
+      sendingEnabled,
       valid: issues.length === 0,
       publishable: issues.length === 0,
       issues,
@@ -2814,6 +2918,14 @@ export class MailMarketingService {
     const { settings } = await this.mail.mailCenterSettings();
     return providerSummary(settings.providerMode);
   }
+
+  private async marketingDeliveryEnabled() {
+    const [settings, provider] = await Promise.all([
+      this.repository.ensureSettings(),
+      this.mailProviderSummary(),
+    ]);
+    return settings.sendingEnabled && provider.mode === 'live';
+  }
 }
 
 function toSettingsDto(settings: {
@@ -2830,7 +2942,7 @@ function toSettingsDto(settings: {
   const approvalPolicy = approvalPolicyFromMetadata(settings.metadata);
   return {
     id: settings.id,
-    sendingEnabled: false,
+    sendingEnabled: settings.sendingEnabled && providerMode === 'live',
     providerMode,
     defaultSenderName: settings.defaultSenderName,
     defaultSenderEmail: settings.defaultSenderEmail,
@@ -3400,7 +3512,7 @@ function toFlowDto(flow: {
   runs?: Array<{ status: string; enrollmentCount: number; completedCount: number; failedCount: number; createdAt: Date }>;
   actionLogs?: Array<{ id: string; actionType: string; status: string; createdAt: Date }>;
   _count?: { runs: number; actionLogs: number };
-}) {
+}, sendingEnabled = false) {
   const latestVersion = flow.versions?.[0] ?? null;
   const activeVersion = flow.activeVersion ?? null;
   const runSummary = summarizeFlowRuns(flow.runs ?? []);
@@ -3412,7 +3524,7 @@ function toFlowDto(flow: {
     status: flow.status,
     graph: asRecord(flow.graph),
     metadata: asRecord(flow.metadata),
-    sendingEnabled: false,
+    sendingEnabled,
     activeVersion: activeVersion ? toFlowVersionDto(activeVersion) : null,
     latestVersion: latestVersion ? toFlowVersionDto(latestVersion) : null,
     nodeCount: activeVersion?.nodes?.length ?? latestVersion?.nodes?.length ?? 0,
@@ -3484,16 +3596,17 @@ function flowValidationSummary(nodes: NormalizedFlowNode[]) {
   };
 }
 
-function flowValidationWarnings(flow: MailFlowRecord, version: FlowVersionDtoInput | null, providerMode: MailProviderMode) {
+function flowValidationWarnings(flow: MailFlowRecord, version: FlowVersionDtoInput | null, providerMode: MailProviderMode, sendingEnabled: boolean) {
   const warnings: string[] = [];
   if (flow.status === 'paused') warnings.push('Flow is paused; publish references can be valid while runtime remains stopped.');
-  if (providerMode === 'disabled') warnings.push('Mail Center provider mode is disabled; runtime delivery creates proof records instead of contacting customers.');
-  if (providerMode === 'test') warnings.push('Mail Center provider mode is test-only; marketing flow simulation remains proof-only.');
+  if (!sendingEnabled) warnings.push('Marketing delivery is off; email nodes will be skipped until the workspace send control and live provider mode are enabled.');
+  if (providerMode === 'disabled') warnings.push('Mail Center provider mode is disabled; runtime email nodes cannot contact customers.');
+  if (providerMode === 'test') warnings.push('Mail Center provider mode is test-only; customer-facing marketing email is blocked.');
   if (version && version.status !== 'published') warnings.push('Selected version is not published yet.');
   return warnings;
 }
 
-function simulateFlowNode(node: NormalizedFlowNode, providerMode: MailProviderMode) {
+function simulateFlowNode(node: NormalizedFlowNode, providerMode: MailProviderMode, sendingEnabled: boolean) {
   const config = asRecord(node.config as Prisma.JsonValue);
   switch (node.nodeType) {
     case 'trigger':
@@ -3533,10 +3646,12 @@ function simulateFlowNode(node: NormalizedFlowNode, providerMode: MailProviderMo
         nodeKey: node.nodeKey,
         nodeType: node.nodeType,
         label: node.label,
-        outcome: providerMode === 'live' ? 'would_enter_delivery_gate' : 'would_record_delivery_proof',
-        message: providerMode === 'live'
-          ? 'Would enter the delivery gate; consent, suppression, category, and provider checks still apply.'
-          : 'Would record proof only; no customer email is sent in this simulation.',
+        outcome: 'would_evaluate_delivery_gate',
+        message: !sendingEnabled
+          ? 'Simulation does not send email. Runtime would skip this node until Marketing delivery is enabled in workspace settings.'
+          : providerMode === 'live'
+            ? 'Simulation does not send email. Runtime would evaluate consent, suppression, category, quiet-hours, frequency, and provider checks.'
+            : `Simulation does not send email. Runtime would skip this node because Mail Center is in ${providerMode} mode.`,
       };
     case 'create_sales_task':
     case 'create_follow_up_task':

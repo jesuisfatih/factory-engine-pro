@@ -316,6 +316,7 @@ export function MailMarketingPage() {
     maxSnapshotMembers: '1500',
     maxEstimatedAudienceSpendUsd: '0',
   });
+  const [marketingDeliveryEnabled, setMarketingDeliveryEnabled] = useState(false);
   const [selectedAudienceId, setSelectedAudienceId] = useState('');
   const [selectedSnapshotId, setSelectedSnapshotId] = useState('');
   const [snapshotSearch, setSnapshotSearch] = useState('');
@@ -586,7 +587,7 @@ export function MailMarketingPage() {
     mutationFn: () => {
       const settings = bootstrap.data?.settings ?? {};
       const input: MailMarketingSettingsInput = {
-        sendingEnabled: false,
+        sendingEnabled: marketingDeliveryEnabled,
         providerMode: providerModeValue(settings.providerMode),
         defaultSenderName: String(settings.defaultSenderName ?? 'Factory Engine Pro'),
         defaultSenderEmail: typeof settings.defaultSenderEmail === 'string' ? settings.defaultSenderEmail : null,
@@ -627,6 +628,12 @@ export function MailMarketingPage() {
     },
     onError: (error) => toast.error('Webhook destination failed', { description: apiErrorMessage(error) }),
   });
+
+  useEffect(() => {
+    if (bootstrap.data?.settings) {
+      setMarketingDeliveryEnabled(Boolean(bootstrap.data.settings.sendingEnabled));
+    }
+  }, [bootstrap.data?.settings]);
 
   const approveWebhookDestination = useMutation({
     mutationFn: (destination: MailFlowWebhookDestinationDto) => adminApi.approveMailMarketingWebhookDestination(destination.id, { allowlistedUrl: destination.url }),
@@ -1424,6 +1431,8 @@ export function MailMarketingPage() {
           destinations={webhookDestinations.data ?? []}
           destinationsLoading={webhookDestinations.isLoading}
           destinationsError={webhookDestinations.error ? apiErrorMessage(webhookDestinations.error) : null}
+          marketingDeliveryEnabled={marketingDeliveryEnabled}
+          onMarketingDeliveryEnabledChange={setMarketingDeliveryEnabled}
           approvalPolicyDraft={approvalPolicyDraft}
           onApprovalPolicyDraftChange={setApprovalPolicyDraft}
           onSaveApprovalPolicy={() => updateApprovalPolicy.mutate()}
@@ -2744,7 +2753,7 @@ function TemplatesPanel({
               {!deliveriesLoading && !deliveriesError && deliveryRows.length === 0 && (
                 <StateBlock
                   title="No delivery proof yet"
-                  body="Record a test delivery from a revision. The backend will create a proof-only delivery record while provider sending is disabled."
+                  body="Queue a test delivery from this revision. In live provider mode it is delivered only to the address you enter; otherwise the result records the exact send control that blocked it."
                 />
               )}
               {!deliveriesLoading && !deliveriesError && deliveryRows.length > 0 && (
@@ -3415,7 +3424,7 @@ function CampaignsPanel({
         <div className="field">
           <label>Schedule after approval</label>
           <input type="datetime-local" value={scheduledAt} onChange={(event) => onScheduledAtChange(event.target.value)} />
-          <div className="hint">After approval, scheduled campaigns record marketing proof at this time. Marketing delivery stays proof-only until the send gate is explicitly enabled.</div>
+          <div className="hint">After approval, the campaign is queued at this time. Delivery still passes consent, suppression, quiet-hours, frequency, provider, and workspace send controls.</div>
         </div>
         <button className="btn primary" type="button" disabled={!canCreate || creating} onClick={onCreate}>
           <Mail size={14} /> Create draft campaign
@@ -3868,6 +3877,8 @@ function SettingsPanel({
   destinations,
   destinationsLoading,
   destinationsError,
+  marketingDeliveryEnabled,
+  onMarketingDeliveryEnabledChange,
   approvalPolicyDraft,
   onApprovalPolicyDraftChange,
   onSaveApprovalPolicy,
@@ -3888,6 +3899,8 @@ function SettingsPanel({
   destinations: MailFlowWebhookDestinationDto[];
   destinationsLoading: boolean;
   destinationsError: string | null;
+  marketingDeliveryEnabled: boolean;
+  onMarketingDeliveryEnabledChange: (enabled: boolean) => void;
   approvalPolicyDraft: ApprovalPolicyDraft;
   onApprovalPolicyDraftChange: (draft: ApprovalPolicyDraft) => void;
   onSaveApprovalPolicy: () => void;
@@ -3910,9 +3923,21 @@ function SettingsPanel({
       <div className="two-col" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
         <section className="section">
           <h3>Settings</h3>
-          <DetailLine label="Sending enabled" value="false" />
+          <label className="field" style={{ gap: 8 }}>
+            <span>Marketing delivery</span>
+            <span className="toggle-row">
+              <input
+                type="checkbox"
+                checked={marketingDeliveryEnabled}
+                disabled={!canSettingsWrite}
+                onChange={(event) => onMarketingDeliveryEnabledChange(event.target.checked)}
+              />
+              <span>{marketingDeliveryEnabled ? 'Enabled after policy checks' : 'Off'}</span>
+            </span>
+          </label>
           <DetailLine label="Provider mode" value={String(data.settings.providerMode ?? 'disabled')} />
           <DetailLine label="Daily cap" value={String(data.settings.dailySendCap ?? 0)} />
+          <div className="hint">Sending also requires live provider mode, an approved campaign or published flow, consent, suppression, quiet-hours, and frequency checks.</div>
         </section>
         <section className="section">
           <h3>Campaign approval policy</h3>
@@ -4737,7 +4762,7 @@ function providerModeTemplateDetail(value: unknown) {
   const mode = providerModeValue(value);
   if (mode === 'live') return 'Mail Center is in live mode. Template tests still use explicit test recipients before any customer-facing release.';
   if (mode === 'test') return 'Mail Center is in test-only mode. Template tests can create delivery proof for the selected test recipient only.';
-  return 'Mail Center delivery is disabled. Tests create a proof-only delivery record without contacting customers.';
+  return 'Mail Center delivery is off. A test records the exact blocking control and does not contact the recipient.';
 }
 
 function snapshotEligibilitySummary(snapshot: { memberCount: number; reachableCount: number }) {

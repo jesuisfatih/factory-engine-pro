@@ -27,6 +27,7 @@ export class MailMarketingRepository {
   }
 
   async updateSettings(input: {
+    sendingEnabled?: boolean;
     providerMode?: string;
     defaultSenderName?: string;
     defaultSenderEmail?: string | null;
@@ -38,8 +39,8 @@ export class MailMarketingRepository {
     await this.prisma.db.mailMarketingSetting.updateMany({
       where: { tenantId: this.tenantId(), id: settings.id },
       data: {
-        sendingEnabled: false,
-        providerMode: 'disabled',
+        ...(input.sendingEnabled !== undefined && { sendingEnabled: input.sendingEnabled }),
+        ...(input.providerMode !== undefined && { providerMode: input.providerMode }),
         ...(input.defaultSenderName !== undefined && { defaultSenderName: input.defaultSenderName }),
         ...(input.defaultSenderEmail !== undefined && { defaultSenderEmail: input.defaultSenderEmail }),
         ...(input.quietHours !== undefined && { quietHours: input.quietHours }),
@@ -1044,6 +1045,49 @@ export class MailMarketingRepository {
       },
     });
     return this.requireCampaign(id);
+  }
+
+  async reconcileCampaignDeliveryStats(campaignId: string) {
+    const tenantId = this.tenantId();
+    const campaign = await this.requireCampaign(campaignId);
+    if (campaign.status !== 'sending') return campaign;
+
+    const deliveries = await this.prisma.db.mailDelivery.findMany({
+      where: {
+        tenantId,
+        category: 'marketing',
+        metadata: { path: ['campaignId'], equals: campaignId },
+      },
+      select: { status: true },
+    });
+    const stats = deliveries.reduce((summary, delivery) => {
+      if (delivery.status === 'queued' || delivery.status === 'sending') summary.pending += 1;
+      if (delivery.status === 'sent') summary.sent += 1;
+      if (delivery.status === 'failed') summary.failed += 1;
+      if (delivery.status === 'skipped' || delivery.status === 'queued_disabled') summary.skipped += 1;
+      return summary;
+    }, { pending: 0, sent: 0, failed: 0, skipped: 0 });
+    const metadata = asRecord(campaign.metadata);
+    const initialSkipped = Number(metadata.eligibilitySkippedCount);
+    const eligibilitySkippedCount = Number.isFinite(initialSkipped)
+      ? Math.max(0, Math.trunc(initialSkipped))
+      : Math.max(0, campaign.skippedCount - stats.skipped);
+
+    const terminal = deliveries.length >= campaign.queuedCount && stats.pending === 0;
+    await this.prisma.db.mailCampaign.updateMany({
+      where: { tenantId, id: campaignId, status: 'sending' },
+      data: {
+        sentCount: stats.sent,
+        failedCount: stats.failed,
+        skippedCount: eligibilitySkippedCount + stats.skipped,
+        ...(terminal && {
+          status: 'completed',
+          completedAt: new Date(),
+          sentAt: stats.sent > 0 ? new Date() : null,
+        }),
+      },
+    });
+    return this.requireCampaign(campaignId);
   }
 
   snapshotMembers(snapshotId: string, limit = 1000) {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { CustomerDetailPanelDto, CustomerDetailTab } from '@factory-engine-pro/contracts';
 import { staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import {
+  ChevronLeft,
   ClipboardList,
   Headphones,
   LayoutDashboard,
@@ -74,6 +75,7 @@ const TAB_CONFIG: Partial<Record<CustomerDetailTab, { label: string; Icon: Lucid
 };
 
 type PanelTab = CustomerDetailTab | 'main';
+type CustomerDetailOrder = CustomerDetailPanelDto['tabs']['shopifyOrders'][number];
 
 export function CustomerDetailPanel({
   open,
@@ -99,6 +101,7 @@ export function CustomerDetailPanel({
     [visibleKey, detail, main],
   );
   const [activeTab, setActiveTab] = useState<PanelTab>('profile');
+  const [selectedOrder, setSelectedOrder] = useState<CustomerDetailOrder | null>(null);
   const showCustomerName = customerDetailFieldVisible(customization, 'customerName', true, true);
   const showPhone = customerDetailFieldVisible(customization, 'phone', true, true);
   const showEmail = customerDetailFieldVisible(customization, 'email');
@@ -109,7 +112,8 @@ export function CustomerDetailPanel({
   useEffect(() => {
     if (!open) return;
     setActiveTab(main ? 'main' : 'profile');
-  }, [main, open]);
+    setSelectedOrder(null);
+  }, [detail?.customer.id, main, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -201,9 +205,11 @@ export function CustomerDetailPanel({
             </nav>
 
             <main className="customer-detail-body">
-              {activeTab === 'main' && main
+              {selectedOrder
+                ? <OrderDetailTab order={selectedOrder} onBack={() => { setSelectedOrder(null); setActiveTab('shopify_orders'); }} staffTerminology={staffTerminology} />
+                : activeTab === 'main' && main
                 ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} customization={customization} />
-                : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology)}
+                : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology, setSelectedOrder)}
             </main>
           </>
         )}
@@ -286,9 +292,15 @@ function MainTab({
   );
 }
 
-function renderTab(detail: CustomerDetailPanelDto, tab: CustomerDetailTab, onRetry: () => void, staffTerminology: boolean) {
+function renderTab(
+  detail: CustomerDetailPanelDto,
+  tab: CustomerDetailTab,
+  onRetry: () => void,
+  staffTerminology: boolean,
+  onOpenOrder: (order: CustomerDetailOrder) => void,
+) {
   if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} />;
-  if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
+  if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} onOpenOrder={onOpenOrder} />;
   if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
@@ -350,7 +362,17 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
   );
 }
 
-function OrdersTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
+function OrdersTab({
+  detail,
+  onRetry,
+  staffTerminology,
+  onOpenOrder,
+}: {
+  detail: CustomerDetailPanelDto;
+  onRetry: () => void;
+  staffTerminology: boolean;
+  onOpenOrder: (order: CustomerDetailOrder) => void;
+}) {
   const rows = detail.tabs.shopifyOrders;
   if (rows.length === 0 && detail.customer.metrics.ordersCount > 0) {
     return (
@@ -365,19 +387,166 @@ function OrdersTab({ detail, onRetry, staffTerminology }: { detail: CustomerDeta
   return (
     <div className="customer-detail-list">
       {rows.map((order) => (
-        <article key={order.id} className="customer-detail-card">
+        <button key={order.id} type="button" className="customer-detail-card customer-detail-order-card" onClick={() => onOpenOrder(order)}>
           <div className="customer-detail-row">
             <div>
               <strong>{order.orderNumber ?? order.shopifyOrderId ?? order.id}</strong>
               <span>{staffPanelText(`${label(order.financialStatus ?? 'unknown')} - ${label(order.fulfillmentStatus ?? order.fulfillmentMode)}`, staffTerminology)}</span>
             </div>
-            <div className="customer-detail-amount">{money(order.totalPrice)}</div>
+            <div className="customer-detail-amount">{money(order.totalPrice, order.currency)}</div>
           </div>
-          <div className="customer-detail-muted">{date(order.processedAt ?? order.createdAt)} - discounts {money(order.totalDiscounts)} - shipping {money(order.totalShipping)}</div>
-        </article>
+          <div className="customer-detail-muted">{date(order.processedAt ?? order.createdAt)} - discounts {money(order.totalDiscounts, order.currency)} - shipping {money(order.totalShipping, order.currency)}</div>
+          <span className="customer-detail-order-open">Open complete order detail</span>
+        </button>
       ))}
     </div>
   );
+}
+
+function OrderDetailTab({
+  order,
+  onBack,
+  staffTerminology,
+}: {
+  order: CustomerDetailOrder;
+  onBack: () => void;
+  staffTerminology: boolean;
+}) {
+  const [tab, setTab] = useState<'overview' | 'items' | 'delivery' | 'financial'>('overview');
+  const lineItems = orderLineItems(order.lineItems);
+  const fulfillments = jsonRecords(order.fulfillments);
+  const refunds = jsonRecords(order.refunds);
+  const discountCodes = displayValues(order.discountCodes);
+  const designFiles = jsonRecords(order.designFiles);
+  const title = order.orderNumber ?? order.shopifyOrderId ?? order.id;
+
+  return (
+    <section className="customer-detail-order-detail" aria-label={`Order ${title} detail`}>
+      <header className="customer-detail-order-head">
+        <div>
+          <button type="button" className="customer-detail-back-link" onClick={onBack}><ChevronLeft size={15} /> Back to orders</button>
+          <h3>Order {title}</h3>
+          <p>{staffPanelText(`${label(order.financialStatus ?? 'unknown')} payment - ${label(order.fulfillmentStatus ?? order.fulfillmentMode)} fulfillment`, staffTerminology)}</p>
+        </div>
+        <div className="customer-detail-order-total">{money(order.totalPrice, order.currency)}</div>
+      </header>
+
+      <nav className="customer-detail-order-tabs" aria-label="Order detail sections">
+        {([
+          ['overview', 'Overview'],
+          ['items', `Items (${lineItems.length})`],
+          ['delivery', 'Delivery'],
+          ['financial', 'Payment'],
+        ] as const).map(([id, labelText]) => (
+          <button key={id} type="button" className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{labelText}</button>
+        ))}
+      </nav>
+
+      {tab === 'overview' && (
+        <div className="customer-detail-grid">
+          <section className="customer-detail-card">
+            <h3>Order status</h3>
+            <KeyValue label="Placed" value={dateTime(order.processedAt ?? order.createdAt)} />
+            <KeyValue label="Payment" value={label(order.financialStatus)} />
+            <KeyValue label="Fulfillment" value={label(order.fulfillmentStatus ?? order.fulfillmentMode)} />
+            <KeyValue label="Items" value={String(lineItems.reduce((sum, item) => sum + item.quantity, 0))} />
+          </section>
+          <section className="customer-detail-card">
+            <h3>Order context</h3>
+            <KeyValue label="Order subtotal" value={money(order.subtotal, order.currency)} />
+            <KeyValue label="Shipping" value={money(order.totalShipping, order.currency)} />
+            <KeyValue label="Tax" value={money(order.totalTax, order.currency)} />
+            {order.tags.length > 0 ? <div className="customer-detail-tags">{order.tags.map((tag) => <span key={tag}>{staffPanelText(tag, staffTerminology)}</span>)}</div> : <div className="customer-detail-muted">No Shopify order tags.</div>}
+          </section>
+          {order.note ? <section className="customer-detail-card customer-detail-order-note"><h3>Order note</h3><p>{staffPanelText(order.note, staffTerminology)}</p></section> : null}
+          {designFiles.length > 0 ? <section className="customer-detail-card customer-detail-order-note"><h3>Attached production files</h3><OrderDesignFiles files={designFiles} /></section> : null}
+        </div>
+      )}
+
+      {tab === 'items' && (
+        lineItems.length === 0
+          ? <EmptyTab title="No line items captured" body="This Shopify order does not contain line item detail in the current sync record." onRetry={onBack} />
+          : <div className="customer-detail-list">{lineItems.map((item, index) => <OrderLineItem key={`${item.id ?? item.title}-${index}`} item={item} currency={order.currency} staffTerminology={staffTerminology} />)}</div>
+      )}
+
+      {tab === 'delivery' && (
+        <div className="customer-detail-grid">
+          <section className="customer-detail-card"><h3>Shipping address</h3><AddressBlock label="Shipping" value={order.shippingAddress} /></section>
+          <section className="customer-detail-card"><h3>Billing address</h3><AddressBlock label="Billing" value={order.billingAddress} /></section>
+          <section className="customer-detail-card customer-detail-order-note">
+            <h3>Fulfillment and tracking</h3>
+            {fulfillments.length === 0 ? <div className="customer-detail-muted">No fulfillment shipment detail is attached yet.</div> : <FulfillmentList rows={fulfillments} />}
+          </section>
+        </div>
+      )}
+
+      {tab === 'financial' && (
+        <div className="customer-detail-grid">
+          <section className="customer-detail-card">
+            <h3>Amount breakdown</h3>
+            <KeyValue label="Subtotal" value={money(order.subtotal, order.currency)} />
+            <KeyValue label="Discounts" value={money(order.totalDiscounts, order.currency)} />
+            <KeyValue label="Shipping" value={money(order.totalShipping, order.currency)} />
+            <KeyValue label="Tax" value={money(order.totalTax, order.currency)} />
+            <KeyValue label="Total" value={money(order.totalPrice, order.currency)} />
+          </section>
+          <section className="customer-detail-card">
+            <h3>Discount and refund history</h3>
+            {discountCodes.length > 0 ? <KeyValue label="Discount codes" value={discountCodes.join(', ')} /> : <div className="customer-detail-muted">No discount code captured.</div>}
+            {refunds.length > 0 ? <RefundList rows={refunds} /> : <div className="customer-detail-muted" style={{ marginTop: 10 }}>No refund record captured.</div>}
+          </section>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function OrderLineItem({ item, currency, staffTerminology }: { item: OrderLineItem; currency: string; staffTerminology: boolean }) {
+  return (
+    <article className="customer-detail-card">
+      <div className="customer-detail-row">
+        <div>
+          <strong>{staffPanelText(item.title, staffTerminology)}</strong>
+          <span>{[item.variantTitle, item.sku ? `SKU ${item.sku}` : null].filter(Boolean).join(' - ') || 'Variant details not captured'}</span>
+        </div>
+        <div className="customer-detail-amount">{item.quantity} x {item.unitPrice === null ? '-' : money(item.unitPrice, currency)}</div>
+      </div>
+      {item.properties.length > 0 ? <OrderProperties properties={item.properties} /> : null}
+    </article>
+  );
+}
+
+function OrderProperties({ properties }: { properties: Array<{ name: string; value: string }> }) {
+  return <div className="customer-detail-order-properties">{properties.map((property) => {
+    const url = httpUrl(property.value);
+    return <div key={`${property.name}-${property.value}`}><span>{property.name}</span>{url ? <a href={url} target="_blank" rel="noreferrer">Open linked file</a> : <strong>{property.value}</strong>}</div>;
+  })}</div>;
+}
+
+function OrderDesignFiles({ files }: { files: Array<Record<string, unknown>> }) {
+  return <div className="customer-detail-order-files">{files.map((file, index) => {
+    const name = textFromRecord(file, ['fileName', 'lineItemTitle', 'title']) ?? `File ${index + 1}`;
+    const url = httpUrl(textFromRecord(file, ['previewUrl', 'uploadedFileUrl', 'printReadyUrl', 'editUrl', 'downloadUrl', 'url']));
+    return <div key={`${name}-${index}`}><strong>{name}</strong>{url ? <a href={url} target="_blank" rel="noreferrer">Open file</a> : <span>File metadata is present; no accessible link was captured.</span>}</div>;
+  })}</div>;
+}
+
+function FulfillmentList({ rows }: { rows: Array<Record<string, unknown>> }) {
+  return <div className="customer-detail-order-files">{rows.map((row, index) => {
+    const tracking = jsonRecords(row.tracking_info ?? row.trackingInfo);
+    const status = textFromRecord(row, ['status', 'shipmentStatus']) ?? `Shipment ${index + 1}`;
+    const trackingText = tracking.map((entry) => [textFromRecord(entry, ['company']), textFromRecord(entry, ['number'])].filter(Boolean).join(' ')).filter(Boolean).join(', ');
+    const url = httpUrl(textFromRecord(row, ['tracking_url', 'trackingUrl'])) ?? httpUrl(textFromRecord(tracking[0] ?? {}, ['url']));
+    return <div key={`${status}-${index}`}><strong>{status}</strong><span>{trackingText || 'Tracking details have not been supplied.'}</span>{url ? <a href={url} target="_blank" rel="noreferrer">Track shipment</a> : null}</div>;
+  })}</div>;
+}
+
+function RefundList({ rows }: { rows: Array<Record<string, unknown>> }) {
+  return <div className="customer-detail-order-files">{rows.map((row, index) => {
+    const amount = textFromRecord(row, ['amount', 'totalRefunded', 'total_refunded']) ?? moneyFromSet(row.totalRefundedSet);
+    const reason = textFromRecord(row, ['note', 'reason']) ?? `Refund ${index + 1}`;
+    return <div key={`${reason}-${index}`}><strong>{reason}</strong><span>{amount ?? 'Amount not captured'}{textFromRecord(row, ['createdAt', 'created_at']) ? ` - ${dateTime(textFromRecord(row, ['createdAt', 'created_at']))}` : ''}</span></div>;
+  })}</div>;
 }
 
 function AircallTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
@@ -573,8 +742,12 @@ function PanelState({ title, body, action }: { title: string; body: string; acti
   );
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+function money(value: number, currency = 'USD') {
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `${currency || 'USD'} ${value.toFixed(2)}`;
+  }
 }
 
 function date(value: string | null) {
@@ -599,6 +772,124 @@ function duration(seconds: number | null) {
 
 function cleanPhone(value: string) {
   return value.replace(/[^\d+]/g, '');
+}
+
+interface OrderLineItem {
+  id: string | null;
+  title: string;
+  variantTitle: string | null;
+  sku: string | null;
+  quantity: number;
+  unitPrice: number | null;
+  properties: Array<{ name: string; value: string }>;
+}
+
+function orderLineItems(value: unknown): OrderLineItem[] {
+  return jsonRecords(value).map((row, index) => {
+    const quantity = numberFromRecord(row, ['quantity', 'qty']) ?? 0;
+    const unitPrice = numberFromRecord(row, ['price', 'unitPrice', 'unit_price']) ?? moneyAmountFromSet(row.originalUnitPriceSet);
+    return {
+      id: textFromRecord(row, ['id', 'lineItemId', 'line_item_id']),
+      title: textFromRecord(row, ['title', 'name', 'productTitle']) ?? `Line item ${index + 1}`,
+      variantTitle: textFromRecord(row, ['variant_title', 'variantTitle']),
+      sku: textFromRecord(row, ['sku']),
+      quantity,
+      unitPrice,
+      properties: orderProperties(row.properties ?? row.customAttributes),
+    };
+  });
+}
+
+function orderProperties(value: unknown): Array<{ name: string; value: string }> {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      const row = recordFrom(entry);
+      if (!row) return [];
+      const name = textFromRecord(row, ['name', 'key']);
+      const propertyValue = textFromRecord(row, ['value']);
+      return name && propertyValue ? [{ name, value: propertyValue }] : [];
+    });
+  }
+  const record = recordFrom(value);
+  return record
+    ? Object.entries(record)
+      .map(([name, propertyValue]) => ({ name, value: scalarText(propertyValue) }))
+      .filter((property) => property.value)
+    : [];
+}
+
+function jsonRecords(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) return value.flatMap((entry) => {
+    const record = recordFrom(entry);
+    return record ? [record] : [];
+  });
+  const record = recordFrom(value);
+  if (!record) return [];
+  if (Array.isArray(record.nodes)) return jsonRecords(record.nodes);
+  return [record];
+}
+
+function displayValues(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((entry) => {
+      if (typeof entry === 'string') return entry.trim();
+      const record = recordFrom(entry);
+      return record ? textFromRecord(record, ['code', 'title', 'name']) ?? '' : '';
+    }).filter(Boolean);
+  }
+  if (typeof value === 'string') return value.split(',').map((entry) => entry.trim()).filter(Boolean);
+  return [];
+}
+
+function recordFrom(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function textFromRecord(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = scalarText(record[key]);
+    if (value) return value;
+  }
+  return null;
+}
+
+function numberFromRecord(record: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = Number(record[key]);
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function moneyFromSet(value: unknown) {
+  const root = recordFrom(value);
+  const shopMoney = recordFrom(root?.shopMoney);
+  const amount = Number(shopMoney?.amount);
+  const currency = scalarText(shopMoney?.currencyCode) || 'USD';
+  return Number.isFinite(amount) ? money(amount, currency) : null;
+}
+
+function moneyAmountFromSet(value: unknown): number | null {
+  const root = recordFrom(value);
+  const shopMoney = recordFrom(root?.shopMoney);
+  const amount = Number(shopMoney?.amount);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function scalarText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value).trim();
+  return '';
+}
+
+function httpUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function label(value: string | null | undefined) {
