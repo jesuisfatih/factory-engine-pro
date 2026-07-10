@@ -174,11 +174,11 @@ export function queueName(config: ConfigService, baseName: string): string {
     .map((value) => value?.trim())
     .find((value): value is string => Boolean(value));
 
-  return namespace ? `${safeQueueNamespace(namespace)}:${baseName}` : baseName;
+  return namespace ? `${safeQueueNamespace(namespace)}__${baseName}` : baseName;
 }
 
 function safeQueueNamespace(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_.:-]/g, '_');
+  return value.replace(/[^a-zA-Z0-9_.-]/g, '_');
 }
 
 function redisConnectionOptions(url: string): ConnectionOptions {
