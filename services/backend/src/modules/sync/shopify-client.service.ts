@@ -48,7 +48,7 @@ export class ShopifyClientService {
   ) {}
 
   async credentialState(tenantId = this.tenantContext.get()?.tenantId): Promise<ShopifyCredentialState> {
-    const config = tenantId ? await this.prisma.db.tenantConfig.findUnique({
+    const config = tenantId ? await this.prisma.db.tenantConfig.findFirst({
       where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     }) : null;
@@ -66,7 +66,7 @@ export class ShopifyClientService {
   }
 
   async resolveCredentials(tenantId = this.tenantContext.get()?.tenantId): Promise<ShopifyCredentials | null> {
-    const config = tenantId ? await this.prisma.db.tenantConfig.findUnique({
+    const config = tenantId ? await this.prisma.db.tenantConfig.findFirst({
       where: { tenantId },
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     }) : null;
