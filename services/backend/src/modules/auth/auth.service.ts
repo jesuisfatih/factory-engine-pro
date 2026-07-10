@@ -239,6 +239,8 @@ export class AuthService {
     const token = await this.authTokens.consume('password_reset', input.token);
     const passwordHash = await this.password.hash(input.password);
     await this.principals.updatePassword(token.principalType as PrincipalType, token.principalId, passwordHash, true);
+    const principal = await this.principals.findById(token.principalType as PrincipalType, token.principalId);
+    if (principal) await this.notifyPasswordResetCompleted(principal, token.id, surfaceFromToken(token.metadata, principal.type));
     this.logger.log('auth', 'password_reset.completed', 'Password was reset', {
       principal_id: token.principalId,
       principal_type: token.principalType,
@@ -252,6 +254,7 @@ export class AuthService {
     await this.principals.updatePassword(token.principalType as PrincipalType, token.principalId, passwordHash, true);
     const principal = await this.principals.findById(token.principalType as PrincipalType, token.principalId);
     if (!principal) throw new UnauthorizedException('Invitation principal not found');
+    await this.notifyInvitationAccepted(principal, token.id);
     return this.sessions.issue(token.tenantId, principal);
   }
 
@@ -430,6 +433,69 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid email or password');
   }
 
+  private async notifyPasswordResetCompleted(
+    principal: PrincipalRecord,
+    eventId: string,
+    surface: 'admin' | 'person' | 'accounts',
+  ) {
+    try {
+      await this.mail.sendPasswordResetCompleted({
+        to: principal.email,
+        recipientName: `${principal.firstName} ${principal.lastName}`.trim() || principal.email,
+        eventId,
+        surface,
+      });
+    } catch (error) {
+      this.logger.warn('auth', 'password_reset.completed_mail_failed', 'Password was reset but the confirmation email could not be queued.', {
+        principal_id: principal.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private async notifyInvitationAccepted(principal: PrincipalRecord, eventId: string) {
+    const surface = principal.type === 'member' ? 'admin' : 'accounts';
+    try {
+      await this.mail.sendAccountActivated({
+        to: principal.email,
+        recipientName: `${principal.firstName} ${principal.lastName}`.trim() || principal.email,
+        eventId,
+        surface,
+      });
+    } catch (error) {
+      this.logger.warn('auth', 'invitation.activation_mail_failed', 'Invitation was accepted but the activation email could not be queued.', {
+        principal_id: principal.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    if (principal.type !== 'customer_user') return;
+    const approvedRequest = await this.prisma.db.b2BAccessRequest.findFirst({
+      where: { resolvedCustomerUserId: principal.id, status: 'approved' },
+      select: { id: true, companyName: true },
+    });
+    if (!approvedRequest) return;
+
+    try {
+      const recipients = await this.mail.listInternalRecipients();
+      const adminUrl = `${(this.config.get<string>('ADMIN_URL') ?? this.config.get<string>('ADMIN_APP_URL') ?? '').replace(/\/+$/, '')}/b2b-access`;
+      await Promise.all(recipients.map((recipient) => this.mail.sendB2BInvitationAcceptedInternal({
+        to: recipient.email,
+        recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+        eventId,
+        accountName: approvedRequest.companyName,
+        accountEmail: principal.email,
+        adminUrl,
+      })));
+    } catch (error) {
+      this.logger.warn('auth', 'b2b.invitation_accepted_mail_failed', 'B2B invitation was accepted but the internal notification could not be queued.', {
+        principal_id: principal.id,
+        b2b_access_request_id: approvedRequest.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   private mcpTokenDto(row: {
     id: string;
     metadata: Prisma.JsonValue;
@@ -463,6 +529,14 @@ export class AuthService {
       revokedAt: row.revokedAt?.toISOString() ?? null,
     };
   }
+}
+
+function surfaceFromToken(metadata: Prisma.JsonValue, principalType: PrincipalType): 'admin' | 'person' | 'accounts' {
+  const surface = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as Record<string, unknown>).surface
+    : null;
+  if (surface === 'admin' || surface === 'person' || surface === 'accounts') return surface;
+  return principalType === 'member' ? 'admin' : 'accounts';
 }
 
 function cleanOptionalString(value: string | undefined) {

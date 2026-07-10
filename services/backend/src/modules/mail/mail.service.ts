@@ -1639,6 +1639,141 @@ export class MailService {
     });
   }
 
+  async sendPasswordResetCompleted(input: {
+    to: string;
+    recipientName: string;
+    eventId: string;
+    surface: 'admin' | 'person' | 'accounts';
+  }) {
+    const brand = await this.resolveBrandName();
+    const loginUrl = this.surfaceLoginUrl(input.surface);
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'auth.password_reset_completed.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        login_url: loginUrl,
+        action_url: loginUrl,
+        surface: input.surface,
+      },
+      fallback: {
+        subject: `${brand} password updated`,
+        html: [
+          `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+          `<p>Your ${escapeHtml(brand)} password was updated successfully.</p>`,
+          `<p>If you did not make this change, contact your workspace administrator immediately.</p>`,
+          loginUrl ? `<p><a href="${escapeHtml(loginUrl)}">Sign in</a></p>` : '',
+        ].filter(Boolean).join(''),
+        text: `Hello ${input.recipientName}, your ${brand} password was updated successfully.${loginUrl ? ` Sign in: ${loginUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'auth.password_reset_completed.user',
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `auth:password_reset_completed:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: { surface: input.surface, templateSource: rendered.templateSource },
+    });
+  }
+
+  async sendAccountActivated(input: {
+    to: string;
+    recipientName: string;
+    eventId: string;
+    surface: 'admin' | 'accounts';
+  }) {
+    const brand = await this.resolveBrandName();
+    const loginUrl = this.surfaceLoginUrl(input.surface);
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'users.account_activated.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        login_url: loginUrl,
+        action_url: loginUrl,
+      },
+      fallback: {
+        subject: `${brand} account is ready`,
+        html: [
+          `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+          `<p>Your ${escapeHtml(brand)} account is active and ready to use.</p>`,
+          loginUrl ? `<p><a href="${escapeHtml(loginUrl)}">Open your account</a></p>` : '',
+        ].filter(Boolean).join(''),
+        text: `Hello ${input.recipientName}, your ${brand} account is active.${loginUrl ? ` Open your account: ${loginUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'users.account_activated.user',
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `auth:account_activated:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: { surface: input.surface, templateSource: rendered.templateSource },
+    });
+  }
+
+  async sendB2BInvitationAcceptedInternal(input: {
+    to: string;
+    recipientName: string;
+    eventId: string;
+    accountName: string;
+    accountEmail: string;
+    adminUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'b2b.invitation_accepted.internal',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        account_name: input.accountName,
+        customer_name: input.accountName,
+        account_email: input.accountEmail,
+        customer_email: input.accountEmail,
+        admin_url: input.adminUrl ?? '',
+        action_url: input.adminUrl ?? '',
+      },
+      fallback: {
+        subject: `${input.accountName} activated B2B access`,
+        html: [
+          `<p><strong>${escapeHtml(input.accountName)}</strong> activated B2B access.</p>`,
+          `<p>Email: ${escapeHtml(input.accountEmail)}</p>`,
+          input.adminUrl ? `<p><a href="${escapeHtml(input.adminUrl)}">Open B2B applications</a></p>` : '',
+        ].filter(Boolean).join(''),
+        text: `${input.accountName} (${input.accountEmail}) activated B2B access.${input.adminUrl ? ` Review: ${input.adminUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'b2b.invitation_accepted.internal',
+      category: 'system.b2b',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `b2b:invitation_accepted:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: { accountEmail: input.accountEmail, templateSource: rendered.templateSource },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'
@@ -1684,6 +1819,15 @@ export class MailService {
         templateSource: rendered.templateSource,
       },
     });
+  }
+
+  private surfaceLoginUrl(surface: 'admin' | 'person' | 'accounts') {
+    const base = surface === 'accounts'
+      ? this.config.get<string>('ACCOUNTS_URL')
+      : surface === 'person'
+        ? this.config.get<string>('PERSON_APP_URL')
+        : this.config.get<string>('ADMIN_URL');
+    return `${(base ?? '').replace(/\/+$/, '')}/login`;
   }
 
   async deliverQueued(deliveryId: string) {
