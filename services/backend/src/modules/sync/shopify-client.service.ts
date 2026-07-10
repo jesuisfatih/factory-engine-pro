@@ -51,13 +51,11 @@ export class ShopifyClientService {
     });
     const shopifyDomain = normalizeShopDomain(
       config?.shopifyDomain
-      ?? this.config.get<string>('SHOPIFY_STORE_DOMAIN')
-      ?? this.config.get<string>('SHOPIFY_SHOP_DOMAIN')
-      ?? this.config.get<string>('SHOPIFY_DOMAIN')
+      ?? this.envShopifyDomain()
       ?? null,
     );
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
-    const envToken = this.envAdminToken();
+    const envToken = config ? null : this.envAdminToken();
     const source = tenantToken ? 'tenant_config' : envToken ? 'env' : 'none';
     const configured = Boolean(shopifyDomain && (tenantToken || envToken));
     return {
@@ -74,13 +72,11 @@ export class ShopifyClientService {
     });
     const shopifyDomain = normalizeShopDomain(
       config?.shopifyDomain
-      ?? this.config.get<string>('SHOPIFY_STORE_DOMAIN')
-      ?? this.config.get<string>('SHOPIFY_SHOP_DOMAIN')
-      ?? this.config.get<string>('SHOPIFY_DOMAIN')
+      ?? this.envShopifyDomain()
       ?? null,
     );
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
-    const envToken = this.envAdminToken();
+    const envToken = config ? null : this.envAdminToken();
     const adminToken = tenantToken || envToken;
     if (!shopifyDomain || !adminToken) return null;
     return {
@@ -232,6 +228,13 @@ export class ShopifyClientService {
     return this.config.get<string>('SHOPIFY_ACCESS_TOKEN')?.trim()
       || this.config.get<string>('SHOPIFY_ADMIN_ACCESS_TOKEN')?.trim()
       || this.config.get<string>('SHOPIFY_ADMIN_TOKEN')?.trim()
+      || null;
+  }
+
+  private envShopifyDomain() {
+    return this.config.get<string>('SHOPIFY_STORE_DOMAIN')?.trim()
+      || this.config.get<string>('SHOPIFY_SHOP_DOMAIN')?.trim()
+      || this.config.get<string>('SHOPIFY_DOMAIN')?.trim()
       || null;
   }
 }
