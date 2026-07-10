@@ -238,6 +238,10 @@ export class SyncService {
     return results;
   }
 
+  async ingestWebhookOrder(raw: Record<string, unknown>) {
+    await this.persistOrder(raw);
+  }
+
   private async processResource(
     resource: ShopifySyncResource,
     syncLogId: string,

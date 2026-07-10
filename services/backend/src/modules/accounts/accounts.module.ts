@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PricingModule } from '../pricing/pricing.module.js';
+import { MailModule } from '../mail/mail.module.js';
 import { RulesModule } from '../rules/rules.module.js';
 import { SyncModule } from '../sync/sync.module.js';
 import { AccountsCheckoutService } from './accounts-checkout.service.js';
@@ -11,7 +12,7 @@ import { ShopifyCustomerSessionGuard } from './shopify-customer-session.guard.js
 import { ShopifyCustomerSessionService } from './shopify-customer-session.service.js';
 
 @Module({
-  imports: [SyncModule, RulesModule, PricingModule],
+  imports: [SyncModule, RulesModule, PricingModule, MailModule],
   controllers: [AccountsController, CustomerAccountController, CustomerAccountStatusController],
   providers: [AccountsCheckoutService, AccountsService, ShopifyCustomerSessionGuard, ShopifyCustomerSessionService],
 })

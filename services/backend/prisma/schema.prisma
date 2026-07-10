@@ -127,6 +127,7 @@ model Tenant {
   aircallNumbers          AircallNumber[]
   aircallWebhookConfig    AircallWebhookConfig?
   aircallWebhookInbox     AircallWebhookInbox[]
+  shopifyWebhookInboxes   ShopifyWebhookInbox[]
   aircallCallEvents       AircallCallEvent[]
   calls                   Call[]
   callEvents              CallEvent[]
@@ -178,6 +179,30 @@ model TenantConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_configs")
+}
+
+model ShopifyWebhookInbox {
+  id           String    @id
+  tenantId     String    @map("tenant_id")
+  shopDomain   String    @map("shop_domain")
+  topic        String
+  webhookId    String?   @map("webhook_id")
+  dedupeKey    String    @map("dedupe_key")
+  status       String    @default("received")
+  payload      Json
+  headers      Json      @default("{}")
+  errorMessage String?   @map("error_message")
+  receivedAt   DateTime  @default(now()) @map("received_at")
+  processedAt  DateTime? @map("processed_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, status, receivedAt])
+  @@index([tenantId, topic, receivedAt])
+  @@index([tenantId, shopDomain, receivedAt])
+  @@map("shopify_webhook_inbox")
 }
 
 model Member {

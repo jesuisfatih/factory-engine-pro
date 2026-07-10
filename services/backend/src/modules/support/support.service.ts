@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { assertServiceRequestSourceContract, SERVICE_REQUEST_SOURCES, serviceRequestSourceSchema } from '@factory-engine-pro/contracts';
 import type {
@@ -17,6 +18,7 @@ import type {
 } from '@factory-engine-pro/contracts';
 import { AppLogger } from '../../shared/logger.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { MailService } from '../mail/mail.service.js';
 import { SupportRepository } from './support.repository.js';
 
 const CLOSED_STATUSES = new Set(['closed', 'resolved']);
@@ -28,6 +30,8 @@ export class SupportService {
     private readonly repository: SupportRepository,
     private readonly tenantContext: TenantContextService,
     private readonly logger: AppLogger,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
   ) {}
 
   async list(query: SupportQuery) {
@@ -210,13 +214,14 @@ export class SupportService {
     this.logger.log('support', 'status', 'Service request status changed', { service_request_id: id, status: input.status });
     if (updated && !CLOSED_STATUSES.has(existing.status) && CLOSED_STATUSES.has(input.status)) {
       await this.fireTaskLifecycleTrigger('task.completed', updated);
+      await this.notifyCustomerTicketClosed(updated);
     }
     return this.getById(id);
   }
 
   async addComment(id: string, input: AddServiceRequestCommentInput) {
-    await this.requireRow(id);
-    await this.repository.createComment({
+    const existing = await this.requireRow(id);
+    const comment = await this.repository.createComment({
       serviceRequestId: id,
       actorId: this.tenantContext.get()?.principalId,
       actorType: this.tenantContext.get()?.principalType ?? 'member',
@@ -225,6 +230,7 @@ export class SupportService {
       attachmentsJson: (input.attachmentsJson ?? []) as Prisma.InputJsonValue,
     });
     await this.repository.touch(id);
+    if (!input.internal) await this.notifyCustomerTicketReply(existing, comment.id, input.body);
     this.logger.log('support', 'comment', 'Service request comment added', { service_request_id: id, internal: input.internal ?? false });
     return this.getById(id);
   }
@@ -241,6 +247,7 @@ export class SupportService {
     this.logger.log('support', 'close', 'Service request closed', { service_request_id: id });
     if (updated && !CLOSED_STATUSES.has(existing.status)) {
       await this.fireTaskLifecycleTrigger('task.completed', updated);
+      await this.notifyCustomerTicketClosed(updated);
     }
     return this.getById(id);
   }
@@ -477,6 +484,61 @@ export class SupportService {
     };
   }
 
+  private async notifyCustomerTicketReply(ticket: any, eventId: string, replyMessage: string) {
+    if (ticket.surface !== 'customer_facing' || !ticket.customer?.email) return;
+    try {
+      await this.mail.sendSupportTicketEvent({
+        eventKey: 'support.reply_added.user',
+        eventId,
+        to: ticket.customer.email,
+        recipientName: customerRecipientName(ticket),
+        ticketId: ticket.id,
+        ticketNumber: ticketNumber(ticket),
+        ticketSubject: ticket.title,
+        replyMessage,
+        customerName: ticket.customer.companyName,
+        customerEmail: ticket.customer.email,
+        actionUrl: this.accountSupportUrl(ticket.id),
+      });
+    } catch (error) {
+      this.logMailFailure('support.reply_added.user', ticket.id, error);
+    }
+  }
+
+  private async notifyCustomerTicketClosed(ticket: any) {
+    if (ticket.surface !== 'customer_facing' || !ticket.customer?.email) return;
+    try {
+      await this.mail.sendSupportTicketEvent({
+        eventKey: 'support.ticket_closed.user',
+        eventId: `closed:${ticket.id}`,
+        to: ticket.customer.email,
+        recipientName: customerRecipientName(ticket),
+        ticketId: ticket.id,
+        ticketNumber: ticketNumber(ticket),
+        ticketSubject: ticket.title,
+        ticketMessage: ticket.resolutionNote ?? null,
+        customerName: ticket.customer.companyName,
+        customerEmail: ticket.customer.email,
+        actionUrl: this.accountSupportUrl(ticket.id),
+      });
+    } catch (error) {
+      this.logMailFailure('support.ticket_closed.user', ticket.id, error);
+    }
+  }
+
+  private accountSupportUrl(ticketId: string) {
+    const base = (this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '');
+    return `${base}/support#ticket-${encodeURIComponent(ticketId)}`;
+  }
+
+  private logMailFailure(eventKey: string, serviceRequestId: string, error: unknown) {
+    this.logger.warn('support', 'mail_event_failed', 'Customer request persisted but a notification could not be queued.', {
+      event_key: eventKey,
+      service_request_id: serviceRequestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   private requireServiceRequestSource(value: unknown) {
     const parsed = serviceRequestSourceSchema.safeParse(value);
     if (!parsed.success) {
@@ -496,6 +558,17 @@ export class SupportService {
 
 function splitCsv(raw?: string) {
   return String(raw || '').split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function ticketNumber(ticket: { id: string; metadata?: unknown }) {
+  const metadata = ticket.metadata && typeof ticket.metadata === 'object' ? ticket.metadata as Record<string, unknown> : {};
+  return stringValue(metadata.ticketNumber) ?? `SR-${ticket.id.slice(-8).toUpperCase()}`;
+}
+
+function customerRecipientName(ticket: { customer?: { firstName?: string | null; lastName?: string | null; companyName?: string | null; email?: string | null } | null }) {
+  const firstName = ticket.customer?.firstName?.trim() ?? '';
+  const lastName = ticket.customer?.lastName?.trim() ?? '';
+  return `${firstName} ${lastName}`.trim() || ticket.customer?.companyName || ticket.customer?.email || 'Customer';
 }
 
 function isAllowedServiceRequestSource(source: string) {

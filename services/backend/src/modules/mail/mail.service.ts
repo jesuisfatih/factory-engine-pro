@@ -48,6 +48,7 @@ export interface TransactionalMailInput {
   templateVersionId?: string | null;
   fromName?: string | null;
   replyTo?: string | null;
+  idempotencyKey?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -68,6 +69,13 @@ interface RenderedTransactionalTemplate {
   templateVersionId?: string | null;
   templateSource: 'event_binding' | 'fallback';
 }
+
+type SupportTicketEventKey =
+  | 'support.ticket_created.user'
+  | 'support.ticket_created.internal'
+  | 'support.reply_added.user'
+  | 'support.reply_added.internal'
+  | 'support.ticket_closed.user';
 
 export interface ResendWebhookInput {
   tenantSlug: string;
@@ -114,20 +122,49 @@ export class MailService {
       fromName: safeMailHeader(input.fromName),
       replyTo: safeEmailAddress(input.replyTo),
     };
-    const delivery = await this.repository.createDelivery({
-      eventKey: input.eventKey,
-      category: input.category,
-      recipientEmail: input.to,
-      templateId: input.templateId ?? null,
-      templateVersionId: input.templateVersionId ?? null,
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-      metadata: {
-        ...metadata,
-        ...(transport.fromName || transport.replyTo ? { transport } : {}),
-      } as Prisma.InputJsonValue,
-    });
+    const idempotencyKey = input.idempotencyKey?.trim() || null;
+    const deliveryResult = idempotencyKey
+      ? await this.repository.createIdempotentDelivery({
+        idempotencyKey,
+        eventKey: input.eventKey,
+        category: input.category,
+        recipientEmail: input.to,
+        templateId: input.templateId ?? null,
+        templateVersionId: input.templateVersionId ?? null,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        metadata: {
+          ...metadata,
+          ...(transport.fromName || transport.replyTo ? { transport } : {}),
+        } as Prisma.InputJsonValue,
+      })
+      : {
+        delivery: await this.repository.createDelivery({
+          eventKey: input.eventKey,
+          category: input.category,
+          recipientEmail: input.to,
+          templateId: input.templateId ?? null,
+          templateVersionId: input.templateVersionId ?? null,
+          subject: input.subject,
+          html: input.html,
+          text: input.text,
+          metadata: {
+            ...metadata,
+            ...(transport.fromName || transport.replyTo ? { transport } : {}),
+          } as Prisma.InputJsonValue,
+        }),
+        duplicate: false,
+      };
+    const delivery = deliveryResult.delivery;
+    if (deliveryResult.duplicate) {
+      this.logger.log('mail', 'idempotent_duplicate', 'Transactional email was already accepted for this event.', {
+        mail_delivery_id: delivery.id,
+        event_key: input.eventKey,
+        idempotency_key: idempotencyKey,
+      });
+      return delivery;
+    }
 
     if (this.outboundQueue) {
       try {
@@ -1403,6 +1440,205 @@ export class MailService {
     });
   }
 
+  async sendOrderConfirmation(input: {
+    to: string;
+    recipientName: string;
+    shopifyOrderId: string;
+    orderNumber: string;
+    total: number;
+    currency: string;
+    portalUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const total = formatCurrency(input.total, input.currency);
+    const portalUrl = input.portalUrl?.trim()
+      || `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/orders`;
+    const subject = `${brand} order ${input.orderNumber} confirmed`;
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>We received your order <strong>${escapeHtml(input.orderNumber)}</strong>.</p>`,
+      `<p><strong>Order total:</strong> ${escapeHtml(total)}</p>`,
+      portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">View your order</a></p>` : '',
+    ].filter(Boolean).join('');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'orders.order_confirmation.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        shopify_order_id: input.shopifyOrderId,
+        order_number: input.orderNumber,
+        order_total: total,
+        order_total_value: input.total,
+        currency: input.currency,
+        portal_url: portalUrl,
+        order_url: portalUrl,
+        action_url: portalUrl,
+      },
+      fallback: {
+        subject,
+        html,
+        text: `Hello ${input.recipientName}, we received your order ${input.orderNumber}. Order total: ${total}.${portalUrl ? ` View your order: ${portalUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'orders.order_confirmation.user',
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `shopify:order_confirmation:${input.shopifyOrderId}:${input.to.toLowerCase()}`,
+      metadata: {
+        shopifyOrderId: input.shopifyOrderId,
+        orderNumber: input.orderNumber,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
+  async sendOrderShipment(input: {
+    to: string;
+    recipientName: string;
+    shopifyOrderId: string;
+    orderNumber: string;
+    shipmentId: string;
+    trackingNumber?: string | null;
+    trackingUrl?: string | null;
+    trackingCompany?: string | null;
+    portalUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const portalUrl = input.portalUrl?.trim()
+      || `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/orders`;
+    const subject = `${brand} order ${input.orderNumber} is on its way`;
+    const trackingLine = input.trackingNumber
+      ? `<p><strong>Tracking:</strong> ${escapeHtml(input.trackingNumber)}${input.trackingCompany ? ` (${escapeHtml(input.trackingCompany)})` : ''}</p>`
+      : '';
+    const html = [
+      `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+      `<p>Your order <strong>${escapeHtml(input.orderNumber)}</strong> has shipped.</p>`,
+      trackingLine,
+      input.trackingUrl ? `<p><a href="${escapeHtml(input.trackingUrl)}">Track shipment</a></p>` : '',
+      portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">View your order</a></p>` : '',
+    ].filter(Boolean).join('');
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'orders.order_shipped.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        shopify_order_id: input.shopifyOrderId,
+        order_number: input.orderNumber,
+        shipment_id: input.shipmentId,
+        tracking_number: input.trackingNumber ?? '',
+        tracking_url: input.trackingUrl ?? '',
+        tracking_company: input.trackingCompany ?? '',
+        portal_url: portalUrl,
+        order_url: portalUrl,
+        action_url: input.trackingUrl ?? portalUrl,
+      },
+      fallback: {
+        subject,
+        html,
+        text: `Hello ${input.recipientName}, your order ${input.orderNumber} has shipped.${input.trackingNumber ? ` Tracking: ${input.trackingNumber}.` : ''}${input.trackingUrl ? ` Track shipment: ${input.trackingUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'orders.order_shipped.user',
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `shopify:order_shipped:${input.shopifyOrderId}:${input.shipmentId}:${input.to.toLowerCase()}`,
+      metadata: {
+        shopifyOrderId: input.shopifyOrderId,
+        orderNumber: input.orderNumber,
+        shipmentId: input.shipmentId,
+        trackingNumber: input.trackingNumber ?? null,
+        trackingUrl: input.trackingUrl ?? null,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
+  async listInternalRecipients() {
+    return this.prisma.db.member.findMany({
+      where: {
+        status: 'active',
+        roleAssignments: { some: { role: { slug: { in: ['owner', 'admin'] } } } },
+      },
+      select: { id: true, email: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      take: 25,
+    });
+  }
+
+  async sendSupportTicketEvent(input: {
+    eventKey: SupportTicketEventKey;
+    eventId: string;
+    to: string;
+    recipientName: string;
+    ticketId: string;
+    ticketNumber: string;
+    ticketSubject: string;
+    ticketMessage?: string | null;
+    replyMessage?: string | null;
+    customerName?: string | null;
+    customerEmail?: string | null;
+    actionUrl?: string | null;
+    adminUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const fallback = supportTicketFallback(input, brand);
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: input.eventKey,
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        ticket_id: input.ticketId,
+        ticket_number: input.ticketNumber,
+        ticket_subject: input.ticketSubject,
+        ticket_message: input.ticketMessage ?? '',
+        reply_message: input.replyMessage ?? '',
+        customer_name: input.customerName ?? '',
+        customer_email: input.customerEmail ?? '',
+        action_url: input.actionUrl ?? input.adminUrl ?? '',
+        admin_url: input.adminUrl ?? '',
+      },
+      fallback,
+    });
+    return this.sendTransactional({
+      eventKey: input.eventKey,
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `support:${input.eventKey}:${input.eventId}:${input.to.toLowerCase()}`,
+      metadata: {
+        ticketId: input.ticketId,
+        ticketNumber: input.ticketNumber,
+        ticketSubject: input.ticketSubject,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
   async sendPasswordReset(input: { to: string; recipientName: string; token: string; surface: 'admin' | 'person' | 'accounts' }) {
     const brand = await this.resolveBrandName();
     const baseUrl = input.surface === 'accounts'
@@ -1957,6 +2193,52 @@ function renderTemplate(source: string, variables: Record<string, unknown>, opti
 
 function renderEmailHtml(html: string, css: string | null) {
   return css?.trim() ? `<style>${css}</style>${html}` : html;
+}
+
+function supportTicketFallback(input: {
+  eventKey: SupportTicketEventKey;
+  ticketNumber: string;
+  ticketSubject: string;
+  ticketMessage?: string | null;
+  replyMessage?: string | null;
+  actionUrl?: string | null;
+  adminUrl?: string | null;
+}, brand: string) {
+  const actionUrl = input.actionUrl ?? input.adminUrl ?? '';
+  const message = input.replyMessage ?? input.ticketMessage ?? '';
+  const textByEvent: Record<SupportTicketEventKey, { subject: string; lead: string }> = {
+    'support.ticket_created.user': {
+      subject: `${brand} received your request ${input.ticketNumber}`,
+      lead: `We received your request: ${input.ticketSubject}.`,
+    },
+    'support.ticket_created.internal': {
+      subject: `New customer request ${input.ticketNumber}`,
+      lead: `A customer request needs review: ${input.ticketSubject}.`,
+    },
+    'support.reply_added.user': {
+      subject: `There is an update on ${input.ticketNumber}`,
+      lead: `The support team added an update to ${input.ticketNumber}.`,
+    },
+    'support.reply_added.internal': {
+      subject: `Customer replied on ${input.ticketNumber}`,
+      lead: `A customer added a reply to ${input.ticketNumber}.`,
+    },
+    'support.ticket_closed.user': {
+      subject: `${input.ticketNumber} was closed`,
+      lead: `Your request ${input.ticketNumber} was closed.`,
+    },
+  };
+  const copy = textByEvent[input.eventKey];
+  const html = [
+    `<p>${escapeHtml(copy.lead)}</p>`,
+    message ? `<p>${escapeHtml(message)}</p>` : '',
+    actionUrl ? `<p><a href="${escapeHtml(actionUrl)}">Open request</a></p>` : '',
+  ].filter(Boolean).join('');
+  return {
+    subject: copy.subject,
+    html,
+    text: [copy.lead, message, actionUrl ? `Open request: ${actionUrl}` : ''].filter(Boolean).join('\n\n'),
+  };
 }
 
 function deriveMailIdempotencyKey(

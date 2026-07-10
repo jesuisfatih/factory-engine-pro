@@ -71,6 +71,70 @@ export class MailRepository {
     });
   }
 
+  async createIdempotentDelivery(input: {
+    idempotencyKey: string;
+    eventKey: string;
+    category?: string;
+    templateId?: string | null;
+    templateVersionId?: string | null;
+    recipientEmail: string;
+    subject: string;
+    html: string;
+    text?: string | null;
+    metadata?: Prisma.InputJsonValue;
+  }) {
+    const tenantId = this.tenantId();
+    const existing = await this.prisma.db.mailIdempotencyKey.findFirst({
+      where: { tenantId, idempotencyKey: input.idempotencyKey },
+    });
+    if (existing?.deliveryId) {
+      const delivery = await this.findById(existing.deliveryId);
+      if (delivery) return { delivery, duplicate: true };
+    }
+
+    const deliveryId = prefixedId('mail');
+    try {
+      const [delivery] = await this.prisma.db.$transaction([
+        this.prisma.db.mailDelivery.create({
+          data: {
+            id: deliveryId,
+            tenantId,
+            eventKey: input.eventKey,
+            category: input.category ?? 'system',
+            templateId: input.templateId ?? null,
+            templateVersionId: input.templateVersionId ?? null,
+            recipientEmail: input.recipientEmail.toLowerCase(),
+            subject: input.subject,
+            html: input.html,
+            text: input.text ?? null,
+            metadata: input.metadata ?? {},
+          },
+        }),
+        this.prisma.db.mailIdempotencyKey.create({
+          data: {
+            id: prefixedId('miky'),
+            tenantId,
+            idempotencyKey: input.idempotencyKey,
+            eventKey: input.eventKey,
+            recipientEmail: input.recipientEmail.toLowerCase(),
+            deliveryId,
+          },
+        }),
+      ]);
+      return { delivery, duplicate: false };
+    } catch (error) {
+      if (!isUniqueConstraint(error)) throw error;
+      const claimed = await this.prisma.db.mailIdempotencyKey.findFirst({
+        where: { tenantId, idempotencyKey: input.idempotencyKey },
+      });
+      if (claimed?.deliveryId) {
+        const delivery = await this.findById(claimed.deliveryId);
+        if (delivery) return { delivery, duplicate: true };
+      }
+      throw error;
+    }
+  }
+
   list(input: MailDeliveryListInput) {
     return this.prisma.db.mailDelivery.findMany({
       where: this.deliveryWhere(input),
@@ -290,6 +354,10 @@ export class MailRepository {
       ...(andFilters.length > 0 && { AND: andFilters }),
     };
   }
+}
+
+function isUniqueConstraint(error: unknown) {
+  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'P2002');
 }
 
 function mergeMetadata(current: unknown, patch: unknown): Prisma.InputJsonObject {

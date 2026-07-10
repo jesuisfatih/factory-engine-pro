@@ -21,6 +21,7 @@ import { RulesModule } from './modules/rules/rules.module.js';
 import { SegmentsModule } from './modules/segments/segments.module.js';
 import { SupportModule } from './modules/support/support.module.js';
 import { SyncModule } from './modules/sync/sync.module.js';
+import { ShopifyWebhooksModule } from './modules/shopify-webhooks/shopify-webhooks.module.js';
 import { StorefrontModule } from './modules/storefront/storefront.module.js';
 import { StorefrontFormsModule } from './modules/storefront-forms/storefront-forms.module.js';
 import { JwtAuthGuard } from './shared/auth.guard.js';
@@ -55,6 +56,7 @@ import { HealthController } from './health.controller.js';
     CallCenterModule,
     CommissionsModule,
     SyncModule,
+    ShopifyWebhooksModule,
     StorefrontModule,
     StorefrontFormsModule,
     BackfillModule,

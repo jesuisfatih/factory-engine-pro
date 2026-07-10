@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type {
   AccountAddressInput,
@@ -25,6 +26,7 @@ import { PasswordService } from '../../shared/password.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { PricingCalculatorService } from '../pricing/pricing-calculator.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { algorithmScore, algorithmScoreBand, algorithmVisible } from '../rules/algorithm-runtime.js';
 import { RulesService } from '../rules/rules.service.js';
 import { AccountsCheckoutService, type AccountCheckoutAttempt } from './accounts-checkout.service.js';
@@ -57,6 +59,7 @@ type AccountCartCatalogVariant = Prisma.CatalogVariantGetPayload<{
 type AccountSupportTicketRecord = Prisma.ServiceRequestGetPayload<{
   include: { comments: true };
 }>;
+type AccountSupportTicketNotification = Pick<AccountSupportTicketRecord, 'id' | 'title' | 'description' | 'metadata'>;
 
 type AccountDocumentItem = {
   id: string;
@@ -95,6 +98,10 @@ type AccountActor = {
   customer: CustomerUserRecord['customer'];
 };
 
+function supportTicketNumber(ticket: Pick<AccountSupportTicketRecord, 'id' | 'metadata'>) {
+  return stringValue(metadata(ticket.metadata).ticketNumber) ?? `SR-${ticket.id.slice(-8).toUpperCase()}`;
+}
+
 @Injectable()
 export class AccountsService {
   constructor(
@@ -105,6 +112,8 @@ export class AccountsService {
     private readonly checkout: AccountsCheckoutService,
     private readonly pricing: PricingCalculatorService,
     private readonly rules: RulesService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
   ) {}
 
   async profile() {
@@ -966,6 +975,7 @@ export class AccountsService {
 
   async createSupportTicket(input: CreateAccountSupportTicketInput) {
     const actor = await this.currentActor();
+    const ticketNumber = `SR-${Date.now().toString(36).toUpperCase()}`;
     const ticket = await this.prisma.db.serviceRequest.create({
       data: {
         id: prefixedId('sr'),
@@ -980,11 +990,12 @@ export class AccountsService {
         createdByActorId: actor.principalId,
         metadata: {
           category: input.category,
+          ticketNumber,
           ...(input.relatedTo ? { relatedTo: input.relatedTo } : {}),
         },
       },
     });
-    await this.prisma.db.serviceRequestComment.create({
+    const comment = await this.prisma.db.serviceRequestComment.create({
       data: {
         id: prefixedId('srcm'),
         tenantId: this.tenantId(),
@@ -996,6 +1007,7 @@ export class AccountsService {
         attachmentsJson: [],
       },
     });
+    await this.notifyCustomerTicketCreated(actor, ticket, comment.id, ticketNumber);
     this.logger.log('accounts', 'support.create', 'Customer support ticket created', { service_request_id: ticket.id });
     return (await this.supportTickets()).find((item) => item.id === ticket.id) ?? ticket;
   }
@@ -1005,7 +1017,7 @@ export class AccountsService {
     const ticket = await this.requireCustomerSupportTicket(actor, id);
     if (ticket.status === 'closed') throw new BadRequestException('Closed customer requests cannot receive new replies. Reopen it first.');
 
-    await this.prisma.db.serviceRequestComment.create({
+    const comment = await this.prisma.db.serviceRequestComment.create({
       data: {
         id: prefixedId('srcm'),
         tenantId: this.tenantId(),
@@ -1026,6 +1038,7 @@ export class AccountsService {
         resolutionNote: null,
       },
     });
+    await this.notifyCustomerTicketReply(actor, ticket, comment.id, input.body);
     this.logger.log('accounts', 'support.reply', 'Customer support ticket reply added', { service_request_id: ticket.id });
     return this.supportTicketDto(actor, await this.requireCustomerSupportTicket(actor, id));
   }
@@ -1541,6 +1554,85 @@ export class AccountsService {
     return ticket;
   }
 
+  private async notifyCustomerTicketCreated(
+    actor: AccountActor,
+    ticket: AccountSupportTicketNotification,
+    eventId: string,
+    ticketNumber: string,
+  ) {
+    const actionUrl = this.accountSupportUrl(ticket.id);
+    try {
+      const internalRecipients = await this.mail.listInternalRecipients();
+      await Promise.all([
+        this.mail.sendSupportTicketEvent({
+          eventKey: 'support.ticket_created.user',
+          eventId,
+          to: actor.email,
+          recipientName: `${actor.firstName} ${actor.lastName}`.trim() || actor.email,
+          ticketId: ticket.id,
+          ticketNumber,
+          ticketSubject: ticket.title,
+          ticketMessage: ticket.description,
+          customerName: actor.customer.companyName,
+          customerEmail: actor.email,
+          actionUrl,
+        }),
+        ...internalRecipients.map((recipient) => this.mail.sendSupportTicketEvent({
+          eventKey: 'support.ticket_created.internal',
+          eventId,
+          to: recipient.email,
+          recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+          ticketId: ticket.id,
+          ticketNumber,
+          ticketSubject: ticket.title,
+          ticketMessage: ticket.description,
+          customerName: actor.customer.companyName,
+          customerEmail: actor.email,
+          adminUrl: this.adminSupportUrl(ticket.id),
+        })),
+      ]);
+    } catch (error) {
+      this.logger.warn('accounts', 'support.created_mail_failed', 'Customer request was saved but a notification could not be queued.', {
+        service_request_id: ticket.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private async notifyCustomerTicketReply(actor: AccountActor, ticket: AccountSupportTicketRecord, eventId: string, replyMessage: string) {
+    try {
+      const internalRecipients = await this.mail.listInternalRecipients();
+      await Promise.all(internalRecipients.map((recipient) => this.mail.sendSupportTicketEvent({
+        eventKey: 'support.reply_added.internal',
+        eventId,
+        to: recipient.email,
+        recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+        ticketId: ticket.id,
+        ticketNumber: supportTicketNumber(ticket),
+        ticketSubject: ticket.title,
+        replyMessage,
+        customerName: actor.customer.companyName,
+        customerEmail: actor.email,
+        adminUrl: this.adminSupportUrl(ticket.id),
+      })));
+    } catch (error) {
+      this.logger.warn('accounts', 'support.reply_mail_failed', 'Customer reply was saved but an internal notification could not be queued.', {
+        service_request_id: ticket.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private accountSupportUrl(ticketId: string) {
+    const base = (this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '');
+    return `${base}/support#ticket-${encodeURIComponent(ticketId)}`;
+  }
+
+  private adminSupportUrl(ticketId: string) {
+    const base = (this.config.get<string>('ADMIN_URL') ?? this.config.get<string>('ADMIN_APP_URL') ?? '').replace(/\/+$/, '');
+    return `${base}/support?id=${encodeURIComponent(ticketId)}`;
+  }
+
   private supportTicketDto(actor: AccountActor, ticket: AccountSupportTicketRecord) {
     const publicComments = ticket.comments.filter((comment) => !comment.internal);
     const firstStaffReply = publicComments.find((comment) => comment.actorId !== actor.principalId);
@@ -1549,7 +1641,7 @@ export class AccountsService {
       : null;
     return {
       id: ticket.id,
-      ticketNumber: ticket.id,
+      ticketNumber: supportTicketNumber(ticket),
       subject: ticket.title,
       description: ticket.description ?? '',
       category: supportCategory(metadata(ticket.metadata).category),

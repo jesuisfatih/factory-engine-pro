@@ -9,6 +9,7 @@
     "start": "node dist/services/backend/src/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:resend-webhook": "tsx --test src/modules/mail/resend-webhook.test.ts",
+    "test:shopify-webhook": "tsx --test src/modules/shopify-webhooks/shopify-webhook.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "node scripts/guard-database-url.mjs && prisma migrate dev",
     "prisma:deploy": "node scripts/guard-database-url.mjs && prisma migrate deploy"

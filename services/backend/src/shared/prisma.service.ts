@@ -84,6 +84,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'AircallSyncState',
   'ShopifySyncState',
   'SyncLog',
+  'ShopifyWebhookInbox',
   'WorkflowRule',
   'WorkflowRuleExecution',
   'TranscriptWorkflowEvaluation',
