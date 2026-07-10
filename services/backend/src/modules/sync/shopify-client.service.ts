@@ -49,11 +49,7 @@ export class ShopifyClientService {
     const config = await this.prisma.db.tenantConfig.findFirst({
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     });
-    const shopifyDomain = normalizeShopDomain(
-      config?.shopifyDomain
-      ?? this.envShopifyDomain()
-      ?? null,
-    );
+    const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
     const envToken = config ? null : this.envAdminToken();
     const source = tenantToken ? 'tenant_config' : envToken ? 'env' : 'none';
@@ -70,11 +66,7 @@ export class ShopifyClientService {
     const config = await this.prisma.db.tenantConfig.findFirst({
       select: { shopifyDomain: true, shopifyAdminTokenEncrypted: true },
     });
-    const shopifyDomain = normalizeShopDomain(
-      config?.shopifyDomain
-      ?? this.envShopifyDomain()
-      ?? null,
-    );
+    const shopifyDomain = normalizeShopDomain(config ? config.shopifyDomain : this.envShopifyDomain());
     const tenantToken = this.crypto.decrypt(config?.shopifyAdminTokenEncrypted)?.trim();
     const envToken = config ? null : this.envAdminToken();
     const adminToken = tenantToken || envToken;
