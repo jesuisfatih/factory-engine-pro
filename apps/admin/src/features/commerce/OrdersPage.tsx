@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpDown,
   ArrowRightLeft,
+  BellRing,
   CalendarDays,
+  CheckCircle2,
+  ChevronRight,
   CreditCard,
   Download,
   ExternalLink,
@@ -10,19 +13,31 @@ import {
   FilterX,
   Loader2,
   MapPin,
+  Mail,
   Package,
+  Phone,
   RefreshCw,
   Search,
   Send,
   ShoppingBag,
+  UserRound,
   Truck,
   X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { AccountInvoiceStatus, OrderSortBy, OrderSurface, SaveAccountInvoiceInput, TransferOrderToMemberInput } from '@factory-engine-pro/contracts';
+import type {
+  AccountInvoiceStatus,
+  CustomerDetailPanelDto,
+  OrderSortBy,
+  OrderSurface,
+  SaveAccountInvoiceInput,
+  TransferOrderToMemberInput,
+  UpdateCommercePickupInput,
+} from '@factory-engine-pro/contracts';
+import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { Dialog, DialogClose, DialogDescription, DialogTitle } from '@/components/Dialog';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
@@ -64,6 +79,17 @@ interface OrderRow {
   fulfillments?: unknown;
   refunds?: unknown;
   fulfillmentEvidence?: unknown;
+  pickup?: {
+    id: string;
+    status: string;
+    qrCode: string | null;
+    shelfCode: string | null;
+    note: string | null;
+    pickupAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    history: unknown[];
+  };
 }
 
 interface OrderListResponse {
@@ -97,6 +123,10 @@ interface AccountInvoiceRow {
   externalPaymentUrl: string | null;
   payment: { state: string; label: string; amountDue: number; url: string | null };
   lastDelivery: { id: string | null; status: string; recipientEmail: string | null; sentAt: string } | null;
+  notes?: string | null;
+  lineItems?: Array<{ id?: string; sku?: string; name: string; quantity: number; unitPrice: number; total: number }>;
+  payments?: Array<{ id: string; amount: number; method: string; note: string | null; recordedAt: string; recordedByMemberId: string | null }>;
+  activities?: Array<{ id: string; action: string; actorMemberId: string | null; metadata: unknown; createdAt: string }>;
 }
 
 interface OrderDetailResponse {
@@ -168,9 +198,15 @@ export function OrdersPage() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_ORDER_FILTERS);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const query = useMemo(() => orderQuery(surface, search, filters), [surface, search, filters]);
   const orders = useQuery({ queryKey: ['commerce', 'orders', query], queryFn: () => fetchOrders(query) });
   const stats = useQuery({ queryKey: ['commerce', 'orders', 'stats', query], queryFn: () => fetchStats(query) });
+  const customerDetail = useQuery({
+    queryKey: ['commerce', 'customers', selectedCustomerId, 'detail'],
+    queryFn: () => adminApi.customerDetail(selectedCustomerId ?? '') as Promise<CustomerDetailPanelDto>,
+    enabled: Boolean(selectedCustomerId),
+  });
   const rows = orders.data?.data ?? [];
   const shopifyStore = import.meta.env.VITE_SHOPIFY_ADMIN_STORE as string | undefined;
   const hasActiveFilters = Boolean(
@@ -418,17 +454,50 @@ export function OrdersPage() {
           orderId={selectedOrderId}
           shopifyStore={shopifyStore}
           onClose={() => setSelectedOrderId(null)}
+          onSelectOrder={setSelectedOrderId}
+          onOpenCustomer={(customerId) => {
+            setSelectedOrderId(null);
+            setSelectedCustomerId(customerId);
+          }}
         />
       )}
+      <CustomerDetailPanel
+        open={Boolean(selectedCustomerId)}
+        detail={customerDetail.data}
+        isLoading={customerDetail.isLoading}
+        error={customerDetail.error ? apiErrorMessage(customerDetail.error) : null}
+        onRetry={() => customerDetail.refetch()}
+        onClose={() => setSelectedCustomerId(null)}
+        onOpenOrder={(nextOrderId) => {
+          setSelectedCustomerId(null);
+          setSelectedOrderId(nextOrderId);
+        }}
+        shopifyAdminCustomerUrl={shopifyStore && customerDetail.data?.customer.shopifyCustomerId
+          ? `https://admin.shopify.com/store/${shopifyStore}/customers/${customerDetail.data.customer.shopifyCustomerId}`
+          : null}
+      />
     </>
   );
 }
 
-function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string; shopifyStore?: string; onClose: () => void }) {
+export function OrderDetailDialog({
+  orderId,
+  shopifyStore,
+  onClose,
+  onSelectOrder,
+  onOpenCustomer,
+}: {
+  orderId: string;
+  shopifyStore?: string;
+  onClose: () => void;
+  onSelectOrder?: (orderId: string) => void;
+  onOpenCustomer?: (customerId: string) => void;
+}) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [draft, setDraft] = useState({ targetMemberId: '', axis: 'support', note: '' });
   const [lastTransfer, setLastTransfer] = useState<TransferResult | null>(null);
+  const [section, setSection] = useState<'overview' | 'items' | 'fulfillment' | 'billing' | 'activity'>('overview');
   const detail = useQuery({ queryKey: ['commerce', 'orders', orderId, 'detail'], queryFn: () => fetchOrderDetail(orderId), retry: false });
   const members = useQuery({ queryKey: ['identity', 'members', 'orders-transfer'], queryFn: fetchMembers, retry: false });
   const activeMembers = (members.data ?? []).filter((member) => member.status === 'active');
@@ -456,6 +525,11 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
   const history = body?.customerHistory;
   const canTransfer = Boolean(selectedTargetId && draft.note.trim()) && !transfer.isPending;
 
+  useEffect(() => {
+    setSection('overview');
+    setLastTransfer(null);
+  }, [orderId]);
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()} cardClassName="modal-card order-modal-card" labelledBy="order-detail-title" describedBy="order-detail-subtitle">
       <header className="modal-head">
@@ -473,6 +547,22 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
           <button type="button" className="close" title={t('common.cancel')}><X size={16} /></button>
         </DialogClose>
       </header>
+
+      {order && (
+        <nav className="order-modal-tabs" aria-label="Order detail sections">
+          {([
+            ['overview', 'Overview'],
+            ['items', `Items (${order.lineItems.length})`],
+            ['fulfillment', order.fulfillmentMode === 'pickup' ? 'Pickup & files' : 'Delivery & files'],
+            ['billing', 'Invoices & payment'],
+            ['activity', `Activity (${history?.activities.length ?? 0})`],
+          ] as const).map(([id, labelText]) => (
+            <button key={id} type="button" className={section === id ? 'active' : ''} onClick={() => setSection(id)}>
+              {labelText}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {detail.isLoading && (
         <div className="modal-body order-modal-body order-modal-single">
@@ -499,7 +589,7 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
       {detail.isSuccess && order && history && (
         <div className="modal-body order-modal-body">
           <main className="order-modal-main">
-            <section className="modal-section">
+            {section === 'overview' && <section className="modal-section">
               <div className="order-modal-section-head">
                 <h3>{t('orders.modal.shopify_detail', { defaultValue: 'Shopify order detail' })}</h3>
                 {shopifyStore && order.shopifyOrderId && (
@@ -516,9 +606,16 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
               </div>
               <MoneyBreakdown order={order} />
               {order.notes && <InfoBlock title="Notes" body={order.notes} />}
-            </section>
+              <div className="order-detail-grid order-detail-dates">
+                <Metric icon={<CalendarDays size={13} />} label="Placed" value={fmtDateTime(order.processedAt ?? order.createdAt ?? null)} />
+                <Metric label="Synced" value={fmtDateTime(order.updatedAt ?? null)} />
+                <Metric label="Closed" value={fmtDateTime(order.closedAt ?? null)} />
+                <Metric label="Cancelled" value={fmtDateTime(order.cancelledAt ?? null)} />
+              </div>
+              {order.tags?.length ? <div className="order-tag-row">{order.tags.map((tag) => <span key={tag} className="chip">{tag}</span>)}</div> : null}
+            </section>}
 
-            <section className="modal-section">
+            {section === 'items' && <section className="modal-section">
               <h3>{t('orders.modal.line_items', { defaultValue: 'Line items' })}</h3>
               {order.lineItems.length === 0 ? (
                 <div className="muted">{t('orders.modal.no_line_items', { defaultValue: 'No line items captured for this order.' })}</div>
@@ -537,27 +634,72 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
                         <td>
                           <strong>{String(item.title ?? item.name ?? 'Line item')}</strong>
                           <div className="muted">{[item.sku, item.variant_title ?? item.variantTitle].filter(Boolean).map(String).join(' - ') || '-'}</div>
+                          <OrderItemProperties value={item.properties ?? item.customAttributes} />
                         </td>
                         <td>{String(item.quantity ?? 1)}</td>
-                        <td>{fmtMoney(Number(item.totalPrice ?? item.price ?? 0) * Number(item.quantity ?? 1), order.currency)}</td>
+                        <td>
+                          <strong>{fmtMoney(Number(item.totalPrice ?? item.price ?? 0) * Number(item.quantity ?? 1), order.currency)}</strong>
+                          <div className="muted">{fmtMoney(Number(item.price ?? item.unitPrice ?? 0), order.currency)} each</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
-            </section>
+            </section>}
 
-            <section className="modal-section">
+            {section === 'fulfillment' && <section className="modal-section">
               <h3>{t('orders.modal.fulfillment', { defaultValue: 'Fulfillment, refunds, and files' })}</h3>
+              {order.fulfillmentMode === 'pickup' ? <PickupPanel order={order} /> : null}
+              <div className="order-address-grid">
+                <AddressSummary title="Shipping address" value={order.shippingAddress} />
+                <AddressSummary title="Billing address" value={order.billingAddress} />
+              </div>
               <FulfillmentList values={arrayValue(order.fulfillments)} currency={order.currency} />
               <RefundList values={arrayValue(order.refunds)} currency={order.currency} />
               <DesignFiles values={order.designFiles} />
-            </section>
+            </section>}
+
+            {section === 'billing' && <InvoicePanel order={order} />}
+
+            {section === 'activity' && (
+              <section className="modal-section">
+                <h3>Order and customer activity</h3>
+                {history.activities.length === 0 ? (
+                  <div className="muted">No related activity has been captured for this customer.</div>
+                ) : (
+                  <div className="order-activity-list">
+                    {history.activities.map((activity) => (
+                      <article key={activity.id}>
+                        <span className="order-activity-dot" />
+                        <div>
+                          <strong>{labelStatus(activity.eventType)}</strong>
+                          <span>{fmtDateTime(activity.createdAt)}</span>
+                          <ActivityPayload value={activity.payload} />
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </main>
 
           <aside className="order-modal-side">
             <section className="modal-section">
-              <h3>{t('orders.modal.customer_stats', { defaultValue: 'Shopify customer stats' })}</h3>
+              <div className="order-modal-section-head">
+                <h3>{t('orders.modal.customer_stats', { defaultValue: 'Customer' })}</h3>
+                {order.customerId && onOpenCustomer ? (
+                  <button type="button" className="btn ghost" onClick={() => onOpenCustomer(order.customerId!)}>
+                    <UserRound size={13} /> Customer 360
+                  </button>
+                ) : null}
+              </div>
+              <div className="order-customer-contact">
+                <strong>{order.customerName ?? order.companyName ?? 'Unknown customer'}</strong>
+                {order.customerEmail ? <a href={`mailto:${order.customerEmail}`}><Mail size={12} /> {order.customerEmail}</a> : <span className="muted">No email</span>}
+                {order.phone ? <a href={`tel:${order.phone.replace(/[^\d+]/g, '')}`}><Phone size={12} /> {order.phone}</a> : <span className="muted">No phone</span>}
+              </div>
               <div className="order-stats-grid">
                 <Metric label="LTV" value={fmtMoney(history.summary.totalSpent, order.currency)} />
                 <Metric label="AOV" value={fmtMoney(history.summary.averageOrderValue, order.currency)} />
@@ -573,17 +715,20 @@ function OrderDetailDialog({ orderId, shopifyStore, onClose }: { orderId: string
               ) : (
                 <div className="order-history-list">
                   {history.orders.map((item) => (
-                    <div key={item.id} className={item.id === order.id ? 'active' : ''}>
-                      <strong>{item.orderNumber}</strong>
-                      <span>{fmtDateTime(item.processedAt ?? item.createdAt ?? null)}</span>
-                      <span>{fmtMoney(item.totalPrice, item.currency)}</span>
-                    </div>
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={item.id === order.id ? 'active' : ''}
+                      disabled={item.id === order.id}
+                      onClick={() => onSelectOrder?.(item.id)}
+                    >
+                      <span><strong>{item.orderNumber}</strong><small>{fmtDateTime(item.processedAt ?? item.createdAt ?? null)}</small></span>
+                      <span>{fmtMoney(item.totalPrice, item.currency)} <ChevronRight size={13} /></span>
+                    </button>
                   ))}
                 </div>
               )}
             </section>
-
-            <InvoicePanel order={order} />
 
             <section className="modal-section">
               <h3>{t('orders.modal.transfer_title', { defaultValue: 'Personele aktar' })}</h3>
@@ -653,6 +798,112 @@ function fetchOrderDetail(orderId: string) {
 
 function fetchMembers() {
   return adminApi.members() as Promise<MemberRow[]>;
+}
+
+function PickupPanel({ order }: { order: OrderRow }) {
+  const queryClient = useQueryClient();
+  const pickup = order.pickup;
+  const [draft, setDraft] = useState({
+    shelfCode: pickup?.shelfCode ?? '',
+    qrCode: pickup?.qrCode ?? '',
+    note: pickup?.note ?? '',
+  });
+  useEffect(() => {
+    setDraft({
+      shelfCode: pickup?.shelfCode ?? '',
+      qrCode: pickup?.qrCode ?? '',
+      note: pickup?.note ?? '',
+    });
+  }, [order.id, pickup?.note, pickup?.qrCode, pickup?.shelfCode]);
+
+  const updatePickup = useMutation({
+    mutationFn: (input: UpdateCommercePickupInput) => adminApi.updateOrderPickup(order.id, input) as Promise<OrderRow>,
+    onSuccess: async () => {
+      toast.success('Pickup record updated');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['commerce', 'orders', order.id, 'detail'] }),
+        queryClient.invalidateQueries({ queryKey: ['commerce', 'orders'] }),
+      ]);
+    },
+    onError: (error) => toast.error('Pickup update failed', { description: apiErrorMessage(error) }),
+  });
+  const status = pickup?.status ?? order.pickupStatus ?? 'pending';
+  const nextActions = pickupStatusActions(status);
+
+  return (
+    <div className="pickup-workspace">
+      <div className="pickup-status-strip">
+        {['pending', 'processing', 'ready', 'notified', 'picked_up'].map((step) => (
+          <div key={step} className={pickupStepDone(status, step) ? 'done' : status === step ? 'current' : ''}>
+            <span>{pickupStepDone(status, step) ? <CheckCircle2 size={13} /> : null}</span>
+            <strong>{labelStatus(step)}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="pickup-details-grid">
+        <label>
+          <span>Shelf / pickup location</span>
+          <input value={draft.shelfCode} onChange={(event) => setDraft((current) => ({ ...current, shelfCode: event.target.value }))} placeholder="A-12 or Front counter" />
+        </label>
+        <label>
+          <span>QR or pickup code</span>
+          <input value={draft.qrCode} onChange={(event) => setDraft((current) => ({ ...current, qrCode: event.target.value }))} placeholder="Scan or enter code" />
+        </label>
+        <label className="wide">
+          <span>Pickup note</span>
+          <textarea rows={2} value={draft.note} onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Customer-facing pickup or handling context" />
+        </label>
+      </div>
+      <div className="pickup-action-row">
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={updatePickup.isPending}
+          onClick={() => updatePickup.mutate({
+            shelfCode: draft.shelfCode.trim() || null,
+            qrCode: draft.qrCode.trim() || null,
+            note: draft.note.trim() || null,
+          })}
+        >
+          {updatePickup.isPending ? <Loader2 size={13} className="spin" /> : <MapPin size={13} />} Save pickup details
+        </button>
+        {nextActions.map((action) => (
+          <button
+            key={action.status}
+            type="button"
+            className={action.primary ? 'btn primary' : 'btn ghost'}
+            disabled={updatePickup.isPending}
+            onClick={() => updatePickup.mutate({
+              status: action.status,
+              shelfCode: draft.shelfCode.trim() || null,
+              qrCode: draft.qrCode.trim() || null,
+              note: draft.note.trim() || null,
+            })}
+          >
+            {action.status === 'notified' ? <BellRing size={13} /> : <CheckCircle2 size={13} />} {action.label}
+          </button>
+        ))}
+      </div>
+      {status === 'notified' ? <div className="pickup-proof success"><Mail size={13} /> Pickup-ready email is recorded for this order.</div> : null}
+      {pickup?.pickupAt ? <div className="pickup-proof"><CheckCircle2 size={13} /> Picked up {fmtDateTime(pickup.pickupAt)}</div> : null}
+    </div>
+  );
+}
+
+function pickupStatusActions(status: string): Array<{ status: UpdateCommercePickupInput['status']; label: string; primary: boolean }> {
+  if (status === 'pending') return [{ status: 'processing', label: 'Start processing', primary: true }];
+  if (status === 'processing') return [{ status: 'ready', label: 'Mark ready', primary: true }];
+  if (status === 'ready') return [
+    { status: 'notified', label: 'Email customer', primary: true },
+    { status: 'picked_up', label: 'Mark picked up', primary: false },
+  ];
+  if (status === 'notified') return [{ status: 'picked_up', label: 'Mark picked up', primary: true }];
+  return [];
+}
+
+function pickupStepDone(status: string, step: string) {
+  const rank: Record<string, number> = { pending: 0, processing: 1, ready: 2, notified: 3, picked_up: 4 };
+  return (rank[status] ?? -1) > (rank[step] ?? 99);
 }
 
 function InvoicePanel({ order }: { order: OrderRow }) {
@@ -769,33 +1020,49 @@ function InvoicePanel({ order }: { order: OrderRow }) {
       </p>
 
       <div className="order-invoice-create">
-        <input
-          value={draft.invoiceNumber}
-          onChange={(event) => setDraft((current) => ({ ...current, invoiceNumber: event.target.value }))}
-          placeholder={t('orders.invoice.number_placeholder', { defaultValue: 'Invoice number' })}
-        />
-        <input
-          type="date"
-          value={draft.dueAt}
-          onChange={(event) => setDraft((current) => ({ ...current, dueAt: event.target.value }))}
-          aria-label={t('orders.invoice.due_date', { defaultValue: 'Due date' })}
-        />
-        <input
-          value={draft.fileUrl}
-          onChange={(event) => setDraft((current) => ({ ...current, fileUrl: event.target.value }))}
-          placeholder={t('orders.invoice.file_placeholder', { defaultValue: 'Invoice file URL' })}
-        />
-        <input
-          value={draft.externalPaymentUrl}
-          onChange={(event) => setDraft((current) => ({ ...current, externalPaymentUrl: event.target.value }))}
-          placeholder={t('orders.invoice.pay_placeholder', { defaultValue: 'Payment URL' })}
-        />
-        <textarea
-          rows={2}
-          value={draft.notes}
-          onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
-          placeholder={t('orders.invoice.notes_placeholder', { defaultValue: 'Billing note visible to staff' })}
-        />
+        <label>
+          <span>Invoice number</span>
+          <input
+            value={draft.invoiceNumber}
+            onChange={(event) => setDraft((current) => ({ ...current, invoiceNumber: event.target.value }))}
+            placeholder={t('orders.invoice.number_placeholder', { defaultValue: 'Generated when blank' })}
+          />
+        </label>
+        <label>
+          <span>{t('orders.invoice.due_date', { defaultValue: 'Due date' })}</span>
+          <input
+            type="date"
+            value={draft.dueAt}
+            onChange={(event) => setDraft((current) => ({ ...current, dueAt: event.target.value }))}
+          />
+        </label>
+        <label>
+          <span>Invoice file URL</span>
+          <input
+            type="url"
+            value={draft.fileUrl}
+            onChange={(event) => setDraft((current) => ({ ...current, fileUrl: event.target.value }))}
+            placeholder="https://..."
+          />
+        </label>
+        <label>
+          <span>Payment URL</span>
+          <input
+            type="url"
+            value={draft.externalPaymentUrl}
+            onChange={(event) => setDraft((current) => ({ ...current, externalPaymentUrl: event.target.value }))}
+            placeholder="https://..."
+          />
+        </label>
+        <label className="wide">
+          <span>Billing note</span>
+          <textarea
+            rows={2}
+            value={draft.notes}
+            onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
+            placeholder={t('orders.invoice.notes_placeholder', { defaultValue: 'Context visible to staff and used by the invoice email' })}
+          />
+        </label>
         <button type="button" className="btn primary" onClick={() => createInvoice.mutate()} disabled={createInvoice.isPending}>
           {createInvoice.isPending ? <Loader2 size={13} className="spin" /> : <FileText size={13} />}
           {t('orders.invoice.create', { defaultValue: 'Create invoice' })}
@@ -849,6 +1116,30 @@ function InvoicePanel({ order }: { order: OrderRow }) {
                     </span>
                   </div>
                 ) : null}
+                {invoice.notes ? <div className="invoice-note"><strong>Billing note</strong><span>{invoice.notes}</span></div> : null}
+                <details className="invoice-detail-disclosure">
+                  <summary>Invoice detail, payments, and audit history</summary>
+                  <div className="invoice-detail-grid">
+                    <div>
+                      <strong>Line items</strong>
+                      {invoice.lineItems?.length ? invoice.lineItems.map((item, index) => (
+                        <span key={`${item.id ?? item.name}-${index}`}>{item.quantity} x {item.name}{item.sku ? ` (${item.sku})` : ''} - {fmtMoney(item.total, invoice.currency)}</span>
+                      )) : <span>No line items captured.</span>}
+                    </div>
+                    <div>
+                      <strong>Payments</strong>
+                      {invoice.payments?.length ? invoice.payments.map((payment) => (
+                        <span key={payment.id}>{fmtMoney(payment.amount, invoice.currency)} - {labelStatus(payment.method)} - {fmtDateTime(payment.recordedAt)}</span>
+                      )) : <span>No payment has been recorded.</span>}
+                    </div>
+                    <div>
+                      <strong>Audit history</strong>
+                      {invoice.activities?.length ? invoice.activities.map((activity) => (
+                        <span key={activity.id}>{labelStatus(activity.action)} - {fmtDateTime(activity.createdAt)}</span>
+                      )) : <span>No invoice activity captured.</span>}
+                    </div>
+                  </div>
+                </details>
                 <div className="invoice-link-grid">
                   <input
                     value={fileDraft.fileUrl}
@@ -870,6 +1161,11 @@ function InvoicePanel({ order }: { order: OrderRow }) {
                   </button>
                 </div>
                 <div className="invoice-action-row">
+                  {invoice.status === 'draft' ? (
+                    <button type="button" className="btn primary" onClick={() => updateStatus.mutate({ id: invoice.id, status: 'unpaid' })} disabled={updateStatus.isPending}>
+                      Publish invoice
+                    </button>
+                  ) : null}
                   {invoice.fileUrl && (
                     <a className="btn ghost" href={invoice.fileUrl} target="_blank" rel="noreferrer">
                       <Download size={13} /> File
@@ -1018,12 +1314,20 @@ function FulfillmentList({ values }: { values: Array<Record<string, unknown>>; c
   if (values.length === 0) return <div className="muted">No fulfillment rows captured.</div>;
   return (
     <div className="compact-list">
-      {values.map((entry, index) => (
-        <div key={`fulfillment-${index}`}>
-          <strong>{String(entry.status ?? entry.shipmentStatus ?? `Fulfillment ${index + 1}`)}</strong>
-          <span>{[entry.trackingCompany, entry.trackingNumber].filter(Boolean).map(String).join(' - ') || 'No tracking number'}</span>
-        </div>
-      ))}
+      {values.map((entry, index) => {
+        const trackingRows = arrayValue(entry.trackingInfo ?? entry.tracking_info);
+        const trackingCompany = entry.trackingCompany ?? trackingRows[0]?.company;
+        const trackingNumber = entry.trackingNumber ?? trackingRows[0]?.number;
+        const trackingUrl = String(entry.trackingUrl ?? entry.tracking_url ?? trackingRows[0]?.url ?? '');
+        return (
+          <div key={`fulfillment-${index}`}>
+            <strong>{labelStatus(String(entry.displayStatus ?? entry.status ?? entry.shipmentStatus ?? `Fulfillment ${index + 1}`))}</strong>
+            <span>{[trackingCompany, trackingNumber].filter(Boolean).map(String).join(' - ') || 'No tracking number'}</span>
+            {isHttpUrl(trackingUrl) ? <a href={trackingUrl} target="_blank" rel="noreferrer">Track shipment</a> : null}
+            {entry.createdAt ? <span>Created {fmtDateTime(String(entry.createdAt))}</span> : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1032,12 +1336,15 @@ function RefundList({ values, currency }: { values: Array<Record<string, unknown
   if (values.length === 0) return null;
   return (
     <div className="compact-list refund-list">
-      {values.map((entry, index) => (
-        <div key={`refund-${index}`}>
-          <strong>{String(entry.note ?? `Refund ${index + 1}`)}</strong>
-          <span>{fmtMoney(Number(entry.amount ?? 0), currency)} - {fmtDateTime(String(entry.createdAt ?? ''))}</span>
-        </div>
-      ))}
+      {values.map((entry, index) => {
+        const amount = Number(entry.amount ?? nestedMoneyAmount(entry.totalRefundedSet) ?? 0);
+        return (
+          <div key={`refund-${index}`}>
+            <strong>{String(entry.note ?? entry.reason ?? `Refund ${index + 1}`)}</strong>
+            <span>{fmtMoney(amount, currency)} - {fmtDateTime(String(entry.processedAt ?? entry.createdAt ?? ''))}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1051,14 +1358,88 @@ function DesignFiles({ values }: { values: Array<Record<string, unknown>> }) {
           <strong>{String(file.fileName ?? file.lineItemTitle ?? `Design file ${index + 1}`)}</strong>
           <span>{[file.rawWidth && `${String(file.rawWidth)}w`, file.rawHeight && `${String(file.rawHeight)}h`, file.dpi && `${String(file.dpi)} DPI`].filter(Boolean).join(' - ') || 'File metadata captured'}</span>
           {typeof file.previewUrl === 'string' && <a href={file.previewUrl} target="_blank" rel="noreferrer">Preview</a>}
+          {typeof file.uploadedFileUrl === 'string' && <a href={file.uploadedFileUrl} target="_blank" rel="noreferrer">Uploaded file</a>}
+          {typeof file.printReadyUrl === 'string' && <a href={file.printReadyUrl} target="_blank" rel="noreferrer">Print-ready file</a>}
+          {typeof file.adminEditUrl === 'string' && <a href={file.adminEditUrl} target="_blank" rel="noreferrer">Edit production file</a>}
         </div>
       ))}
     </div>
   );
 }
 
+function OrderItemProperties({ value }: { value: unknown }) {
+  const rows = Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const row = asRecord(entry);
+        const name = row ? String(row.name ?? row.key ?? '').trim() : '';
+        const propertyValue = row ? String(row.value ?? '').trim() : '';
+        return name && propertyValue ? [{ name, value: propertyValue }] : [];
+      })
+    : Object.entries(asRecord(value) ?? {}).map(([name, propertyValue]) => ({ name, value: String(propertyValue ?? '') })).filter((entry) => entry.value);
+  if (rows.length === 0) return null;
+  return (
+    <dl className="order-item-properties">
+      {rows.map((property) => (
+        <div key={`${property.name}-${property.value}`}>
+          <dt>{property.name}</dt>
+          <dd>{isHttpUrl(property.value) ? <a href={property.value} target="_blank" rel="noreferrer">Open linked file</a> : property.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function AddressSummary({ title, value }: { title: string; value: unknown }) {
+  const address = asRecord(value);
+  if (!address) return <div className="order-address-card"><strong>{title}</strong><span>No address captured</span></div>;
+  const name = [address.first_name ?? address.firstName, address.last_name ?? address.lastName].filter(Boolean).join(' ');
+  const cityLine = [address.city, address.province ?? address.province_code, address.zip].filter(Boolean).join(', ');
+  return (
+    <div className="order-address-card">
+      <strong>{title}</strong>
+      {name ? <span>{String(name)}</span> : null}
+      {address.company ? <span>{String(address.company)}</span> : null}
+      {address.address1 ? <span>{String(address.address1)}</span> : null}
+      {address.address2 ? <span>{String(address.address2)}</span> : null}
+      {cityLine ? <span>{cityLine}</span> : null}
+      {address.country ? <span>{String(address.country)}</span> : null}
+      {address.phone ? <span>{String(address.phone)}</span> : null}
+    </div>
+  );
+}
+
+function ActivityPayload({ value }: { value: unknown }) {
+  const record = asRecord(value);
+  if (!record) return null;
+  const rows = Object.entries(record)
+    .filter(([, entry]) => ['string', 'number', 'boolean'].includes(typeof entry))
+    .slice(0, 6);
+  if (rows.length === 0) return null;
+  return <div className="order-activity-meta">{rows.map(([key, entry]) => <span key={key}>{labelStatus(key)}: {String(entry)}</span>)}</div>;
+}
+
 function arrayValue(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item)) : [];
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function nestedMoneyAmount(value: unknown): number | null {
+  const root = asRecord(value);
+  const shopMoney = asRecord(root?.shopMoney);
+  const amount = Number(shopMoney?.amount);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function memberName(member: MemberRow) {

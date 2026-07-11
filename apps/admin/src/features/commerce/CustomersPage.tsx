@@ -15,6 +15,7 @@ import type {
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
+import { OrderDetailDialog } from './OrdersPage';
 
 interface CustomerRow {
   id: string;
@@ -81,6 +82,7 @@ export function CustomersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ownerCustomerId, setOwnerCustomerId] = useState('');
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const query = useMemo(() => customerQuery({ search, segment, churnRisk, tag, taxExempt, sort }), [search, segment, churnRisk, tag, taxExempt, sort]);
   const customers = useQuery({ queryKey: ['commerce', 'customers', query], queryFn: () => fetchCustomers(query) });
   const stats = useQuery({ queryKey: ['commerce', 'customers', 'stats'], queryFn: () => fetchCustomerStats() });
@@ -102,6 +104,7 @@ export function CustomersPage() {
     queryFn: fetchMembers,
     enabled: canWrite,
   });
+  const shopifyStore = import.meta.env.VITE_SHOPIFY_ADMIN_STORE as string | undefined;
 
   useEffect(() => {
     const syncFromUrl = () => setDetailCustomerId(currentCustomerIdFromUrl());
@@ -148,6 +151,7 @@ export function CustomersPage() {
       toast.success(t('customers.assignment_saved'));
       qc.setQueryData(['commerce', 'customers', input.customerId, 'assignments'], data);
       qc.invalidateQueries({ queryKey: ['commerce', 'customers', input.customerId, 'assignments'] });
+      qc.invalidateQueries({ queryKey: ['commerce', 'customers', input.customerId, 'detail'] });
     },
     onError: (error) => toast.error(t('customers.assignment_failed'), { description: apiErrorMessage(error) }),
   });
@@ -303,8 +307,8 @@ export function CustomersPage() {
             </thead>
             <tbody>
               {rows.map((customer) => (
-                <tr key={customer.id} id={`row-customer-${customer.id}`} onDoubleClick={() => openCustomerDetail(customer.id)}>
-                  <td><input type="checkbox" checked={selected.has(customer.id)} onChange={() => toggleOne(customer.id, setSelected)} aria-label={t('customers.select_customer')} /></td>
+                <tr key={customer.id} id={`row-customer-${customer.id}`} onClick={() => openCustomerDetail(customer.id)} tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && openCustomerDetail(customer.id)}>
+                  <td onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.has(customer.id)} onChange={() => toggleOne(customer.id, setSelected)} aria-label={t('customers.select_customer')} /></td>
                   <td>
                     <div className="name">{customer.name ?? customer.companyName}</div>
                     <div className="muted">{customer.email ?? '—'}</div>
@@ -326,7 +330,7 @@ export function CustomersPage() {
                   <td>{customer.ordersCount}</td>
                   <td><strong>{fmtMoney(customer.totalSpent)}</strong></td>
                   <td className="muted">{fmtDate(customer.lastOrderAt)}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right' }} onClick={(event) => event.stopPropagation()}>
                     <div style={{ display: 'inline-flex', gap: 6 }}>
                       <button type="button" className="btn ghost" onClick={() => openCustomerDetail(customer.id)} title="Open customer detail">
                         <ExternalLink size={13} />
@@ -352,7 +356,37 @@ export function CustomersPage() {
         error={detail.error ? apiErrorMessage(detail.error) : null}
         onRetry={() => detail.refetch()}
         onClose={closeCustomerDetail}
+        onOpenOrder={(orderId) => {
+          closeCustomerDetail();
+          setDetailOrderId(orderId);
+        }}
+        shopifyAdminCustomerUrl={shopifyStore && detail.data?.customer.shopifyCustomerId
+          ? `https://admin.shopify.com/store/${shopifyStore}/customers/${detail.data.customer.shopifyCustomerId}`
+          : null}
+        ownershipEditor={canWrite ? {
+          options: (members.data ?? [])
+            .filter((member) => member.status === 'active')
+            .map((member) => ({ id: member.id, label: memberName(member), email: member.email })),
+          isSaving: assignPrimary.isPending,
+          onAssign: (axis, memberId) => detailCustomerId && assignPrimary.mutate({
+            customerId: detailCustomerId,
+            axis: axis as CustomerAssignmentAxis,
+            memberId,
+          }),
+        } : null}
       />
+      {detailOrderId ? (
+        <OrderDetailDialog
+          orderId={detailOrderId}
+          shopifyStore={shopifyStore}
+          onClose={() => setDetailOrderId(null)}
+          onSelectOrder={setDetailOrderId}
+          onOpenCustomer={(customerId) => {
+            setDetailOrderId(null);
+            openCustomerDetail(customerId);
+          }}
+        />
+      ) : null}
     </>
   );
 }

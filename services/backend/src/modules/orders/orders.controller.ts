@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   createDirectOrderSchema,
   accountInvoiceQuerySchema,
@@ -11,6 +11,7 @@ import {
   transferOrderToMemberSchema,
   updateAccountInvoiceFileSchema,
   updateAccountInvoiceStatusSchema,
+  updateCommercePickupSchema,
   type AccountInvoiceQuery,
   type CreateDirectOrderInput,
   type OrderListQuery,
@@ -21,6 +22,7 @@ import {
   type TransferOrderToMemberInput,
   type UpdateAccountInvoiceFileInput,
   type UpdateAccountInvoiceStatusInput,
+  type UpdateCommercePickupInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -145,6 +147,15 @@ export class OrdersController {
     @Body(new ZodValidationPipe(transferOrderToMemberSchema)) body: TransferOrderToMemberInput,
   ) {
     return this.orders.transferToMember(id, body);
+  }
+
+  @Patch(':id/pickup')
+  @RequirePermission(MEMBER_PERMISSIONS.ordersWrite)
+  updatePickup(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateCommercePickupSchema)) body: UpdateCommercePickupInput,
+  ) {
+    return this.orders.updatePickup(id, body);
   }
 
   @Post('reorder/resolve')

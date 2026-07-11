@@ -66,6 +66,7 @@ import type {
   CreateMcpTokenResponse,
   CreateDirectOrderInput,
   TransferOrderToMemberInput,
+  UpdateCommercePickupInput,
   CreateMemberInput,
   CreateMemberRoleInput,
   CreateB2BAccessRequestInput,
@@ -633,6 +634,10 @@ export class ApiClient {
 
   transferOrder(id: string, input: TransferOrderToMemberInput) {
     return this.post(`/orders/${encodeURIComponent(id)}/transfer`, input);
+  }
+
+  updateOrderPickup(id: string, input: UpdateCommercePickupInput) {
+    return this.patch(`/orders/${encodeURIComponent(id)}/pickup`, input);
   }
 
   createDirectOrder(input: CreateDirectOrderInput) {

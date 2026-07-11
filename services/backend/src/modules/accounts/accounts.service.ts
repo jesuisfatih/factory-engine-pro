@@ -2166,10 +2166,11 @@ function pickupSteps(status: string, createdAt: Date, pickupAt: Date | null) {
 
 function pickupStatus(status: string) {
   const value = status.toLowerCase();
-  if (['ready', 'ready_for_pickup'].includes(value)) return 'ready_for_pickup';
+  if (['pending', 'received'].includes(value)) return 'received';
+  if (['ready', 'ready_for_pickup', 'notified'].includes(value)) return 'ready_for_pickup';
   if (['complete', 'completed', 'picked_up'].includes(value)) return 'picked_up';
   if (['in_production', 'processing'].includes(value)) return 'in_production';
-  return 'in_production';
+  return value;
 }
 
 function invoiceStatus(financialStatus: string | null, dueAt: Date, paid: number, total: number) {

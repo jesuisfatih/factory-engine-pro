@@ -1577,6 +1577,63 @@ export class MailService {
     });
   }
 
+  async sendPickupReady(input: {
+    to: string;
+    recipientName: string;
+    pickupOrderId: string;
+    orderNumber: string;
+    shelfCode?: string | null;
+    portalUrl?: string | null;
+  }) {
+    const brand = await this.resolveBrandName();
+    const portalUrl = input.portalUrl?.trim()
+      || `${(this.config.get<string>('ACCOUNTS_URL') ?? '').replace(/\/+$/, '')}/pickup`;
+    const subject = `${brand} order ${input.orderNumber} is ready for pickup`;
+    const shelfLine = input.shelfCode ? ` Pickup location: ${input.shelfCode}.` : '';
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'orders.pickup_ready.user',
+      variables: {
+        brand,
+        brand_name: brand,
+        recipientName: input.recipientName,
+        recipient_name: input.recipientName,
+        email: input.to,
+        pickup_order_id: input.pickupOrderId,
+        order_number: input.orderNumber,
+        shelf_code: input.shelfCode ?? '',
+        portal_url: portalUrl,
+        action_url: portalUrl,
+      },
+      fallback: {
+        subject,
+        html: [
+          `<p>Hello ${escapeHtml(input.recipientName)},</p>`,
+          `<p>Your order <strong>${escapeHtml(input.orderNumber)}</strong> is ready for pickup.</p>`,
+          input.shelfCode ? `<p><strong>Pickup location:</strong> ${escapeHtml(input.shelfCode)}</p>` : '',
+          portalUrl ? `<p><a href="${escapeHtml(portalUrl)}">View pickup details</a></p>` : '',
+        ].filter(Boolean).join(''),
+        text: `Hello ${input.recipientName}, your order ${input.orderNumber} is ready for pickup.${shelfLine}${portalUrl ? ` View pickup details: ${portalUrl}` : ''}`,
+      },
+    });
+    return this.sendTransactional({
+      eventKey: 'orders.pickup_ready.user',
+      category: 'system',
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      idempotencyKey: `order:pickup_ready:${input.pickupOrderId}:${input.to.toLowerCase()}`,
+      metadata: {
+        pickupOrderId: input.pickupOrderId,
+        orderNumber: input.orderNumber,
+        shelfCode: input.shelfCode ?? null,
+        templateSource: rendered.templateSource,
+      },
+    });
+  }
+
   async listInternalRecipients() {
     return this.prisma.db.member.findMany({
       where: {

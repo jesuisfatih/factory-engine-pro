@@ -12,6 +12,7 @@ import {
   type TransferOrderToMemberInput,
   type UpdateAccountInvoiceFileInput,
   type UpdateAccountInvoiceStatusInput,
+  type UpdateCommercePickupInput,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -508,6 +509,94 @@ export class OrdersService {
     };
   }
 
+  async updatePickup(id: string, input: UpdateCommercePickupInput) {
+    const order = await this.repository.getRequired(id);
+    if (order.fulfillmentMode !== 'pickup' && !order.pickupOrder) {
+      throw new BadRequestException('Only pickup orders can use pickup operations');
+    }
+    const pickup = order.pickupOrder ?? await this.repository.ensurePickupOrder(
+      order,
+      (order.designFiles ?? []) as Prisma.InputJsonValue,
+    );
+    const previousStatus = pickup.status;
+    if (input.status) assertPickupStatusTransition(previousStatus, input.status);
+
+    const previousMetadata = jsonObject(pickup.metadata);
+    const nextShelfCode = input.shelfCode === undefined
+      ? stringValue(previousMetadata.shelfCode)
+      : input.shelfCode;
+    const notification = input.status === 'notified'
+      ? await this.mail.sendPickupReady({
+          to: order.email ?? order.customer?.email ?? '',
+          recipientName: order.customer ? customerDisplayName(order.customer) : order.email ?? 'Customer',
+          pickupOrderId: pickup.id,
+          orderNumber: order.shopifyOrderNumber ?? order.id,
+          shelfCode: nextShelfCode,
+        }).catch((error) => {
+          if (!order.email && !order.customer?.email) {
+            throw new BadRequestException('Customer email is required before marking pickup as notified');
+          }
+          throw error;
+        })
+      : null;
+    const history = Array.isArray(previousMetadata.history) ? previousMetadata.history.slice(-49) : [];
+    const changedAt = new Date();
+    const nextMetadata = {
+      ...previousMetadata,
+      ...(input.shelfCode !== undefined ? { shelfCode: input.shelfCode } : {}),
+      ...(input.note !== undefined ? { note: input.note } : {}),
+      history: [
+        ...history,
+        {
+          at: changedAt.toISOString(),
+          actorMemberId: this.tenantContext.require().principalId,
+          previousStatus,
+          status: input.status ?? previousStatus,
+          shelfCode: input.shelfCode === undefined ? previousMetadata.shelfCode ?? null : input.shelfCode,
+          note: input.note ?? null,
+          mailDeliveryId: notification?.id ?? null,
+        },
+      ],
+    };
+    const updated = await this.prisma.db.commercePickupOrder.updateMany({
+      where: { id: pickup.id },
+      data: {
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.qrCode !== undefined ? { qrCode: input.qrCode } : {}),
+        ...(input.status === 'picked_up' ? { pickupAt: changedAt } : {}),
+        metadata: nextMetadata as Prisma.InputJsonValue,
+      },
+    });
+    if (updated.count === 0) throw new NotFoundException('Pickup order not found');
+
+    await this.prisma.db.commerceActivityLog.create({
+      data: {
+        id: prefixedId('alog'),
+        tenantId: this.requireTenantId(),
+        customerId: order.customerId,
+        shopifyCustomerId: order.shopifyCustomerId,
+        eventType: 'pickup.updated',
+        payload: {
+          orderId: order.id,
+          pickupOrderId: pickup.id,
+          previousStatus,
+          status: input.status ?? previousStatus,
+          shelfCode: input.shelfCode === undefined ? previousMetadata.shelfCode ?? null : input.shelfCode,
+          qrCodeChanged: input.qrCode !== undefined,
+          note: input.note ?? null,
+          mailDeliveryId: notification?.id ?? null,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log('orders', 'pickup.update', 'Pickup order updated', {
+      order_id: order.id,
+      pickup_order_id: pickup.id,
+      previous_status: previousStatus,
+      status: input.status ?? previousStatus,
+    });
+    return this.get(order.id);
+  }
+
   async createDirectOrder(input: CreateDirectOrderInput) {
     if (input.idempotencyKey) {
       const existing = await this.repository.findByIdempotencyKey(input.idempotencyKey);
@@ -892,6 +981,19 @@ export class OrdersService {
       fulfillmentStatus: order.fulfillmentStatus,
       fulfillmentMode: order.fulfillmentMode,
       pickupStatus: order.pickupOrder?.status ?? null,
+      pickup: detailed && order.pickupOrder ? {
+        id: order.pickupOrder.id,
+        status: order.pickupOrder.status,
+        qrCode: order.pickupOrder.qrCode,
+        shelfCode: stringValue(jsonObject(order.pickupOrder.metadata).shelfCode),
+        note: stringValue(jsonObject(order.pickupOrder.metadata).note),
+        pickupAt: order.pickupOrder.pickupAt?.toISOString() ?? null,
+        createdAt: order.pickupOrder.createdAt.toISOString(),
+        updatedAt: order.pickupOrder.updatedAt.toISOString(),
+        history: Array.isArray(jsonObject(order.pickupOrder.metadata).history)
+          ? jsonObject(order.pickupOrder.metadata).history
+          : [],
+      } : undefined,
       tags: order.tags,
       processedAt: order.processedAt?.toISOString() ?? null,
       cancelledAt: detailed ? order.cancelledAt?.toISOString() ?? null : undefined,
@@ -934,6 +1036,33 @@ export class OrdersService {
       syncedAt: new Date(),
     });
   }
+}
+
+const PICKUP_STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  processing: 1,
+  ready: 2,
+  notified: 3,
+  picked_up: 4,
+};
+
+function assertPickupStatusTransition(current: string, next: string) {
+  if (current === next) return;
+  if (current === 'picked_up' || current === 'cancelled') {
+    throw new ConflictException(`Pickup status ${current} is final`);
+  }
+  if (next === 'cancelled') return;
+  const currentRank = PICKUP_STATUS_RANK[current];
+  const nextRank = PICKUP_STATUS_RANK[next];
+  if (currentRank === undefined || nextRank === undefined || nextRank < currentRank) {
+    throw new BadRequestException(`Pickup status cannot move from ${current} to ${next}`);
+  }
+}
+
+function jsonObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function extractDesignFiles(lineItems: Array<Record<string, unknown>>) {

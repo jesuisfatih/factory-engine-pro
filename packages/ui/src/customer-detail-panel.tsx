@@ -5,6 +5,7 @@ import { staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import {
   ChevronLeft,
   ClipboardList,
+  ExternalLink,
   Headphones,
   LayoutDashboard,
   Mail,
@@ -54,6 +55,15 @@ export interface CustomerDetailPanelProps {
   main?: CustomerDetailMainInfo;
   mainContent?: ReactNode;
   customization?: CustomerDetailPanelCustomization | null;
+  onOpenOrder?: (orderId: string) => void;
+  shopifyAdminCustomerUrl?: string | null;
+  ownershipEditor?: CustomerOwnershipEditor | null;
+}
+
+export interface CustomerOwnershipEditor {
+  options: Array<{ id: string; label: string; email: string }>;
+  isSaving: boolean;
+  onAssign: (axis: string, memberId: string) => void;
 }
 
 export interface CustomerDetailPanelCustomization {
@@ -91,6 +101,9 @@ export function CustomerDetailPanel({
   main,
   mainContent,
   customization,
+  onOpenOrder,
+  shopifyAdminCustomerUrl,
+  ownershipEditor,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
   const visibleTabs = useMemo<PanelTab[]>(
@@ -154,6 +167,16 @@ export function CustomerDetailPanel({
                 </a>
               )
             ) : null}
+            {detail?.customer.email ? (
+              <a className="btn ghost" href={`mailto:${detail.customer.email}`} aria-label={`Email ${detail.customer.email}`}>
+                <Mail size={14} /> Email
+              </a>
+            ) : null}
+            {shopifyAdminCustomerUrl ? (
+              <a className="btn ghost" href={shopifyAdminCustomerUrl} target="_blank" rel="noreferrer" aria-label="Open customer in Shopify">
+                <ExternalLink size={14} /> Shopify
+              </a>
+            ) : null}
             <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
               <X size={18} />
             </button>
@@ -209,7 +232,14 @@ export function CustomerDetailPanel({
                 ? <OrderDetailTab order={selectedOrder} onBack={() => { setSelectedOrder(null); setActiveTab('shopify_orders'); }} staffTerminology={staffTerminology} />
                 : activeTab === 'main' && main
                 ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} customization={customization} />
-                : renderTab(detail, activeTab as CustomerDetailTab, onRetry, staffTerminology, setSelectedOrder)}
+                : renderTab(
+                    detail,
+                    activeTab as CustomerDetailTab,
+                    onRetry,
+                    staffTerminology,
+                    (order) => onOpenOrder ? onOpenOrder(order.id) : setSelectedOrder(order),
+                    ownershipEditor,
+                  )}
             </main>
           </>
         )}
@@ -298,8 +328,9 @@ function renderTab(
   onRetry: () => void,
   staffTerminology: boolean,
   onOpenOrder: (order: CustomerDetailOrder) => void,
+  ownershipEditor?: CustomerOwnershipEditor | null,
 ) {
-  if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} />;
+  if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} ownershipEditor={ownershipEditor} />;
   if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} onOpenOrder={onOpenOrder} />;
   if (tab === 'aircall_calls') return <AircallTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
@@ -310,7 +341,15 @@ function renderTab(
   return null;
 }
 
-function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelDto; staffTerminology: boolean }) {
+function ProfileTab({
+  detail,
+  staffTerminology,
+  ownershipEditor,
+}: {
+  detail: CustomerDetailPanelDto;
+  staffTerminology: boolean;
+  ownershipEditor?: CustomerOwnershipEditor | null;
+}) {
   const customer = detail.customer;
   const customerListHeading = staffTerminology ? 'Customer lists' : 'Segments';
   const noCustomerListText = staffTerminology ? 'No live customer-list membership.' : 'No live segment membership.';
@@ -339,6 +378,28 @@ function ProfileTab({ detail, staffTerminology }: { detail: CustomerDetailPanelD
             <small>{staffPanelText(label(assignment.source), staffTerminology)}</small>
           </div>
         ))}
+        {ownershipEditor ? (
+          <div className="customer-detail-owner-editor">
+            {['sales', 'account', 'support'].map((axis) => {
+              const assignment = customer.assignments.find((row) => row.axis === axis);
+              return (
+                <label key={axis}>
+                  <span>{staffTerminology ? customerFocusLabel(axis) : label(axis)}</span>
+                  <select
+                    value={assignment?.memberId ?? ''}
+                    disabled={ownershipEditor.isSaving || ownershipEditor.options.length === 0}
+                    onChange={(event) => event.target.value && ownershipEditor.onAssign(axis, event.target.value)}
+                  >
+                    <option value="">Select owner</option>
+                    {ownershipEditor.options.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label} - {option.email}</option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })}
+          </div>
+        ) : null}
       </section>
       <section className="customer-detail-card">
         <h3>{customerListHeading}</h3>

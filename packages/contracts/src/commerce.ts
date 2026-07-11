@@ -5,6 +5,26 @@ import { taskAxisSchema } from './operations.js';
 export const fulfillmentModeSchema = z.enum(['pickup', 'shipping', 'local_delivery', 'unknown']);
 export type FulfillmentMode = z.infer<typeof fulfillmentModeSchema>;
 
+export const commercePickupStatusSchema = z.enum([
+  'pending',
+  'processing',
+  'ready',
+  'notified',
+  'picked_up',
+  'cancelled',
+]);
+export type CommercePickupStatus = z.infer<typeof commercePickupStatusSchema>;
+
+export const updateCommercePickupSchema = z.object({
+  status: commercePickupStatusSchema.optional(),
+  shelfCode: z.string().trim().max(80).nullable().optional(),
+  qrCode: z.string().trim().max(240).nullable().optional(),
+  note: z.string().trim().max(1000).nullable().optional(),
+}).refine((input) => Object.values(input).some((value) => value !== undefined), {
+  message: 'At least one pickup field must be provided',
+});
+export type UpdateCommercePickupInput = z.infer<typeof updateCommercePickupSchema>;
+
 export const orderSurfaceSchema = z.enum(['all', 'pickup', 'design_files']);
 export type OrderSurface = z.infer<typeof orderSurfaceSchema>;
 

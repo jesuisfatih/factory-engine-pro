@@ -448,7 +448,10 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; background: var(--surface-2); }
 .modal-section { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
 .modal-section h3 { margin: 0 0 12px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
-.order-modal-card { width: min(1180px, calc(100vw - 28px)); max-width: 1180px; max-height: 92vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.order-modal-card { width: min(1220px, calc(100vw - 28px)); max-width: 1220px; max-height: 92vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.order-modal-tabs { display: flex; gap: 6px; padding: 9px 20px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.order-modal-tabs button { height: 32px; padding: 0 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 650; white-space: nowrap; cursor: pointer; }
+.order-modal-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .order-modal-body { grid-template-columns: minmax(0, 1.45fr) minmax(300px, .75fr); gap: 16px; }
 .order-modal-single { grid-template-columns: 1fr; }
 .order-modal-main, .order-modal-side { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
@@ -468,12 +471,18 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .mini-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .mini-table td:last-child, .mini-table th:last-child { text-align: right; }
 .compact-list, .order-history-list { display: flex; flex-direction: column; gap: 8px; }
-.compact-list > div, .order-history-list > div { border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; background: var(--surface); font-size: 12px; }
+.compact-list > div, .order-history-list > div, .order-history-list > button { border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; background: var(--surface); font-size: 12px; }
+.order-history-list > button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text); text-align: left; cursor: pointer; }
+.order-history-list > button > span:last-child { display: inline-flex; align-items: center; gap: 5px; color: var(--text); font-weight: 700; white-space: nowrap; }
+.order-history-list > button:disabled { cursor: default; }
+.order-history-list small { display: block; margin-top: 3px; color: var(--text-muted); }
 .compact-list strong, .order-history-list strong { display: block; color: var(--text); margin-bottom: 3px; }
 .compact-list span, .order-history-list span { color: var(--text-muted); display: block; overflow-wrap: anywhere; }
 .compact-list a { display: inline-flex; margin-top: 5px; color: var(--accent); font-weight: 700; text-decoration: none; }
 .order-invoice-create { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
-.order-invoice-create textarea, .order-invoice-create .btn { grid-column: 1 / -1; }
+.order-invoice-create label { display: grid; gap: 5px; min-width: 0; }
+.order-invoice-create label > span, .pickup-details-grid label > span { color: var(--text-muted); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .35px; }
+.order-invoice-create label.wide, .order-invoice-create .btn { grid-column: 1 / -1; }
 .invoice-list { gap: 10px; }
 .invoice-row { display: flex; flex-direction: column; gap: 9px; }
 .invoice-row-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -494,7 +503,43 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 }
 .invoice-delivery-proof strong { color: var(--info); }
 .invoice-delivery-proof span { color: var(--text-muted); }
-.order-history-list > div.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.invoice-note { display: grid; gap: 3px; border-left: 3px solid var(--warn); padding: 7px 10px; background: var(--warn-soft); border-radius: 0 7px 7px 0; font-size: 11px; }
+.invoice-detail-disclosure { border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.invoice-detail-disclosure summary { padding: 9px 10px; cursor: pointer; color: var(--text); font-size: 11px; font-weight: 700; }
+.invoice-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 10px 10px; }
+.invoice-detail-grid > div { display: grid; align-content: start; gap: 4px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 9px; }
+.invoice-detail-grid span { color: var(--text-muted); font-size: 11px; line-height: 1.35; }
+.order-history-list > button.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.order-customer-contact { display: grid; gap: 5px; margin-bottom: 10px; }
+.order-customer-contact a { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: 11px; text-decoration: none; overflow-wrap: anywhere; }
+.order-detail-dates { margin-top: 10px; }
+.order-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.order-address-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.order-address-card { display: grid; gap: 3px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 11px; overflow-wrap: anywhere; }
+.order-address-card > strong { margin-bottom: 3px; color: var(--text); }
+.order-address-card > span { color: var(--text-muted); }
+.order-item-properties { display: grid; gap: 3px; margin: 7px 0 0; }
+.order-item-properties > div { display: grid; grid-template-columns: minmax(80px, .35fr) minmax(0, 1fr); gap: 6px; font-size: 10px; }
+.order-item-properties dt { color: var(--text-muted); }
+.order-item-properties dd { margin: 0; overflow-wrap: anywhere; }
+.order-item-properties a { color: var(--accent); }
+.pickup-workspace { display: grid; gap: 10px; border: 1px solid color-mix(in srgb, var(--warn) 28%, var(--border)); background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface)); border-radius: 8px; padding: 12px; }
+.pickup-status-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.pickup-status-strip > div { display: grid; grid-template-columns: 18px 1fr; align-items: center; min-width: 0; padding: 7px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-muted); font-size: 10px; }
+.pickup-status-strip > div.done { border-color: color-mix(in srgb, var(--success) 40%, var(--border)); color: var(--success); }
+.pickup-status-strip > div.current { border-color: var(--warn); box-shadow: inset 0 -2px 0 var(--warn); color: var(--text); }
+.pickup-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pickup-details-grid label { display: grid; gap: 5px; }
+.pickup-details-grid label.wide { grid-column: 1 / -1; }
+.pickup-action-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.pickup-proof { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 11px; }
+.pickup-proof.success { color: var(--success); }
+.order-activity-list { display: grid; }
+.order-activity-list article { display: grid; grid-template-columns: 16px 1fr; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.order-activity-dot { width: 8px; height: 8px; margin-top: 4px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.order-activity-list article > div { display: grid; gap: 3px; }
+.order-activity-list article span { color: var(--text-muted); font-size: 11px; }
+.order-activity-meta { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 3px; }
 .field-label { display: block; margin: 10px 0 5px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: .35px; }
 .inline-error { color: var(--danger); font-size: 11px; margin-top: 5px; }
 .transfer-proof { display: flex; align-items: center; gap: 6px; margin: 10px 0; padding: 8px 10px; border-radius: 8px; background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 700; }
@@ -503,6 +548,9 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   .order-modal-body { grid-template-columns: 1fr; }
   .order-detail-grid, .order-stats-grid, .money-breakdown { grid-template-columns: 1fr; }
   .order-invoice-create { grid-template-columns: 1fr; }
+  .invoice-detail-grid, .order-address-grid, .pickup-details-grid { grid-template-columns: 1fr; }
+  .pickup-status-strip { grid-template-columns: 1fr; }
+  .pickup-details-grid label.wide { grid-column: auto; }
 }
 
 .rule-row { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 8px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
@@ -2119,6 +2167,10 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-card h3 { margin: 0 0 12px; font-size: 14px; }
 .customer-detail-card p { margin: 10px 0 0; color: var(--text); line-height: 1.45; }
 .customer-detail-card blockquote { margin: 10px 0 0; border-left: 3px solid #0f766e; padding-left: 10px; color: var(--muted, var(--text-muted)); }
+.customer-detail-owner-editor { display: grid; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.customer-detail-owner-editor label { display: grid; grid-template-columns: minmax(110px, .35fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.customer-detail-owner-editor label > span { color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.customer-detail-owner-editor select { min-width: 0; }
 .customer-detail-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .customer-detail-row > * { min-width: 0; }
 .customer-detail-row + .customer-detail-row, .customer-detail-kv + .customer-detail-kv { margin-top: 10px; }
@@ -2163,6 +2215,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   .customer-detail-backdrop { padding: 0; }
   .customer-detail-panel { width: 100vw; height: 100vh; border-radius: 0; }
   .customer-detail-summary, .customer-detail-grid { grid-template-columns: 1fr; }
+  .customer-detail-owner-editor label { grid-template-columns: 1fr; }
 }
 
 /* Call Center */
