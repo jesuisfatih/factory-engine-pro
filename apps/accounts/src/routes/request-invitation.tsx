@@ -34,6 +34,13 @@ const BENEFIT_ICONS: Record<string, LucideIcon> = {
   TEAM: Users,
   VIP: Headphones,
   SHIP: Truck,
+  'badge-check': CircleCheck,
+  'calendar-clock': CalendarClock,
+  headphones: Headphones,
+  'package-check': BadgeDollarSign,
+  'shield-check': CircleCheck,
+  truck: Truck,
+  users: Users,
 };
 
 interface RequestPageConfig {
@@ -193,7 +200,28 @@ function RequestInvitationView() {
   const merchantHint = (search.get('merchantId') || search.get('merchant_id') || '').trim();
   const emailFromUrl = (search.get('email') || '').trim();
   const emailLocked = emailFromUrl.length > 0;
-  const [pageConfig] = useState<RequestPageConfig>(DEFAULT_REQUEST_PAGE_CONFIG);
+  const portalExperience = brandQuery.data?.accountPortalExperience;
+  const requestExperience = portalExperience?.requestAccess;
+  const pageConfig = useMemo<RequestPageConfig>(() => ({
+    ...DEFAULT_REQUEST_PAGE_CONFIG,
+    title: requestExperience?.formTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.title,
+    subtitle: requestExperience?.formDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.subtitle,
+    heroTitle: requestExperience
+      ? (requestExperience.headline === 'Partner Program' ? `${brandName} Partner Program` : requestExperience.headline)
+      : '',
+    heroSubtitle: requestExperience?.description ?? DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
+    primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
+    fontColor: portalExperience?.theme.textColor ?? DEFAULT_REQUEST_PAGE_CONFIG.fontColor,
+    formPanelBackgroundColor: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelBackgroundColor,
+    formPanelGradientFrom: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelGradientFrom,
+    formPanelTextColor: portalExperience?.theme.textColor ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelTextColor,
+    formPanelMutedTextColor: portalExperience?.theme.mutedTextColor ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelMutedTextColor,
+    benefits: requestExperience?.showBenefits
+      ? requestExperience.benefits.map((benefit) => ({ icon: benefit.icon, title: benefit.title, description: benefit.body }))
+      : [],
+    successTitle: requestExperience?.successTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.successTitle,
+    successMessage: requestExperience?.successMessage ?? DEFAULT_REQUEST_PAGE_CONFIG.successMessage,
+  }), [brandName, portalExperience, requestExperience]);
   const [formData, setFormData] = useState<Record<string, string>>(() => ({
     email: emailFromUrl,
     firstName: (search.get('firstName') || '').trim(),
@@ -466,15 +494,15 @@ function RequestInvitationView() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
+        background: portalExperience?.theme.pageBackground ?? `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
         padding: 20,
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 980, position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: requestExperience?.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
         <div
           style={{
-            background: STATIC_COLORS.card,
+            background: portalExperience?.theme.panelBackground ?? STATIC_COLORS.card,
             borderRadius: 20,
             overflow: 'hidden',
             boxShadow: boxShadowEnabled
@@ -484,7 +512,7 @@ function RequestInvitationView() {
           }}
         >
           <div style={{ display: 'flex', minHeight: 620 }}>
-            <div
+            {requestExperience?.layout !== 'centered' ? <div
               style={{
                 flex: '0 0 38%',
                 padding: '44px 32px',
@@ -540,7 +568,7 @@ function RequestInvitationView() {
                   ))}
                 </div>
               ) : null}
-            </div>
+            </div> : null}
 
             <div
               style={{
@@ -692,13 +720,13 @@ function RequestInvitationView() {
                         fontFamily: 'Inter, system-ui, sans-serif',
                       }}
                     >
-                      {loading ? 'Submitting Application...' : 'Submit Application'}
+                      {loading ? 'Submitting Application...' : (requestExperience?.primaryActionLabel ?? 'Submit Application')}
                     </button>
 
                     <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: 16, marginBottom: 0, fontSize: 14 }}>
                       Already have an account?{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
-                        Sign in
+                        {requestExperience?.secondaryActionLabel ?? 'Sign in'}
                       </a>
                     </p>
                   </form>

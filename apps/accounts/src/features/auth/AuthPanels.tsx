@@ -1,28 +1,14 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, Eye, EyeOff, KeyRound, Lock, Mail, PackageCheck, ShieldCheck, Truck, Users2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Users2 } from 'lucide-react';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
+import { AccountPortalLayout, useAccountPortalSurface } from '@/features/auth/AccountPortalLayout';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
-
-const LOGIN_FEATURES = [
-  { icon: PackageCheck, title: 'Wholesale pricing', body: 'Contract rates and volume breaks stay visible before checkout.', tone: 'green' },
-  { icon: BadgeCheck, title: 'Net terms', body: 'Approved buyers can manage invoices, balances, and payment timing.', tone: 'amber' },
-  { icon: Users2, title: 'Team purchasing', body: 'Buyers, managers, and admins work from one controlled account.', tone: 'blue' },
-] as const;
-
-const LOGIN_TRUST = [
-  { icon: ShieldCheck, label: 'Secure checkout' },
-  { icon: Truck, label: 'Order tracking' },
-  { icon: BadgeCheck, label: 'Priority support' },
-] as const;
 
 export function AccountsLoginPanel() {
   const rememberedEmail = readRememberedEmail();
-  const brandQuery = useWorkspaceBrand();
-  const currentWorkspaceName = workspaceName(brandQuery.data?.workspaceName);
-  const currentWorkspaceBadge = workspaceBadge(brandQuery.data?.brandBadge, currentWorkspaceName);
-  const brandLogo = brandQuery.data?.brandLogo;
+  const { page } = useAccountPortalSurface('login');
   const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,59 +32,15 @@ export function AccountsLoginPanel() {
   };
 
   return (
-    <main className="auth-page">
-      <div className="auth-stage">
-        <section className="auth-brand-panel" aria-label={`${currentWorkspaceName} account workspace`}>
-          <div>
-            <div className="auth-brand-row">
-              <div className="auth-brand-mark">
-                {brandLogo
-                  ? <img src={brandLogo} alt="" className="auth-brand-mark-img" aria-hidden="true" />
-                  : currentWorkspaceBadge.charAt(0)}
-              </div>
-              <div className="auth-brand-name">
-                <span>{currentWorkspaceName}</span>
-                <small>Company Portal</small>
-              </div>
-            </div>
-
-            <div className="auth-brand-copy">
-              <span className="auth-eyebrow">B2B account workspace</span>
-              <h1>Order and track every DTF job from one place.</h1>
-              <p>Wholesale ordering, payment terms, team access, and support are kept together for repeat purchasing.</p>
-            </div>
-          </div>
-
-          <div className="auth-benefit-list">
-            {LOGIN_FEATURES.map(({ icon: Icon, title, body, tone }) => (
-              <div className={`auth-benefit-card tone-${tone}`} key={title}>
-                <Icon aria-hidden="true" />
-                <div>
-                  <strong>{title}</strong>
-                  <span>{body}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="auth-trust-strip" aria-label="Account benefits">
-            {LOGIN_TRUST.map(({ icon: Icon, label }) => (
-              <span key={label}><Icon aria-hidden="true" />{label}</span>
-            ))}
-          </div>
-        </section>
-
-        <section className="auth-form-panel" aria-label="Sign in">
-          <div className="auth-card">
+    <AccountPortalLayout surface="login" formLabel="Sign in">
+      <div className="auth-card">
             <div className="auth-logo-wrap">
-              {brandLogo
-                ? <img src={brandLogo} alt={currentWorkspaceName} className="auth-logo-img" />
-                : <div className="auth-logo-mark">{currentWorkspaceBadge.charAt(0)}</div>}
+              <Brand />
             </div>
 
             <div className="auth-heading">
-              <h2>Welcome back</h2>
-              <p>Sign in to your {currentWorkspaceName} account.</p>
+              <h2>{page.formTitle}</h2>
+              <p>{page.formDescription}</p>
             </div>
 
             {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
@@ -159,26 +101,23 @@ export function AccountsLoginPanel() {
 
               <button type="submit" className="auth-submit" disabled={login.isPending}>
                 <ArrowRight aria-hidden="true" />
-                {login.isPending ? 'Signing in...' : 'Sign In'}
+                {login.isPending ? 'Signing in...' : page.primaryActionLabel}
               </button>
             </form>
 
             <div className="auth-divider"><span /><b>or</b><span /></div>
 
             <div className="auth-link-grid">
-              <a href="/register" className="auth-secondary-link secondary"><Users2 aria-hidden="true" />Create Account</a>
-              <a href="/request-invitation" className="auth-secondary-link ghost"><ArrowRight aria-hidden="true" />Request B2B Access</a>
+              <a href="/register" className="auth-secondary-link secondary"><Users2 aria-hidden="true" />{page.secondaryActionLabel}</a>
+              <a href="/request-invitation" className="auth-secondary-link ghost"><ArrowRight aria-hidden="true" />{page.tertiaryActionLabel}</a>
             </div>
-          </div>
-
-          <p className="auth-footer">&copy; {new Date().getFullYear()} {currentWorkspaceName}. All rights reserved.</p>
-        </section>
       </div>
-    </main>
+    </AccountPortalLayout>
   );
 }
 
 export function AccountsRegisterPanel() {
+  const { page } = useAccountPortalSurface('register');
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(() => initialRegisterFormFromSearch());
   const [error, setError] = useState<string | null>(null);
@@ -240,10 +179,11 @@ export function AccountsRegisterPanel() {
   };
 
   return (
-    <div className="auth-card" style={{ maxWidth: 620 }}>
+    <AccountPortalLayout surface="register" formLabel="Create account">
+    <div className="auth-card auth-register-card">
       <Brand />
-      <h2>Create your B2B account</h2>
-      <p className="muted">Step {step} of 5. Your company, billing and portal credentials are created through the live API.</p>
+      <h2>{page.formTitle}</h2>
+      <p className="muted">Step {step} of 5. {page.formDescription}</p>
       <div className="auth-progress"><div style={{ width: `${(step / 5) * 100}%` }} /></div>
       <AuthForm onSubmit={submit}>
         {error && <AuthAlert onDismiss={() => setError(null)}>{error}</AuthAlert>}
@@ -306,11 +246,12 @@ export function AccountsRegisterPanel() {
         )}
         <div className="auth-register-actions">
           {step > 1 && <button className="btn" type="button" onClick={() => { setError(null); setStep((current) => current - 1); }}><ArrowLeft size={13} /> Back</button>}
-          <AuthSubmit pending={register.isPending}>{step === 5 ? 'Create account' : 'Next step'} <ArrowRight size={14} /></AuthSubmit>
+          <AuthSubmit pending={register.isPending}>{step === 5 ? page.primaryActionLabel : 'Next step'} <ArrowRight size={14} /></AuthSubmit>
         </div>
       </AuthForm>
-      <a href="/login" className="auth-link"><ArrowLeft size={12} /> Back to sign in</a>
+      <a href="/login" className="auth-link"><ArrowLeft size={12} /> {page.secondaryActionLabel}</a>
     </div>
+    </AccountPortalLayout>
   );
 }
 

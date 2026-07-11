@@ -161,6 +161,7 @@ model TenantConfig {
   workspaceName              String?  @map("workspace_name")
   brandBadge                 String?  @map("brand_badge")
   brandLogo                  String?  @map("brand_logo")
+  accountPortalExperience    Json     @default("{}") @map("account_portal_experience")
   urgencyScoringConfig       Json     @default("{}") @map("urgency_scoring_config")
   shopifyDomain              String?  @map("shopify_domain")
   shopifyAdminTokenEncrypted String?  @map("shopify_admin_token_encrypted")

@@ -2070,14 +2070,14 @@ a { color: inherit; text-decoration: none; }
 }
 
 .auth-page {
-  --auth-bg: #f4f6f8;
-  --auth-brand-bg: #081f6f;
+  --auth-bg: var(--portal-page-bg, #f4f6f8);
+  --auth-brand-bg: var(--portal-primary, #081f6f);
   --auth-brand-text: #ffffff;
-  --auth-form-bg: #f6f8fc;
-  --auth-card-bg: #ffffff;
-  --auth-primary: #081f6f;
+  --auth-form-bg: var(--portal-panel-bg, #ffffff);
+  --auth-card-bg: var(--portal-panel-bg, #ffffff);
+  --auth-primary: var(--portal-primary, #081f6f);
   --auth-primary-text: #ffffff;
-  --auth-link: #081f6f;
+  --auth-link: var(--portal-primary, #081f6f);
   min-height: 100vh;
   min-height: 100svh;
   display: grid;
@@ -2087,7 +2087,7 @@ a { color: inherit; text-decoration: none; }
   background:
     linear-gradient(135deg, rgba(255,255,255,0.86), rgba(242,245,248,0.94)),
     var(--auth-bg);
-  color: #171a1f;
+  color: var(--portal-text, #171a1f);
   overflow-y: auto;
 }
 
@@ -2102,6 +2102,21 @@ a { color: inherit; text-decoration: none; }
   background: #ffffff;
   box-shadow: 0 28px 80px rgba(22, 26, 32, 0.14), 0 2px 8px rgba(22, 26, 32, 0.05);
 }
+
+.auth-stage.auth-layout-centered {
+  width: min(620px, 100%);
+  min-height: 0;
+  grid-template-columns: 1fr;
+}
+
+.portal-radius-compact .auth-stage,
+.portal-radius-compact .auth-benefit-card,
+.portal-radius-compact .auth-card { border-radius: 4px; }
+.portal-radius-soft .auth-stage { border-radius: 16px; }
+.portal-radius-soft .auth-benefit-card,
+.portal-radius-soft .auth-card { border-radius: 12px; }
+.portal-density-compact .auth-brand-panel,
+.portal-density-compact .auth-form-panel { padding: 34px; }
 
 .auth-brand-panel {
   position: relative;
@@ -2250,6 +2265,7 @@ a { color: inherit; text-decoration: none; }
 .auth-benefit-card.tone-green > svg { color: #42d990; }
 .auth-benefit-card.tone-amber > svg { color: #ffb25a; }
 .auth-benefit-card.tone-blue > svg { color: #6eb7ff; }
+.auth-benefit-card.tone-neutral > svg { color: #d6deeb; }
 
 .auth-benefit-card strong {
   display: block;
@@ -2297,6 +2313,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: 48px;
   background: var(--auth-form-bg);
+  overflow-y: auto;
 }
 
 .auth-page .auth-card {
@@ -2310,6 +2327,8 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 12px 36px rgba(22, 26, 32, 0.08);
   text-align: initial;
 }
+
+.auth-page .auth-register-card { max-width: 620px; }
 
 .auth-logo-wrap {
   min-height: 52px;

@@ -427,7 +427,12 @@ export class ApiClient {
   }
 
   workspaceBrand() {
-    return this.get<{ workspaceName: string | null; brandBadge: string | null; brandLogo: string | null }>('/identity/workspace-brand', false);
+    return this.get<{
+      workspaceName: string | null;
+      brandBadge: string | null;
+      brandLogo: string | null;
+      accountPortalExperience: import('@factory-engine-pro/contracts').AccountPortalExperience;
+    }>('/identity/workspace-brand', false);
   }
 
   updateTenantConfig(input: TenantConfigInput) {

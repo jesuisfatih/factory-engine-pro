@@ -4,6 +4,7 @@ import {
   DEFAULT_CUSTOMER_ROLES,
   DEFAULT_MEMBER_ROLES,
   MEMBER_PERMISSIONS,
+  accountPortalExperienceSchema,
   urgencyScoringConfigSchema,
   type CreateCustomerUserInput,
   type CreateMemberInput,
@@ -264,6 +265,7 @@ export class IdentityService {
         workspaceName: null,
         brandBadge: null,
         brandLogo: null,
+        accountPortalExperience: accountPortalExperienceSchema.parse({}),
         urgencyScoringConfig: urgencyScoringConfigSchema.parse({}),
         shopifyDomain: null,
         hasShopifyAdminToken: false,
@@ -282,6 +284,7 @@ export class IdentityService {
       workspaceName: config.workspaceName,
       brandBadge: config.brandBadge,
       brandLogo: config.brandLogo,
+      accountPortalExperience: parseAccountPortalExperience(config.accountPortalExperience),
       urgencyScoringConfig: parseUrgencyScoringConfig(config.urgencyScoringConfig),
       shopifyDomain: config.shopifyDomain,
       hasShopifyAdminToken: Boolean(config.shopifyAdminTokenEncrypted),
@@ -303,12 +306,14 @@ export class IdentityService {
         workspaceName: true,
         brandBadge: true,
         brandLogo: true,
+        accountPortalExperience: true,
       },
     });
     return {
       workspaceName: config?.workspaceName ?? null,
       brandBadge: config?.brandBadge ?? null,
       brandLogo: config?.brandLogo ?? null,
+      accountPortalExperience: parseAccountPortalExperience(config?.accountPortalExperience),
     };
   }
 
@@ -320,6 +325,7 @@ export class IdentityService {
       workspaceName: input.workspaceName,
       brandBadge: input.brandBadge,
       brandLogo: input.brandLogo,
+      accountPortalExperience: input.accountPortalExperience,
       urgencyScoringConfig: input.urgencyScoringConfig,
       shopifyDomain: input.shopifyDomain,
       shopifyAdminTokenEncrypted: this.crypto.encrypt(input.shopifyAdminToken),
@@ -453,6 +459,11 @@ function stripUndefined<T extends Record<string, unknown>>(input: T) {
 function parseUrgencyScoringConfig(value: Prisma.JsonValue) {
   const parsed = urgencyScoringConfigSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
   return parsed.success ? parsed.data : urgencyScoringConfigSchema.parse({});
+}
+
+function parseAccountPortalExperience(value: Prisma.JsonValue | null | undefined) {
+  const parsed = accountPortalExperienceSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  return parsed.success ? parsed.data : accountPortalExperienceSchema.parse({});
 }
 
 function stripPasswordHash<T extends { passwordHash?: unknown }>(record: T) {

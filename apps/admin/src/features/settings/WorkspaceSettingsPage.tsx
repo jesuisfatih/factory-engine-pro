@@ -5,20 +5,24 @@ import { AlertTriangle, Copy, Image as ImageIcon, KeyRound, RefreshCw, Save, Tra
 import { toast } from 'sonner';
 import {
   createMcpTokenSchema,
+  DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
   DEFAULT_URGENCY_SCORING_CONFIG,
   tenantConfigSchema,
   type CreateMcpTokenResponse,
+  type AccountPortalExperience,
   type TenantConfigInput,
   type UrgencyScoringConfig,
 } from '@factory-engine-pro/contracts';
 import { ADMIN_API_BASE_URL, adminApi, apiErrorMessage } from '@/lib/api';
 import { useCurrentPrincipal } from '@/lib/current-principal';
 import { workspaceBadge, workspaceBrandQueryKey, workspaceName } from '@/lib/workspace-brand';
+import { AccountPortalExperienceEditor } from './AccountPortalExperienceEditor';
 
 interface TenantConfigResponse {
   workspaceName: string | null;
   brandBadge: string | null;
   brandLogo: string | null;
+  accountPortalExperience: AccountPortalExperience;
   urgencyScoringConfig: UrgencyScoringConfig;
 }
 
@@ -61,6 +65,7 @@ export function WorkspaceSettingsPage() {
   const canWrite = new Set(principal?.permissions ?? []).has('settings.write');
   const [form, setForm] = useState<WorkspaceFormState>(emptyForm);
   const [urgencyForm, setUrgencyForm] = useState<UrgencyScoringConfig>(() => defaultUrgencyConfig());
+  const [portalExperience, setPortalExperience] = useState<AccountPortalExperience>(() => clonePortalExperience(DEFAULT_ACCOUNT_PORTAL_EXPERIENCE));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const config = useQuery({
@@ -77,6 +82,7 @@ export function WorkspaceSettingsPage() {
       brandLogo: config.data.brandLogo ?? '',
     });
     setUrgencyForm(config.data.urgencyScoringConfig ?? defaultUrgencyConfig());
+    setPortalExperience(clonePortalExperience(config.data.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE));
   }, [config.data]);
 
   const save = useMutation({
@@ -102,6 +108,7 @@ export function WorkspaceSettingsPage() {
       workspaceName: clean(form.workspaceName),
       brandBadge: clean(form.brandBadge),
       brandLogo: clean(form.brandLogo),
+      accountPortalExperience: portalExperience,
       urgencyScoringConfig: urgencyForm,
     };
     const parsed = tenantConfigSchema.safeParse(input);
@@ -188,6 +195,14 @@ export function WorkspaceSettingsPage() {
             />
           </div>
         </div>
+        <AccountPortalExperienceEditor
+          value={portalExperience}
+          onChange={setPortalExperience}
+          workspaceName={previewName}
+          brandBadge={previewBadge}
+          brandLogo={form.brandLogo}
+          disabled={!canWrite || save.isPending}
+        />
         <div className="field">
           <label>{t('settings.workspace.urgency_weights')}</label>
           <div className="field-row">
@@ -470,6 +485,10 @@ function McpAccessPanel({ canWrite }: { canWrite: boolean }) {
 function clean(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function clonePortalExperience(value: AccountPortalExperience): AccountPortalExperience {
+  return JSON.parse(JSON.stringify(value)) as AccountPortalExperience;
 }
 
 function defaultUrgencyConfig(): UrgencyScoringConfig {
