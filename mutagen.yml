@@ -13,6 +13,8 @@ sync:
         - .turbo
         - "**/.turbo"
         - .local
+        - .tmp
+        - "**/.tmp"
         - uploads
         - "**/uploads"
         - .env
