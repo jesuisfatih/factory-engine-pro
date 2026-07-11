@@ -214,7 +214,7 @@ export function WorkspaceSettingsPage() {
                   type="number"
                   min="0"
                   max="100"
-                  step="0.1"
+                  step={field === 'waitingHoursWeight' ? '0.01' : '0.1'}
                   value={urgencyForm[field]}
                   disabled={!canWrite || save.isPending}
                   onChange={(event) => setUrgencyForm((current) => ({ ...current, [field]: Number(event.target.value) }))}
