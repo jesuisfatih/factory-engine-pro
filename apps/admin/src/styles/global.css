@@ -322,6 +322,35 @@ a { color: inherit; text-decoration: none; }
 .portal-preview-input { height: 34px; display: flex; align-items: center; padding: 0 10px; border: 1px solid #d8e0eb; border-radius: 5px; color: #7b8798; font-size: 10px; }
 .portal-preview-button { display: grid; place-items: center; height: 36px; margin-top: 18px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; }
 .portal-preview-links { display: flex; justify-content: space-between; margin-top: 16px; color: #40516a; font-size: 9px; }
+.portal-preview-stage.surface-requestAccess { width: 100%; min-width: 680px; min-height: 620px; grid-template-columns: 38% 62%; }
+.portal-preview-stage.surface-requestAccess.layout-centered { min-width: 0; max-width: 620px; grid-template-columns: 1fr; }
+.portal-request-hero { justify-content: center; padding: 32px 26px; }
+.portal-request-brand { min-height: 46px; margin-bottom: 24px; display: flex; align-items: center; }
+.portal-request-brand img { max-width: 118px; max-height: 46px; object-fit: contain; }
+.portal-request-brand > span { font-size: 30px; font-weight: 500; }
+.portal-request-hero > h4 { margin: 0; color: #fff; font-size: 18px; line-height: 1.28; }
+.portal-request-hero > p { margin: 10px 0 0; color: rgba(255,255,255,.76); font-size: 10px; line-height: 1.55; }
+.portal-request-benefits { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.portal-request-benefits > div { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; align-items: center; }
+.portal-request-benefit-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: rgba(255,255,255,.18); }
+.portal-request-benefits b, .portal-request-benefits small { display: block; }
+.portal-request-benefits b { font-size: 9px; }
+.portal-request-benefits small { margin-top: 2px; color: rgba(255,255,255,.72); font-size: 8px; }
+.portal-preview-form.portal-request-form { justify-content: center; padding: 24px 27px; }
+.portal-request-form > h4 { font-size: 17px; }
+.portal-request-form > p { margin: 5px 0 13px; font-size: 9px; }
+.portal-request-notice { margin-bottom: 11px; padding: 7px 9px; border: 1px solid; border-radius: 6px; font-size: 8px; line-height: 1.35; }
+.portal-request-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 9px; }
+.portal-request-field { min-width: 0; }
+.portal-request-field.full { grid-column: 1 / -1; }
+.portal-request-field label { display: block; margin: 0 0 3px; color: inherit; font-size: 7px; font-weight: 600; text-transform: none; }
+.portal-request-field label span { color: var(--danger); }
+.portal-request-input { min-height: 26px; display: flex; align-items: center; overflow: hidden; padding: 0 8px; border: 1px solid #d4e3ed; border-radius: 5px; background: #fff; font-size: 7px; white-space: nowrap; text-overflow: ellipsis; }
+.portal-request-field.kind-textarea .portal-request-input { min-height: 45px; align-items: flex-start; padding-top: 7px; white-space: normal; }
+.portal-request-field.kind-file .portal-request-input { color: #40516a; }
+.portal-request-field > small { display: block; margin-top: 3px; font-size: 6px; }
+.portal-request-form .portal-preview-button { height: 32px; margin-top: 13px; }
+.portal-request-signin { margin-top: 10px; text-align: center; font-size: 8px; }
 .mcp-token-section h3 span:first-child { display: inline-flex; align-items: center; gap: 7px; }
 .mcp-token-section .sub { margin: -4px 0 14px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
 .mcp-token-form { display: flex; flex-direction: column; gap: 2px; }
@@ -356,6 +385,8 @@ a { color: inherit; text-decoration: none; }
   .portal-benefit-editor { grid-template-columns: 1fr 1fr; }
   .portal-benefit-actions { grid-column: 1 / -1; }
   .portal-color-grid { grid-template-columns: 1fr 1fr; }
+  .portal-live-preview.viewport-mobile .portal-preview-stage.surface-requestAccess { width: 310px; min-width: 0; min-height: 560px; grid-template-columns: 1fr; }
+  .portal-live-preview.viewport-mobile .portal-request-form { padding: 20px; }
 }
 
 /* ─── Wizard / Stepper ──────────────────────────────────── */

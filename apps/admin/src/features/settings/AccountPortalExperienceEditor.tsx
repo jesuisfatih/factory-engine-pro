@@ -16,7 +16,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE } from '@factory-engine-pro/contracts';
+import {
+  ACCOUNT_PORTAL_REQUEST_FIELDS,
+  DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
+} from '@factory-engine-pro/contracts';
 import type {
   AccountPortalBenefit,
   AccountPortalExperience,
@@ -224,15 +227,16 @@ export function AccountPortalExperienceEditor({
           </div>
         </div>
 
-        <PortalPreview value={value} page={page} viewport={viewport} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} />
+        <PortalPreview value={value} page={page} surface={surface} viewport={viewport} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} />
       </div>
     </section>
   );
 }
 
-function PortalPreview({ value, page, viewport, workspaceName, brandBadge, brandLogo }: {
+function PortalPreview({ value, page, surface, viewport, workspaceName, brandBadge, brandLogo }: {
   value: AccountPortalExperience;
   page: AccountPortalPage;
+  surface: Surface;
   viewport: 'desktop' | 'mobile';
   workspaceName: string;
   brandBadge: string;
@@ -240,9 +244,12 @@ function PortalPreview({ value, page, viewport, workspaceName, brandBadge, brand
 }) {
   return (
     <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground }}>
-      <div className={`portal-preview-stage layout-${page.layout}`}>
+      <div className={`portal-preview-stage layout-${page.layout} surface-${surface}`}>
         {page.layout === 'split' ? (
-          <div className="portal-preview-hero" style={{ background: value.theme.primaryColor }}>
+          surface === 'requestAccess' ? (
+            <RequestAccessPreviewHero page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} primaryColor={value.theme.primaryColor} />
+          ) : (
+            <div className="portal-preview-hero" style={{ background: value.theme.primaryColor }}>
             <div className="portal-preview-brand">
               {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge.charAt(0)}</span>}
               <strong>{workspaceName}<small>Company Portal</small></strong>
@@ -250,8 +257,12 @@ function PortalPreview({ value, page, viewport, workspaceName, brandBadge, brand
             <div className="portal-preview-copy"><small>{page.eyebrow}</small><h4>{page.headline}</h4><p>{page.description}</p></div>
             {page.showBenefits ? <div className="portal-preview-benefits">{page.benefits.map((benefit) => { const Icon = ICONS[benefit.icon]; return <div key={`${benefit.title}-${benefit.body}`}><Icon size={15} /><span><b>{benefit.title}</b><small>{benefit.body}</small></span></div>; })}</div> : null}
             {page.showTrustItems ? <div className="portal-preview-trust">{page.trustItems.map((item) => { const Icon = ICONS[item.icon]; return <span key={`${item.icon}-${item.label}`}><Icon size={10} />{item.label}</span>; })}</div> : null}
-          </div>
+            </div>
+          )
         ) : null}
+        {surface === 'requestAccess' ? (
+          <RequestAccessPreviewForm page={page} theme={value.theme} />
+        ) : (
         <div className="portal-preview-form" style={{ background: value.theme.panelBackground, color: value.theme.textColor }}>
           <div className="portal-preview-logo">{brandLogo ? <img src={brandLogo} alt="" /> : brandBadge.charAt(0)}</div>
           <h4>{page.formTitle}</h4><p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p>
@@ -260,9 +271,76 @@ function PortalPreview({ value, page, viewport, workspaceName, brandBadge, brand
           <div className="portal-preview-button" style={{ background: value.theme.primaryColor }}>{page.primaryActionLabel}</div>
           <div className="portal-preview-links">{page.secondaryActionLabel}<span>{page.tertiaryActionLabel}</span></div>
         </div>
+        )}
       </div>
     </div>
   );
+}
+
+function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, primaryColor }: {
+  page: AccountPortalPage;
+  workspaceName: string;
+  brandBadge: string;
+  brandLogo: string;
+  primaryColor: string;
+}) {
+  const headline = page.headline === 'Partner Program' ? `${workspaceName} Partner Program` : page.headline;
+  return (
+    <div className="portal-preview-hero portal-request-hero" style={{ background: `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)` }}>
+      <div className="portal-request-brand">
+        {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge}</span>}
+      </div>
+      <h4>{headline}</h4>
+      <p>{page.description}</p>
+      {page.showBenefits ? (
+        <div className="portal-request-benefits">
+          {page.benefits.map((benefit) => {
+            const Icon = ICONS[benefit.icon];
+            return (
+              <div key={`${benefit.title}-${benefit.body}`}>
+                <span className="portal-request-benefit-icon"><Icon size={17} /></span>
+                <span><b>{benefit.title}</b><small>{benefit.body}</small></span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RequestAccessPreviewForm({ page, theme }: {
+  page: AccountPortalPage;
+  theme: AccountPortalExperience['theme'];
+}) {
+  return (
+    <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor }}>
+      <h4>{page.formTitle}</h4>
+      <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p>
+      <div className="portal-request-notice" style={{ color: theme.mutedTextColor, borderColor: `${theme.primaryColor}40`, background: `${theme.primaryColor}0D` }}>
+        If you already have a storefront account, use the same email address here.
+      </div>
+      <div className="portal-request-fields">
+        {ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => (
+          <div className={`portal-request-field ${field.half ? 'half' : 'full'} kind-${field.type}`} key={field.key}>
+            <label>{field.label}{field.required ? <span> *</span> : null}</label>
+            <div className="portal-request-input" style={{ color: theme.mutedTextColor }}>
+              {field.type === 'password' ? '********' : field.placeholder}
+            </div>
+            {field.type === 'file' ? <small style={{ color: theme.mutedTextColor }}>PDF, JPEG, PNG or WebP (max 10MB)</small> : null}
+          </div>
+        ))}
+      </div>
+      <div className="portal-preview-button" style={{ background: `linear-gradient(135deg, ${theme.primaryColor}, ${darkenHex(theme.primaryColor, 0.15)})` }}>{page.primaryActionLabel}</div>
+      <div className="portal-request-signin" style={{ color: theme.mutedTextColor }}>Already have an account? <strong style={{ color: theme.primaryColor }}>{page.secondaryActionLabel}</strong></div>
+    </div>
+  );
+}
+
+function darkenHex(hex: string, amount: number) {
+  const normalized = hex.replace('#', '');
+  const channels = [0, 2, 4].map((offset) => Math.max(0, Math.round(Number.parseInt(normalized.slice(offset, offset + 2), 16) * (1 - amount))));
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
 }
 
 function ColorInput({ label, value, onChange, disabled }: { label: string; value: string; onChange: (next: string) => void; disabled: boolean }) {

@@ -89,6 +89,33 @@ export const accountPortalTrustItemSchema = z.object({
 }).strict();
 export type AccountPortalTrustItem = z.infer<typeof accountPortalTrustItemSchema>;
 
+export type AccountPortalRequestFieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password';
+
+export interface AccountPortalRequestField {
+  key: string;
+  label: string;
+  type: AccountPortalRequestFieldType;
+  placeholder: string;
+  required?: boolean;
+  half?: boolean;
+}
+
+export const ACCOUNT_PORTAL_REQUEST_FIELDS = [
+  { key: 'firstName', label: 'First Name', type: 'text', placeholder: 'John', required: true, half: true },
+  { key: 'lastName', label: 'Last Name', type: 'text', placeholder: 'Doe', required: true, half: true },
+  { key: 'email', label: 'Email Address', type: 'email', placeholder: 'you@company.com', required: true, half: true },
+  { key: 'phone', label: 'Phone Number', type: 'tel', placeholder: '(555) 123-4567', half: true },
+  { key: 'companyName', label: 'Company Name', type: 'text', placeholder: 'Your company name', required: true, half: true },
+  { key: 'legalName', label: 'Legal Name', type: 'text', placeholder: 'Registered legal name', required: true, half: true },
+  { key: 'website', label: 'Website', type: 'url', placeholder: 'https://yourcompany.com', half: true },
+  { key: 'industry', label: 'Industry', type: 'select', placeholder: 'Select industry', half: true },
+  { key: 'estimatedMonthlyVolume', label: 'Estimated Monthly Volume', type: 'select', placeholder: 'Select estimated monthly volume' },
+  { key: 'taxCertificate', label: 'Tax Exemption Certificate', type: 'file', placeholder: 'Choose file' },
+  { key: 'password', label: 'Password', type: 'password', placeholder: 'Minimum 6 characters', required: true, half: true },
+  { key: 'confirmPassword', label: 'Confirm Password', type: 'password', placeholder: 'Repeat your password', required: true, half: true },
+  { key: 'message', label: 'Additional Information', type: 'textarea', placeholder: 'Tell us about your business and how we can help...' },
+] satisfies readonly AccountPortalRequestField[];
+
 const loginExperienceDefault = {
   enabled: true,
   layout: 'split' as const,

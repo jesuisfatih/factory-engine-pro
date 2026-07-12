@@ -9,18 +9,12 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import {
+  ACCOUNT_PORTAL_REQUEST_FIELDS,
+  type AccountPortalRequestField,
+} from '@factory-engine-pro/contracts';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
-
-type FieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password';
-
-interface FormFieldConfig {
-  key: string;
-  label: string;
-  type: FieldType;
-  required?: boolean;
-  half?: boolean;
-}
 
 interface BenefitConfig {
   icon: string;
@@ -72,7 +66,7 @@ interface RequestPageConfig {
   benefits: BenefitConfig[];
   industries: string[];
   volumeOptions: string[];
-  formFields: FormFieldConfig[];
+  formFields: AccountPortalRequestField[];
   successTitle: string;
   successMessage: string;
 }
@@ -128,21 +122,7 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
     '1000-5000 transfers/month',
     '5000+ transfers/month',
   ],
-  formFields: [
-    { key: 'firstName', label: 'First Name', type: 'text', required: true, half: true },
-    { key: 'lastName', label: 'Last Name', type: 'text', required: true, half: true },
-    { key: 'email', label: 'Email Address', type: 'email', required: true, half: true },
-    { key: 'phone', label: 'Phone Number', type: 'tel', required: false, half: true },
-    { key: 'companyName', label: 'Company Name', type: 'text', required: true, half: true },
-    { key: 'legalName', label: 'Legal Name', type: 'text', required: true, half: true },
-    { key: 'website', label: 'Website', type: 'url', required: false, half: true },
-    { key: 'industry', label: 'Industry', type: 'select', required: false, half: true },
-    { key: 'estimatedMonthlyVolume', label: 'Estimated Monthly Volume', type: 'select', required: false },
-    { key: 'taxCertificate', label: 'Tax Exemption Certificate', type: 'file', required: false },
-    { key: 'password', label: 'Password', type: 'password', required: true, half: true },
-    { key: 'confirmPassword', label: 'Confirm Password', type: 'password', required: true, half: true },
-    { key: 'message', label: 'Additional Information', type: 'textarea', required: false },
-  ],
+  formFields: ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => ({ ...field })),
   successTitle: 'Application Submitted!',
   successMessage:
     'Thank you for your interest! Our team will review your application and get back to you within 1-2 business days.',
@@ -173,19 +153,6 @@ const KNOWN_REQUEST_KEYS = new Set([
   'confirmPassword',
   'taxCertificate',
 ]);
-
-const PLACEHOLDERS: Record<string, string> = {
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'you@company.com',
-  phone: '(555) 123-4567',
-  companyName: 'Your company name',
-  legalName: 'Registered legal name',
-  website: 'https://yourcompany.com',
-  password: 'Minimum 6 characters',
-  confirmPassword: 'Repeat your password',
-  message: 'Tell us about your business and how we can help...',
-};
 
 const DEFAULT_PRIMARY_COLOR = '#081F6F';
 const DEFAULT_GRADIENT_TO = '#F8FBFF';
@@ -355,7 +322,7 @@ function RequestInvitationView() {
     }
   };
 
-  const renderField = (field: FormFieldConfig) => {
+  const renderField = (field: AccountPortalRequestField) => {
     const isRequired = Boolean(field.required);
     const value = formData[field.key] || '';
     const isLockedEmailField = field.key === 'email' && emailLocked;
@@ -883,8 +850,8 @@ function getSelectOptions(pageConfig: RequestPageConfig, fieldKey: string) {
   return [];
 }
 
-function getPlaceholder(field: FormFieldConfig) {
-  return PLACEHOLDERS[field.key] || `Enter ${field.label.toLowerCase()}`;
+function getPlaceholder(field: AccountPortalRequestField) {
+  return field.placeholder || `Enter ${field.label.toLowerCase()}`;
 }
 
 function mergeRequestMessage(
