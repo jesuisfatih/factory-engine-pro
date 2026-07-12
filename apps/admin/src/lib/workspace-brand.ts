@@ -16,8 +16,9 @@ export function workspaceName(value: string | null | undefined) {
 }
 
 export function workspaceBadge(value: string | null | undefined, name: string) {
-  const source = value?.trim() || name;
-  return source
+  const explicit = value?.trim();
+  if (explicit && explicit.length <= 6) return explicit.toUpperCase();
+  return name
     .split(/\s+/)
     .map((part) => part[0])
     .join('')

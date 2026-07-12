@@ -76,9 +76,10 @@ export function WorkspaceSettingsPage() {
 
   useEffect(() => {
     if (!config.data) return;
+    const loadedWorkspaceName = workspaceName(config.data.workspaceName);
     setForm({
       workspaceName: config.data.workspaceName ?? '',
-      brandBadge: config.data.brandBadge ?? '',
+      brandBadge: workspaceBadge(config.data.brandBadge, loadedWorkspaceName),
       brandLogo: config.data.brandLogo ?? '',
     });
     setUrgencyForm(config.data.urgencyScoringConfig ?? defaultUrgencyConfig());
@@ -113,7 +114,9 @@ export function WorkspaceSettingsPage() {
     };
     const parsed = tenantConfigSchema.safeParse(input);
     if (!parsed.success) {
-      setValidationError(parsed.error.issues[0]?.message ?? t('settings.workspace.validation_invalid'));
+      const issue = parsed.error.issues[0];
+      const field = issue?.path.length ? issue.path.join('.') : t('settings.workspace.form_title');
+      setValidationError(issue ? `${field}: ${issue.message}` : t('settings.workspace.validation_invalid'));
       return;
     }
     save.mutate(parsed.data);
@@ -178,6 +181,7 @@ export function WorkspaceSettingsPage() {
             <input
               id="field-brand-badge"
               value={form.brandBadge}
+              maxLength={6}
               onChange={(event) => setForm((current) => ({ ...current, brandBadge: event.target.value.toUpperCase().slice(0, 6) }))}
               disabled={!canWrite || save.isPending}
               placeholder={previewBadge}
