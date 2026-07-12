@@ -39,6 +39,7 @@ import { Route as TasksCalendarRouteImport } from './routes/tasks/calendar'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings/workspace'
 import { Route as SettingsShopifyRouteImport } from './routes/settings/shopify'
 import { Route as SettingsInitialSetupRouteImport } from './routes/settings/initial-setup'
+import { Route as SettingsCustomerPortalRouteImport } from './routes/settings/customer-portal'
 import { Route as SettingsAircallRouteImport } from './routes/settings/aircall'
 import { Route as RulesStatsRouteImport } from './routes/rules/stats'
 import { Route as RulesShadowTelemetryRouteImport } from './routes/rules/shadow-telemetry'
@@ -200,6 +201,11 @@ const SettingsInitialSetupRoute = SettingsInitialSetupRouteImport.update({
   path: '/initial-setup',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCustomerPortalRoute = SettingsCustomerPortalRouteImport.update({
+  id: '/customer-portal',
+  path: '/customer-portal',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsAircallRoute = SettingsAircallRouteImport.update({
   id: '/aircall',
   path: '/aircall',
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
   '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/customer-portal': typeof SettingsCustomerPortalRoute
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
   '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/customer-portal': typeof SettingsCustomerPortalRoute
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/rules/shadow-telemetry': typeof RulesShadowTelemetryRoute
   '/rules/stats': typeof RulesStatsRoute
   '/settings/aircall': typeof SettingsAircallRouteWithChildren
+  '/settings/customer-portal': typeof SettingsCustomerPortalRoute
   '/settings/initial-setup': typeof SettingsInitialSetupRoute
   '/settings/shopify': typeof SettingsShopifyRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/rules/shadow-telemetry'
     | '/rules/stats'
     | '/settings/aircall'
+    | '/settings/customer-portal'
     | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/rules/shadow-telemetry'
     | '/rules/stats'
     | '/settings/aircall'
+    | '/settings/customer-portal'
     | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
@@ -482,6 +493,7 @@ export interface FileRouteTypes {
     | '/rules/shadow-telemetry'
     | '/rules/stats'
     | '/settings/aircall'
+    | '/settings/customer-portal'
     | '/settings/initial-setup'
     | '/settings/shopify'
     | '/settings/workspace'
@@ -737,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsInitialSetupRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/customer-portal': {
+      id: '/settings/customer-portal'
+      path: '/customer-portal'
+      fullPath: '/settings/customer-portal'
+      preLoaderRoute: typeof SettingsCustomerPortalRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/aircall': {
       id: '/settings/aircall'
       path: '/aircall'
@@ -844,6 +863,7 @@ const SettingsAircallRouteWithChildren = SettingsAircallRoute._addFileChildren(
 
 interface SettingsRouteChildren {
   SettingsAircallRoute: typeof SettingsAircallRouteWithChildren
+  SettingsCustomerPortalRoute: typeof SettingsCustomerPortalRoute
   SettingsInitialSetupRoute: typeof SettingsInitialSetupRoute
   SettingsShopifyRoute: typeof SettingsShopifyRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
@@ -851,6 +871,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAircallRoute: SettingsAircallRouteWithChildren,
+  SettingsCustomerPortalRoute: SettingsCustomerPortalRoute,
   SettingsInitialSetupRoute: SettingsInitialSetupRoute,
   SettingsShopifyRoute: SettingsShopifyRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,

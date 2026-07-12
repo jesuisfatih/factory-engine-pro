@@ -98,6 +98,10 @@ export function Sidebar({ collapsed }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
+  const brandAssets = brandQuery.data?.brandAssets;
+  const compactLogo = brandAssets?.squareLogoUrl
+    || (brandAssets?.systemIconSvg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(brandAssets.systemIconSvg)}` : '')
+    || brandQuery.data?.brandLogo;
   const permissions = new Set(principal?.permissions ?? []);
   const can = (permission?: string | readonly string[]) => hasAnyPermission(permissions, permission);
   const sections = NAV.map((section) => ({
@@ -119,7 +123,7 @@ export function Sidebar({ collapsed }: Props) {
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
       <div className="workspace">
-        {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" /> : <div className="ws-badge">{brandBadge}</div>}
+        {compactLogo ? <img className="ws-logo" src={compactLogo} alt={brandAssets?.logoAltText || brandName} /> : <div className="ws-badge">{brandBadge}</div>}
         <div className="ws-meta">
           <div className="name">{brandName}</div>
           <div className="role">{brandQuery.isError ? t('workspace.brand_unavailable') : t('workspace.back_panel')}</div>

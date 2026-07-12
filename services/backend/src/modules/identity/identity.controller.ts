@@ -8,6 +8,7 @@ import {
   MEMBER_PERMISSIONS,
   CUSTOMER_PERMISSIONS,
   tenantConfigSchema,
+  updateCurrentMemberSchema,
   updateMemberRoleSchema,
   updateMemberSchema,
   type CreateCustomerUserInput,
@@ -16,6 +17,7 @@ import {
   type CreateSubUserInput,
   type IdentityListQuery,
   type TenantConfigInput,
+  type UpdateCurrentMemberInput,
   type UpdateMemberInput,
   type UpdateMemberRoleInput,
 } from '@factory-engine-pro/contracts';
@@ -27,6 +29,18 @@ import { IdentityService } from './identity.service.js';
 @Controller('identity')
 export class IdentityController {
   constructor(private readonly identity: IdentityService) {}
+
+  @Get('me/profile')
+  currentMemberProfile() {
+    return this.identity.getCurrentMemberProfile();
+  }
+
+  @Patch('me/profile')
+  updateCurrentMemberProfile(
+    @Body(new ZodValidationPipe(updateCurrentMemberSchema)) body: UpdateCurrentMemberInput,
+  ) {
+    return this.identity.updateCurrentMemberProfile(body);
+  }
 
   @Get('member-roles')
   @RequirePermission(MEMBER_PERMISSIONS.rolesRead)

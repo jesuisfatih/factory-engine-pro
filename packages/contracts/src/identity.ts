@@ -38,6 +38,73 @@ export const updateMemberSchema = z.object({
 });
 export type UpdateMemberInput = z.infer<typeof updateMemberSchema>;
 
+const optionalProfileText = (max: number) => z.string().trim().max(max).nullable().optional();
+
+export const updateCurrentMemberSchema = z.object({
+  email: emailSchema.optional(),
+  firstName: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().min(1).max(80).optional(),
+  phone: optionalProfileText(40),
+  jobTitle: optionalProfileText(120),
+  avatarUrl: z.string().trim().url().max(2048).nullable().optional(),
+  timezone: optionalProfileText(80),
+}).strict();
+export type UpdateCurrentMemberInput = z.infer<typeof updateCurrentMemberSchema>;
+
+export const currentMemberProfileSchema = z.object({
+  id: z.string(),
+  email: emailSchema,
+  firstName: z.string(),
+  lastName: z.string(),
+  phone: z.string().nullable(),
+  jobTitle: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  timezone: z.string().nullable(),
+});
+export type CurrentMemberProfile = z.infer<typeof currentMemberProfileSchema>;
+
+export const companyProfileSchema = z.object({
+  legalName: z.string().trim().max(160).default(''),
+  displayName: z.string().trim().max(120).default(''),
+  email: z.union([emailSchema, z.literal('')]).default(''),
+  phone: z.string().trim().max(40).default(''),
+  website: z.union([z.string().trim().url().max(2048), z.literal('')]).default(''),
+  taxId: z.string().trim().max(80).default(''),
+  addressLine1: z.string().trim().max(180).default(''),
+  addressLine2: z.string().trim().max(180).default(''),
+  city: z.string().trim().max(100).default(''),
+  state: z.string().trim().max(100).default(''),
+  postalCode: z.string().trim().max(30).default(''),
+  country: z.string().trim().max(100).default(''),
+  timezone: z.string().trim().max(80).default('America/New_York'),
+}).strict();
+export type CompanyProfile = z.infer<typeof companyProfileSchema>;
+export const DEFAULT_COMPANY_PROFILE: CompanyProfile = companyProfileSchema.parse({});
+
+const brandAssetReferenceSchema = z.string().trim().max(450_000).refine(
+  (value) => value === '' || /^https?:\/\//i.test(value) || /^data:image\/(?:png|jpeg|webp);base64,/i.test(value),
+  'Use an HTTPS image URL or upload a PNG, JPEG, or WebP image',
+);
+
+export const safeSystemSvgSchema = z.string().trim().max(50_000).refine((value) => {
+  if (value === '') return true;
+  if (!/^<svg[\s>]/i.test(value) || !/<\/svg>$/i.test(value)) return false;
+  return !/(?:<script|<foreignObject|<image|<use|\son[a-z]+\s*=|javascript:|data:text\/html|<iframe|<object|<embed|@import|url\s*\(|(?:xlink:)?href\s*=)/i.test(value);
+}, 'SVG must be self-contained and cannot include scripts, event handlers, embedded pages, or external styles');
+
+export const brandAssetsSchema = z.object({
+  primaryLogoUrl: brandAssetReferenceSchema.default(''),
+  darkLogoUrl: brandAssetReferenceSchema.default(''),
+  squareLogoUrl: brandAssetReferenceSchema.default(''),
+  faviconUrl: brandAssetReferenceSchema.default(''),
+  logoAltText: z.string().trim().max(140).default(''),
+  logoWidth: z.number().int().min(16).max(2400).default(352),
+  logoHeight: z.number().int().min(16).max(2400).default(120),
+  systemIconSvg: safeSystemSvgSchema.default(''),
+}).strict();
+export type BrandAssets = z.infer<typeof brandAssetsSchema>;
+export const DEFAULT_BRAND_ASSETS: BrandAssets = brandAssetsSchema.parse({});
+
 export const createCustomerUserSchema = z.object({
   customerId: z.string().optional(),
   companyName: z.string().trim().min(1),
@@ -241,6 +308,8 @@ export const tenantConfigSchema = z.object({
   workspaceName: z.string().trim().min(1).optional(),
   brandBadge: z.string().trim().min(1).max(6).optional(),
   brandLogo: z.string().trim().url().optional(),
+  companyProfile: companyProfileSchema.optional(),
+  brandAssets: brandAssetsSchema.optional(),
   accountPortalExperience: accountPortalExperienceSchema.optional(),
   urgencyScoringConfig: urgencyScoringConfigSchema.optional(),
   shopifyDomain: z.string().trim().optional(),

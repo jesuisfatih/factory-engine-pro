@@ -535,6 +535,7 @@
     "subtitle": "API keys, integrations, and provider configuration",
     "tabs": {
       "workspace": "Workspace",
+      "customer_portal": "Customer portal",
       "aircall": "Aircall",
       "shopify": "Shopify",
       "initial_setup": "Initial setup"

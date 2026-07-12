@@ -62,6 +62,7 @@ import type {
   CustomerAxisAssignmentsResponse,
   CustomerDetailPanelDto,
   CreateCustomerUserInput,
+  CurrentMemberProfile,
   CreateMcpTokenInput,
   CreateMcpTokenResponse,
   CreateDirectOrderInput,
@@ -98,6 +99,7 @@ import type {
   UpdateSegmentInput,
   UpdateServiceRequestInput,
   UpdateMemberInput,
+  UpdateCurrentMemberInput,
   UpdateMemberRoleInput,
   UpdatePricingRuleInput,
   UpsertCommissionProfileInput,
@@ -386,6 +388,14 @@ export class ApiClient {
     return this.patch(`/identity/members/${id}`, input);
   }
 
+  currentMemberProfile() {
+    return this.get<CurrentMemberProfile>('/identity/me/profile');
+  }
+
+  updateCurrentMemberProfile(input: UpdateCurrentMemberInput) {
+    return this.patch<CurrentMemberProfile>('/identity/me/profile', input);
+  }
+
   memberRoles() {
     return this.get('/identity/member-roles');
   }
@@ -431,6 +441,8 @@ export class ApiClient {
       workspaceName: string | null;
       brandBadge: string | null;
       brandLogo: string | null;
+      companyProfile: import('@factory-engine-pro/contracts').CompanyProfile;
+      brandAssets: import('@factory-engine-pro/contracts').BrandAssets;
       accountPortalExperience: import('@factory-engine-pro/contracts').AccountPortalExperience;
     }>('/identity/workspace-brand', false);
   }

@@ -5,12 +5,15 @@ import {
   DEFAULT_MEMBER_ROLES,
   MEMBER_PERMISSIONS,
   accountPortalExperienceSchema,
+  brandAssetsSchema,
+  companyProfileSchema,
   urgencyScoringConfigSchema,
   type CreateCustomerUserInput,
   type CreateMemberInput,
   type CreateMemberRoleInput,
   type CreateSubUserInput,
   type TenantConfigInput,
+  type UpdateCurrentMemberInput,
   type UpdateMemberInput,
   type UpdateMemberRoleInput,
 } from '@factory-engine-pro/contracts';
@@ -34,6 +37,37 @@ export class IdentityService {
     private readonly crypto: CryptoService,
     private readonly mail: MailService,
   ) {}
+
+  async getCurrentMemberProfile() {
+    const context = this.tenantContext.require();
+    if (context.principalType !== 'member' || !context.principalId) {
+      throw new BadRequestException('Member profile is only available to workspace members');
+    }
+    const member = await this.repository.findMemberById(context.principalId);
+    if (!member) throw new NotFoundException('Member not found');
+    return currentMemberProfile(member);
+  }
+
+  async updateCurrentMemberProfile(input: UpdateCurrentMemberInput) {
+    const context = this.tenantContext.require();
+    if (context.principalType !== 'member' || !context.principalId) {
+      throw new BadRequestException('Member profile is only available to workspace members');
+    }
+    try {
+      await this.repository.updateMember(context.principalId, {
+        ...(input.email !== undefined && { email: input.email }),
+        ...(input.firstName !== undefined && { firstName: input.firstName }),
+        ...(input.lastName !== undefined && { lastName: input.lastName }),
+        ...(input.phone !== undefined && { phone: input.phone }),
+        ...(input.jobTitle !== undefined && { jobTitle: input.jobTitle }),
+        ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl }),
+        ...(input.timezone !== undefined && { timezone: input.timezone }),
+      });
+    } catch (error) {
+      throw uniqueConflict(error, 'A member with this email already exists');
+    }
+    return this.getCurrentMemberProfile();
+  }
 
   async ensureDefaultRoles() {
     for (const role of DEFAULT_MEMBER_ROLES) {
@@ -265,6 +299,8 @@ export class IdentityService {
         workspaceName: null,
         brandBadge: null,
         brandLogo: null,
+        companyProfile: companyProfileSchema.parse({}),
+        brandAssets: brandAssetsSchema.parse({}),
         accountPortalExperience: accountPortalExperienceSchema.parse({}),
         urgencyScoringConfig: urgencyScoringConfigSchema.parse({}),
         shopifyDomain: null,
@@ -284,6 +320,8 @@ export class IdentityService {
       workspaceName: config.workspaceName,
       brandBadge: config.brandBadge,
       brandLogo: config.brandLogo,
+      companyProfile: parseCompanyProfile(config.companyProfile),
+      brandAssets: parseBrandAssets(config.brandAssets),
       accountPortalExperience: parseAccountPortalExperience(config.accountPortalExperience),
       urgencyScoringConfig: parseUrgencyScoringConfig(config.urgencyScoringConfig),
       shopifyDomain: config.shopifyDomain,
@@ -306,6 +344,8 @@ export class IdentityService {
         workspaceName: true,
         brandBadge: true,
         brandLogo: true,
+        companyProfile: true,
+        brandAssets: true,
         accountPortalExperience: true,
       },
     });
@@ -313,6 +353,8 @@ export class IdentityService {
       workspaceName: config?.workspaceName ?? null,
       brandBadge: config?.brandBadge ?? null,
       brandLogo: config?.brandLogo ?? null,
+      companyProfile: parseCompanyProfile(config?.companyProfile),
+      brandAssets: parseBrandAssets(config?.brandAssets),
       accountPortalExperience: parseAccountPortalExperience(config?.accountPortalExperience),
     };
   }
@@ -325,6 +367,8 @@ export class IdentityService {
       workspaceName: input.workspaceName,
       brandBadge: input.brandBadge,
       brandLogo: input.brandLogo,
+      companyProfile: input.companyProfile,
+      brandAssets: input.brandAssets,
       accountPortalExperience: input.accountPortalExperience,
       urgencyScoringConfig: input.urgencyScoringConfig,
       shopifyDomain: input.shopifyDomain,
@@ -464,6 +508,38 @@ function parseUrgencyScoringConfig(value: Prisma.JsonValue) {
 function parseAccountPortalExperience(value: Prisma.JsonValue | null | undefined) {
   const parsed = accountPortalExperienceSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
   return parsed.success ? parsed.data : accountPortalExperienceSchema.parse({});
+}
+
+function parseCompanyProfile(value: Prisma.JsonValue | null | undefined) {
+  const parsed = companyProfileSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  return parsed.success ? parsed.data : companyProfileSchema.parse({});
+}
+
+function parseBrandAssets(value: Prisma.JsonValue | null | undefined) {
+  const parsed = brandAssetsSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  return parsed.success ? parsed.data : brandAssetsSchema.parse({});
+}
+
+function currentMemberProfile(member: {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  jobTitle: string | null;
+  avatarUrl: string | null;
+  timezone: string | null;
+}) {
+  return {
+    id: member.id,
+    email: member.email,
+    firstName: member.firstName,
+    lastName: member.lastName,
+    phone: member.phone,
+    jobTitle: member.jobTitle,
+    avatarUrl: member.avatarUrl,
+    timezone: member.timezone,
+  };
 }
 
 function stripPasswordHash<T extends { passwordHash?: unknown }>(record: T) {

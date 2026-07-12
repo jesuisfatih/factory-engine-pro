@@ -161,6 +161,8 @@ model TenantConfig {
   workspaceName              String?  @map("workspace_name")
   brandBadge                 String?  @map("brand_badge")
   brandLogo                  String?  @map("brand_logo")
+  companyProfile             Json     @default("{}") @map("company_profile")
+  brandAssets                Json     @default("{}") @map("brand_assets")
   accountPortalExperience    Json     @default("{}") @map("account_portal_experience")
   urgencyScoringConfig       Json     @default("{}") @map("urgency_scoring_config")
   shopifyDomain              String?  @map("shopify_domain")
@@ -213,6 +215,9 @@ model Member {
   firstName           String          @map("first_name")
   lastName            String          @map("last_name")
   phone               String?
+  jobTitle            String?         @map("job_title")
+  avatarUrl           String?         @map("avatar_url")
+  timezone            String?
   passwordHash        String?         @map("password_hash")
   status              PrincipalStatus @default(invited)
   lastLoginAt         DateTime?       @map("last_login_at")
