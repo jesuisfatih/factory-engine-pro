@@ -81,7 +81,9 @@ type TaxExemptEventKey =
   | 'tax_exempt.request_received.user'
   | 'tax_exempt.request_received.internal'
   | 'tax_exempt.request_approved.user'
-  | 'tax_exempt.request_rejected.user';
+  | 'tax_exempt.request_rejected.user'
+  | 'tax_exempt.certificate_expiring.user'
+  | 'tax_exempt.certificate_expired.user';
 
 export interface ResendWebhookInput {
   tenantSlug: string;
@@ -1898,6 +1900,7 @@ export class MailService {
     applicantEmail?: string | null;
     reviewNotes?: string | null;
     actionUrl?: string | null;
+    expiresAt?: string | null;
   }) {
     const brand = await this.resolveBrandName();
     const fallback = taxExemptFallback(input, brand);
@@ -1916,6 +1919,7 @@ export class MailService {
         login_url: input.actionUrl ?? '',
         admin_url: input.actionUrl ?? '',
         action_url: input.actionUrl ?? '',
+        expires_at: input.expiresAt ?? '',
       },
       fallback,
     });
@@ -1929,7 +1933,12 @@ export class MailService {
       templateId: rendered.templateId,
       templateVersionId: rendered.templateVersionId,
       idempotencyKey: `tax_exempt:${input.eventKey}:${input.eventId}:${input.to.toLowerCase()}`,
-      metadata: { requestId: input.requestId, companyName: input.companyName, templateSource: rendered.templateSource },
+      metadata: {
+        requestId: input.requestId,
+        companyName: input.companyName,
+        expiresAt: input.expiresAt ?? null,
+        templateSource: rendered.templateSource,
+      },
     });
   }
 
@@ -2550,6 +2559,7 @@ function taxExemptFallback(input: {
   requestId: string;
   reviewNotes?: string | null;
   actionUrl?: string | null;
+  expiresAt?: string | null;
 }, brand: string) {
   const states: Record<TaxExemptEventKey, { subject: string; body: string }> = {
     'tax_exempt.request_received.user': {
@@ -2567,6 +2577,14 @@ function taxExemptFallback(input: {
     'tax_exempt.request_rejected.user': {
       subject: `Update on your ${brand} tax exemption request`,
       body: `The tax exemption request for ${input.companyName} was not approved at this time.`,
+    },
+    'tax_exempt.certificate_expiring.user': {
+      subject: `Your ${brand} tax exemption certificate expires soon`,
+      body: `Your tax exemption certificate will expire soon. Please update it as soon as possible.${input.expiresAt ? ` Expiration date: ${input.expiresAt}.` : ''}`,
+    },
+    'tax_exempt.certificate_expired.user': {
+      subject: `Your ${brand} tax exemption certificate has expired`,
+      body: `The tax exemption certificate for ${input.companyName} has expired. Tax-exempt purchasing is paused and tax will be charged until a valid replacement certificate is approved.`,
     },
   };
   const copy = states[input.eventKey];
@@ -2652,6 +2670,8 @@ const CRITICAL_B2B_MAIL_EVENTS = [
   'b2b.application_approved.user',
   'b2b.application_rejected.user',
   'b2b.invoice_delivered.user',
+  'tax_exempt.certificate_expiring.user',
+  'tax_exempt.certificate_expired.user',
 ] as const;
 
 const CRITICAL_MAIL_EVENTS = [

@@ -88,6 +88,11 @@ export const accountCartCheckoutSchema = z.object({
 });
 export type AccountCartCheckoutInput = z.infer<typeof accountCartCheckoutSchema>;
 
+export const accountTaxExemptionRenewalSchema = z.object({
+  expiresAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD for the certificate expiration date.'),
+});
+export type AccountTaxExemptionRenewalInput = z.infer<typeof accountTaxExemptionRenewalSchema>;
+
 export const accountInvoiceDownloadActionSchema = z.object({
   action: z.literal('download'),
   invoiceId: z.string().trim().min(1),

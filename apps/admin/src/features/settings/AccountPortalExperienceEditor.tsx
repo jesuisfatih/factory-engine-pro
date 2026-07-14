@@ -16,15 +16,13 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  ACCOUNT_PORTAL_REQUEST_FIELDS,
-  DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
-} from '@factory-engine-pro/contracts';
+import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE } from '@factory-engine-pro/contracts';
 import type {
   AccountPortalBenefit,
   AccountPortalExperience,
   AccountPortalIcon,
   AccountPortalPage,
+  AccountPortalRequestField,
 } from '@factory-engine-pro/contracts';
 
 type Surface = 'login' | 'register' | 'requestAccess';
@@ -92,6 +90,12 @@ export function AccountPortalExperienceEditor({
     ]);
   };
 
+  const updateRequestField = (index: number, patch: Partial<AccountPortalRequestField>) => {
+    const formFields = [...value.requestAccess.formFields];
+    formFields[index] = { ...formFields[index], ...patch };
+    onChange({ ...value, requestAccess: { ...value.requestAccess, formFields } });
+  };
+
   return (
     <section className="portal-editor" aria-label="Customer portal page editor">
       <div className="portal-editor-heading">
@@ -154,6 +158,35 @@ export function AccountPortalExperienceEditor({
 
           <div className="portal-control-section">
             <div className="portal-control-title">Page copy</div>
+            <div className="field-row">
+              <TextField label="Brand title" value={page.heroBrandTitle} disabled={disabled} maxLength={64} onChange={(heroBrandTitle) => setPageField('heroBrandTitle', heroBrandTitle)} />
+              <TextField label="Brand subtitle" value={page.heroBrandSubtitle} disabled={disabled} maxLength={48} onChange={(heroBrandSubtitle) => setPageField('heroBrandSubtitle', heroBrandSubtitle)} />
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-form-brand-${surface}`}>Form branding</label>
+                <select id={`portal-form-brand-${surface}`} value={page.formBrandMode} disabled={disabled} onChange={(event) => setPageField('formBrandMode', event.target.value as AccountPortalPage['formBrandMode'])}>
+                  <option value="full">Logo and name</option><option value="logo">Logo only</option><option value="hidden">Hidden</option>
+                </select>
+              </div>
+              <div className="field portal-toggle-stack">
+                <label><input type="checkbox" checked={page.showHeroLogo} disabled={disabled} onChange={(event) => setPageField('showHeroLogo', event.target.checked)} /> Show hero logo</label>
+                <label><input type="checkbox" checked={page.showHeroBadge} disabled={disabled} onChange={(event) => setPageField('showHeroBadge', event.target.checked)} /> Show fallback badge</label>
+                <label><input type="checkbox" checked={page.showFormDescription} disabled={disabled} onChange={(event) => setPageField('showFormDescription', event.target.checked)} /> Show form description</label>
+              </div>
+            </div>
+            <div className="portal-control-title portal-control-title-row portal-trust-title">
+              <span>Hero background</span>
+              <label className="portal-inline-check"><input type="checkbox" checked={page.panelGradientEnabled} disabled={disabled} onChange={(event) => setPageField('panelGradientEnabled', event.target.checked)} /> Gradient</label>
+            </div>
+            <div className="portal-color-grid">
+              <ColorInput label="Gradient start" value={page.panelGradientFrom} disabled={disabled} onChange={(panelGradientFrom) => setPageField('panelGradientFrom', panelGradientFrom)} />
+              <ColorInput label="Gradient end" value={page.panelGradientTo} disabled={disabled} onChange={(panelGradientTo) => setPageField('panelGradientTo', panelGradientTo)} />
+            </div>
+            <div className="field">
+              <label htmlFor={`portal-gradient-angle-${surface}`}>Gradient angle ({page.panelGradientAngle} degrees)</label>
+              <input id={`portal-gradient-angle-${surface}`} type="range" min="0" max="360" value={page.panelGradientAngle} disabled={disabled} onChange={(event) => setPageField('panelGradientAngle', Number(event.target.value))} />
+            </div>
             <TextField label="Eyebrow" value={page.eyebrow} disabled={disabled} maxLength={48} onChange={(eyebrow) => setPageField('eyebrow', eyebrow)} />
             <TextField label="Hero headline" value={page.headline} disabled={disabled} maxLength={120} onChange={(headline) => setPageField('headline', headline)} />
             <TextArea label="Hero description" value={page.description} disabled={disabled} maxLength={260} onChange={(description) => setPageField('description', description)} />
@@ -173,6 +206,31 @@ export function AccountPortalExperienceEditor({
               <TextField label="Tertiary action" value={page.tertiaryActionLabel} disabled={disabled} maxLength={40} onChange={(tertiaryActionLabel) => setPageField('tertiaryActionLabel', tertiaryActionLabel)} />
             </div>
           </div>
+
+          {surface === 'requestAccess' ? (
+            <div className="portal-control-section">
+              <div className="portal-control-title">B2B request form</div>
+              <label className="portal-inline-check"><input type="checkbox" checked={value.requestAccess.notice.enabled} disabled={disabled} onChange={(event) => onChange({ ...value, requestAccess: { ...value.requestAccess, notice: { ...value.requestAccess.notice, enabled: event.target.checked } } })} /> Show existing-customer notice</label>
+              <TextArea label="Notice text" value={value.requestAccess.notice.text} disabled={disabled} maxLength={300} onChange={(text) => onChange({ ...value, requestAccess: { ...value.requestAccess, notice: { ...value.requestAccess.notice, text } } })} />
+              <div className="portal-color-grid">
+                <ColorInput label="Notice background" value={value.requestAccess.notice.backgroundColor} disabled={disabled} onChange={(backgroundColor) => onChange({ ...value, requestAccess: { ...value.requestAccess, notice: { ...value.requestAccess.notice, backgroundColor } } })} />
+                <ColorInput label="Notice border" value={value.requestAccess.notice.borderColor} disabled={disabled} onChange={(borderColor) => onChange({ ...value, requestAccess: { ...value.requestAccess, notice: { ...value.requestAccess.notice, borderColor } } })} />
+                <ColorInput label="Notice text" value={value.requestAccess.notice.textColor} disabled={disabled} onChange={(textColor) => onChange({ ...value, requestAccess: { ...value.requestAccess, notice: { ...value.requestAccess.notice, textColor } } })} />
+              </div>
+              <TextArea label="Industries (one per line)" value={value.requestAccess.industries.join('\n')} disabled={disabled} maxLength={1200} onChange={(next) => onChange({ ...value, requestAccess: { ...value.requestAccess, industries: lines(next) } })} />
+              <TextArea label="Monthly volume choices (one per line)" value={value.requestAccess.volumeOptions.join('\n')} disabled={disabled} maxLength={800} onChange={(next) => onChange({ ...value, requestAccess: { ...value.requestAccess, volumeOptions: lines(next) } })} />
+              <div className="portal-control-title portal-trust-title">Form fields</div>
+              <div className="portal-request-field-editor-list">
+                {value.requestAccess.formFields.map((field, index) => (
+                  <div className="portal-request-field-editor" key={field.key}>
+                    <input value={field.label} maxLength={80} disabled={disabled} aria-label={`${field.key} label`} onChange={(event) => updateRequestField(index, { label: event.target.value })} />
+                    <code>{field.key}</code>
+                    <label><input type="checkbox" checked={Boolean(field.required)} disabled={disabled} onChange={(event) => updateRequestField(index, { required: event.target.checked })} /> Required</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="portal-control-section">
             <div className="portal-control-title portal-control-title-row">
@@ -247,12 +305,12 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
       <div className={`portal-preview-stage layout-${page.layout} surface-${surface}`}>
         {page.layout === 'split' ? (
           surface === 'requestAccess' ? (
-            <RequestAccessPreviewHero page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} primaryColor={value.theme.primaryColor} />
+            <RequestAccessPreviewHero page={value.requestAccess} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} primaryColor={value.theme.primaryColor} />
           ) : (
-            <div className="portal-preview-hero" style={{ background: value.theme.primaryColor }}>
+            <div className="portal-preview-hero" style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
             <div className="portal-preview-brand">
-              {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge.charAt(0)}</span>}
-              <strong>{workspaceName}<small>Company Portal</small></strong>
+              {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge.charAt(0)}</span> : null}
+              <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong>
             </div>
             <div className="portal-preview-copy"><small>{page.eyebrow}</small><h4>{page.headline}</h4><p>{page.description}</p></div>
             {page.showBenefits ? <div className="portal-preview-benefits">{page.benefits.map((benefit) => { const Icon = ICONS[benefit.icon]; return <div key={`${benefit.title}-${benefit.body}`}><Icon size={15} /><span><b>{benefit.title}</b><small>{benefit.body}</small></span></div>; })}</div> : null}
@@ -261,11 +319,11 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
           )
         ) : null}
         {surface === 'requestAccess' ? (
-          <RequestAccessPreviewForm page={page} theme={value.theme} />
+          <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} />
         ) : (
         <div className="portal-preview-form" style={{ background: value.theme.panelBackground, color: value.theme.textColor }}>
-          <div className="portal-preview-logo">{brandLogo ? <img src={brandLogo} alt="" /> : brandBadge.charAt(0)}</div>
-          <h4>{page.formTitle}</h4><p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p>
+          {page.formBrandMode !== 'hidden' ? <div className="portal-preview-logo">{brandLogo ? <img src={brandLogo} alt="" /> : brandBadge.charAt(0)}</div> : null}
+          <h4>{page.formTitle}</h4>{page.showFormDescription ? <p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p> : null}
           <label>Email</label><div className="portal-preview-input">you@company.com</div>
           <label>Password</label><div className="portal-preview-input">••••••••••</div>
           <div className="portal-preview-button" style={{ background: value.theme.primaryColor }}>{page.primaryActionLabel}</div>
@@ -278,20 +336,23 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
 }
 
 function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, primaryColor }: {
-  page: AccountPortalPage;
+  page: AccountPortalExperience['requestAccess'];
   workspaceName: string;
   brandBadge: string;
   brandLogo: string;
   primaryColor: string;
 }) {
-  const headline = page.headline === 'Partner Program' ? `${workspaceName} Partner Program` : page.headline;
+  const headline = page.heroBrandTitle || (page.headline === 'Partner Program' ? `${workspaceName} Partner Program` : page.headline);
+  const background = page.panelGradientEnabled
+    ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
+    : `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)`;
   return (
-    <div className="portal-preview-hero portal-request-hero" style={{ background: `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)` }}>
+    <div className="portal-preview-hero portal-request-hero" style={{ background }}>
       <div className="portal-request-brand">
-        {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge}</span>}
+        {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge}</span> : null}
       </div>
       <h4>{headline}</h4>
-      <p>{page.description}</p>
+      <p>{page.heroBrandSubtitle || page.description}</p>
       {page.showBenefits ? (
         <div className="portal-request-benefits">
           {page.benefits.map((benefit) => {
@@ -310,18 +371,18 @@ function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, 
 }
 
 function RequestAccessPreviewForm({ page, theme }: {
-  page: AccountPortalPage;
+  page: AccountPortalExperience['requestAccess'];
   theme: AccountPortalExperience['theme'];
 }) {
   return (
     <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor }}>
       <h4>{page.formTitle}</h4>
-      <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p>
-      <div className="portal-request-notice" style={{ color: theme.mutedTextColor, borderColor: `${theme.primaryColor}40`, background: `${theme.primaryColor}0D` }}>
-        If you already have a storefront account, use the same email address here.
-      </div>
+      {page.showFormDescription ? <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p> : null}
+      {page.notice.enabled ? <div className="portal-request-notice" style={{ color: page.notice.textColor, borderColor: page.notice.borderColor, background: page.notice.backgroundColor }}>
+        {page.notice.text}
+      </div> : null}
       <div className="portal-request-fields">
-        {ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => (
+        {page.formFields.map((field) => (
           <div className={`portal-request-field ${field.half ? 'half' : 'full'} kind-${field.type}`} key={field.key}>
             <label>{field.label}{field.required ? <span> *</span> : null}</label>
             <div className="portal-request-input" style={{ color: theme.mutedTextColor }}>
@@ -353,4 +414,8 @@ function TextField({ label, value, onChange, disabled, maxLength }: { label: str
 
 function TextArea({ label, value, onChange, disabled, maxLength }: { label: string; value: string; onChange: (next: string) => void; disabled: boolean; maxLength: number }) {
   return <div className="field"><label>{label}</label><textarea rows={2} value={value} maxLength={maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+function lines(value: string) {
+  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 }

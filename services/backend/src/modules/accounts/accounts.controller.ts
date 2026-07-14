@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import {
   accountAddressSchema,
@@ -14,6 +15,7 @@ import {
   accountSupportCloseSchema,
   accountSupportReopenSchema,
   accountSupportReplySchema,
+  accountTaxExemptionRenewalSchema,
   createAccountSupportTicketSchema,
   CUSTOMER_PERMISSIONS,
   updateAccountPasswordSchema,
@@ -31,6 +33,7 @@ import {
   type AccountSupportCloseInput,
   type AccountSupportReopenInput,
   type AccountSupportReplyInput,
+  type AccountTaxExemptionRenewalInput,
   type CreateAccountSupportTicketInput,
   type UpdateAccountPasswordInput,
   type UpdateAccountProfileInput,
@@ -59,6 +62,23 @@ export class AccountsController {
   @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
   updatePassword(@Body(new ZodValidationPipe(updateAccountPasswordSchema)) body: UpdateAccountPasswordInput) {
     return this.accounts.updatePassword(body);
+  }
+
+  @Post('tax-exemption/renewal')
+  @RequirePermission(CUSTOMER_PERMISSIONS.accountWrite)
+  @UseInterceptors(FileInterceptor('taxCertificate', {
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, callback) => {
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      const accepted = allowed.includes(file.mimetype);
+      callback(accepted ? null : new Error('Only PDF, JPEG, PNG and WebP files are allowed'), accepted);
+    },
+  }))
+  requestTaxExemptionRenewal(
+    @Body(new ZodValidationPipe(accountTaxExemptionRenewalSchema)) body: AccountTaxExemptionRenewalInput,
+    @UploadedFile() file?: { originalname: string; mimetype: string; size: number; buffer?: Buffer },
+  ) {
+    return this.accounts.requestTaxExemptionRenewal(body, file);
   }
 
   @Get('addresses')

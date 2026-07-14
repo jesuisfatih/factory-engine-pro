@@ -257,6 +257,7 @@ export const createB2BAccessRequestSchema = z.object({
   website: z.string().trim().optional(),
   industry: z.string().trim().optional(),
   estimatedMonthlyVolume: z.string().trim().optional(),
+  taxCertificateExpiresAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD for the certificate expiration date.').optional(),
   message: z.string().trim().max(4000).optional(),
   password: passwordSchema,
   flowIntent: z.enum(['apply', 'request-invitation']).default('request-invitation'),

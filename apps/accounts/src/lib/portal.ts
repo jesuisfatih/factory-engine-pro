@@ -296,6 +296,22 @@ export type BuyerProfile = {
   spendingLimitCents: number | null;
   spendingUsedCents: number;
   addresses: AccountAddress[];
+  taxExemption: {
+    status: string;
+    expiresAt: string;
+    daysRemaining: number;
+    warningSentAt: string | null;
+    expiredAt: string | null;
+    purchasingRestricted: boolean;
+    syncPending: boolean;
+    warningMessage: string | null;
+  } | null;
+  taxExemptionRenewal: {
+    requestId: string;
+    submittedAt: string;
+    expiresAt: string | null;
+    status: 'pending';
+  } | null;
 };
 
 export function fetchAccountAddresses() {
@@ -417,6 +433,10 @@ export function saveProfile(input: UpdateAccountProfileInput) {
 
 export function updateAccountPassword(input: UpdateAccountPasswordInput) {
   return accountsApi.updateAccountPassword(input) as Promise<{ ok: true }>;
+}
+
+export function submitTaxExemptionRenewal(expiresAt: string, certificate: File) {
+  return accountsApi.submitAccountTaxExemptionRenewal(expiresAt, certificate);
 }
 
 export function fetchSupportTickets() {

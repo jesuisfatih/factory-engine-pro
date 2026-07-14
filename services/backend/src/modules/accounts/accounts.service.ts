@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type {
@@ -15,12 +15,14 @@ import type {
   AccountSupportCloseInput,
   AccountSupportReopenInput,
   AccountSupportReplyInput,
+  AccountTaxExemptionRenewalInput,
   CreateAccountSupportTicketInput,
   PrincipalType,
   UpdateAccountPasswordInput,
   UpdateAccountProfileInput,
 } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
+import { parseDateOnlyAtEndOfDay } from '../../shared/date-only.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -60,6 +62,13 @@ type AccountSupportTicketRecord = Prisma.ServiceRequestGetPayload<{
   include: { comments: true };
 }>;
 type AccountSupportTicketNotification = Pick<AccountSupportTicketRecord, 'id' | 'title' | 'description' | 'metadata'>;
+
+type AccountUploadFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer?: Buffer;
+};
 
 type AccountDocumentItem = {
   id: string;
@@ -118,7 +127,19 @@ export class AccountsService {
 
   async profile() {
     const actor = await this.currentActor();
-    return this.profilePayload(actor);
+    const [taxExemption, pendingRenewal] = await Promise.all([
+      this.prisma.db.customerTaxExemption.findFirst({ where: { customerId: actor.customerId } }),
+      this.prisma.db.b2BAccessRequest.findFirst({
+        where: {
+          status: 'pending',
+          email: { equals: actor.email, mode: 'insensitive' },
+          metadata: { path: ['formHandle'], equals: 'tax-exempt-renewal' },
+        },
+        select: { id: true, submittedAt: true, taxCertificateExpiresAt: true },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
+    return this.profilePayload(actor, taxExemption, pendingRenewal);
   }
 
   async updateProfile(input: UpdateAccountProfileInput) {
@@ -159,6 +180,105 @@ export class AccountsService {
     }
     this.logger.log('accounts', 'password.update', 'Customer password changed', { principal_id: actor.principalId });
     return { ok: true };
+  }
+
+  async requestTaxExemptionRenewal(input: AccountTaxExemptionRenewalInput, file?: AccountUploadFile) {
+    const actor = await this.currentActor();
+    if (!file?.buffer) throw new BadRequestException('Tax Exemption Certificate is required.');
+    if (!actor.passwordHash) throw new BadRequestException('Complete account activation before submitting a certificate.');
+    const expiresAt = parseAccountCertificateExpiration(input.expiresAt);
+    const existing = await this.prisma.db.b2BAccessRequest.findFirst({
+      where: {
+        status: 'pending',
+        email: { equals: actor.email, mode: 'insensitive' },
+        metadata: { path: ['formHandle'], equals: 'tax-exempt-renewal' },
+      },
+      select: { id: true },
+    });
+    if (existing) throw new ConflictException('A tax exemption certificate is already awaiting review.');
+
+    const requestId = prefixedId('b2br');
+    const fileId = prefixedId('b2bf');
+    const tenantId = this.tenantId();
+    const db = this.prisma.db;
+    await db.$transaction([
+      db.b2BAccessRequest.create({
+        data: {
+          id: requestId,
+          tenantId,
+          status: 'pending',
+          email: actor.email,
+          firstName: actor.firstName,
+          lastName: actor.lastName,
+          phone: actor.phone,
+          companyName: actor.customer.companyName,
+          legalName: actor.customer.legalName ?? actor.customer.companyName,
+          taxCertificateExpiresAt: expiresAt,
+          passwordHash: actor.passwordHash,
+          shopifyCustomerId: actor.customer.shopifyCustomerId,
+          resolvedCustomerId: actor.customerId,
+          resolvedCustomerUserId: actor.principalType === 'customer_user' ? actor.principalId : null,
+          metadata: {
+            flowIntent: 'tax-exemption-renewal',
+            sourceSurface: 'accounts-profile',
+            formHandle: 'tax-exempt-renewal',
+            matchedCustomerId: actor.customerId,
+          },
+        },
+      }),
+      db.b2BAccessRequestFile.create({
+        data: {
+          id: fileId,
+          tenantId,
+          requestId,
+          storageKey: `b2b-certificates/${requestId}/${file.originalname}`,
+          originalFilename: file.originalname,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          contentBase64: file.buffer.toString('base64'),
+        },
+      }),
+    ]);
+
+    try {
+      const expiresOn = isoDate(expiresAt);
+      const internalRecipients = await this.mail.listInternalRecipients();
+      await Promise.all([
+        this.mail.sendTaxExemptEvent({
+          eventKey: 'tax_exempt.request_received.user',
+          eventId: requestId,
+          to: actor.email,
+          recipientName: `${actor.firstName} ${actor.lastName}`.trim() || actor.email,
+          companyName: actor.customer.companyName,
+          requestId,
+          applicantEmail: actor.email,
+          expiresAt: expiresOn,
+        }),
+        ...internalRecipients.map((recipient) => this.mail.sendTaxExemptEvent({
+          eventKey: 'tax_exempt.request_received.internal',
+          eventId: requestId,
+          to: recipient.email,
+          recipientName: `${recipient.firstName} ${recipient.lastName}`.trim() || recipient.email,
+          companyName: actor.customer.companyName,
+          requestId,
+          applicantEmail: actor.email,
+          expiresAt: expiresOn,
+          actionUrl: `${(this.config.get<string>('ADMIN_URL') ?? this.config.get<string>('ADMIN_APP_URL') ?? '').replace(/\/+$/, '')}/b2b-access`,
+        })),
+      ]);
+    } catch (error) {
+      this.logger.warn('accounts', 'tax_exemption_renewal_mail_failed', 'Certificate renewal was saved but a notification could not be queued.', {
+        request_id: requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    this.logger.log('accounts', 'tax_exemption_renewal.created', 'Tax exemption renewal submitted', {
+      request_id: requestId,
+      customer_id: actor.customerId,
+      expires_at: expiresAt.toISOString(),
+    });
+    return { success: true as const, requestId, message: 'Your certificate was submitted for review.' };
   }
 
   async addresses() {
@@ -225,11 +345,16 @@ export class AccountsService {
       include: accountCartInclude(),
       orderBy: { updatedAt: 'desc' },
     });
-    return cart ? this.buyerCart(cart) : null;
+    if (!cart) return null;
+    const payload = this.buyerCart(cart);
+    return actor.customer.status === 'tax_hold'
+      ? { ...payload, checkoutUrl: null, checkoutAction: 'unavailable' as const, checkoutError: purchasingHoldMessage() }
+      : payload;
   }
 
   async createCart(input: AccountCartCreateInput) {
     const actor = await this.currentActor();
+    this.assertPurchasingAllowed(actor);
     const sourceOrder = input.originOrderId ? await this.findCustomerOrder(actor, input.originOrderId) : null;
     const cart = await this.prisma.db.accountReorderCart.create({
       data: {
@@ -267,6 +392,7 @@ export class AccountsService {
 
   async addCartItem(cartId: string, input: AccountCartAddItemInput) {
     const actor = await this.currentActor();
+    this.assertPurchasingAllowed(actor);
     const cart = await this.requireEditableCart(actor, cartId);
     const variant = await this.findCatalogVariantForCart(input);
     if (!variant) throw new NotFoundException('Catalog variant not found for this cart item');
@@ -346,6 +472,7 @@ export class AccountsService {
 
   async updateCartItem(cartId: string, itemId: string, input: AccountCartUpdateItemInput) {
     const actor = await this.currentActor();
+    this.assertPurchasingAllowed(actor);
     const cart = await this.requireEditableCart(actor, cartId);
     const item = await this.prisma.db.accountReorderCartItem.findFirst({ where: { id: itemId, cartId: cart.id } });
     if (!item) throw new NotFoundException('Cart item not found');
@@ -388,6 +515,7 @@ export class AccountsService {
 
   async removeCartItem(cartId: string, itemId: string) {
     const actor = await this.currentActor();
+    this.assertPurchasingAllowed(actor);
     const cart = await this.requireEditableCart(actor, cartId);
     const item = await this.prisma.db.accountReorderCartItem.findFirst({ where: { id: itemId, cartId: cart.id } });
     if (!item) throw new NotFoundException('Cart item not found');
@@ -404,6 +532,7 @@ export class AccountsService {
 
   async checkoutCart(cartId: string, input: AccountCartCheckoutInput) {
     const actor = await this.currentActor();
+    this.assertPurchasingAllowed(actor);
     const cart = await this.requireOwnedCart(actor, cartId);
     if (cart.items.length === 0) throw new BadRequestException('Cart is empty');
     const reorderable = cart.items.filter((item) => item.reorderable);
@@ -1162,6 +1291,7 @@ export class AccountsService {
     order: AccountOrderRecord,
     items: Array<ReturnType<AccountsService['reorderLineFromDetail']>>,
   ) {
+    this.assertPurchasingAllowed(actor);
     if (items.length === 0) throw new BadRequestException('This order has no line items to reorder');
     const strategy = await this.rules.algorithmRuntimeDefinition('customer_portal.reorder_eligibility');
     const variantKeys = items
@@ -1686,6 +1816,12 @@ export class AccountsService {
     throw new ForbiddenException('Accounts portal is only available to customer users');
   }
 
+  private assertPurchasingAllowed(actor: AccountActor) {
+    if (actor.customer.status === 'tax_hold') {
+      throw new ForbiddenException(purchasingHoldMessage());
+    }
+  }
+
   private fromCustomerUser(user: CustomerUserRecord): AccountActor {
     return {
       principalId: user.id,
@@ -1724,7 +1860,22 @@ export class AccountsService {
     };
   }
 
-  private profilePayload(actor: AccountActor) {
+  private profilePayload(actor: AccountActor, taxExemption: {
+    status: string;
+    expiresAt: Date;
+    warningSentAt: Date | null;
+    expiredAt: Date | null;
+    shopifySyncError: string | null;
+  } | null, pendingRenewal: {
+    id: string;
+    submittedAt: Date;
+    taxCertificateExpiresAt: Date | null;
+  } | null) {
+    const daysRemaining = taxExemption
+      ? Math.ceil((taxExemption.expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+      : null;
+    const purchasingRestricted = actor.customer.status === 'tax_hold'
+      || Boolean(taxExemption && ['expired', 'sync_failed'].includes(taxExemption.status));
     return {
       id: actor.principalId,
       type: actor.principalType,
@@ -1744,6 +1895,26 @@ export class AccountsService {
       spendingLimitCents: actor.spendingLimitCents,
       spendingUsedCents: actor.spendingUsedCents,
       addresses: this.addressList(actor.customer),
+      taxExemption: taxExemption ? {
+        status: taxExemption.status,
+        expiresAt: taxExemption.expiresAt.toISOString(),
+        daysRemaining,
+        warningSentAt: taxExemption.warningSentAt?.toISOString() ?? null,
+        expiredAt: taxExemption.expiredAt?.toISOString() ?? null,
+        purchasingRestricted,
+        syncPending: Boolean(taxExemption.shopifySyncError),
+        warningMessage: purchasingRestricted
+          ? 'Your tax exemption certificate has expired. Tax will be charged until a valid replacement certificate is approved.'
+          : daysRemaining !== null && daysRemaining <= 90
+            ? 'Your tax exemption certificate will expire soon. Please update it as soon as possible.'
+            : null,
+      } : null,
+      taxExemptionRenewal: pendingRenewal ? {
+        requestId: pendingRenewal.id,
+        submittedAt: pendingRenewal.submittedAt.toISOString(),
+        expiresAt: pendingRenewal.taxCertificateExpiresAt?.toISOString() ?? null,
+        status: 'pending' as const,
+      } : null,
     };
   }
 
@@ -2458,6 +2629,21 @@ function money(value: unknown) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function parseAccountCertificateExpiration(value: string) {
+  const expiresAt = parseDateOnlyAtEndOfDay(value);
+  if (!expiresAt) {
+    throw new BadRequestException('Certificate Expiration Date is invalid.');
+  }
+  if (expiresAt.getTime() <= Date.now()) {
+    throw new BadRequestException('Tax exemption certificate must be valid beyond today.');
+  }
+  return expiresAt;
+}
+
+function purchasingHoldMessage() {
+  return 'Tax-exempt purchasing is paused until a valid replacement certificate is approved. Tax will apply to new storefront purchases.';
 }
 
 function accountRoleKeys(role: { id: string; slug: string; name: string }) {

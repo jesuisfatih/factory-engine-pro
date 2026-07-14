@@ -35,6 +35,7 @@ export class B2BAccessRepository {
     website?: string | null;
     industry?: string | null;
     estimatedMonthlyVolume?: string | null;
+    taxCertificateExpiresAt?: Date | null;
     message?: string | null;
     passwordHash: string;
     shopifyCustomerId?: string | null;

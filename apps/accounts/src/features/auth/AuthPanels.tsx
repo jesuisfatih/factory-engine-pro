@@ -35,7 +35,7 @@ export function AccountsLoginPanel() {
     <AccountPortalLayout surface="login" formLabel="Sign in">
       <div className="auth-card">
             <div className="auth-logo-wrap">
-              <Brand />
+              <Brand surface="login" />
             </div>
 
             <div className="auth-heading">
@@ -181,7 +181,7 @@ export function AccountsRegisterPanel() {
   return (
     <AccountPortalLayout surface="register" formLabel="Create account">
     <div className="auth-card auth-register-card">
-      <Brand />
+      <Brand surface="register" />
       <h2>{page.formTitle}</h2>
       <p className="muted">Step {step} of 5. {page.formDescription}</p>
       <div className="auth-progress"><div style={{ width: `${(step / 5) * 100}%` }} /></div>
@@ -341,20 +341,29 @@ export function AccountsResetPasswordPanel({ tokenOverride, invitation = false }
   );
 }
 
-function Brand({ hero = false }: { hero?: boolean }) {
+function Brand({ hero = false, surface }: { hero?: boolean; surface?: 'login' | 'register' }) {
   const brandQuery = useWorkspaceBrand();
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
+  const page = surface ? brandQuery.data?.accountPortalExperience?.[surface] : null;
+  const mode = page?.formBrandMode ?? 'full';
+  const logo = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo;
+  if (mode === 'hidden') return null;
   const className = hero ? 'invite-brand' : 'auth-brand';
   const size = hero ? 44 : 40;
+  if (mode === 'logo') {
+    return logo
+      ? <img className="auth-brand-logo-only" src={logo} alt={name} />
+      : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>;
+  }
   return (
     <div className={className}>
-      {brandQuery.data?.brandLogo
-        ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: size, height: size }} />
+      {logo
+        ? <img className="ws-logo" src={logo} alt="" style={{ width: size, height: size }} />
         : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
       <div>
         <div className="name">{name}</div>
-        <div className="muted">Company Portal</div>
+        <div className="muted">{page?.heroBrandSubtitle || 'Company Portal'}</div>
       </div>
     </div>
   );

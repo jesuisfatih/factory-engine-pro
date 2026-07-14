@@ -39,16 +39,17 @@ export class PricingCalculatorService {
         : null,
     ]);
     const customerRecord = customer ?? customerUser?.customer ?? null;
-    const customerTags = uniqueKeys([
+    const taxExemptionHold = customerRecord?.status === 'tax_hold';
+    const customerTags = taxExemptionHold ? [] : uniqueKeys([
       ...(input.customerTags ?? []),
       ...(customer?.tags ?? []),
       ...(customerUser?.customer.tags ?? []),
     ]);
-    const customerRoleKeys = uniqueKeys([
+    const customerRoleKeys = taxExemptionHold ? [] : uniqueKeys([
       ...(input.customerRoleKeys ?? []),
       ...(customerUser?.roleAssignments.flatMap((assignment) => collectRoleKeys(assignment.role)) ?? []),
     ]);
-    const customerSegmentKeys = uniqueKeys([
+    const customerSegmentKeys = taxExemptionHold ? [] : uniqueKeys([
       ...(input.customerSegmentKeys ?? []),
       ...(customerRecord ? collectSegmentKeys(customerRecord.insight?.rfmSegment ?? null, customerRecord.segmentMemberships) : []),
     ]);

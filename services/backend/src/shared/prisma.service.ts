@@ -43,6 +43,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'ServiceRequestComment',
   'B2BAccessRequest',
   'B2BAccessRequestFile',
+  'CustomerTaxExemption',
   'MailDelivery',
   'MailProviderEvent',
   'MailIdempotencyKey',

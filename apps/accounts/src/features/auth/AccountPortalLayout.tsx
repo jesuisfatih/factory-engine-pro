@@ -45,11 +45,16 @@ export function AccountPortalLayout({
   const brandQuery = useWorkspaceBrand();
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
-  const logo = brandQuery.data?.brandLogo;
+  const logo = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo;
   const experience: AccountPortalExperience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
   const page = experience[surface];
   const theme = experience.theme;
   const layout = page.enabled ? page.layout : 'centered';
+  const brandTitle = page.heroBrandTitle || name;
+  const brandSubtitle = page.heroBrandSubtitle || 'Company Portal';
+  const brandBackground = page.panelGradientEnabled
+    ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
+    : theme.primaryColor;
   const style = {
     '--portal-primary': theme.primaryColor,
     '--portal-accent': theme.accentColor,
@@ -57,6 +62,8 @@ export function AccountPortalLayout({
     '--portal-panel-bg': theme.panelBackground,
     '--portal-text': theme.textColor,
     '--portal-muted': theme.mutedTextColor,
+    '--auth-brand-background': brandBackground,
+    '--auth-brand-header-text': page.panelGradientEnabled && isLightColor(page.panelGradientFrom) ? '#172033' : '#ffffff',
   } as CSSProperties;
 
   return (
@@ -66,10 +73,12 @@ export function AccountPortalLayout({
           <section className="auth-brand-panel" aria-label={`${name} account workspace`}>
             <div>
               <div className="auth-brand-row">
-                <div className="auth-brand-mark">
-                  {logo ? <img src={logo} alt="" className="auth-brand-mark-img" aria-hidden="true" /> : badge.charAt(0)}
-                </div>
-                <div className="auth-brand-name"><span>{name}</span><small>Company Portal</small></div>
+                {page.showHeroLogo && logo ? (
+                  <div className="auth-brand-logo"><img src={logo} alt={name} className="auth-brand-mark-img" /></div>
+                ) : page.showHeroBadge ? (
+                  <div className="auth-brand-mark">{badge.charAt(0)}</div>
+                ) : null}
+                <div className="auth-brand-name"><span>{brandTitle}</span><small>{brandSubtitle}</small></div>
               </div>
               <div className="auth-brand-copy">
                 {page.eyebrow ? <span className="auth-eyebrow">{page.eyebrow}</span> : null}
@@ -106,6 +115,15 @@ export function AccountPortalLayout({
       </div>
     </main>
   );
+}
+
+function isLightColor(hex: string) {
+  const value = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return false;
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 180;
 }
 
 export function useAccountPortalSurface(surface: PortalSurface | 'requestAccess') {

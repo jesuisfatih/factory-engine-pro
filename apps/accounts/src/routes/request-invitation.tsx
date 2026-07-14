@@ -42,6 +42,9 @@ interface RequestPageConfig {
   subtitle: string;
   heroTitle: string;
   heroSubtitle: string;
+  showHeroLogo: boolean;
+  showHeroBadge: boolean;
+  showFormDescription: boolean;
   primaryColor: string;
   primaryGradientEnabled?: boolean;
   primaryGradientFrom?: string;
@@ -67,6 +70,13 @@ interface RequestPageConfig {
   industries: string[];
   volumeOptions: string[];
   formFields: AccountPortalRequestField[];
+  notice: {
+    enabled: boolean;
+    text: string;
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+  };
   successTitle: string;
   successMessage: string;
 }
@@ -76,6 +86,9 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   subtitle: 'Tell us about your business to get started',
   heroTitle: '',
   heroSubtitle: '',
+  showHeroLogo: true,
+  showHeroBadge: true,
+  showFormDescription: true,
   primaryColor: '#081F6F',
   primaryGradientEnabled: false,
   primaryGradientFrom: '#081F6F',
@@ -123,6 +136,13 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
     '5000+ transfers/month',
   ],
   formFields: ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => ({ ...field })),
+  notice: {
+    enabled: true,
+    text: 'If you already have a storefront account, use the same email address here.',
+    backgroundColor: '#EEF4FF',
+    borderColor: '#AFC6F8',
+    textColor: '#344054',
+  },
   successTitle: 'Application Submitted!',
   successMessage:
     'Thank you for your interest! Our team will review your application and get back to you within 1-2 business days.',
@@ -152,6 +172,7 @@ const KNOWN_REQUEST_KEYS = new Set([
   'password',
   'confirmPassword',
   'taxCertificate',
+  'taxCertificateExpiresAt',
 ]);
 
 const DEFAULT_PRIMARY_COLOR = '#081F6F';
@@ -161,7 +182,7 @@ function RequestInvitationView() {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
-  const logoUrl = brandQuery.data?.brandLogo ?? '';
+  const logoUrl = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo || '';
   const search = useMemo(() => currentSearchParams(), []);
   const shop = normalizeShopDomain(search.get('shop') || search.get('store') || '');
   const merchantHint = (search.get('merchantId') || search.get('merchant_id') || '').trim();
@@ -173,11 +194,18 @@ function RequestInvitationView() {
     ...DEFAULT_REQUEST_PAGE_CONFIG,
     title: requestExperience?.formTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.title,
     subtitle: requestExperience?.formDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.subtitle,
-    heroTitle: requestExperience
+    heroTitle: requestExperience?.heroBrandTitle || (requestExperience
       ? (requestExperience.headline === 'Partner Program' ? `${brandName} Partner Program` : requestExperience.headline)
-      : '',
-    heroSubtitle: requestExperience?.description ?? DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
+      : ''),
+    heroSubtitle: requestExperience?.heroBrandSubtitle || requestExperience?.description || DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
+    showHeroLogo: requestExperience?.showHeroLogo ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroLogo,
+    showHeroBadge: requestExperience?.showHeroBadge ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroBadge,
+    showFormDescription: requestExperience?.showFormDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showFormDescription,
     primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
+    primaryGradientEnabled: requestExperience?.panelGradientEnabled ?? false,
+    primaryGradientFrom: requestExperience?.panelGradientFrom ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
+    primaryGradientTo: requestExperience?.panelGradientTo ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientTo,
+    primaryGradientAngle: requestExperience?.panelGradientAngle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientAngle,
     fontColor: portalExperience?.theme.textColor ?? DEFAULT_REQUEST_PAGE_CONFIG.fontColor,
     formPanelBackgroundColor: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelBackgroundColor,
     formPanelGradientFrom: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelGradientFrom,
@@ -186,6 +214,10 @@ function RequestInvitationView() {
     benefits: requestExperience?.showBenefits
       ? requestExperience.benefits.map((benefit) => ({ icon: benefit.icon, title: benefit.title, description: benefit.body }))
       : [],
+    industries: requestExperience?.industries ?? DEFAULT_REQUEST_PAGE_CONFIG.industries,
+    volumeOptions: requestExperience?.volumeOptions ?? DEFAULT_REQUEST_PAGE_CONFIG.volumeOptions,
+    formFields: requestExperience?.formFields ?? DEFAULT_REQUEST_PAGE_CONFIG.formFields,
+    notice: requestExperience?.notice ?? DEFAULT_REQUEST_PAGE_CONFIG.notice,
     successTitle: requestExperience?.successTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.successTitle,
     successMessage: requestExperience?.successMessage ?? DEFAULT_REQUEST_PAGE_CONFIG.successMessage,
   }), [brandName, portalExperience, requestExperience]);
@@ -202,6 +234,7 @@ function RequestInvitationView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const certificateWarning = certificateExpiryWarning(formData.taxCertificateExpiresAt);
 
   const colors = makeColors(pageConfig.primaryColor || DEFAULT_PRIMARY_COLOR);
   const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
@@ -290,6 +323,13 @@ function RequestInvitationView() {
       return;
     }
 
+    const missingFileField = pageConfig.formFields.find((field) => field.required && field.type === 'file' && !files[field.key]);
+    if (missingFileField) {
+      setError(`${missingFileField.label} is required.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       const mergedMessage = mergeRequestMessage(pageConfig, formData, files);
       await accountsApi.submitB2BAccessRequest({
@@ -303,6 +343,7 @@ function RequestInvitationView() {
         website: optionalValue(formData.website),
         industry: optionalValue(formData.industry),
         estimatedMonthlyVolume: optionalValue(formData.estimatedMonthlyVolume),
+        taxCertificateExpiresAt: optionalValue(formData.taxCertificateExpiresAt),
         message: optionalValue(mergedMessage),
         flowIntent: 'request-invitation',
         sourceSurface: (search.get('sourceSurface') || 'accounts-request-invitation').trim(),
@@ -424,6 +465,11 @@ function RequestInvitationView() {
             Email linked from your storefront session.
           </p>
         ) : null}
+        {field.key === 'taxCertificateExpiresAt' && certificateWarning ? (
+          <p style={{ fontSize: 12, color: '#B54708', marginTop: 6, marginBottom: 0, lineHeight: 1.45 }}>
+            {certificateWarning}
+          </p>
+        ) : null}
       </div>
     );
   };
@@ -491,15 +537,15 @@ function RequestInvitationView() {
               }}
             >
               <div style={{ marginBottom: 36 }}>
-                {logoUrl ? (
+                {pageConfig.showHeroLogo && logoUrl ? (
                   <img
                     src={logoUrl}
                     alt={brandName}
                     style={{ maxWidth: 140, maxHeight: 50, objectFit: 'contain', marginBottom: 10 }}
                   />
-                ) : (
+                ) : pageConfig.showHeroBadge ? (
                   <span style={{ fontSize: 44 }}>{brandBadge}</span>
-                )}
+                ) : null}
                 <h3 style={{ fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: 22, lineHeight: 1.3, letterSpacing: -0.3 }}>
                   {heroTitle}
                 </h3>
@@ -614,24 +660,26 @@ function RequestInvitationView() {
                     <h4 style={{ fontWeight: 700, marginBottom: 4, color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
                     </h4>
-                    <p style={{ color: formPanelMutedTextColor, marginBottom: 0, fontSize: 14 }}>
-                      {pageConfig.subtitle || 'Tell us about your business to get started'}
-                    </p>
+                    {pageConfig.showFormDescription ? (
+                      <p style={{ color: formPanelMutedTextColor, marginBottom: 0, fontSize: 14 }}>
+                        {pageConfig.subtitle || 'Tell us about your business to get started'}
+                      </p>
+                    ) : null}
                   </div>
 
-                  {!emailLocked ? (
+                  {!emailLocked && pageConfig.notice.enabled ? (
                     <div
                       style={{
-                        background: colors.primarySoft,
-                        border: `1px solid ${colors.primaryBorder}`,
+                        background: normalizeHexColor(pageConfig.notice.backgroundColor, '#EEF4FF'),
+                        border: `1px solid ${normalizeHexColor(pageConfig.notice.borderColor, '#AFC6F8')}`,
                         borderRadius: 10,
                         padding: '10px 14px',
                         marginBottom: 12,
                         fontSize: 13,
-                        color: formPanelMutedTextColor,
+                        color: normalizeHexColor(pageConfig.notice.textColor, '#344054'),
                       }}
                     >
-                      If you already have a storefront account, use the same email address here.
+                      {pageConfig.notice.text}
                     </div>
                   ) : null}
 
@@ -852,6 +900,18 @@ function getSelectOptions(pageConfig: RequestPageConfig, fieldKey: string) {
 
 function getPlaceholder(field: AccountPortalRequestField) {
   return field.placeholder || `Enter ${field.label.toLowerCase()}`;
+}
+
+function certificateExpiryWarning(value: string | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const expiresAt = new Date(`${value}T23:59:59.999Z`);
+  if (Number.isNaN(expiresAt.getTime())) return '';
+  const daysRemaining = Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  if (daysRemaining < 0) return 'This certificate has expired. Upload a current certificate.';
+  if (daysRemaining <= 90) {
+    return 'Your tax exemption certificate will expire soon. Please update it as soon as possible.';
+  }
+  return '';
 }
 
 function mergeRequestMessage(

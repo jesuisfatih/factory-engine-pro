@@ -475,6 +475,13 @@ export class ApiClient {
     return this.post('/accounts/password', input);
   }
 
+  submitAccountTaxExemptionRenewal(expiresAt: string, certificate: Blob) {
+    const form = new FormData();
+    form.set('expiresAt', expiresAt);
+    form.set('taxCertificate', certificate);
+    return this.requestForm<{ success: true; requestId: string; message: string }>('POST', '/accounts/tax-exemption/renewal', form);
+  }
+
   accountAddresses() {
     return this.get('/accounts/addresses');
   }

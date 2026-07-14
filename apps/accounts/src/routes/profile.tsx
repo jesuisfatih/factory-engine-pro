@@ -3,18 +3,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Save, ShieldCheck, User, AlertCircle } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileUp, Save, ShieldCheck, User } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import { apiErrorMessage } from '@/lib/api';
-import { fetchProfile, saveProfile, updateAccountPassword, type BuyerProfile } from '@/lib/portal';
+import { fetchProfile, saveProfile, submitTaxExemptionRenewal, updateAccountPassword, type BuyerProfile } from '@/lib/portal';
 
 const QK = ['profile'] as const;
 
-type TabKey = 'profile' | 'security';
+type TabKey = 'profile' | 'security' | 'tax';
 
 function fmtMoney(value: number) {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+
+function fmtDate(value: string | null | undefined) {
+  if (!value) return 'Not available';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function ProfileView() {
@@ -41,6 +49,23 @@ function ProfileView() {
       setPwd({ current: '', next: '', confirm: '' });
     },
     onError: (error) => toast.error('Password update failed', { description: apiErrorMessage(error) }),
+  });
+
+  const [certificateExpiresAt, setCertificateExpiresAt] = useState('');
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const renewal = useMutation({
+    mutationFn: () => {
+      if (!certificateFile || !certificateExpiresAt) throw new Error('Select the certificate file and expiration date.');
+      return submitTaxExemptionRenewal(certificateExpiresAt, certificateFile);
+    },
+    onSuccess: () => {
+      toast.success('Certificate submitted for review');
+      setCertificateExpiresAt('');
+      setCertificateFile(null);
+      qc.invalidateQueries({ queryKey: QK });
+      qc.invalidateQueries({ queryKey: ['home', 'profile'] });
+    },
+    onError: (error) => toast.error('Certificate submission failed', { description: apiErrorMessage(error) }),
   });
 
   if (isError) {
@@ -85,7 +110,7 @@ function ProfileView() {
 
         <main className="profile-main">
           <div className="tabs" role="tablist">
-            {(['profile', 'security'] as TabKey[]).map((value) => (
+            {(['profile', 'security', 'tax'] as TabKey[]).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -93,8 +118,8 @@ function ProfileView() {
                 className={`tab${tab === value ? ' active' : ''}`}
                 onClick={() => setTab(value)}
               >
-                {value === 'profile' ? <User size={11} /> : <ShieldCheck size={11} />}
-                {t(`profile.tabs.${value}`)}
+                {value === 'profile' ? <User size={11} /> : value === 'security' ? <ShieldCheck size={11} /> : <CalendarClock size={11} />}
+                {value === 'tax' ? 'Tax certificate' : t(`profile.tabs.${value}`)}
               </button>
             ))}
           </div>
@@ -163,6 +188,80 @@ function ProfileView() {
               </div>
             </section>
           )}
+
+          {tab === 'tax' && (
+            <section className="section tax-renewal-section">
+              <div className="tax-renewal-heading">
+                <div>
+                  <span>Business account document</span>
+                  <h3>Tax exemption certificate</h3>
+                  <p>Keep the approved certificate current to preserve tax-exempt purchasing.</p>
+                </div>
+                <span className={`pill ${form.taxExemption?.purchasingRestricted ? 'danger' : form.taxExemption ? 'success' : 'info'}`}>
+                  {form.taxExemption?.purchasingRestricted ? 'Purchasing paused' : form.taxExemption ? form.taxExemption.status : 'Not on file'}
+                </span>
+              </div>
+
+              {form.taxExemption ? (
+                <div className={`tax-certificate-status${form.taxExemption.purchasingRestricted ? ' restricted' : ''}`}>
+                  <CalendarClock size={18} />
+                  <div>
+                    <strong>Current certificate expires {fmtDate(form.taxExemption.expiresAt)}</strong>
+                    <span>
+                      {form.taxExemption.warningMessage
+                        ?? `${Math.max(0, form.taxExemption.daysRemaining)} days remain before renewal is required.`}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              {form.taxExemptionRenewal ? (
+                <div className="tax-renewal-pending">
+                  <ShieldCheck size={18} />
+                  <div>
+                    <strong>Replacement certificate is awaiting review</strong>
+                    <span>Submitted {fmtDate(form.taxExemptionRenewal.submittedAt)} for expiration {fmtDate(form.taxExemptionRenewal.expiresAt)}.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="tax-renewal-form">
+                  <div className="field-row">
+                    <div className="field">
+                      <label htmlFor="tax-expiration">Certificate expiration date</label>
+                      <input
+                        id="tax-expiration"
+                        type="date"
+                        min={tomorrowDate()}
+                        value={certificateExpiresAt}
+                        onChange={(event) => setCertificateExpiresAt(event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="tax-certificate-file">Replacement certificate</label>
+                      <input
+                        id="tax-certificate-file"
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
+                        onChange={(event) => setCertificateFile(event.target.files?.[0] ?? null)}
+                      />
+                      <small>PDF, JPEG, PNG or WebP, up to 10 MB.</small>
+                    </div>
+                  </div>
+                  <div className="tax-renewal-action">
+                    <span>Approval updates this account and its connected Shopify tax status.</span>
+                    <button
+                      type="button"
+                      className="save-btn"
+                      disabled={!certificateFile || !certificateExpiresAt || renewal.isPending}
+                      onClick={() => renewal.mutate()}
+                    >
+                      <FileUp size={14} /> {renewal.isPending ? 'Submitting...' : 'Submit certificate'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
         </main>
       </div>
     </>
@@ -170,3 +269,9 @@ function ProfileView() {
 }
 
 export const Route = createFileRoute('/profile')({ component: ProfileView });
+
+function tomorrowDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}

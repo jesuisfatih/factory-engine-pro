@@ -28,6 +28,7 @@ interface B2BRequest {
   website: string | null;
   industry: string | null;
   estimatedMonthlyVolume: string | null;
+  taxCertificateExpiresAt: string | null;
   message: string | null;
   status: B2BStatus;
   reviewNotes: string | null;
@@ -223,6 +224,8 @@ export function B2BRequestsPage() {
                   <DetailLine label={t('b2b_access.detail_website')} value={selected.website ?? '-'} />
                   <DetailLine label={t('b2b_access.detail_industry')} value={selected.industry ?? '-'} />
                   <DetailLine label={t('b2b_access.detail_volume')} value={selected.estimatedMonthlyVolume ?? '-'} />
+                  <DetailLine label="Request type" value={requestTypeLabel(selected)} />
+                  <DetailLine label="Certificate expires" value={selected.taxCertificateExpiresAt ? fmtDate(selected.taxCertificateExpiresAt) : '-'} />
                   <DetailLine label={t('b2b_access.detail_submitted')} value={fmtDate(selected.submittedAt)} />
                 </div>
                 {selected.message && (
@@ -365,6 +368,13 @@ function statusTone(status: B2BStatus) {
   if (status === 'approved') return 'success';
   if (status === 'rejected') return 'danger';
   return 'warn';
+}
+
+function requestTypeLabel(request: B2BRequest) {
+  const handle = typeof request.metadata?.formHandle === 'string' ? request.metadata.formHandle : '';
+  if (handle === 'tax-exempt-renewal') return 'Tax certificate renewal';
+  if (request.taxCertificateExpiresAt || request.files.length > 0) return 'B2B access + tax exemption';
+  return 'B2B access';
 }
 
 function fmtDate(value: string | null) {

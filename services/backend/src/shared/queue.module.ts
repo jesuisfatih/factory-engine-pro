@@ -15,6 +15,7 @@ export const SHOPIFY_SYNC_QUEUE = Symbol('SHOPIFY_SYNC_QUEUE');
 export const SEGMENT_EVALUATION_QUEUE = Symbol('SEGMENT_EVALUATION_QUEUE');
 export const ROLLING_BACKFILL_QUEUE = Symbol('ROLLING_BACKFILL_QUEUE');
 export const WORKFLOW_SCHEDULED_ACTION_QUEUE = Symbol('WORKFLOW_SCHEDULED_ACTION_QUEUE');
+export const TAX_EXEMPTION_LIFECYCLE_QUEUE = Symbol('TAX_EXEMPTION_LIFECYCLE_QUEUE');
 export const AUTH_EVENTS_QUEUE_NAME = 'auth.events';
 export const PRICING_RULE_SYNC_QUEUE_NAME = 'pricing-rule-sync';
 export const MAIL_OUTBOUND_QUEUE_NAME = 'mail-outbound';
@@ -30,6 +31,8 @@ export const ROLLING_BACKFILL_QUEUE_NAME = 'rolling-7d-backfill';
 export const ROLLING_BACKFILL_JOB = 'rolling_7d_backfill_job';
 export const WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME = 'workflow-scheduled-actions';
 export const WORKFLOW_SCHEDULED_ACTION_JOB = 'workflow_scheduled_actions_sweep';
+export const TAX_EXEMPTION_LIFECYCLE_QUEUE_NAME = 'tax-exemption-lifecycle';
+export const TAX_EXEMPTION_LIFECYCLE_JOB = 'tax_exemption_lifecycle_sweep';
 export const MAIL_MARKETING_FLOW_QUEUE_NAME = 'mail-marketing-flow';
 export const MAIL_MARKETING_FLOW_JOB = 'process-enrollment';
 export const MAIL_MARKETING_CAMPAIGN_QUEUE_NAME = 'mail-marketing-campaign';
@@ -143,6 +146,14 @@ export const MAIL_MARKETING_CAMPAIGN_JOB = 'queue-campaign';
         return new Queue(queueName(config, WORKFLOW_SCHEDULED_ACTION_QUEUE_NAME), { connection });
       },
     },
+    {
+      provide: TAX_EXEMPTION_LIFECYCLE_QUEUE,
+      inject: [REDIS_CONNECTION, ConfigService],
+      useFactory: (connection: ConnectionOptions | null, config: ConfigService) => {
+        if (!connection) return null;
+        return new Queue(queueName(config, TAX_EXEMPTION_LIFECYCLE_QUEUE_NAME), { connection });
+      },
+    },
   ],
   exports: [
     REDIS_CONNECTION,
@@ -158,6 +169,7 @@ export const MAIL_MARKETING_CAMPAIGN_JOB = 'queue-campaign';
     SEGMENT_EVALUATION_QUEUE,
     ROLLING_BACKFILL_QUEUE,
     WORKFLOW_SCHEDULED_ACTION_QUEUE,
+    TAX_EXEMPTION_LIFECYCLE_QUEUE,
   ],
 })
 export class QueueModule {}

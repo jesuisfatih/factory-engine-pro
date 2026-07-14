@@ -8,6 +8,7 @@ import {
   fetchActiveCart,
   fetchBuyerOrders,
   fetchInvoices,
+  fetchProfile,
   fetchReorderTemplates,
   type BuyerCart,
   type BuyerInvoice,
@@ -165,6 +166,10 @@ function HomeView() {
     queryKey: ['home', 'cart'],
     queryFn: fetchActiveCart,
   });
+  const profile = useQuery({
+    queryKey: ['home', 'profile'],
+    queryFn: fetchProfile,
+  });
 
   const orderRows = orders.data?.data ?? [];
   const invoiceRows = invoices.data?.data ?? [];
@@ -179,6 +184,17 @@ function HomeView() {
   return (
     <>
       <PageHeader titleI18nKey="home.title" subtitleI18nKey="home.subtitle" />
+
+      {profile.data?.taxExemption?.warningMessage ? (
+        <div className={`portal-tax-notice${profile.data.taxExemption.purchasingRestricted ? ' restricted' : ''}`}>
+          <AlertCircle size={18} />
+          <div>
+            <strong>{profile.data.taxExemption.purchasingRestricted ? 'Tax-exempt purchasing is paused' : 'Certificate renewal needed'}</strong>
+            <span>{profile.data.taxExemption.warningMessage} Expiration date: {fmtDate(profile.data.taxExemption.expiresAt)}.</span>
+          </div>
+          <Link to="/profile" className="btn">Update account documents</Link>
+        </div>
+      ) : null}
 
       <div className="portal-home-hero">
         <div>

@@ -91,6 +91,7 @@ model Tenant {
   serviceRequestComments  ServiceRequestComment[]
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
+  customerTaxExemptions   CustomerTaxExemption[]
   mailDeliveries          MailDelivery[]
   mailIdempotencyKeys     MailIdempotencyKey[]
   emailTemplates          EmailTemplate[]
@@ -339,6 +340,7 @@ model Customer {
   workflowScheduledActions WorkflowScheduledAction[]
   dailyCallOrders PersonDailyCallOrder[]
   commissionRequests CommissionRequest[]
+  taxExemption CustomerTaxExemption?
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -1342,6 +1344,7 @@ model B2BAccessRequest {
   website                String?
   industry               String?
   estimatedMonthlyVolume String?  @map("estimated_monthly_volume")
+  taxCertificateExpiresAt DateTime? @map("tax_certificate_expires_at")
   message                String?
   passwordHash           String   @map("password_hash")
   shopifyCustomerId      String?  @map("shopify_customer_id")
@@ -1359,6 +1362,30 @@ model B2BAccessRequest {
   @@index([tenantId, status, submittedAt])
   @@index([tenantId, email, status])
   @@map("b2b_access_requests")
+}
+
+model CustomerTaxExemption {
+  id                         String   @id
+  tenantId                   String   @map("tenant_id")
+  customerId                 String   @unique @map("customer_id")
+  sourceRequestId            String?  @map("source_request_id")
+  certificateFileId          String?  @map("certificate_file_id")
+  status                     String   @default("active")
+  expiresAt                  DateTime @map("expires_at")
+  warningSentAt              DateTime? @map("warning_sent_at")
+  warningDeliveryId          String?  @map("warning_delivery_id")
+  expiredAt                  DateTime? @map("expired_at")
+  shopifyTaxExemptDisabledAt DateTime? @map("shopify_tax_exempt_disabled_at")
+  shopifySyncError           String?  @map("shopify_sync_error")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, expiresAt])
+  @@index([tenantId, warningSentAt, expiresAt])
+  @@map("customer_tax_exemptions")
 }
 
 model B2BAccessRequestFile {

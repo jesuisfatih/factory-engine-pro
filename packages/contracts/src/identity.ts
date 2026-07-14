@@ -156,7 +156,7 @@ export const accountPortalTrustItemSchema = z.object({
 }).strict();
 export type AccountPortalTrustItem = z.infer<typeof accountPortalTrustItemSchema>;
 
-export type AccountPortalRequestFieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password';
+export type AccountPortalRequestFieldType = 'text' | 'email' | 'tel' | 'url' | 'select' | 'textarea' | 'file' | 'password' | 'date';
 
 export interface AccountPortalRequestField {
   key: string;
@@ -178,6 +178,7 @@ export const ACCOUNT_PORTAL_REQUEST_FIELDS = [
   { key: 'industry', label: 'Industry', type: 'select', placeholder: 'Select industry', half: true },
   { key: 'estimatedMonthlyVolume', label: 'Estimated Monthly Volume', type: 'select', placeholder: 'Select estimated monthly volume' },
   { key: 'taxCertificate', label: 'Tax Exemption Certificate', type: 'file', placeholder: 'Choose file' },
+  { key: 'taxCertificateExpiresAt', label: 'Certificate Expiration Date', type: 'date', placeholder: 'Select expiration date' },
   { key: 'password', label: 'Password', type: 'password', placeholder: 'Minimum 6 characters', required: true, half: true },
   { key: 'confirmPassword', label: 'Confirm Password', type: 'password', placeholder: 'Repeat your password', required: true, half: true },
   { key: 'message', label: 'Additional Information', type: 'textarea', placeholder: 'Tell us about your business and how we can help...' },
@@ -194,6 +195,16 @@ const loginExperienceDefault = {
   primaryActionLabel: 'Sign In',
   secondaryActionLabel: 'Create Account',
   tertiaryActionLabel: 'Request B2B Access',
+  heroBrandTitle: '',
+  heroBrandSubtitle: 'Company Portal',
+  showHeroLogo: true,
+  showHeroBadge: true,
+  formBrandMode: 'full' as const,
+  showFormDescription: true,
+  panelGradientEnabled: false,
+  panelGradientFrom: '#081F6F',
+  panelGradientTo: '#081F6F',
+  panelGradientAngle: 160,
   showBenefits: true,
   showTrustItems: true,
   benefits: [
@@ -219,6 +230,16 @@ const registerExperienceDefault = {
   primaryActionLabel: 'Create account',
   secondaryActionLabel: 'Back to sign in',
   tertiaryActionLabel: 'Request B2B Access',
+  heroBrandTitle: '',
+  heroBrandSubtitle: 'Company Portal',
+  showHeroLogo: true,
+  showHeroBadge: true,
+  formBrandMode: 'full' as const,
+  showFormDescription: true,
+  panelGradientEnabled: false,
+  panelGradientFrom: '#081F6F',
+  panelGradientTo: '#081F6F',
+  panelGradientAngle: 160,
   showBenefits: true,
   showTrustItems: true,
   benefits: loginExperienceDefault.benefits,
@@ -238,6 +259,16 @@ const requestAccessExperienceDefault = {
   tertiaryActionLabel: 'Create Account',
   showBenefits: true,
   showTrustItems: false,
+  heroBrandTitle: '',
+  heroBrandSubtitle: 'B2B Portal',
+  showHeroLogo: true,
+  showHeroBadge: true,
+  formBrandMode: 'hidden' as const,
+  showFormDescription: true,
+  panelGradientEnabled: false,
+  panelGradientFrom: '#081F6F',
+  panelGradientTo: '#081F6F',
+  panelGradientAngle: 160,
   benefits: [
     { icon: 'package-check' as const, title: 'Wholesale Pricing', body: 'Up to 40% off retail prices', tone: 'green' as const },
     { icon: 'calendar-clock' as const, title: 'Net 30 Terms', body: 'Flexible payment options', tone: 'amber' as const },
@@ -247,6 +278,17 @@ const requestAccessExperienceDefault = {
   ],
   trustItems: loginExperienceDefault.trustItems,
 };
+
+const hexColorSchema = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex color.');
+
+const accountPortalRequestFieldSchema = z.object({
+  key: z.string().trim().min(1).max(64),
+  label: z.string().trim().min(1).max(80),
+  type: z.enum(['text', 'email', 'tel', 'url', 'select', 'textarea', 'file', 'password', 'date']),
+  placeholder: z.string().trim().max(160).default(''),
+  required: z.boolean().optional(),
+  half: z.boolean().optional(),
+}).strict();
 
 const accountPortalPageSchema = z.object({
   enabled: z.boolean().default(true),
@@ -259,14 +301,22 @@ const accountPortalPageSchema = z.object({
   primaryActionLabel: z.string().trim().min(1).max(40),
   secondaryActionLabel: z.string().trim().min(1).max(40),
   tertiaryActionLabel: z.string().trim().min(1).max(40),
+  heroBrandTitle: z.string().trim().max(64).default(''),
+  heroBrandSubtitle: z.string().trim().max(48).default('Company Portal'),
+  showHeroLogo: z.boolean().default(true),
+  showHeroBadge: z.boolean().default(true),
+  formBrandMode: z.enum(['full', 'logo', 'hidden']).default('full'),
+  showFormDescription: z.boolean().default(true),
+  panelGradientEnabled: z.boolean().default(false),
+  panelGradientFrom: hexColorSchema.default('#081F6F'),
+  panelGradientTo: hexColorSchema.default('#081F6F'),
+  panelGradientAngle: z.number().int().min(0).max(360).default(160),
   showBenefits: z.boolean().default(true),
   showTrustItems: z.boolean().default(true),
   benefits: z.array(accountPortalBenefitSchema).max(5),
   trustItems: z.array(accountPortalTrustItemSchema).max(4),
 }).strict();
 export type AccountPortalPage = z.infer<typeof accountPortalPageSchema>;
-
-const hexColorSchema = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex color.');
 
 export const accountPortalExperienceSchema = z.object({
   version: z.literal(1).default(1),
@@ -294,10 +344,70 @@ export const accountPortalExperienceSchema = z.object({
   requestAccess: accountPortalPageSchema.extend({
     successTitle: z.string().trim().min(1).max(80).default('Application Submitted!'),
     successMessage: z.string().trim().min(1).max(260).default('Thank you. The team will review your application and contact you with the next step.'),
+    notice: z.object({
+      enabled: z.boolean().default(true),
+      text: z.string().trim().min(1).max(300).default('If you already have a storefront account, use the same email address here.'),
+      backgroundColor: hexColorSchema.default('#EEF4FF'),
+      borderColor: hexColorSchema.default('#AFC6F8'),
+      textColor: hexColorSchema.default('#344054'),
+    }).strict().default({
+      enabled: true,
+      text: 'If you already have a storefront account, use the same email address here.',
+      backgroundColor: '#EEF4FF',
+      borderColor: '#AFC6F8',
+      textColor: '#344054',
+    }),
+    industries: z.array(z.string().trim().min(1).max(80)).min(1).max(30).default([
+      'Apparel & Fashion',
+      'Promotional Products',
+      'Sports & Athletics',
+      'Corporate Branding',
+      'Screen Printing Shop',
+      'Embroidery Business',
+      'Sign & Banner Shop',
+      'Reseller/Distributor',
+      'Other',
+    ]),
+    volumeOptions: z.array(z.string().trim().min(1).max(80)).min(1).max(20).default([
+      'Just starting out',
+      '100-500 transfers/month',
+      '500-1000 transfers/month',
+      '1000-5000 transfers/month',
+      '5000+ transfers/month',
+    ]),
+    formFields: z.array(accountPortalRequestFieldSchema).min(1).max(24).default(
+      ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => ({ ...field })),
+    ),
   }).strict().default({
     ...requestAccessExperienceDefault,
     successTitle: 'Application Submitted!',
     successMessage: 'Thank you. The team will review your application and contact you with the next step.',
+    notice: {
+      enabled: true,
+      text: 'If you already have a storefront account, use the same email address here.',
+      backgroundColor: '#EEF4FF',
+      borderColor: '#AFC6F8',
+      textColor: '#344054',
+    },
+    industries: [
+      'Apparel & Fashion',
+      'Promotional Products',
+      'Sports & Athletics',
+      'Corporate Branding',
+      'Screen Printing Shop',
+      'Embroidery Business',
+      'Sign & Banner Shop',
+      'Reseller/Distributor',
+      'Other',
+    ],
+    volumeOptions: [
+      'Just starting out',
+      '100-500 transfers/month',
+      '500-1000 transfers/month',
+      '1000-5000 transfers/month',
+      '5000+ transfers/month',
+    ],
+    formFields: ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => ({ ...field })),
   }),
 }).strict();
 export type AccountPortalExperience = z.infer<typeof accountPortalExperienceSchema>;

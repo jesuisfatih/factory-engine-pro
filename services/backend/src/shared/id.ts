@@ -43,6 +43,7 @@ export type IdPrefix =
   | 'tpar'
   | 'b2br'
   | 'b2bf'
+  | 'taxex'
   | 'mail'
   | 'miky'
   | 'mtpl'

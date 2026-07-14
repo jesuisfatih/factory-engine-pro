@@ -1342,6 +1342,31 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 14px;
   box-shadow: var(--shadow);
 }
+.portal-tax-notice { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-bottom: 14px; padding: 13px 15px; border: 1px solid #f2b84b; border-radius: 8px; background: #fff8e6; color: #7a4b00; }
+.portal-tax-notice.restricted { border-color: #ef8f8f; background: #fff0f0; color: #9f1f1f; }
+.portal-tax-notice strong, .portal-tax-notice span { display: block; }
+.portal-tax-notice strong { font-size: 13px; }
+.portal-tax-notice span { margin-top: 2px; font-size: 12px; line-height: 1.45; }
+
+.tax-renewal-section { padding: 18px; }
+.tax-renewal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.tax-renewal-heading span:first-child { color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.tax-renewal-heading h3 { margin: 3px 0 4px; font-size: 17px; }
+.tax-renewal-heading p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+.tax-certificate-status,
+.tax-renewal-pending { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; align-items: center; padding: 13px; border: 1px solid #f0bd57; border-radius: 8px; background: #fff8e7; color: #734900; }
+.tax-certificate-status.restricted { border-color: #ef9999; background: #fff0f0; color: #991b1b; }
+.tax-renewal-pending { border-color: #8fc9ad; background: #eefbf4; color: #17613c; }
+.tax-certificate-status strong,
+.tax-certificate-status span,
+.tax-renewal-pending strong,
+.tax-renewal-pending span { display: block; }
+.tax-certificate-status span,
+.tax-renewal-pending span { margin-top: 2px; font-size: 11px; line-height: 1.45; }
+.tax-renewal-form { margin-top: 16px; }
+.tax-renewal-form .field small { display: block; margin-top: 5px; color: var(--text-muted); font-size: 10px; }
+.tax-renewal-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.tax-renewal-action > span { color: var(--text-muted); font-size: 11px; }
 .portal-home-hero span {
   display: block;
   font-size: 10px;
@@ -2126,7 +2151,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   gap: 36px;
   padding: 48px;
-  background: var(--auth-brand-bg);
+  background: var(--auth-brand-background, var(--auth-brand-bg));
   color: var(--auth-brand-text);
   overflow: hidden;
 }
@@ -2139,7 +2164,7 @@ a { color: inherit; text-decoration: none; }
   background:
     linear-gradient(135deg, rgba(60, 160, 112, 0.18), transparent 34%),
     linear-gradient(225deg, rgba(232, 126, 62, 0.16), transparent 34%),
-    var(--auth-brand-bg);
+    transparent;
 }
 
 .auth-brand-panel::after {
@@ -2176,6 +2201,21 @@ a { color: inherit; text-decoration: none; }
   color: var(--auth-brand-bg);
 }
 
+.auth-brand-logo {
+  width: min(180px, 48%);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.auth-brand-logo .auth-brand-mark-img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 64px;
+}
+
 .auth-brand-mark-img {
   display: block;
   width: 100%;
@@ -2191,14 +2231,14 @@ a { color: inherit; text-decoration: none; }
 }
 
 .auth-brand-name span {
-  color: var(--auth-brand-text);
+  color: var(--auth-brand-header-text, var(--auth-brand-text));
   font-size: 17px;
   font-weight: 800;
   line-height: 1.25;
 }
 
 .auth-brand-name small {
-  color: color-mix(in srgb, var(--auth-brand-text) 64%, transparent);
+  color: color-mix(in srgb, var(--auth-brand-header-text, var(--auth-brand-text)) 68%, transparent);
   font-size: 13px;
   font-weight: 600;
 }
@@ -2342,6 +2382,15 @@ a { color: inherit; text-decoration: none; }
   display: block;
   max-width: 132px;
   max-height: 52px;
+  object-fit: contain;
+}
+
+.auth-brand-logo-only {
+  display: block;
+  width: auto;
+  max-width: min(220px, 80%);
+  height: auto;
+  max-height: 72px;
   object-fit: contain;
 }
 
