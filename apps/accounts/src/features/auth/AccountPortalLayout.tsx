@@ -64,13 +64,19 @@ export function AccountPortalLayout({
     '--portal-muted': theme.mutedTextColor,
     '--auth-brand-background': brandBackground,
     '--auth-brand-header-text': page.panelGradientEnabled && isLightColor(page.panelGradientFrom) ? '#172033' : '#ffffff',
+    '--auth-primary-action': page.primaryButtonStyle === 'gradient'
+      ? `linear-gradient(135deg, ${theme.primaryColor}, ${theme.accentColor})`
+      : theme.primaryColor,
   } as CSSProperties;
 
   return (
     <main className={`auth-page portal-density-${theme.density} portal-radius-${theme.radius}`} style={style}>
       <div className={`auth-stage auth-layout-${layout}`}>
         {layout === 'split' ? (
-          <section className="auth-brand-panel" aria-label={`${name} account workspace`}>
+          <section
+            className={`auth-brand-panel auth-brand-align-${page.heroBrandAlignment} auth-brand-logo-${page.heroLogoSize} auth-brand-size-${page.heroBrandSize} auth-benefits-${page.benefitsPlacement}`}
+            aria-label={`${name} account workspace`}
+          >
             <div>
               <div className="auth-brand-row">
                 {page.showHeroLogo && logo ? (

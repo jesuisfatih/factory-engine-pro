@@ -44,6 +44,11 @@ interface RequestPageConfig {
   heroSubtitle: string;
   showHeroLogo: boolean;
   showHeroBadge: boolean;
+  heroBrandAlignment: 'left' | 'center';
+  heroLogoSize: 'standard' | 'large';
+  heroBrandSize: 'standard' | 'large';
+  benefitsPlacement: 'flow' | 'lower';
+  primaryButtonStyle: 'solid' | 'gradient';
   showFormDescription: boolean;
   primaryColor: string;
   primaryGradientEnabled?: boolean;
@@ -88,6 +93,11 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   heroSubtitle: '',
   showHeroLogo: true,
   showHeroBadge: true,
+  heroBrandAlignment: 'left',
+  heroLogoSize: 'standard',
+  heroBrandSize: 'standard',
+  benefitsPlacement: 'flow',
+  primaryButtonStyle: 'solid',
   showFormDescription: true,
   primaryColor: '#081F6F',
   primaryGradientEnabled: false,
@@ -200,12 +210,17 @@ function RequestInvitationView() {
     heroSubtitle: requestExperience?.heroBrandSubtitle || requestExperience?.description || DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
     showHeroLogo: requestExperience?.showHeroLogo ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroLogo,
     showHeroBadge: requestExperience?.showHeroBadge ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroBadge,
+    heroBrandAlignment: requestExperience?.heroBrandAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandAlignment,
+    heroLogoSize: requestExperience?.heroLogoSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroLogoSize,
+    heroBrandSize: requestExperience?.heroBrandSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandSize,
+    benefitsPlacement: requestExperience?.benefitsPlacement ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitsPlacement,
+    primaryButtonStyle: requestExperience?.primaryButtonStyle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryButtonStyle,
     showFormDescription: requestExperience?.showFormDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showFormDescription,
     primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
-    primaryGradientEnabled: requestExperience?.panelGradientEnabled ?? false,
-    primaryGradientFrom: requestExperience?.panelGradientFrom ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
-    primaryGradientTo: requestExperience?.panelGradientTo ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientTo,
-    primaryGradientAngle: requestExperience?.panelGradientAngle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientAngle,
+    primaryGradientEnabled: requestExperience?.primaryButtonStyle === 'gradient',
+    primaryGradientFrom: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
+    primaryGradientTo: portalExperience?.theme.accentColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientTo,
+    primaryGradientAngle: 135,
     fontColor: portalExperience?.theme.textColor ?? DEFAULT_REQUEST_PAGE_CONFIG.fontColor,
     formPanelBackgroundColor: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelBackgroundColor,
     formPanelGradientFrom: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelGradientFrom,
@@ -247,10 +262,11 @@ function RequestInvitationView() {
     pageConfig,
     `linear-gradient(160deg, ${colors.primary} 0%, ${colors.gradientOne} 60%, ${colors.gradientTwo} 100%)`,
   );
-  const actionBackground = getConfiguredGradient(
-    pageConfig,
-    `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`,
-  );
+  const heroStartsLight = pageConfig.primaryGradientEnabled && isLightHex(pageConfig.primaryGradientFrom);
+  const heroIntroColor = heroStartsLight ? '#172033' : '#ffffff';
+  const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
+    ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
+    : colors.primary;
   const formPanelModeSettings = getFormPanelModeSettings(pageConfig.formPanelMode);
   const formPanelBackgroundStyle = getFormPanelBackgroundStyle(pageConfig, colors.primary);
   const formPanelTextColor = normalizeHexColor(pageConfig.formPanelTextColor, fontColor);
@@ -536,26 +552,39 @@ function RequestInvitationView() {
                 color: '#fff',
               }}
             >
-              <div style={{ marginBottom: 36 }}>
+              <div
+                style={{
+                  marginBottom: pageConfig.benefitsPlacement === 'lower' ? 48 : 36,
+                  textAlign: pageConfig.heroBrandAlignment,
+                  alignItems: pageConfig.heroBrandAlignment === 'center' ? 'center' : 'flex-start',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
                 {pageConfig.showHeroLogo && logoUrl ? (
                   <img
                     src={logoUrl}
                     alt={brandName}
-                    style={{ maxWidth: 140, maxHeight: 50, objectFit: 'contain', marginBottom: 10 }}
+                    style={{
+                      maxWidth: pageConfig.heroLogoSize === 'large' ? 196 : 140,
+                      maxHeight: pageConfig.heroLogoSize === 'large' ? 78 : 50,
+                      objectFit: 'contain',
+                      marginBottom: 10,
+                    }}
                   />
                 ) : pageConfig.showHeroBadge ? (
                   <span style={{ fontSize: 44 }}>{brandBadge}</span>
                 ) : null}
-                <h3 style={{ fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: 22, lineHeight: 1.3, letterSpacing: -0.3 }}>
+                <h3 style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
                   {heroTitle}
                 </h3>
-                <p style={{ opacity: 0.8, fontSize: 14, lineHeight: 1.6, marginTop: 8 }}>
+                <p style={{ color: heroIntroColor, opacity: 0.78, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 14, lineHeight: 1.5, marginTop: 6 }}>
                   {heroSubtitle}
                 </p>
               </div>
 
               {pageConfig.benefits.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div style={{ color: '#ffffff', display: 'flex', flexDirection: 'column', gap: 18, marginTop: pageConfig.benefitsPlacement === 'lower' ? 'auto' : 0 }}>
                   {pageConfig.benefits.map((item) => (
                     <div key={`${item.title}-${item.description}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
@@ -590,8 +619,6 @@ function RequestInvitationView() {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
-                overflowY: 'auto',
-                maxHeight: '90vh',
                 borderLeft: isOutlinedFormPanel ? `1px solid ${formPanelBorderColor}` : undefined,
                 boxShadow: isGlassFormPanel ? 'inset 1px 0 0 rgba(255,255,255,0.55)' : undefined,
                 backdropFilter: isGlassFormPanel ? 'blur(12px)' : undefined,
@@ -823,6 +850,14 @@ function normalizeGradientAngle(value: number | undefined, fallback = 160) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(360, Math.max(0, Math.round(parsed)));
+}
+
+function isLightHex(value: string | undefined) {
+  const normalized = normalizeHexColor(value, '#081F6F').replace('#', '');
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 180;
 }
 
 function getConfiguredGradient(pageConfig: RequestPageConfig, fallbackGradient: string) {

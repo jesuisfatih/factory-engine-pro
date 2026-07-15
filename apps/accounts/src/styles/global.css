@@ -2186,6 +2186,45 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 76px;
 }
 
+.auth-brand-align-center .auth-brand-row {
+  justify-content: center;
+  text-align: center;
+}
+
+.auth-brand-align-center .auth-brand-copy {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.auth-brand-align-center .auth-brand-copy p {
+  margin-inline: auto;
+}
+
+.auth-brand-logo-large .auth-brand-logo {
+  width: min(228px, 62%);
+  min-height: 72px;
+}
+
+.auth-brand-logo-large .auth-brand-logo .auth-brand-mark-img {
+  max-height: 88px;
+}
+
+.auth-brand-size-large .auth-brand-name span {
+  font-size: 22px;
+}
+
+.auth-brand-size-large .auth-brand-name small {
+  font-size: 15px;
+}
+
+.auth-brand-size-large .auth-brand-copy h1 {
+  font-size: 48px;
+}
+
+.auth-benefits-lower .auth-benefit-list {
+  margin-top: auto;
+}
+
 .auth-brand-mark,
 .auth-logo-mark {
   width: 48px;
@@ -2560,7 +2599,7 @@ a { color: inherit; text-decoration: none; }
   min-height: 48px;
   border: 1px solid var(--auth-primary);
   border-radius: 8px;
-  background: var(--auth-primary);
+  background: var(--auth-primary-action, var(--auth-primary));
   color: var(--auth-primary-text);
   font-size: 15px;
   font-weight: 800;

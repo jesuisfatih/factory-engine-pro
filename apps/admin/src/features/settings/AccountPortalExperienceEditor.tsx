@@ -175,6 +175,40 @@ export function AccountPortalExperienceEditor({
                 <label><input type="checkbox" checked={page.showFormDescription} disabled={disabled} onChange={(event) => setPageField('showFormDescription', event.target.checked)} /> Show form description</label>
               </div>
             </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-brand-alignment-${surface}`}>Hero brand alignment</label>
+                <select id={`portal-brand-alignment-${surface}`} value={page.heroBrandAlignment} disabled={disabled} onChange={(event) => setPageField('heroBrandAlignment', event.target.value as AccountPortalPage['heroBrandAlignment'])}>
+                  <option value="left">Left</option><option value="center">Centered</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-logo-size-${surface}`}>Hero logo size</label>
+                <select id={`portal-logo-size-${surface}`} value={page.heroLogoSize} disabled={disabled} onChange={(event) => setPageField('heroLogoSize', event.target.value as AccountPortalPage['heroLogoSize'])}>
+                  <option value="standard">Standard</option><option value="large">Large</option>
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-brand-size-${surface}`}>Hero brand text</label>
+                <select id={`portal-brand-size-${surface}`} value={page.heroBrandSize} disabled={disabled} onChange={(event) => setPageField('heroBrandSize', event.target.value as AccountPortalPage['heroBrandSize'])}>
+                  <option value="standard">Standard</option><option value="large">Large</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-benefits-placement-${surface}`}>Benefit card placement</label>
+                <select id={`portal-benefits-placement-${surface}`} value={page.benefitsPlacement} disabled={disabled} onChange={(event) => setPageField('benefitsPlacement', event.target.value as AccountPortalPage['benefitsPlacement'])}>
+                  <option value="flow">Below intro</option><option value="lower">Lower in hero</option>
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor={`portal-primary-button-${surface}`}>Primary button</label>
+              <select id={`portal-primary-button-${surface}`} value={page.primaryButtonStyle} disabled={disabled} onChange={(event) => setPageField('primaryButtonStyle', event.target.value as AccountPortalPage['primaryButtonStyle'])}>
+                <option value="solid">Solid brand color</option><option value="gradient">Brand gradient</option>
+              </select>
+            </div>
             <div className="portal-control-title portal-control-title-row portal-trust-title">
               <span>Hero background</span>
               <label className="portal-inline-check"><input type="checkbox" checked={page.panelGradientEnabled} disabled={disabled} onChange={(event) => setPageField('panelGradientEnabled', event.target.checked)} /> Gradient</label>
@@ -307,7 +341,7 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
           surface === 'requestAccess' ? (
             <RequestAccessPreviewHero page={value.requestAccess} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} primaryColor={value.theme.primaryColor} />
           ) : (
-            <div className="portal-preview-hero" style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
+            <div className={`portal-preview-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement}`} style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
             <div className="portal-preview-brand">
               {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge.charAt(0)}</span> : null}
               <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong>
@@ -347,7 +381,7 @@ function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, 
     ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
     : `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)`;
   return (
-    <div className="portal-preview-hero portal-request-hero" style={{ background }}>
+    <div className={`portal-preview-hero portal-request-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement}`} style={{ background }}>
       <div className="portal-request-brand">
         {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge}</span> : null}
       </div>
@@ -392,7 +426,7 @@ function RequestAccessPreviewForm({ page, theme }: {
           </div>
         ))}
       </div>
-      <div className="portal-preview-button" style={{ background: `linear-gradient(135deg, ${theme.primaryColor}, ${darkenHex(theme.primaryColor, 0.15)})` }}>{page.primaryActionLabel}</div>
+      <div className="portal-preview-button" style={{ background: page.primaryButtonStyle === 'gradient' ? `linear-gradient(135deg, ${theme.primaryColor}, ${darkenHex(theme.primaryColor, 0.15)})` : theme.primaryColor }}>{page.primaryActionLabel}</div>
       <div className="portal-request-signin" style={{ color: theme.mutedTextColor }}>Already have an account? <strong style={{ color: theme.primaryColor }}>{page.secondaryActionLabel}</strong></div>
     </div>
   );
