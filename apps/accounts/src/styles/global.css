@@ -2172,12 +2172,20 @@ a { color: inherit; text-decoration: none; }
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.13;
+  opacity: var(--auth-hero-pattern-opacity, 0.13);
   background-image:
     linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px),
     linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px);
   background-size: 36px 36px;
 }
+
+.auth-hero-pattern-none::after { display: none; }
+.auth-hero-width-narrow { padding-inline: 38px; }
+.auth-hero-width-wide { padding-inline: 60px; }
+
+.auth-stage:has(.auth-hero-width-narrow) { grid-template-columns: minmax(0, 0.82fr) minmax(440px, 1.18fr); }
+.auth-stage:has(.auth-hero-width-balanced) { grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr); }
+.auth-stage:has(.auth-hero-width-wide) { grid-template-columns: minmax(0, 1.2fr) minmax(400px, 0.8fr); }
 
 .auth-brand-row {
   display: flex;

@@ -1,12 +1,26 @@
 import type { CSSProperties, ReactNode } from 'react';
 import {
   BadgeCheck,
+  BadgeDollarSign,
   CalendarClock,
+  CircleCheck,
+  Clock3,
+  CreditCard,
+  FileCheck2,
   Headphones,
+  HeartHandshake,
+  Landmark,
+  Mail,
   PackageCheck,
+  Palette,
+  PhoneCall,
+  Rocket,
+  ShoppingBag,
   ShieldCheck,
+  Sparkles,
   Truck,
   Users2,
+  WalletCards,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -20,12 +34,26 @@ type PortalSurface = 'login' | 'register';
 
 const ICONS: Record<AccountPortalIcon, LucideIcon> = {
   'badge-check': BadgeCheck,
+  'badge-dollar-sign': BadgeDollarSign,
   'calendar-clock': CalendarClock,
+  'circle-check': CircleCheck,
+  'clock-3': Clock3,
+  'credit-card': CreditCard,
+  'file-check-2': FileCheck2,
   headphones: Headphones,
+  'heart-handshake': HeartHandshake,
+  landmark: Landmark,
+  mail: Mail,
   'package-check': PackageCheck,
+  palette: Palette,
+  'phone-call': PhoneCall,
+  rocket: Rocket,
+  'shopping-bag': ShoppingBag,
   'shield-check': ShieldCheck,
+  sparkles: Sparkles,
   truck: Truck,
   users: Users2,
+  'wallet-cards': WalletCards,
 };
 
 export function AccountPortalIconView({ name, size }: { name: AccountPortalIcon; size?: number }) {
@@ -47,7 +75,7 @@ export function AccountPortalLayout({
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
   const logo = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo;
   const experience: AccountPortalExperience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
-  const page = experience[surface];
+  const page = { ...DEFAULT_ACCOUNT_PORTAL_EXPERIENCE[surface], ...experience[surface] };
   const theme = experience.theme;
   const layout = page.enabled ? page.layout : 'centered';
   const brandTitle = page.heroBrandTitle || name;
@@ -74,7 +102,8 @@ export function AccountPortalLayout({
       <div className={`auth-stage auth-layout-${layout}`}>
         {layout === 'split' ? (
           <section
-            className={`auth-brand-panel auth-brand-align-${page.heroBrandAlignment} auth-brand-logo-${page.heroLogoSize} auth-brand-size-${page.heroBrandSize} auth-benefits-${page.benefitsPlacement}`}
+            className={`auth-brand-panel auth-brand-align-${page.heroBrandAlignment} auth-brand-logo-${page.heroLogoSize} auth-brand-size-${page.heroBrandSize} auth-benefits-${page.benefitsPlacement} auth-hero-width-${page.heroPanelWidth} auth-hero-pattern-${page.heroPattern}`}
+            style={{ '--auth-hero-pattern-opacity': String(page.heroPatternOpacity / 100) } as CSSProperties}
             aria-label={`${name} account workspace`}
           >
             <div>
@@ -84,12 +113,12 @@ export function AccountPortalLayout({
                 ) : page.showHeroBadge ? (
                   <div className="auth-brand-mark">{badge.charAt(0)}</div>
                 ) : null}
-                <div className="auth-brand-name"><span>{brandTitle}</span><small>{brandSubtitle}</small></div>
+                {page.showHeroBrandText ? <div className="auth-brand-name"><span>{brandTitle}</span><small>{brandSubtitle}</small></div> : null}
               </div>
               <div className="auth-brand-copy">
-                {page.eyebrow ? <span className="auth-eyebrow">{page.eyebrow}</span> : null}
-                <h1>{page.headline}</h1>
-                <p>{page.description}</p>
+                {page.showEyebrow && page.eyebrow ? <span className="auth-eyebrow">{page.eyebrow}</span> : null}
+                {page.showHeroHeadline ? <h1>{page.headline}</h1> : null}
+                {page.showHeroDescription ? <p>{page.description}</p> : null}
               </div>
             </div>
 
@@ -116,7 +145,7 @@ export function AccountPortalLayout({
 
         <section className="auth-form-panel" aria-label={formLabel}>
           {children}
-          <p className="auth-footer">&copy; {new Date().getFullYear()} {name}. All rights reserved.</p>
+          {page.showFooter ? <p className="auth-footer">&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{name}. {page.footerText}</p> : null}
         </section>
       </div>
     </main>

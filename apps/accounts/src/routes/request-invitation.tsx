@@ -1,55 +1,49 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import {
-  BadgeDollarSign,
-  CalendarClock,
-  CircleCheck,
-  Headphones,
-  Truck,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
-import {
   ACCOUNT_PORTAL_REQUEST_FIELDS,
+  DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
+  type AccountPortalIcon,
   type AccountPortalRequestField,
 } from '@factory-engine-pro/contracts';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
+import { AccountPortalIconView } from '@/features/auth/AccountPortalLayout';
 
 interface BenefitConfig {
-  icon: string;
+  icon: AccountPortalIcon;
   title: string;
   description: string;
 }
 
-const BENEFIT_ICONS: Record<string, LucideIcon> = {
-  '$': BadgeDollarSign,
-  NET: CalendarClock,
-  TEAM: Users,
-  VIP: Headphones,
-  SHIP: Truck,
-  'badge-check': CircleCheck,
-  'calendar-clock': CalendarClock,
-  headphones: Headphones,
-  'package-check': BadgeDollarSign,
-  'shield-check': CircleCheck,
-  truck: Truck,
-  users: Users,
-};
-
 interface RequestPageConfig {
   title: string;
   subtitle: string;
+  primaryActionLabel: string;
+  secondaryActionLabel: string;
+  heroEyebrow: string;
+  brandTitle: string;
+  brandSubtitle: string;
   heroTitle: string;
   heroSubtitle: string;
   showHeroLogo: boolean;
   showHeroBadge: boolean;
+  showHeroBrandText: boolean;
+  showEyebrow: boolean;
+  showHeroHeadline: boolean;
+  showHeroDescription: boolean;
   heroBrandAlignment: 'left' | 'center';
   heroLogoSize: 'standard' | 'large';
   heroBrandSize: 'standard' | 'large';
   benefitsPlacement: 'flow' | 'lower';
+  heroPanelWidth: 'narrow' | 'balanced' | 'wide';
+  heroPattern: 'grid' | 'none';
+  heroPatternOpacity: number;
   primaryButtonStyle: 'solid' | 'gradient';
   showFormDescription: boolean;
+  showFooter: boolean;
+  footerText: string;
+  footerShowYear: boolean;
   primaryColor: string;
   primaryGradientEnabled?: boolean;
   primaryGradientFrom?: string;
@@ -72,6 +66,8 @@ interface RequestPageConfig {
   formPanelBorderColor: string;
   boxShadow: boolean;
   benefits: BenefitConfig[];
+  trustItems: Array<{ icon: AccountPortalIcon; label: string }>;
+  showTrustItems: boolean;
   industries: string[];
   volumeOptions: string[];
   formFields: AccountPortalRequestField[];
@@ -84,21 +80,45 @@ interface RequestPageConfig {
   };
   successTitle: string;
   successMessage: string;
+  successIcon: AccountPortalIcon;
+  showSuccessEmailHint: boolean;
+  successEmailHintPrefix: string;
+  successBackActionLabel: string;
+  submittingActionLabel: string;
+  existingAccountPrompt: string;
+  lockedEmailHint: string;
+  errorDismissLabel: string;
+  certificateExpiringMessage: string;
 }
 
 const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
-  title: 'Request B2B Access',
-  subtitle: 'Tell us about your business to get started',
-  heroTitle: '',
-  heroSubtitle: '',
-  showHeroLogo: true,
-  showHeroBadge: true,
-  heroBrandAlignment: 'left',
-  heroLogoSize: 'standard',
-  heroBrandSize: 'standard',
-  benefitsPlacement: 'flow',
-  primaryButtonStyle: 'solid',
-  showFormDescription: true,
+  title: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.formTitle,
+  subtitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.formDescription,
+  primaryActionLabel: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.primaryActionLabel,
+  secondaryActionLabel: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.secondaryActionLabel,
+  heroEyebrow: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.eyebrow,
+  brandTitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandTitle,
+  brandSubtitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandSubtitle,
+  heroTitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.headline,
+  heroSubtitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.description,
+  showHeroLogo: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroLogo,
+  showHeroBadge: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroBadge,
+  showHeroBrandText: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroBrandText,
+  showEyebrow: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showEyebrow,
+  showHeroHeadline: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroHeadline,
+  showHeroDescription: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroDescription,
+  heroBrandAlignment: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandAlignment,
+  heroLogoSize: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroLogoSize,
+  heroBrandSize: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandSize,
+  benefitsPlacement: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefitsPlacement,
+  heroPanelWidth: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPanelWidth,
+  heroPattern: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPattern,
+  heroPatternOpacity: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPatternOpacity,
+  primaryButtonStyle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.primaryButtonStyle,
+  showFormDescription: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showFormDescription,
+  showFooter: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showFooter,
+  footerText: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerText,
+  footerShowYear: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerShowYear,
   primaryColor: '#081F6F',
   primaryGradientEnabled: false,
   primaryGradientFrom: '#081F6F',
@@ -120,31 +140,11 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   formPanelInputBorderColor: '#D4E3ED',
   formPanelBorderColor: '#E3E8F0',
   boxShadow: true,
-  benefits: [
-    { icon: '$', title: 'Wholesale Pricing', description: 'Up to 40% off retail prices' },
-    { icon: 'NET', title: 'Net 30 Terms', description: 'Flexible payment options' },
-    { icon: 'TEAM', title: 'Team Management', description: 'Add unlimited team members' },
-    { icon: 'VIP', title: 'Priority Support', description: 'Dedicated account manager' },
-    { icon: 'SHIP', title: 'Free Shipping', description: 'On orders over $500' },
-  ],
-  industries: [
-    'Apparel & Fashion',
-    'Promotional Products',
-    'Sports & Athletics',
-    'Corporate Branding',
-    'Screen Printing Shop',
-    'Embroidery Business',
-    'Sign & Banner Shop',
-    'Reseller/Distributor',
-    'Other',
-  ],
-  volumeOptions: [
-    'Just starting out',
-    '100-500 transfers/month',
-    '500-1000 transfers/month',
-    '1000-5000 transfers/month',
-    '5000+ transfers/month',
-  ],
+  benefits: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefits.map((benefit) => ({ icon: benefit.icon, title: benefit.title, description: benefit.body })),
+  trustItems: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.trustItems,
+  showTrustItems: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showTrustItems,
+  industries: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.industries,
+  volumeOptions: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.volumeOptions,
   formFields: ACCOUNT_PORTAL_REQUEST_FIELDS.map((field) => ({ ...field })),
   notice: {
     enabled: true,
@@ -153,9 +153,17 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
     borderColor: '#AFC6F8',
     textColor: '#344054',
   },
-  successTitle: 'Application Submitted!',
-  successMessage:
-    'Thank you for your interest! Our team will review your application and get back to you within 1-2 business days.',
+  successTitle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.successTitle,
+  successMessage: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.successMessage,
+  successIcon: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.successIcon,
+  showSuccessEmailHint: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showSuccessEmailHint,
+  successEmailHintPrefix: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.successEmailHintPrefix,
+  successBackActionLabel: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.successBackActionLabel,
+  submittingActionLabel: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.submittingActionLabel,
+  existingAccountPrompt: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.existingAccountPrompt,
+  lockedEmailHint: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.lockedEmailHint,
+  errorDismissLabel: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.errorDismissLabel,
+  certificateExpiringMessage: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.certificateExpiringMessage,
 };
 
 const STATIC_COLORS = {
@@ -204,18 +212,31 @@ function RequestInvitationView() {
     ...DEFAULT_REQUEST_PAGE_CONFIG,
     title: requestExperience?.formTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.title,
     subtitle: requestExperience?.formDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.subtitle,
-    heroTitle: requestExperience?.heroBrandTitle || (requestExperience
-      ? (requestExperience.headline === 'Partner Program' ? `${brandName} Partner Program` : requestExperience.headline)
-      : ''),
-    heroSubtitle: requestExperience?.heroBrandSubtitle || requestExperience?.description || DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
+    primaryActionLabel: requestExperience?.primaryActionLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryActionLabel,
+    secondaryActionLabel: requestExperience?.secondaryActionLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.secondaryActionLabel,
+    heroEyebrow: requestExperience?.eyebrow ?? DEFAULT_REQUEST_PAGE_CONFIG.heroEyebrow,
+    brandTitle: requestExperience?.heroBrandTitle || brandName,
+    brandSubtitle: requestExperience?.heroBrandSubtitle ?? DEFAULT_REQUEST_PAGE_CONFIG.brandSubtitle,
+    heroTitle: requestExperience?.headline ?? DEFAULT_REQUEST_PAGE_CONFIG.heroTitle,
+    heroSubtitle: requestExperience?.description ?? DEFAULT_REQUEST_PAGE_CONFIG.heroSubtitle,
     showHeroLogo: requestExperience?.showHeroLogo ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroLogo,
     showHeroBadge: requestExperience?.showHeroBadge ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroBadge,
+    showHeroBrandText: requestExperience?.showHeroBrandText ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroBrandText,
+    showEyebrow: requestExperience?.showEyebrow ?? DEFAULT_REQUEST_PAGE_CONFIG.showEyebrow,
+    showHeroHeadline: requestExperience?.showHeroHeadline ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroHeadline,
+    showHeroDescription: requestExperience?.showHeroDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroDescription,
     heroBrandAlignment: requestExperience?.heroBrandAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandAlignment,
     heroLogoSize: requestExperience?.heroLogoSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroLogoSize,
     heroBrandSize: requestExperience?.heroBrandSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandSize,
     benefitsPlacement: requestExperience?.benefitsPlacement ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitsPlacement,
+    heroPanelWidth: requestExperience?.heroPanelWidth ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPanelWidth,
+    heroPattern: requestExperience?.heroPattern ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPattern,
+    heroPatternOpacity: requestExperience?.heroPatternOpacity ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPatternOpacity,
     primaryButtonStyle: requestExperience?.primaryButtonStyle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryButtonStyle,
     showFormDescription: requestExperience?.showFormDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showFormDescription,
+    showFooter: requestExperience?.showFooter ?? DEFAULT_REQUEST_PAGE_CONFIG.showFooter,
+    footerText: requestExperience?.footerText ?? DEFAULT_REQUEST_PAGE_CONFIG.footerText,
+    footerShowYear: requestExperience?.footerShowYear ?? DEFAULT_REQUEST_PAGE_CONFIG.footerShowYear,
     primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
     primaryGradientEnabled: requestExperience?.primaryButtonStyle === 'gradient',
     primaryGradientFrom: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
@@ -229,12 +250,23 @@ function RequestInvitationView() {
     benefits: requestExperience?.showBenefits
       ? requestExperience.benefits.map((benefit) => ({ icon: benefit.icon, title: benefit.title, description: benefit.body }))
       : [],
+    trustItems: requestExperience?.trustItems ?? DEFAULT_REQUEST_PAGE_CONFIG.trustItems,
+    showTrustItems: requestExperience?.showTrustItems ?? DEFAULT_REQUEST_PAGE_CONFIG.showTrustItems,
     industries: requestExperience?.industries ?? DEFAULT_REQUEST_PAGE_CONFIG.industries,
     volumeOptions: requestExperience?.volumeOptions ?? DEFAULT_REQUEST_PAGE_CONFIG.volumeOptions,
     formFields: requestExperience?.formFields ?? DEFAULT_REQUEST_PAGE_CONFIG.formFields,
     notice: requestExperience?.notice ?? DEFAULT_REQUEST_PAGE_CONFIG.notice,
     successTitle: requestExperience?.successTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.successTitle,
     successMessage: requestExperience?.successMessage ?? DEFAULT_REQUEST_PAGE_CONFIG.successMessage,
+    successIcon: requestExperience?.successIcon ?? DEFAULT_REQUEST_PAGE_CONFIG.successIcon,
+    showSuccessEmailHint: requestExperience?.showSuccessEmailHint ?? DEFAULT_REQUEST_PAGE_CONFIG.showSuccessEmailHint,
+    successEmailHintPrefix: requestExperience?.successEmailHintPrefix ?? DEFAULT_REQUEST_PAGE_CONFIG.successEmailHintPrefix,
+    successBackActionLabel: requestExperience?.successBackActionLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.successBackActionLabel,
+    submittingActionLabel: requestExperience?.submittingActionLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.submittingActionLabel,
+    existingAccountPrompt: requestExperience?.existingAccountPrompt ?? DEFAULT_REQUEST_PAGE_CONFIG.existingAccountPrompt,
+    lockedEmailHint: requestExperience?.lockedEmailHint ?? DEFAULT_REQUEST_PAGE_CONFIG.lockedEmailHint,
+    errorDismissLabel: requestExperience?.errorDismissLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.errorDismissLabel,
+    certificateExpiringMessage: requestExperience?.certificateExpiringMessage ?? DEFAULT_REQUEST_PAGE_CONFIG.certificateExpiringMessage,
   }), [brandName, portalExperience, requestExperience]);
   const [formData, setFormData] = useState<Record<string, string>>(() => ({
     email: emailFromUrl,
@@ -249,19 +281,19 @@ function RequestInvitationView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const certificateWarning = certificateExpiryWarning(formData.taxCertificateExpiresAt);
+  const certificateWarning = certificateExpiryWarning(formData.taxCertificateExpiresAt, pageConfig.certificateExpiringMessage);
 
   const colors = makeColors(pageConfig.primaryColor || DEFAULT_PRIMARY_COLOR);
   const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
   const boxShadowEnabled = pageConfig.boxShadow !== false;
-  const heroTitle = pageConfig.heroTitle || `${brandName} Partner Program`;
-  const heroSubtitle =
-    pageConfig.heroSubtitle ||
-    'Join our exclusive B2B network and unlock premium wholesale benefits.';
+  const heroFlexBasis = pageConfig.heroPanelWidth === 'narrow' ? '33%' : pageConfig.heroPanelWidth === 'wide' ? '46%' : '38%';
   const heroBackground = getConfiguredGradient(
     pageConfig,
     `linear-gradient(160deg, ${colors.primary} 0%, ${colors.gradientOne} 60%, ${colors.gradientTwo} 100%)`,
   );
+  const heroBackgroundWithPattern = pageConfig.heroPattern === 'grid'
+    ? `linear-gradient(90deg, rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), linear-gradient(rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), ${heroBackground}`
+    : heroBackground;
   const heroStartsLight = pageConfig.primaryGradientEnabled && isLightHex(pageConfig.primaryGradientFrom);
   const heroIntroColor = heroStartsLight ? '#172033' : '#ffffff';
   const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
@@ -380,6 +412,7 @@ function RequestInvitationView() {
   };
 
   const renderField = (field: AccountPortalRequestField) => {
+    if (field.visible === false) return null;
     const isRequired = Boolean(field.required);
     const value = formData[field.key] || '';
     const isLockedEmailField = field.key === 'email' && emailLocked;
@@ -399,9 +432,7 @@ function RequestInvitationView() {
             required={isRequired}
             style={{ ...inputStyle, padding: '8px 12px' }}
           />
-          <p style={{ fontSize: 12, color: formPanelMutedTextColor, marginTop: 4, marginBottom: 0 }}>
-            PDF, JPEG, PNG or WebP (max 10MB)
-          </p>
+          {field.helpText ? <p style={{ fontSize: 12, color: formPanelMutedTextColor, marginTop: 4, marginBottom: 0 }}>{field.helpText}</p> : null}
         </div>
       );
     }
@@ -421,7 +452,7 @@ function RequestInvitationView() {
             required={isRequired}
             style={inputStyle}
           >
-            <option value="">Select {field.label.toLowerCase()}</option>
+            <option value="">{field.selectPlaceholder || getPlaceholder(field)}</option>
             {options.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}
@@ -478,7 +509,7 @@ function RequestInvitationView() {
         />
         {isLockedEmailField ? (
           <p style={{ fontSize: 11, color: colors.primary, marginTop: 4, marginBottom: 0 }}>
-            Email linked from your storefront session.
+            {pageConfig.lockedEmailHint}
           </p>
         ) : null}
         {field.key === 'taxCertificateExpiresAt' && certificateWarning ? (
@@ -543,9 +574,10 @@ function RequestInvitationView() {
           <div style={{ display: 'flex', minHeight: 620 }}>
             {requestExperience?.layout !== 'centered' ? <div
               style={{
-                flex: '0 0 38%',
+                flex: `0 0 ${heroFlexBasis}`,
                 padding: '44px 32px',
-                background: heroBackground,
+                background: heroBackgroundWithPattern,
+                backgroundSize: pageConfig.heroPattern === 'grid' ? '36px 36px, 36px 36px, auto' : undefined,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
@@ -575,12 +607,17 @@ function RequestInvitationView() {
                 ) : pageConfig.showHeroBadge ? (
                   <span style={{ fontSize: 44 }}>{brandBadge}</span>
                 ) : null}
-                <h3 style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
-                  {heroTitle}
-                </h3>
-                <p style={{ color: heroIntroColor, opacity: 0.78, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 14, lineHeight: 1.5, marginTop: 6 }}>
-                  {heroSubtitle}
-                </p>
+                {pageConfig.showHeroBrandText ? <div style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
+                  <div>{pageConfig.brandTitle}</div>
+                  {pageConfig.brandSubtitle ? <div style={{ opacity: 0.72, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 13, fontWeight: 600, marginTop: 3 }}>{pageConfig.brandSubtitle}</div> : null}
+                </div> : null}
+                {pageConfig.showEyebrow && pageConfig.heroEyebrow ? <div style={{ color: heroIntroColor, opacity: 0.8, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 24 }}>{pageConfig.heroEyebrow}</div> : null}
+                {pageConfig.showHeroHeadline ? <h3 style={{ color: heroIntroColor, fontWeight: 700, margin: '10px 0 0', fontSize: pageConfig.heroBrandSize === 'large' ? 30 : 24, lineHeight: 1.24, letterSpacing: 0 }}>
+                  {pageConfig.heroTitle}
+                </h3> : null}
+                {pageConfig.showHeroDescription ? <p style={{ color: heroIntroColor, opacity: 0.78, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 14, lineHeight: 1.5, marginTop: 8 }}>
+                  {pageConfig.heroSubtitle}
+                </p> : null}
               </div>
 
               {pageConfig.benefits.length > 0 ? (
@@ -610,6 +647,9 @@ function RequestInvitationView() {
                   ))}
                 </div>
               ) : null}
+              {pageConfig.showTrustItems && pageConfig.trustItems.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20 }}>
+                {pageConfig.trustItems.map((item) => <span key={`${item.icon}-${item.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff', background: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 8px', fontSize: 11, fontWeight: 700 }}><AccountPortalIconView name={item.icon} size={13} />{item.label}</span>)}
+              </div> : null}
             </div> : null}
 
             <div
@@ -641,15 +681,15 @@ function RequestInvitationView() {
                       color: STATIC_COLORS.green,
                     }}
                   >
-                    OK
+                    <AccountPortalIconView name={pageConfig.successIcon} size={28} />
                   </div>
                   <h4 style={{ fontWeight: 700, marginBottom: 8, color: formPanelTextColor, fontSize: 20 }}>
-                    {pageConfig.successTitle || 'Application Submitted!'}
+                    {pageConfig.successTitle}
                   </h4>
                   <p style={{ color: formPanelMutedTextColor, marginBottom: 16, lineHeight: 1.6 }}>
                     {pageConfig.successMessage || 'Thank you for your interest. Our team will review your application and get back to you.'}
                   </p>
-                  <div
+                  {pageConfig.showSuccessEmailHint ? <div
                     style={{
                       background: colors.primarySoft,
                       borderRadius: 10,
@@ -660,8 +700,9 @@ function RequestInvitationView() {
                       border: `1px solid ${colors.primaryBorder}`,
                     }}
                   >
-                    Check your inbox for updates at <strong>{formData.email}</strong>
+                    {pageConfig.successEmailHintPrefix} <strong>{formData.email}</strong>
                   </div>
+                  : null}
                   <a
                     href="/login"
                     style={{
@@ -678,7 +719,7 @@ function RequestInvitationView() {
                       textDecoration: 'none',
                     }}
                   >
-                    Back to Login
+                    {pageConfig.successBackActionLabel}
                   </a>
                 </div>
               ) : (
@@ -689,7 +730,7 @@ function RequestInvitationView() {
                     </h4>
                     {pageConfig.showFormDescription ? (
                       <p style={{ color: formPanelMutedTextColor, marginBottom: 0, fontSize: 14 }}>
-                        {pageConfig.subtitle || 'Tell us about your business to get started'}
+                        {pageConfig.subtitle}
                       </p>
                     ) : null}
                   </div>
@@ -730,7 +771,7 @@ function RequestInvitationView() {
                         type="button"
                         onClick={() => setError('')}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: STATIC_COLORS.textMuted, fontSize: 16, padding: 0, lineHeight: 1 }}
-                        aria-label="Dismiss"
+                        aria-label={pageConfig.errorDismissLabel}
                       >
                         x
                       </button>
@@ -762,13 +803,13 @@ function RequestInvitationView() {
                         fontFamily: 'Inter, system-ui, sans-serif',
                       }}
                     >
-                      {loading ? 'Submitting Application...' : (requestExperience?.primaryActionLabel ?? 'Submit Application')}
+                      {loading ? pageConfig.submittingActionLabel : pageConfig.primaryActionLabel}
                     </button>
 
                     <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: 16, marginBottom: 0, fontSize: 14 }}>
-                      Already have an account?{' '}
+                      {pageConfig.existingAccountPrompt}{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
-                        {requestExperience?.secondaryActionLabel ?? 'Sign in'}
+                        {pageConfig.secondaryActionLabel}
                       </a>
                     </p>
                   </form>
@@ -778,6 +819,7 @@ function RequestInvitationView() {
           </div>
         </div>
       </div>
+      {pageConfig.showFooter ? <p style={{ color: formPanelMutedTextColor, fontSize: 12, margin: '16px 0 0', textAlign: 'center' }}>&copy; {pageConfig.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {pageConfig.footerText}</p> : null}
     </div>
   );
 }
@@ -785,8 +827,7 @@ function RequestInvitationView() {
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
 
 function renderBenefitIcon(item: BenefitConfig) {
-  const Icon = BENEFIT_ICONS[item.icon] ?? CircleCheck;
-  return <Icon size={22} strokeWidth={2} aria-hidden="true" />;
+  return <AccountPortalIconView name={item.icon} size={22} />;
 }
 
 function currentSearchParams() {
@@ -934,17 +975,17 @@ function getSelectOptions(pageConfig: RequestPageConfig, fieldKey: string) {
 }
 
 function getPlaceholder(field: AccountPortalRequestField) {
-  return field.placeholder || `Enter ${field.label.toLowerCase()}`;
+  return field.placeholder;
 }
 
-function certificateExpiryWarning(value: string | undefined) {
+function certificateExpiryWarning(value: string | undefined, warningMessage: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
   const expiresAt = new Date(`${value}T23:59:59.999Z`);
   if (Number.isNaN(expiresAt.getTime())) return '';
   const daysRemaining = Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-  if (daysRemaining < 0) return 'This certificate has expired. Upload a current certificate.';
+  if (daysRemaining < 0) return warningMessage;
   if (daysRemaining <= 90) {
-    return 'Your tax exemption certificate will expire soon. Please update it as soon as possible.';
+    return warningMessage;
   }
   return '';
 }

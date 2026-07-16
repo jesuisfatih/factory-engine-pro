@@ -1,19 +1,33 @@
 import { useState } from 'react';
 import {
   BadgeCheck,
+  BadgeDollarSign,
   CalendarClock,
   ChevronDown,
   ChevronUp,
+  CircleCheck,
+  Clock3,
+  CreditCard,
+  FileCheck2,
   Headphones,
+  HeartHandshake,
+  Landmark,
+  Mail,
   Monitor,
   PackageCheck,
+  Palette,
+  PhoneCall,
   Plus,
+  Rocket,
   RotateCcw,
+  ShoppingBag,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Trash2,
   Truck,
   Users,
+  WalletCards,
   type LucideIcon,
 } from 'lucide-react';
 import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE } from '@factory-engine-pro/contracts';
@@ -35,12 +49,26 @@ const SURFACES: Array<{ id: Surface; label: string }> = [
 
 const ICONS: Record<AccountPortalIcon, LucideIcon> = {
   'badge-check': BadgeCheck,
+  'badge-dollar-sign': BadgeDollarSign,
   'calendar-clock': CalendarClock,
+  'circle-check': CircleCheck,
+  'clock-3': Clock3,
+  'credit-card': CreditCard,
+  'file-check-2': FileCheck2,
   headphones: Headphones,
+  'heart-handshake': HeartHandshake,
+  landmark: Landmark,
+  mail: Mail,
   'package-check': PackageCheck,
+  palette: Palette,
+  'phone-call': PhoneCall,
+  rocket: Rocket,
+  'shopping-bag': ShoppingBag,
   'shield-check': ShieldCheck,
+  sparkles: Sparkles,
   truck: Truck,
   users: Users,
+  'wallet-cards': WalletCards,
 };
 
 const ICON_OPTIONS = Object.keys(ICONS) as AccountPortalIcon[];
@@ -83,7 +111,7 @@ export function AccountPortalExperienceEditor({
   };
 
   const addBenefit = () => {
-    if (page.benefits.length >= 5) return;
+    if (page.benefits.length >= 8) return;
     setPageField('benefits', [
       ...page.benefits,
       { icon: 'badge-check', title: 'New benefit', body: 'Explain the value customers receive.', tone: 'blue' },
@@ -94,6 +122,14 @@ export function AccountPortalExperienceEditor({
     const formFields = [...value.requestAccess.formFields];
     formFields[index] = { ...formFields[index], ...patch };
     onChange({ ...value, requestAccess: { ...value.requestAccess, formFields } });
+  };
+
+  const moveRequestField = (index: number, direction: -1 | 1) => {
+    const fields = [...value.requestAccess.formFields];
+    const target = index + direction;
+    if (target < 0 || target >= fields.length) return;
+    [fields[index], fields[target]] = [fields[target], fields[index]];
+    onChange({ ...value, requestAccess: { ...value.requestAccess, formFields: fields } });
   };
 
   return (
@@ -172,7 +208,13 @@ export function AccountPortalExperienceEditor({
               <div className="field portal-toggle-stack">
                 <label><input type="checkbox" checked={page.showHeroLogo} disabled={disabled} onChange={(event) => setPageField('showHeroLogo', event.target.checked)} /> Show hero logo</label>
                 <label><input type="checkbox" checked={page.showHeroBadge} disabled={disabled} onChange={(event) => setPageField('showHeroBadge', event.target.checked)} /> Show fallback badge</label>
+                <label><input type="checkbox" checked={page.showHeroBrandText} disabled={disabled} onChange={(event) => setPageField('showHeroBrandText', event.target.checked)} /> Show brand title</label>
+                <label><input type="checkbox" checked={page.showEyebrow} disabled={disabled} onChange={(event) => setPageField('showEyebrow', event.target.checked)} /> Show eyebrow</label>
+                <label><input type="checkbox" checked={page.showHeroHeadline} disabled={disabled} onChange={(event) => setPageField('showHeroHeadline', event.target.checked)} /> Show headline</label>
+                <label><input type="checkbox" checked={page.showHeroDescription} disabled={disabled} onChange={(event) => setPageField('showHeroDescription', event.target.checked)} /> Show hero description</label>
                 <label><input type="checkbox" checked={page.showFormDescription} disabled={disabled} onChange={(event) => setPageField('showFormDescription', event.target.checked)} /> Show form description</label>
+                <label><input type="checkbox" checked={page.showFooter} disabled={disabled} onChange={(event) => setPageField('showFooter', event.target.checked)} /> Show footer</label>
+                <label><input type="checkbox" checked={page.footerShowYear} disabled={disabled} onChange={(event) => setPageField('footerShowYear', event.target.checked)} /> Show footer year</label>
               </div>
             </div>
             <div className="field-row">
@@ -186,6 +228,12 @@ export function AccountPortalExperienceEditor({
                 <label htmlFor={`portal-logo-size-${surface}`}>Hero logo size</label>
                 <select id={`portal-logo-size-${surface}`} value={page.heroLogoSize} disabled={disabled} onChange={(event) => setPageField('heroLogoSize', event.target.value as AccountPortalPage['heroLogoSize'])}>
                   <option value="standard">Standard</option><option value="large">Large</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-hero-width-${surface}`}>Hero panel width</label>
+                <select id={`portal-hero-width-${surface}`} value={page.heroPanelWidth} disabled={disabled} onChange={(event) => setPageField('heroPanelWidth', event.target.value as AccountPortalPage['heroPanelWidth'])}>
+                  <option value="narrow">Narrow</option><option value="balanced">Balanced</option><option value="wide">Wide</option>
                 </select>
               </div>
             </div>
@@ -221,6 +269,18 @@ export function AccountPortalExperienceEditor({
               <label htmlFor={`portal-gradient-angle-${surface}`}>Gradient angle ({page.panelGradientAngle} degrees)</label>
               <input id={`portal-gradient-angle-${surface}`} type="range" min="0" max="360" value={page.panelGradientAngle} disabled={disabled} onChange={(event) => setPageField('panelGradientAngle', Number(event.target.value))} />
             </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-hero-pattern-${surface}`}>Hero pattern</label>
+                <select id={`portal-hero-pattern-${surface}`} value={page.heroPattern} disabled={disabled} onChange={(event) => setPageField('heroPattern', event.target.value as AccountPortalPage['heroPattern'])}>
+                  <option value="grid">Grid</option><option value="none">None</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-pattern-opacity-${surface}`}>Pattern opacity ({page.heroPatternOpacity}%)</label>
+                <input id={`portal-pattern-opacity-${surface}`} type="range" min="0" max="30" value={page.heroPatternOpacity} disabled={disabled} onChange={(event) => setPageField('heroPatternOpacity', Number(event.target.value))} />
+              </div>
+            </div>
             <TextField label="Eyebrow" value={page.eyebrow} disabled={disabled} maxLength={48} onChange={(eyebrow) => setPageField('eyebrow', eyebrow)} />
             <TextField label="Hero headline" value={page.headline} disabled={disabled} maxLength={120} onChange={(headline) => setPageField('headline', headline)} />
             <TextArea label="Hero description" value={page.description} disabled={disabled} maxLength={260} onChange={(description) => setPageField('description', description)} />
@@ -235,6 +295,7 @@ export function AccountPortalExperienceEditor({
               </div>
             ) : null}
             <TextArea label="Form description" value={page.formDescription} disabled={disabled} maxLength={180} onChange={(formDescription) => setPageField('formDescription', formDescription)} />
+            <TextField label="Footer text" value={page.footerText} disabled={disabled} maxLength={120} onChange={(footerText) => setPageField('footerText', footerText)} />
             <div className="field-row">
               <TextField label="Secondary action" value={page.secondaryActionLabel} disabled={disabled} maxLength={40} onChange={(secondaryActionLabel) => setPageField('secondaryActionLabel', secondaryActionLabel)} />
               <TextField label="Tertiary action" value={page.tertiaryActionLabel} disabled={disabled} maxLength={40} onChange={(tertiaryActionLabel) => setPageField('tertiaryActionLabel', tertiaryActionLabel)} />
@@ -253,13 +314,36 @@ export function AccountPortalExperienceEditor({
               </div>
               <TextArea label="Industries (one per line)" value={value.requestAccess.industries.join('\n')} disabled={disabled} maxLength={1200} onChange={(next) => onChange({ ...value, requestAccess: { ...value.requestAccess, industries: lines(next) } })} />
               <TextArea label="Monthly volume choices (one per line)" value={value.requestAccess.volumeOptions.join('\n')} disabled={disabled} maxLength={800} onChange={(next) => onChange({ ...value, requestAccess: { ...value.requestAccess, volumeOptions: lines(next) } })} />
+              <div className="field-row">
+                <TextField label="Success email hint" value={value.requestAccess.successEmailHintPrefix} disabled={disabled} maxLength={140} onChange={(successEmailHintPrefix) => onChange({ ...value, requestAccess: { ...value.requestAccess, successEmailHintPrefix } })} />
+                <TextField label="Success back action" value={value.requestAccess.successBackActionLabel} disabled={disabled} maxLength={40} onChange={(successBackActionLabel) => onChange({ ...value, requestAccess: { ...value.requestAccess, successBackActionLabel } })} />
+              </div>
+              <div className="field-row">
+                <div className="field"><label htmlFor="portal-success-icon">Success icon</label><select id="portal-success-icon" value={value.requestAccess.successIcon} disabled={disabled} onChange={(event) => onChange({ ...value, requestAccess: { ...value.requestAccess, successIcon: event.target.value as AccountPortalIcon } })}>{ICON_OPTIONS.map((icon) => <option key={icon} value={icon}>{icon.replace(/-/g, ' ')}</option>)}</select></div>
+                <TextField label="Submitting label" value={value.requestAccess.submittingActionLabel} disabled={disabled} maxLength={60} onChange={(submittingActionLabel) => onChange({ ...value, requestAccess: { ...value.requestAccess, submittingActionLabel } })} />
+              </div>
+              <div className="field-row">
+                <TextField label="Existing account prompt" value={value.requestAccess.existingAccountPrompt} disabled={disabled} maxLength={140} onChange={(existingAccountPrompt) => onChange({ ...value, requestAccess: { ...value.requestAccess, existingAccountPrompt } })} />
+                <TextField label="Locked email hint" value={value.requestAccess.lockedEmailHint} disabled={disabled} maxLength={180} onChange={(lockedEmailHint) => onChange({ ...value, requestAccess: { ...value.requestAccess, lockedEmailHint } })} />
+              </div>
+              <div className="field-row">
+                <TextField label="Certificate expiry warning" value={value.requestAccess.certificateExpiringMessage} disabled={disabled} maxLength={300} onChange={(certificateExpiringMessage) => onChange({ ...value, requestAccess: { ...value.requestAccess, certificateExpiringMessage } })} />
+                <div className="field portal-toggle-stack"><label><input type="checkbox" checked={value.requestAccess.showSuccessEmailHint} disabled={disabled} onChange={(event) => onChange({ ...value, requestAccess: { ...value.requestAccess, showSuccessEmailHint: event.target.checked } })} /> Show success email hint</label></div>
+              </div>
               <div className="portal-control-title portal-trust-title">Form fields</div>
               <div className="portal-request-field-editor-list">
                 {value.requestAccess.formFields.map((field, index) => (
                   <div className="portal-request-field-editor" key={field.key}>
                     <input value={field.label} maxLength={80} disabled={disabled} aria-label={`${field.key} label`} onChange={(event) => updateRequestField(index, { label: event.target.value })} />
                     <code>{field.key}</code>
+                    <label><input type="checkbox" checked={field.visible !== false} disabled={disabled} onChange={(event) => updateRequestField(index, { visible: event.target.checked })} /> Show</label>
                     <label><input type="checkbox" checked={Boolean(field.required)} disabled={disabled} onChange={(event) => updateRequestField(index, { required: event.target.checked })} /> Required</label>
+                    <label><input type="checkbox" checked={Boolean(field.half)} disabled={disabled} onChange={(event) => updateRequestField(index, { half: event.target.checked })} /> Half row</label>
+                    <input value={field.placeholder} maxLength={160} disabled={disabled} aria-label={`${field.key} placeholder`} placeholder="Placeholder" onChange={(event) => updateRequestField(index, { placeholder: event.target.value })} />
+                    {field.type === 'select' ? <input value={field.selectPlaceholder ?? ''} maxLength={160} disabled={disabled} aria-label={`${field.key} select placeholder`} placeholder="Empty select label" onChange={(event) => updateRequestField(index, { selectPlaceholder: event.target.value })} /> : null}
+                    <input value={field.helpText ?? ''} maxLength={240} disabled={disabled} aria-label={`${field.key} help text`} placeholder="Optional help text" onChange={(event) => updateRequestField(index, { helpText: event.target.value })} />
+                    <button type="button" className="icon-btn" disabled={disabled || index === 0} onClick={() => moveRequestField(index, -1)} title="Move field up"><ChevronUp size={14} /></button>
+                    <button type="button" className="icon-btn" disabled={disabled || index === value.requestAccess.formFields.length - 1} onClick={() => moveRequestField(index, 1)} title="Move field down"><ChevronDown size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -290,7 +374,7 @@ export function AccountPortalExperienceEditor({
                 </div>
               ))}
             </div>
-            <button type="button" className="btn portal-add-benefit" disabled={disabled || page.benefits.length >= 5} onClick={addBenefit}><Plus size={14} /> Add benefit</button>
+            <button type="button" className="btn portal-add-benefit" disabled={disabled || page.benefits.length >= 8} onClick={addBenefit}><Plus size={14} /> Add benefit</button>
 
             <div className="portal-control-title portal-control-title-row portal-trust-title">
               <span>Trust strip</span>
@@ -315,7 +399,7 @@ export function AccountPortalExperienceEditor({
                 </div>
               ))}
             </div>
-            <button type="button" className="btn portal-add-benefit" disabled={disabled || page.trustItems.length >= 4} onClick={() => setPageField('trustItems', [...page.trustItems, { icon: 'shield-check', label: 'New trust item' }])}><Plus size={14} /> Add trust item</button>
+            <button type="button" className="btn portal-add-benefit" disabled={disabled || page.trustItems.length >= 6} onClick={() => setPageField('trustItems', [...page.trustItems, { icon: 'shield-check', label: 'New trust item' }])}><Plus size={14} /> Add trust item</button>
           </div>
         </div>
 
