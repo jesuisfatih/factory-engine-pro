@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { CUSTOMER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { CUSTOMER_PERMISSIONS, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import {
   LayoutDashboard, MapPin, LifeBuoy, Users2, LogOut, ShoppingCart, FileText,
   RotateCw, MapPinned, Truck, FileSpreadsheet, FolderArchive, UserCircle,
@@ -71,6 +71,7 @@ export function Sidebar({ collapsed }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
+  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
   const roleLabel = customerRoleLabel(principal);
   const permissions = new Set(principal?.permissions ?? []);
   const logout = () => {
@@ -81,7 +82,7 @@ export function Sidebar({ collapsed }: Props) {
   return (
     <aside className="sidebar" data-i18n-section="sidebar">
       <div className="workspace">
-        {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" /> : <div className="ws-badge">{brandBadge}</div>}
+        {brandLogo ? <img className="ws-logo" src={brandLogo} alt="" /> : <div className="ws-badge">{brandBadge}</div>}
         <div className="ws-meta">
           <div className="name">{brandName}</div>
           <div className="role">{t('app.workspace')}</div>

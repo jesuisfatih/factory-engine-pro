@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Users2 } from 'lucide-react';
+import { resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
 import { AccountPortalLayout, useAccountPortalSurface } from '@/features/auth/AccountPortalLayout';
@@ -347,7 +348,11 @@ function Brand({ hero = false, surface }: { hero?: boolean; surface?: 'login' | 
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
   const page = surface ? brandQuery.data?.accountPortalExperience?.[surface] : null;
   const mode = page?.formBrandMode ?? 'full';
-  const logo = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo;
+  const panelBackground = brandQuery.data?.accountPortalExperience?.theme.panelBackground ?? '#FFFFFF';
+  const logoSurface = page?.formLogoSurface === 'auto' || !page?.formLogoSurface
+    ? (isLightSurface(panelBackground) ? 'light' : 'dark')
+    : page.formLogoSurface;
+  const logo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, logoSurface);
   if (mode === 'hidden') return null;
   const className = hero ? 'invite-brand' : 'auth-brand';
   const size = hero ? 44 : 40;
@@ -367,6 +372,15 @@ function Brand({ hero = false, surface }: { hero?: boolean; surface?: 'login' | 
       </div>
     </div>
   );
+}
+
+function isLightSurface(hex: string) {
+  const value = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return true;
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 180;
 }
 
 const REMEMBERED_EMAIL_KEY = 'factory-engine-pro.accounts.remembered-email';

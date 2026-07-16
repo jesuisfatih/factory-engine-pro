@@ -8,6 +8,9 @@ export function useWorkspaceBrand() {
     queryKey: workspaceBrandQueryKey,
     queryFn: () => accountsApi.workspaceBrand(),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 }
 

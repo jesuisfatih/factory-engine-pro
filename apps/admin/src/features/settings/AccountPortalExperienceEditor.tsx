@@ -8,6 +8,7 @@ import {
   CircleCheck,
   Clock3,
   CreditCard,
+  ExternalLink,
   FileCheck2,
   Headphones,
   HeartHandshake,
@@ -30,21 +31,22 @@ import {
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
-import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE } from '@factory-engine-pro/contracts';
+import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import type {
   AccountPortalBenefit,
   AccountPortalExperience,
   AccountPortalIcon,
   AccountPortalPage,
   AccountPortalRequestField,
+  BrandAssets,
 } from '@factory-engine-pro/contracts';
 
 type Surface = 'login' | 'register' | 'requestAccess';
 
-const SURFACES: Array<{ id: Surface; label: string }> = [
-  { id: 'login', label: 'Login' },
-  { id: 'register', label: 'Register' },
-  { id: 'requestAccess', label: 'B2B Request' },
+const SURFACES: Array<{ id: Surface; label: string; description: string; path: string }> = [
+  { id: 'login', label: 'Login', description: 'Existing customer sign-in page', path: '/login' },
+  { id: 'register', label: 'Create account', description: 'New customer self-registration page', path: '/register' },
+  { id: 'requestAccess', label: 'B2B application', description: 'Business account request form', path: '/request-invitation' },
 ];
 
 const ICONS: Record<AccountPortalIcon, LucideIcon> = {
@@ -79,6 +81,7 @@ export function AccountPortalExperienceEditor({
   workspaceName,
   brandBadge,
   brandLogo,
+  brandAssets,
   disabled,
 }: {
   value: AccountPortalExperience;
@@ -86,11 +89,13 @@ export function AccountPortalExperienceEditor({
   workspaceName: string;
   brandBadge: string;
   brandLogo: string;
+  brandAssets: BrandAssets;
   disabled: boolean;
 }) {
   const [surface, setSurface] = useState<Surface>('login');
   const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop');
   const page = value[surface];
+  const surfaceMeta = SURFACES.find((item) => item.id === surface) ?? SURFACES[0];
   const setPage = (next: AccountPortalPage) => onChange({ ...value, [surface]: next });
   const setPageField = <K extends keyof AccountPortalPage>(field: K, next: AccountPortalPage[K]) => {
     setPage({ ...page, [field]: next });
@@ -154,6 +159,10 @@ export function AccountPortalExperienceEditor({
             {item.label}
           </button>
         ))}
+      </div>
+      <div className="portal-surface-context">
+        <div><strong>{surfaceMeta.label}</strong><span>{surfaceMeta.description}. Changes here do not alter the other two pages.</span></div>
+        <a className="btn" href={publicPortalUrl(surfaceMeta.path)} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open page</a>
       </div>
 
       <div className="portal-editor-grid">
@@ -245,6 +254,18 @@ export function AccountPortalExperienceEditor({
                 </select>
               </div>
               <div className="field">
+                <label htmlFor={`portal-hero-logo-surface-${surface}`}>Hero logo contrast</label>
+                <select id={`portal-hero-logo-surface-${surface}`} value={page.heroLogoSurface} disabled={disabled} onChange={(event) => setPageField('heroLogoSurface', event.target.value as AccountPortalPage['heroLogoSurface'])}>
+                  <option value="auto">Automatic for background</option><option value="light">Logo for light background</option><option value="dark">Logo for dark background</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-form-logo-surface-${surface}`}>Form logo contrast</label>
+                <select id={`portal-form-logo-surface-${surface}`} value={page.formLogoSurface} disabled={disabled} onChange={(event) => setPageField('formLogoSurface', event.target.value as AccountPortalPage['formLogoSurface'])}>
+                  <option value="auto">Automatic for background</option><option value="light">Logo for light background</option><option value="dark">Logo for dark background</option>
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor={`portal-benefits-placement-${surface}`}>Benefit card placement</label>
                 <select id={`portal-benefits-placement-${surface}`} value={page.benefitsPlacement} disabled={disabled} onChange={(event) => setPageField('benefitsPlacement', event.target.value as AccountPortalPage['benefitsPlacement'])}>
                   <option value="flow">Below intro</option><option value="lower">Lower in hero</option>
@@ -256,6 +277,53 @@ export function AccountPortalExperienceEditor({
               <select id={`portal-primary-button-${surface}`} value={page.primaryButtonStyle} disabled={disabled} onChange={(event) => setPageField('primaryButtonStyle', event.target.value as AccountPortalPage['primaryButtonStyle'])}>
                 <option value="solid">Solid brand color</option><option value="gradient">Brand gradient</option>
               </select>
+            </div>
+            <div className="portal-control-title portal-trust-title">Position and fit</div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-vertical-alignment-${surface}`}>Hero content position</label>
+                <select id={`portal-vertical-alignment-${surface}`} value={page.heroVerticalAlignment} disabled={disabled} onChange={(event) => setPageField('heroVerticalAlignment', event.target.value as AccountPortalPage['heroVerticalAlignment'])}>
+                  <option value="top">Top</option><option value="center">Centered</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-hero-padding-${surface}`}>Hero inner spacing</label>
+                <select id={`portal-hero-padding-${surface}`} value={page.heroPadding} disabled={disabled} onChange={(event) => setPageField('heroPadding', event.target.value as AccountPortalPage['heroPadding'])}>
+                  <option value="compact">Compact</option><option value="standard">Standard</option><option value="spacious">Spacious</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-content-gap-${surface}`}>Intro to benefits gap</label>
+                <select id={`portal-content-gap-${surface}`} value={page.heroContentGap} disabled={disabled} onChange={(event) => setPageField('heroContentGap', event.target.value as AccountPortalPage['heroContentGap'])}>
+                  <option value="tight">Tight</option><option value="standard">Standard</option><option value="open">Open</option>
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-benefit-density-${surface}`}>Benefit row density</label>
+                <select id={`portal-benefit-density-${surface}`} value={page.benefitDensity} disabled={disabled} onChange={(event) => setPageField('benefitDensity', event.target.value as AccountPortalPage['benefitDensity'])}>
+                  <option value="compact">Compact</option><option value="standard">Standard</option>
+                </select>
+              </div>
+              <div className="field portal-toggle-stack portal-fit-toggle">
+                <label><input type="checkbox" checked={page.desktopFit} disabled={disabled} onChange={(event) => setPageField('desktopFit', event.target.checked)} /> Fit desktop page without scrolling</label>
+                <small>Mobile stays naturally scrollable.</small>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-footer-placement-${surface}`}>Footer location</label>
+                <select id={`portal-footer-placement-${surface}`} value={page.footerPlacement} disabled={disabled} onChange={(event) => setPageField('footerPlacement', event.target.value as AccountPortalPage['footerPlacement'])}>
+                  <option value="form">Inside form panel</option><option value="page">Below the complete page</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-footer-alignment-${surface}`}>Footer alignment</label>
+                <select id={`portal-footer-alignment-${surface}`} value={page.footerAlignment} disabled={disabled} onChange={(event) => setPageField('footerAlignment', event.target.value as AccountPortalPage['footerAlignment'])}>
+                  <option value="left">Left</option><option value="center">Centered</option><option value="right">Right</option>
+                </select>
+              </div>
             </div>
             <div className="portal-control-title portal-control-title-row portal-trust-title">
               <span>Hero background</span>
@@ -403,13 +471,13 @@ export function AccountPortalExperienceEditor({
           </div>
         </div>
 
-        <PortalPreview value={value} page={page} surface={surface} viewport={viewport} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} />
+        <PortalPreview value={value} page={page} surface={surface} viewport={viewport} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} brandAssets={brandAssets} />
       </div>
     </section>
   );
 }
 
-function PortalPreview({ value, page, surface, viewport, workspaceName, brandBadge, brandLogo }: {
+function PortalPreview({ value, page, surface, viewport, workspaceName, brandBadge, brandLogo, brandAssets }: {
   value: AccountPortalExperience;
   page: AccountPortalPage;
   surface: Surface;
@@ -417,20 +485,23 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
   workspaceName: string;
   brandBadge: string;
   brandLogo: string;
+  brandAssets: BrandAssets;
 }) {
+  const heroLogo = portalLogo(page.heroLogoSurface, page.panelGradientEnabled ? page.panelGradientFrom : value.theme.primaryColor, brandAssets, brandLogo);
+  const formLogo = portalLogo(page.formLogoSurface, value.theme.panelBackground, brandAssets, brandLogo);
   return (
     <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground }}>
-      <div className={`portal-preview-stage layout-${page.layout} surface-${surface}`}>
+      <div className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}>
         {page.layout === 'split' ? (
           surface === 'requestAccess' ? (
-            <RequestAccessPreviewHero page={value.requestAccess} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} primaryColor={value.theme.primaryColor} />
+            <RequestAccessPreviewHero page={value.requestAccess} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={heroLogo} primaryColor={value.theme.primaryColor} />
           ) : (
-            <div className={`portal-preview-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement}`} style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
+            <div className={`portal-preview-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement} portal-preview-vertical-${page.heroVerticalAlignment} portal-preview-padding-${page.heroPadding} portal-preview-gap-${page.heroContentGap} portal-preview-benefit-density-${page.benefitDensity}`} style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
             <div className="portal-preview-brand">
-              {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge.charAt(0)}</span> : null}
-              <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong>
+              {page.showHeroLogo && heroLogo ? <img src={heroLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge.charAt(0)}</span> : null}
+              {page.showHeroBrandText ? <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong> : null}
             </div>
-            <div className="portal-preview-copy"><small>{page.eyebrow}</small><h4>{page.headline}</h4><p>{page.description}</p></div>
+            <div className="portal-preview-copy">{page.showEyebrow ? <small>{page.eyebrow}</small> : null}{page.showHeroHeadline ? <h4>{page.headline}</h4> : null}{page.showHeroDescription ? <p>{page.description}</p> : null}</div>
             {page.showBenefits ? <div className="portal-preview-benefits">{page.benefits.map((benefit) => { const Icon = ICONS[benefit.icon]; return <div key={`${benefit.title}-${benefit.body}`}><Icon size={15} /><span><b>{benefit.title}</b><small>{benefit.body}</small></span></div>; })}</div> : null}
             {page.showTrustItems ? <div className="portal-preview-trust">{page.trustItems.map((item) => { const Icon = ICONS[item.icon]; return <span key={`${item.icon}-${item.label}`}><Icon size={10} />{item.label}</span>; })}</div> : null}
             </div>
@@ -440,7 +511,7 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
           <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} />
         ) : (
         <div className="portal-preview-form" style={{ background: value.theme.panelBackground, color: value.theme.textColor }}>
-          {page.formBrandMode !== 'hidden' ? <div className="portal-preview-logo">{brandLogo ? <img src={brandLogo} alt="" /> : brandBadge.charAt(0)}</div> : null}
+          {page.formBrandMode !== 'hidden' ? <div className="portal-preview-logo">{formLogo ? <img src={formLogo} alt="" /> : brandBadge.charAt(0)}</div> : null}
           <h4>{page.formTitle}</h4>{page.showFormDescription ? <p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p> : null}
           <label>Email</label><div className="portal-preview-input">you@company.com</div>
           <label>Password</label><div className="portal-preview-input">••••••••••</div>
@@ -448,7 +519,9 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
           <div className="portal-preview-links">{page.secondaryActionLabel}<span>{page.tertiaryActionLabel}</span></div>
         </div>
         )}
+        {page.showFooter && page.footerPlacement === 'form' ? <div className={`portal-preview-footer align-${page.footerAlignment}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{workspaceName}. {page.footerText}</div> : null}
       </div>
+      {page.showFooter && page.footerPlacement === 'page' ? <div className={`portal-preview-footer page align-${page.footerAlignment}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{workspaceName}. {page.footerText}</div> : null}
     </div>
   );
 }
@@ -465,12 +538,16 @@ function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, 
     ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
     : `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)`;
   return (
-    <div className={`portal-preview-hero portal-request-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement}`} style={{ background }}>
+    <div className={`portal-preview-hero portal-request-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement} portal-preview-vertical-${page.heroVerticalAlignment} portal-preview-padding-${page.heroPadding} portal-preview-gap-${page.heroContentGap} portal-preview-benefit-density-${page.benefitDensity}`} style={{ background }}>
       <div className="portal-request-brand">
         {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge}</span> : null}
+        {page.showHeroBrandText ? <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong> : null}
       </div>
-      <h4>{headline}</h4>
-      <p>{page.heroBrandSubtitle || page.description}</p>
+      <div className="portal-request-copy">
+        {page.showEyebrow && page.eyebrow ? <small>{page.eyebrow}</small> : null}
+        {page.showHeroHeadline ? <h4>{headline}</h4> : null}
+        {page.showHeroDescription ? <p>{page.description}</p> : null}
+      </div>
       {page.showBenefits ? (
         <div className="portal-request-benefits">
           {page.benefits.map((benefit) => {
@@ -522,6 +599,25 @@ function darkenHex(hex: string, amount: number) {
   return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
 }
 
+function portalLogo(
+  preference: AccountPortalPage['heroLogoSurface'],
+  background: string,
+  brandAssets: BrandAssets,
+  fallback: string,
+) {
+  const surface = preference === 'auto' ? (isLightHex(background) ? 'light' : 'dark') : preference;
+  return resolveBrandLogoUrl(brandAssets, fallback, surface);
+}
+
+function isLightHex(hex: string) {
+  const value = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return true;
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 180;
+}
+
 function ColorInput({ label, value, onChange, disabled }: { label: string; value: string; onChange: (next: string) => void; disabled: boolean }) {
   return <label className="portal-color-input"><span>{label}</span><input type="color" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value.toUpperCase())} /><code>{value}</code></label>;
 }
@@ -536,4 +632,13 @@ function TextArea({ label, value, onChange, disabled, maxLength }: { label: stri
 
 function lines(value: string) {
   return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+
+function publicPortalUrl(path: string) {
+  if (typeof window === 'undefined') return path;
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return path;
+  const host = window.location.hostname.startsWith('app.')
+    ? `accounts.${window.location.hostname.slice(4)}`
+    : window.location.hostname;
+  return `${window.location.protocol}//${host}${path}`;
 }

@@ -233,8 +233,8 @@ export function WorkspaceSettingsPage() {
               <Field label="Workspace name" value={brand.workspaceName} onChange={(workspaceNameValue) => setBrand((current) => ({ ...current, workspaceName: workspaceNameValue }))} disabled={!canWrite || busy} />
               <Field label="Short badge" value={brand.brandBadge} maxLength={6} onChange={(brandBadge) => setBrand((current) => ({ ...current, brandBadge: brandBadge.toUpperCase().slice(0, 6) }))} disabled={!canWrite || busy} />
             </div>
-            <BrandAssetField label="Primary logo" hint="Used on light backgrounds and customer pages." value={brand.assets.primaryLogoUrl} disabled={!canWrite || busy} onChange={(primaryLogoUrl) => setBrandAsset(setBrand, 'primaryLogoUrl', primaryLogoUrl)} />
-            <BrandAssetField label="Dark mode logo" hint="Optional alternate logo for dark surfaces." value={brand.assets.darkLogoUrl} disabled={!canWrite || busy} onChange={(darkLogoUrl) => setBrandAsset(setBrand, 'darkLogoUrl', darkLogoUrl)} />
+            <BrandAssetField label="Logo for light backgrounds" hint="Usually the full-color or dark artwork used on white and pale surfaces." value={brand.assets.primaryLogoUrl} disabled={!canWrite || busy} onChange={(primaryLogoUrl) => setBrandAsset(setBrand, 'primaryLogoUrl', primaryLogoUrl)} />
+            <BrandAssetField label="Logo for dark backgrounds" hint="Usually the white or light artwork used on navy, black, and dark surfaces." value={brand.assets.darkLogoUrl} disabled={!canWrite || busy} onChange={(darkLogoUrl) => setBrandAsset(setBrand, 'darkLogoUrl', darkLogoUrl)} />
             <div className="field-row">
               <BrandAssetField label="Square mark" hint="Sidebar, avatar, and compact navigation." value={brand.assets.squareLogoUrl} disabled={!canWrite || busy} onChange={(squareLogoUrl) => setBrandAsset(setBrand, 'squareLogoUrl', squareLogoUrl)} compact />
               <BrandAssetField label="Favicon" hint="Browser and compact system identity." value={brand.assets.faviconUrl} disabled={!canWrite || busy} onChange={(faviconUrl) => setBrandAsset(setBrand, 'faviconUrl', faviconUrl)} compact />

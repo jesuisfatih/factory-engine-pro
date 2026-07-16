@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { PanelLeft, Bell, Sun, Moon } from 'lucide-react';
+import { resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { useTheme } from '@/lib/theme';
 import { adminRoleLabel, useCurrentPrincipal } from '@/lib/current-principal';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
@@ -16,6 +17,7 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
+  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, theme === 'dark' ? 'dark' : 'light');
   const roleLabel = adminRoleLabel(principal);
 
   return (
@@ -32,7 +34,7 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
       />
       <div className="right">
         <div className="topbar-workspace" title={brandQuery.isError ? t('workspace.brand_unavailable') : brandName}>
-          {brandQuery.data?.brandLogo ? <img src={brandQuery.data.brandLogo} alt="" /> : <span>{brandBadge}</span>}
+          {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge}</span>}
           <strong>{brandName}</strong>
         </div>
         <span className="role-badge">{roleLabel}</span>

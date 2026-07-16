@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   createCustomerUserSchema,
   createMemberRoleSchema,
@@ -134,6 +134,8 @@ export class IdentityController {
 
   @Public()
   @Get('workspace-brand')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @Header('Vary', 'x-tenant-id')
   workspaceBrand() {
     return this.identity.getWorkspaceBrand();
   }

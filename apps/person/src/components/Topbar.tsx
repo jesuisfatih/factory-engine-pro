@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from './Icon';
 import { syncPersonTasks } from '../api/live';
 import { useTheme } from '../theme';
+import { resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '../lib/workspace-brand';
 
 interface Props {
@@ -17,6 +18,7 @@ export function Topbar({ title, onToggleSidebar }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
+  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, theme === 'dark' ? 'dark' : 'light');
   const [search, setSearch] = useState(() => currentSearchFromUrl());
   const syncTasks = useMutation({
     mutationFn: syncPersonTasks,
@@ -59,7 +61,7 @@ export function Topbar({ title, onToggleSidebar }: Props) {
       </form>
       <div className="right">
         <div className="topbar-workspace" title={brandName}>
-          {brandQuery.data?.brandLogo ? <img src={brandQuery.data.brandLogo} alt="" /> : <span>{brandBadge}</span>}
+          {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge}</span>}
           <strong>{brandName}</strong>
         </div>
         <button

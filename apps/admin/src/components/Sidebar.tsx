@@ -5,7 +5,7 @@ import {
   ShoppingCart, UserSquare2, Workflow, KeyRound, FileCheck2,
   FileText, Mail,
 } from 'lucide-react';
-import { MEMBER_PERMISSIONS } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { adminApi, clearSurfaceSessions } from '@/lib/api';
 import { adminRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
 import {
@@ -101,7 +101,7 @@ export function Sidebar({ collapsed }: Props) {
   const brandAssets = brandQuery.data?.brandAssets;
   const compactLogo = brandAssets?.squareLogoUrl
     || (brandAssets?.systemIconSvg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(brandAssets.systemIconSvg)}` : '')
-    || brandQuery.data?.brandLogo;
+    || resolveBrandLogoUrl(brandAssets, brandQuery.data?.brandLogo, 'dark');
   const permissions = new Set(principal?.permissions ?? []);
   const can = (permission?: string | readonly string[]) => hasAnyPermission(permissions, permission);
   const sections = NAV.map((section) => ({

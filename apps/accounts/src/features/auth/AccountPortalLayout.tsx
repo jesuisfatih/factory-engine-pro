@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import {
   DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
+  resolveBrandLogoUrl,
   type AccountPortalExperience,
   type AccountPortalIcon,
 } from '@factory-engine-pro/contracts';
@@ -73,7 +74,6 @@ export function AccountPortalLayout({
   const brandQuery = useWorkspaceBrand();
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
-  const logo = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo;
   const experience: AccountPortalExperience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
   const page = { ...DEFAULT_ACCOUNT_PORTAL_EXPERIENCE[surface], ...experience[surface] };
   const theme = experience.theme;
@@ -83,6 +83,10 @@ export function AccountPortalLayout({
   const brandBackground = page.panelGradientEnabled
     ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
     : theme.primaryColor;
+  const heroLogoSurface = page.heroLogoSurface === 'auto'
+    ? (isLightColor(page.panelGradientEnabled ? page.panelGradientFrom : theme.primaryColor) ? 'light' : 'dark')
+    : page.heroLogoSurface;
+  const logo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, heroLogoSurface);
   const style = {
     '--portal-primary': theme.primaryColor,
     '--portal-accent': theme.accentColor,
@@ -98,11 +102,11 @@ export function AccountPortalLayout({
   } as CSSProperties;
 
   return (
-    <main className={`auth-page portal-density-${theme.density} portal-radius-${theme.radius}`} style={style}>
-      <div className={`auth-stage auth-layout-${layout}`}>
+    <main className={`auth-page portal-density-${theme.density} portal-radius-${theme.radius} ${page.desktopFit ? 'auth-desktop-fit' : ''}`} style={style}>
+      <div className={`auth-stage auth-layout-${layout} auth-hero-width-${page.heroPanelWidth}`}>
         {layout === 'split' ? (
           <section
-            className={`auth-brand-panel auth-brand-align-${page.heroBrandAlignment} auth-brand-logo-${page.heroLogoSize} auth-brand-size-${page.heroBrandSize} auth-benefits-${page.benefitsPlacement} auth-hero-width-${page.heroPanelWidth} auth-hero-pattern-${page.heroPattern}`}
+            className={`auth-brand-panel auth-brand-align-${page.heroBrandAlignment} auth-brand-logo-${page.heroLogoSize} auth-brand-size-${page.heroBrandSize} auth-benefits-${page.benefitsPlacement} auth-hero-pattern-${page.heroPattern} auth-vertical-${page.heroVerticalAlignment} auth-padding-${page.heroPadding} auth-gap-${page.heroContentGap} auth-benefit-density-${page.benefitDensity}`}
             style={{ '--auth-hero-pattern-opacity': String(page.heroPatternOpacity / 100) } as CSSProperties}
             aria-label={`${name} account workspace`}
           >
@@ -145,11 +149,16 @@ export function AccountPortalLayout({
 
         <section className="auth-form-panel" aria-label={formLabel}>
           {children}
-          {page.showFooter ? <p className="auth-footer">&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{name}. {page.footerText}</p> : null}
+          {page.showFooter && page.footerPlacement === 'form' ? <PortalFooter page={page} name={name} /> : null}
         </section>
       </div>
+      {page.showFooter && page.footerPlacement === 'page' ? <PortalFooter page={page} name={name} outside /> : null}
     </main>
   );
+}
+
+function PortalFooter({ page, name, outside = false }: { page: AccountPortalExperience['login']; name: string; outside?: boolean }) {
+  return <p className={`auth-footer auth-footer-${page.footerAlignment}${outside ? ' auth-footer-page' : ''}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{name}. {page.footerText}</p>;
 }
 
 function isLightColor(hex: string) {

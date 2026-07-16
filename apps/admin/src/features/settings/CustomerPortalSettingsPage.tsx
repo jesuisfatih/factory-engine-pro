@@ -4,8 +4,10 @@ import { AlertTriangle, CheckCircle2, RefreshCw, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   accountPortalExperienceSchema,
+  DEFAULT_BRAND_ASSETS,
   DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
   type AccountPortalExperience,
+  type BrandAssets,
 } from '@factory-engine-pro/contracts';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCurrentPrincipal } from '@/lib/current-principal';
@@ -18,6 +20,7 @@ interface PortalTenantConfig {
   workspaceName: string | null;
   brandBadge: string | null;
   brandLogo: string | null;
+  brandAssets?: BrandAssets | null;
   accountPortalExperience: AccountPortalExperience;
 }
 
@@ -91,6 +94,7 @@ export function CustomerPortalSettingsPage() {
           workspaceName={name}
           brandBadge={badge}
           brandLogo={config.data.brandLogo ?? ''}
+          brandAssets={config.data.brandAssets ?? DEFAULT_BRAND_ASSETS}
           disabled={!canWrite || save.isPending}
         />
       </div>

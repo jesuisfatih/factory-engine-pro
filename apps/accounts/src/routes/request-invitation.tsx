@@ -3,6 +3,7 @@ import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode }
 import {
   ACCOUNT_PORTAL_REQUEST_FIELDS,
   DEFAULT_ACCOUNT_PORTAL_EXPERIENCE,
+  resolveBrandLogoUrl,
   type AccountPortalIcon,
   type AccountPortalRequestField,
 } from '@factory-engine-pro/contracts';
@@ -34,7 +35,13 @@ interface RequestPageConfig {
   showHeroDescription: boolean;
   heroBrandAlignment: 'left' | 'center';
   heroLogoSize: 'standard' | 'large';
+  heroLogoSurface: 'auto' | 'light' | 'dark';
   heroBrandSize: 'standard' | 'large';
+  heroVerticalAlignment: 'top' | 'center';
+  heroPadding: 'compact' | 'standard' | 'spacious';
+  heroContentGap: 'tight' | 'standard' | 'open';
+  benefitDensity: 'compact' | 'standard';
+  desktopFit: boolean;
   benefitsPlacement: 'flow' | 'lower';
   heroPanelWidth: 'narrow' | 'balanced' | 'wide';
   heroPattern: 'grid' | 'none';
@@ -42,6 +49,8 @@ interface RequestPageConfig {
   primaryButtonStyle: 'solid' | 'gradient';
   showFormDescription: boolean;
   showFooter: boolean;
+  footerPlacement: 'form' | 'page';
+  footerAlignment: 'left' | 'center' | 'right';
   footerText: string;
   footerShowYear: boolean;
   primaryColor: string;
@@ -109,7 +118,13 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   showHeroDescription: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showHeroDescription,
   heroBrandAlignment: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandAlignment,
   heroLogoSize: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroLogoSize,
+  heroLogoSurface: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroLogoSurface,
   heroBrandSize: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroBrandSize,
+  heroVerticalAlignment: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroVerticalAlignment,
+  heroPadding: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPadding,
+  heroContentGap: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroContentGap,
+  benefitDensity: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefitDensity,
+  desktopFit: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.desktopFit,
   benefitsPlacement: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefitsPlacement,
   heroPanelWidth: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPanelWidth,
   heroPattern: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPattern,
@@ -117,6 +132,8 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   primaryButtonStyle: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.primaryButtonStyle,
   showFormDescription: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showFormDescription,
   showFooter: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.showFooter,
+  footerPlacement: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerPlacement,
+  footerAlignment: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerAlignment,
   footerText: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerText,
   footerShowYear: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.footerShowYear,
   primaryColor: '#081F6F',
@@ -200,7 +217,6 @@ function RequestInvitationView() {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
-  const logoUrl = brandQuery.data?.brandAssets?.primaryLogoUrl || brandQuery.data?.brandLogo || '';
   const search = useMemo(() => currentSearchParams(), []);
   const shop = normalizeShopDomain(search.get('shop') || search.get('store') || '');
   const merchantHint = (search.get('merchantId') || search.get('merchant_id') || '').trim();
@@ -227,7 +243,13 @@ function RequestInvitationView() {
     showHeroDescription: requestExperience?.showHeroDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showHeroDescription,
     heroBrandAlignment: requestExperience?.heroBrandAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandAlignment,
     heroLogoSize: requestExperience?.heroLogoSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroLogoSize,
+    heroLogoSurface: requestExperience?.heroLogoSurface ?? DEFAULT_REQUEST_PAGE_CONFIG.heroLogoSurface,
     heroBrandSize: requestExperience?.heroBrandSize ?? DEFAULT_REQUEST_PAGE_CONFIG.heroBrandSize,
+    heroVerticalAlignment: requestExperience?.heroVerticalAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.heroVerticalAlignment,
+    heroPadding: requestExperience?.heroPadding ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPadding,
+    heroContentGap: requestExperience?.heroContentGap ?? DEFAULT_REQUEST_PAGE_CONFIG.heroContentGap,
+    benefitDensity: requestExperience?.benefitDensity ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitDensity,
+    desktopFit: requestExperience?.desktopFit ?? DEFAULT_REQUEST_PAGE_CONFIG.desktopFit,
     benefitsPlacement: requestExperience?.benefitsPlacement ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitsPlacement,
     heroPanelWidth: requestExperience?.heroPanelWidth ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPanelWidth,
     heroPattern: requestExperience?.heroPattern ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPattern,
@@ -235,6 +257,8 @@ function RequestInvitationView() {
     primaryButtonStyle: requestExperience?.primaryButtonStyle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryButtonStyle,
     showFormDescription: requestExperience?.showFormDescription ?? DEFAULT_REQUEST_PAGE_CONFIG.showFormDescription,
     showFooter: requestExperience?.showFooter ?? DEFAULT_REQUEST_PAGE_CONFIG.showFooter,
+    footerPlacement: requestExperience?.footerPlacement ?? DEFAULT_REQUEST_PAGE_CONFIG.footerPlacement,
+    footerAlignment: requestExperience?.footerAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.footerAlignment,
     footerText: requestExperience?.footerText ?? DEFAULT_REQUEST_PAGE_CONFIG.footerText,
     footerShowYear: requestExperience?.footerShowYear ?? DEFAULT_REQUEST_PAGE_CONFIG.footerShowYear,
     primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
@@ -268,6 +292,13 @@ function RequestInvitationView() {
     errorDismissLabel: requestExperience?.errorDismissLabel ?? DEFAULT_REQUEST_PAGE_CONFIG.errorDismissLabel,
     certificateExpiringMessage: requestExperience?.certificateExpiringMessage ?? DEFAULT_REQUEST_PAGE_CONFIG.certificateExpiringMessage,
   }), [brandName, portalExperience, requestExperience]);
+  const heroLogoBackground = requestExperience?.panelGradientEnabled
+    ? requestExperience.panelGradientFrom
+    : pageConfig.primaryColor;
+  const heroLogoSurface = pageConfig.heroLogoSurface === 'auto'
+    ? (isLightHex(heroLogoBackground) ? 'light' : 'dark')
+    : pageConfig.heroLogoSurface;
+  const logoUrl = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, heroLogoSurface);
   const [formData, setFormData] = useState<Record<string, string>>(() => ({
     email: emailFromUrl,
     firstName: (search.get('firstName') || '').trim(),
@@ -294,8 +325,11 @@ function RequestInvitationView() {
   const heroBackgroundWithPattern = pageConfig.heroPattern === 'grid'
     ? `linear-gradient(90deg, rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), linear-gradient(rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), ${heroBackground}`
     : heroBackground;
-  const heroStartsLight = pageConfig.primaryGradientEnabled && isLightHex(pageConfig.primaryGradientFrom);
+  const heroStartsLight = Boolean(requestExperience?.panelGradientEnabled) && isLightHex(requestExperience?.panelGradientFrom);
   const heroIntroColor = heroStartsLight ? '#172033' : '#ffffff';
+  const heroPadding = pageConfig.heroPadding === 'compact' ? '26px 28px' : pageConfig.heroPadding === 'spacious' ? '52px 42px' : '38px 34px';
+  const heroContentGap = pageConfig.heroContentGap === 'tight' ? 14 : pageConfig.heroContentGap === 'open' ? 38 : 24;
+  const benefitGap = pageConfig.benefitDensity === 'compact' ? 10 : 16;
   const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
     ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
     : colors.primary;
@@ -549,6 +583,7 @@ function RequestInvitationView() {
 
   return (
     <div
+      className={`request-portal-page${pageConfig.desktopFit ? ' request-portal-desktop-fit' : ''}`}
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -559,8 +594,9 @@ function RequestInvitationView() {
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
       }}
     >
-      <div style={{ width: '100%', maxWidth: requestExperience?.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
+      <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestExperience?.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
         <div
+          className="request-portal-stage"
           style={{
             background: portalExperience?.theme.panelBackground ?? STATIC_COLORS.card,
             borderRadius: 20,
@@ -571,22 +607,23 @@ function RequestInvitationView() {
             border: `1px solid ${colors.primaryLight}`,
           }}
         >
-          <div style={{ display: 'flex', minHeight: 620 }}>
+          <div className="request-portal-stage-grid" style={{ display: 'flex', minHeight: pageConfig.desktopFit ? 0 : 620 }}>
             {requestExperience?.layout !== 'centered' ? <div
+              className="request-portal-hero"
               style={{
                 flex: `0 0 ${heroFlexBasis}`,
-                padding: '44px 32px',
+                padding: heroPadding,
                 background: heroBackgroundWithPattern,
                 backgroundSize: pageConfig.heroPattern === 'grid' ? '36px 36px, 36px 36px, auto' : undefined,
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
+                justifyContent: pageConfig.heroVerticalAlignment === 'top' ? 'flex-start' : 'center',
                 color: '#fff',
               }}
             >
               <div
                 style={{
-                  marginBottom: pageConfig.benefitsPlacement === 'lower' ? 48 : 36,
+                  marginBottom: heroContentGap,
                   textAlign: pageConfig.heroBrandAlignment,
                   alignItems: pageConfig.heroBrandAlignment === 'center' ? 'center' : 'flex-start',
                   display: 'flex',
@@ -601,17 +638,17 @@ function RequestInvitationView() {
                       maxWidth: pageConfig.heroLogoSize === 'large' ? 196 : 140,
                       maxHeight: pageConfig.heroLogoSize === 'large' ? 78 : 50,
                       objectFit: 'contain',
-                      marginBottom: 10,
+                      marginBottom: pageConfig.heroContentGap === 'tight' ? 4 : 8,
                     }}
                   />
                 ) : pageConfig.showHeroBadge ? (
                   <span style={{ fontSize: 44 }}>{brandBadge}</span>
                 ) : null}
-                {pageConfig.showHeroBrandText ? <div style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? 8 : 14, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
+                {pageConfig.showHeroBrandText ? <div style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? (pageConfig.heroContentGap === 'tight' ? 2 : 6) : 0, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
                   <div>{pageConfig.brandTitle}</div>
                   {pageConfig.brandSubtitle ? <div style={{ opacity: 0.72, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 13, fontWeight: 600, marginTop: 3 }}>{pageConfig.brandSubtitle}</div> : null}
                 </div> : null}
-                {pageConfig.showEyebrow && pageConfig.heroEyebrow ? <div style={{ color: heroIntroColor, opacity: 0.8, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 24 }}>{pageConfig.heroEyebrow}</div> : null}
+                {pageConfig.showEyebrow && pageConfig.heroEyebrow ? <div style={{ color: heroIntroColor, opacity: 0.8, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: heroContentGap }}>{pageConfig.heroEyebrow}</div> : null}
                 {pageConfig.showHeroHeadline ? <h3 style={{ color: heroIntroColor, fontWeight: 700, margin: '10px 0 0', fontSize: pageConfig.heroBrandSize === 'large' ? 30 : 24, lineHeight: 1.24, letterSpacing: 0 }}>
                   {pageConfig.heroTitle}
                 </h3> : null}
@@ -621,15 +658,15 @@ function RequestInvitationView() {
               </div>
 
               {pageConfig.benefits.length > 0 ? (
-                <div style={{ color: '#ffffff', display: 'flex', flexDirection: 'column', gap: 18, marginTop: pageConfig.benefitsPlacement === 'lower' ? 'auto' : 0 }}>
+                <div style={{ color: '#ffffff', display: 'flex', flexDirection: 'column', gap: benefitGap, marginTop: pageConfig.benefitsPlacement === 'lower' ? 'auto' : 0 }}>
                   {pageConfig.benefits.map((item) => (
                     <div key={`${item.title}-${item.description}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
                         style={{
                           background: 'rgba(255,255,255,0.18)',
-                          borderRadius: 12,
-                          width: 42,
-                          height: 42,
+                          borderRadius: pageConfig.benefitDensity === 'compact' ? 8 : 12,
+                          width: pageConfig.benefitDensity === 'compact' ? 34 : 42,
+                          height: pageConfig.benefitDensity === 'compact' ? 34 : 42,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -640,8 +677,8 @@ function RequestInvitationView() {
                         {renderBenefitIcon(item)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
-                        <div style={{ fontSize: 12, opacity: 0.75 }}>{item.description}</div>
+                        <div style={{ fontWeight: 600, fontSize: pageConfig.benefitDensity === 'compact' ? 13 : 14 }}>{item.title}</div>
+                        <div style={{ fontSize: pageConfig.benefitDensity === 'compact' ? 11 : 12, opacity: 0.75 }}>{item.description}</div>
                       </div>
                     </div>
                   ))}
@@ -653,9 +690,10 @@ function RequestInvitationView() {
             </div> : null}
 
             <div
+              className="request-portal-form-panel"
               style={{
                 flex: 1,
-                padding: formPanelModeSettings.panelPadding,
+                padding: pageConfig.desktopFit ? '24px 30px' : formPanelModeSettings.panelPadding,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
@@ -815,11 +853,12 @@ function RequestInvitationView() {
                   </form>
                 </>
               )}
+              {pageConfig.showFooter && pageConfig.footerPlacement === 'form' ? <RequestPortalFooter config={pageConfig} brandName={brandName} color={formPanelMutedTextColor} /> : null}
             </div>
           </div>
         </div>
       </div>
-      {pageConfig.showFooter ? <p style={{ color: formPanelMutedTextColor, fontSize: 12, margin: '16px 0 0', textAlign: 'center' }}>&copy; {pageConfig.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {pageConfig.footerText}</p> : null}
+      {pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? <RequestPortalFooter config={pageConfig} brandName={brandName} color={formPanelMutedTextColor} /> : null}
     </div>
   );
 }
@@ -828,6 +867,10 @@ export const Route = createFileRoute('/request-invitation')({ component: Request
 
 function renderBenefitIcon(item: BenefitConfig) {
   return <AccountPortalIconView name={item.icon} size={22} />;
+}
+
+function RequestPortalFooter({ config, brandName, color }: { config: RequestPageConfig; brandName: string; color: string }) {
+  return <p style={{ color, fontSize: 12, margin: '16px 0 0', textAlign: config.footerAlignment }}>&copy; {config.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {config.footerText}</p>;
 }
 
 function currentSearchParams() {
