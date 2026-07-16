@@ -2725,12 +2725,27 @@ a { color: inherit; text-decoration: none; }
 .auth-footer-right { text-align: right; }
 .auth-footer-page { max-width: 1120px; padding-inline: 8px; }
 
+.request-portal-footer {
+  width: 100%;
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.request-portal-footer-page {
+  flex: 0 0 auto;
+  max-width: 980px;
+  margin: 6px auto 0;
+  padding-inline: 8px;
+}
+
 @media (min-width: 901px) {
-  .request-portal-desktop-fit { height: 100svh; padding: 16px !important; overflow: hidden; }
-  .request-portal-desktop-fit .request-portal-stage-wrap { height: calc(100svh - 32px); max-height: 900px; }
+  .request-portal-desktop-fit { height: 100svh; padding: 12px !important; overflow: hidden; }
+  .request-portal-desktop-fit .request-portal-stage-wrap { min-height: 0; height: calc(100svh - 24px); max-height: 900px; }
+  .request-portal-desktop-fit.request-portal-has-page-footer .request-portal-stage-wrap { height: calc(100svh - 48px); }
   .request-portal-desktop-fit .request-portal-stage,
   .request-portal-desktop-fit .request-portal-stage-grid { height: 100%; }
-  .request-portal-desktop-fit .request-portal-hero,
+  .request-portal-desktop-fit .request-portal-hero { min-height: 0; overflow: hidden; }
   .request-portal-desktop-fit .request-portal-form-panel { min-height: 0; overflow-y: auto; }
 }
 

@@ -262,10 +262,10 @@ function RequestInvitationView() {
     footerText: requestExperience?.footerText ?? DEFAULT_REQUEST_PAGE_CONFIG.footerText,
     footerShowYear: requestExperience?.footerShowYear ?? DEFAULT_REQUEST_PAGE_CONFIG.footerShowYear,
     primaryColor: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryColor,
-    primaryGradientEnabled: requestExperience?.primaryButtonStyle === 'gradient',
-    primaryGradientFrom: portalExperience?.theme.primaryColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
-    primaryGradientTo: portalExperience?.theme.accentColor ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientTo,
-    primaryGradientAngle: 135,
+    primaryGradientEnabled: requestExperience?.panelGradientEnabled ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientEnabled,
+    primaryGradientFrom: requestExperience?.panelGradientFrom ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientFrom,
+    primaryGradientTo: requestExperience?.panelGradientTo ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientTo,
+    primaryGradientAngle: requestExperience?.panelGradientAngle ?? DEFAULT_REQUEST_PAGE_CONFIG.primaryGradientAngle,
     fontColor: portalExperience?.theme.textColor ?? DEFAULT_REQUEST_PAGE_CONFIG.fontColor,
     formPanelBackgroundColor: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelBackgroundColor,
     formPanelGradientFrom: portalExperience?.theme.panelBackground ?? DEFAULT_REQUEST_PAGE_CONFIG.formPanelGradientFrom,
@@ -333,7 +333,9 @@ function RequestInvitationView() {
   const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
     ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
     : colors.primary;
-  const formPanelModeSettings = getFormPanelModeSettings(pageConfig.formPanelMode);
+  const formPanelModeSettings = pageConfig.desktopFit
+    ? { panelPadding: '12px 24px', inputPadding: '5px 10px', inputRadius: 8, fieldGap: 7, buttonHeight: 38 }
+    : getFormPanelModeSettings(pageConfig.formPanelMode);
   const formPanelBackgroundStyle = getFormPanelBackgroundStyle(pageConfig, colors.primary);
   const formPanelTextColor = normalizeHexColor(pageConfig.formPanelTextColor, fontColor);
   const formPanelMutedTextColor = normalizeHexColor(
@@ -358,7 +360,7 @@ function RequestInvitationView() {
     padding: formPanelModeSettings.inputPadding,
     border: `1px solid ${formPanelInputBorderColor}`,
     borderRadius: formPanelModeSettings.inputRadius,
-    fontSize: 14,
+    fontSize: pageConfig.desktopFit ? 13 : 14,
     fontFamily: 'Inter, system-ui, sans-serif',
     color: formPanelInputTextColor,
     background: formPanelInputBackgroundColor,
@@ -368,10 +370,10 @@ function RequestInvitationView() {
 
   const labelStyle: CSSProperties = {
     display: 'block',
-    fontSize: 13,
+    fontSize: pageConfig.desktopFit ? 11 : 13,
     fontWeight: 500,
     color: formPanelMutedTextColor,
-    marginBottom: 6,
+    marginBottom: pageConfig.desktopFit ? 3 : 6,
   };
 
   const handleChange = (field: string, value: string) => {
@@ -503,13 +505,13 @@ function RequestInvitationView() {
             {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
           </label>
           <textarea
-            rows={3}
+            rows={pageConfig.desktopFit ? 2 : 3}
             value={value}
             onChange={(inputEvent) => handleChange(field.key, inputEvent.target.value)}
             disabled={loading}
             required={isRequired}
             placeholder={getPlaceholder(field)}
-            style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+            style={{ ...inputStyle, minHeight: pageConfig.desktopFit ? 48 : 80, resize: 'vertical' }}
           />
         </div>
       );
@@ -583,10 +585,11 @@ function RequestInvitationView() {
 
   return (
     <div
-      className={`request-portal-page${pageConfig.desktopFit ? ' request-portal-desktop-fit' : ''}`}
+      className={`request-portal-page${pageConfig.desktopFit ? ' request-portal-desktop-fit' : ''}${pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? ' request-portal-has-page-footer' : ''}`}
       style={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         background: portalExperience?.theme.pageBackground ?? `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
@@ -693,10 +696,10 @@ function RequestInvitationView() {
               className="request-portal-form-panel"
               style={{
                 flex: 1,
-                padding: pageConfig.desktopFit ? '24px 30px' : formPanelModeSettings.panelPadding,
+                padding: formPanelModeSettings.panelPadding,
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
+                justifyContent: pageConfig.desktopFit ? 'flex-start' : 'center',
                 borderLeft: isOutlinedFormPanel ? `1px solid ${formPanelBorderColor}` : undefined,
                 boxShadow: isGlassFormPanel ? 'inset 1px 0 0 rgba(255,255,255,0.55)' : undefined,
                 backdropFilter: isGlassFormPanel ? 'blur(12px)' : undefined,
@@ -762,7 +765,7 @@ function RequestInvitationView() {
                 </div>
               ) : (
                 <>
-                  <div style={{ marginBottom: 20 }}>
+                  <div style={{ marginBottom: pageConfig.desktopFit ? 8 : 20 }}>
                     <h4 style={{ fontWeight: 700, marginBottom: 4, color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
                     </h4>
@@ -779,9 +782,9 @@ function RequestInvitationView() {
                         background: normalizeHexColor(pageConfig.notice.backgroundColor, '#EEF4FF'),
                         border: `1px solid ${normalizeHexColor(pageConfig.notice.borderColor, '#AFC6F8')}`,
                         borderRadius: 10,
-                        padding: '10px 14px',
-                        marginBottom: 12,
-                        fontSize: 13,
+                        padding: pageConfig.desktopFit ? '6px 10px' : '10px 14px',
+                        marginBottom: pageConfig.desktopFit ? 7 : 12,
+                        fontSize: pageConfig.desktopFit ? 11 : 13,
                         color: normalizeHexColor(pageConfig.notice.textColor, '#344054'),
                       }}
                     >
@@ -827,7 +830,7 @@ function RequestInvitationView() {
                       style={{
                         width: '100%',
                         height: formPanelModeSettings.buttonHeight,
-                        marginTop: 22,
+                        marginTop: pageConfig.desktopFit ? 10 : 22,
                         border: 'none',
                         borderRadius: formPanelModeSettings.inputRadius,
                         background: actionBackground,
@@ -844,7 +847,7 @@ function RequestInvitationView() {
                       {loading ? pageConfig.submittingActionLabel : pageConfig.primaryActionLabel}
                     </button>
 
-                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: 16, marginBottom: 0, fontSize: 14 }}>
+                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: pageConfig.desktopFit ? 7 : 16, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
                       {pageConfig.existingAccountPrompt}{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
                         {pageConfig.secondaryActionLabel}
@@ -858,7 +861,7 @@ function RequestInvitationView() {
           </div>
         </div>
       </div>
-      {pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? <RequestPortalFooter config={pageConfig} brandName={brandName} color={formPanelMutedTextColor} /> : null}
+      {pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? <RequestPortalFooter config={pageConfig} brandName={brandName} color={formPanelMutedTextColor} outside /> : null}
     </div>
   );
 }
@@ -869,8 +872,8 @@ function renderBenefitIcon(item: BenefitConfig) {
   return <AccountPortalIconView name={item.icon} size={22} />;
 }
 
-function RequestPortalFooter({ config, brandName, color }: { config: RequestPageConfig; brandName: string; color: string }) {
-  return <p style={{ color, fontSize: 12, margin: '16px 0 0', textAlign: config.footerAlignment }}>&copy; {config.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {config.footerText}</p>;
+function RequestPortalFooter({ config, brandName, color, outside = false }: { config: RequestPageConfig; brandName: string; color: string; outside?: boolean }) {
+  return <p className={outside ? 'request-portal-footer request-portal-footer-page' : 'request-portal-footer'} style={{ color, textAlign: config.footerAlignment }}>&copy; {config.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {config.footerText}</p>;
 }
 
 function currentSearchParams() {
