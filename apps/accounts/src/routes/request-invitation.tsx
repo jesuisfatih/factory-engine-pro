@@ -334,7 +334,7 @@ function RequestInvitationView() {
     ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
     : colors.primary;
   const formPanelModeSettings = pageConfig.desktopFit
-    ? { panelPadding: '12px 24px', inputPadding: '5px 10px', inputRadius: 8, fieldGap: 7, buttonHeight: 38 }
+    ? { panelPadding: '8px 24px', inputPadding: '3px 10px', inputRadius: 8, fieldGap: 7, buttonHeight: 36 }
     : getFormPanelModeSettings(pageConfig.formPanelMode);
   const formPanelBackgroundStyle = getFormPanelBackgroundStyle(pageConfig, colors.primary);
   const formPanelTextColor = normalizeHexColor(pageConfig.formPanelTextColor, fontColor);
@@ -373,7 +373,7 @@ function RequestInvitationView() {
     fontSize: pageConfig.desktopFit ? 11 : 13,
     fontWeight: 500,
     color: formPanelMutedTextColor,
-    marginBottom: pageConfig.desktopFit ? 3 : 6,
+    marginBottom: pageConfig.desktopFit ? 2 : 6,
   };
 
   const handleChange = (field: string, value: string) => {
@@ -466,7 +466,7 @@ function RequestInvitationView() {
             onChange={(inputEvent) => handleFileChange(field.key, inputEvent.target.files?.[0] || null)}
             disabled={loading}
             required={isRequired}
-            style={{ ...inputStyle, padding: '8px 12px' }}
+            style={{ ...inputStyle, padding: pageConfig.desktopFit ? '4px 9px' : '8px 12px' }}
           />
           {field.helpText ? <p style={{ fontSize: 12, color: formPanelMutedTextColor, marginTop: 4, marginBottom: 0 }}>{field.helpText}</p> : null}
         </div>
@@ -511,7 +511,7 @@ function RequestInvitationView() {
             disabled={loading}
             required={isRequired}
             placeholder={getPlaceholder(field)}
-            style={{ ...inputStyle, minHeight: pageConfig.desktopFit ? 48 : 80, resize: 'vertical' }}
+            style={{ ...inputStyle, minHeight: pageConfig.desktopFit ? 42 : 80, resize: 'vertical' }}
           />
         </div>
       );
@@ -766,7 +766,7 @@ function RequestInvitationView() {
               ) : (
                 <>
                   <div style={{ marginBottom: pageConfig.desktopFit ? 8 : 20 }}>
-                    <h4 style={{ fontWeight: 700, marginBottom: 4, color: formPanelTextColor, fontSize: 19 }}>
+                    <h4 style={{ fontWeight: 700, margin: '0 0 4px', color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
                     </h4>
                     {pageConfig.showFormDescription ? (
@@ -830,7 +830,7 @@ function RequestInvitationView() {
                       style={{
                         width: '100%',
                         height: formPanelModeSettings.buttonHeight,
-                        marginTop: pageConfig.desktopFit ? 10 : 22,
+                        marginTop: pageConfig.desktopFit ? 8 : 22,
                         border: 'none',
                         borderRadius: formPanelModeSettings.inputRadius,
                         background: actionBackground,
@@ -847,7 +847,7 @@ function RequestInvitationView() {
                       {loading ? pageConfig.submittingActionLabel : pageConfig.primaryActionLabel}
                     </button>
 
-                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: pageConfig.desktopFit ? 7 : 16, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
+                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: pageConfig.desktopFit ? 5 : 16, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
                       {pageConfig.existingAccountPrompt}{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
                         {pageConfig.secondaryActionLabel}

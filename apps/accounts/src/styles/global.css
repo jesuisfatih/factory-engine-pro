@@ -2094,6 +2094,13 @@ a { color: inherit; text-decoration: none; }
   background: transparent;
 }
 
+.auth-shell:has(.request-portal-page) {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .auth-page {
   --auth-bg: var(--portal-page-bg, #f4f6f8);
   --auth-brand-bg: var(--portal-primary, #081f6f);
