@@ -7,9 +7,9 @@ import {
   type AccountPortalIcon,
   type AccountPortalRequestField,
 } from '@factory-engine-pro/contracts';
+import { AccountPortalFormBrand, AccountPortalHero, AccountPortalIconView } from '@factory-engine-pro/ui';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
-import { AccountPortalIconView } from '@/features/auth/AccountPortalLayout';
 
 interface BenefitConfig {
   icon: AccountPortalIcon;
@@ -224,6 +224,7 @@ function RequestInvitationView() {
   const emailLocked = emailFromUrl.length > 0;
   const portalExperience = brandQuery.data?.accountPortalExperience;
   const requestExperience = portalExperience?.requestAccess;
+  const requestPage = requestExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess;
   const pageConfig = useMemo<RequestPageConfig>(() => ({
     ...DEFAULT_REQUEST_PAGE_CONFIG,
     title: requestExperience?.formTitle ?? DEFAULT_REQUEST_PAGE_CONFIG.title,
@@ -299,6 +300,10 @@ function RequestInvitationView() {
     ? (isLightHex(heroLogoBackground) ? 'light' : 'dark')
     : pageConfig.heroLogoSurface;
   const logoUrl = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, heroLogoSurface);
+  const formLogoSurface = requestPage.formLogoSurface === 'auto'
+    ? (isLightHex(portalExperience?.theme.panelBackground ?? '#FFFFFF') ? 'light' : 'dark')
+    : requestPage.formLogoSurface;
+  const formLogoUrl = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, formLogoSurface);
   const [formData, setFormData] = useState<Record<string, string>>(() => ({
     email: emailFromUrl,
     firstName: (search.get('firstName') || '').trim(),
@@ -318,18 +323,6 @@ function RequestInvitationView() {
   const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
   const boxShadowEnabled = pageConfig.boxShadow !== false;
   const heroFlexBasis = pageConfig.heroPanelWidth === 'narrow' ? '33%' : pageConfig.heroPanelWidth === 'wide' ? '46%' : '38%';
-  const heroBackground = getConfiguredGradient(
-    pageConfig,
-    `linear-gradient(160deg, ${colors.primary} 0%, ${colors.gradientOne} 60%, ${colors.gradientTwo} 100%)`,
-  );
-  const heroBackgroundWithPattern = pageConfig.heroPattern === 'grid'
-    ? `linear-gradient(90deg, rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), linear-gradient(rgba(255,255,255,${pageConfig.heroPatternOpacity / 100}) 1px, transparent 1px), ${heroBackground}`
-    : heroBackground;
-  const heroStartsLight = Boolean(requestExperience?.panelGradientEnabled) && isLightHex(requestExperience?.panelGradientFrom);
-  const heroIntroColor = heroStartsLight ? '#172033' : '#ffffff';
-  const heroPadding = pageConfig.heroPadding === 'compact' ? '26px 28px' : pageConfig.heroPadding === 'spacious' ? '52px 42px' : '38px 34px';
-  const heroContentGap = pageConfig.heroContentGap === 'tight' ? 14 : pageConfig.heroContentGap === 'open' ? 38 : 24;
-  const benefitGap = pageConfig.benefitDensity === 'compact' ? 10 : 16;
   const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
     ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
     : colors.primary;
@@ -597,7 +590,7 @@ function RequestInvitationView() {
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
       }}
     >
-      <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestExperience?.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
+      <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestPage.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
         <div
           className="request-portal-stage"
           style={{
@@ -611,86 +604,18 @@ function RequestInvitationView() {
           }}
         >
           <div className="request-portal-stage-grid" style={{ display: 'flex', minHeight: pageConfig.desktopFit ? 0 : 620 }}>
-            {requestExperience?.layout !== 'centered' ? <div
-              className="request-portal-hero"
-              style={{
-                flex: `0 0 ${heroFlexBasis}`,
-                padding: heroPadding,
-                background: heroBackgroundWithPattern,
-                backgroundSize: pageConfig.heroPattern === 'grid' ? '36px 36px, 36px 36px, auto' : undefined,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: pageConfig.heroVerticalAlignment === 'top' ? 'flex-start' : 'center',
-                color: '#fff',
-              }}
-            >
-              <div
-                style={{
-                  marginBottom: heroContentGap,
-                  textAlign: pageConfig.heroBrandAlignment,
-                  alignItems: pageConfig.heroBrandAlignment === 'center' ? 'center' : 'flex-start',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                {pageConfig.showHeroLogo && logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={brandName}
-                    style={{
-                      maxWidth: pageConfig.heroLogoSize === 'large' ? 196 : 140,
-                      maxHeight: pageConfig.heroLogoSize === 'large' ? 78 : 50,
-                      objectFit: 'contain',
-                      marginBottom: pageConfig.heroContentGap === 'tight' ? 4 : 8,
-                    }}
-                  />
-                ) : pageConfig.showHeroBadge ? (
-                  <span style={{ fontSize: 44 }}>{brandBadge}</span>
-                ) : null}
-                {pageConfig.showHeroBrandText ? <div style={{ color: heroIntroColor, fontWeight: 700, marginTop: logoUrl ? (pageConfig.heroContentGap === 'tight' ? 2 : 6) : 0, fontSize: pageConfig.heroBrandSize === 'large' ? 26 : 22, lineHeight: 1.24, letterSpacing: 0 }}>
-                  <div>{pageConfig.brandTitle}</div>
-                  {pageConfig.brandSubtitle ? <div style={{ opacity: 0.72, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 13, fontWeight: 600, marginTop: 3 }}>{pageConfig.brandSubtitle}</div> : null}
-                </div> : null}
-                {pageConfig.showEyebrow && pageConfig.heroEyebrow ? <div style={{ color: heroIntroColor, opacity: 0.8, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: heroContentGap }}>{pageConfig.heroEyebrow}</div> : null}
-                {pageConfig.showHeroHeadline ? <h3 style={{ color: heroIntroColor, fontWeight: 700, margin: '10px 0 0', fontSize: pageConfig.heroBrandSize === 'large' ? 30 : 24, lineHeight: 1.24, letterSpacing: 0 }}>
-                  {pageConfig.heroTitle}
-                </h3> : null}
-                {pageConfig.showHeroDescription ? <p style={{ color: heroIntroColor, opacity: 0.78, fontSize: pageConfig.heroBrandSize === 'large' ? 15 : 14, lineHeight: 1.5, marginTop: 8 }}>
-                  {pageConfig.heroSubtitle}
-                </p> : null}
-              </div>
-
-              {pageConfig.benefits.length > 0 ? (
-                <div style={{ color: '#ffffff', display: 'flex', flexDirection: 'column', gap: benefitGap, marginTop: pageConfig.benefitsPlacement === 'lower' ? 'auto' : 0 }}>
-                  {pageConfig.benefits.map((item) => (
-                    <div key={`${item.title}-${item.description}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div
-                        style={{
-                          background: 'rgba(255,255,255,0.18)',
-                          borderRadius: pageConfig.benefitDensity === 'compact' ? 8 : 12,
-                          width: pageConfig.benefitDensity === 'compact' ? 34 : 42,
-                          height: pageConfig.benefitDensity === 'compact' ? 34 : 42,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 18,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {renderBenefitIcon(item)}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: pageConfig.benefitDensity === 'compact' ? 13 : 14 }}>{item.title}</div>
-                        <div style={{ fontSize: pageConfig.benefitDensity === 'compact' ? 11 : 12, opacity: 0.75 }}>{item.description}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {pageConfig.showTrustItems && pageConfig.trustItems.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20 }}>
-                {pageConfig.trustItems.map((item) => <span key={`${item.icon}-${item.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff', background: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 8px', fontSize: 11, fontWeight: 700 }}><AccountPortalIconView name={item.icon} size={13} />{item.label}</span>)}
-              </div> : null}
-            </div> : null}
+            {requestPage.layout !== 'centered' ? (
+              <AccountPortalHero
+                className="request-portal-hero"
+                style={{ flex: `0 0 ${heroFlexBasis}` }}
+                page={requestPage}
+                surface="requestAccess"
+                workspaceName={brandName}
+                brandBadge={brandBadge}
+                brandLogo={logoUrl}
+                primaryColor={pageConfig.primaryColor}
+              />
+            ) : null}
 
             <div
               className="request-portal-form-panel"
@@ -765,6 +690,7 @@ function RequestInvitationView() {
                 </div>
               ) : (
                 <>
+                  <AccountPortalFormBrand page={requestPage} workspaceName={brandName} brandBadge={brandBadge} brandLogo={formLogoUrl} />
                   <div style={{ marginBottom: pageConfig.desktopFit ? 8 : 20 }}>
                     <h4 style={{ fontWeight: 700, margin: '0 0 4px', color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
@@ -867,10 +793,6 @@ function RequestInvitationView() {
 }
 
 export const Route = createFileRoute('/request-invitation')({ component: RequestInvitationView });
-
-function renderBenefitIcon(item: BenefitConfig) {
-  return <AccountPortalIconView name={item.icon} size={22} />;
-}
 
 function RequestPortalFooter({ config, brandName, color, outside = false }: { config: RequestPageConfig; brandName: string; color: string; outside?: boolean }) {
   return <p className={outside ? 'request-portal-footer request-portal-footer-page' : 'request-portal-footer'} style={{ color, textAlign: config.footerAlignment }}>&copy; {config.footerShowYear ? `${new Date().getFullYear()} ` : ''}{brandName}. {config.footerText}</p>;

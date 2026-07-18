@@ -2186,6 +2186,11 @@ a { color: inherit; text-decoration: none; }
   background-size: 36px 36px;
 }
 
+.auth-brand-panel.account-portal-hero-shared::before,
+.auth-brand-panel.account-portal-hero-shared::after {
+  display: none;
+}
+
 .auth-hero-pattern-none::after { display: none; }
 .auth-stage.auth-hero-width-narrow { grid-template-columns: minmax(0, 0.82fr) minmax(440px, 1.18fr); }
 .auth-stage.auth-hero-width-balanced { grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr); }

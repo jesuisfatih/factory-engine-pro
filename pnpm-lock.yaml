@@ -27,6 +27,9 @@ importers:
       '@factory-engine-pro/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@factory-engine-pro/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-dialog':
         specifier: ^1.1.17
         version: 1.1.17(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

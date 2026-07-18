@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Users2 } from 'lucide-react';
-import { resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
+import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
+import { AccountPortalFormBrand } from '@factory-engine-pro/ui';
 import { accountsApi, accountsTokenStore, apiErrorMessage } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/AuthShell';
 import { AccountPortalLayout, useAccountPortalSurface } from '@/features/auth/AccountPortalLayout';
@@ -342,36 +343,18 @@ export function AccountsResetPasswordPanel({ tokenOverride, invitation = false }
   );
 }
 
-function Brand({ hero = false, surface }: { hero?: boolean; surface?: 'login' | 'register' }) {
+function Brand({ surface }: { surface?: 'login' | 'register' }) {
   const brandQuery = useWorkspaceBrand();
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
-  const page = surface ? brandQuery.data?.accountPortalExperience?.[surface] : null;
-  const mode = page?.formBrandMode ?? 'full';
-  const panelBackground = brandQuery.data?.accountPortalExperience?.theme.panelBackground ?? '#FFFFFF';
-  const logoSurface = page?.formLogoSurface === 'auto' || !page?.formLogoSurface
+  const experience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
+  const page = surface ? experience[surface] : experience.login;
+  const panelBackground = experience.theme.panelBackground;
+  const logoSurface = page.formLogoSurface === 'auto'
     ? (isLightSurface(panelBackground) ? 'light' : 'dark')
     : page.formLogoSurface;
   const logo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, logoSurface);
-  if (mode === 'hidden') return null;
-  const className = hero ? 'invite-brand' : 'auth-brand';
-  const size = hero ? 44 : 40;
-  if (mode === 'logo') {
-    return logo
-      ? <img className="auth-brand-logo-only" src={logo} alt={name} />
-      : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>;
-  }
-  return (
-    <div className={className}>
-      {logo
-        ? <img className="ws-logo" src={logo} alt="" style={{ width: size, height: size }} />
-        : <div className="ws-badge" style={{ width: size, height: size, fontSize: 14 }}>{badge}</div>}
-      <div>
-        <div className="name">{name}</div>
-        <div className="muted">{page?.heroBrandSubtitle || 'Company Portal'}</div>
-      </div>
-    </div>
-  );
+  return <AccountPortalFormBrand page={page} workspaceName={name} brandBadge={badge} brandLogo={logo} />;
 }
 
 function isLightSurface(hex: string) {

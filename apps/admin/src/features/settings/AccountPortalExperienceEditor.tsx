@@ -32,6 +32,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
+import { AccountPortalFormBrand, AccountPortalHero } from '@factory-engine-pro/ui';
 import type {
   AccountPortalBenefit,
   AccountPortalExperience,
@@ -234,6 +235,12 @@ export function AccountPortalExperienceEditor({
                 </select>
               </div>
               <div className="field">
+                <label htmlFor={`portal-brand-layout-${surface}`}>Logo and brand layout</label>
+                <select id={`portal-brand-layout-${surface}`} value={page.heroBrandLayout} disabled={disabled} onChange={(event) => setPageField('heroBrandLayout', event.target.value as AccountPortalPage['heroBrandLayout'])}>
+                  <option value="inline">Side by side</option><option value="stacked">Stacked</option>
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor={`portal-logo-size-${surface}`}>Hero logo size</label>
                 <select id={`portal-logo-size-${surface}`} value={page.heroLogoSize} disabled={disabled} onChange={(event) => setPageField('heroLogoSize', event.target.value as AccountPortalPage['heroLogoSize'])}>
                   <option value="standard">Standard</option><option value="large">Large</option>
@@ -243,6 +250,20 @@ export function AccountPortalExperienceEditor({
                 <label htmlFor={`portal-hero-width-${surface}`}>Hero panel width</label>
                 <select id={`portal-hero-width-${surface}`} value={page.heroPanelWidth} disabled={disabled} onChange={(event) => setPageField('heroPanelWidth', event.target.value as AccountPortalPage['heroPanelWidth'])}>
                   <option value="narrow">Narrow</option><option value="balanced">Balanced</option><option value="wide">Wide</option>
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`portal-form-logo-size-${surface}`}>Form logo size</label>
+                <select id={`portal-form-logo-size-${surface}`} value={page.formLogoSize} disabled={disabled} onChange={(event) => setPageField('formLogoSize', event.target.value as AccountPortalPage['formLogoSize'])}>
+                  <option value="compact">Compact</option><option value="standard">Standard</option><option value="large">Large</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`portal-form-brand-alignment-${surface}`}>Form brand alignment</label>
+                <select id={`portal-form-brand-alignment-${surface}`} value={page.formBrandAlignment} disabled={disabled} onChange={(event) => setPageField('formBrandAlignment', event.target.value as AccountPortalPage['formBrandAlignment'])}>
+                  <option value="left">Left</option><option value="center">Centered</option>
                 </select>
               </div>
             </div>
@@ -493,25 +514,22 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
     <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground }}>
       <div className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}>
         {page.layout === 'split' ? (
-          surface === 'requestAccess' ? (
-            <RequestAccessPreviewHero page={value.requestAccess} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={heroLogo} primaryColor={value.theme.primaryColor} />
-          ) : (
-            <div className={`portal-preview-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement} portal-preview-vertical-${page.heroVerticalAlignment} portal-preview-padding-${page.heroPadding} portal-preview-gap-${page.heroContentGap} portal-preview-benefit-density-${page.benefitDensity}`} style={{ background: page.panelGradientEnabled ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom}, ${page.panelGradientTo})` : value.theme.primaryColor }}>
-            <div className="portal-preview-brand">
-              {page.showHeroLogo && heroLogo ? <img src={heroLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge.charAt(0)}</span> : null}
-              {page.showHeroBrandText ? <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong> : null}
-            </div>
-            <div className="portal-preview-copy">{page.showEyebrow ? <small>{page.eyebrow}</small> : null}{page.showHeroHeadline ? <h4>{page.headline}</h4> : null}{page.showHeroDescription ? <p>{page.description}</p> : null}</div>
-            {page.showBenefits ? <div className="portal-preview-benefits">{page.benefits.map((benefit) => { const Icon = ICONS[benefit.icon]; return <div key={`${benefit.title}-${benefit.body}`}><Icon size={15} /><span><b>{benefit.title}</b><small>{benefit.body}</small></span></div>; })}</div> : null}
-            {page.showTrustItems ? <div className="portal-preview-trust">{page.trustItems.map((item) => { const Icon = ICONS[item.icon]; return <span key={`${item.icon}-${item.label}`}><Icon size={10} />{item.label}</span>; })}</div> : null}
-            </div>
-          )
+          <AccountPortalHero
+            className="portal-preview-hero"
+            page={page}
+            surface={surface}
+            workspaceName={workspaceName}
+            brandBadge={brandBadge}
+            brandLogo={heroLogo}
+            primaryColor={value.theme.primaryColor}
+            preview
+          />
         ) : null}
         {surface === 'requestAccess' ? (
-          <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} />
+          <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} />
         ) : (
         <div className="portal-preview-form" style={{ background: value.theme.panelBackground, color: value.theme.textColor }}>
-          {page.formBrandMode !== 'hidden' ? <div className="portal-preview-logo">{formLogo ? <img src={formLogo} alt="" /> : brandBadge.charAt(0)}</div> : null}
+          <AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} preview />
           <h4>{page.formTitle}</h4>{page.showFormDescription ? <p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p> : null}
           <label>Email</label><div className="portal-preview-input">you@company.com</div>
           <label>Password</label><div className="portal-preview-input">••••••••••</div>
@@ -526,51 +544,16 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
   );
 }
 
-function RequestAccessPreviewHero({ page, workspaceName, brandBadge, brandLogo, primaryColor }: {
+function RequestAccessPreviewForm({ page, theme, workspaceName, brandBadge, brandLogo }: {
   page: AccountPortalExperience['requestAccess'];
+  theme: AccountPortalExperience['theme'];
   workspaceName: string;
   brandBadge: string;
   brandLogo: string;
-  primaryColor: string;
-}) {
-  const headline = page.heroBrandTitle || (page.headline === 'Partner Program' ? `${workspaceName} Partner Program` : page.headline);
-  const background = page.panelGradientEnabled
-    ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
-    : `linear-gradient(160deg, ${primaryColor} 0%, ${darkenHex(primaryColor, 0.15)} 60%, ${darkenHex(primaryColor, 0.3)} 100%)`;
-  return (
-    <div className={`portal-preview-hero portal-request-hero portal-preview-align-${page.heroBrandAlignment} portal-preview-logo-${page.heroLogoSize} portal-preview-brand-${page.heroBrandSize} portal-preview-benefits-${page.benefitsPlacement} portal-preview-vertical-${page.heroVerticalAlignment} portal-preview-padding-${page.heroPadding} portal-preview-gap-${page.heroContentGap} portal-preview-benefit-density-${page.benefitDensity}`} style={{ background }}>
-      <div className="portal-request-brand">
-        {page.showHeroLogo && brandLogo ? <img src={brandLogo} alt="" /> : page.showHeroBadge ? <span>{brandBadge}</span> : null}
-        {page.showHeroBrandText ? <strong>{page.heroBrandTitle || workspaceName}<small>{page.heroBrandSubtitle}</small></strong> : null}
-      </div>
-      <div className="portal-request-copy">
-        {page.showEyebrow && page.eyebrow ? <small>{page.eyebrow}</small> : null}
-        {page.showHeroHeadline ? <h4>{headline}</h4> : null}
-        {page.showHeroDescription ? <p>{page.description}</p> : null}
-      </div>
-      {page.showBenefits ? (
-        <div className="portal-request-benefits">
-          {page.benefits.map((benefit) => {
-            const Icon = ICONS[benefit.icon];
-            return (
-              <div key={`${benefit.title}-${benefit.body}`}>
-                <span className="portal-request-benefit-icon"><Icon size={17} /></span>
-                <span><b>{benefit.title}</b><small>{benefit.body}</small></span>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function RequestAccessPreviewForm({ page, theme }: {
-  page: AccountPortalExperience['requestAccess'];
-  theme: AccountPortalExperience['theme'];
 }) {
   return (
     <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor }}>
+      <AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} preview />
       <h4>{page.formTitle}</h4>
       {page.showFormDescription ? <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p> : null}
       {page.notice.enabled ? <div className="portal-request-notice" style={{ color: page.notice.textColor, borderColor: page.notice.borderColor, background: page.notice.backgroundColor }}>
