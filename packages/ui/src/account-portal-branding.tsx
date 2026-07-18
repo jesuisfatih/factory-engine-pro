@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AccountPortalIcon, AccountPortalPage } from '@factory-engine-pro/contracts';
+import { resolveAccountPortalComposition } from './account-portal-composition.js';
 
 const ICONS: Record<AccountPortalIcon, LucideIcon> = {
   'badge-check': BadgeCheck,
@@ -83,12 +84,11 @@ export function AccountPortalHero({
   const headline = page.headline;
   const brandTitle = page.heroBrandTitle || workspaceName;
   const logoSize = heroLogoDimensions(page.heroLogoSize, compact);
+  const composition = resolveAccountPortalComposition(page, { preview: compact });
+  const hero = composition.hero;
   const brandLayout = page.heroBrandLayout ?? 'inline';
   const center = page.heroBrandAlignment === 'center';
-  const padding = heroPadding(page.heroPadding, compact);
-  const contentGap = heroGap(page.heroContentGap, compact);
   const benefitIconSize = page.benefitDensity === 'compact' ? (compact ? 28 : 34) : (compact ? 34 : 42);
-  const benefitGap = page.benefitDensity === 'compact' ? (compact ? 6 : 10) : (compact ? 10 : 16);
   const background = portalHeroBackground(page, primaryColor);
 
   return (
@@ -101,7 +101,7 @@ export function AccountPortalHero({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: page.heroVerticalAlignment === 'top' ? 'flex-start' : 'center',
-        padding,
+        padding: `${hero.paddingTop}px ${hero.paddingRight}px ${hero.paddingBottom}px ${hero.paddingLeft}px`,
         color: introColor,
         backgroundImage: background.image,
         backgroundColor: background.color,
@@ -118,7 +118,7 @@ export function AccountPortalHero({
           flexDirection: brandLayout === 'stacked' ? 'column' : 'row',
           alignItems: brandLayout === 'stacked' && !center ? 'flex-start' : 'center',
           justifyContent: center ? 'center' : 'flex-start',
-          gap: brandLayout === 'stacked' ? (compact ? 5 : 8) : (compact ? 9 : 14),
+          gap: hero.brandGap,
           width: '100%',
           minWidth: 0,
           textAlign: center ? 'center' : 'left',
@@ -145,14 +145,14 @@ export function AccountPortalHero({
         ) : null}
       </div>
 
-      <div style={{ width: '100%', marginTop: contentGap, textAlign: center ? 'center' : 'left' }}>
+      <div style={{ width: '100%', marginTop: hero.brandToIntroGap, textAlign: center ? 'center' : 'left' }}>
         {page.showEyebrow && page.eyebrow ? <small style={{ display: 'block', color: introColor, opacity: 0.8, fontSize: compact ? 8 : 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: compact ? 0 : 0.4 }}>{page.eyebrow}</small> : null}
-        {page.showHeroHeadline ? <h1 style={{ maxWidth: center ? '100%' : compact ? 250 : 460, margin: `${compact ? 7 : 10}px ${center ? 'auto' : 0} 0`, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 21 : 30) : (compact ? 18 : 24), lineHeight: 1.24, fontWeight: 700, letterSpacing: 0 }}>{headline}</h1> : null}
-        {page.showHeroDescription ? <p style={{ maxWidth: center ? (compact ? 300 : 500) : compact ? 270 : 480, margin: `${compact ? 7 : 8}px ${center ? 'auto' : 0} 0`, color: introColor, opacity: 0.78, fontSize: page.heroBrandSize === 'large' ? (compact ? 11 : 15) : (compact ? 10 : 14), lineHeight: 1.5 }}>{page.description}</p> : null}
+        {page.showHeroHeadline ? <h1 style={{ maxWidth: center ? '100%' : compact ? 250 : 460, margin: `${page.showEyebrow && page.eyebrow ? hero.eyebrowToHeadlineGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 21 : 30) : (compact ? 18 : 24), lineHeight: 1.24, fontWeight: 700, letterSpacing: 0 }}>{headline}</h1> : null}
+        {page.showHeroDescription ? <p style={{ maxWidth: center ? (compact ? 300 : 500) : compact ? 270 : 480, margin: `${page.showHeroHeadline ? hero.headlineToDescriptionGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, opacity: 0.78, fontSize: page.heroBrandSize === 'large' ? (compact ? 11 : 15) : (compact ? 10 : 14), lineHeight: 1.5 }}>{page.description}</p> : null}
       </div>
 
       {page.showBenefits && page.benefits.length ? (
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: benefitGap, marginTop: page.benefitsPlacement === 'lower' ? 'auto' : contentGap, color: lowerColor }}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: hero.benefitRowGap, marginTop: page.benefitsPlacement === 'lower' ? 'auto' : hero.introToBenefitsGap, color: lowerColor }}>
           {page.benefits.map((benefit) => (
             <div key={`${benefit.title}-${benefit.body}`} style={{ display: 'grid', gridTemplateColumns: `${benefitIconSize}px minmax(0, 1fr)`, gap: compact ? 9 : 12, alignItems: 'center', textAlign: 'left' }}>
               <span style={{ width: benefitIconSize, height: benefitIconSize, display: 'grid', placeItems: 'center', borderRadius: page.benefitDensity === 'compact' ? (compact ? 7 : 8) : (compact ? 9 : 12), background: isLightColor(lowerColor) ? 'rgba(8,31,111,0.10)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }}>
@@ -168,7 +168,7 @@ export function AccountPortalHero({
       ) : null}
 
       {page.showTrustItems && page.trustItems.length ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: center ? 'center' : 'flex-start', gap: compact ? 5 : 8, marginTop: compact ? 9 : 20, color: lowerColor }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: center ? 'center' : 'flex-start', gap: compact ? 5 : 8, marginTop: hero.trustTopGap, color: lowerColor }}>
           {page.trustItems.map((item) => (
             <span key={`${item.icon}-${item.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? 4 : 6, padding: compact ? '4px 6px' : '6px 8px', borderRadius: compact ? 4 : 8, background: isLightColor(lowerColor) ? 'rgba(8,31,111,0.08)' : 'rgba(255,255,255,0.10)', fontSize: compact ? 7 : 11, fontWeight: 700 }}>
               <AccountPortalIconView name={item.icon} size={compact ? 10 : 13} />{item.label}
@@ -194,6 +194,7 @@ export function AccountPortalFormBrand({
   preview?: boolean;
 }) {
   if (page.formBrandMode === 'hidden') return null;
+  const composition = resolveAccountPortalComposition(page, { preview });
   const center = (page.formBrandAlignment ?? 'center') === 'center';
   const logoSize = formLogoDimensions(page.formLogoSize ?? 'standard', preview);
   const logo = brandLogo ? (
@@ -203,11 +204,11 @@ export function AccountPortalFormBrand({
   );
 
   if (page.formBrandMode === 'logo') {
-    return <div style={{ width: '100%', display: 'flex', justifyContent: center ? 'center' : 'flex-start', marginBottom: preview ? 12 : 22 }}><span style={{ width: logoSize.width, height: logoSize.height, maxWidth: '100%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start' }}>{logo}</span></div>;
+    return <div style={{ width: '100%', display: 'flex', justifyContent: center ? 'center' : 'flex-start', marginBottom: composition.form.brandBottomGap }}><span style={{ width: logoSize.width, height: logoSize.height, maxWidth: '100%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start' }}>{logo}</span></div>;
   }
 
   return (
-    <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: preview ? 8 : 12, marginBottom: preview ? 12 : 22, textAlign: center ? 'center' : 'left' }}>
+    <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: preview ? 8 : 12, marginBottom: composition.form.brandBottomGap, textAlign: center ? 'center' : 'left' }}>
       <span style={{ width: Math.min(logoSize.width, preview ? 100 : 150), height: logoSize.height, maxWidth: '45%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start' }}>{logo}</span>
       <strong style={{ minWidth: 0, fontSize: preview ? 10 : 15, lineHeight: 1.2 }}>{page.heroBrandTitle || workspaceName}<small style={{ display: 'block', marginTop: 2, opacity: 0.64, fontSize: preview ? 8 : 12, fontWeight: 500 }}>{page.heroBrandSubtitle}</small></strong>
     </div>
@@ -223,18 +224,6 @@ function formLogoDimensions(size: AccountPortalPage['formLogoSize'], preview: bo
   if (size === 'large') return preview ? { width: 180, height: 62 } : { width: 280, height: 82 };
   if (size === 'compact') return preview ? { width: 100, height: 38 } : { width: 160, height: 52 };
   return preview ? { width: 140, height: 50 } : { width: 220, height: 72 };
-}
-
-function heroPadding(size: AccountPortalPage['heroPadding'], preview: boolean) {
-  if (size === 'compact') return preview ? '20px' : '26px 28px';
-  if (size === 'spacious') return preview ? '34px' : '52px 42px';
-  return preview ? '26px' : '38px 34px';
-}
-
-function heroGap(size: AccountPortalPage['heroContentGap'], preview: boolean) {
-  if (size === 'tight') return preview ? 10 : 14;
-  if (size === 'open') return preview ? 30 : 38;
-  return preview ? 18 : 24;
 }
 
 function portalHeroBackground(page: AccountPortalPage, primaryColor: string) {

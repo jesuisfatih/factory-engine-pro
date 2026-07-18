@@ -4,7 +4,7 @@ import {
   resolveBrandLogoUrl,
   type AccountPortalExperience,
 } from '@factory-engine-pro/contracts';
-import { AccountPortalHero } from '@factory-engine-pro/ui';
+import { AccountPortalHero, resolveAccountPortalComposition } from '@factory-engine-pro/ui';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 type PortalSurface = 'login' | 'register';
@@ -24,6 +24,7 @@ export function AccountPortalLayout({
   const experience: AccountPortalExperience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
   const page = { ...DEFAULT_ACCOUNT_PORTAL_EXPERIENCE[surface], ...experience[surface] };
   const theme = experience.theme;
+  const composition = resolveAccountPortalComposition(page);
   const layout = page.enabled ? page.layout : 'centered';
   const brandBackground = page.panelGradientEnabled
     ? `linear-gradient(${page.panelGradientAngle}deg, ${page.panelGradientFrom} 0%, ${page.panelGradientTo} 100%)`
@@ -45,11 +46,29 @@ export function AccountPortalLayout({
       ? `linear-gradient(135deg, ${theme.primaryColor}, ${theme.accentColor})`
       : theme.primaryColor,
     '--portal-desktop-stage-height': `${page.desktopStageHeight}px`,
+    '--portal-page-padding': `${composition.canvas.pagePadding}px`,
+    '--portal-stage-width': `${composition.canvas.stageWidth}px`,
+    '--portal-stage-height': `${composition.canvas.stageHeight}px`,
+    '--portal-hero-panel-percent': `${composition.canvas.heroPanelPercent}%`,
+    '--portal-stage-corner-radius': `${composition.canvas.stageCornerRadius}px`,
+    '--portal-stage-border-width': `${composition.canvas.stageBorderWidth}px`,
+    '--portal-stage-shadow': composition.canvas.stageShadowBlur > 0 && composition.canvas.stageShadowOpacity > 0
+      ? `0 ${Math.max(4, Math.round(composition.canvas.stageShadowBlur / 2))}px ${composition.canvas.stageShadowBlur}px rgba(15, 23, 42, ${composition.canvas.stageShadowOpacity / 100})`
+      : 'none',
+    '--portal-form-padding-top': `${composition.form.paddingTop}px`,
+    '--portal-form-padding-right': `${composition.form.paddingRight}px`,
+    '--portal-form-padding-bottom': `${composition.form.paddingBottom}px`,
+    '--portal-form-padding-left': `${composition.form.paddingLeft}px`,
+    '--portal-mobile-page-padding': `${composition.mobile.pagePadding}px`,
+    '--portal-mobile-form-padding-top': `${composition.mobile.formPaddingTop}px`,
+    '--portal-mobile-form-padding-right': `${composition.mobile.formPaddingRight}px`,
+    '--portal-mobile-form-padding-bottom': `${composition.mobile.formPaddingBottom}px`,
+    '--portal-mobile-form-padding-left': `${composition.mobile.formPaddingLeft}px`,
   } as CSSProperties;
 
   return (
-    <main className={`auth-page portal-density-${theme.density} portal-radius-${theme.radius} ${page.desktopFit ? 'auth-desktop-fit' : ''}`} style={style}>
-      <div className={`auth-stage auth-layout-${layout} auth-hero-width-${page.heroPanelWidth}`}>
+    <main className={`auth-page auth-height-${composition.canvas.heightMode} portal-density-${theme.density} portal-radius-${theme.radius} ${composition.canvas.heightMode !== 'content' ? 'auth-desktop-fit' : ''}${composition.mobile.heroVisible ? '' : ' auth-mobile-hero-hidden'}`} style={{ ...style, alignItems: composition.canvas.pageVerticalAlignment === 'top' ? 'start' : 'center' }}>
+      <div className={`auth-stage auth-layout-${layout}`}>
         {layout === 'split' ? (
           <AccountPortalHero
             className="auth-brand-panel"

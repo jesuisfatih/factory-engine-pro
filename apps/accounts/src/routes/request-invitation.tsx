@@ -7,7 +7,7 @@ import {
   type AccountPortalIcon,
   type AccountPortalRequestField,
 } from '@factory-engine-pro/contracts';
-import { AccountPortalFormBrand, AccountPortalHero, AccountPortalIconView } from '@factory-engine-pro/ui';
+import { AccountPortalFormBrand, AccountPortalHero, AccountPortalIconView, resolveAccountPortalComposition } from '@factory-engine-pro/ui';
 import { accountsApi, apiErrorMessage } from '@/lib/api';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
@@ -324,17 +324,25 @@ function RequestInvitationView() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const certificateWarning = certificateExpiryWarning(formData.taxCertificateExpiresAt, pageConfig.certificateExpiringMessage);
+  const composition = resolveAccountPortalComposition(requestPage);
+  const formComposition = composition.form;
 
   const colors = makeColors(pageConfig.primaryColor || DEFAULT_PRIMARY_COLOR);
   const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
   const boxShadowEnabled = pageConfig.boxShadow !== false;
-  const heroFlexBasis = pageConfig.heroPanelWidth === 'narrow' ? '33%' : pageConfig.heroPanelWidth === 'wide' ? '46%' : '38%';
+  const heroFlexBasis = `${composition.canvas.heroPanelPercent}%`;
   const actionBackground = pageConfig.primaryButtonStyle === 'gradient'
     ? getConfiguredGradient(pageConfig, `linear-gradient(135deg, ${colors.primary}, ${colors.gradientOne})`)
     : colors.primary;
-  const formPanelModeSettings = pageConfig.desktopFit
-    ? { panelPadding: '8px 24px', inputPadding: '3px 10px', inputRadius: 8, fieldGap: 7, buttonHeight: 36 }
-    : getFormPanelModeSettings(pageConfig.formPanelMode);
+  const legacyFormPanelSettings = getFormPanelModeSettings(pageConfig.formPanelMode);
+  const formPanelModeSettings = {
+    ...legacyFormPanelSettings,
+    panelPadding: `${formComposition.paddingTop}px ${formComposition.paddingRight}px ${formComposition.paddingBottom}px ${formComposition.paddingLeft}px`,
+    inputPadding: `${formComposition.inputPaddingY}px ${formComposition.inputPaddingX}px`,
+    fieldGap: formComposition.fieldRowGap,
+    fieldColumnGap: formComposition.fieldColumnGap,
+    buttonHeight: formComposition.buttonHeight,
+  };
   const formPanelBackgroundStyle = getFormPanelBackgroundStyle(pageConfig, colors.primary);
   const formPanelTextColor = normalizeHexColor(pageConfig.formPanelTextColor, fontColor);
   const formPanelMutedTextColor = normalizeHexColor(
@@ -372,7 +380,7 @@ function RequestInvitationView() {
     fontSize: pageConfig.desktopFit ? 11 : 13,
     fontWeight: 500,
     color: formPanelMutedTextColor,
-    marginBottom: pageConfig.desktopFit ? 2 : 6,
+    marginBottom: formComposition.labelGap,
   };
 
   const handleChange = (field: string, value: string) => {
@@ -465,7 +473,7 @@ function RequestInvitationView() {
             onChange={(inputEvent) => handleFileChange(field.key, inputEvent.target.files?.[0] || null)}
             disabled={loading}
             required={isRequired}
-            style={{ ...inputStyle, padding: pageConfig.desktopFit ? '4px 9px' : '8px 12px' }}
+            style={inputStyle}
           />
           {field.helpText ? <p style={{ fontSize: 12, color: formPanelMutedTextColor, marginTop: 4, marginBottom: 0 }}>{field.helpText}</p> : null}
         </div>
@@ -504,13 +512,13 @@ function RequestInvitationView() {
             {isRequired ? <span style={{ color: STATIC_COLORS.red }}> *</span> : null}
           </label>
           <textarea
-            rows={pageConfig.desktopFit ? 2 : 3}
+            rows={formComposition.textareaRows}
             value={value}
             onChange={(inputEvent) => handleChange(field.key, inputEvent.target.value)}
             disabled={loading}
             required={isRequired}
             placeholder={getPlaceholder(field)}
-            style={{ ...inputStyle, minHeight: pageConfig.desktopFit ? 42 : 80, resize: 'vertical' }}
+            style={{ ...inputStyle, resize: 'vertical' }}
           />
         </div>
       );
@@ -567,7 +575,7 @@ function RequestInvitationView() {
         rows.push(
           <div
             key={`row-${current.key}-${next.key}`}
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: formPanelModeSettings.fieldGap }}
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: formPanelModeSettings.fieldColumnGap }}
           >
             {renderField(current)}
             {renderField(next)}
@@ -584,33 +592,39 @@ function RequestInvitationView() {
 
   return (
     <div
-      className={`request-portal-page${pageConfig.desktopFit ? ' request-portal-desktop-fit' : ''}${pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? ' request-portal-has-page-footer' : ''}`}
+      className={`request-portal-page request-portal-height-${composition.canvas.heightMode}${composition.canvas.heightMode !== 'content' ? ' request-portal-desktop-fit' : ''}${pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? ' request-portal-has-page-footer' : ''}${composition.mobile.heroVisible ? '' : ' request-portal-mobile-hero-hidden'}`}
       style={{
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: composition.canvas.pageVerticalAlignment === 'top' ? 'flex-start' : 'center',
         background: portalExperience?.theme.pageBackground ?? `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
-        padding: 20,
+        padding: composition.canvas.pagePadding,
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         '--portal-desktop-stage-height': `${pageConfig.desktopStageHeight}px`,
+        '--portal-page-padding': `${composition.canvas.pagePadding}px`,
+        '--portal-mobile-page-padding': `${composition.mobile.pagePadding}px`,
+        '--portal-mobile-form-padding-top': `${composition.mobile.formPaddingTop}px`,
+        '--portal-mobile-form-padding-right': `${composition.mobile.formPaddingRight}px`,
+        '--portal-mobile-form-padding-bottom': `${composition.mobile.formPaddingBottom}px`,
+        '--portal-mobile-form-padding-left': `${composition.mobile.formPaddingLeft}px`,
       } as CSSProperties}
     >
-      <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestPage.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
+      <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestPage.layout === 'centered' ? Math.min(620, composition.canvas.stageWidth) : composition.canvas.stageWidth, position: 'relative', zIndex: 1 }}>
         <div
           className="request-portal-stage"
           style={{
             background: portalExperience?.theme.panelBackground ?? STATIC_COLORS.card,
-            borderRadius: 20,
+            borderRadius: composition.canvas.stageCornerRadius,
             overflow: 'hidden',
-            boxShadow: boxShadowEnabled
-              ? `0 8px 40px ${colors.primaryLight}, 0 2px 8px rgba(0,0,0,0.04)`
+            boxShadow: boxShadowEnabled && composition.canvas.stageShadowBlur > 0 && composition.canvas.stageShadowOpacity > 0
+              ? `0 ${Math.max(4, Math.round(composition.canvas.stageShadowBlur / 2))}px ${composition.canvas.stageShadowBlur}px rgba(15, 23, 42, ${composition.canvas.stageShadowOpacity / 100})`
               : 'none',
-            border: `1px solid ${colors.primaryLight}`,
+            border: `${composition.canvas.stageBorderWidth}px solid ${colors.primaryLight}`,
           }}
         >
-          <div className="request-portal-stage-grid" style={{ display: 'flex', minHeight: pageConfig.desktopFit ? 0 : 620 }}>
+          <div className="request-portal-stage-grid" style={{ display: 'flex', minHeight: composition.canvas.heightMode === 'content' ? pageConfig.desktopStageHeight : 0 }}>
             {requestPage.layout !== 'centered' ? (
               <AccountPortalHero
                 className="request-portal-hero"
@@ -698,7 +712,7 @@ function RequestInvitationView() {
               ) : (
                 <>
                   <AccountPortalFormBrand page={requestPage} workspaceName={brandName} brandBadge={brandBadge} brandLogo={formLogoUrl} />
-                  <div style={{ marginBottom: pageConfig.desktopFit ? 8 : 20 }}>
+                  <div style={{ marginBottom: formComposition.headingBottomGap }}>
                     <h4 style={{ fontWeight: 700, margin: '0 0 4px', color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
                     </h4>
@@ -715,8 +729,8 @@ function RequestInvitationView() {
                         background: normalizeHexColor(pageConfig.notice.backgroundColor, '#EEF4FF'),
                         border: `1px solid ${normalizeHexColor(pageConfig.notice.borderColor, '#AFC6F8')}`,
                         borderRadius: 10,
-                        padding: pageConfig.desktopFit ? '6px 10px' : '10px 14px',
-                        marginBottom: pageConfig.desktopFit ? 7 : 12,
+                        padding: `${Math.max(6, formComposition.inputPaddingY)}px ${formComposition.inputPaddingX}px`,
+                        marginBottom: formComposition.noticeBottomGap,
                         fontSize: pageConfig.desktopFit ? 11 : 13,
                         color: normalizeHexColor(pageConfig.notice.textColor, '#344054'),
                       }}
@@ -763,7 +777,7 @@ function RequestInvitationView() {
                       style={{
                         width: '100%',
                         height: formPanelModeSettings.buttonHeight,
-                        marginTop: pageConfig.desktopFit ? 8 : 22,
+                        marginTop: formComposition.buttonTopGap,
                         border: 'none',
                         borderRadius: formPanelModeSettings.inputRadius,
                         background: actionBackground,
@@ -780,7 +794,7 @@ function RequestInvitationView() {
                       {loading ? pageConfig.submittingActionLabel : pageConfig.primaryActionLabel}
                     </button>
 
-                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: pageConfig.desktopFit ? 5 : 16, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
+                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: formComposition.signinTopGap, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
                       {pageConfig.existingAccountPrompt}{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
                         {pageConfig.secondaryActionLabel}

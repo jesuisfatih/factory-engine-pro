@@ -2115,7 +2115,7 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   place-items: center;
   width: 100%;
-  padding: 40px;
+  padding: var(--portal-page-padding, 40px);
   background:
     linear-gradient(135deg, rgba(255,255,255,0.86), rgba(242,245,248,0.94)),
     var(--auth-bg);
@@ -2124,15 +2124,15 @@ a { color: inherit; text-decoration: none; }
 }
 
 .auth-stage {
-  width: min(1120px, 100%);
-  min-height: 680px;
+  width: min(var(--portal-stage-width, 1120px), 100%);
+  min-height: var(--portal-stage-height, 680px);
   display: grid;
-  grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr);
+  grid-template-columns: var(--portal-hero-panel-percent, 38%) minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid #dfe5ec;
-  border-radius: 8px;
+  border: var(--portal-stage-border-width, 1px) solid #dfe5ec;
+  border-radius: var(--portal-stage-corner-radius, 8px);
   background: #ffffff;
-  box-shadow: 0 28px 80px rgba(22, 26, 32, 0.14), 0 2px 8px rgba(22, 26, 32, 0.05);
+  box-shadow: var(--portal-stage-shadow, 0 28px 80px rgba(22, 26, 32, 0.14));
 }
 
 .auth-stage.auth-layout-centered {
@@ -2141,14 +2141,11 @@ a { color: inherit; text-decoration: none; }
   grid-template-columns: 1fr;
 }
 
-.portal-radius-compact .auth-stage,
 .portal-radius-compact .auth-benefit-card,
 .portal-radius-compact .auth-card { border-radius: 4px; }
-.portal-radius-soft .auth-stage { border-radius: 16px; }
 .portal-radius-soft .auth-benefit-card,
 .portal-radius-soft .auth-card { border-radius: 12px; }
-.portal-density-compact .auth-brand-panel,
-.portal-density-compact .auth-form-panel { padding: 34px; }
+.portal-density-compact .auth-brand-panel { padding: 34px; }
 
 .auth-brand-panel {
   position: relative;
@@ -2421,7 +2418,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 48px;
+  padding: var(--portal-form-padding-top, 48px) var(--portal-form-padding-right, 48px) var(--portal-form-padding-bottom, 48px) var(--portal-form-padding-left, 48px);
   background: var(--auth-form-bg);
   overflow-y: auto;
 }
@@ -2752,9 +2749,12 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (min-width: 901px) {
-  .request-portal-desktop-fit { height: 100svh; padding: 12px !important; overflow: hidden; }
-  .request-portal-desktop-fit .request-portal-stage-wrap { min-height: 0; height: min(calc(100svh - 24px), var(--portal-desktop-stage-height, 620px)); max-height: var(--portal-desktop-stage-height, 620px); }
-  .request-portal-desktop-fit.request-portal-has-page-footer .request-portal-stage-wrap { height: min(calc(100svh - 48px), var(--portal-desktop-stage-height, 620px)); }
+  .request-portal-desktop-fit { height: 100svh; padding: var(--portal-page-padding, 12px) !important; overflow: hidden; }
+  .request-portal-desktop-fit .request-portal-stage-wrap { min-height: 0; }
+  .request-portal-height-viewport .request-portal-stage-wrap { height: calc(100svh - var(--portal-page-padding, 12px) - var(--portal-page-padding, 12px)); max-height: none; }
+  .request-portal-height-viewport.request-portal-has-page-footer .request-portal-stage-wrap { height: calc(100svh - var(--portal-page-padding, 12px) - var(--portal-page-padding, 12px) - 28px); }
+  .request-portal-height-fixed .request-portal-stage-wrap { height: min(calc(100svh - var(--portal-page-padding, 12px) - var(--portal-page-padding, 12px)), var(--portal-desktop-stage-height, 620px)); max-height: var(--portal-desktop-stage-height, 620px); }
+  .request-portal-height-fixed.request-portal-has-page-footer .request-portal-stage-wrap { height: min(calc(100svh - var(--portal-page-padding, 12px) - var(--portal-page-padding, 12px) - 28px), var(--portal-desktop-stage-height, 620px)); }
   .request-portal-desktop-fit .request-portal-stage,
   .request-portal-desktop-fit .request-portal-stage-grid { height: 100%; }
   .request-portal-desktop-fit .request-portal-hero { min-height: 0; overflow: hidden; }
@@ -2762,16 +2762,20 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 900px) {
-  .request-portal-page { align-items: flex-start !important; padding: 16px !important; }
+  .request-portal-page { align-items: flex-start !important; padding: var(--portal-mobile-page-padding, 16px) !important; }
   .request-portal-stage-grid { flex-direction: column; }
   .request-portal-hero { flex-basis: auto !important; }
-  .request-portal-form-panel { padding: 28px 22px !important; }
+  .request-portal-mobile-hero-hidden .request-portal-hero { display: none; }
+  .request-portal-form-panel { padding: var(--portal-mobile-form-padding-top, 28px) var(--portal-mobile-form-padding-right, 22px) var(--portal-mobile-form-padding-bottom, 28px) var(--portal-mobile-form-padding-left, 22px) !important; }
 }
 
 @media (min-width: 901px) {
-  .auth-page.auth-desktop-fit { padding: 20px; overflow: hidden; }
-  .auth-page.auth-desktop-fit .auth-stage { min-height: 0; height: min(calc(100svh - 40px), var(--portal-desktop-stage-height, 680px)); max-height: var(--portal-desktop-stage-height, 680px); }
-  .auth-page.auth-desktop-fit:has(.auth-footer-page) .auth-stage { height: min(calc(100svh - 76px), var(--portal-desktop-stage-height, 680px)); }
+  .auth-page.auth-desktop-fit { padding: var(--portal-page-padding, 20px); overflow: hidden; }
+  .auth-page.auth-desktop-fit .auth-stage { min-height: 0; }
+  .auth-page.auth-height-viewport .auth-stage { height: calc(100svh - var(--portal-page-padding, 20px) - var(--portal-page-padding, 20px)); max-height: none; }
+  .auth-page.auth-height-viewport:has(.auth-footer-page) .auth-stage { height: calc(100svh - var(--portal-page-padding, 20px) - var(--portal-page-padding, 20px) - 36px); }
+  .auth-page.auth-height-fixed .auth-stage { height: min(calc(100svh - var(--portal-page-padding, 20px) - var(--portal-page-padding, 20px)), var(--portal-desktop-stage-height, 680px)); max-height: var(--portal-desktop-stage-height, 680px); }
+  .auth-page.auth-height-fixed:has(.auth-footer-page) .auth-stage { height: min(calc(100svh - var(--portal-page-padding, 20px) - var(--portal-page-padding, 20px) - 36px), var(--portal-desktop-stage-height, 680px)); }
   .auth-page.auth-desktop-fit .auth-brand-panel,
   .auth-page.auth-desktop-fit .auth-form-panel { overflow-y: auto; }
 }
@@ -2951,7 +2955,7 @@ a { color: inherit; text-decoration: none; }
   .order-detail-grid, .order-address-grid { grid-template-columns: 1fr; }
   .invoice-history-grid { grid-template-columns: 1fr; }
   .invite-shell { grid-template-columns: 1fr; }
-  .auth-page { padding: 24px; }
+  .auth-page { padding: var(--portal-mobile-page-padding, 16px); }
   .auth-stage {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -2963,7 +2967,8 @@ a { color: inherit; text-decoration: none; }
     line-height: 1.16;
   }
   .auth-brand-copy p { font-size: 15px; }
-  .auth-form-panel { padding: 34px; }
+  .auth-form-panel { padding: var(--portal-mobile-form-padding-top, 28px) var(--portal-mobile-form-padding-right, 22px) var(--portal-mobile-form-padding-bottom, 28px) var(--portal-mobile-form-padding-left, 22px); }
+  .auth-mobile-hero-hidden .auth-brand-panel { display: none; }
 }
 
 @media (max-width: 620px) {
@@ -2971,27 +2976,25 @@ a { color: inherit; text-decoration: none; }
     display: block;
     min-height: 100vh;
     min-height: 100svh;
-    padding: 0;
+    padding: var(--portal-mobile-page-padding, 0px);
     background: var(--auth-card-bg);
     overflow-x: hidden;
   }
   .auth-stage {
     width: 100%;
-    min-height: 100vh;
-    min-height: 100svh;
+    min-height: 0;
     display: block;
     overflow-x: hidden;
     border: 0;
     border-radius: 0;
     box-shadow: none;
   }
-  .auth-brand-panel { display: none; }
+  .auth-mobile-hero-hidden .auth-brand-panel { display: none; }
   .auth-form-panel {
-    min-height: 100vh;
-    min-height: 100svh;
+    min-height: 0;
     width: 100%;
     display: block;
-    padding: 28px 18px;
+    padding: var(--portal-mobile-form-padding-top, 28px) var(--portal-mobile-form-padding-right, 18px) var(--portal-mobile-form-padding-bottom, 28px) var(--portal-mobile-form-padding-left, 18px);
     background: var(--auth-card-bg);
     overflow-x: hidden;
   }

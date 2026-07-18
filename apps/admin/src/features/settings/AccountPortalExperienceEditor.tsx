@@ -32,7 +32,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { DEFAULT_ACCOUNT_PORTAL_EXPERIENCE, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
-import { AccountPortalFormBrand, AccountPortalHero } from '@factory-engine-pro/ui';
+import { AccountPortalFormBrand, AccountPortalHero, resolveAccountPortalComposition } from '@factory-engine-pro/ui';
 import type {
   AccountPortalBenefit,
   AccountPortalExperience,
@@ -41,6 +41,7 @@ import type {
   AccountPortalRequestField,
   BrandAssets,
 } from '@factory-engine-pro/contracts';
+import { PortalCompositionControls } from './PortalCompositionControls';
 
 type Surface = 'login' | 'register' | 'requestAccess';
 
@@ -248,7 +249,11 @@ export function AccountPortalExperienceEditor({
               </div>
               <div className="field">
                 <label htmlFor={`portal-hero-width-${surface}`}>Hero panel width</label>
-                <select id={`portal-hero-width-${surface}`} value={page.heroPanelWidth} disabled={disabled} onChange={(event) => setPageField('heroPanelWidth', event.target.value as AccountPortalPage['heroPanelWidth'])}>
+                <select id={`portal-hero-width-${surface}`} value={page.heroPanelWidth} disabled={disabled} onChange={(event) => {
+                  const heroPanelWidth = event.target.value as AccountPortalPage['heroPanelWidth'];
+                  const heroPanelPercent = heroPanelWidth === 'narrow' ? 33 : heroPanelWidth === 'wide' ? 46 : 38;
+                  setPage({ ...page, heroPanelWidth, heroPanelPercent });
+                }}>
                   <option value="narrow">Narrow</option><option value="balanced">Balanced</option><option value="wide">Wide</option>
                 </select>
               </div>
@@ -286,12 +291,6 @@ export function AccountPortalExperienceEditor({
                   <option value="auto">Automatic for background</option><option value="light">Logo for light background</option><option value="dark">Logo for dark background</option>
                 </select>
               </div>
-              <div className="field">
-                <label htmlFor={`portal-benefits-placement-${surface}`}>Benefit card placement</label>
-                <select id={`portal-benefits-placement-${surface}`} value={page.benefitsPlacement} disabled={disabled} onChange={(event) => setPageField('benefitsPlacement', event.target.value as AccountPortalPage['benefitsPlacement'])}>
-                  <option value="flow">Below intro</option><option value="lower">Lower in hero</option>
-                </select>
-              </div>
             </div>
             <div className="field">
               <label htmlFor={`portal-primary-button-${surface}`}>Primary button</label>
@@ -299,50 +298,7 @@ export function AccountPortalExperienceEditor({
                 <option value="solid">Solid brand color</option><option value="gradient">Brand gradient</option>
               </select>
             </div>
-            <div className="portal-control-title portal-trust-title">Position and fit</div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor={`portal-vertical-alignment-${surface}`}>Hero content position</label>
-                <select id={`portal-vertical-alignment-${surface}`} value={page.heroVerticalAlignment} disabled={disabled} onChange={(event) => setPageField('heroVerticalAlignment', event.target.value as AccountPortalPage['heroVerticalAlignment'])}>
-                  <option value="top">Top</option><option value="center">Centered</option>
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor={`portal-hero-padding-${surface}`}>Hero inner spacing</label>
-                <select id={`portal-hero-padding-${surface}`} value={page.heroPadding} disabled={disabled} onChange={(event) => setPageField('heroPadding', event.target.value as AccountPortalPage['heroPadding'])}>
-                  <option value="compact">Compact</option><option value="standard">Standard</option><option value="spacious">Spacious</option>
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor={`portal-content-gap-${surface}`}>Intro to benefits gap</label>
-                <select id={`portal-content-gap-${surface}`} value={page.heroContentGap} disabled={disabled} onChange={(event) => setPageField('heroContentGap', event.target.value as AccountPortalPage['heroContentGap'])}>
-                  <option value="tight">Tight</option><option value="standard">Standard</option><option value="open">Open</option>
-                </select>
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor={`portal-benefit-density-${surface}`}>Benefit row density</label>
-                <select id={`portal-benefit-density-${surface}`} value={page.benefitDensity} disabled={disabled} onChange={(event) => setPageField('benefitDensity', event.target.value as AccountPortalPage['benefitDensity'])}>
-                  <option value="compact">Compact</option><option value="standard">Standard</option>
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor={`portal-form-vertical-alignment-${surface}`}>Form content position</label>
-                <select id={`portal-form-vertical-alignment-${surface}`} value={page.formVerticalAlignment} disabled={disabled} onChange={(event) => setPageField('formVerticalAlignment', event.target.value as AccountPortalPage['formVerticalAlignment'])}>
-                  <option value="top">Top</option><option value="center">Centered</option>
-                </select>
-              </div>
-              <div className="field portal-toggle-stack portal-fit-toggle">
-                <label><input type="checkbox" checked={page.desktopFit} disabled={disabled} onChange={(event) => setPageField('desktopFit', event.target.checked)} /> Fit desktop page without scrolling</label>
-                <small>Mobile stays naturally scrollable.</small>
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor={`portal-desktop-stage-height-${surface}`}>Desktop canvas height ({page.desktopStageHeight}px)</label>
-              <input id={`portal-desktop-stage-height-${surface}`} type="range" min="560" max="900" step="10" value={page.desktopStageHeight} disabled={disabled} onChange={(event) => setPageField('desktopStageHeight', Number(event.target.value))} />
-              <small className="portal-field-help">Controls the real page and this preview when desktop fit is enabled.</small>
-            </div>
+            <PortalCompositionControls page={page} disabled={disabled} onChange={setPage} />
             <div className="field-row">
               <div className="field">
                 <label htmlFor={`portal-footer-placement-${surface}`}>Footer location</label>
@@ -521,13 +477,30 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
 }) {
   const heroLogo = portalLogo(page.heroLogoSurface, page.panelGradientEnabled ? page.panelGradientFrom : value.theme.primaryColor, brandAssets, brandLogo);
   const formLogo = portalLogo(page.formLogoSurface, value.theme.panelBackground, brandAssets, brandLogo);
+  const composition = resolveAccountPortalComposition(page, { preview: true });
+  const stageHeight = composition.canvas.heightMode === 'content' ? undefined : composition.canvas.stageHeight;
+  const previewPadding = viewport === 'mobile' ? composition.mobile.pagePadding : composition.canvas.pagePadding;
+  const stageShadow = composition.canvas.stageShadowBlur > 0 && composition.canvas.stageShadowOpacity > 0
+    ? `0 ${Math.max(4, Math.round(composition.canvas.stageShadowBlur / 2))}px ${composition.canvas.stageShadowBlur}px rgba(15, 23, 42, ${composition.canvas.stageShadowOpacity / 100})`
+    : 'none';
   return (
-    <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground }}>
+    <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground, padding: previewPadding, justifyContent: composition.canvas.pageVerticalAlignment === 'top' ? 'flex-start' : 'center' }}>
       <div
         className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}
-        style={viewport === 'desktop' && page.desktopFit ? { height: page.desktopStageHeight, minHeight: page.desktopStageHeight } : undefined}
+        style={{
+          borderRadius: composition.canvas.stageCornerRadius,
+          borderWidth: composition.canvas.stageBorderWidth,
+          boxShadow: stageShadow,
+          ...(viewport === 'desktop' ? {
+            width: composition.canvas.stageWidth,
+            maxWidth: '100%',
+            height: stageHeight,
+            minHeight: composition.canvas.stageHeight,
+            gridTemplateColumns: page.layout === 'centered' ? '1fr' : `${composition.canvas.heroPanelPercent}% minmax(0, 1fr)`,
+          } : {}),
+        }}
       >
-        {page.layout === 'split' ? (
+        {page.layout === 'split' && (viewport === 'desktop' || composition.mobile.heroVisible) ? (
           <AccountPortalHero
             className="portal-preview-hero"
             page={page}
@@ -540,15 +513,22 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
           />
         ) : null}
         {surface === 'requestAccess' ? (
-          <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} />
+          <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} viewport={viewport} />
         ) : (
-        <div className="portal-preview-form" style={{ background: value.theme.panelBackground, color: value.theme.textColor }}>
+        <div className="portal-preview-form" style={{
+          background: value.theme.panelBackground,
+          color: value.theme.textColor,
+          justifyContent: page.formVerticalAlignment === 'top' ? 'flex-start' : 'center',
+          padding: viewport === 'mobile'
+            ? `${composition.mobile.formPaddingTop}px ${composition.mobile.formPaddingRight}px ${composition.mobile.formPaddingBottom}px ${composition.mobile.formPaddingLeft}px`
+            : `${composition.form.paddingTop}px ${composition.form.paddingRight}px ${composition.form.paddingBottom}px ${composition.form.paddingLeft}px`,
+        }}>
           <AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} preview />
-          <h4>{page.formTitle}</h4>{page.showFormDescription ? <p style={{ color: value.theme.mutedTextColor }}>{page.formDescription}</p> : null}
-          <label>Email</label><div className="portal-preview-input">you@company.com</div>
+          <h4 style={{ margin: 0 }}>{page.formTitle}</h4>{page.showFormDescription ? <p style={{ color: value.theme.mutedTextColor, marginBottom: composition.form.headingBottomGap }}>{page.formDescription}</p> : <div style={{ height: composition.form.headingBottomGap }} />}
+          <label style={{ marginBottom: composition.form.labelGap }}>Email</label><div className="portal-preview-input" style={{ padding: `${composition.form.inputPaddingY}px ${composition.form.inputPaddingX}px` }}>you@company.com</div>
           <label>Password</label><div className="portal-preview-input">••••••••••</div>
-          <div className="portal-preview-button" style={{ background: value.theme.primaryColor }}>{page.primaryActionLabel}</div>
-          <div className="portal-preview-links">{page.secondaryActionLabel}<span>{page.tertiaryActionLabel}</span></div>
+          <div className="portal-preview-button" style={{ height: composition.form.buttonHeight, marginTop: composition.form.buttonTopGap, background: value.theme.primaryColor }}>{page.primaryActionLabel}</div>
+          <div className="portal-preview-links" style={{ marginTop: composition.form.signinTopGap }}>{page.secondaryActionLabel}<span>{page.tertiaryActionLabel}</span></div>
         </div>
         )}
         {page.showFooter && page.footerPlacement === 'form' ? <div className={`portal-preview-footer align-${page.footerAlignment}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{workspaceName}. {page.footerText}</div> : null}
@@ -558,34 +538,40 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
   );
 }
 
-function RequestAccessPreviewForm({ page, theme, workspaceName, brandBadge, brandLogo }: {
+function RequestAccessPreviewForm({ page, theme, workspaceName, brandBadge, brandLogo, viewport }: {
   page: AccountPortalExperience['requestAccess'];
   theme: AccountPortalExperience['theme'];
   workspaceName: string;
   brandBadge: string;
   brandLogo: string;
+  viewport: 'desktop' | 'mobile';
 }) {
+  const composition = resolveAccountPortalComposition(page, { preview: true });
+  const form = composition.form;
+  const panelPadding = viewport === 'mobile'
+    ? `${composition.mobile.formPaddingTop}px ${composition.mobile.formPaddingRight}px ${composition.mobile.formPaddingBottom}px ${composition.mobile.formPaddingLeft}px`
+    : `${form.paddingTop}px ${form.paddingRight}px ${form.paddingBottom}px ${form.paddingLeft}px`;
   return (
-    <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor, justifyContent: page.formVerticalAlignment === 'top' ? 'flex-start' : 'center' }}>
+    <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor, justifyContent: page.formVerticalAlignment === 'top' ? 'flex-start' : 'center', padding: panelPadding }}>
       <AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} preview />
-      <h4>{page.formTitle}</h4>
-      {page.showFormDescription ? <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p> : null}
-      {page.notice.enabled ? <div className="portal-request-notice" style={{ color: page.notice.textColor, borderColor: page.notice.borderColor, background: page.notice.backgroundColor }}>
+      <h4 style={{ margin: 0 }}>{page.formTitle}</h4>
+      {page.showFormDescription ? <p style={{ color: theme.mutedTextColor, margin: `3px 0 ${form.headingBottomGap}px` }}>{page.formDescription}</p> : <div style={{ height: form.headingBottomGap }} />}
+      {page.notice.enabled ? <div className="portal-request-notice" style={{ color: page.notice.textColor, borderColor: page.notice.borderColor, background: page.notice.backgroundColor, marginBottom: form.noticeBottomGap }}>
         {page.notice.text}
       </div> : null}
-      <div className="portal-request-fields">
+      <div className="portal-request-fields" style={{ rowGap: form.fieldRowGap, columnGap: form.fieldColumnGap }}>
         {page.formFields.map((field) => (
           <div className={`portal-request-field ${field.half ? 'half' : 'full'} kind-${field.type}`} key={field.key}>
-            <label>{field.label}{field.required ? <span> *</span> : null}</label>
-            <div className="portal-request-input" style={{ color: theme.mutedTextColor }}>
+            <label style={{ marginBottom: form.labelGap }}>{field.label}{field.required ? <span> *</span> : null}</label>
+            <div className="portal-request-input" style={{ color: theme.mutedTextColor, padding: `${form.inputPaddingY}px ${form.inputPaddingX}px` }}>
               {field.type === 'password' ? '********' : field.placeholder}
             </div>
             {field.type === 'file' ? <small style={{ color: theme.mutedTextColor }}>PDF, JPEG, PNG or WebP (max 10MB)</small> : null}
           </div>
         ))}
       </div>
-      <div className="portal-preview-button" style={{ background: page.primaryButtonStyle === 'gradient' ? `linear-gradient(135deg, ${theme.primaryColor}, ${darkenHex(theme.primaryColor, 0.15)})` : theme.primaryColor }}>{page.primaryActionLabel}</div>
-      <div className="portal-request-signin" style={{ color: theme.mutedTextColor }}>Already have an account? <strong style={{ color: theme.primaryColor }}>{page.secondaryActionLabel}</strong></div>
+      <div className="portal-preview-button" style={{ height: form.buttonHeight, marginTop: form.buttonTopGap, background: page.primaryButtonStyle === 'gradient' ? `linear-gradient(135deg, ${theme.primaryColor}, ${darkenHex(theme.primaryColor, 0.15)})` : theme.primaryColor }}>{page.primaryActionLabel}</div>
+      <div className="portal-request-signin" style={{ color: theme.mutedTextColor, marginTop: form.signinTopGap }}>Already have an account? <strong style={{ color: theme.primaryColor }}>{page.secondaryActionLabel}</strong></div>
     </div>
   );
 }
