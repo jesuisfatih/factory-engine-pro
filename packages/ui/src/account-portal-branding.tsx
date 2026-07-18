@@ -80,9 +80,7 @@ export function AccountPortalHero({
   const compact = preview;
   const introColor = isLightColor(page.panelGradientEnabled ? page.panelGradientFrom : primaryColor) ? '#172033' : '#FFFFFF';
   const lowerColor = isLightColor(page.panelGradientEnabled ? page.panelGradientTo : primaryColor) ? '#172033' : '#FFFFFF';
-  const headline = surface === 'requestAccess'
-    ? page.heroBrandTitle || (page.headline === 'Partner Program' ? `${workspaceName} Partner Program` : page.headline)
-    : page.headline;
+  const headline = page.headline;
   const brandTitle = page.heroBrandTitle || workspaceName;
   const logoSize = heroLogoDimensions(page.heroLogoSize, compact);
   const brandLayout = page.heroBrandLayout ?? 'inline';

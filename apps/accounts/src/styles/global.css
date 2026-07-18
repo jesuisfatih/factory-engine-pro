@@ -2753,8 +2753,8 @@ a { color: inherit; text-decoration: none; }
 
 @media (min-width: 901px) {
   .request-portal-desktop-fit { height: 100svh; padding: 12px !important; overflow: hidden; }
-  .request-portal-desktop-fit .request-portal-stage-wrap { min-height: 0; height: calc(100svh - 24px); max-height: 900px; }
-  .request-portal-desktop-fit.request-portal-has-page-footer .request-portal-stage-wrap { height: calc(100svh - 48px); }
+  .request-portal-desktop-fit .request-portal-stage-wrap { min-height: 0; height: min(calc(100svh - 24px), var(--portal-desktop-stage-height, 620px)); max-height: var(--portal-desktop-stage-height, 620px); }
+  .request-portal-desktop-fit.request-portal-has-page-footer .request-portal-stage-wrap { height: min(calc(100svh - 48px), var(--portal-desktop-stage-height, 620px)); }
   .request-portal-desktop-fit .request-portal-stage,
   .request-portal-desktop-fit .request-portal-stage-grid { height: 100%; }
   .request-portal-desktop-fit .request-portal-hero { min-height: 0; overflow: hidden; }
@@ -2770,8 +2770,8 @@ a { color: inherit; text-decoration: none; }
 
 @media (min-width: 901px) {
   .auth-page.auth-desktop-fit { padding: 20px; overflow: hidden; }
-  .auth-page.auth-desktop-fit .auth-stage { min-height: 0; height: calc(100svh - 40px); max-height: 820px; }
-  .auth-page.auth-desktop-fit:has(.auth-footer-page) .auth-stage { height: calc(100svh - 76px); }
+  .auth-page.auth-desktop-fit .auth-stage { min-height: 0; height: min(calc(100svh - 40px), var(--portal-desktop-stage-height, 680px)); max-height: var(--portal-desktop-stage-height, 680px); }
+  .auth-page.auth-desktop-fit:has(.auth-footer-page) .auth-stage { height: min(calc(100svh - 76px), var(--portal-desktop-stage-height, 680px)); }
   .auth-page.auth-desktop-fit .auth-brand-panel,
   .auth-page.auth-desktop-fit .auth-form-panel { overflow-y: auto; }
 }

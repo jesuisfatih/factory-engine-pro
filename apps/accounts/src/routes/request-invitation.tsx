@@ -42,6 +42,8 @@ interface RequestPageConfig {
   heroContentGap: 'tight' | 'standard' | 'open';
   benefitDensity: 'compact' | 'standard';
   desktopFit: boolean;
+  desktopStageHeight: number;
+  formVerticalAlignment: 'top' | 'center';
   benefitsPlacement: 'flow' | 'lower';
   heroPanelWidth: 'narrow' | 'balanced' | 'wide';
   heroPattern: 'grid' | 'none';
@@ -125,6 +127,8 @@ const DEFAULT_REQUEST_PAGE_CONFIG: RequestPageConfig = {
   heroContentGap: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroContentGap,
   benefitDensity: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefitDensity,
   desktopFit: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.desktopFit,
+  desktopStageHeight: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.desktopStageHeight,
+  formVerticalAlignment: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.formVerticalAlignment,
   benefitsPlacement: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.benefitsPlacement,
   heroPanelWidth: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPanelWidth,
   heroPattern: DEFAULT_ACCOUNT_PORTAL_EXPERIENCE.requestAccess.heroPattern,
@@ -251,6 +255,8 @@ function RequestInvitationView() {
     heroContentGap: requestExperience?.heroContentGap ?? DEFAULT_REQUEST_PAGE_CONFIG.heroContentGap,
     benefitDensity: requestExperience?.benefitDensity ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitDensity,
     desktopFit: requestExperience?.desktopFit ?? DEFAULT_REQUEST_PAGE_CONFIG.desktopFit,
+    desktopStageHeight: requestExperience?.desktopStageHeight ?? DEFAULT_REQUEST_PAGE_CONFIG.desktopStageHeight,
+    formVerticalAlignment: requestExperience?.formVerticalAlignment ?? DEFAULT_REQUEST_PAGE_CONFIG.formVerticalAlignment,
     benefitsPlacement: requestExperience?.benefitsPlacement ?? DEFAULT_REQUEST_PAGE_CONFIG.benefitsPlacement,
     heroPanelWidth: requestExperience?.heroPanelWidth ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPanelWidth,
     heroPattern: requestExperience?.heroPattern ?? DEFAULT_REQUEST_PAGE_CONFIG.heroPattern,
@@ -588,7 +594,8 @@ function RequestInvitationView() {
         background: portalExperience?.theme.pageBackground ?? `linear-gradient(135deg, #f0f6f9 0%, #e3eef3 50%, ${colors.backgroundLight} 100%)`,
         padding: 20,
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      }}
+        '--portal-desktop-stage-height': `${pageConfig.desktopStageHeight}px`,
+      } as CSSProperties}
     >
       <div className="request-portal-stage-wrap" style={{ width: '100%', maxWidth: requestPage.layout === 'centered' ? 620 : 980, position: 'relative', zIndex: 1 }}>
         <div
@@ -624,7 +631,7 @@ function RequestInvitationView() {
                 padding: formPanelModeSettings.panelPadding,
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: pageConfig.desktopFit ? 'flex-start' : 'center',
+                justifyContent: pageConfig.formVerticalAlignment === 'top' ? 'flex-start' : 'center',
                 borderLeft: isOutlinedFormPanel ? `1px solid ${formPanelBorderColor}` : undefined,
                 boxShadow: isGlassFormPanel ? 'inset 1px 0 0 rgba(255,255,255,0.55)' : undefined,
                 backdropFilter: isGlassFormPanel ? 'blur(12px)' : undefined,

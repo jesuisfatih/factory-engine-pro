@@ -327,10 +327,21 @@ export function AccountPortalExperienceEditor({
                   <option value="compact">Compact</option><option value="standard">Standard</option>
                 </select>
               </div>
+              <div className="field">
+                <label htmlFor={`portal-form-vertical-alignment-${surface}`}>Form content position</label>
+                <select id={`portal-form-vertical-alignment-${surface}`} value={page.formVerticalAlignment} disabled={disabled} onChange={(event) => setPageField('formVerticalAlignment', event.target.value as AccountPortalPage['formVerticalAlignment'])}>
+                  <option value="top">Top</option><option value="center">Centered</option>
+                </select>
+              </div>
               <div className="field portal-toggle-stack portal-fit-toggle">
                 <label><input type="checkbox" checked={page.desktopFit} disabled={disabled} onChange={(event) => setPageField('desktopFit', event.target.checked)} /> Fit desktop page without scrolling</label>
                 <small>Mobile stays naturally scrollable.</small>
               </div>
+            </div>
+            <div className="field">
+              <label htmlFor={`portal-desktop-stage-height-${surface}`}>Desktop canvas height ({page.desktopStageHeight}px)</label>
+              <input id={`portal-desktop-stage-height-${surface}`} type="range" min="560" max="900" step="10" value={page.desktopStageHeight} disabled={disabled} onChange={(event) => setPageField('desktopStageHeight', Number(event.target.value))} />
+              <small className="portal-field-help">Controls the real page and this preview when desktop fit is enabled.</small>
             </div>
             <div className="field-row">
               <div className="field">
@@ -512,7 +523,10 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
   const formLogo = portalLogo(page.formLogoSurface, value.theme.panelBackground, brandAssets, brandLogo);
   return (
     <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground }}>
-      <div className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}>
+      <div
+        className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}
+        style={viewport === 'desktop' && page.desktopFit ? { height: page.desktopStageHeight, minHeight: page.desktopStageHeight } : undefined}
+      >
         {page.layout === 'split' ? (
           <AccountPortalHero
             className="portal-preview-hero"
@@ -552,7 +566,7 @@ function RequestAccessPreviewForm({ page, theme, workspaceName, brandBadge, bran
   brandLogo: string;
 }) {
   return (
-    <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor }}>
+    <div className="portal-preview-form portal-request-form" style={{ background: `linear-gradient(135deg, ${theme.panelBackground}, #F6F8FC)`, color: theme.textColor, justifyContent: page.formVerticalAlignment === 'top' ? 'flex-start' : 'center' }}>
       <AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} preview />
       <h4>{page.formTitle}</h4>
       {page.showFormDescription ? <p style={{ color: theme.mutedTextColor }}>{page.formDescription}</p> : null}

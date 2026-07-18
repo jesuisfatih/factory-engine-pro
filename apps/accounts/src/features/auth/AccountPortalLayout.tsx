@@ -44,6 +44,7 @@ export function AccountPortalLayout({
     '--auth-primary-action': page.primaryButtonStyle === 'gradient'
       ? `linear-gradient(135deg, ${theme.primaryColor}, ${theme.accentColor})`
       : theme.primaryColor,
+    '--portal-desktop-stage-height': `${page.desktopStageHeight}px`,
   } as CSSProperties;
 
   return (
@@ -61,7 +62,11 @@ export function AccountPortalLayout({
           />
         ) : null}
 
-        <section className="auth-form-panel" aria-label={formLabel}>
+        <section
+          className="auth-form-panel"
+          aria-label={formLabel}
+          style={{ justifyContent: page.formVerticalAlignment === 'top' ? 'flex-start' : 'center' }}
+        >
           {children}
           {page.showFooter && page.footerPlacement === 'form' ? <PortalFooter page={page} name={name} /> : null}
         </section>
