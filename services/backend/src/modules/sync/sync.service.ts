@@ -479,11 +479,13 @@ export class SyncService {
     const mappedLineItems = lineItems.map(mapLineItem);
     const designFiles = extractDesignFiles(mappedLineItems);
     const shippingLines = Array.isArray(raw.shipping_lines) ? raw.shipping_lines as Record<string, unknown>[] : [];
+    const fulfillments = Array.isArray(raw.fulfillments) ? raw.fulfillments as Record<string, unknown>[] : [];
     const fulfillment = classifyFulfillment({
       tags: tags(raw.tags),
       lineItems,
       shippingAddress: raw.shipping_address,
       shippingLines,
+      fulfillments,
       deliveryMethod: stringOrNull(raw.delivery_method ?? raw.deliveryMethod ?? raw.delivery_method_type),
       fulfillmentStatus: stringOrNull(raw.fulfillment_status),
     });

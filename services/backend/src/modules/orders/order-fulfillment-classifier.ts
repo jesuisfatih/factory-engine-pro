@@ -5,6 +5,7 @@ export interface FulfillmentInput {
   lineItems?: unknown[];
   shippingAddress?: unknown;
   shippingLines?: unknown[];
+  fulfillments?: unknown[];
   deliveryMethod?: string | null;
   fulfillmentStatus?: string | null;
 }
@@ -15,6 +16,7 @@ export interface FulfillmentClassification {
     matchedTags: string[];
     shippingLineTitles: string[];
     lineItemSignals: string[];
+    fulfillmentSignals: string[];
     deliveryMethod?: string | null;
     hasShippingAddress: boolean;
     fulfillmentStatus?: string | null;
@@ -35,22 +37,34 @@ export function classifyFulfillment(input: FulfillmentInput): FulfillmentClassif
     .flatMap(extractLineItemSignals)
     .map(normalizeSignal)
     .filter(Boolean);
+  const fulfillmentSignals = (input.fulfillments ?? [])
+    .flatMap(extractFulfillmentSignals)
+    .map(normalizeSignal)
+    .filter(Boolean);
   const deliveryMethod = input.deliveryMethod ? normalizeSignal(input.deliveryMethod) : null;
-  const haystack = [...tags, ...shippingLineTitles, ...lineItemSignals, deliveryMethod ?? ''].join(' ');
+  const fulfillmentStatus = input.fulfillmentStatus ? normalizeSignal(input.fulfillmentStatus) : null;
+  const haystack = [
+    ...tags,
+    ...shippingLineTitles,
+    ...lineItemSignals,
+    ...fulfillmentSignals,
+    deliveryMethod ?? '',
+    fulfillmentStatus ?? '',
+  ].join(' ');
 
   if (matches(haystack, PICKUP_PATTERNS)) {
-    return build('pickup', input, tags, shippingLineTitles, lineItemSignals);
+    return build('pickup', input, tags, shippingLineTitles, lineItemSignals, fulfillmentSignals);
   }
 
   if (matches(haystack, DELIVERY_PATTERNS)) {
-    return build('local_delivery', input, tags, shippingLineTitles, lineItemSignals);
+    return build('local_delivery', input, tags, shippingLineTitles, lineItemSignals, fulfillmentSignals);
   }
 
   if (input.shippingAddress || shippingLineTitles.length > 0) {
-    return build('shipping', input, tags, shippingLineTitles, lineItemSignals);
+    return build('shipping', input, tags, shippingLineTitles, lineItemSignals, fulfillmentSignals);
   }
 
-  return build('unknown', input, tags, shippingLineTitles, lineItemSignals);
+  return build('unknown', input, tags, shippingLineTitles, lineItemSignals, fulfillmentSignals);
 }
 
 function build(
@@ -59,6 +73,7 @@ function build(
   tags: string[],
   shippingLineTitles: string[],
   lineItemSignals: string[],
+  fulfillmentSignals: string[],
 ): FulfillmentClassification {
   return {
     mode,
@@ -66,6 +81,7 @@ function build(
       matchedTags: tags.filter((tag) => matches(tag, [...PICKUP_PATTERNS, ...DELIVERY_PATTERNS])),
       shippingLineTitles,
       lineItemSignals,
+      fulfillmentSignals,
       deliveryMethod: input.deliveryMethod ?? null,
       hasShippingAddress: Boolean(input.shippingAddress),
       fulfillmentStatus: input.fulfillmentStatus ?? null,
@@ -86,6 +102,23 @@ function extractShippingSignals(value: unknown) {
     candidate.carrierIdentifier,
     candidate.requested_fulfillment_service_id,
     candidate.requestedFulfillmentServiceId,
+  ].filter(isMeaningfulScalar).map(String);
+}
+
+function extractFulfillmentSignals(value: unknown) {
+  if (!value || typeof value !== 'object') return [];
+  const candidate = value as Record<string, unknown>;
+  return [
+    candidate.status,
+    candidate.shipment_status,
+    candidate.shipmentStatus,
+    candidate.display_status,
+    candidate.displayStatus,
+    candidate.delivery_method,
+    candidate.deliveryMethod,
+    candidate.service,
+    candidate.service_name,
+    candidate.serviceName,
   ].filter(isMeaningfulScalar).map(String);
 }
 

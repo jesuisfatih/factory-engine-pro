@@ -28,6 +28,17 @@ test('classifies line-item delivery properties as pickup', () => {
   assert.ok(result.evidence.lineItemSignals.includes('store pickup'));
 });
 
+test('classifies Shopify recipient pickup fulfillment status as pickup', () => {
+  const result = classifyFulfillment({
+    shippingAddress: { city: 'Chicago' },
+    shippingLines: [{ title: 'Eagle DTF Print', code: 'Eagle DTF Print' }],
+    fulfillments: [{ status: 'success', shipment_status: 'ready_for_recipient_pickup' }],
+  });
+
+  assert.equal(result.mode, 'pickup');
+  assert.ok(result.evidence.fulfillmentSignals.includes('ready for recipient pickup'));
+});
+
 test('does not misclassify a normal carrier shipment as pickup', () => {
   const result = classifyFulfillment({
     shippingAddress: { city: 'Chicago' },
@@ -35,6 +46,7 @@ test('does not misclassify a normal carrier shipment as pickup', () => {
   });
 
   assert.equal(result.mode, 'shipping');
+  assert.deepEqual(result.evidence.fulfillmentSignals, []);
 });
 
 test('ignores unrelated custom artwork text containing pickup words', () => {
