@@ -148,7 +148,8 @@ export const fetchTaskBrief = (id: string) => personApi.personTaskBrief(id) as P
 export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => personApi.savePersonTaskNote(id, input) as Promise<TaskBriefDetail>;
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
-export const fetchCustomers = () => personApi.personCustomers() as Promise<CustomerRow[]>;
+export const fetchCustomers = (query: { limit: number; offset: number; search?: string }) =>
+  personApi.personCustomers(query) as Promise<CustomerArchivePage>;
 export const fetchCustomerArchive = (query: { limit: number; offset: number; search?: string }) =>
   personApi.personCustomerArchive(query) as Promise<CustomerArchivePage>;
 export const fetchCustomerDetail = (customerId: string) => personApi.personCustomerDetail(customerId) as Promise<CustomerDetailPanelDto>;

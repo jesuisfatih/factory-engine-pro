@@ -266,6 +266,10 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const tier = riskTier(liveCard.priority);
   const safeTitle = personSafeText(liveCard.displayTitle || liveCard.title);
   const safeSource = sourceLabel(liveCard.source);
+  const customerSummaryOrder = Math.min(
+    ...(showField('purchaseHistory') ? [sectionStyle('purchaseHistory', 90).order] : []),
+    ...(showField('callSummary') ? [sectionStyle('callSummary', 100).order] : []),
+  );
 
   const noteSection = isTaskCard && showField('noteForm') ? (
     <form className="brief-block" style={sectionStyle('noteForm', 82)} onSubmit={submitNote}>
@@ -378,9 +382,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                       </div>
                     ) : null}
                     {noteSection}
-                    <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 85)}>
-                      <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
-                    </div>
                   </>
                 ) : (
                   <>
@@ -396,7 +397,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                   </>
                 )}
 
-                {(showField('purchaseHistory') || showField('callSummary')) ? <div className="brief-grid-two">
+                {(showField('purchaseHistory') || showField('callSummary')) ? <div className="brief-grid-two" style={{ order: customerSummaryOrder }}>
                   {showField('purchaseHistory') ? <div className="brief-block" style={sectionStyle('purchaseHistory', 90)}>
                     <div className="brief-block-head">
                       <span className="lbl">{frontendCopy(override, 'purchaseHistoryBlockLabel', 'Customer purchase history')}</span>
@@ -443,9 +444,12 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     )}
                   </div> : null}
                 </div> : null}
+                <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 105)}>
+                  <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
+                </div>
                 {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
-                    <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Order, call, and follow-up history')}</span>
+                    <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Customer history before calling')}</span>
                     {detail ? <span className="brief-count-pill">{detail.timeline.length}</span> : null}
                   </div>
                   {detail?.timeline.length ? (

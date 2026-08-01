@@ -943,8 +943,13 @@ export class ApiClient {
     return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/calendar`, input);
   }
 
-  personCustomers() {
-    return this.get('/person/workspace/customers');
+  personCustomers(query: Partial<PersonCustomerArchiveQuery> = {}) {
+    const params = new URLSearchParams();
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.offset) params.set('offset', String(query.offset));
+    if (query.search) params.set('search', query.search);
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.get(`/person/workspace/customers${suffix}`);
   }
 
   personCustomerArchive(query: Partial<PersonCustomerArchiveQuery> = {}) {

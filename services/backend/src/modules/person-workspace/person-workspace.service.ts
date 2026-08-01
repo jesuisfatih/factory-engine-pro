@@ -1444,27 +1444,70 @@ export class PersonWorkspaceService {
     return this.taskBrief(id);
   }
 
-  async customers() {
+  async customers(query: PersonCustomerArchiveQuery) {
     const member = await this.currentMember();
-    const assignments = await this.axisAssignments(member.id);
-    const visibleCustomerIds = Array.from(assignments.keys());
-    if (visibleCustomerIds.length === 0) return [];
-    const rows = await this.prisma.db.customer.findMany({
-      where: { id: { in: visibleCustomerIds } },
-      include: {
-        insight: true,
-        segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
-      },
-      orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
-      take: 120,
-    });
+    const limit = query.limit;
+    const offset = query.offset;
+    const search = query.search?.trim();
+    const searchDigits = search?.replace(/\D/g, '') ?? '';
+    const phoneSearches = search && searchDigits.length >= 4 ? phoneVariants(search) : [];
+    const searchOr: Prisma.CustomerWhereInput[] = search ? [
+      { companyName: { contains: search, mode: 'insensitive' } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+      { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+      ...phoneSearches.map((phone) => ({ phone: { contains: phone, mode: Prisma.QueryMode.insensitive } })),
+    ] : [];
+    const where: Prisma.CustomerWhereInput = {
+      assignments: { some: { memberId: member.id, isPrimary: true } },
+      ...(searchOr.length > 0 ? { OR: searchOr } : {}),
+    };
+    const [rows, total, aggregate, atRisk] = await Promise.all([
+      this.prisma.db.customer.findMany({
+        where,
+        include: {
+          insight: true,
+          segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 1 },
+        },
+        orderBy: [{ lastOrderAt: 'desc' }, { updatedAt: 'desc' }],
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.db.customer.count({ where }),
+      this.prisma.db.customer.aggregate({
+        where,
+        _sum: { totalSpent: true, ordersCount: true },
+        _avg: { ordersCount: true },
+      }),
+      this.prisma.db.customer.count({
+        where: {
+          ...where,
+          insight: { churnRisk: { in: ['critical', 'high'] } },
+        },
+      }),
+    ]);
     const [config, repeatCounts] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(rows.map((row) => row.id)),
     ]);
-    return rows
-      .map((customer, index) => this.customerRow(customer, index, config, repeatCounts))
+    const items = rows
+      .map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts))
       .sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      search: search ?? null,
+      summary: {
+        totalSpent: money(aggregate._sum.totalSpent),
+        avgOrders: Math.round(aggregate._avg.ordersCount ?? 0),
+        totalOrders: aggregate._sum.ordersCount ?? 0,
+        atRisk,
+      },
+    };
   }
 
   async customerArchive(query: PersonCustomerArchiveQuery) {

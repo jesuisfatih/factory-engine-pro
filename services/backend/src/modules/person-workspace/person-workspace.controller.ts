@@ -179,8 +179,10 @@ export class PersonWorkspaceController {
 
   @Get('customers')
   @RequirePermission(MEMBER_PERMISSIONS.customersRead)
-  customers() {
-    return this.workspace.customers();
+  customers(
+    @Query(new ZodValidationPipe(personCustomerArchiveQuerySchema)) query: PersonCustomerArchiveQuery,
+  ) {
+    return this.workspace.customers(query);
   }
 
   @Get('customer-archive')

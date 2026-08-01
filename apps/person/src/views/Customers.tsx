@@ -11,9 +11,10 @@ import { Icon } from '../components/Icon';
 import { QueryState } from '../components/QueryState';
 import { personSafeText } from '../lib/personTerminology';
 
-const ARCHIVE_PAGE_SIZE_OPTIONS = [10, 50, 100, 150] as const;
-type ArchivePageSize = (typeof ARCHIVE_PAGE_SIZE_OPTIONS)[number];
-const DEFAULT_ARCHIVE_PAGE_SIZE: ArchivePageSize = 10;
+const CUSTOMER_PAGE_SIZE_OPTIONS = [10, 50, 100, 150] as const;
+type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZE_OPTIONS)[number];
+const DEFAULT_ARCHIVE_PAGE_SIZE: CustomerPageSize = 10;
+const DEFAULT_ROUTINE_PAGE_SIZE: CustomerPageSize = 50;
 
 const LIFECYCLE_LABEL: Record<CustomerRow['lifecycle'], string> = {
   lead: 'Lead', engaged: 'Engaged', active: 'Active', at_risk: 'At risk', churned: 'Churned',
@@ -31,19 +32,19 @@ export function CustomersView({
   customization?: FrontendCustomizationRuntimeDto | null;
 }) {
   const qc = useQueryClient();
-  const [archivePage, setArchivePage] = useState(0);
-  const [archivePageSize, setArchivePageSize] = useState<ArchivePageSize>(DEFAULT_ARCHIVE_PAGE_SIZE);
-  const [archiveSearch, setArchiveSearch] = useState(() => archive ? currentArchiveSearchFromUrl() : '');
-  const archiveOffset = archive ? archivePage * archivePageSize : 0;
-  const { data, isLoading, isFetching, error } = useQuery<CustomerRow[] | CustomerArchivePage>({
-    queryKey: ['person', archive ? 'customer-archive' : 'customers', archive ? archivePage : 0, archive ? archivePageSize : 0, archive ? archiveSearch : ''],
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<CustomerPageSize>(archive ? DEFAULT_ARCHIVE_PAGE_SIZE : DEFAULT_ROUTINE_PAGE_SIZE);
+  const [search, setSearch] = useState(currentCustomerSearchFromUrl);
+  const offset = page * pageSize;
+  const { data, isLoading, isFetching, error } = useQuery<CustomerArchivePage>({
+    queryKey: ['person', archive ? 'customer-archive' : 'customers', page, pageSize, search],
     queryFn: () => archive
-      ? fetchCustomerArchive({ limit: archivePageSize, offset: archiveOffset, search: archiveSearch || undefined })
-      : fetchCustomers(),
+      ? fetchCustomerArchive({ limit: pageSize, offset, search: search || undefined })
+      : fetchCustomers({ limit: pageSize, offset, search: search || undefined }),
     placeholderData: (previous) => previous,
   });
-  const archiveResult = archive && data && !Array.isArray(data) ? data : null;
-  const customers = Array.isArray(data) ? data : archiveResult?.items ?? [];
+  const pageResult = data ?? null;
+  const customers = pageResult?.items ?? [];
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(() => currentCustomerIdFromUrl());
   const [noteTarget, setNoteTarget] = useState<CustomerRow | null>(null);
   const [noteBody, setNoteBody] = useState('');
@@ -56,10 +57,8 @@ export function CustomersView({
   useEffect(() => {
     const syncFromUrl = () => {
       setDetailCustomerId(currentCustomerIdFromUrl());
-      if (archive) {
-        setArchivePage(0);
-        setArchiveSearch(currentArchiveSearchFromUrl());
-      }
+      setPage(0);
+      setSearch(currentCustomerSearchFromUrl());
     };
     window.addEventListener('popstate', syncFromUrl);
     return () => window.removeEventListener('popstate', syncFromUrl);
@@ -69,9 +68,9 @@ export function CustomersView({
     setDetailCustomerId(currentCustomerIdFromUrl());
     setNoteTarget(null);
     setNoteBody('');
-    setArchivePage(0);
-    setArchivePageSize(DEFAULT_ARCHIVE_PAGE_SIZE);
-    setArchiveSearch(archive ? currentArchiveSearchFromUrl() : '');
+    setPage(0);
+    setPageSize(archive ? DEFAULT_ARCHIVE_PAGE_SIZE : DEFAULT_ROUTINE_PAGE_SIZE);
+    setSearch(currentCustomerSearchFromUrl());
   }, [archive]);
 
   const openCustomerDetail = (customerId: string) => {
@@ -117,8 +116,8 @@ export function CustomersView({
       customerDetail: detailQuery.data,
       summary: {
         archive,
-        totalCustomers: archiveResult?.total ?? customers.length,
-        pageSize: archivePageSize,
+        totalCustomers: pageResult?.total ?? customers.length,
+        pageSize,
       },
     });
     if (!override) return null;
@@ -128,7 +127,7 @@ export function CustomersView({
       copyOverrides: override.copyOverrides,
       className: frontendElementClassName(override, customerDetailMain?.urgencyScore),
     };
-  }, [archive, archivePageSize, archiveResult?.total, customerDetailMain?.urgencyScore, customers.length, customization, detailQuery.data]);
+  }, [archive, customerDetailMain?.urgencyScore, customers.length, customization, detailQuery.data, pageResult?.total, pageSize]);
 
   const columns = useMemo<ColumnDef<CustomerRow>[]>(() => [
     {
@@ -189,32 +188,30 @@ export function CustomersView({
 
   const table = useReactTable({ data: customers, columns, getCoreRowModel: getCoreRowModel(), getRowId: (row) => row.id });
 
-  const totalCustomers = archive ? archiveResult?.total ?? customers.length : customers.length;
-  const totalSpent = archive ? archiveResult?.summary.totalSpent ?? 0 : customers.reduce((acc, c) => acc + c.totalSpent, 0);
-  const atRisk = archive ? archiveResult?.summary.atRisk ?? 0 : customers.filter((c) => c.lifecycle === 'at_risk').length;
-  const avgOrders = archive
-    ? archiveResult?.summary.avgOrders ?? 0
-    : customers.length ? Math.round(customers.reduce((a, c) => a + c.ordersCount, 0) / customers.length) : 0;
-  const pageStart = totalCustomers === 0 ? 0 : archiveOffset + 1;
-  const pageEnd = Math.min(archiveOffset + customers.length, totalCustomers);
-  const hasPrevPage = archive && archivePage > 0;
-  const hasNextPage = archive && pageEnd < totalCustomers;
-  const applyArchiveSearch = (value: string) => {
+  const totalCustomers = pageResult?.total ?? customers.length;
+  const totalSpent = pageResult?.summary.totalSpent ?? 0;
+  const atRisk = pageResult?.summary.atRisk ?? 0;
+  const avgOrders = pageResult?.summary.avgOrders ?? 0;
+  const pageStart = totalCustomers === 0 ? 0 : offset + 1;
+  const pageEnd = Math.min(offset + customers.length, totalCustomers);
+  const hasPrevPage = page > 0;
+  const hasNextPage = pageEnd < totalCustomers;
+  const applySearch = (value: string) => {
     const next = value.trim();
-    setArchivePage(0);
-    setArchiveSearch(next);
-    writeArchiveSearchToUrl(next);
+    setPage(0);
+    setSearch(next);
+    writeCustomerSearchToUrl(next);
   };
-  const clearArchiveSearch = () => {
-    setArchivePage(0);
-    setArchiveSearch('');
-    writeArchiveSearchToUrl('');
+  const clearSearch = () => {
+    setPage(0);
+    setSearch('');
+    writeCustomerSearchToUrl('');
   };
-  const changeArchivePageSize = (value: string) => {
-    const next = Number(value) as ArchivePageSize;
-    if (!ARCHIVE_PAGE_SIZE_OPTIONS.includes(next)) return;
-    setArchivePage(0);
-    setArchivePageSize(next);
+  const changePageSize = (value: string) => {
+    const next = Number(value) as CustomerPageSize;
+    if (!CUSTOMER_PAGE_SIZE_OPTIONS.includes(next)) return;
+    setPage(0);
+    setPageSize(next);
   };
 
   return (
@@ -224,20 +221,19 @@ export function CustomersView({
         <div className="kpi"><div className="label">Total spent</div><div className="val">{fmtMoney(totalSpent)}</div><div className="sub">{archive ? 'across Shopify archive' : 'from assigned contacts'}</div></div>
         <div className="kpi"><div className="label">At risk</div><div className="val">{atRisk}</div><div className="sub">needs outreach</div></div>
         <div className="kpi"><div className="label">Avg orders</div><div className="val">{avgOrders}</div><div className="sub">{archive ? 'per customer' : 'per contact'}</div></div>
-        <div className="kpi"><div className="label">Customer lists</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">{archive ? 'on this page' : 'owned'}</div></div>
+        <div className="kpi"><div className="label">Customer lists</div><div className="val">{new Set(customers.map((c) => c.segment.id)).size}</div><div className="sub">visible this page</div></div>
       </div>
 
-      {archive ? (
-        <ArchiveSearchToolbar
-          activeSearch={archiveSearch}
-          pageSize={archivePageSize}
-          isFetching={isFetching}
-          resultLabel={`Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}
-          onSearch={applyArchiveSearch}
-          onClear={clearArchiveSearch}
-          onPageSizeChange={changeArchivePageSize}
-        />
-      ) : null}
+      <CustomerSearchToolbar
+        archive={archive}
+        activeSearch={search}
+        pageSize={pageSize}
+        isFetching={isFetching}
+        resultLabel={`Showing ${pageStart}-${pageEnd} of ${totalCustomers}`}
+        onSearch={applySearch}
+        onClear={clearSearch}
+        onPageSizeChange={changePageSize}
+      />
 
       <QueryState
         isLoading={isLoading}
@@ -268,17 +264,15 @@ export function CustomersView({
           </tbody>
         </table>
       </div>
-      {archive ? (
-        <div className="archive-pagination">
-          <button type="button" disabled={!hasPrevPage || isLoading} onClick={() => setArchivePage((page) => Math.max(0, page - 1))}>
-            Previous
-          </button>
-          <span>Page {archivePage + 1}</span>
-          <button type="button" disabled={!hasNextPage || isLoading} onClick={() => setArchivePage((page) => page + 1)}>
-            Next
-          </button>
-        </div>
-      ) : null}
+      <div className="archive-pagination">
+        <button type="button" disabled={!hasPrevPage || isLoading || isFetching} onClick={() => setPage((current) => Math.max(0, current - 1))}>
+          Previous
+        </button>
+        <span>Page {page + 1}</span>
+        <button type="button" disabled={!hasNextPage || isLoading || isFetching} onClick={() => setPage((current) => current + 1)}>
+          Next
+        </button>
+      </div>
       </QueryState>
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
@@ -316,11 +310,11 @@ function currentCustomerIdFromUrl() {
   return new URLSearchParams(window.location.search).get('customerId');
 }
 
-function currentArchiveSearchFromUrl() {
+function currentCustomerSearchFromUrl() {
   return new URLSearchParams(window.location.search).get('q') ?? '';
 }
 
-function writeArchiveSearchToUrl(value: string) {
+function writeCustomerSearchToUrl(value: string) {
   const url = new URL(window.location.href);
   if (value) url.searchParams.set('q', value);
   else url.searchParams.delete('q');
@@ -355,7 +349,8 @@ function customerRowMainInfo(customer: CustomerRow, archive: boolean): CustomerD
   };
 }
 
-function ArchiveSearchToolbar({
+function CustomerSearchToolbar({
+  archive,
   activeSearch,
   pageSize,
   isFetching,
@@ -364,8 +359,9 @@ function ArchiveSearchToolbar({
   onClear,
   onPageSizeChange,
 }: {
+  archive: boolean;
   activeSearch: string;
-  pageSize: ArchivePageSize;
+  pageSize: CustomerPageSize;
   isFetching: boolean;
   resultLabel: string;
   onSearch: (value: string) => void;
@@ -386,26 +382,26 @@ function ArchiveSearchToolbar({
   return (
     <form className="archive-toolbar" onSubmit={submit}>
       <label>
-        Search archive
+        {archive ? 'Search Shopify archive' : 'Search routine call list'}
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Customer, email, phone, Shopify ID..."
+          placeholder={archive ? 'Customer, email, phone, Shopify ID...' : 'Call contact, email or phone...'}
         />
       </label>
       <label className="archive-page-size">
         Rows
         <select value={pageSize} onChange={(event) => onPageSizeChange(event.target.value)}>
-          {ARCHIVE_PAGE_SIZE_OPTIONS.map((size) => (
+          {CUSTOMER_PAGE_SIZE_OPTIONS.map((size) => (
             <option key={size} value={size}>{size}</option>
           ))}
         </select>
       </label>
       <button type="submit" className="archive-toolbar-btn" disabled={isFetching}>
-        {isFetching ? 'Searching...' : 'Search'}
+        {isFetching ? 'Loading...' : 'Search'}
       </button>
       {activeSearch ? <button type="button" className="archive-toolbar-btn" onClick={onClear} disabled={isFetching}>Clear</button> : null}
-      <span>{isFetching ? 'Searching full archive...' : resultLabel}</span>
+      <span>{isFetching ? 'Loading customer records...' : resultLabel}</span>
     </form>
   );
 }
