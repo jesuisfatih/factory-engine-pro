@@ -15,6 +15,7 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { SEGMENT_EVALUATION_JOB, SEGMENT_EVALUATION_QUEUE, SHOPIFY_SYNC_QUEUE } from '../../shared/queue.module.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { classifyFulfillment } from '../orders/order-fulfillment-classifier.js';
+import { extractDesignFiles } from '../orders/order-design-files.js';
 import { SegmentsService } from '../segments/segments.service.js';
 import { ShopifyAdminApiError, ShopifyClientService, type ShopifyCredentials } from './shopify-client.service.js';
 import { SHOPIFY_INITIAL_SYNC_JOB, SHOPIFY_SYNC_RESOURCES } from './shopify-sync.constants.js';
@@ -475,16 +476,19 @@ export class SyncService {
     const shopifyCustomerId = stringId(customer?.id);
     const localCustomer = customer ? await this.ensureCustomerFromOrder(customer) : null;
     const lineItems = Array.isArray(raw.line_items) ? raw.line_items as Record<string, unknown>[] : [];
+    const mappedLineItems = lineItems.map(mapLineItem);
+    const designFiles = extractDesignFiles(mappedLineItems);
     const shippingLines = Array.isArray(raw.shipping_lines) ? raw.shipping_lines as Record<string, unknown>[] : [];
     const fulfillment = classifyFulfillment({
       tags: tags(raw.tags),
       lineItems,
       shippingAddress: raw.shipping_address,
       shippingLines,
+      deliveryMethod: stringOrNull(raw.delivery_method ?? raw.deliveryMethod ?? raw.delivery_method_type),
       fulfillmentStatus: stringOrNull(raw.fulfillment_status),
     });
 
-    await this.prisma.db.commerceOrder.upsert({
+    const order = await this.prisma.db.commerceOrder.upsert({
       where: { tenantId_shopifyOrderId: { tenantId: this.tenantId(), shopifyOrderId } },
       create: {
         id: prefixedId('ord'),
@@ -509,12 +513,13 @@ export class SyncService {
         notes: stringOrNull(raw.note),
         tags: tags(raw.tags),
         riskLevel: null,
-        lineItems: lineItems.map(mapLineItem) as Prisma.InputJsonValue,
+        lineItems: mappedLineItems as Prisma.InputJsonValue,
         shippingAddress: jsonOrDbNull(raw.shipping_address),
         billingAddress: jsonOrDbNull(raw.billing_address),
         discountCodes: jsonOrDbNull(raw.discount_codes),
         fulfillments: jsonOrDbNull(raw.fulfillments),
         refunds: jsonOrDbNull(raw.refunds),
+        designFiles: designFiles as Prisma.InputJsonValue,
         fulfillmentEvidence: fulfillment.evidence as Prisma.InputJsonValue,
         rawData: raw as Prisma.InputJsonValue,
         processedAt: dateOrNull(raw.processed_at),
@@ -539,12 +544,13 @@ export class SyncService {
         fulfillmentMode: fulfillment.mode,
         notes: stringOrNull(raw.note),
         tags: tags(raw.tags),
-        lineItems: lineItems.map(mapLineItem) as Prisma.InputJsonValue,
+        lineItems: mappedLineItems as Prisma.InputJsonValue,
         shippingAddress: jsonOrDbNull(raw.shipping_address),
         billingAddress: jsonOrDbNull(raw.billing_address),
         discountCodes: jsonOrDbNull(raw.discount_codes),
         fulfillments: jsonOrDbNull(raw.fulfillments),
         refunds: jsonOrDbNull(raw.refunds),
+        designFiles: designFiles as Prisma.InputJsonValue,
         fulfillmentEvidence: fulfillment.evidence as Prisma.InputJsonValue,
         rawData: raw as Prisma.InputJsonValue,
         processedAt: dateOrNull(raw.processed_at),
@@ -553,6 +559,35 @@ export class SyncService {
         syncedAt: new Date(),
       },
     });
+
+    if (fulfillment.mode === 'pickup') {
+      await this.prisma.db.commercePickupOrder.upsert({
+        where: { orderId: order.id },
+        create: {
+          id: prefixedId('pick'),
+          tenantId: this.tenantId(),
+          orderId: order.id,
+          customerId: order.customerId,
+          customerUserId: order.customerUserId,
+          status: 'pending',
+          orderNumber: order.shopifyOrderNumber,
+          customerName: localCustomer?.companyName ?? null,
+          customerEmail: order.email,
+          designFiles: designFiles as Prisma.InputJsonValue,
+          metadata: { source: 'shopify_sync' },
+        },
+        update: {
+          customerId: order.customerId,
+          customerUserId: order.customerUserId,
+          orderNumber: order.shopifyOrderNumber,
+          customerName: localCustomer?.companyName ?? null,
+          customerEmail: order.email,
+          designFiles: designFiles as Prisma.InputJsonValue,
+        },
+      });
+    } else {
+      await this.prisma.db.commercePickupOrder.deleteMany({ where: { orderId: order.id } });
+    }
   }
 
   private async ensureCustomerFromOrder(customer: Record<string, unknown>) {

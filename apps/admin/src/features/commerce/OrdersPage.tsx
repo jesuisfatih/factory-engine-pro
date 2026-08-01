@@ -495,7 +495,7 @@ export function OrderDetailDialog({
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [draft, setDraft] = useState({ targetMemberId: '', axis: 'support', note: '' });
+  const [draft, setDraft] = useState({ targetMemberId: '', axis: 'sales', note: '' });
   const [lastTransfer, setLastTransfer] = useState<TransferResult | null>(null);
   const [section, setSection] = useState<'overview' | 'items' | 'fulfillment' | 'billing' | 'activity'>('overview');
   const detail = useQuery({ queryKey: ['commerce', 'orders', orderId, 'detail'], queryFn: () => fetchOrderDetail(orderId), retry: false });
@@ -517,7 +517,7 @@ export function OrderDetailDialog({
       });
       qc.invalidateQueries({ queryKey: ['commerce', 'orders', orderId, 'detail'] });
     },
-    onError: (error) => toast.error(t('orders.modal.transfer_failed', { defaultValue: 'Transfer failed' }), { description: apiErrorMessage(error) }),
+    onError: (error) => toast.error(t('orders.modal.transfer_failed', { defaultValue: 'Follow-up assignment failed' }), { description: apiErrorMessage(error) }),
   });
 
   const body = detail.data;
@@ -731,7 +731,7 @@ export function OrderDetailDialog({
             </section>
 
             <section className="modal-section">
-              <h3>{t('orders.modal.transfer_title', { defaultValue: 'Personele aktar' })}</h3>
+              <h3>{t('orders.modal.transfer_title', { defaultValue: 'Assign follow-up' })}</h3>
               <label className="field-label" htmlFor="order-transfer-member">{t('orders.modal.target_member', { defaultValue: 'Target staff member' })}</label>
               <select
                 id="order-transfer-member"
@@ -747,20 +747,19 @@ export function OrderDetailDialog({
               </select>
               {members.isError && <div className="inline-error">{apiErrorMessage(members.error)}</div>}
 
-              <label className="field-label" htmlFor="order-transfer-axis">Axis</label>
+              <label className="field-label" htmlFor="order-transfer-axis">Follow-up purpose</label>
               <select id="order-transfer-axis" value={draft.axis} onChange={(event) => setDraft((current) => ({ ...current, axis: event.target.value }))}>
-                <option value="support">Support</option>
-                <option value="sales">Sales</option>
-                <option value="account">Account</option>
+                <option value="sales">Purchase follow-up</option>
+                <option value="account">Account follow-up</option>
               </select>
 
-              <label className="field-label" htmlFor="order-transfer-note">{t('orders.modal.note', { defaultValue: 'Explanation' })}</label>
+              <label className="field-label" htmlFor="order-transfer-note">{t('orders.modal.note', { defaultValue: 'Instructions' })}</label>
               <textarea
                 id="order-transfer-note"
                 rows={4}
                 value={draft.note}
                 onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))}
-                placeholder={t('orders.modal.note_placeholder', { defaultValue: 'Tell the staff member what to do with this order.' })}
+                placeholder={t('orders.modal.note_placeholder', { defaultValue: 'Tell the staff member what outcome is needed for this order.' })}
               />
               {lastTransfer && (
                 <div className="transfer-proof">
@@ -770,7 +769,7 @@ export function OrderDetailDialog({
               )}
               <button type="button" className="btn primary" disabled={!canTransfer} onClick={() => transfer.mutate()}>
                 {transfer.isPending ? <Loader2 size={13} className="spin" /> : <ArrowRightLeft size={13} />}
-                {t('orders.modal.transfer_button', { defaultValue: 'Personele aktar' })}
+                {t('orders.modal.transfer_button', { defaultValue: 'Assign follow-up' })}
               </button>
             </section>
           </aside>
@@ -1316,13 +1315,27 @@ function FulfillmentList({ values }: { values: Array<Record<string, unknown>>; c
     <div className="compact-list">
       {values.map((entry, index) => {
         const trackingRows = arrayValue(entry.trackingInfo ?? entry.tracking_info);
-        const trackingCompany = entry.trackingCompany ?? trackingRows[0]?.company;
-        const trackingNumber = entry.trackingNumber ?? trackingRows[0]?.number;
-        const trackingUrl = String(entry.trackingUrl ?? entry.tracking_url ?? trackingRows[0]?.url ?? '');
+        const trackingCompany = firstText(
+          entry.trackingCompany,
+          entry.tracking_company,
+          trackingRows[0]?.company,
+        );
+        const trackingNumber = firstText(
+          entry.trackingNumber,
+          entry.tracking_number,
+          firstArrayText(entry.trackingNumbers ?? entry.tracking_numbers),
+          trackingRows[0]?.number,
+        );
+        const trackingUrl = firstText(
+          entry.trackingUrl,
+          entry.tracking_url,
+          firstArrayText(entry.trackingUrls ?? entry.tracking_urls),
+          trackingRows[0]?.url,
+        ) ?? '';
         return (
           <div key={`fulfillment-${index}`}>
             <strong>{labelStatus(String(entry.displayStatus ?? entry.status ?? entry.shipmentStatus ?? `Fulfillment ${index + 1}`))}</strong>
-            <span>{[trackingCompany, trackingNumber].filter(Boolean).map(String).join(' - ') || 'No tracking number'}</span>
+            <span>{[trackingCompany, trackingNumber].filter(Boolean).join(' - ') || (isHttpUrl(trackingUrl) ? 'Tracking link available' : 'No tracking number')}</span>
             {isHttpUrl(trackingUrl) ? <a href={trackingUrl} target="_blank" rel="noreferrer">Track shipment</a> : null}
             {entry.createdAt ? <span>Created {fmtDateTime(String(entry.createdAt))}</span> : null}
           </div>
@@ -1420,6 +1433,18 @@ function ActivityPayload({ value }: { value: unknown }) {
 
 function arrayValue(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item)) : [];
+}
+
+function firstArrayText(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  return firstText(...value);
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    if ((typeof value === 'string' || typeof value === 'number') && String(value).trim()) return String(value).trim();
+  }
+  return null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

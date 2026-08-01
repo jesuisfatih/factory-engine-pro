@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
-  Pencil, RotateCcw, ShoppingBag, DollarSign, Tags,
+  Pencil, RotateCcw, ShoppingBag, DollarSign,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
+import { FollowUpScheduler, initialFollowUpValue } from './FollowUpScheduler';
 import type { Card as CardData, TaskBriefDetail } from '../types';
 import { humanize, personSafeText, staffActionLabel, staffBriefLine } from '../lib/personTerminology';
 
@@ -15,8 +16,11 @@ interface Props {
   card: CardData;
   customization?: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
+  contextTone?: TaskBriefContextTone;
   onClose: () => void;
 }
+
+export type TaskBriefContextTone = 'missed' | 'risk' | 'followup' | 'priority' | 'pinned';
 
 type TaskBriefContentProps = Props & {
   embedded?: boolean;
@@ -40,19 +44,6 @@ function fmtDate(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
-}
-
-function dateTimeLocal(value: Date) {
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
-}
-
-function initialScheduleValue() {
-  const value = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  value.setMinutes(0, 0, 0);
-  if (value.getHours() < 9) value.setHours(9);
-  if (value.getHours() > 17) value.setHours(17);
-  return dateTimeLocal(value);
 }
 
 function riskTier(priority: number) {
@@ -121,7 +112,7 @@ export function TaskBriefModal(props: Props) {
   return <TaskBriefContent {...props} />;
 }
 
-export function TaskBriefContent({ card, customization, summary, onClose, embedded = false }: TaskBriefContentProps) {
+export function TaskBriefContent({ card, customization, summary, contextTone = 'followup', onClose, embedded = false }: TaskBriefContentProps) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
   const isTaskCard = card.kind === 'task';
@@ -150,7 +141,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
   const [note, setNote] = useState('');
-  const [scheduleAt, setScheduleAt] = useState(() => initialScheduleValue());
+  const [scheduleAt, setScheduleAt] = useState(() => initialFollowUpValue());
   const [scheduleNote, setScheduleNote] = useState('');
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
@@ -274,11 +265,43 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
   const callExcerpt = personSafeText(liveCard.callExcerpt);
   const tier = riskTier(liveCard.priority);
   const safeTitle = personSafeText(liveCard.displayTitle || liveCard.title);
-  const safeSegment = personSafeText(liveCard.displayCustomerSummary || liveCard.segment);
   const safeSource = sourceLabel(liveCard.source);
 
+  const noteSection = isTaskCard && showField('noteForm') ? (
+    <form className="brief-block" style={sectionStyle('noteForm', 82)} onSubmit={submitNote}>
+      <div className="brief-block-head">
+        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up note')}</span>
+        {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
+      </div>
+      <textarea
+        id="task-note-input"
+        className="brief-edit"
+        rows={3}
+        placeholder="Save a follow-up note to customer history..."
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+      />
+      <div className="brief-form-actions">
+        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer follow-up thread.'}</span>
+        <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
+          <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
+        </button>
+      </div>
+      {detail?.notes.length ? (
+        <div className="brief-mini-list">
+          {detail.notes.slice(0, 3).map((item) => (
+            <div key={item.id} className="brief-note-row">
+              <span>{fmtDate(item.createdAt)}</span>
+              <p>{personSafeText(item.body)}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </form>
+  ) : null;
+
   const modalContent = (
-      <div className={`modal-card brief-modal ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
+      <div className={`modal-card brief-modal brief-context-${contextTone} ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
         <header className="modal-head">
           <div>
             <div className="brief-eyebrow">
@@ -354,19 +377,23 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                         <div className="brief-transcript">{callExcerpt}</div>
                       </div>
                     ) : null}
+                    {noteSection}
                     <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 85)}>
                       <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
                     </div>
                   </>
                 ) : (
-                  <div className="brief-block">
-                    <div className="brief-block-head">
-                      <span className="lbl">Manual follow-up</span>
+                  <>
+                    <div className="brief-block">
+                      <div className="brief-block-head">
+                        <span className="lbl">Manual follow-up</span>
+                      </div>
+                      <div className="brief-val brief-val-muted">
+                        Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
+                      </div>
                     </div>
-                    <div className="brief-val brief-val-muted">
-                      Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
-                    </div>
-                  </div>
+                    {noteSection}
+                  </>
                 )}
 
                 {(showField('purchaseHistory') || showField('callSummary')) ? <div className="brief-grid-two">
@@ -439,53 +466,11 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                   )}
                 </div> : null}
 
-                {isTaskCard ? (
-                  <>
-                    {showField('noteForm') ? <form className="brief-block" style={sectionStyle('noteForm', 120)} onSubmit={submitNote}>
-                      <div className="brief-block-head">
-                        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up note')}</span>
-                        {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
-                      </div>
-                      <textarea
-                        id="task-note-input"
-                        className="brief-edit"
-                        rows={3}
-                        placeholder="Save a follow-up note to customer history..."
-                        value={note}
-                        onChange={(event) => setNote(event.target.value)}
-                      />
-                      <div className="brief-form-actions">
-                        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer follow-up thread.'}</span>
-                        <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
-                          <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
-                        </button>
-                      </div>
-                      {detail?.notes.length ? (
-                        <div className="brief-mini-list">
-                          {detail.notes.slice(0, 3).map((item) => (
-                            <div key={item.id} className="brief-note-row">
-                              <span>{fmtDate(item.createdAt)}</span>
-                              <p>{personSafeText(item.body)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </form> : null}
-                  </>
-                ) : null}
               </>
             )}
           </div>
 
           {showField('customerSidePanel') ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
-            <div className="brief-card">
-              <div className="brief-card-head"><Tags size={12} /> {frontendCopy(override, 'customerLabel', 'Customer')}</div>
-              <div className="brief-card-row"><span className="lbl">Name</span><span className="val">{safeTitle}</span></div>
-              {liveCard.email && <div className="brief-card-row"><span className="lbl">Email</span><span className="val">{liveCard.email}</span></div>}
-              {liveCard.phone && <div className="brief-card-row"><span className="lbl">Phone</span><span className="val">{liveCard.phone}</span></div>}
-              <div className="brief-card-row"><span className="lbl">Context</span><span className="val">{safeSegment}</span></div>
-            </div>
-
             <div className="brief-stats">
               <div className="brief-stat">
                 <ShoppingBag size={11} />
@@ -531,7 +516,7 @@ export function TaskBriefContent({ card, customization, summary, onClose, embedd
                   <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
                 </div>
                 <div className="brief-schedule-grid side">
-                  <input id="task-schedule-input" className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                  <FollowUpScheduler value={scheduleAt} onChange={setScheduleAt} disabled={scheduleMutation.isPending} compact />
                   <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
                   <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
                     <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}

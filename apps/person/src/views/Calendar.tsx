@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { dialAircall, fetchCalEvents, friendlyError, saveTaskNote, scheduleTaskFollowUp, type EventSource, type CalEvent } from '../api/live';
 import { QueryState } from '../components/QueryState';
+import { FollowUpScheduler, initialFollowUpValue } from '../components/FollowUpScheduler';
 import { personSafeText, taskSourceLabel } from '../lib/personTerminology';
 
 const SOURCE_LABEL: Record<EventSource, string> = {
@@ -39,7 +40,7 @@ export function CalendarView() {
   const [weekStart, setWeekStart] = useState<number>(() => startOfWeek(new Date()).getTime());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [scheduleAt, setScheduleAt] = useState(() => dateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+  const [scheduleAt, setScheduleAt] = useState(() => initialFollowUpValue());
   const [scheduleNote, setScheduleNote] = useState('');
 
   const { data: events = [], isLoading, error } = useQuery({ queryKey: ['person', 'cal', 'events'], queryFn: fetchCalEvents });
@@ -98,7 +99,7 @@ export function CalendarView() {
   useEffect(() => {
     setNote('');
     setScheduleNote('');
-    setScheduleAt(dateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+    setScheduleAt(initialFollowUpValue());
   }, [selectedId]);
 
   const submitNote = (event: FormEvent) => {
@@ -144,6 +145,7 @@ export function CalendarView() {
           emptyTitle="No calendar items"
           emptyBody="Customer follow-ups, Aircall activity and failed delivery items will appear here."
         >
+        <div className="cal-grid-scroll">
         <div className="cal-grid">
           <div className="cal-col-head" />
           {days.map((day) => (
@@ -161,15 +163,13 @@ export function CalendarView() {
                 return (
                   <div key={`${day.iso}-${hour}`} className="cal-cell">
                     {eventsHere.map((event) => {
-                      const eventHeight = Math.max(52, Math.min(132, event.durationMinutes / 60 * 64 - 4));
                       return (
                         <button key={event.id} type="button"
                           className={`cal-event ${event.source}`}
-                          onClick={() => setSelectedId(event.id)}
-                          style={{ top: 2, height: eventHeight, zIndex: 1 }}>
+                          onClick={() => setSelectedId(event.id)}>
                           <span className="src-badge">{SOURCE_LABEL[event.source]}</span>
                           <div className="title">{personSafeText(event.title)}</div>
-                          <div className="who">{event.customer ?? ''}</div>
+                          <div className="who">{event.customer ?? ''}{event.durationMinutes ? ` - ${event.durationMinutes} min` : ''}</div>
                         </button>
                       );
                     })}
@@ -178,6 +178,7 @@ export function CalendarView() {
               })}
             </div>
           ))}
+        </div>
         </div>
         </QueryState>
       </div>
@@ -256,8 +257,8 @@ export function CalendarView() {
                       <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: .4, display: 'block', marginBottom: 6 }}>
                         Follow-up
                       </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(160px, 1fr)', gap: 8 }}>
-                        <input className="brief-edit" type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                      <div className="calendar-follow-up-form">
+                        <FollowUpScheduler value={scheduleAt} onChange={setScheduleAt} disabled={scheduleMutation.isPending} />
                         <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
                       </div>
                       {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
@@ -327,10 +328,4 @@ function startOfWeek(date: Date) {
 function taskIdFromEvent(event: CalEvent) {
   if (event.serviceRequestId) return event.serviceRequestId;
   return event.id.startsWith('sr-') ? event.id.slice(3) : null;
-}
-
-
-function dateTimeLocal(value: Date) {
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }

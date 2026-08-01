@@ -14,17 +14,19 @@ import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
-import { TaskBriefContent, TaskBriefModal } from '../components/TaskBriefModal';
+import { TaskBriefContent, TaskBriefModal, type TaskBriefContextTone } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
 import { focusLabel, personSafeText, staffActionLabel } from '../lib/personTerminology';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
 type DailyFilter = 'all' | 'urgent' | 'unreached' | 'at_risk';
+type WorkSection = 'missed' | 'risk' | 'followup' | 'priority';
 
 export function CallQueueView({ range: initialRange = 'last7d', archive = false }: { range?: DailyOperationRange; archive?: boolean } = {}) {
   const qc = useQueryClient();
   const [range, setRange] = useState<DailyOperationRange>(initialRange);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedContextTone, setSelectedContextTone] = useState<TaskBriefContextTone>('followup');
   const [deepLinkCard, setDeepLinkCard] = useState<CardData | null>(null);
   const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [transferCard, setTransferCard] = useState<CardData | null>(null);
@@ -33,10 +35,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>('all');
-  const [dailyCollapsed, setDailyCollapsed] = useState(false);
-  const [missedCollapsed, setMissedCollapsed] = useState(false);
-  const [churnCollapsed, setChurnCollapsed] = useState(false);
-  const [kanbanCollapsed, setKanbanCollapsed] = useState(false);
+  const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
   const [kanbanSegment, setKanbanSegment] = useState<string>('all');
   const [completeCandidate, setCompleteCandidate] = useState<CardData | null>(null);
   const queryKey = [...QK_BASE, range] as const;
@@ -185,6 +184,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     if (!taskId) return;
     let cancelled = false;
     setSelectedId(taskId);
+    setSelectedContextTone('followup');
     fetchTaskBrief(taskId)
       .then((detail) => {
         if (!cancelled) {
@@ -208,11 +208,20 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const openRequestsCount = summary?.openRequestsCount ?? 0;
   const closeTaskModal = () => {
     setSelectedId(null);
+    setSelectedContextTone('followup');
     setDeepLinkCard(null);
     setDeepLinkError(null);
     if (window.location.search.includes('taskId=')) {
       window.history.replaceState(null, '', window.location.pathname);
     }
+  };
+  const toggleSection = (section: WorkSection) => {
+    setActiveSection((current) => current === section ? null : section);
+  };
+  const openSection = (section: WorkSection) => setActiveSection(section);
+  const openTaskBrief = (taskId: string, contextTone: TaskBriefContextTone) => {
+    setSelectedContextTone(contextTone);
+    setSelectedId(taskId);
   };
   const scrollToSection = (id: string, expand?: () => void) => {
     expand?.();
@@ -280,7 +289,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             <div className="sub amber">waiting for an update</div>
           </div>
         )}
-        <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('followup-list-section', () => setDailyCollapsed(false))}>
+        <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('followup-list-section', () => openSection('followup'))}>
           <div className="kpi-head"><span className="kpi-icon indigo"><ListChecks size={13} /></span><span className="label">{archive ? 'Archived calls' : 'Follow-ups'}</span></div>
           <div className="val">{daily.length}</div>
           <div className="sub">{archive ? 'older than 7 days or manually archived' : range === 'today' ? 'today only' : 'last 7 days'}</div>
@@ -293,7 +302,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           </button>
         )}
         {!archive && (
-          <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('priority-kanban-section', () => setKanbanCollapsed(false))}>
+          <button type="button" className="kpi kpi-link" onClick={() => scrollToSection('priority-kanban-section', () => openSection('priority'))}>
             <div className="kpi-head"><span className="kpi-icon green"><Users size={13} /></span><span className="label">Priority customers</span></div>
             <div className="val">{priorityCustomerCount}</div>
             <div className="sub green">{groups.length} customer list{groups.length === 1 ? '' : 's'}</div>
@@ -333,21 +342,21 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 <button
                   type="button"
                   className="missed-v2-title"
-                  aria-expanded={!missedCollapsed}
-                  onClick={() => setMissedCollapsed((current) => !current)}
+                  aria-expanded={activeSection === 'missed'}
+                  onClick={() => toggleSection('missed')}
                 >
                   <h2>Missed work</h2>
                 </button>
                 <span className="missed-v2-badge">Not completed - {missedFollowUps.length}</span>
               </div>
-              {!missedCollapsed ? (
+              {activeSection === 'missed' ? (
                 <div className="missed-v2-list">
                   {missedFollowUps.slice(0, 8).map((card, index) => {
                     const tags = compactCardChips(card);
                     const note = card.missedNote || card.displayOutcome || card.displayReason || card.summary;
                     const action = missedActionFor(card);
                     return (
-                      <button type="button" key={card.id} className="missed-row" onClick={() => setSelectedId(card.id)}>
+                      <button type="button" key={card.id} className="missed-row" onClick={() => openTaskBrief(card.id, 'missed')}>
                         <span className="missed-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>
                           {initialsFor(card.displayTitle || card.title)}
                         </span>
@@ -372,21 +381,21 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <button
                 type="button"
                 className="missed-v2-head churn-v2-head"
-                aria-expanded={!churnCollapsed}
-                onClick={() => setChurnCollapsed((current) => !current)}
+                aria-expanded={activeSection === 'risk'}
+                onClick={() => toggleSection('risk')}
               >
                 <span className="missed-v2-icon churn-v2-icon"><UserX size={15} /></span>
                 <h2>At-risk customers</h2>
                 <span className="missed-v2-badge churn-v2-badge">Needs care - {churnFollowUps.length}</span>
               </button>
-              {!churnCollapsed ? (
+              {activeSection === 'risk' ? (
                 <div className="missed-v2-list">
                   {churnFollowUps.slice(0, 8).map((card, index) => {
                     const note = card.customerRiskNote || card.displayConcern || card.displayReason || card.summary;
                     const lost = card.customerRisk === 'lost';
                     const tags = compactCardChips(card);
                     return (
-                      <button type="button" key={card.id} className="missed-row" onClick={() => setSelectedId(card.id)}>
+                      <button type="button" key={card.id} className="missed-row" onClick={() => openTaskBrief(card.id, 'risk')}>
                         <span className="missed-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>
                           {initialsFor(card.displayTitle || card.title)}
                         </span>
@@ -415,14 +424,14 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <button
                 type="button"
                 className="missed-v2-title"
-                aria-expanded={!dailyCollapsed}
-                onClick={() => setDailyCollapsed((current) => !current)}
+                aria-expanded={activeSection === 'followup'}
+                onClick={() => toggleSection('followup')}
               >
                 <h2>{archive ? 'Follow-up archive' : range === 'today' ? 'Follow-up list for today' : 'Follow-up list'}</h2>
                 <p className="followup-subtitle">{archive ? 'Archived follow-ups for this staff member.' : 'Customers you need to call back, based on recent conversations.'}</p>
                 <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
               </button>
-              {!archive && !dailyCollapsed ? (
+              {!archive && activeSection === 'followup' ? (
                 <div className="daily-range-toggle" aria-label="Daily call list range">
                   <button type="button" className={range === 'last7d' ? 'active' : ''} aria-pressed={range === 'last7d'} onClick={() => setRange('last7d')}>Last 7 days</button>
                   <button type="button" className={range === 'today' ? 'active' : ''} aria-pressed={range === 'today'} onClick={() => setRange('today')}>Today</button>
@@ -430,7 +439,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               ) : null}
               <span className="missed-v2-badge followup-badge">To call - {filteredDaily.length}</span>
             </div>
-            {!dailyCollapsed ? (
+            {activeSection === 'followup' ? (
               <div className="followup-body">
                 {!archive ? (
                   <div className="filter-chips" role="tablist" aria-label="Follow-up filters">
@@ -465,7 +474,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
                   onTogglePin={(card) => taskPin.mutate(card)}
                   onArchive={(card) => setCompleteCandidate(card)}
-                  onOpen={setSelectedId}
+                  onOpen={(taskId) => openTaskBrief(taskId, 'followup')}
                   onCall={(card) => {
                     if (card.phone) dialCustomer.mutate({ phone: card.phone, customerId: card.customerId ?? undefined, source: 'daily_card' });
                   }}
@@ -482,8 +491,8 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <button
                 type="button"
                 className="missed-v2-title"
-                aria-expanded={!kanbanCollapsed}
-                onClick={() => setKanbanCollapsed((current) => !current)}
+                aria-expanded={activeSection === 'priority'}
+                onClick={() => toggleSection('priority')}
               >
                 <h2>Priority customers</h2>
                 <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
@@ -491,7 +500,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               </button>
               <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} across {groups.length} customer list{groups.length === 1 ? '' : 's'}</span>
             </div>
-            {!kanbanCollapsed ? <div className="followup-body">
+            {activeSection === 'priority' ? <div className="followup-body">
               {(() => {
                 const orderedGroups = [...groups].sort((a, b) => a.priority - b.priority);
                 const currentIndex = orderedGroups.findIndex((group) => group.segmentId === kanbanSegment);
@@ -580,7 +589,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         </div>
       </QueryState>
 
-      {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} onClose={closeTaskModal} />}
+      {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} contextTone={selectedContextTone} onClose={closeTaskModal} />}
       {completeCandidate ? (
         <CompleteTaskDialog
           followUpTitle={personSafeText(completeCandidate.displayTitle || completeCandidate.title)}
@@ -608,6 +617,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             card={detailMatchedCard}
             customization={frontendCustomization}
             summary={summary}
+            contextTone="priority"
             onClose={() => setDetailCustomerId(null)}
             embedded
           />

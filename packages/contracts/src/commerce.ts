@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { pageQuerySchema } from './common.js';
+import { createTaskAxisSchema } from './enums.js';
 import { taskAxisSchema } from './operations.js';
 
 export const fulfillmentModeSchema = z.enum(['pickup', 'shipping', 'local_delivery', 'unknown']);
@@ -93,7 +94,7 @@ export type ResolveReorderInput = z.infer<typeof resolveReorderSchema>;
 export const transferOrderToMemberSchema = z.object({
   targetMemberId: z.string().trim().min(1),
   note: z.string().trim().min(1).max(2000),
-  axis: taskAxisSchema.default('support'),
+  axis: createTaskAxisSchema.default('sales'),
   priority: z.enum(['critical', 'urgent', 'high', 'medium', 'low']).default('high'),
   dueAt: z.string().datetime().nullable().optional(),
 });
