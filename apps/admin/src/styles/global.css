@@ -478,6 +478,180 @@ a { color: inherit; text-decoration: none; }
 .portal-preview-footer.align-center { text-align: center; }
 .portal-preview-footer.align-right { text-align: right; }
 .portal-preview-footer.page { position: static; width: 100%; margin-top: 8px; padding-inline: 8px; }
+
+.portal-presentation-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.portal-presentation-modes button {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.portal-presentation-modes button:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.portal-presentation-modes button.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.portal-presentation-modes strong,
+.portal-presentation-modes span { display: block; }
+.portal-presentation-modes strong { font-size: 12px; }
+.portal-presentation-modes span { margin-top: 2px; color: var(--text-muted); font-size: 10px; }
+
+.portal-live-preview.portal-presentation-mode3 .portal-preview-stage {
+  border-radius: 4px !important;
+  border-color: #dfe5ec;
+  box-shadow: 0 14px 34px rgba(15,23,42,.13) !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-preview-stage {
+  width: 524px !important;
+  height: 386px !important;
+  min-height: 386px !important;
+  grid-template-columns: 199px minmax(0,1fr) !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-preview-stage {
+  width: 423px !important;
+  height: 260px !important;
+  min-height: 260px !important;
+  grid-template-columns: 161px minmax(0,1fr) !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-preview-stage {
+  width: 554px !important;
+  height: 401px !important;
+  min-height: 401px !important;
+  grid-template-columns: 211px minmax(0,1fr) !important;
+}
+.portal-live-preview.portal-presentation-mode3 .account-portal-hero-shared {
+  background-image: linear-gradient(180deg, var(--preview-primary, #081f6f) 0%, color-mix(in srgb, var(--preview-primary, #081f6f) 83%, #000) 100%) !important;
+  background-size: auto !important;
+  gap: 0 !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-preview-hero {
+  justify-content: flex-start !important;
+  padding: 48px 16px 45px !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-logo,
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-badge,
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-eyebrow,
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-logo,
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-badge { display: none !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-brand-copy { font-size: 11px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-brand-copy small { font-size: 6px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-intro { margin-top: 30px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-headline { margin: 0 !important; font-size: 12px !important; line-height: 1.45 !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-description { margin-top: 8px !important; font-size: 7px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-benefits { gap: 14px !important; margin-top: 26px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-benefit { grid-template-columns: 12px minmax(0,1fr) !important; gap: 8px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-benefit-icon { width: 12px !important; height: 12px !important; border-radius: 0 !important; background: transparent !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-benefit b { font-size: 6px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-benefit small { font-size: 5px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-trust { gap: 12px !important; margin-top: auto !important; flex-wrap: nowrap !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .account-portal-hero-trust span { padding: 0 !important; background: transparent !important; font-size: 5px !important; white-space: nowrap; }
+
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-preview-hero { justify-content: flex-start !important; padding: 19px 12px 29px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-brand-copy { font-size: 7px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-brand-copy small { font-size: 5px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-intro { margin-top: 5px !important; text-align: left !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-eyebrow { font-size: 4px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-headline { margin-top: 24px !important; font-size: 9px !important; line-height: 1.25 !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-description { margin-top: 7px !important; font-size: 5px !important; line-height: 1.5 !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-benefits { gap: 7px !important; margin-top: 23px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-benefit { grid-template-columns: 10px minmax(0,1fr) !important; gap: 6px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-benefit-icon { width: 10px !important; height: 10px !important; border-radius: 0 !important; background: transparent !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-benefit b { font-size: 5px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-benefit small { font-size: 4px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-trust { gap: 10px !important; margin-top: auto !important; flex-wrap: nowrap !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .account-portal-hero-trust span { padding: 0 !important; background: transparent !important; font-size: 4px !important; white-space: nowrap; }
+
+.portal-live-preview.portal-presentation-mode3 .portal-precision-form { justify-content: flex-start; padding: 0; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #e1e6ec; box-shadow: 0 6px 16px rgba(15,23,42,.07); }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-form-brand > div { margin-bottom: 0 !important; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-form-brand > div > span { max-width: 100% !important; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-input { display: flex; align-items: center; border: 1px solid #d8e0eb; color: #7b8798; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-input svg { flex: 0 0 auto; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-primary { display: flex; align-items: center; justify-content: center; color: #fff; }
+.portal-live-preview.portal-presentation-mode3 .portal-precision-primary svg { flex: 0 0 auto; }
+
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-form { padding: 17px 0 14px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-card { width: 201px; height: 336px; margin: 0 auto; padding: 16px; border-radius: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-form-brand { min-height: 34px; margin-bottom: 13px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-form-brand > div > span { width: 136px !important; height: 34px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-card h4 { margin: 0; text-align: center; font-size: 12px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-description { margin: 4px 0 14px; text-align: center; font-size: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-card label,
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-label-row strong { margin: 0 0 3px; font-size: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-label-row { display: flex; justify-content: space-between; margin-top: 8px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-input { height: 22px; gap: 6px; padding: 0 6px; border-radius: 3px; font-size: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-input svg { width: 8px; height: 8px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-eye { margin-left: auto; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-remember { display: flex; align-items: center; gap: 5px; margin: 10px 0; font-size: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-checkbox { width: 8px; height: 8px; border: 1px solid #9aa5b3; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-primary { height: 23px; min-height: 23px; margin-top: 0; gap: 6px; border-radius: 3px; font-size: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-primary svg { width: 8px; height: 8px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-divider { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 7px; margin: 13px 0 9px; color: #718096; font-size: 5px; text-transform: uppercase; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-divider span { height: 1px; background: #e2e8f0; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-secondary { min-height: 21px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8e0eb; border-radius: 3px; font-size: 6px; font-weight: 700; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-secondary + .portal-precision-secondary { margin-top: 5px; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-secondary.ghost { background: #f8fafc; }
+.portal-live-preview.portal-presentation-mode3.surface-login .portal-precision-secondary svg { width: 8px; height: 8px; }
+
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-form { padding: 31px 14px 13px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-card { width: 234px; height: 186px; margin: 0 auto; padding: 13px; border-radius: 3px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-form-brand { min-height: 28px; margin-bottom: 9px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-form-brand > div > span { width: 110px !important; height: 28px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-card h4 { margin: 0 0 3px; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-description { margin: 0; font-size: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-progress { height: 2px; margin: 6px 0 7px; overflow: hidden; border-radius: 999px; background: #e8edf3; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-progress span { display: block; width: 20%; height: 100%; background: #2c63e8; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-card label { margin-bottom: 2px; font-size: 4px; text-transform: uppercase; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-input { height: 17px; gap: 4px; padding: 0 5px; border-radius: 2px; font-size: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-input svg { width: 6px; height: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-choice { display: grid; gap: 2px; margin-top: 5px; padding: 5px; border: 1px solid #2c63e8; border-radius: 2px; box-shadow: 0 0 0 1px rgba(44,99,232,.12); }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-choice strong { font-size: 5px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-choice span { color: #667085; font-size: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-primary { height: 19px; min-height: 19px; margin-top: 5px; gap: 5px; border-radius: 2px; font-size: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-primary svg { width: 6px; height: 6px; }
+.portal-live-preview.portal-presentation-mode3.surface-register .portal-precision-back { margin-top: 5px; color: #667085; font-size: 4px; }
+
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-preview-hero {
+  justify-content: flex-start !important;
+  padding: 12px 22px 22px !important;
+}
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-brand { flex-direction: column !important; justify-content: center !important; gap: 10px !important; text-align: center !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-logo,
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-badge { width: 94px !important; height: 94px !important; max-width: 94px !important; padding: 15px !important; border-radius: 999px !important; background: #fff !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-brand-copy,
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-brand-copy small { font-size: 15px !important; line-height: 1.3 !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-intro { margin-top: 16px !important; text-align: center !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-eyebrow,
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-headline { display: none !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-description { margin: 0 auto !important; font-size: 7px !important; text-decoration: underline; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-benefits { gap: 8px !important; margin-top: 25px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-benefit { grid-template-columns: 13px minmax(0,1fr) !important; gap: 9px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-benefit-icon { width: 13px !important; height: 13px !important; border-radius: 0 !important; background: transparent !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-benefit b { font-size: 7px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-benefit small { font-size: 5px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .account-portal-hero-trust { display: none !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-form { justify-content: flex-start !important; padding: 6px 13px 5px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-form > h4 { font-size: 11px !important; line-height: 1.2; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-form > p { display: none !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-notice { min-height: 26px; display: flex; align-items: center; margin-bottom: 9px !important; padding: 4px 7px; border: 1px solid #ef4444 !important; border-radius: 6px; background: var(--preview-primary, #081f6f) !important; color: #fff !important; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-fields { row-gap: 5px !important; column-gap: 20px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-field label { margin-bottom: 1px !important; font-size: 7px; line-height: 1.05; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-input { min-height: 16px; padding: 2px 6px !important; border-radius: 4px; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-field.kind-textarea .portal-request-input { min-height: 25px; padding-top: 4px !important; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-field > small { margin-top: 1px; font-size: 4px; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-form .portal-preview-button { height: 21px !important; margin-top: 4px !important; border-radius: 4px; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-request-signin { margin-top: 4px !important; font-size: 7px; }
+.portal-live-preview.portal-presentation-mode3.surface-requestAccess .portal-preview-footer { right: 13px; bottom: 6px; width: 343px; font-size: 6px; }
+
+@media (max-width: 840px) {
+  .portal-presentation-modes { grid-template-columns: 1fr; }
+}
 .mcp-token-section h3 span:first-child { display: inline-flex; align-items: center; gap: 7px; }
 .mcp-token-section .sub { margin: -4px 0 14px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
 .mcp-token-form { display: flex; flex-direction: column; gap: 2px; }

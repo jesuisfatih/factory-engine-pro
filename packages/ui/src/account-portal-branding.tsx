@@ -113,6 +113,7 @@ export function AccountPortalHero({
       data-brand-layout={brandLayout}
     >
       <div
+        className="account-portal-hero-brand"
         style={{
           display: 'flex',
           flexDirection: brandLayout === 'stacked' ? 'column' : 'row',
@@ -125,7 +126,7 @@ export function AccountPortalHero({
         }}
       >
         {page.showHeroLogo && brandLogo ? (
-          <span style={{ width: logoSize.width, height: logoSize.height, maxWidth: '62%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', flex: '0 1 auto' }}>
+          <span className="account-portal-hero-logo" style={{ width: logoSize.width, height: logoSize.height, maxWidth: '62%', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', flex: '0 1 auto' }}>
             <img
               src={brandLogo}
               alt={workspaceName}
@@ -133,29 +134,29 @@ export function AccountPortalHero({
             />
           </span>
         ) : page.showHeroBadge ? (
-          <span style={{ minWidth: compact ? 34 : 44, height: compact ? 34 : 44, paddingInline: compact ? 7 : 10, display: 'grid', placeItems: 'center', borderRadius: compact ? 6 : 8, background: introColor, color: isLightColor(introColor) ? primaryColor : '#FFFFFF', fontSize: compact ? 11 : 14, fontWeight: 800 }}>
+          <span className="account-portal-hero-badge" style={{ minWidth: compact ? 34 : 44, height: compact ? 34 : 44, paddingInline: compact ? 7 : 10, display: 'grid', placeItems: 'center', borderRadius: compact ? 6 : 8, background: introColor, color: isLightColor(introColor) ? primaryColor : '#FFFFFF', fontSize: compact ? 11 : 14, fontWeight: 800 }}>
             {brandBadge}
           </span>
         ) : null}
         {page.showHeroBrandText ? (
-          <strong style={{ display: 'block', minWidth: 0, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 13 : 26) : (compact ? 11 : 22), lineHeight: 1.22, fontWeight: 700 }}>
+          <strong className="account-portal-hero-brand-copy" style={{ display: 'block', minWidth: 0, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 13 : 26) : (compact ? 11 : 22), lineHeight: 1.22, fontWeight: 700 }}>
             {brandTitle}
             {page.heroBrandSubtitle ? <small style={{ display: 'block', marginTop: compact ? 2 : 3, opacity: 0.72, fontSize: page.heroBrandSize === 'large' ? (compact ? 9 : 15) : (compact ? 8 : 13), fontWeight: 600 }}>{page.heroBrandSubtitle}</small> : null}
           </strong>
         ) : null}
       </div>
 
-      <div style={{ width: '100%', marginTop: hero.brandToIntroGap, textAlign: center ? 'center' : 'left' }}>
-        {page.showEyebrow && page.eyebrow ? <small style={{ display: 'block', color: introColor, opacity: 0.8, fontSize: compact ? 8 : 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: compact ? 0 : 0.4 }}>{page.eyebrow}</small> : null}
-        {page.showHeroHeadline ? <h1 style={{ maxWidth: center ? '100%' : compact ? 250 : 460, margin: `${page.showEyebrow && page.eyebrow ? hero.eyebrowToHeadlineGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 21 : 30) : (compact ? 18 : 24), lineHeight: 1.24, fontWeight: 700, letterSpacing: 0 }}>{headline}</h1> : null}
-        {page.showHeroDescription ? <p style={{ maxWidth: center ? (compact ? 300 : 500) : compact ? 270 : 480, margin: `${page.showHeroHeadline ? hero.headlineToDescriptionGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, opacity: 0.78, fontSize: page.heroBrandSize === 'large' ? (compact ? 11 : 15) : (compact ? 10 : 14), lineHeight: 1.5 }}>{page.description}</p> : null}
+      <div className="account-portal-hero-intro" style={{ width: '100%', marginTop: hero.brandToIntroGap, textAlign: center ? 'center' : 'left' }}>
+        {page.showEyebrow && page.eyebrow ? <small className="account-portal-hero-eyebrow" style={{ display: 'block', color: introColor, opacity: 0.8, fontSize: compact ? 8 : 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: compact ? 0 : 0.4 }}>{page.eyebrow}</small> : null}
+        {page.showHeroHeadline ? <h1 className="account-portal-hero-headline" style={{ maxWidth: center ? '100%' : compact ? 250 : 460, margin: `${page.showEyebrow && page.eyebrow ? hero.eyebrowToHeadlineGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, fontSize: page.heroBrandSize === 'large' ? (compact ? 21 : 30) : (compact ? 18 : 24), lineHeight: 1.24, fontWeight: 700, letterSpacing: 0 }}>{headline}</h1> : null}
+        {page.showHeroDescription ? <p className="account-portal-hero-description" style={{ maxWidth: center ? (compact ? 300 : 500) : compact ? 270 : 480, margin: `${page.showHeroHeadline ? hero.headlineToDescriptionGap : 0}px ${center ? 'auto' : 0} 0`, color: introColor, opacity: 0.78, fontSize: page.heroBrandSize === 'large' ? (compact ? 11 : 15) : (compact ? 10 : 14), lineHeight: 1.5 }}>{page.description}</p> : null}
       </div>
 
       {page.showBenefits && page.benefits.length ? (
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: hero.benefitRowGap, marginTop: page.benefitsPlacement === 'lower' ? 'auto' : hero.introToBenefitsGap, color: lowerColor }}>
+        <div className="account-portal-hero-benefits" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: hero.benefitRowGap, marginTop: page.benefitsPlacement === 'lower' ? 'auto' : hero.introToBenefitsGap, color: lowerColor }}>
           {page.benefits.map((benefit) => (
-            <div key={`${benefit.title}-${benefit.body}`} style={{ display: 'grid', gridTemplateColumns: `${benefitIconSize}px minmax(0, 1fr)`, gap: compact ? 9 : 12, alignItems: 'center', textAlign: 'left' }}>
-              <span style={{ width: benefitIconSize, height: benefitIconSize, display: 'grid', placeItems: 'center', borderRadius: page.benefitDensity === 'compact' ? (compact ? 7 : 8) : (compact ? 9 : 12), background: isLightColor(lowerColor) ? 'rgba(8,31,111,0.10)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }}>
+            <div className="account-portal-hero-benefit" key={`${benefit.title}-${benefit.body}`} style={{ display: 'grid', gridTemplateColumns: `${benefitIconSize}px minmax(0, 1fr)`, gap: compact ? 9 : 12, alignItems: 'center', textAlign: 'left' }}>
+              <span className="account-portal-hero-benefit-icon" style={{ width: benefitIconSize, height: benefitIconSize, display: 'grid', placeItems: 'center', borderRadius: page.benefitDensity === 'compact' ? (compact ? 7 : 8) : (compact ? 9 : 12), background: isLightColor(lowerColor) ? 'rgba(8,31,111,0.10)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }}>
                 <AccountPortalIconView name={benefit.icon} size={compact ? 17 : 20} />
               </span>
               <span style={{ minWidth: 0 }}>
@@ -168,7 +169,7 @@ export function AccountPortalHero({
       ) : null}
 
       {page.showTrustItems && page.trustItems.length ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: center ? 'center' : 'flex-start', gap: compact ? 5 : 8, marginTop: hero.trustTopGap, color: lowerColor }}>
+        <div className="account-portal-hero-trust" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: center ? 'center' : 'flex-start', gap: compact ? 5 : 8, marginTop: hero.trustTopGap, color: lowerColor }}>
           {page.trustItems.map((item) => (
             <span key={`${item.icon}-${item.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? 4 : 6, padding: compact ? '4px 6px' : '6px 8px', borderRadius: compact ? 4 : 8, background: isLightColor(lowerColor) ? 'rgba(8,31,111,0.08)' : 'rgba(255,255,255,0.10)', fontSize: compact ? 7 : 11, fontWeight: 700 }}>
               <AccountPortalIconView name={item.icon} size={compact ? 10 : 13} />{item.label}

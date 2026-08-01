@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
+  ArrowRight,
   BadgeCheck,
   BadgeDollarSign,
   CalendarClock,
@@ -13,6 +14,7 @@ import {
   Headphones,
   HeartHandshake,
   Landmark,
+  Lock,
   Mail,
   Monitor,
   PackageCheck,
@@ -27,6 +29,7 @@ import {
   Sparkles,
   Trash2,
   Truck,
+  UserRound,
   Users,
   WalletCards,
   type LucideIcon,
@@ -39,6 +42,7 @@ import type {
   AccountPortalIcon,
   AccountPortalPage,
   AccountPortalRequestField,
+  AccountPortalPresentationMode,
   BrandAssets,
 } from '@factory-engine-pro/contracts';
 import { PortalCompositionControls } from './PortalCompositionControls';
@@ -153,6 +157,25 @@ export function AccountPortalExperienceEditor({
             <button type="button" className={viewport === 'mobile' ? 'active' : ''} onClick={() => setViewport('mobile')} title="Mobile preview"><Smartphone size={15} /></button>
           </div>
         </div>
+      </div>
+
+      <div className="portal-presentation-modes" aria-label="Portal presentation mode">
+        {([
+          ['mode1', 'Mode 1', 'Platform default'],
+          ['mode2', 'Mode 2', 'Flexible composition'],
+          ['mode3', 'Mode 3', 'Precision portal'],
+        ] as Array<[AccountPortalPresentationMode, string, string]>).map(([id, label, description]) => (
+          <button
+            key={id}
+            type="button"
+            className={value.presentationMode === id ? 'active' : ''}
+            disabled={disabled}
+            onClick={() => onChange({ ...value, presentationMode: id })}
+          >
+            <strong>{label}</strong>
+            <span>{description}</span>
+          </button>
+        ))}
       </div>
 
       <div className="portal-surface-tabs" role="tablist">
@@ -484,7 +507,7 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
     ? `0 ${Math.max(4, Math.round(composition.canvas.stageShadowBlur / 2))}px ${composition.canvas.stageShadowBlur}px rgba(15, 23, 42, ${composition.canvas.stageShadowOpacity / 100})`
     : 'none';
   return (
-    <div className={`portal-live-preview viewport-${viewport}`} style={{ background: value.theme.pageBackground, padding: previewPadding, justifyContent: composition.canvas.pageVerticalAlignment === 'top' ? 'flex-start' : 'center' }}>
+    <div className={`portal-live-preview portal-presentation-${value.presentationMode ?? 'mode3'} surface-${surface} viewport-${viewport}`} style={{ background: value.theme.pageBackground, padding: previewPadding, justifyContent: composition.canvas.pageVerticalAlignment === 'top' ? 'flex-start' : 'center', '--preview-primary': value.theme.primaryColor } as CSSProperties}>
       <div
         className={`portal-preview-stage layout-${page.layout} surface-${surface}${page.desktopFit ? ' portal-preview-desktop-fit' : ''}`}
         style={{
@@ -514,6 +537,8 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
         ) : null}
         {surface === 'requestAccess' ? (
           <RequestAccessPreviewForm page={value.requestAccess} theme={value.theme} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} viewport={viewport} />
+        ) : (value.presentationMode ?? 'mode3') === 'mode3' ? (
+          <PrecisionAuthPreviewForm page={page} surface={surface} theme={value.theme} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={formLogo} />
         ) : (
         <div className="portal-preview-form" style={{
           background: value.theme.panelBackground,
@@ -534,6 +559,55 @@ function PortalPreview({ value, page, surface, viewport, workspaceName, brandBad
         {page.showFooter && page.footerPlacement === 'form' ? <div className={`portal-preview-footer align-${page.footerAlignment}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{workspaceName}. {page.footerText}</div> : null}
       </div>
       {page.showFooter && page.footerPlacement === 'page' ? <div className={`portal-preview-footer page align-${page.footerAlignment}`}>&copy; {page.footerShowYear ? `${new Date().getFullYear()} ` : ''}{workspaceName}. {page.footerText}</div> : null}
+    </div>
+  );
+}
+
+function PrecisionAuthPreviewForm({ page, surface, theme, workspaceName, brandBadge, brandLogo }: {
+  page: AccountPortalPage;
+  surface: Exclude<Surface, 'requestAccess'>;
+  theme: AccountPortalExperience['theme'];
+  workspaceName: string;
+  brandBadge: string;
+  brandLogo: string;
+}) {
+  if (surface === 'register') {
+    return (
+      <div className="portal-preview-form portal-precision-form portal-precision-register" style={{ background: theme.panelBackground, color: theme.textColor }}>
+        <div className="portal-precision-card">
+          <div className="portal-precision-form-brand"><AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} preview /></div>
+          <h4>{page.formTitle}</h4>
+          {page.showFormDescription ? <p className="portal-precision-description" style={{ color: theme.mutedTextColor }}>Step 1 of 5. {page.formDescription}</p> : null}
+          <div className="portal-precision-progress"><span /></div>
+          <label>Email</label>
+          <div className="portal-precision-input"><Mail aria-hidden="true" /><span>you@company.com</span></div>
+          <div className="portal-precision-choice">
+            <strong>B2B Account</strong>
+            <span>Company buying portal with team seats and order visibility.</span>
+          </div>
+          <div className="portal-preview-button portal-precision-primary" style={{ background: theme.primaryColor }}>{page.primaryActionLabel}<ArrowRight aria-hidden="true" /></div>
+          <div className="portal-precision-back">&larr;&nbsp; {page.secondaryActionLabel}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="portal-preview-form portal-precision-form portal-precision-login" style={{ background: theme.panelBackground, color: theme.textColor }}>
+      <div className="portal-precision-card">
+        <div className="portal-precision-form-brand"><AccountPortalFormBrand page={page} workspaceName={workspaceName} brandBadge={brandBadge} brandLogo={brandLogo} preview /></div>
+        <h4>{page.formTitle}</h4>
+        {page.showFormDescription ? <p className="portal-precision-description" style={{ color: theme.mutedTextColor }}>{page.formDescription}</p> : null}
+        <label>Email</label>
+        <div className="portal-precision-input"><Mail aria-hidden="true" /><span>you@company.com</span></div>
+        <div className="portal-precision-label-row"><label>Password</label><strong>Forgot password?</strong></div>
+        <div className="portal-precision-input"><Lock aria-hidden="true" /><span>Enter your password</span><span className="portal-precision-eye">&#9673;</span></div>
+        <div className="portal-precision-remember"><span className="portal-precision-checkbox" />Remember me</div>
+        <div className="portal-preview-button portal-precision-primary" style={{ background: theme.primaryColor }}><ArrowRight aria-hidden="true" />{page.primaryActionLabel}</div>
+        <div className="portal-precision-divider"><span /><b>or</b><span /></div>
+        <div className="portal-precision-secondary"><UserRound aria-hidden="true" />{page.secondaryActionLabel}</div>
+        <div className="portal-precision-secondary ghost"><ArrowRight aria-hidden="true" />{page.tertiaryActionLabel}</div>
+      </div>
     </div>
   );
 }

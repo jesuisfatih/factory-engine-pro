@@ -326,6 +326,7 @@ function RequestInvitationView() {
   const certificateWarning = certificateExpiryWarning(formData.taxCertificateExpiresAt, pageConfig.certificateExpiringMessage);
   const composition = resolveAccountPortalComposition(requestPage);
   const formComposition = composition.form;
+  const presentationMode = portalExperience?.presentationMode ?? 'mode3';
 
   const colors = makeColors(pageConfig.primaryColor || DEFAULT_PRIMARY_COLOR);
   const fontColor = normalizeHexColor(pageConfig.fontColor, '#2c3e50');
@@ -574,6 +575,7 @@ function RequestInvitationView() {
       if (current.half && next?.half) {
         rows.push(
           <div
+            className="request-portal-field-row"
             key={`row-${current.key}-${next.key}`}
             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: formPanelModeSettings.fieldColumnGap }}
           >
@@ -592,7 +594,7 @@ function RequestInvitationView() {
 
   return (
     <div
-      className={`request-portal-page request-portal-height-${composition.canvas.heightMode}${composition.canvas.heightMode !== 'content' ? ' request-portal-desktop-fit' : ''}${pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? ' request-portal-has-page-footer' : ''}${composition.mobile.heroVisible ? '' : ' request-portal-mobile-hero-hidden'}`}
+      className={`request-portal-page portal-presentation-${presentationMode} request-portal-height-${composition.canvas.heightMode}${composition.canvas.heightMode !== 'content' ? ' request-portal-desktop-fit' : ''}${pageConfig.showFooter && pageConfig.footerPlacement === 'page' ? ' request-portal-has-page-footer' : ''}${composition.mobile.heroVisible ? '' : ' request-portal-mobile-hero-hidden'}`}
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -603,6 +605,8 @@ function RequestInvitationView() {
         padding: composition.canvas.pagePadding,
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         '--portal-desktop-stage-height': `${pageConfig.desktopStageHeight}px`,
+        '--portal-primary': colors.primary,
+        '--portal-page-bg': portalExperience?.theme.pageBackground ?? '#F4F5F8',
         '--portal-page-padding': `${composition.canvas.pagePadding}px`,
         '--portal-mobile-page-padding': `${composition.mobile.pagePadding}px`,
         '--portal-mobile-form-padding-top': `${composition.mobile.formPaddingTop}px`,
@@ -712,7 +716,7 @@ function RequestInvitationView() {
               ) : (
                 <>
                   <AccountPortalFormBrand page={requestPage} workspaceName={brandName} brandBadge={brandBadge} brandLogo={formLogoUrl} />
-                  <div style={{ marginBottom: formComposition.headingBottomGap }}>
+                  <div className="request-portal-form-heading" style={{ marginBottom: formComposition.headingBottomGap }}>
                     <h4 style={{ fontWeight: 700, margin: '0 0 4px', color: formPanelTextColor, fontSize: 19 }}>
                       {pageConfig.title || 'Request B2B Access'}
                     </h4>
@@ -725,6 +729,7 @@ function RequestInvitationView() {
 
                   {!emailLocked && pageConfig.notice.enabled ? (
                     <div
+                      className="request-portal-notice"
                       style={{
                         background: normalizeHexColor(pageConfig.notice.backgroundColor, '#EEF4FF'),
                         border: `1px solid ${normalizeHexColor(pageConfig.notice.borderColor, '#AFC6F8')}`,
@@ -766,8 +771,8 @@ function RequestInvitationView() {
                     </div>
                   ) : null}
 
-                  <form onSubmit={handleSubmit}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: formPanelModeSettings.fieldGap }}>
+                  <form className="request-portal-form" onSubmit={handleSubmit}>
+                    <div className="request-portal-fields-live" style={{ display: 'flex', flexDirection: 'column', gap: formPanelModeSettings.fieldGap }}>
                       {renderFormFields()}
                     </div>
 
@@ -794,7 +799,7 @@ function RequestInvitationView() {
                       {loading ? pageConfig.submittingActionLabel : pageConfig.primaryActionLabel}
                     </button>
 
-                    <p style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: formComposition.signinTopGap, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
+                    <p className="request-portal-signin" style={{ textAlign: 'center', color: formPanelMutedTextColor, marginTop: formComposition.signinTopGap, marginBottom: 0, fontSize: pageConfig.desktopFit ? 12 : 14 }}>
                       {pageConfig.existingAccountPrompt}{' '}
                       <a href="/login" style={{ color: colors.primary, fontWeight: 600, textDecoration: 'none' }}>
                         {pageConfig.secondaryActionLabel}

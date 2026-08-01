@@ -424,8 +424,8 @@ const requestAccessExperienceDefault = {
   heroPanelWidth: 'balanced' as const,
   heroPattern: 'grid' as const,
   heroPatternOpacity: 13,
-  showFooter: false,
-  footerPlacement: 'page' as const,
+  showFooter: true,
+  footerPlacement: 'form' as const,
   footerAlignment: 'center' as const,
   footerText: 'All rights reserved.',
   footerShowYear: true,
@@ -561,8 +561,12 @@ const accountPortalPageSchema = z.object({
 }).strict();
 export type AccountPortalPage = z.infer<typeof accountPortalPageSchema>;
 
+export const ACCOUNT_PORTAL_PRESENTATION_MODES = ['mode1', 'mode2', 'mode3'] as const;
+export type AccountPortalPresentationMode = (typeof ACCOUNT_PORTAL_PRESENTATION_MODES)[number];
+
 export const accountPortalExperienceSchema = z.object({
   version: z.literal(1).default(1),
+  presentationMode: z.enum(ACCOUNT_PORTAL_PRESENTATION_MODES).default('mode3'),
   theme: z.object({
     primaryColor: hexColorSchema.default('#081F6F'),
     accentColor: hexColorSchema.default('#2C63E8'),

@@ -3022,3 +3022,755 @@ a { color: inherit; text-decoration: none; }
     text-align: left;
   }
 }
+
+/* Portal presentation mode 3: the tenant-driven precision layout. */
+.portal-presentation-mode3.auth-page,
+.portal-presentation-mode3.request-portal-page {
+  background: var(--portal-page-bg, #f4f5f8) !important;
+}
+
+.portal-presentation-mode3 .account-portal-hero-shared {
+  background-image: linear-gradient(180deg, var(--portal-primary, #081f6f) 0%, color-mix(in srgb, var(--portal-primary, #081f6f) 83%, #000000) 100%) !important;
+  background-size: auto !important;
+}
+
+.portal-presentation-mode3 .auth-brand-panel.account-portal-hero-shared {
+  gap: 0 !important;
+}
+
+@media (min-width: 901px) {
+  .portal-presentation-mode3.auth-page {
+    padding: 32px !important;
+  }
+
+  .portal-presentation-mode3 .auth-stage,
+  .portal-presentation-mode3 .request-portal-stage {
+    border: 1px solid #dfe5ec !important;
+    border-radius: 7px !important;
+    box-shadow: 0 24px 58px rgba(15, 23, 42, 0.13) !important;
+  }
+
+  .portal-presentation-mode3 .auth-brand-panel::after {
+    display: block !important;
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: -1;
+    height: 19px;
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Login reference: 904 x 666 stage, 344 px hero and 346 px form card. */
+  .portal-presentation-mode3.auth-surface-login .auth-stage {
+    width: min(904px, 100%) !important;
+    height: 666px !important;
+    min-height: 666px !important;
+    grid-template-columns: 344px minmax(0, 1fr) !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-brand-panel {
+    justify-content: flex-start !important;
+    padding: 82px 27px 77px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-brand {
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    text-align: left !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-logo,
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-badge {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-brand-copy {
+    color: #fff !important;
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-brand-copy small {
+    margin-top: 3px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-intro {
+    margin-top: 52px !important;
+    text-align: left !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-eyebrow {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-headline {
+    max-width: 275px !important;
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+    font-weight: 700 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-description {
+    max-width: 275px !important;
+    margin: 13px 0 0 !important;
+    color: #fff !important;
+    opacity: 0.72 !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefits {
+    gap: 24px !important;
+    margin-top: 44px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefit {
+    grid-template-columns: 20px minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefit-icon {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefit-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefit b {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-benefit small {
+    margin-top: 2px !important;
+    font-size: 8px !important;
+    line-height: 1.4 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-trust {
+    gap: 22px !important;
+    margin-top: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-trust span {
+    gap: 5px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 8px !important;
+    white-space: nowrap;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .account-portal-hero-trust svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-form-panel {
+    position: relative;
+    justify-content: flex-start !important;
+    padding: 30px 0 24px !important;
+    overflow: hidden !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-card {
+    width: 347px !important;
+    min-height: 580px;
+    margin: 0 auto !important;
+    padding: 28px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07) !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-logo-wrap {
+    min-height: 58px;
+    margin-bottom: 22px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-logo-wrap > div,
+  .portal-presentation-mode3.auth-surface-login .auth-logo-wrap > div > span {
+    width: 235px !important;
+    height: 58px !important;
+    max-width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-logo-wrap > div > strong,
+  .portal-presentation-mode3.auth-surface-register .auth-register-card > div:first-child > strong {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-heading {
+    margin-bottom: 24px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-heading h2 {
+    font-size: 21px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-heading p {
+    margin-top: 7px;
+    font-size: 11px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-login-form .form-group {
+    margin-bottom: 14px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .form-label,
+  .portal-presentation-mode3.auth-surface-login .auth-label-row a {
+    font-size: 10px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-label-row,
+  .portal-presentation-mode3.auth-surface-login .form-label {
+    margin-bottom: 5px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .form-input.auth-input {
+    height: 38px;
+    padding-left: 34px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-input-wrap > svg {
+    left: 10px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-password-toggle {
+    right: 3px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-password-toggle svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-form-row {
+    margin: 1px 0 18px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-checkbox-row {
+    gap: 7px;
+    font-size: 10px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-checkbox-row input {
+    width: 13px;
+    height: 13px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-submit {
+    min-height: 40px;
+    border-radius: 5px;
+    font-size: 11px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-divider {
+    gap: 12px;
+    margin: 22px 0 16px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-divider b {
+    font-size: 9px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-link-grid {
+    gap: 8px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-secondary-link {
+    min-height: 36px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  .portal-presentation-mode3.auth-surface-login .auth-footer {
+    position: absolute;
+    right: 0;
+    bottom: 28px;
+    left: 0;
+    margin: 0 auto;
+    font-size: 9px;
+  }
+
+  /* Register reference: compact 729 x 448 shell with a focused step card. */
+  .portal-presentation-mode3.auth-surface-register .auth-stage {
+    width: min(729px, 100%) !important;
+    height: 448px !important;
+    min-height: 448px !important;
+    grid-template-columns: 277px minmax(0, 1fr) !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-brand-panel {
+    justify-content: flex-start !important;
+    padding: 33px 21px 50px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-logo,
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-badge {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-brand {
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    text-align: left !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-brand-copy {
+    color: #fff !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-brand-copy small {
+    margin-top: 2px !important;
+    font-size: 8px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-intro {
+    margin-top: 8px !important;
+    text-align: left !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-eyebrow {
+    font-size: 7px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-headline {
+    max-width: 226px !important;
+    margin-top: 41px !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-description {
+    max-width: 225px !important;
+    margin-top: 12px !important;
+    color: #fff !important;
+    font-size: 8px !important;
+    line-height: 1.5 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefits {
+    gap: 12px !important;
+    margin-top: 40px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefit {
+    grid-template-columns: 17px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefit-icon {
+    width: 17px !important;
+    height: 17px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefit-icon svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefit b {
+    font-size: 8px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-benefit small {
+    font-size: 6px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-trust {
+    gap: 17px !important;
+    margin-top: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-trust span {
+    gap: 4px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    font-size: 6px !important;
+    white-space: nowrap;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .account-portal-hero-trust svg {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-form-panel {
+    position: relative;
+    justify-content: flex-start !important;
+    padding: 53px 24px 22px !important;
+    overflow: hidden !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card {
+    width: 403px !important;
+    max-width: 403px !important;
+    height: 320px !important;
+    min-height: 320px !important;
+    margin: 0 auto !important;
+    padding: 22px !important;
+    border-radius: 5px !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07) !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card > div:first-child {
+    margin-bottom: 16px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card > div:first-child,
+  .portal-presentation-mode3.auth-surface-register .auth-register-card > div:first-child > span {
+    width: 190px !important;
+    height: 48px !important;
+    max-width: 100% !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card h2 {
+    margin: 0 0 6px !important;
+    font-size: 12px !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .muted {
+    margin: 0 !important;
+    font-size: 7px !important;
+    line-height: 1.35 !important;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-progress {
+    height: 3px;
+    margin: 11px 0 13px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card form {
+    margin-top: 0;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .field label {
+    margin-bottom: 4px;
+    font-size: 7px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .field {
+    margin-bottom: 0;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .field input,
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .field select,
+  .portal-presentation-mode3.auth-surface-register .auth-register-card .field textarea {
+    min-height: 29px;
+    padding: 6px 9px;
+    border-radius: 4px;
+    font-size: 7px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-choice {
+    margin-top: 8px;
+    padding: 9px;
+    border-radius: 4px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-choice strong {
+    font-size: 8px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-choice span {
+    font-size: 6px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-submit {
+    height: 32px;
+    min-height: 32px;
+    margin-top: 9px;
+    padding: 0 16px;
+    border-radius: 4px;
+    font-size: 7px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-link {
+    margin-top: 8px;
+    font-size: 6px;
+  }
+
+  .portal-presentation-mode3.auth-surface-register .auth-footer {
+    position: absolute;
+    right: 0;
+    bottom: 49px;
+    left: 0;
+    margin: 0 auto;
+    font-size: 6px;
+  }
+
+  /* B2B request reference: 956 x 692 stage with a dense two-column form. */
+  .portal-presentation-mode3.request-portal-page {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 24px !important;
+    overflow: auto !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-stage-wrap {
+    width: min(956px, 100%) !important;
+    max-width: 956px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-stage-grid {
+    width: 100% !important;
+    min-height: 692px !important;
+    height: 692px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero {
+    flex: 0 0 364px !important;
+    justify-content: flex-start !important;
+    padding: 20px 38px 37px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-brand {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 17px !important;
+    text-align: center !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-logo,
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-badge {
+    width: 162px !important;
+    height: 162px !important;
+    max-width: 162px !important;
+    padding: 26px !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    justify-content: center !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-logo img {
+    object-position: center !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-brand-copy {
+    color: #fff !important;
+    font-size: 27px !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-brand-copy small {
+    margin-top: 0 !important;
+    font-size: 27px !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-intro {
+    margin-top: 28px !important;
+    text-align: center !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-eyebrow,
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-headline {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-description {
+    max-width: 285px !important;
+    margin: 0 auto !important;
+    color: #fff !important;
+    opacity: 0.8 !important;
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+    text-decoration: underline;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefits {
+    gap: 14px !important;
+    margin-top: 43px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefit {
+    grid-template-columns: 22px minmax(0, 1fr) !important;
+    gap: 15px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefit-icon {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefit-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefit b {
+    font-size: 14px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-benefit small {
+    font-size: 10px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-hero .account-portal-hero-trust {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form-panel {
+    justify-content: flex-start !important;
+    padding: 11px 23px 10px !important;
+    overflow: hidden !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form-heading {
+    margin-bottom: 7px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form-heading h4 {
+    margin: 0 !important;
+    font-size: 19px !important;
+    line-height: 1.2 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form-heading p {
+    display: none !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-notice {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px !important;
+    padding: 8px 12px !important;
+    border: 2px solid #ef4444 !important;
+    border-radius: 10px !important;
+    background: var(--portal-primary, #081f6f) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    line-height: 1.35;
+  }
+
+  .portal-presentation-mode3 .request-portal-fields-live {
+    gap: 9px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-field-row {
+    gap: 35px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form label {
+    margin-bottom: 2px !important;
+    font-size: 12px !important;
+    line-height: 1.05 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form input,
+  .portal-presentation-mode3 .request-portal-form select,
+  .portal-presentation-mode3 .request-portal-form textarea {
+    min-height: 27px !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form input[type='file'] {
+    padding: 2px 8px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form textarea {
+    height: 43px !important;
+    min-height: 43px !important;
+    resize: none !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form small,
+  .portal-presentation-mode3 .request-portal-form p:not(.request-portal-signin) {
+    margin-top: 1px !important;
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form > button {
+    height: 36px !important;
+    margin-top: 6px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-signin {
+    margin-top: 7px !important;
+    font-size: 12px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-footer {
+    margin-top: 27px !important;
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .portal-presentation-mode3.auth-page,
+  .portal-presentation-mode3.request-portal-page {
+    min-height: 100svh;
+    padding: 14px !important;
+    background: var(--portal-page-bg, #f4f5f8) !important;
+  }
+
+  .portal-presentation-mode3 .auth-stage,
+  .portal-presentation-mode3 .request-portal-stage {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border: 1px solid #dfe5ec !important;
+    border-radius: 7px !important;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12) !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-stage-grid {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form-panel {
+    padding: 22px 18px !important;
+    overflow: visible !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-field-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .portal-presentation-mode3 .request-portal-form input,
+  .portal-presentation-mode3 .request-portal-form select,
+  .portal-presentation-mode3 .request-portal-form textarea {
+    min-height: 42px !important;
+    font-size: 14px !important;
+  }
+}

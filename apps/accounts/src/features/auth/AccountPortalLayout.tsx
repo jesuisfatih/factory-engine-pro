@@ -24,6 +24,7 @@ export function AccountPortalLayout({
   const experience: AccountPortalExperience = brandQuery.data?.accountPortalExperience ?? DEFAULT_ACCOUNT_PORTAL_EXPERIENCE;
   const page = { ...DEFAULT_ACCOUNT_PORTAL_EXPERIENCE[surface], ...experience[surface] };
   const theme = experience.theme;
+  const presentationMode = experience.presentationMode ?? 'mode3';
   const composition = resolveAccountPortalComposition(page);
   const layout = page.enabled ? page.layout : 'centered';
   const brandBackground = page.panelGradientEnabled
@@ -67,7 +68,7 @@ export function AccountPortalLayout({
   } as CSSProperties;
 
   return (
-    <main className={`auth-page auth-height-${composition.canvas.heightMode} portal-density-${theme.density} portal-radius-${theme.radius} ${composition.canvas.heightMode !== 'content' ? 'auth-desktop-fit' : ''}${composition.mobile.heroVisible ? '' : ' auth-mobile-hero-hidden'}`} style={{ ...style, alignItems: composition.canvas.pageVerticalAlignment === 'top' ? 'start' : 'center' }}>
+    <main className={`auth-page auth-surface-${surface} portal-presentation-${presentationMode} auth-height-${composition.canvas.heightMode} portal-density-${theme.density} portal-radius-${theme.radius} ${composition.canvas.heightMode !== 'content' ? 'auth-desktop-fit' : ''}${composition.mobile.heroVisible ? '' : ' auth-mobile-hero-hidden'}`} style={{ ...style, alignItems: composition.canvas.pageVerticalAlignment === 'top' ? 'start' : 'center' }}>
       <div className={`auth-stage auth-layout-${layout}`}>
         {layout === 'split' ? (
           <AccountPortalHero
