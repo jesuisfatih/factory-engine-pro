@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
+import type { FrontendCustomizationModalSection, FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, ShoppingBag, DollarSign,
@@ -25,6 +25,36 @@ export type TaskBriefContextTone = 'missed' | 'risk' | 'followup' | 'priority' |
 type TaskBriefContentProps = Props & {
   embedded?: boolean;
 };
+
+const CALL_CONTEXT_SECTION_ORDER = [
+  'callExcerpt',
+  'noteForm',
+  'purchaseHistory',
+  'callSummary',
+  'timeline',
+  'customCustomerContext',
+] as const satisfies readonly FrontendCustomizationModalSection[];
+
+function normalizeCallContextSectionOrder(sectionOrder: FrontendCustomizationModalSection[] | undefined) {
+  if (!sectionOrder?.length) return sectionOrder;
+
+  const groupedSections = new Set<FrontendCustomizationModalSection>(CALL_CONTEXT_SECTION_ORDER);
+  const firstGroupedSection = sectionOrder.findIndex((section) => groupedSections.has(section));
+  if (firstGroupedSection < 0) return sectionOrder;
+
+  const callExcerptIndex = sectionOrder.indexOf('callExcerpt');
+  const anchorIndex = callExcerptIndex >= 0 ? callExcerptIndex : firstGroupedSection;
+  const anchor = sectionOrder
+    .slice(0, anchorIndex)
+    .filter((section) => !groupedSections.has(section)).length;
+  const remaining = sectionOrder.filter((section) => !groupedSections.has(section));
+
+  return [
+    ...remaining.slice(0, anchor),
+    ...CALL_CONTEXT_SECTION_ORDER,
+    ...remaining.slice(anchor),
+  ];
+}
 
 function labelize(value: string | null | undefined) {
   if (!value) return 'Not captured';
@@ -126,7 +156,10 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const liveCard = detail?.card ?? card;
   const customizationContext = { dailyCall: liveCard, taskBrief: detail, summary };
   const override = frontendElementOverride(customization, 'task.modal', customizationContext);
-  const sectionStyle = (section: Parameters<typeof frontendModalSectionStyle>[1], fallbackOrder: number) => frontendModalSectionStyle(override, section, fallbackOrder);
+  const normalizedOverride = override?.sectionOrder
+    ? { ...override, sectionOrder: normalizeCallContextSectionOrder(override.sectionOrder) }
+    : override;
+  const sectionStyle = (section: Parameters<typeof frontendModalSectionStyle>[1], fallbackOrder: number) => frontendModalSectionStyle(normalizedOverride, section, fallbackOrder);
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
@@ -444,9 +477,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     )}
                   </div> : null}
                 </div> : null}
-                <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 105)}>
-                  <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
-                </div>
                 {showField('timeline') ? <div className="brief-block" style={sectionStyle('timeline', 110)}>
                   <div className="brief-block-head">
                     <span className="lbl">{frontendCopy(override, 'timelineLabel', 'Customer history before calling')}</span>
@@ -469,6 +499,9 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     <div className="brief-val brief-val-muted">No customer history entries yet.</div>
                   )}
                 </div> : null}
+                <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 120)}>
+                  <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
+                </div>
 
               </>
             )}
