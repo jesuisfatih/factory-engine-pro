@@ -19,6 +19,7 @@ import {
 } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
 import { RulesService } from '../rules/rules.service.js';
 import { AiService } from './ai.service.js';
 import {
@@ -51,6 +52,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     private readonly rules: RulesService,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly contactResolver: CustomerContactResolverService,
     private readonly logger: AppLogger,
     private readonly config: ConfigService,
   ) {}
@@ -430,36 +432,11 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
     output: TranscriptResolverOutput,
   ) {
-    const tenantId = this.tenantContext.require().tenantId;
-    if (output.customer_match.customer_id) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, id: output.customer_match.customer_id },
-        select: { id: true },
-      });
-      if (customer) return customer;
-    }
-
-    const email = (callEvent.contactEmail ?? '').trim();
-    if (email) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      if (customer) return customer;
-    }
-
-    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
-    if (!phone) return null;
-    const digits = phone.replace(/\D/g, '');
-    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
-    for (const needle of phoneNeedles) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, phone: { contains: needle } },
-        select: { id: true },
-      });
-      if (customer) return customer;
-    }
-    return null;
+    return this.contactResolver.findCustomer({
+      customerId: output.customer_match.customer_id,
+      email: callEvent.contactEmail,
+      phone: callEvent.contactPhoneE164 ?? output.customer_match.phone,
+    });
   }
 
   private async recoverDuplicateWorkflowResponse(

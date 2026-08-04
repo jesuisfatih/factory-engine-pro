@@ -92,6 +92,7 @@ model Tenant {
   b2bAccessRequests       B2BAccessRequest[]
   b2bAccessRequestFiles   B2BAccessRequestFile[]
   customerTaxExemptions   CustomerTaxExemption[]
+  customerInternalNotes   CustomerInternalNote[]
   mailDeliveries          MailDelivery[]
   mailIdempotencyKeys     MailIdempotencyKey[]
   emailTemplates          EmailTemplate[]
@@ -251,6 +252,7 @@ model Member {
   dailyTaskOrders PersonDailyTaskOrder[]
   commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
   reviewedCommissionRequests CommissionRequest[] @relation("CommissionRequestReviewer")
+  customerInternalNotes CustomerInternalNote[] @relation("CustomerInternalNoteAuthor")
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -341,12 +343,32 @@ model Customer {
   dailyCallOrders PersonDailyCallOrder[]
   commissionRequests CommissionRequest[]
   taxExemption CustomerTaxExemption?
+  internalNotes CustomerInternalNote[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
   @@index([tenantId, email])
   @@index([tenantId, lastOrderAt])
   @@map("customers")
+}
+
+model CustomerInternalNote {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  customerId     String   @map("customer_id")
+  authorMemberId String?  @map("author_member_id")
+  body           String
+  source         String   @default("person_workspace")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  author Member? @relation("CustomerInternalNoteAuthor", fields: [authorMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, customerId, createdAt])
+  @@index([tenantId, authorMemberId, createdAt])
+  @@map("customer_internal_notes")
 }
 
 model CustomerAssignment {

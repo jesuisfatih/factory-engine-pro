@@ -161,6 +161,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
+import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { SupportService } from '../support/support.service.js';
@@ -487,6 +488,7 @@ export class RulesService {
     private readonly repository: RulesRepository,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly contactResolver: CustomerContactResolverService,
     private readonly customers: CustomersService,
     private readonly mail: MailService,
     private readonly support: SupportService,
@@ -1188,15 +1190,12 @@ export class RulesService {
   }
 
   private async resolveCustomer(params: Record<string, unknown>) {
-    const customerId = stringParam(params, 'customerId');
-    if (customerId) return this.prisma.db.customer.findFirst({ where: { id: customerId } });
-    const shopifyCustomerId = stringParam(params, 'shopifyCustomerId');
-    if (shopifyCustomerId) return this.prisma.db.customer.findFirst({ where: { shopifyCustomerId } });
-    const email = stringParam(params, 'customerEmail') ?? stringParam(params, 'email');
-    if (email) return this.prisma.db.customer.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
-    const phone = stringParam(params, 'customerPhone') ?? stringParam(params, 'phone') ?? stringParam(params, 'contactPhoneE164');
-    if (phone) return this.prisma.db.customer.findFirst({ where: { phone: { contains: phone } } });
-    return null;
+    return this.contactResolver.findCustomer({
+      customerId: stringParam(params, 'customerId'),
+      shopifyCustomerId: stringParam(params, 'shopifyCustomerId'),
+      email: stringParam(params, 'customerEmail') ?? stringParam(params, 'email'),
+      phone: stringParam(params, 'customerPhone') ?? stringParam(params, 'phone') ?? stringParam(params, 'contactPhoneE164'),
+    });
   }
 
   private async resolveConditionValue(
@@ -5143,35 +5142,12 @@ export class RulesService {
     callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
     output: TranscriptResolverOutput,
   ) {
-    if (output.customer_match.customer_id) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, id: output.customer_match.customer_id },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-
-    const email = (callEvent.contactEmail ?? '').trim();
-    if (email) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-
-    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
-    if (!phone) return false;
-    const digits = phone.replace(/\D/g, '');
-    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
-    for (const needle of phoneNeedles) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, phone: { contains: needle } },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-    return false;
+    if (this.tenantContext.require().tenantId !== tenantId) return false;
+    return Boolean(await this.contactResolver.findCustomer({
+      customerId: output.customer_match.customer_id,
+      email: callEvent.contactEmail,
+      phone: callEvent.contactPhoneE164 ?? output.customer_match.phone,
+    }));
   }
 
   private editedByMemberId() {

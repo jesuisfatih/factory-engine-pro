@@ -2530,6 +2530,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-title h2 { margin: 2px 0 4px; font-size: 22px; line-height: 1.2; }
 .customer-detail-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; }
 .customer-detail-sub span { display: inline-flex; min-width: 0; overflow-wrap: anywhere; }
+.customer-detail-phone { align-items: center; gap: 5px; border: 1px solid #BBF7D0; border-radius: 999px; background: #F0FDF4; color: #166534; padding: 3px 8px; font-weight: 650; }
+.customer-detail-phone.unavailable { border-color: var(--border); background: var(--surface-2); color: var(--muted, var(--text-muted)); }
 .customer-detail-kicker, .customer-detail-sub, .customer-detail-muted, .customer-detail-card small { color: var(--muted, var(--text-muted)); font-size: 12px; }
 .customer-detail-icon-btn {
   width: 36px;
@@ -2574,6 +2576,7 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-tabs button.active { background: #0f766e; border-color: #0f766e; color: white; }
 .customer-detail-body { flex: 1; overflow: auto; padding: 16px; }
 .customer-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.customer-detail-main-stack, .customer-detail-note-tab { display: grid; gap: 12px; }
 .customer-detail-list { display: grid; gap: 10px; }
 .customer-detail-card { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 14px; }
 .customer-detail-card h3 { margin: 0 0 12px; font-size: 14px; }
@@ -2609,6 +2612,10 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
 .customer-detail-address-block strong { font-size: 13px; }
 .customer-detail-address-block.empty strong { color: var(--muted, var(--text-muted)); font-weight: 600; }
 .customer-detail-address-phone { color: var(--muted, var(--text-muted)); }
+.customer-detail-phone-list { display: grid; gap: 7px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.customer-detail-phone-list > span { color: var(--muted, var(--text-muted)); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.customer-detail-phone-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.customer-detail-phone-list small { text-align: right; }
 .customer-detail-amount { font-weight: 700; white-space: nowrap; }
 .customer-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .customer-detail-tags span { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 8px; font-size: 11px; }

@@ -4,7 +4,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
-import { CustomerDetailPanel } from '@factory-engine-pro/ui';
+import { CustomerDetailPanel, CustomerInternalNoteComposer } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
@@ -165,6 +165,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       qc.setQueryData(['person', 'customer-detail', input.customerId], detail);
       qc.invalidateQueries({ queryKey: ['person', 'notes'] });
       qc.invalidateQueries({ queryKey: ['person', 'customers'] });
+      qc.invalidateQueries({ queryKey: QK_BASE });
     },
   });
   const dialCustomer = useMutation({
@@ -469,6 +470,8 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   cards={filteredDaily}
                   customization={frontendCustomization}
                   summary={summary}
+                  businessTimeZone={summary?.businessTimezone ?? 'America/Chicago'}
+                  businessDate={summary?.businessDate}
                   emptyLabel={archive ? 'No archived follow-ups.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No follow-ups for today.' : 'No follow-ups from the last 7 days.'}
                   reorderDisabled={reorderDaily.isPending}
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
@@ -620,8 +623,23 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             contextTone="priority"
             onClose={() => setDetailCustomerId(null)}
             embedded
+            followUpNotesContent={customerDetailQuery.data ? (
+              <CustomerInternalNoteComposer
+                detail={customerDetailQuery.data}
+                onSave={(body) => {
+                  if (detailCustomerId) customerNote.mutate({ customerId: detailCustomerId, body });
+                }}
+                isSaving={customerNote.isPending}
+                error={customerNote.error ? friendlyError(customerNote.error) : null}
+              />
+            ) : null}
           />
         ) : undefined}
+        onSaveCustomerNote={(body) => {
+          if (detailCustomerId) customerNote.mutate({ customerId: detailCustomerId, body });
+        }}
+        isSavingCustomerNote={customerNote.isPending}
+        customerNoteError={customerNote.error ? friendlyError(customerNote.error) : null}
       />
       {noteCustomer && (
         <CustomerNoteModal
@@ -659,6 +677,8 @@ function DailyWorkflowList({
   cards,
   customization,
   summary,
+  businessTimeZone,
+  businessDate,
   emptyLabel,
   reorderDisabled,
   onReorder,
@@ -672,6 +692,8 @@ function DailyWorkflowList({
   cards: CardData[];
   customization: FrontendCustomizationRuntimeDto | null;
   summary?: unknown;
+  businessTimeZone: string;
+  businessDate?: string;
   emptyLabel: string;
   reorderDisabled: boolean;
   onReorder: (orderedItemIds: string[]) => void;
@@ -684,7 +706,7 @@ function DailyWorkflowList({
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const itemIds = cards.map((card) => card.id);
-  const rows = dailyListRows(cards);
+  const rows = dailyListRows(cards, businessTimeZone, businessDate);
   const handleDragEnd = (event: DragEndEvent) => {
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
@@ -970,7 +992,7 @@ function SegmentCustomerCard({
         <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
         <div className="card-foot">
           <div className="card-meta">
-            {frontendFieldVisible(override, 'phone') ? <span title={frontendCopy(override, 'phoneLabel', 'Phone')}><span className="sig-ic green"><Phone size={11} /></span> {item.phone || 'No phone'}</span> : null}
+            {frontendFieldVisible(override, 'phone') ? <span title={frontendCopy(override, 'phoneLabel', 'Phone')}><span className="sig-ic green"><Phone size={11} /></span> {item.phone || 'No callable phone found'}</span> : null}
             {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderLabel', 'Latest order')}><span className="sig-ic indigo"><ShoppingBag size={11} /></span> {latestOrder}</span> : null}
             {frontendFieldVisible(override, 'latestCall') ? <span title={frontendCopy(override, 'latestCallLabel', 'Latest call')}><span className="sig-ic amber"><Clock size={11} /></span> {latestCall}</span> : null}
             {frontendFieldVisible(override, 'openFollowUp') ? <span title={frontendCopy(override, 'openFollowUpLabel', 'Open follow-up')}><span className="sig-ic blue"><StickyNote size={11} /></span> {openWork}</span> : null}
@@ -980,7 +1002,7 @@ function SegmentCustomerCard({
               type="button"
               className={`quick-action${item.phone ? '' : ' disabled'}`}
               aria-disabled={!item.phone}
-              title={item.phone ? `Call ${item.phone}` : 'No phone on file'}
+              title={item.phone ? `Call ${item.phone}` : 'No callable phone found'}
               disabled={!item.phone || callDisabled}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
@@ -1204,45 +1226,52 @@ type DailyListRow =
   | { kind: 'separator'; key: string; label: string }
   | { kind: 'card'; card: CardData };
 
-function dailyListRows(cards: CardData[]): DailyListRow[] {
+function dailyListRows(cards: CardData[], timeZone: string, businessDate?: string): DailyListRow[] {
   const rows: DailyListRow[] = [];
   let currentKey = '';
   for (const card of cards) {
-    const key = istanbulDateKey(card.createdAt);
+    const key = businessDateKey(card.createdAt, timeZone);
     if (key !== currentKey) {
       currentKey = key;
-      rows.push({ kind: 'separator', key: `date-${key}`, label: dailyDateLabel(card.createdAt, key) });
+      rows.push({ kind: 'separator', key: `date-${key}`, label: dailyDateLabel(card.createdAt, key, timeZone, businessDate) });
     }
     rows.push({ kind: 'card', card });
   }
   return rows;
 }
 
-function istanbulDateKey(value?: string) {
+function businessDateKey(value: string | undefined, timeZone: string) {
   if (!value) return 'unknown';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'unknown';
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Istanbul',
+    timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(date);
 }
 
-function dailyDateLabel(value: string | undefined, key: string) {
+function dailyDateLabel(value: string | undefined, key: string, timeZone: string, businessDate?: string) {
   if (key === 'unknown' || !value) return 'Unknown date';
-  const todayKey = istanbulDateKey(new Date().toISOString());
-  const yesterdayKey = istanbulDateKey(new Date(Date.now() - 86_400_000).toISOString());
+  const todayKey = businessDate ?? businessDateKey(new Date().toISOString(), timeZone);
+  const yesterdayKey = previousDateKey(todayKey);
   if (key === todayKey) return 'Today';
   if (key === yesterdayKey) return 'Yesterday';
   const date = new Date(value);
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Istanbul',
+    timeZone,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   }).format(date);
+}
+
+function previousDateKey(value: string) {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return '';
+  parsed.setUTCDate(parsed.getUTCDate() - 1);
+  return parsed.toISOString().slice(0, 10);
 }
 
 function formatCurrency(value: number, currency = 'USD') {

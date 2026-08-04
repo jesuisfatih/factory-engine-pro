@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationModalSection, FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import {
@@ -24,6 +24,7 @@ export type TaskBriefContextTone = 'missed' | 'risk' | 'followup' | 'priority' |
 
 type TaskBriefContentProps = Props & {
   embedded?: boolean;
+  followUpNotesContent?: ReactNode;
 };
 
 const CALL_CONTEXT_SECTION_ORDER = [
@@ -142,7 +143,7 @@ export function TaskBriefModal(props: Props) {
   return <TaskBriefContent {...props} />;
 }
 
-export function TaskBriefContent({ card, customization, summary, contextTone = 'followup', onClose, embedded = false }: TaskBriefContentProps) {
+export function TaskBriefContent({ card, customization, summary, contextTone = 'followup', onClose, embedded = false, followUpNotesContent }: TaskBriefContentProps) {
   const queryClient = useQueryClient();
   const queryKey = ['person', 'task-brief', card.id] as const;
   const isTaskCard = card.kind === 'task';
@@ -336,6 +337,9 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       ) : null}
     </form>
   ) : null;
+  const followUpNotesSection = followUpNotesContent ? (
+    <div style={sectionStyle('noteForm', 82)}>{followUpNotesContent}</div>
+  ) : noteSection;
 
   const modalContent = (
       <div className={`modal-card brief-modal brief-context-${contextTone} ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
@@ -414,7 +418,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                         <div className="brief-transcript">{callExcerpt}</div>
                       </div>
                     ) : null}
-                    {noteSection}
+                    {followUpNotesSection}
                   </>
                 ) : (
                   <>
@@ -426,7 +430,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                         Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
                       </div>
                     </div>
-                    {noteSection}
+                    {followUpNotesSection}
                   </>
                 )}
 

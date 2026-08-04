@@ -334,6 +334,8 @@ export const personDailyOperationsSchema = z.object({
     atRiskCustomerCount: z.number(),
     visibleAxes: z.array(z.string()),
     segmentGroupCount: z.number(),
+    businessTimezone: z.string(),
+    businessDate: z.string(),
   }),
   dailyCallList: z.array(personQueueCardSchema),
   priorityKanban: z.array(personQueueCardSchema),

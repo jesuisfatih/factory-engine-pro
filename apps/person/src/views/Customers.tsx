@@ -89,10 +89,11 @@ export function CustomersView({
     mutationFn: (input: { customerId: string; body: string }) => archive
       ? saveCustomerArchiveNote(input.customerId, { body: input.body })
       : saveCustomerNote(input.customerId, { body: input.body }),
-    onSuccess: async (_detail, input) => {
+    onSuccess: async (detail, input) => {
       setNoteTarget(null);
       setNoteBody('');
       setDetailCustomerId(input.customerId);
+      qc.setQueryData(['person', archive ? 'customer-archive-detail' : 'customer-detail', input.customerId], detail);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['person', archive ? 'customer-archive' : 'customers'] }),
         qc.invalidateQueries({ queryKey: ['person', 'notes'] }),
@@ -151,7 +152,15 @@ export function CustomersView({
     { id: 'urgency', header: 'Urgency', cell: ({ row }) => <span className="stat-pill">U{row.original.urgencyScore ?? 0}</span> },
     { id: 'orders', header: 'Orders', cell: ({ row }) => <span>{row.original.ordersCount}</span> },
     { id: 'spent', header: 'Spent', cell: ({ row }) => <span>{fmtMoney(row.original.totalSpent)}</span> },
-    { id: 'phone', header: 'Phone', cell: ({ row }) => <span className="cust-email">{row.original.phone}</span> },
+    {
+      id: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => (
+        <span className={`customer-phone-cell${row.original.phoneCallable ? '' : ' unavailable'}`}>
+          <Icon name="phone" size={13} /> {row.original.phoneDisplay || 'No callable phone found'}
+        </span>
+      ),
+    },
     { id: 'last', header: 'Last contact', cell: ({ row }) => <span className="cust-email">{row.original.lastContact}</span> },
     {
       id: 'actions',
@@ -164,17 +173,15 @@ export function CustomersView({
           <button type="button" className="action-btn" title="Open customer detail" onClick={() => openCustomerDetail(customer.id)}>
             <Icon name="customers" size={14} />
           </button>
-          {customer.phone ? (
-            <button
-              type="button"
-              className="action-btn"
-              title="Dial"
-              disabled={dialCustomer.isPending}
-              onClick={() => dialCustomer.mutate({ phone: customer.phone ?? '', customerId: customer.id, source: 'customer_table' })}
-            >
-              <Icon name="phone" size={14} />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="action-btn"
+            title={customer.phoneCallable ? `Call ${customer.phoneDisplay}` : 'No callable phone found'}
+            disabled={dialCustomer.isPending || !customer.phoneCallable}
+            onClick={() => customer.phoneCallable && dialCustomer.mutate({ phone: customer.phone, customerId: customer.id, source: 'customer_table' })}
+          >
+            <Icon name="phone" size={14} />
+          </button>
           {emailHref ? (
             <a className="action-btn" title="Email" href={emailHref}><Icon name="mail-action" size={14} /></a>
           ) : null}
@@ -287,6 +294,11 @@ export function CustomersView({
         staffTerminology
         main={customerDetailMain}
         customization={customerDetailCustomization}
+        onSaveCustomerNote={(body) => {
+          if (detailCustomerId) customerNote.mutate({ customerId: detailCustomerId, body });
+        }}
+        isSavingCustomerNote={customerNote.isPending}
+        customerNoteError={customerNote.error ? friendlyError(customerNote.error) : null}
       />
       {noteTarget ? (
         <CustomerNoteModal

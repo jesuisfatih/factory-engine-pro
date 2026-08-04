@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type { CustomerDetailPanelDto, CustomerDetailTab } from '@factory-engine-pro/contracts';
 import { staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import {
   ChevronLeft,
   ClipboardList,
+  Copy,
   ExternalLink,
   Headphones,
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   NotebookText,
   Phone,
   RefreshCw,
+  Save,
   ShoppingBag,
   UserRound,
   X,
@@ -58,6 +60,9 @@ export interface CustomerDetailPanelProps {
   onOpenOrder?: (orderId: string) => void;
   shopifyAdminCustomerUrl?: string | null;
   ownershipEditor?: CustomerOwnershipEditor | null;
+  onSaveCustomerNote?: (body: string) => void;
+  isSavingCustomerNote?: boolean;
+  customerNoteError?: string | null;
 }
 
 export interface CustomerOwnershipEditor {
@@ -104,6 +109,9 @@ export function CustomerDetailPanel({
   onOpenOrder,
   shopifyAdminCustomerUrl,
   ownershipEditor,
+  onSaveCustomerNote,
+  isSavingCustomerNote = false,
+  customerNoteError,
 }: CustomerDetailPanelProps) {
   const visibleKey = detail?.visibleTabs.join('|') ?? '';
   const visibleTabs = useMemo<PanelTab[]>(
@@ -121,6 +129,8 @@ export function CustomerDetailPanel({
   const showLatestOrder = customerDetailFieldVisible(customization, 'latestOrder');
   const showLatestCall = customerDetailFieldVisible(customization, 'latestCall');
   const showOpenFollowUp = customerDetailFieldVisible(customization, 'openFollowUp');
+  const contactPhone = detail?.customer.contact.phone ?? detail?.customer.phone ?? null;
+  const contactPhoneDisplay = detail?.customer.contact.displayPhone ?? contactPhone;
 
   useEffect(() => {
     if (!open) return;
@@ -146,26 +156,42 @@ export function CustomerDetailPanel({
             <h2>{showCustomerName ? detail?.customer.name ?? 'Customer detail' : 'Customer detail'}</h2>
             <div className="customer-detail-sub">
               {showEmail ? <span>{detail?.customer.email ?? 'No email'}</span> : null}
-              {showPhone ? <span>{detail?.customer.phone ? `Phone ${detail.customer.phone}` : 'No phone on file'}</span> : null}
+              {showPhone ? (
+                <span className={`customer-detail-phone${contactPhone ? '' : ' unavailable'}`}>
+                  <Phone size={13} /> {contactPhoneDisplay ?? 'No callable phone found'}
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="customer-detail-header-actions">
-            {showPhone && detail?.customer.phone ? (
+            {showPhone ? (
               onCallCustomer ? (
                 <button
                   type="button"
                   className="btn ghost"
-                  aria-label={`Call ${detail.customer.phone}`}
-                  disabled={isCallingCustomer}
-                  onClick={() => onCallCustomer(detail.customer.phone ?? '', detail.customer.id)}
+                  aria-label={contactPhone ? `Call ${contactPhone}` : 'No callable phone found'}
+                  title={contactPhone ? `Call ${contactPhoneDisplay}` : 'No callable phone found'}
+                  disabled={isCallingCustomer || !contactPhone || !detail}
+                  onClick={() => contactPhone && detail && onCallCustomer(contactPhone, detail.customer.id)}
                 >
                   <Phone size={14} /> {isCallingCustomer ? 'Calling' : 'Call'}
                 </button>
-              ) : (
-                <a className="btn ghost" href={`tel:${cleanPhone(detail.customer.phone)}`} aria-label={`Call ${detail.customer.phone}`}>
+              ) : contactPhone ? (
+                <a className="btn ghost" href={`tel:${cleanPhone(contactPhone)}`} aria-label={`Call ${contactPhone}`}>
                   <Phone size={14} /> Call
                 </a>
-              )
+              ) : <button type="button" className="btn ghost" disabled title="No callable phone found"><Phone size={14} /> Call</button>
+            ) : null}
+            {showPhone && contactPhone ? (
+              <button
+                type="button"
+                className="btn ghost"
+                title={`Copy ${contactPhoneDisplay}`}
+                aria-label={`Copy ${contactPhone}`}
+                onClick={() => void navigator.clipboard.writeText(contactPhone)}
+              >
+                <Copy size={14} /> Copy
+              </button>
             ) : null}
             {detail?.customer.email ? (
               <a className="btn ghost" href={`mailto:${detail.customer.email}`} aria-label={`Email ${detail.customer.email}`}>
@@ -231,7 +257,16 @@ export function CustomerDetailPanel({
               {selectedOrder
                 ? <OrderDetailTab order={selectedOrder} onBack={() => { setSelectedOrder(null); setActiveTab('shopify_orders'); }} staffTerminology={staffTerminology} />
                 : activeTab === 'main' && main
-                ? <MainTab main={main} mainContent={mainContent} staffTerminology={staffTerminology} customization={customization} />
+                ? <MainTab
+                    detail={detail}
+                    main={main}
+                    mainContent={mainContent}
+                    staffTerminology={staffTerminology}
+                    customization={customization}
+                    onSaveCustomerNote={onSaveCustomerNote}
+                    isSavingCustomerNote={isSavingCustomerNote}
+                    customerNoteError={customerNoteError}
+                  />
                 : renderTab(
                     detail,
                     activeTab as CustomerDetailTab,
@@ -239,6 +274,9 @@ export function CustomerDetailPanel({
                     staffTerminology,
                     (order) => onOpenOrder ? onOpenOrder(order.id) : setSelectedOrder(order),
                     ownershipEditor,
+                    onSaveCustomerNote,
+                    isSavingCustomerNote,
+                    customerNoteError,
                   )}
             </main>
           </>
@@ -249,18 +287,30 @@ export function CustomerDetailPanel({
 }
 
 function MainTab({
+  detail,
   main,
   mainContent,
   staffTerminology,
   customization,
+  onSaveCustomerNote,
+  isSavingCustomerNote,
+  customerNoteError,
 }: {
+  detail: CustomerDetailPanelDto;
   main: CustomerDetailMainInfo;
   mainContent?: ReactNode;
   staffTerminology: boolean;
   customization?: CustomerDetailPanelCustomization | null;
+  onSaveCustomerNote?: (body: string) => void;
+  isSavingCustomerNote: boolean;
+  customerNoteError?: string | null;
 }) {
   if (mainContent) {
-    return <div className="customer-detail-main-card">{mainContent}</div>;
+    return (
+      <div className="customer-detail-main-stack">
+        <div className="customer-detail-main-card">{mainContent}</div>
+      </div>
+    );
   }
   const productTags = main.productTags.map((tag) => staffPanelText(tag, staffTerminology)).filter(Boolean);
   const showPhone = customerDetailFieldVisible(customization, 'phone', true, true);
@@ -270,7 +320,8 @@ function MainTab({
   const showOpenFollowUp = customerDetailFieldVisible(customization, 'openFollowUp');
   const showLatestNote = customerDetailFieldVisible(customization, 'latestNote');
   return (
-    <div className="customer-detail-grid">
+    <div className="customer-detail-main-stack">
+      <div className="customer-detail-grid">
       <section className="customer-detail-card customer-detail-main-reason">
         <h3>Why this customer is open</h3>
         <p>{staffPanelText(main.reason, staffTerminology)}</p>
@@ -318,6 +369,13 @@ function MainTab({
           <div className="customer-detail-muted">{staffPanelText(main.latestNote.authorName, staffTerminology)} - {date(main.latestNote.createdAt)}</div>
         </section>
       ) : null}
+      </div>
+      <CustomerInternalNoteComposer
+        detail={detail}
+        onSave={onSaveCustomerNote}
+        isSaving={isSavingCustomerNote}
+        error={customerNoteError}
+      />
     </div>
   );
 }
@@ -329,6 +387,9 @@ function renderTab(
   staffTerminology: boolean,
   onOpenOrder: (order: CustomerDetailOrder) => void,
   ownershipEditor?: CustomerOwnershipEditor | null,
+  onSaveCustomerNote?: (body: string) => void,
+  isSavingCustomerNote = false,
+  customerNoteError?: string | null,
 ) {
   if (tab === 'profile') return <ProfileTab detail={detail} staffTerminology={staffTerminology} ownershipEditor={ownershipEditor} />;
   if (tab === 'shopify_orders') return <OrdersTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} onOpenOrder={onOpenOrder} />;
@@ -336,7 +397,16 @@ function renderTab(
   if (tab === 'support') return <SupportTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'email') return <EmailTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   if (tab === 'messages') return <MessagesTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
-  if (tab === 'notes') return <NotesTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
+  if (tab === 'notes') return (
+    <NotesTab
+      detail={detail}
+      onRetry={onRetry}
+      staffTerminology={staffTerminology}
+      onSaveCustomerNote={onSaveCustomerNote}
+      isSavingCustomerNote={isSavingCustomerNote}
+      customerNoteError={customerNoteError}
+    />
+  );
   if (tab === 'tasks') return <TasksTab detail={detail} onRetry={onRetry} staffTerminology={staffTerminology} />;
   return null;
 }
@@ -363,6 +433,23 @@ function ProfileTab({
         <KeyValue label="Health score" value={customer.insight.healthScore === null ? '-' : String(customer.insight.healthScore)} />
         <KeyValue label="Churn risk" value={label(customer.insight.churnRisk)} />
         <KeyValue label="Shopify customer" value={customer.shopifyCustomerId ?? '-'} />
+      </section>
+      <section className="customer-detail-card">
+        <h3>Contact information</h3>
+        <KeyValue label="Email" value={customer.email ?? 'No email on file'} />
+        <KeyValue label="Callable phone" value={customer.contact.displayPhone ?? 'No callable phone found'} />
+        <KeyValue label="Phone source" value={phoneSourceLabel(customer.contact.phoneSource)} />
+        {customer.contact.alternatePhones.length > 1 ? (
+          <div className="customer-detail-phone-list">
+            <span>Other verified phone records</span>
+            {customer.contact.alternatePhones.slice(1).map((phone) => (
+              <div key={`${phone.phone}-${phone.source}`}>
+                <strong>{phone.displayPhone}</strong>
+                <small>{phoneSourceLabel(phone.source)}</small>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
       <section className="customer-detail-card">
         <h3>Ownership</h3>
@@ -696,28 +783,117 @@ function MessagesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDe
   );
 }
 
-function NotesTab({ detail, onRetry, staffTerminology }: { detail: CustomerDetailPanelDto; onRetry: () => void; staffTerminology: boolean }) {
+function NotesTab({
+  detail,
+  onRetry,
+  staffTerminology,
+  onSaveCustomerNote,
+  isSavingCustomerNote,
+  customerNoteError,
+}: {
+  detail: CustomerDetailPanelDto;
+  onRetry: () => void;
+  staffTerminology: boolean;
+  onSaveCustomerNote?: (body: string) => void;
+  isSavingCustomerNote: boolean;
+  customerNoteError?: string | null;
+}) {
   const rows = detail.tabs.notes;
-  if (rows.length === 0) return <EmptyTab title="No personnel notes" body="Notes saved from call plans or customer history will appear here." onRetry={onRetry} />;
   return (
-    <div className="customer-detail-list">
-      {rows.map((note) => (
-        <article key={note.id} className="customer-detail-card">
-          <div className="customer-detail-row">
-            <div>
-              <strong>{staffPanelText(note.title, staffTerminology)}</strong>
-              <span>
-                {staffPanelText(label(note.kind), staffTerminology)}
-                {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
-                {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
-              </span>
-            </div>
-            <small>{dateTime(note.updatedAt)}</small>
-          </div>
-          <p>{staffPanelText(note.body, staffTerminology)}</p>
-        </article>
-      ))}
+    <div className="customer-detail-note-tab">
+      <CustomerInternalNoteComposer
+        detail={detail}
+        onSave={onSaveCustomerNote}
+        isSaving={isSavingCustomerNote}
+        error={customerNoteError}
+      />
+      {rows.length === 0 ? (
+        <EmptyTab title="No personnel notes" body="Notes saved from call plans or customer history will appear here." onRetry={onRetry} />
+      ) : (
+        <div className="customer-detail-list">
+          {rows.map((note) => (
+            <article key={note.id} className="customer-detail-card">
+              <div className="customer-detail-row">
+                <div>
+                  <strong>{staffPanelText(note.title, staffTerminology)}</strong>
+                  <span>
+                    {staffPanelText(label(note.kind), staffTerminology)}
+                    {note.authorMemberName ? ` - ${note.authorMemberName}` : ''}
+                    {note.linkedQueueId ? ` - task ${note.linkedQueueId}` : ''}
+                  </span>
+                </div>
+                <small>{dateTime(note.updatedAt)}</small>
+              </div>
+              <p>{staffPanelText(note.body, staffTerminology)}</p>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+export function CustomerInternalNoteComposer({
+  detail,
+  onSave,
+  isSaving,
+  error,
+}: {
+  detail: CustomerDetailPanelDto;
+  onSave?: (body: string) => void;
+  isSaving: boolean;
+  error?: string | null;
+}) {
+  const [body, setBody] = useState('');
+  const latestNoteId = detail.tabs.notes[0]?.id ?? null;
+
+  useEffect(() => {
+    setBody('');
+  }, [latestNoteId]);
+
+  if (!onSave) return null;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const value = body.trim();
+    if (!value || isSaving) return;
+    onSave(value);
+  };
+
+  return (
+    <form className="customer-detail-note-composer" onSubmit={submit}>
+      <div className="customer-detail-note-heading">
+        <div>
+          <span>Follow-up notes</span>
+          <p>Internal customer note. Visible to personnel only.</p>
+        </div>
+        <span className="customer-detail-note-count">{detail.tabs.notes.length} saved</span>
+      </div>
+      <textarea
+        rows={3}
+        maxLength={5000}
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        placeholder="Write a customer note for the next person who opens this profile..."
+        aria-label="Customer follow-up note"
+      />
+      <div className="customer-detail-note-actions">
+        <span className={error ? 'danger-text' : ''}>{error ?? 'Saved to this customer history with your name and time.'}</span>
+        <button type="submit" className="btn primary" disabled={!body.trim() || isSaving}>
+          <Save size={14} /> {isSaving ? 'Saving' : 'Save note'}
+        </button>
+      </div>
+      {detail.tabs.notes.length > 0 ? (
+        <div className="customer-detail-note-recent">
+          {detail.tabs.notes.slice(0, 3).map((note) => (
+            <div key={note.id}>
+              <span>{note.authorMemberName ?? 'Personnel'} - {dateTime(note.updatedAt)}</span>
+              <p>{note.body}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </form>
   );
 }
 
@@ -956,6 +1132,22 @@ function httpUrl(value: string | null | undefined): string | null {
 function label(value: string | null | undefined) {
   if (!value) return '-';
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function phoneSourceLabel(value: string | null | undefined) {
+  const labels: Record<string, string> = {
+    customer: 'Shopify customer profile',
+    customer_user: 'Customer account user',
+    sub_user: 'Customer account team member',
+    billing_address: 'Shopify billing address',
+    shipping_address: 'Shopify shipping address',
+    customer_shopify_data: 'Shopify customer data',
+    order: 'Recent Shopify order',
+    order_billing_address: 'Recent order billing address',
+    order_shipping_address: 'Recent order shipping address',
+    order_shopify_data: 'Recent Shopify order data',
+  };
+  return value ? labels[value] ?? label(value) : 'No verified source';
 }
 
 function customerFocusLabel(value: string) {

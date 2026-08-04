@@ -42,6 +42,13 @@ import type {
   AlgorithmStrategyDefinition,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
+import { BusinessClockService } from '../../shared/business-clock.service.js';
+import type { BusinessDayRange } from '../../shared/business-time.js';
+import {
+  CustomerContactResolverService,
+  type ResolvedCustomerContact,
+} from '../../shared/customer-contact-resolver.service.js';
+import { CustomerInternalNotesService } from '../../shared/customer-internal-notes.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -249,6 +256,9 @@ export class PersonWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly businessClock: BusinessClockService,
+    private readonly contactResolver: CustomerContactResolverService,
+    private readonly customerNotes: CustomerInternalNotesService,
     private readonly scoring: UrgencyScoringService,
     private readonly customersService: CustomersService,
     private readonly aircall: AircallService,
@@ -298,7 +308,7 @@ export class PersonWorkspaceService {
     const assignments = await this.axisAssignments(member.id);
     const visibleCustomerIds = Array.from(assignments.keys());
     const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
-    const today = istanbulDayRange();
+    const today = await this.businessClock.currentDay();
     const dailyWindow = dailyWorkflowRange(range, today);
 
     const [
@@ -375,12 +385,11 @@ export class PersonWorkspaceService {
       ...memberships.map((membership) => membership.customerId),
       ...allRequestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, priorityCustomerContext, todayAircallStats] = await Promise.all([
+    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats] = await Promise.all([
       this.customerPins(member.id, contextCustomerIds),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
       this.cardCallContext(allRequestRows),
-      this.priorityCustomerContext(memberships.map((membership) => membership.customer)),
       this.todayAircallStats(member, today.start, today.end),
     ]);
     const repeatCounts = initialRepeatCounts;
@@ -388,22 +397,45 @@ export class PersonWorkspaceService {
     const callContext = initialCallContext;
     const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
-
-    const segmentGroups = segmentOwnerships.map((ownership) => {
+    const selectedMembershipGroups = segmentOwnerships.map((ownership) => {
       const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
-      const items = segmentMemberships
-        .map((membership) => this.dailyCallItem(
+      const selectedMemberships = segmentMemberships
+        .map((membership) => ({
           membership,
-          ownership,
-          assignments,
-          config,
-          repeatCounts.get(membership.customerId) ?? 0,
-          customerPinsByCustomer.get(membership.customerId) ?? null,
-          priorityCustomerContext.get(membership.customerId) ?? emptyPersonPriorityCustomerContext(),
-        ))
-        .sort(sortDaily)
-        .slice(0, ownership.dailyCap ?? 100);
+          preview: this.dailyCallItem(
+            membership,
+            ownership,
+            assignments,
+            config,
+            repeatCounts.get(membership.customerId) ?? 0,
+            customerPinsByCustomer.get(membership.customerId) ?? null,
+          ),
+        }))
+        .sort((left, right) => sortDaily(left.preview, right.preview))
+        .slice(0, ownership.dailyCap ?? 100)
+        .map((entry) => entry.membership);
+      return { ownership, segmentMemberships, selectedMemberships };
+    });
+    const contactSeeds = uniqueCustomers([
+      ...selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)),
+      ...allRequestRows.flatMap((row) => row.customer ? [row.customer] : []),
+      ...customerPinRows.flatMap((row) => row.customer ? [row.customer] : []),
+    ]);
+    const contactByCustomer = await this.contactResolver.resolveMany(contactSeeds);
+    const selectedCustomers = uniqueCustomers(selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)));
+    const priorityCustomerContext = await this.priorityCustomerContext(selectedCustomers, contactByCustomer);
 
+    const segmentGroups = selectedMembershipGroups.map(({ ownership, segmentMemberships, selectedMemberships }) => {
+      const items = selectedMemberships.map((membership) => this.dailyCallItem(
+        membership,
+        ownership,
+        assignments,
+        config,
+        repeatCounts.get(membership.customerId) ?? 0,
+        customerPinsByCustomer.get(membership.customerId) ?? null,
+        priorityCustomerContext.get(membership.customerId) ?? emptyPersonPriorityCustomerContext(),
+        contactByCustomer.get(membership.customerId) ?? null,
+      ));
       return {
         segmentId: ownership.segment.id,
         segmentName: ownership.segment.name,
@@ -423,7 +455,10 @@ export class PersonWorkspaceService {
         .filter((row) => range === 'archive'
           ? this.isDailyWorkflowArchived(row, member.id, dailyWindow.start)
           : !this.isArchivedForMember(row, member.id))
-        .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies))
+        .map((row) => this.withResolvedContact(
+          this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies),
+          contactByCustomer,
+        ))
         .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card))),
       dailyTaskOrderRows,
       dailyRankingStrategy,
@@ -443,10 +478,16 @@ export class PersonWorkspaceService {
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
     const pinnedTasks = scopedRows
       .filter((row) => this.isTaskPinned(row, member.id))
-      .map((row) => this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies));
+      .map((row) => this.withResolvedContact(
+        this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies),
+        contactByCustomer,
+      ));
     const pinnedCustomers = customerPinRows
       .filter((row) => row.customer)
-      .map((row) => this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0));
+      .map((row) => this.withResolvedContact(
+        this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0),
+        contactByCustomer,
+      ));
     const pinBoard = [...pinnedTasks, ...pinnedCustomers].sort(sortByUrgency).slice(0, 120);
     const openRequestsCount = scopedRows.filter((row) => !CLOSED.has(row.status) && isCustomerRequestLike(row)).length;
     const missedFollowUpCount = dailyCallList.filter((card) => card.unreached || isMissedFollowUp(card, today.start)).length;
@@ -475,6 +516,8 @@ export class PersonWorkspaceService {
         atRiskCustomerCount,
         visibleAxes,
         segmentGroupCount: segmentGroups.length,
+        businessTimezone: today.timeZone,
+        businessDate: today.localDate,
       },
       dailyCallList,
       priorityKanban: segmentPriorityCards,
@@ -687,7 +730,7 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const tenantId = this.tenantId();
     if (!input.segmentId) {
-      const dailyWindow = dailyWorkflowRange(input.range ?? 'last7d', istanbulDayRange());
+      const dailyWindow = dailyWorkflowRange(input.range ?? 'last7d', await this.businessClock.currentDay());
       const operations = await this.dailyOperationsFor(member, input.range ?? 'last7d');
       const currentById = new Map(operations.dailyCallList.map((item) => [item.id, item] as const));
       const requested = uniqueStrings(input.orderedItemIds).filter((id) => currentById.has(id));
@@ -1451,6 +1494,7 @@ export class PersonWorkspaceService {
     const search = query.search?.trim();
     const searchDigits = search?.replace(/\D/g, '') ?? '';
     const phoneSearches = search && searchDigits.length >= 4 ? phoneVariants(search) : [];
+    const resolvedPhoneCustomerIds = search ? await this.contactResolver.matchingCustomerIds(search) : [];
     const searchOr: Prisma.CustomerWhereInput[] = search ? [
       { companyName: { contains: search, mode: 'insensitive' } },
       { firstName: { contains: search, mode: 'insensitive' } },
@@ -1458,6 +1502,7 @@ export class PersonWorkspaceService {
       { email: { contains: search, mode: 'insensitive' } },
       { phone: { contains: search, mode: 'insensitive' } },
       { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+      ...(resolvedPhoneCustomerIds.length ? [{ id: { in: resolvedPhoneCustomerIds } }] : []),
       ...phoneSearches.map((phone) => ({ phone: { contains: phone, mode: Prisma.QueryMode.insensitive } })),
     ] : [];
     const where: Prisma.CustomerWhereInput = {
@@ -1488,12 +1533,13 @@ export class PersonWorkspaceService {
         },
       }),
     ]);
-    const [config, repeatCounts] = await Promise.all([
+    const [config, repeatCounts, contacts] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(rows.map((row) => row.id)),
+      this.contactResolver.resolveMany(rows),
     ]);
     const items = rows
-      .map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts))
+      .map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts, contacts.get(customer.id) ?? null))
       .sort((left, right) => (right.urgencyScore ?? 0) - (left.urgencyScore ?? 0) || left.name.localeCompare(right.name));
     return {
       items,
@@ -1516,6 +1562,7 @@ export class PersonWorkspaceService {
     const search = query.search?.trim();
     const searchDigits = search?.replace(/\D/g, '') ?? '';
     const phoneSearches = search && searchDigits.length >= 4 ? phoneVariants(search) : [];
+    const resolvedPhoneCustomerIds = search ? await this.contactResolver.matchingCustomerIds(search) : [];
     const phoneSearchOr: Prisma.CustomerWhereInput[] = phoneSearches.map((phone) => ({
       phone: { contains: phone, mode: 'insensitive' },
     }));
@@ -1526,6 +1573,7 @@ export class PersonWorkspaceService {
       { email: { contains: search, mode: 'insensitive' } },
       { phone: { contains: search, mode: 'insensitive' } },
       { shopifyCustomerId: { contains: search, mode: 'insensitive' } },
+      ...(resolvedPhoneCustomerIds.length ? [{ id: { in: resolvedPhoneCustomerIds } }] : []),
       ...phoneSearchOr,
     ] : [];
     const where: Prisma.CustomerWhereInput = {
@@ -1556,12 +1604,13 @@ export class PersonWorkspaceService {
         },
       }),
     ]);
-    const [config, repeatCounts] = await Promise.all([
+    const [config, repeatCounts, contacts] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCounts(rows.map((row) => row.id)),
+      this.contactResolver.resolveMany(rows),
     ]);
     return {
-      items: rows.map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts)),
+      items: rows.map((customer, index) => this.customerRow(customer, offset + index, config, repeatCounts, contacts.get(customer.id) ?? null)),
       total,
       limit,
       offset,
@@ -1614,30 +1663,11 @@ export class PersonWorkspaceService {
     member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>,
     source: 'workspace' | 'archive',
   ) {
-    const title = `Customer note - ${memberDisplayName(member)}`;
-    await this.prisma.db.serviceRequest.create({
-      data: {
-        id: prefixedId('sr'),
-        tenantId: this.tenantId(),
-        customerId: id,
-        source: 'manual',
-        surface: 'internal',
-        title,
-        description: input.body,
-        status: 'closed',
-        priority: 'low',
-        createdByActorId: member.id,
-        metadata: {
-          personWorkspaceKind: 'note',
-          noteKind: 'customer',
-          linkedCustomer: id,
-          category: 'person_customer_note',
-          personWorkspaceSource: source,
-          createdByMemberId: member.id,
-          createdByMemberEmail: member.email,
-          createdByMemberName: memberDisplayName(member),
-        } as Prisma.InputJsonValue,
-      },
+    await this.customerNotes.create({
+      customerId: id,
+      authorMemberId: member.id,
+      body: input.body,
+      source: source === 'archive' ? 'customer_archive' : 'person_workspace',
     });
     this.logger.log('person_workspace', 'customer.note.create', 'Customer note saved from person workspace', {
       customer_id: id,
@@ -2330,6 +2360,7 @@ export class PersonWorkspaceService {
 
   private async priorityCustomerContext(
     customers: Array<{ id: string; email: string | null; phone: string | null }>,
+    contacts: Map<string, ResolvedCustomerContact>,
   ): Promise<Map<string, PersonPriorityCustomerContext>> {
     const ids = uniqueStrings(customers.map((customer) => customer.id));
     const result = new Map(ids.map((id) => [id, emptyPersonPriorityCustomerContext()] as const));
@@ -2338,20 +2369,27 @@ export class PersonWorkspaceService {
     const emailToCustomerId = new Map<string, string>();
     const phoneToCustomerId = new Map<string, string>();
     for (const customer of customers) {
-      const email = customer.email?.trim().toLowerCase();
+      const contact = contacts.get(customer.id);
+      const email = contact?.normalizedEmail ?? customer.email?.trim().toLowerCase();
       if (email) emailToCustomerId.set(email, customer.id);
-      for (const phone of phoneVariants(customer.phone)) {
+      const resolvedPhones = contact?.alternatePhones.map((entry) => entry.phone) ?? [customer.phone];
+      for (const phone of resolvedPhones.flatMap((value) => phoneVariants(value))) {
         phoneToCustomerId.set(phone, customer.id);
       }
     }
     const emails = [...emailToCustomerId.keys()];
     const phones = [...phoneToCustomerId.keys()];
 
-    const [serviceRows, noteRows, commentRows, orderRows, callRows] = await Promise.all([
+    const [serviceRows, customerNoteRows, noteRows, commentRows, orderRows, callRows] = await Promise.all([
       this.prisma.db.serviceRequest.findMany({
         where: { customerId: { in: ids } },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(Math.max(ids.length * 20, 200), 3000),
+      }),
+      this.prisma.db.customerInternalNote.findMany({
+        where: { customerId: { in: ids } },
+        orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 5, 100), 1000),
       }),
       this.prisma.db.serviceRequest.findMany({
         where: {
@@ -2390,6 +2428,7 @@ export class PersonWorkspaceService {
     ]);
 
     const memberIds = uniqueStrings([
+      ...customerNoteRows.map((row) => row.authorMemberId),
       ...noteRows.map((row) => row.createdByActorId),
       ...commentRows.map((row) => row.actorId),
     ]);
@@ -2415,6 +2454,19 @@ export class PersonWorkspaceService {
         body: row.description || row.title,
         authorName: memberById.get(row.createdByActorId ?? '') ?? 'Staff member',
         createdAt: row.updatedAt.toISOString(),
+      };
+      context.notesCount += 1;
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+
+    for (const row of customerNoteRows) {
+      const context = result.get(row.customerId);
+      if (!context) continue;
+      const note = {
+        id: row.id,
+        body: row.body,
+        authorName: memberById.get(row.authorMemberId ?? '') ?? 'Staff member',
+        createdAt: row.createdAt.toISOString(),
       };
       context.notesCount += 1;
       if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
@@ -2468,6 +2520,20 @@ export class PersonWorkspaceService {
     return result;
   }
 
+  private withResolvedContact(
+    card: PersonQueueCardDto,
+    contacts: Map<string, ResolvedCustomerContact>,
+  ): PersonQueueCardDto {
+    if (!card.customerId) return card;
+    const contact = contacts.get(card.customerId);
+    if (!contact) return card;
+    return {
+      ...card,
+      phone: contact.phone ?? undefined,
+      email: contact.email ?? undefined,
+    };
+  }
+
   private dailyCallItem(
     membership: SegmentMembershipRow,
     ownership: { priority: number; dailyCap: number | null; segment: { id: string; name: string; color: string; priority: number; priorityGlobal: number } },
@@ -2476,6 +2542,7 @@ export class PersonWorkspaceService {
     repeatCount = 0,
     pin: CustomerPinRow | null = null,
     context: PersonPriorityCustomerContext = emptyPersonPriorityCustomerContext(),
+    contact: ResolvedCustomerContact | null = null,
   ): PersonDailyCallItem {
     const customer = membership.customer;
     const axes = assignments.get(customer.id) ?? new Set<string>();
@@ -2510,8 +2577,8 @@ export class PersonWorkspaceService {
       id: dailyItemId(membership.segmentId, customer.id),
       customerId: customer.id,
       customerName: customerDisplayName(customer),
-      email: customer.email,
-      phone: customer.phone,
+      email: contact?.email ?? customer.email,
+      phone: contact?.phone ?? null,
       ordersCount: customer.ordersCount,
       totalSpent: money(customer.totalSpent),
       lastContact: isoDate(customer.lastOrderAt ?? customer.updatedAt),
@@ -2965,6 +3032,7 @@ export class PersonWorkspaceService {
     index: number,
     config: UrgencyScoringConfig,
     repeatCounts: Map<string, number>,
+    contact: ResolvedCustomerContact | null,
   ) {
     const segment = customer.segmentMemberships[0]?.segment;
     const urgencyBreakdown = this.scoring.score({
@@ -2981,8 +3049,11 @@ export class PersonWorkspaceService {
     return {
       id: customer.id,
       name: customer.companyName || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.email || customer.id,
-      email: customer.email ?? '',
-      phone: customer.phone ?? '',
+      email: contact?.email ?? customer.email ?? '',
+      phone: contact?.phone ?? '',
+      phoneDisplay: contact?.displayPhone ?? '',
+      phoneCallable: contact?.phoneCallable ?? false,
+      phoneSource: contact?.phoneSource ?? null,
       ordersCount: customer.ordersCount,
       totalSpent: money(customer.totalSpent),
       lastContact: isoDate(customer.lastOrderAt ?? customer.updatedAt),
@@ -3224,25 +3295,7 @@ function mergeRequestRows(primary: ServiceRequestRow[], extra: ServiceRequestRow
   return Array.from(rows.values());
 }
 
-function istanbulDayRange(now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Istanbul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(now);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '01';
-  const ymd = `${part('year')}-${part('month')}-${part('day')}`;
-  const start = new Date(`${ymd}T00:00:00+03:00`);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  return {
-    start,
-    end,
-    workDate: new Date(`${ymd}T00:00:00.000Z`),
-  };
-}
-
-function dailyWorkflowRange(range: PersonDailyOperationRange, today = istanbulDayRange(), now = new Date()) {
+function dailyWorkflowRange(range: PersonDailyOperationRange, today: BusinessDayRange, now = new Date()) {
   const sevenDayStart = new Date(now.getTime() - 7 * 86_400_000);
   if (range === 'today') {
     return {
@@ -3263,6 +3316,10 @@ function dailyWorkflowRange(range: PersonDailyOperationRange, today = istanbulDa
     end: today.end,
     orderDate: today.workDate,
   };
+}
+
+function uniqueCustomers<T extends { id: string }>(rows: T[]) {
+  return Array.from(new Map(rows.map((row) => [row.id, row] as const)).values());
 }
 
 function sortDaily(

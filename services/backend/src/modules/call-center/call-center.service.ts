@@ -20,6 +20,8 @@ import type {
 } from '@factory-engine-pro/contracts';
 import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
+import { BusinessClockService } from '../../shared/business-clock.service.js';
+import { CustomerInternalNotesService } from '../../shared/customer-internal-notes.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { RealtimeService } from '../../shared/realtime.service.js';
@@ -37,7 +39,9 @@ export class CallCenterService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly businessClock: BusinessClockService,
     private readonly customers: CustomersService,
+    private readonly customerNotes: CustomerInternalNotesService,
     private readonly aircall: AircallService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
@@ -45,7 +49,8 @@ export class CallCenterService {
 
   async overview(): Promise<CallCenterOverview> {
     const now = new Date();
-    const todayStart = startOfDay(now);
+    const today = await this.businessClock.currentDay(now);
+    const todayStart = today.start;
     const weekStart = daysAgo(now, 7);
     const members = await this.members();
     const memberById = new Map(members.map((member) => [member.id, member]));
@@ -134,30 +139,11 @@ export class CallCenterService {
 
   async saveCustomerNote(id: string, input: CallCenterSaveCustomerNoteInput): Promise<CustomerDetailPanelDto> {
     const actor = await this.currentMember();
-    const customer = await this.prisma.db.customer.findFirst({ where: { id }, select: { id: true } });
-    if (!customer) throw new NotFoundException('Customer not found');
-    await this.prisma.db.serviceRequest.create({
-      data: {
-        id: prefixedId('sr'),
-        tenantId: this.tenantId(),
-        customerId: id,
-        source: 'manual',
-        surface: 'internal',
-        title: `Admin note - ${memberName(actor)}`,
-        description: input.body,
-        status: 'closed',
-        priority: 'low',
-        createdByActorId: actor.id,
-        metadata: {
-          personWorkspaceKind: 'note',
-          noteKind: 'customer',
-          linkedCustomer: id,
-          category: 'admin_customer_note',
-          createdByMemberId: actor.id,
-          createdByMemberEmail: actor.email,
-          createdByMemberName: memberName(actor),
-        } as Prisma.InputJsonValue,
-      },
+    await this.customerNotes.create({
+      customerId: id,
+      authorMemberId: actor.id,
+      body: input.body,
+      source: 'admin_call_center',
     });
     this.logger.log('call_center', 'customer.note.create', 'Admin Call Center customer note saved', {
       customer_id: id,
@@ -1329,12 +1315,6 @@ function customerIdForCall(
 
 function anonymousMember(id: string): CallCenterMember {
   return { id, name: 'Unknown member', email: '', role: 'Member', status: 'unknown' };
-}
-
-function startOfDay(value: Date) {
-  const next = new Date(value);
-  next.setHours(0, 0, 0, 0);
-  return next;
 }
 
 function daysAgo(value: Date, days: number) {

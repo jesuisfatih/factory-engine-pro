@@ -93,6 +93,9 @@ export interface CustomerRow {
   name: string;
   email: string;
   phone: string;
+  phoneDisplay: string;
+  phoneCallable: boolean;
+  phoneSource: string | null;
   ordersCount: number;
   totalSpent: number;
   lastContact: string;

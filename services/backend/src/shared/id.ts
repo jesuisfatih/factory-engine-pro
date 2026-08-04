@@ -29,6 +29,7 @@ export type IdPrefix =
   | 'caud'
   | 'cprof'
   | 'creq'
+  | 'cnote'
   | 'prule'
   | 'seg'
   | 'sown'

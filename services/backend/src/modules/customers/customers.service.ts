@@ -17,7 +17,8 @@ import {
   type RecordCustomerAxisNoAutoReassignInput,
   type UpdateCustomerListInput,
 } from '@factory-engine-pro/contracts';
-import { aircallWhereFor } from '../../shared/contact-match.js';
+import { aircallWhereForContacts } from '../../shared/contact-match.js';
+import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -52,6 +53,7 @@ export class CustomersService {
     private readonly repository: CustomersRepository,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly contactResolver: CustomerContactResolverService,
     private readonly logger: AppLogger,
     private readonly shopify: ShopifyClientService,
   ) {}
@@ -132,11 +134,12 @@ export class CustomersService {
     });
     if (!customer) throw new NotFoundException('Customer not found');
 
-    const email = customer.email?.trim() ?? null;
-    const phone = customer.phone?.trim() ?? null;
-    const aircallWhere = aircallWhereFor(email, phone);
+    const contact = await this.contactResolver.resolveOne(customer.id);
+    if (!contact) throw new NotFoundException('Customer contact record not found');
+    const email = contact.email;
+    const aircallWhere = aircallWhereForContacts(email, contact.alternatePhones.map((entry) => entry.phone));
     const orderWhere: Prisma.CommerceOrderWhereInput = { OR: compactOrderCustomerMatchers(customer) };
-    const [orders, aircallCalls, serviceRequests, mailDeliveries, linkedNotes, linkedMessages] = await Promise.all([
+    const [orders, aircallCalls, serviceRequests, mailDeliveries, internalNotes, linkedNotes, linkedMessages] = await Promise.all([
       this.prisma.db.commerceOrder.findMany({
         where: orderWhere,
         orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
@@ -165,6 +168,14 @@ export class CustomersService {
             take: 50,
           })
         : Promise.resolve([]),
+      this.prisma.db.customerInternalNote.findMany({
+        where: { customerId: id },
+        include: {
+          author: { select: { id: true, email: true, firstName: true, lastName: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: 50,
+      }),
       this.prisma.db.serviceRequest.findMany({
         where: {
           OR: [
@@ -207,6 +218,7 @@ export class CustomersService {
       : [];
     const rulesById = new Map(rules.map((rule) => [rule.id, rule.name]));
     const authorIds = uniqueStrings([
+      ...internalNotes.map((row) => row.authorMemberId),
       ...linkedNotes.map((row) => row.createdByActorId),
       ...serviceRequests.flatMap((row) => row.comments.map((comment) => comment.actorId)),
     ]);
@@ -223,6 +235,18 @@ export class CustomersService {
     const support = (supportRows.length ? supportRows : customerRequests).map((row) => this.mapDetailRequest(row));
     const tasks = customerRequests.map((row) => this.mapDetailTask(row, rulesById.get(row.matchedRuleId ?? '') ?? null));
     const noteRows = [
+      ...internalNotes.map((row) => ({
+        id: row.id,
+        title: `Customer note${row.author ? ` - ${memberName(row.author)}` : ''}`,
+        body: row.body,
+        kind: 'customer_note',
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        linkedQueueId: null,
+        authorMemberId: row.authorMemberId,
+        authorMemberName: row.author ? memberName(row.author) : null,
+        authorMemberEmail: row.author?.email ?? null,
+      })),
       ...linkedNotes.map((row) => this.mapLinkedNote(row, authorsById)),
       ...customerRequests.flatMap((row) => row.comments
         .filter((comment) => comment.internal)
@@ -268,8 +292,17 @@ export class CustomersService {
         name: customerDisplayName(customer),
         firstName: customer.firstName,
         lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
+        email: contact.email,
+        phone: contact.phone,
+        contact: {
+          canonicalIdentityKey: contact.canonicalIdentityKey,
+          normalizedEmail: contact.normalizedEmail,
+          phone: contact.phone,
+          displayPhone: contact.displayPhone,
+          phoneCallable: contact.phoneCallable,
+          phoneSource: contact.phoneSource,
+          alternatePhones: contact.alternatePhones,
+        },
         status: customer.status,
         tags: customer.tags,
         note: customer.note,
