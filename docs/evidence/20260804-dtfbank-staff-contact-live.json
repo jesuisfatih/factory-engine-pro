@@ -1,0 +1,99 @@
+{
+  "checkedAt": "2026-08-04T22:00:46+03:00",
+  "environment": "production",
+  "tenantId": "ten_dtfbank",
+  "application": "DTFBank staff workspace",
+  "backendCommit": "4d1050056eef008339b6aa5fbb23fb5d024b5d57",
+  "businessClock": {
+    "timeZone": "America/Chicago",
+    "dstAware": true,
+    "todayScope": "incoming calls, outbound calls, and today grouping",
+    "persistentScope": "open requests, follow-ups, pinned cards, and priority portfolios"
+  },
+  "lindaLiveCheck": {
+    "routinePhone": "+14063156468",
+    "taskBriefOrder": [
+      "Call excerpt",
+      "Follow-up notes",
+      "Customer purchase history",
+      "Call summary",
+      "Customer history before calling"
+    ],
+    "notePersistence": {
+      "savedCount": 1,
+      "savedAtLocal": "04.08.2026 21:37:21",
+      "text": "Customer contact context verified for staff follow-up on August 4, 2026.",
+      "verifiedAfterReload": true
+    }
+  },
+  "charlotteDatabaseScope": {
+    "memberId": "tmbr_ten_dtfbank_charlette_boatman",
+    "email": "charlette@dtfbank.com",
+    "active": true,
+    "ownedSegments": 1,
+    "ownedSegmentName": "Min 2 max 5 purchase",
+    "segmentMemberships": 387,
+    "assignedServiceRequests": 478,
+    "customerAssignments": 29
+  },
+  "charlotteLiveQueue": {
+    "incomingToday": 2,
+    "outboundToday": 22,
+    "openRequests": 135,
+    "followUps": 2,
+    "pinned": 0,
+    "priorityCustomers": 387,
+    "ownedCustomerLists": 1,
+    "routineExamples": [
+      {
+        "customer": "Tres Service",
+        "phone": "+14804529381"
+      },
+      {
+        "customer": "Angela Ocampo",
+        "phone": "+12709633863"
+      }
+    ],
+    "priorityFirstPage": {
+      "loaded": 100,
+      "callable": 91,
+      "notCallable": 9,
+      "notCallableLabel": "No callable phone found",
+      "notCallableCallButtonDisabled": true,
+      "samplePhones": [
+        "+18313191837",
+        "+17192519293",
+        "+15133820789",
+        "+13184476887",
+        "+15185694565",
+        "+18025980967"
+      ]
+    }
+  },
+  "customer360LiveCheck": {
+    "customer": "OWNER",
+    "canonicalPhone": "+18313191837",
+    "displayPhone": "+1 (831) 319-1837",
+    "actions": [
+      "Call",
+      "Copy",
+      "Email"
+    ],
+    "savedFollowUpNotes": 4,
+    "noteAuthorVisible": "Charlette Boatman",
+    "orders": 5,
+    "lifetimeValue": 7439,
+    "calls": 21,
+    "openRequests": 1,
+    "tasks": 1,
+    "commerceExample": {
+      "orderNumber": "4958",
+      "amountUsd": 3518.99
+    }
+  },
+  "proofSources": [
+    "authenticated production UI inspection",
+    "production API responses rendered by the staff UI",
+    "read-only production database audit"
+  ]
+}

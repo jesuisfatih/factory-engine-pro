@@ -308,7 +308,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const noteSection = isTaskCard && showField('noteForm') ? (
     <form className="brief-block" style={sectionStyle('noteForm', 82)} onSubmit={submitNote}>
       <div className="brief-block-head">
-        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up note')}</span>
+        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up notes')}</span>
         {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
       </div>
       <textarea
