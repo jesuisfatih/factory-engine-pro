@@ -123,6 +123,31 @@ export const personQueueCardDisplayBadgeSchema = z.object({
 });
 export type PersonQueueCardDisplayBadge = z.infer<typeof personQueueCardDisplayBadgeSchema>;
 
+export const personContactActivityStatusSchema = z.enum([
+  'calling',
+  'attempted',
+  'connected',
+  'no_answer',
+  'voicemail',
+  'follow_up_scheduled',
+  'completed',
+]);
+export type PersonContactActivityStatus = z.infer<typeof personContactActivityStatusSchema>;
+
+export const personContactStateSchema = z.object({
+  id: z.string(),
+  status: personContactActivityStatusSchema,
+  label: z.string(),
+  memberId: z.string().nullable(),
+  memberName: z.string().nullable(),
+  phone: z.string().nullable(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  expiresAt: z.string().nullable(),
+  active: z.boolean(),
+});
+export type PersonContactState = z.infer<typeof personContactStateSchema>;
+
 export const personQueueCardSchema = z.object({
   kind: personOperationItemKindSchema.default('task'),
   id: z.string(),
@@ -171,6 +196,7 @@ export const personQueueCardSchema = z.object({
   ctaPriority: z.array(z.string()).optional(),
   modalActionOrder: z.array(z.string()).optional(),
   strategyProof: personCardStrategyProofSchema.optional(),
+  contactState: personContactStateSchema.nullable().optional(),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 
@@ -290,6 +316,7 @@ export const personDailyCallItemSchema = z.object({
     at: z.string(),
   }).nullable().default(null),
   reason: z.string(),
+  contactState: personContactStateSchema.nullable().optional(),
 });
 export type PersonDailyCallItem = z.infer<typeof personDailyCallItemSchema>;
 
@@ -486,9 +513,16 @@ export const personNoteRowSchema = z.object({
   linkedQueueId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  canDelete: z.boolean().default(false),
   replies: z.array(personNoteReplySchema).default([]),
 });
 export type PersonNoteRow = z.infer<typeof personNoteRowSchema>;
+
+export const deletePersonNoteResultSchema = z.object({
+  id: z.string(),
+  deleted: z.literal(true),
+});
+export type DeletePersonNoteResult = z.infer<typeof deletePersonNoteResultSchema>;
 
 export const savePersonEmailDraftSchema = z.object({
   to: emailSchema,

@@ -15,5 +15,6 @@ import { ShopifyCustomerSessionService } from './shopify-customer-session.servic
   imports: [SyncModule, RulesModule, PricingModule, MailModule],
   controllers: [AccountsController, CustomerAccountController, CustomerAccountStatusController],
   providers: [AccountsCheckoutService, AccountsService, ShopifyCustomerSessionGuard, ShopifyCustomerSessionService],
+  exports: [ShopifyCustomerSessionService],
 })
 export class AccountsModule {}

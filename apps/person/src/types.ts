@@ -5,6 +5,7 @@ import type {
   PersonSegmentDailyGroup,
   PersonMiniOrder,
   PersonPerformance30d,
+  PersonContactState,
   PersonCardStrategyProof,
   PersonQueueCardDisplayBadge,
   PersonTaskTransferResult,
@@ -65,6 +66,7 @@ export interface Card {
   ctaPriority?: string[];
   modalActionOrder?: string[];
   strategyProof?: PersonCardStrategyProof;
+  contactState?: PersonContactState | null;
 }
 
 export type DailyCallItem = PersonDailyCallItem;

@@ -139,8 +139,8 @@ export const archiveDailyCall = (id: string) =>
   personApi.archivePersonDailyCall(id) as Promise<ArchivePersonDailyCallResult>;
 export const syncPersonTasks = () => personApi.syncPersonTasks() as Promise<PersonTaskSyncResult>;
 export const dialAircall = (input: AircallDialInput) => personApi.dialPersonAircall(input) as Promise<AircallDialResponse>;
-export const togglePin = (id: string) => personApi.togglePersonQueuePin(id, {}) as Promise<Card>;
-export const toggleCustomerPin = (customerId: string) => personApi.togglePersonCustomerPin(customerId, {}) as Promise<{ ok: boolean; pinned: boolean }>;
+export const togglePin = (id: string, pinned?: boolean) => personApi.togglePersonQueuePin(id, { pinned }) as Promise<Card>;
+export const toggleCustomerPin = (customerId: string, pinned?: boolean) => personApi.togglePersonCustomerPin(customerId, { pinned }) as Promise<{ ok: boolean; pinned: boolean; pinId?: string | null; pinnedAt?: number | null }>;
 export const fetchTransferTargets = () => personApi.personTransferTargets() as Promise<TransferTarget[]>;
 export const transferTask = (id: string, input: TransferPersonTaskInput) =>
   personApi.transferPersonTask(id, input) as Promise<TransferTaskResult>;
@@ -166,6 +166,7 @@ export const sendChatMessage = (input: { threadId: string; text: string }) =>
 export const fetchNotes = () => personApi.personNotes() as Promise<NoteRow[]>;
 export const saveNote = (input: SavePersonNoteInput) => personApi.savePersonNote(input) as Promise<NoteRow>;
 export const replyNote = (id: string, input: ReplyPersonNoteInput) => personApi.replyPersonNote(id, input) as Promise<NoteRow>;
+export const deleteNote = (id: string) => personApi.deletePersonNote(id) as Promise<{ id: string; deleted: true }>;
 export const fetchEmails = () => personApi.personEmails() as Promise<EmailRow[]>;
 export const fetchEmailContacts = () => personApi.personEmailContacts() as Promise<PersonEmailContact[]>;
 export const saveEmailDraft = (input: SavePersonEmailDraftInput) => personApi.savePersonEmailDraft(input) as Promise<EmailRow>;

@@ -17,6 +17,7 @@ import { QueryState } from '../components/QueryState';
 import { TaskBriefContent, TaskBriefModal, type TaskBriefContextTone } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
 import { focusLabel, personSafeText, staffActionLabel } from '../lib/personTerminology';
+import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
 type DailyFilter = 'all' | 'urgent' | 'unreached' | 'at_risk';
@@ -128,17 +129,42 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     },
   });
 
-  const customerPin = useMutation<unknown, Error, string>({
-    mutationFn: (customerId: string) => toggleCustomerPin(customerId),
+  const customerPin = useMutation<unknown, Error, { customerId: string; pinned: boolean }, { previous?: DailyOperations }>({
+    mutationFn: ({ customerId, pinned }) => toggleCustomerPin(customerId, pinned),
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueryData<DailyOperations>(queryKey);
+      if (previous) qc.setQueryData<DailyOperations>(queryKey, optimisticPin(previous, 'customer', input.customerId, input.pinned));
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) qc.setQueryData(queryKey, context.previous);
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QK_BASE });
     },
   });
 
-  const taskPin = useMutation<unknown, Error, CardData>({
-    mutationFn: (card: CardData) => {
-      if (card.kind === 'customer' && card.customerId) return toggleCustomerPin(card.customerId);
-      return togglePin(card.id);
+  const taskPin = useMutation<unknown, Error, { card: CardData; pinned: boolean }, { previous?: DailyOperations }>({
+    mutationFn: ({ card, pinned }) => {
+      if (card.kind === 'customer' && card.customerId) return toggleCustomerPin(card.customerId, pinned);
+      return togglePin(card.id, pinned);
+    },
+    onMutate: async ({ card, pinned }) => {
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueryData<DailyOperations>(queryKey);
+      if (previous) {
+        qc.setQueryData<DailyOperations>(queryKey, optimisticPin(
+          previous,
+          card.kind === 'customer' ? 'customer' : 'task',
+          card.kind === 'customer' ? card.customerId ?? card.id : card.id,
+          pinned,
+        ));
+      }
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) qc.setQueryData(queryKey, context.previous);
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QK_BASE });
@@ -179,6 +205,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   useEffect(() => {
     setRange(initialRange);
   }, [initialRange]);
+
+  useEffect(() => subscribePersonWorkspaceRealtime(() => {
+    void qc.invalidateQueries({ queryKey: QK_BASE });
+    void qc.invalidateQueries({ queryKey: ['person', 'customer-detail'] });
+    void qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+  }), [qc]);
 
   useEffect(() => {
     const taskId = new URLSearchParams(window.location.search).get('taskId');
@@ -267,6 +299,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           </div>
         </div>
       )}
+      {customerPin.isError || taskPin.isError ? (
+        <div className="ops-inline-error" role="alert">
+          {friendlyError(customerPin.error ?? taskPin.error)}
+        </div>
+      ) : null}
       <div className="kpis">
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.before" context={{ summary }} />
         {!archive && (
@@ -475,7 +512,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   emptyLabel={archive ? 'No archived follow-ups.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No follow-ups for today.' : 'No follow-ups from the last 7 days.'}
                   reorderDisabled={reorderDaily.isPending}
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
-                  onTogglePin={(card) => taskPin.mutate(card)}
+                  onTogglePin={(card) => taskPin.mutate({ card, pinned: !card.pinned })}
                   onArchive={(card) => setCompleteCandidate(card)}
                   onOpen={(taskId) => openTaskBrief(taskId, 'followup')}
                   onCall={(card) => {
@@ -569,7 +606,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                           segmentLabel={displayNameForGroup(group)}
                           collapsed={Boolean(collapsedGroups[group.segmentId])}
                           onToggle={() => setCollapsedGroups((current) => ({ ...current, [group.segmentId]: !current[group.segmentId] }))}
-                          onTogglePin={(item) => customerPin.mutate(item.customerId)}
+                          onTogglePin={(item) => customerPin.mutate({ customerId: item.customerId, pinned: !item.pinned })}
                           onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
                           onAddNote={(item) => setNoteCustomer(item)}
                           onCallCustomer={(item) => {
@@ -587,7 +624,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           </section>}
 
           {!archive && <div className="ops-panel pin-board-panel" id="pin-board-section">
-            <PinPanel pinned={pinned} onUnpin={(card) => taskPin.mutate(card)} />
+            <PinPanel pinned={pinned} onUnpin={(card) => taskPin.mutate({ card, pinned: false })} />
           </div>}
         </div>
       </QueryState>
@@ -959,6 +996,8 @@ function SegmentCustomerCard({
   const urgencyClass = priorityUrgencyClass(item.urgencyScore);
   const cardUrgencyClass = item.urgencyScore >= 12 ? 'urgency-high' : item.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low';
   const safeName = personSafeText(item.displayTitle || item.customerName);
+  const viewerId = viewerIdFromSummary(summary);
+  const anotherMemberCalling = Boolean(item.contactState?.active && item.contactState.memberId && item.contactState.memberId !== viewerId);
   const openWork = `${item.openTasksCount} follow-up${item.openTasksCount === 1 ? '' : 's'} - ${item.notesCount} note${item.notesCount === 1 ? '' : 's'}`;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -989,6 +1028,12 @@ function SegmentCustomerCard({
           {frontendFieldVisible(override, 'urgencyScore') ? <span className={`priority ${urgencyClass}`}>U{item.urgencyScore}</span> : null}
         </div>
         {frontendFieldVisible(override, 'reason') ? <div className="summary">{personSafeText(item.displayReason || item.reason)}</div> : null}
+        {item.contactState ? (
+          <div className={`contact-state${item.contactState.active ? ' active' : ''}`} role={item.contactState.active ? 'status' : undefined}>
+            <Phone size={12} />
+            <span>{personSafeText(item.contactState.label)}</span>
+          </div>
+        ) : null}
         <FrontendCustomizationSlotView customization={customization} slot="priority.card.after_summary" context={{ priorityCustomer: item, summary }} />
         <div className="card-foot">
           <div className="card-meta">
@@ -1003,7 +1048,7 @@ function SegmentCustomerCard({
               className={`quick-action${item.phone ? '' : ' disabled'}`}
               aria-disabled={!item.phone}
               title={item.phone ? `Call ${item.phone}` : 'No callable phone found'}
-              disabled={!item.phone || callDisabled}
+              disabled={!item.phone || callDisabled || anotherMemberCalling}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
@@ -1011,7 +1056,7 @@ function SegmentCustomerCard({
               }}
             >
               <Phone size={12} />
-              <span>{frontendCopy(override, 'callButton', 'Call')}</span>
+              <span>{frontendCopy(override, 'callButton', anotherMemberCalling ? 'In call' : 'Call')}</span>
             </button>
             <button
               type="button"
@@ -1045,6 +1090,13 @@ function SegmentCustomerCard({
       </div>
     </article>
   );
+}
+
+function viewerIdFromSummary(summary: unknown) {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return null;
+  const viewer = (summary as { viewer?: unknown }).viewer;
+  if (!viewer || typeof viewer !== 'object' || Array.isArray(viewer)) return null;
+  return typeof (viewer as { id?: unknown }).id === 'string' ? (viewer as { id: string }).id : null;
 }
 
 function displayNameForGroup(group: SegmentDailyGroup) {
@@ -1305,5 +1357,42 @@ function reorderDailyData(data: DailyOperations, segmentId: string | undefined, 
     ...data,
     dailyCallList: segmentId ? data.dailyCallList : applyCardOrder(data.dailyCallList),
     segmentGroups: segmentId ? data.segmentGroups.map((group) => group.segmentId === segmentId ? { ...group, items: applySegmentOrder(group.items) } : group) : data.segmentGroups,
+  };
+}
+
+function optimisticPin(
+  data: DailyOperations,
+  targetKind: 'task' | 'customer',
+  targetId: string,
+  pinned: boolean,
+): DailyOperations {
+  const pinnedAt = pinned ? Date.now() : null;
+  const matchesCard = (card: CardData) => targetKind === 'task'
+    ? card.id === targetId
+    : card.customerId === targetId;
+  const updateCard = (card: CardData): CardData => matchesCard(card)
+    ? { ...card, pinned, pinnedAt }
+    : card;
+  const dailyCallList = data.dailyCallList.map(updateCard);
+  const priorityKanban = data.priorityKanban.map(updateCard);
+  const updatedGroups = data.segmentGroups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => targetKind === 'customer' && item.customerId === targetId
+      ? { ...item, pinned, pinId: pinned ? item.pinId : null }
+      : item),
+  }));
+  const existingBoard = data.pinBoard.map(updateCard).filter((card) => !matchesCard(card) || pinned);
+  const sourceCard = [...dailyCallList, ...priorityKanban].find(matchesCard);
+  const pinBoard = pinned && sourceCard && !existingBoard.some(matchesCard)
+    ? [{ ...sourceCard, pinned: true, pinnedAt }, ...existingBoard]
+    : existingBoard;
+
+  return {
+    ...data,
+    dailyCallList,
+    priorityKanban,
+    segmentGroups: updatedGroups,
+    pinBoard,
+    summary: { ...data.summary, pinnedCount: pinBoard.length },
   };
 }

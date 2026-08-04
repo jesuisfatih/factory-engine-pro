@@ -37,15 +37,8 @@ export class ShopifyCustomerSessionService {
   ) {}
 
   async inspect(request: Request) {
-    const token = this.bearerToken(request);
-    const decoded = this.decodeToken(token);
-    const shopDomain = this.shopDomainFromPayload(decoded);
-    const tenantConfig = await this.resolveTenantConfig(shopDomain);
-    const secret = this.resolveApiSecret(tenantConfig.shopifyApiSecretEncrypted);
-    const payload = this.verifyToken(token, secret, tenantConfig.shopifyApiKeyEncrypted);
+    const { payload, shopDomain, tenantConfig } = await this.inspectVerifiedToken(request);
     const shopifyCustomerId = this.shopifyCustomerId(payload);
-
-    this.tenantContext.set({ tenantId: tenantConfig.tenantId });
 
     let customer = await this.prisma.db.customer.findFirst({
       where: { shopifyCustomerId, status: { notIn: ['disabled', 'archived'] } },
@@ -101,6 +94,11 @@ export class ShopifyCustomerSessionService {
     };
   }
 
+  async inspectAdmin(request: Request) {
+    const { shopDomain, tenantConfig } = await this.inspectVerifiedToken(request);
+    return { tenantId: tenantConfig.tenantId, shopDomain };
+  }
+
   async requirePortalCustomerUser(request: Request) {
     const session = await this.inspect(request);
     if (!session.customer) {
@@ -120,6 +118,17 @@ export class ShopifyCustomerSessionService {
     const token = authHeader.slice('Bearer '.length).trim();
     if (!token) throw new UnauthorizedException('Missing Shopify customer account session token');
     return token;
+  }
+
+  private async inspectVerifiedToken(request: Request) {
+    const token = this.bearerToken(request);
+    const decoded = this.decodeToken(token);
+    const shopDomain = this.shopDomainFromPayload(decoded);
+    const tenantConfig = await this.resolveTenantConfig(shopDomain);
+    const secret = this.resolveApiSecret(tenantConfig.shopifyApiSecretEncrypted);
+    const payload = this.verifyToken(token, secret, tenantConfig.shopifyApiKeyEncrypted);
+    this.tenantContext.set({ tenantId: tenantConfig.tenantId });
+    return { payload, shopDomain, tenantConfig };
   }
 
   private decodeToken(token: string): ShopifySessionPayload {

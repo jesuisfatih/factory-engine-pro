@@ -4,6 +4,7 @@ import { AuthTokenService } from './auth-token.service.js';
 import { BusinessClockService } from './business-clock.service.js';
 import { CryptoService } from './crypto.service.js';
 import { CustomerContactResolverService } from './customer-contact-resolver.service.js';
+import { CustomerContactTimelineService } from './customer-contact-timeline.service.js';
 import { CustomerInternalNotesService } from './customer-internal-notes.service.js';
 import { AppLogger } from './logger.service.js';
 import { PasswordService } from './password.service.js';
@@ -23,6 +24,7 @@ import { TenantContextService } from './tenant-context.js';
     AuthTokenService,
     BusinessClockService,
     CustomerContactResolverService,
+    CustomerContactTimelineService,
     CustomerInternalNotesService,
     AppLogger,
     RealtimeService,
@@ -37,6 +39,7 @@ import { TenantContextService } from './tenant-context.js';
     AuthTokenService,
     BusinessClockService,
     CustomerContactResolverService,
+    CustomerContactTimelineService,
     CustomerInternalNotesService,
     AppLogger,
     RealtimeService,

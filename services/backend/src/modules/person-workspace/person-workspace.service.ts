@@ -16,6 +16,7 @@ import type {
   PersonMiniOrder,
   PersonPerformance30d,
   PersonQueueCardDto,
+  PersonContactState,
   PersonQueueColumn,
   PersonTaskBriefDetail,
   PersonTaskTimelineEntry,
@@ -49,6 +50,7 @@ import {
   type ResolvedCustomerContact,
 } from '../../shared/customer-contact-resolver.service.js';
 import { CustomerInternalNotesService } from '../../shared/customer-internal-notes.service.js';
+import { CustomerContactTimelineService } from '../../shared/customer-contact-timeline.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -60,12 +62,11 @@ import { MailService } from '../mail/mail.service.js';
 import { RulesService } from '../rules/rules.service.js';
 import { isNonCatalogPromoPatchInquiry } from '../ai/transcript-operational-signals.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
+import { PersonWorkspaceNoteService } from './person-workspace-note.service.js';
+import { PersonWorkspacePinService } from './person-workspace-pin.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'transferred']);
 const CUSTOMER_PIN_KIND = 'customer_pin';
-const CUSTOMER_PIN_SOURCE = 'manual';
-const LEGACY_CUSTOMER_PIN_SOURCE = 'manual_pin';
-const CUSTOMER_PIN_SURFACE = 'person_pin';
 const INTERNAL_WORKSPACE_KINDS = new Set(['message_thread', 'note', 'staff_request', CUSTOMER_PIN_KIND]);
 const DAILY_WORKFLOW_TRIGGERS = new Set(['aircall.transcript.received', 'call_intent.classified', 'psych.tag.detected', 'call.operational_signal.detected']);
 const DAILY_WORKFLOW_AXES = new Set(['sales', 'account']);
@@ -178,16 +179,20 @@ type PersonQueueCardWithoutDisplay = Omit<PersonQueueCardInternal, keyof PersonQ
 type PersonDailyCallItemDisplayFields = Pick<PersonDailyCallItem, keyof PersonQueueCardDisplayFields>;
 type PersonDailyCallItemWithoutDisplay = Omit<PersonDailyCallItem, keyof PersonDailyCallItemDisplayFields>;
 
-type CustomerPinRow = Prisma.ServiceRequestGetPayload<{
-  include: {
-    customer: {
-      include: {
-        insight: true;
-        segmentMemberships: { include: { segment: true } };
-      };
-    };
-  };
-}>;
+type WorkspacePinRow = {
+  id: string;
+  tenantId: string;
+  memberId: string;
+  targetKind: string;
+  targetId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type CustomerPinRow = {
+  pin: WorkspacePinRow;
+  customer: CustomerWorkspaceRow;
+};
 
 interface CardContext {
   miniOrders: Map<string, PersonMiniOrder>;
@@ -266,6 +271,9 @@ export class PersonWorkspaceService {
     private readonly rules: RulesService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
+    private readonly workspacePins: PersonWorkspacePinService,
+    private readonly workspaceNotes: PersonWorkspaceNoteService,
+    private readonly contactTimeline: CustomerContactTimelineService,
   ) {}
 
   async summary() {
@@ -377,25 +385,49 @@ export class PersonWorkspaceService {
       }),
     ]);
 
+    const pinRows = await this.workspacePins.list(member.id);
+    const taskPinsByTarget = new Map(
+      pinRows.filter((pin) => pin.targetKind === 'service_request').map((pin) => [pin.targetId, pin] as const),
+    );
+    const customerPinsByTarget = new Map(
+      pinRows.filter((pin) => pin.targetKind === 'customer').map((pin) => [pin.targetId, pin] as const),
+    );
+    const pinnedCustomerIds = Array.from(customerPinsByTarget.keys());
+    const pinnedCustomerRows = pinnedCustomerIds.length > 0
+      ? await this.prisma.db.customer.findMany({
+        where: { id: { in: pinnedCustomerIds }, status: 'active' },
+        include: {
+          insight: true,
+          segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+        },
+        take: 500,
+      })
+      : [];
+    const customerPinRows: CustomerPinRow[] = pinnedCustomerRows.flatMap((customer) => {
+      const pin = customerPinsByTarget.get(customer.id);
+      return pin ? [{ pin, customer }] : [];
+    });
+
     const requestRows = await this.personRequestRows(member.id, visibleCustomerIds);
     const allRequestRows = mergeRequestRows(requestRows, dailyTaskRows);
 
     const contextCustomerIds = uniqueStrings([
       ...visibleCustomerIds,
       ...memberships.map((membership) => membership.customerId),
+      ...pinnedCustomerIds,
       ...allRequestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [customerPinRows, initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats] = await Promise.all([
-      this.customerPins(member.id, contextCustomerIds),
+    const [initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats, contactStates] = await Promise.all([
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
       this.cardCallContext(allRequestRows),
       this.todayAircallStats(member, today.start, today.end),
+      this.contactTimeline.latestForCustomers(contextCustomerIds),
     ]);
     const repeatCounts = initialRepeatCounts;
     const cardContext = initialCardContext;
     const callContext = initialCallContext;
-    const customerPinsByCustomer = new Map(customerPinRows.flatMap((row) => row.customerId ? [[row.customerId, row] as const] : []));
+    const customerPinsByCustomer = customerPinsByTarget;
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
     const selectedMembershipGroups = segmentOwnerships.map((ownership) => {
       const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
@@ -419,23 +451,23 @@ export class PersonWorkspaceService {
     const contactSeeds = uniqueCustomers([
       ...selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)),
       ...allRequestRows.flatMap((row) => row.customer ? [row.customer] : []),
-      ...customerPinRows.flatMap((row) => row.customer ? [row.customer] : []),
+      ...customerPinRows.map((row) => row.customer),
     ]);
     const contactByCustomer = await this.contactResolver.resolveMany(contactSeeds);
     const selectedCustomers = uniqueCustomers(selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)));
     const priorityCustomerContext = await this.priorityCustomerContext(selectedCustomers, contactByCustomer);
 
     const segmentGroups = selectedMembershipGroups.map(({ ownership, segmentMemberships, selectedMemberships }) => {
-      const items = selectedMemberships.map((membership) => this.dailyCallItem(
-        membership,
-        ownership,
-        assignments,
-        config,
-        repeatCounts.get(membership.customerId) ?? 0,
-        customerPinsByCustomer.get(membership.customerId) ?? null,
-        priorityCustomerContext.get(membership.customerId) ?? emptyPersonPriorityCustomerContext(),
-        contactByCustomer.get(membership.customerId) ?? null,
-      ));
+      const items = selectedMemberships.map((membership) => this.withContactState(this.dailyCallItem(
+          membership,
+          ownership,
+          assignments,
+          config,
+          repeatCounts.get(membership.customerId) ?? 0,
+          customerPinsByCustomer.get(membership.customerId) ?? null,
+          priorityCustomerContext.get(membership.customerId) ?? emptyPersonPriorityCustomerContext(),
+          contactByCustomer.get(membership.customerId) ?? null,
+        ), contactStates));
       return {
         segmentId: ownership.segment.id,
         segmentName: ownership.segment.name,
@@ -455,10 +487,10 @@ export class PersonWorkspaceService {
         .filter((row) => range === 'archive'
           ? this.isDailyWorkflowArchived(row, member.id, dailyWindow.start)
           : !this.isArchivedForMember(row, member.id))
-        .map((row) => this.withResolvedContact(
-          this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies),
-          contactByCustomer,
-        ))
+        .map((row) => this.withContactState(this.withResolvedContact(
+            this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies, taskPinsByTarget.get(row.id) ?? null),
+            contactByCustomer,
+          ), contactStates))
         .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card))),
       dailyTaskOrderRows,
       dailyRankingStrategy,
@@ -477,17 +509,16 @@ export class PersonWorkspaceService {
       .filter((row) => this.isQueueVisible(row))
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
     const pinnedTasks = scopedRows
-      .filter((row) => this.isTaskPinned(row, member.id))
-      .map((row) => this.withResolvedContact(
-        this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies),
-        contactByCustomer,
-      ));
+      .filter((row) => taskPinsByTarget.has(row.id))
+      .map((row) => this.withContactState(this.withResolvedContact(
+          this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies, taskPinsByTarget.get(row.id) ?? null),
+          contactByCustomer,
+        ), contactStates));
     const pinnedCustomers = customerPinRows
-      .filter((row) => row.customer)
-      .map((row) => this.withResolvedContact(
-        this.customerPinCard(row, assignments, config, repeatCounts.get(row.customerId ?? '') ?? 0),
-        contactByCustomer,
-      ));
+      .map((row) => this.withContactState(this.withResolvedContact(
+          this.customerPinCard(row, assignments, config, repeatCounts.get(row.customer.id) ?? 0),
+          contactByCustomer,
+        ), contactStates));
     const pinBoard = [...pinnedTasks, ...pinnedCustomers].sort(sortByUrgency).slice(0, 120);
     const openRequestsCount = scopedRows.filter((row) => !CLOSED.has(row.status) && isCustomerRequestLike(row)).length;
     const missedFollowUpCount = dailyCallList.filter((card) => card.unreached || isMissedFollowUp(card, today.start)).length;
@@ -917,6 +948,14 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     if (input.customerId) await this.assertCustomerInWorkspace(input.customerId, member.id);
     const result = await this.aircall.dialForMember(member.id, input);
+    if (input.customerId) {
+      await this.contactTimeline.recordDial({
+        customerId: input.customerId,
+        memberId: member.id,
+        phone: input.phone,
+        result,
+      });
+    }
     this.logger.log('person_workspace', 'aircall.dial', 'Person workspace Aircall dial requested', {
       member_id: member.id,
       customer_id: input.customerId ?? null,
@@ -933,20 +972,11 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const row = await this.requireServiceRequest(id);
     await this.assertServiceRequestScoped(row, member.id);
-    const metadata = this.record(row.metadata);
-    const pinnedBy = this.record(metadata.personPinnedBy);
-    const isPinned = typeof pinnedBy[member.id] === 'number';
-    const nextPinned = input.pinned ?? !isPinned;
-    if (nextPinned) pinnedBy[member.id] = Date.now();
-    else delete pinnedBy[member.id];
-    await this.prisma.db.serviceRequest.updateMany({
-      where: { id },
-      data: { metadata: { ...metadata, personPinnedBy: pinnedBy } as Prisma.InputJsonValue },
-    });
+    const pin = await this.workspacePins.toggle(member.id, 'service_request', id, input.pinned);
     this.logger.log('person_workspace', 'queue.pin', 'Person queue pin toggled', {
       service_request_id: id,
       member_id: member.id,
-      pinned: nextPinned,
+      pinned: pin.pinned,
     });
     this.emitCallCenterInvalidate('person.queue.pin');
     const updated = await this.requireServiceRequest(id);
@@ -957,7 +987,7 @@ export class PersonWorkspaceService {
       this.cardCallContext([updated]),
       this.personCardStrategies(),
     ]);
-    return this.queueCard(
+    const card = this.queueCard(
       updated,
       member.id,
       config,
@@ -967,6 +997,7 @@ export class PersonWorkspaceService {
       callContext,
       cardStrategies,
     );
+    return { ...card, pinned: pin.pinned, pinnedAt: pin.pinnedAt };
   }
 
   async toggleCustomerPin(id: string, input: TogglePersonQueuePinInput) {
@@ -977,91 +1008,15 @@ export class PersonWorkspaceService {
     const customer = await this.prisma.db.customer.findFirst({ where: { id } });
     if (!customer) throw new NotFoundException('Customer not found');
 
-    const existing = await this.prisma.db.serviceRequest.findFirst({
-      where: {
-        customerId: id,
-        assignedMemberId: member.id,
-        source: { in: [CUSTOMER_PIN_SOURCE, LEGACY_CUSTOMER_PIN_SOURCE] },
-        surface: CUSTOMER_PIN_SURFACE,
-        metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
-    const isPinned = existing ? !CLOSED.has(existing.status) : false;
-    const nextPinned = input.pinned ?? !isPinned;
-
-    if (nextPinned) {
-      if (existing) {
-        const sourceOrigin = existing.source === LEGACY_CUSTOMER_PIN_SOURCE
-          ? { sourceOrigin: LEGACY_CUSTOMER_PIN_SOURCE }
-          : {};
-        await this.prisma.db.serviceRequest.updateMany({
-          where: { id: existing.id },
-          data: {
-            source: CUSTOMER_PIN_SOURCE,
-            status: 'open',
-            closedAt: null,
-            metadata: {
-              ...this.record(existing.metadata),
-              personWorkspaceKind: CUSTOMER_PIN_KIND,
-              personPinnedBy: { [member.id]: Date.now() },
-              category: 'customer_pin',
-              ...sourceOrigin,
-            } as Prisma.InputJsonValue,
-          },
-        });
-      } else {
-        await this.prisma.db.serviceRequest.create({
-          data: {
-            id: prefixedId('sr'),
-            tenantId: this.tenantId(),
-            customerId: id,
-            assignedMemberId: member.id,
-            axis: Array.from(assignments.get(id) ?? [])[0] ?? null,
-            source: CUSTOMER_PIN_SOURCE,
-            surface: CUSTOMER_PIN_SURFACE,
-            title: `Pinned customer: ${customerDisplayName(customer)}`,
-            description: 'Manual person workspace pin.',
-            status: 'open',
-            priority: 'medium',
-            createdByActorId: member.id,
-            metadata: {
-              personWorkspaceKind: CUSTOMER_PIN_KIND,
-              personPinnedBy: { [member.id]: Date.now() },
-              category: 'customer_pin',
-              sourceOrigin: 'person_workspace_pin',
-            } as Prisma.InputJsonValue,
-          },
-        });
-      }
-    } else if (existing) {
-      const sourceOrigin = existing.source === LEGACY_CUSTOMER_PIN_SOURCE
-        ? { sourceOrigin: LEGACY_CUSTOMER_PIN_SOURCE }
-        : {};
-      await this.prisma.db.serviceRequest.updateMany({
-        where: { id: existing.id },
-        data: {
-          source: CUSTOMER_PIN_SOURCE,
-          status: 'closed',
-          closedAt: new Date(),
-          metadata: {
-            ...this.record(existing.metadata),
-            personWorkspaceKind: CUSTOMER_PIN_KIND,
-            personPinnedBy: {},
-            category: 'customer_pin',
-            ...sourceOrigin,
-          } as Prisma.InputJsonValue,
-        },
-      });
-    }
+    const pin = await this.workspacePins.toggle(member.id, 'customer', id, input.pinned);
 
     this.logger.log('person_workspace', 'customer.pin', 'Person customer pin toggled', {
       customer_id: id,
       member_id: member.id,
-      pinned: nextPinned,
+      pinned: pin.pinned,
     });
     this.emitCallCenterInvalidate('person.customer.pin');
-    return { ok: true, pinned: nextPinned };
+    return { ok: true, pinned: pin.pinned, pinId: pin.id, pinnedAt: pin.pinnedAt };
   }
 
   async transferTargets(): Promise<PersonTransferTarget[]> {
@@ -1478,6 +1433,14 @@ export class PersonWorkspaceService {
         attachmentsJson: [{ kind: 'calendar_follow_up', ...followUp }] as Prisma.InputJsonValue,
       },
     });
+    if (row.customerId) {
+      await this.contactTimeline.recordFollowUp({
+        customerId: row.customerId,
+        memberId: member.id,
+        scheduledAt,
+        note: input.note,
+      });
+    }
     this.logger.log('person_workspace', 'task.calendar', 'Task follow-up scheduled', {
       service_request_id: row.id,
       member_id: member.id,
@@ -1822,115 +1785,22 @@ export class PersonWorkspaceService {
 
   async notes() {
     const member = await this.currentMember();
-    const rows = await this.prisma.db.serviceRequest.findMany({
-      where: { createdByActorId: member.id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-      include: { customer: true, comments: { orderBy: { createdAt: 'asc' }, take: 50 } },
-      orderBy: [{ updatedAt: 'desc' }],
-      take: 100,
-    });
-    const actorIds = uniqueStrings(rows.flatMap((row) => [
-      row.createdByActorId,
-      ...(row.comments ?? []).map((comment) => comment.actorId),
-    ]).filter((id): id is string => Boolean(id)));
-    const actors = actorIds.length
-      ? await this.prisma.db.member.findMany({
-          where: { id: { in: actorIds } },
-          include: { roleAssignments: { include: { role: true } } },
-          take: 200,
-        })
-      : [];
-    const memberById = new Map(actors.map((actor) => [actor.id, actor] as const));
-    return rows.map((row) => this.note(row, memberById, member.id));
+    return this.workspaceNotes.list(member.id);
   }
 
   async saveNote(input: SavePersonNoteInput) {
     const member = await this.currentMember();
-    if (input.id) {
-      const existing = await this.prisma.db.serviceRequest.findFirst({
-        where: { id: input.id, createdByActorId: member.id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-      });
-      if (!existing) throw new NotFoundException('Note not found');
-      await this.prisma.db.serviceRequest.updateMany({
-        where: { id: input.id },
-        data: {
-          title: input.title,
-          description: input.body || null,
-          metadata: {
-            ...this.record(existing.metadata),
-            noteKind: input.kind,
-            linkedCustomer: input.linkedCustomer ?? null,
-            linkedQueueId: input.linkedQueueId ?? null,
-            updatedByMemberId: member.id,
-            updatedByMemberEmail: member.email,
-            updatedByMemberName: memberDisplayName(member),
-          } as Prisma.InputJsonValue,
-        },
-      });
-      this.logger.log('person_workspace', 'note.update', 'Person note updated', { note_id: input.id, member_id: member.id });
-      this.emitCallCenterInvalidate('person.note.update');
-      return this.note(await this.requireServiceRequest(input.id), new Map([[member.id, member]]), member.id);
-    }
-
-    const created = await this.prisma.db.serviceRequest.create({
-      data: {
-        id: prefixedId('sr'),
-        tenantId: this.tenantId(),
-        source: 'manual',
-        surface: 'internal',
-        title: input.title,
-        description: input.body || null,
-        status: 'open',
-        priority: 'low',
-        createdByActorId: member.id,
-        metadata: {
-          personWorkspaceKind: 'note',
-          noteKind: input.kind,
-          linkedCustomer: input.linkedCustomer ?? null,
-          linkedQueueId: input.linkedQueueId ?? null,
-          category: 'person_note',
-          createdByMemberId: member.id,
-          createdByMemberEmail: member.email,
-          createdByMemberName: memberDisplayName(member),
-        } as Prisma.InputJsonValue,
-      },
-    });
-    this.logger.log('person_workspace', 'note.create', 'Person note created', { note_id: created.id, member_id: member.id });
-    this.emitCallCenterInvalidate('person.note.create');
-    return this.note(created, new Map([[member.id, member]]), member.id);
+    return this.workspaceNotes.save(member.id, input);
   }
 
   async replyNote(id: string, input: ReplyPersonNoteInput) {
     const member = await this.currentMember();
-    const row = await this.prisma.db.serviceRequest.findFirst({
-      where: { id, metadata: { path: ['personWorkspaceKind'], equals: 'note' } },
-      include: serviceRequestInclude,
-    });
-    if (!row) throw new NotFoundException('Note not found');
-    if (row.createdByActorId !== member.id) {
-      const linkedCustomer = this.record(row.metadata).linkedCustomer;
-      if (typeof linkedCustomer !== 'string') throw new ForbiddenException('Note is outside your workspace');
-      await this.assertCustomerInWorkspace(linkedCustomer, member.id);
-    }
-    await this.prisma.db.serviceRequestComment.create({
-      data: {
-        id: prefixedId('srcm'),
-        tenantId: this.tenantId(),
-        serviceRequestId: row.id,
-        actorId: member.id,
-        actorType: 'member',
-        body: input.body,
-        internal: true,
-        attachmentsJson: [{
-          kind: 'person_note_reply',
-          actorMemberId: member.id,
-          at: new Date().toISOString(),
-        }] as Prisma.InputJsonValue,
-      },
-    });
-    await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
-    this.logger.log('person_workspace', 'note.reply', 'Person note reply saved', { note_id: id, member_id: member.id });
-    this.emitCallCenterInvalidate('person.note.reply');
-    return this.note(await this.requireServiceRequest(id), new Map([[member.id, member]]), member.id);
+    return this.workspaceNotes.reply(member.id, id, input);
+  }
+
+  async deleteNote(id: string) {
+    const member = await this.currentMember();
+    return this.workspaceNotes.remove(member.id, id);
   }
 
   async emails() {
@@ -2329,35 +2199,6 @@ export class PersonWorkspaceService {
     return this.isGeneratedOrSegmentPriorityTask(row) && this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer);
   }
 
-  private isTaskPinned(row: { metadata: Prisma.JsonValue }, memberId: string) {
-    const pinnedBy = this.record(this.record(row.metadata).personPinnedBy);
-    return typeof pinnedBy[memberId] === 'number';
-  }
-
-  private customerPins(memberId: string, customerIds: string[]) {
-    if (customerIds.length === 0) return [];
-    return this.prisma.db.serviceRequest.findMany({
-      where: {
-        customerId: { in: customerIds },
-        assignedMemberId: memberId,
-        source: { in: [CUSTOMER_PIN_SOURCE, LEGACY_CUSTOMER_PIN_SOURCE] },
-        surface: CUSTOMER_PIN_SURFACE,
-        status: { notIn: Array.from(CLOSED) },
-        metadata: { path: ['personWorkspaceKind'], equals: CUSTOMER_PIN_KIND },
-      },
-      include: {
-        customer: {
-          include: {
-            insight: true,
-            segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
-          },
-        },
-      },
-      orderBy: [{ updatedAt: 'desc' }],
-      take: 500,
-    });
-  }
-
   private async priorityCustomerContext(
     customers: Array<{ id: string; email: string | null; phone: string | null }>,
     contacts: Map<string, ResolvedCustomerContact>,
@@ -2534,13 +2375,21 @@ export class PersonWorkspaceService {
     };
   }
 
+  private withContactState<T extends { customerId?: string | null }>(
+    item: T,
+    states: Map<string, PersonContactState>,
+  ): T {
+    if (!item.customerId) return item;
+    return { ...item, contactState: states.get(item.customerId) ?? null };
+  }
+
   private dailyCallItem(
     membership: SegmentMembershipRow,
     ownership: { priority: number; dailyCap: number | null; segment: { id: string; name: string; color: string; priority: number; priorityGlobal: number } },
     assignments: AxisAssignments,
     config = this.scoring.configFrom({}),
     repeatCount = 0,
-    pin: CustomerPinRow | null = null,
+    pin: WorkspacePinRow | null = null,
     context: PersonPriorityCustomerContext = emptyPersonPriorityCustomerContext(),
     contact: ResolvedCustomerContact | null = null,
   ): PersonDailyCallItem {
@@ -2630,34 +2479,31 @@ export class PersonWorkspaceService {
 
   private customerPinCard(row: CustomerPinRow, assignments: AxisAssignments, config = this.scoring.configFrom({}), repeatCount = 0) {
     const customer = row.customer;
-    const segment = customer?.segmentMemberships[0]?.segment;
-    const axes = row.customerId ? assignments.get(row.customerId) : null;
+    const segment = customer.segmentMemberships[0]?.segment;
+    const axes = assignments.get(customer.id);
     const assignedAxis = axes ? Array.from(axes).sort().join(', ') : 'unassigned';
     const customerRisk = customerRiskFromSignals({
-      churnRisk: customer?.insight?.churnRisk,
-      lastOrderAt: customer?.lastOrderAt,
+      churnRisk: customer.insight?.churnRisk,
+      lastOrderAt: customer.lastOrderAt,
       repeatCount,
     });
-    const metadata = this.record(row.metadata);
-    const pinnedBy = this.record(metadata.personPinnedBy);
-    const pinnedAtValues = Object.values(pinnedBy).filter((value): value is number => typeof value === 'number');
-    const pinnedAt = pinnedAtValues.length ? Math.max(...pinnedAtValues) : row.updatedAt.getTime();
+    const pinnedAt = row.pin.createdAt.getTime();
     const urgencyBreakdown = this.scoring.score({
-      priority: customer?.insight?.churnRisk === 'critical' ? 'critical' : customer?.insight?.churnRisk === 'high' ? 'high' : row.priority,
+      priority: customer.insight?.churnRisk === 'critical' ? 'critical' : customer.insight?.churnRisk === 'high' ? 'high' : 'medium',
       source: 'daily_customer',
       axis: assignedAxis,
-      createdAt: customer?.lastOrderAt ?? row.createdAt,
-      updatedAt: row.updatedAt,
-      metadata: { workflow: { params: { intent: 'follow_up', signalUrgency: customer?.insight?.churnRisk ?? undefined } } },
-      taskStateSnapshot: row.taskStateSnapshot,
+      createdAt: customer.lastOrderAt ?? row.pin.createdAt,
+      updatedAt: row.pin.updatedAt,
+      metadata: { workflow: { params: { intent: 'follow_up', signalUrgency: customer.insight?.churnRisk ?? undefined } } },
+      taskStateSnapshot: null,
       segmentPriority: segment?.priorityGlobal ?? segment?.priority ?? 0,
       repeatCount,
     }, config);
     return withPersonCardDisplay({
       kind: 'customer' as const,
-      id: row.id,
-      customerId: row.customerId,
-      title: customer ? customerDisplayName(customer) : row.title,
+      id: row.pin.id,
+      customerId: customer.id,
+      title: customerDisplayName(customer),
       summary: `Pinned customer - U${urgencyBreakdown.score} - ${assignedAxis}`,
       segment: segment?.name ?? 'Pinned customer',
       segmentColor: segment?.color ?? colorForUrgency(urgencyBreakdown.score),
@@ -2668,10 +2514,10 @@ export class PersonWorkspaceService {
       pinned: true,
       pinnedAt,
       source: 'manual' as const,
-      phone: customer?.phone ?? undefined,
-      email: customer?.email ?? undefined,
-      ordersCount: customer?.ordersCount ?? undefined,
-      totalSpent: customer ? money(customer.totalSpent) : undefined,
+      phone: customer.phone ?? undefined,
+      email: customer.email ?? undefined,
+      ordersCount: customer.ordersCount,
+      totalSpent: money(customer.totalSpent),
       customerRisk: customerRisk.risk,
       customerRiskNote: customerRisk.note,
     });
@@ -2724,6 +2570,7 @@ export class PersonWorkspaceService {
       performance30d: cardContext?.performance.get(item.customerId) ?? { ...EMPTY_PERFORMANCE_30D },
       customerRisk: item.customerRisk,
       customerRiskNote: item.customerRiskNote,
+      contactState: item.contactState ?? null,
     });
   }
 
@@ -2796,10 +2643,12 @@ export class PersonWorkspaceService {
     ownedSegment?: OwnedSegmentContext | null,
     callContext?: CardCallContext,
     strategies?: PersonCardStrategyRuntime,
+    pin: WorkspacePinRow | null = null,
   ): PersonQueueCardDto {
     const metadata = this.record(row.metadata);
     const pinnedBy = this.record(metadata.personPinnedBy);
-    const pinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
+    const legacyPinnedAt = typeof pinnedBy[memberId] === 'number' ? Number(pinnedBy[memberId]) : null;
+    const pinnedAt = pin?.createdAt.getTime() ?? legacyPinnedAt;
     const columnId = personColumn(row.status, metadata.personColumnId);
     const source = taskSource(row);
     const header = taskHeader(row, metadata, callContext);

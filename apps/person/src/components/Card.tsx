@@ -84,6 +84,9 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
     ? `${card.performance30d.orders} orders - ${fmtMoney(card.performance30d.revenue)} - ${card.performance30d.serviceRequests} follow-ups`
     : '30d customer activity pending');
   const staffSegment = card.source === 'call_analysis' ? null : personSafeText(card.segment);
+  const viewerId = viewerIdFromSummary(summary);
+  const anotherMemberCalling = Boolean(card.contactState?.active && card.contactState.memberId && card.contactState.memberId !== viewerId);
+  const effectiveCallDisabled = callDisabled || anotherMemberCalling;
   return (
     <div
       className={`card card-v2 ${card.urgencyScore >= 12 ? 'urgency-high' : card.urgencyScore >= 6 ? 'urgency-med' : 'urgency-low'} ${frontendElementClassName(override, card.urgencyScore)}`}
@@ -109,6 +112,12 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
           ) : null}
         </div>
         {frontendFieldVisible(override, 'requiredAction') ? <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div> : null}
+        {card.contactState ? (
+          <div className={`contact-state${card.contactState.active ? ' active' : ''}`} role={card.contactState.active ? 'status' : undefined}>
+            <Phone size={12} />
+            <span>{personSafeText(card.contactState.label)}</span>
+          </div>
+        ) : null}
         <div className="card-foot">
           <div className="card-meta">
             {frontendFieldVisible(override, 'phone') ? <span title="Phone"><span className="sig-ic green"><Phone size={11} /></span> {card.phone || 'No phone'}</span> : null}
@@ -127,7 +136,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
                 className="call-btn"
                 title={card.phone ? frontendCopy(override, 'callTitle', `Call ${card.phone}`) : frontendCopy(override, 'noPhoneTitle', 'No phone on file')}
                 aria-label={card.phone ? `Call ${safeCardTitle}` : `No phone for ${safeCardTitle}`}
-                disabled={!card.phone || callDisabled}
+                disabled={!card.phone || effectiveCallDisabled}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -135,7 +144,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
                 }}
               >
                 <Phone size={12} />
-                <span>{frontendCopy(override, 'callLabel', callDisabled ? 'Calling' : 'Call')}</span>
+                <span>{frontendCopy(override, 'callLabel', anotherMemberCalling ? 'In call' : callDisabled ? 'Calling' : 'Call')}</span>
               </button>
             ) : null}
             {frontendFieldVisible(override, 'pinButton') ? (
@@ -188,4 +197,11 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
       </div>
     </div>
   );
+}
+
+function viewerIdFromSummary(summary: unknown) {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return null;
+  const viewer = (summary as { viewer?: unknown }).viewer;
+  if (!viewer || typeof viewer !== 'object' || Array.isArray(viewer)) return null;
+  return typeof (viewer as { id?: unknown }).id === 'string' ? (viewer as { id: string }).id : null;
 }

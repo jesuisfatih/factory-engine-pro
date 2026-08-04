@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   aircallDialSchema,
   createPersonRequestSchema,
@@ -106,7 +106,7 @@ export class PersonWorkspaceController {
   }
 
   @Post('queue/:id/pin')
-  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   toggleQueuePin(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(togglePersonQueuePinSchema)) body: TogglePersonQueuePinInput,
@@ -115,7 +115,7 @@ export class PersonWorkspaceController {
   }
 
   @Post('customers/:id/pin')
-  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   toggleCustomerPin(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(togglePersonQueuePinSchema)) body: TogglePersonQueuePinInput,
@@ -236,6 +236,12 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(replyPersonNoteSchema)) body: ReplyPersonNoteInput,
   ) {
     return this.workspace.replyNote(id, body);
+  }
+
+  @Delete('notes/:id')
+  @RequirePermission(MEMBER_PERMISSIONS.supportWrite)
+  deleteNote(@Param('id') id: string) {
+    return this.workspace.deleteNote(id);
   }
 
   @Get('customer-archive/:id/detail')

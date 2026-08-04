@@ -1005,6 +1005,10 @@ export class ApiClient {
     return this.post(`/person/workspace/notes/${encodeURIComponent(id)}/replies`, input);
   }
 
+  deletePersonNote(id: string) {
+    return this.delete(`/person/workspace/notes/${encodeURIComponent(id)}`);
+  }
+
   personEmails() {
     return this.get('/person/workspace/emails');
   }

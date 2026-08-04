@@ -53,3 +53,16 @@ handle = "factory-engine-account-block"
     type = "single_line_text_field"
     name = "Accounts Portal URL"
     description = "Standalone customer portal URL for order, invoice, cart, and document detail."
+
+[[extensions]]
+uid = "6e7169df-0a9e-4a67-9081-bb87773eaa45"
+type = "ui_extension"
+name = "Factory Engine Contact Context"
+handle = "factory-engine-contact-context"
+
+  [[extensions.targeting]]
+  target = "admin.abandoned-checkout-details.block.render"
+  module = "./src/AbandonedCheckoutContextBlock.tsx"
+
+  [extensions.capabilities]
+  network_access = true

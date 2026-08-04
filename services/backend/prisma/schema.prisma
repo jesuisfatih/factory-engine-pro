@@ -93,6 +93,10 @@ model Tenant {
   b2bAccessRequestFiles   B2BAccessRequestFile[]
   customerTaxExemptions   CustomerTaxExemption[]
   customerInternalNotes   CustomerInternalNote[]
+  personWorkspacePins     PersonWorkspacePin[]
+  personWorkspaceNotes    PersonWorkspaceNote[]
+  personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
+  customerContactActivities CustomerContactActivity[]
   mailDeliveries          MailDelivery[]
   mailIdempotencyKeys     MailIdempotencyKey[]
   emailTemplates          EmailTemplate[]
@@ -253,6 +257,11 @@ model Member {
   commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
   reviewedCommissionRequests CommissionRequest[] @relation("CommissionRequestReviewer")
   customerInternalNotes CustomerInternalNote[] @relation("CustomerInternalNoteAuthor")
+  personWorkspacePins PersonWorkspacePin[]
+  personWorkspaceNotes PersonWorkspaceNote[] @relation("PersonWorkspaceNoteAuthor")
+  deletedPersonWorkspaceNotes PersonWorkspaceNote[] @relation("PersonWorkspaceNoteDeletedBy")
+  personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
+  customerContactActivities CustomerContactActivity[]
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -344,6 +353,8 @@ model Customer {
   commissionRequests CommissionRequest[]
   taxExemption CustomerTaxExemption?
   internalNotes CustomerInternalNote[]
+  personWorkspaceNotes PersonWorkspaceNote[]
+  contactActivities CustomerContactActivity[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -369,6 +380,99 @@ model CustomerInternalNote {
   @@index([tenantId, customerId, createdAt])
   @@index([tenantId, authorMemberId, createdAt])
   @@map("customer_internal_notes")
+}
+
+model PersonWorkspacePin {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  memberId   String   @map("member_id")
+  targetKind String   @map("target_kind")
+  targetId   String   @map("target_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, memberId, targetKind, targetId])
+  @@index([tenantId, memberId, targetKind, createdAt])
+  @@index([tenantId, targetKind, targetId])
+  @@map("person_workspace_pins")
+}
+
+model PersonWorkspaceNote {
+  id                     String    @id
+  tenantId               String    @map("tenant_id")
+  authorMemberId         String    @map("author_member_id")
+  kind                   String
+  title                  String
+  body                   String    @default("")
+  linkedCustomerId       String?   @map("linked_customer_id")
+  linkedServiceRequestId String?   @map("linked_service_request_id")
+  deletedAt              DateTime? @map("deleted_at")
+  deletedByMemberId      String?   @map("deleted_by_member_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author Member @relation("PersonWorkspaceNoteAuthor", fields: [authorMemberId], references: [id], onDelete: Cascade)
+  deletedBy Member? @relation("PersonWorkspaceNoteDeletedBy", fields: [deletedByMemberId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [linkedCustomerId], references: [id], onDelete: SetNull)
+  serviceRequest ServiceRequest? @relation(fields: [linkedServiceRequestId], references: [id], onDelete: SetNull)
+  replies PersonWorkspaceNoteReply[]
+
+  @@index([tenantId, kind, updatedAt])
+  @@index([tenantId, authorMemberId, updatedAt])
+  @@index([tenantId, linkedCustomerId, updatedAt])
+  @@index([tenantId, linkedServiceRequestId])
+  @@index([tenantId, deletedAt])
+  @@map("person_workspace_notes")
+}
+
+model PersonWorkspaceNoteReply {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  noteId         String   @map("note_id")
+  authorMemberId String   @map("author_member_id")
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  note PersonWorkspaceNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author Member @relation(fields: [authorMemberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, noteId, createdAt])
+  @@index([tenantId, authorMemberId, createdAt])
+  @@map("person_workspace_note_replies")
+}
+
+model CustomerContactActivity {
+  id             String    @id
+  tenantId       String    @map("tenant_id")
+  customerId     String    @map("customer_id")
+  memberId       String?   @map("member_id")
+  channel        String    @default("phone")
+  source         String
+  status         String
+  externalCallId String?   @map("external_call_id")
+  phone          String?
+  note           String?
+  startedAt      DateTime  @default(now()) @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  expiresAt      DateTime? @map("expires_at")
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, externalCallId])
+  @@index([tenantId, customerId, startedAt])
+  @@index([tenantId, memberId, startedAt])
+  @@index([tenantId, status, expiresAt])
+  @@map("customer_contact_activities")
 }
 
 model CustomerAssignment {
@@ -1302,6 +1406,7 @@ model ServiceRequest {
   participants TaskParticipant[]
   dailyTaskOrders PersonDailyTaskOrder[]
   materializedWorkflowScheduledActions WorkflowScheduledAction[]
+  personWorkspaceNotes PersonWorkspaceNote[]
 
   @@index([tenantId, customerId])
   @@index([tenantId, customerUserId])

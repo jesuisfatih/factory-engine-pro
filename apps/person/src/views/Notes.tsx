@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageSquareReply, Plus, Save } from 'lucide-react';
-import { fetchNotes, friendlyError, replyNote, saveNote, type NoteRow } from '../api/live';
+import { MessageSquareReply, Plus, Save, Trash2, X } from 'lucide-react';
+import { deleteNote, fetchNotes, friendlyError, replyNote, saveNote, type NoteRow } from '../api/live';
 import { QueryState } from '../components/QueryState';
 import { personSafeText } from '../lib/personTerminology';
+import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 type Tab = 'all' | 'scratch' | 'queue';
 
@@ -15,8 +16,13 @@ export function NotesView() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [replyBody, setReplyBody] = useState('');
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const { data: notes = [], isLoading, error } = useQuery({ queryKey: ['person', 'notes'], queryFn: fetchNotes });
+
+  useEffect(() => subscribePersonWorkspaceRealtime(() => {
+    void qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+  }), [qc]);
 
   const save = useMutation({
     mutationFn: saveNote,
@@ -32,6 +38,15 @@ export function NotesView() {
       qc.invalidateQueries({ queryKey: ['person', 'notes'] });
       setSelectedId(note.id);
       setReplyBody('');
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: deleteNote,
+    onSuccess: (_result, id) => {
+      qc.invalidateQueries({ queryKey: ['person', 'notes'] });
+      if (selectedId === id) setSelectedId(null);
+      setDeleteCandidateId(null);
     },
   });
 
@@ -71,7 +86,7 @@ export function NotesView() {
   }, [selected?.id]);
 
   const onSave = () => {
-    if (!title.trim()) return;
+    if (!selected?.canDelete || !title.trim()) return;
     save.mutate({
       id: selected?.id,
       kind: selected?.kind ?? 'scratch',
@@ -159,7 +174,7 @@ export function NotesView() {
             </div>
           ) : (
             <>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Note title" />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Note title" disabled={!selected.canDelete} />
               {selected.linkedCustomer && (
                 <div className="linked">
                   Linked to <strong>{personSafeText(selected.linkedCustomerName ?? selected.linkedCustomer)}</strong> - follow-up <strong>{selected.linkedQueueId ?? 'none'}</strong>
@@ -169,7 +184,7 @@ export function NotesView() {
                 Written by <strong>{personSafeText(selected.authorName ?? 'Team member')}</strong>
                 {selected.authorEmail ? <> - {selected.authorEmail}</> : null}
               </div>
-              <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." />
+              <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Note body..." disabled={!selected.canDelete} />
               <div className="note-replies">
                 <div className="note-replies-head">
                   <strong>Replies</strong>
@@ -206,14 +221,36 @@ export function NotesView() {
                 </div>
               </div>
               {reply.isError ? <div className="email-compose-error">{friendlyError(reply.error)}</div> : null}
+              {save.isError ? <div className="email-compose-error">{friendlyError(save.error)}</div> : null}
+              {remove.isError ? <div className="email-compose-error">{friendlyError(remove.error)}</div> : null}
               <div className="actions">
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   {selected.kind === 'queue' ? 'Shared with the team - saved to customer history' : 'Personal - only you can see this'}
                 </span>
-                <button type="button" className="save" onClick={onSave} disabled={save.isPending}>
-                  <Save size={12} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
-                  {save.isPending ? 'Saving...' : 'Save'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {selected.canDelete && deleteCandidateId !== selected.id ? (
+                    <button type="button" className="btn" onClick={() => setDeleteCandidateId(selected.id)}>
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  ) : null}
+                  {selected.canDelete && deleteCandidateId === selected.id ? (
+                    <div className="note-delete-confirm" role="alert">
+                      <span>Delete this note?</span>
+                      <button type="button" className="btn" onClick={() => setDeleteCandidateId(null)} disabled={remove.isPending}>
+                        <X size={12} /> Cancel
+                      </button>
+                      <button type="button" className="btn danger" onClick={() => remove.mutate(selected.id)} disabled={remove.isPending}>
+                        <Trash2 size={12} /> {remove.isPending ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  ) : null}
+                  {selected.canDelete ? (
+                    <button type="button" className="save" onClick={onSave} disabled={save.isPending}>
+                      <Save size={12} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
+                      {save.isPending ? 'Saving...' : 'Save'}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </>
           )}

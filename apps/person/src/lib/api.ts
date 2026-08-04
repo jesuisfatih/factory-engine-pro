@@ -43,6 +43,11 @@ export function readSession() {
   }
 }
 
+export function subscribeSession(callback: () => void) {
+  window.addEventListener(PERSON_SESSION_CHANGED_EVENT, callback);
+  return () => window.removeEventListener(PERSON_SESSION_CHANGED_EVENT, callback);
+}
+
 export function readAdminSession() {
   const raw = window.localStorage.getItem(ADMIN_SESSION_KEY);
   if (!raw) return null;

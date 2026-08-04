@@ -18,7 +18,7 @@ async function bootstrap() {
   ].filter(Boolean);
   app.enableCors({
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
-      if (!origin || allowedOrigins.includes(origin) || isShopifyCustomerOrigin(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isShopifyOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -41,10 +41,13 @@ function csvEnv(key: string) {
     .filter(Boolean);
 }
 
-function isShopifyCustomerOrigin(origin: string) {
+function isShopifyOrigin(origin: string) {
   try {
     const { hostname, protocol } = new URL(origin);
-    return protocol === 'https:' && hostname.endsWith('.myshopify.com');
+    return protocol === 'https:' && (
+      hostname.endsWith('.myshopify.com')
+      || hostname === 'extensions.shopifycdn.com'
+    );
   } catch {
     return false;
   }

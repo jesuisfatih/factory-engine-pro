@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { timingSafeEqual } from 'node:crypto';
 import { CryptoService } from '../../shared/crypto.service.js';
+import { CustomerContactTimelineService } from '../../shared/customer-contact-timeline.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_JOB, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
@@ -49,6 +50,7 @@ export class AircallIngestService {
     private readonly logger: AppLogger,
     private readonly customers: CustomersService,
     private readonly rules: RulesService,
+    private readonly contactTimeline: CustomerContactTimelineService,
     @Inject(AIRCALL_INGEST_QUEUE) private readonly ingestQueue: Queue | null,
     @Inject(AI_TRANSCRIPT_RESOLVER_QUEUE) private readonly transcriptResolverQueue: Queue | null,
   ) {}
@@ -229,7 +231,25 @@ export class AircallIngestService {
         },
       });
 
-      const call = await this.mirrorCall(inbox.tenantId, externalCallId, eventType, data);
+      let call = await this.mirrorCall(inbox.tenantId, externalCallId, eventType, data);
+      const contactActivity = await this.contactTimeline.recordAircallEvent({
+        externalCallId,
+        eventType,
+        eventAt: eventTimestamp,
+        memberId: call.currentOperatorId,
+        customerId: call.customerId,
+        email: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
+        phone: contactPhone(data),
+        durationSeconds: numberOrNull(data.duration),
+        direction: stringOrNull(data.direction),
+        rawStatus: stringOrNull(data.status),
+      });
+      if (contactActivity && call.customerId !== contactActivity.customerId) {
+        call = await this.prisma.db.call.update({
+          where: { id: call.id },
+          data: { customerId: contactActivity.customerId },
+        });
+      }
       await this.enqueueTranscriptResolver(callEvent.id, transcriptRaw);
       await this.prisma.db.callEvent.createMany({
         data: [

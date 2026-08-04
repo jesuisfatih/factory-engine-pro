@@ -511,6 +511,8 @@ button { font-family: inherit; }
 .staff-brief.tone-warn { background: #FFFBEB; border-color: #FDE68A; }
 .staff-brief.tone-success { background: #F0FDF4; border-color: #BBF7D0; }
 .staff-brief.tone-info { background: #EFF6FF; border-color: #BFDBFE; }
+.contact-state { display: flex; align-items: center; gap: 6px; margin-top: 7px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); color: var(--text-muted); font-size: 12px; font-weight: 650; line-height: 1.35; }
+.contact-state.active { border-color: #F59E0B; background: #FFFBEB; color: #92400E; }
 .card-contact-line { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; color: var(--text); font-size: 13px; font-weight: 750; }
 .card-contact-line span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; background: #F8FAFC; border: 1px solid #D6E1EF; border-radius: 7px; padding: 5px 8px; }
 .assign-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
@@ -962,6 +964,7 @@ button { font-family: inherit; }
 .notes-tabs { display: flex; gap: 6px; padding: 8px; margin-bottom: 8px; background: var(--surface-2); border-radius: 6px; }
 .notes-tabs button { flex: 1; background: none; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; font-weight: 600; }
 .notes-tabs button.active { background: var(--accent); color: #fff; }
+.note-delete-confirm { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid #FECACA; border-radius: 7px; background: #FEF2F2; color: #991B1B; font-size: 12px; }
 .notes-search {
   display: grid;
   gap: 4px;
@@ -1005,7 +1008,26 @@ button { font-family: inherit; }
 .note-editor input:focus { border-color: var(--accent); }
 .note-editor textarea { flex: 1; min-height: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; color: var(--text); font-size: 13px; line-height: 1.6; outline: none; resize: none; font-family: inherit; }
 .note-editor textarea:focus { border-color: var(--accent); }
-.note-editor .actions { display: flex; justify-content: space-between; align-items: center; }
+.note-editor .actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.note-editor .actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.note-editor .actions .btn:hover { border-color: var(--accent); color: var(--text); }
+.note-editor .actions .btn.danger { border-color: #FCA5A5; background: #DC2626; color: #fff; }
+.note-editor .actions .btn:disabled { cursor: not-allowed; opacity: .6; }
 .note-editor .actions .save { background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .note-editor .linked { font-size: 11px; color: var(--text-muted); }
 .note-replies {
@@ -1035,6 +1057,17 @@ button { font-family: inherit; }
 .note-reply-form textarea { min-height: 68px; resize: vertical; }
 .note-reply-form .save { background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .note-reply-form .save:disabled { opacity: .6; cursor: not-allowed; }
+
+html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; color: #FCA5A5; }
+
+@media (max-width: 760px) {
+  .notes-shell { grid-template-columns: 1fr; height: auto; }
+  .notes-list { max-height: 260px; }
+  .note-editor { min-height: 520px; }
+  .note-editor .actions { align-items: flex-start; flex-direction: column; }
+  .note-editor .actions > div { width: 100%; flex-wrap: wrap; }
+  .note-delete-confirm { flex-wrap: wrap; }
+}
 
 /* ─── Email list ─────────────────────────────────────────── */
 .email-compose-toggle {
@@ -2132,6 +2165,9 @@ button { font-family: inherit; }
   background: #0E2433;
   border-color: #075985;
 }
+:root[data-theme="dark"] .contact-state { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-muted); }
+:root[data-theme="dark"] .contact-state.active { background: #2A2108; border-color: #92400E; color: #FDE68A; }
+:root[data-theme="dark"] .note-delete-confirm { background: #2A1414; border-color: #7F1D1D; color: #FECACA; }
 
 :root[data-theme="dark"] .mcp-ui-stat {
   background: #141C2B;
