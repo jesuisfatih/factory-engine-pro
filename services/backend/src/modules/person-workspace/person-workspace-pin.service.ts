@@ -3,7 +3,7 @@ import { prefixedId } from '../../shared/id.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 
-export type PersonWorkspacePinTarget = 'customer' | 'service_request';
+export type PersonWorkspacePinTarget = 'customer' | 'service_request' | 'staff_work_item';
 
 @Injectable()
 export class PersonWorkspacePinService {

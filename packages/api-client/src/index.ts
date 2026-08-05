@@ -205,6 +205,7 @@ import type {
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  RecordPersonTaskOutcomeInput,
   ReplyPersonNoteInput,
   SendPersonMessageInput,
   SendTestMailInput,
@@ -244,6 +245,7 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
+  PersonTaskOutcome,
   PersonEmailContact,
   PersonTaskSyncResult,
   PersonTaskTransferResult,
@@ -937,6 +939,10 @@ export class ApiClient {
 
   savePersonTaskNote(id: string, input: SavePersonTaskNoteInput) {
     return this.post<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/notes`, input);
+  }
+
+  recordPersonTaskOutcome(id: string, input: RecordPersonTaskOutcomeInput) {
+    return this.post<PersonTaskOutcome>(`/person/workspace/tasks/${encodeURIComponent(id)}/outcomes`, input);
   }
 
   schedulePersonTaskFollowUp(id: string, input: SchedulePersonTaskFollowUpInput) {

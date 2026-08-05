@@ -197,6 +197,8 @@ export const personQueueCardSchema = z.object({
   modalActionOrder: z.array(z.string()).optional(),
   strategyProof: personCardStrategyProofSchema.optional(),
   contactState: personContactStateSchema.nullable().optional(),
+  currentDisposition: z.string().nullable().optional(),
+  outcomeRequired: z.boolean().default(false),
 });
 export type PersonQueueCardDto = z.infer<typeof personQueueCardSchema>;
 
@@ -466,6 +468,47 @@ export const schedulePersonTaskFollowUpSchema = z.object({
   note: z.string().trim().max(1200).optional(),
 });
 export type SchedulePersonTaskFollowUpInput = z.infer<typeof schedulePersonTaskFollowUpSchema>;
+
+export const personCallDispositionSchema = z.enum([
+  'not_selected',
+  'customer_reached',
+  'no_answer',
+  'voicemail',
+  'callback_requested',
+  'follow_up_scheduled',
+  'quote_sent',
+  'order_placed',
+  'not_interested',
+  'wrong_number',
+  'do_not_call',
+  'completed',
+]);
+export type PersonCallDisposition = z.infer<typeof personCallDispositionSchema>;
+
+export const recordPersonTaskOutcomeSchema = z.object({
+  disposition: personCallDispositionSchema,
+  note: z.string().trim().max(4000).optional(),
+  scheduledAt: z.string().datetime().optional(),
+  phone: z.string().trim().min(3).max(40).optional(),
+  externalCallId: z.string().trim().min(1).max(160).optional(),
+  providerResult: z.string().trim().min(1).max(120).optional(),
+  resolverSuggestion: z.string().trim().min(1).max(160).optional(),
+  idempotencyKey: z.string().trim().min(8).max(160).optional(),
+});
+export type RecordPersonTaskOutcomeInput = z.infer<typeof recordPersonTaskOutcomeSchema>;
+
+export const personTaskOutcomeSchema = z.object({
+  id: z.string(),
+  taskId: z.string(),
+  customerId: z.string().nullable(),
+  disposition: personCallDispositionSchema,
+  note: z.string().nullable(),
+  workState: z.string(),
+  queueLocation: z.enum(['follow_up', 'scheduled', 'archive']),
+  visibleAfter: z.string().nullable(),
+  selectedAt: z.string(),
+});
+export type PersonTaskOutcome = z.infer<typeof personTaskOutcomeSchema>;
 
 export const sendPersonMessageSchema = z.object({
   threadId: z.string().trim().min(1),

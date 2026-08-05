@@ -516,7 +516,18 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   onArchive={(card) => setCompleteCandidate(card)}
                   onOpen={(taskId) => openTaskBrief(taskId, 'followup')}
                   onCall={(card) => {
-                    if (card.phone) dialCustomer.mutate({ phone: card.phone, customerId: card.customerId ?? undefined, source: 'daily_card' });
+                    if (!card.phone) return;
+                    dialCustomer.mutate({
+                      phone: card.phone,
+                      customerId: card.customerId ?? undefined,
+                      staffWorkItemId: card.id,
+                      idempotencyKey: personActionId('daily-dial'),
+                      source: 'daily_card',
+                    }, {
+                      onSuccess: (result) => {
+                        if (result.staffWorkItemId) openTaskBrief(result.staffWorkItemId, 'followup');
+                      },
+                    });
                   }}
                   callDisabled={dialCustomer.isPending}
                   onTransfer={setTransferCard}
@@ -610,7 +621,17 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                           onOpenCustomer={(item) => setDetailCustomerId(item.customerId)}
                           onAddNote={(item) => setNoteCustomer(item)}
                           onCallCustomer={(item) => {
-                            if (item.phone) dialCustomer.mutate({ phone: item.phone, customerId: item.customerId, source: 'priority_board' });
+                            if (!item.phone) return;
+                            dialCustomer.mutate({
+                              phone: item.phone,
+                              customerId: item.customerId,
+                              idempotencyKey: personActionId('priority-dial'),
+                              source: 'priority_board',
+                            }, {
+                              onSuccess: (result) => {
+                                if (result.staffWorkItemId) openTaskBrief(result.staffWorkItemId, 'priority');
+                              },
+                            });
                           }}
                           pinDisabled={customerPin.isPending}
                           callDisabled={dialCustomer.isPending}
@@ -1395,4 +1416,11 @@ function optimisticPin(
     pinBoard,
     summary: { ...data.summary, pinnedCount: pinBoard.length },
   };
+}
+
+function personActionId(prefix: string) {
+  const value = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}:${value}`;
 }

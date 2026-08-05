@@ -1,7 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { CustomersModule } from '../customers/customers.module.js';
 import { MailModule } from '../mail/mail.module.js';
-import { SupportModule } from '../support/support.module.js';
+import { StaffWorkModule } from '../staff-work/staff-work.module.js';
 import { RulesController } from './rules.controller.js';
 import { RulesRepository } from './rules.repository.js';
 import { RulesService } from './rules.service.js';
@@ -11,7 +11,7 @@ import { WorkflowPromptService } from './workflow-prompt.service.js';
 import { WorkflowScheduledActionsWorker } from './workflow-scheduled-actions.worker.js';
 
 @Module({
-  imports: [CustomersModule, forwardRef(() => MailModule), SupportModule],
+  imports: [CustomersModule, forwardRef(() => MailModule), StaffWorkModule],
   controllers: [RulesController],
   providers: [
     RulesRepository,

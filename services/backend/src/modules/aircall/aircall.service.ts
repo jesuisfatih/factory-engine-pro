@@ -5,7 +5,7 @@ import {
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
   aircallTranscriptExportQuerySchema,
   aircallTranscriptListQuerySchema,
-  transcriptResolverOutputSchema,
+  parseStoredTranscriptResolverOutput,
   type TranscriptResolverOutput,
 } from '@factory-engine-pro/contracts';
 import type {
@@ -1592,7 +1592,7 @@ export class AircallService {
       const completedSignals = uniqueStrings(rowEvaluations
         .filter((evaluation) => isCompletedWorkflowEvaluationStatus(evaluation.status))
         .map((evaluation) => evaluation.signal));
-      const parsedOutput = transcriptResolverOutputSchema.safeParse(row.resolverOutput);
+      const parsedOutput = parseStoredTranscriptResolverOutput(row.resolverOutput);
       if (!parsedOutput.success) {
         states.set(row.id, {
           expectedSignals: [],
@@ -1606,8 +1606,7 @@ export class AircallService {
         continue;
       }
 
-      const customerMatched = await this.workflowCustomerMatched(tenantId, row, parsedOutput.data);
-      const expectedSignals = transcriptOperationalSignals(parsedOutput.data, { customerMatched }).map((signal) => signal.intent);
+      const expectedSignals = transcriptOperationalSignals(parsedOutput.data).map((signal) => signal.intent);
       const expectedSet = new Set<string>(expectedSignals);
       states.set(row.id, {
         expectedSignals,
@@ -1620,42 +1619,6 @@ export class AircallService {
       });
     }
     return states;
-  }
-
-  private async workflowCustomerMatched(
-    tenantId: string,
-    callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
-    output: TranscriptResolverOutput,
-  ) {
-    if (output.customer_match.customer_id) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, id: output.customer_match.customer_id },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-
-    const email = (callEvent.contactEmail ?? '').trim();
-    if (email) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, email: { equals: email, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-
-    const phone = (callEvent.contactPhoneE164 ?? output.customer_match.phone ?? '').trim();
-    if (!phone) return false;
-    const digits = phone.replace(/\D/g, '');
-    const phoneNeedles = uniqueStrings([phone, digits, digits.length > 10 ? digits.slice(-10) : digits]);
-    for (const needle of phoneNeedles) {
-      const customer = await this.prisma.db.customer.findFirst({
-        where: { tenantId, phone: { contains: needle } },
-        select: { id: true },
-      });
-      if (customer) return true;
-    }
-    return false;
   }
 
   private tenantId() {
@@ -1940,7 +1903,7 @@ function toAircallTranscriptDto(row: AircallTranscriptDetailRow): AircallTranscr
 }
 
 function parseTranscriptResolverOutput(value: unknown): TranscriptResolverOutput | null {
-  const parsed = transcriptResolverOutputSchema.safeParse(value);
+  const parsed = parseStoredTranscriptResolverOutput(value);
   return parsed.success ? parsed.data : null;
 }
 

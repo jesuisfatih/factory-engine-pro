@@ -104,6 +104,20 @@ export class CustomerContactTimelineService {
       return null;
     }
 
+    if (input.phone) {
+      await this.resolver.capturePhonePoints(customer.id, [{
+        value: input.phone,
+        source: 'call',
+        sourceRef: input.externalCallId,
+        priority: 70,
+        metadata: {
+          eventType: input.eventType,
+          eventAt: input.eventAt.toISOString(),
+          direction: input.direction ?? null,
+        },
+      }]);
+    }
+
     const incomingStatus = contactStatus(input.eventType, input.durationSeconds, input.rawStatus);
     const tenantId = this.tenantId();
     const existing = await this.prisma.db.customerContactActivity.findUnique({

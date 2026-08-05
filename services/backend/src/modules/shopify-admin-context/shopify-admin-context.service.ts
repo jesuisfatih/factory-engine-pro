@@ -36,7 +36,24 @@ export class ShopifyAdminContextService {
       };
     }
 
-    const [contactState, internalNote, workspaceNote, taskComment] = await Promise.all([
+    await this.resolver.capturePhonePoints(customer.id, [
+      ...(input.phone ? [{
+        value: input.phone,
+        source: 'checkout' as const,
+        sourceRef: input.checkoutId ?? null,
+        priority: 85,
+        metadata: { surface: 'shopify_admin_abandoned_checkout', checkoutId: input.checkoutId ?? null },
+      }] : []),
+      ...input.alternatePhones.map((phone, index) => ({
+        value: phone,
+        source: 'checkout' as const,
+        sourceRef: input.checkoutId ?? null,
+        priority: 84 - index,
+        metadata: { surface: 'shopify_admin_abandoned_checkout', checkoutId: input.checkoutId ?? null, alternate: true },
+      })),
+    ]);
+
+    const [contactState, internalNote, workspaceNote, taskComment, staffWorkComment] = await Promise.all([
       this.timeline.latestForCustomer(customer.id),
       this.prisma.db.customerInternalNote.findFirst({
         where: { customerId: customer.id },
@@ -55,6 +72,14 @@ export class ShopifyAdminContextService {
         },
         orderBy: [{ createdAt: 'desc' }],
       }),
+      this.prisma.db.staffWorkComment.findFirst({
+        where: {
+          internal: true,
+          staffWorkItem: { customerId: customer.id },
+        },
+        include: { actor: true },
+        orderBy: [{ createdAt: 'desc' }],
+      }),
     ]);
     const taskCommentAuthor = taskComment?.actorId
       ? await this.prisma.db.member.findFirst({
@@ -62,12 +87,22 @@ export class ShopifyAdminContextService {
           select: { firstName: true, lastName: true, email: true },
         })
       : null;
-    const latestNote = pickLatestNote(internalNote, workspaceNote, taskComment ? {
-      id: taskComment.id,
-      body: taskComment.body,
-      createdAt: taskComment.createdAt,
-      author: taskCommentAuthor,
-    } : null);
+    const latestNote = pickLatestNote(
+      internalNote,
+      workspaceNote,
+      taskComment ? {
+        id: taskComment.id,
+        body: taskComment.body,
+        createdAt: taskComment.createdAt,
+        author: taskCommentAuthor,
+      } : null,
+      staffWorkComment ? {
+        id: staffWorkComment.id,
+        body: staffWorkComment.body,
+        createdAt: staffWorkComment.createdAt,
+        author: staffWorkComment.actor,
+      } : null,
+    );
     const contact = await this.resolver.resolveOne(customer.id);
     const name = customer.companyName
       || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim()

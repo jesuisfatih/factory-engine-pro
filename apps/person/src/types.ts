@@ -67,6 +67,8 @@ export interface Card {
   modalActionOrder?: string[];
   strategyProof?: PersonCardStrategyProof;
   contactState?: PersonContactState | null;
+  currentDisposition?: string | null;
+  outcomeRequired: boolean;
 }
 
 export type DailyCallItem = PersonDailyCallItem;

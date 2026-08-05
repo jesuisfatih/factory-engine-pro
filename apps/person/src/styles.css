@@ -898,6 +898,27 @@ button { font-family: inherit; }
 .brief-timeline-row em { color: var(--text-faint); font-size: 10px; font-style: normal; }
 .brief-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 11px; color: var(--text-faint); }
 .brief-form-actions .btn { flex-shrink: 0; }
+.brief-outcome {
+  border-color: #f0b429;
+  background: #fffbeb;
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+.brief-outcome-help {
+  margin: 0 0 9px;
+  color: #7c4a03;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.brief-outcome .brief-count-pill.required {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+.brief-outcome-schedule {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
 .brief-note-row { border: 1px solid var(--border); border-radius: 7px; background: var(--surface); padding: 7px 8px; }
 .brief-note-row span { display: block; color: var(--text-faint); font-size: 10px; margin-bottom: 3px; }
 .brief-note-row p { margin: 0; color: var(--text); font-size: 11px; line-height: 1.45; }
@@ -2132,6 +2153,18 @@ html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; col
 :root[data-theme="dark"] .brief-timeline-row {
   background: #141C2B;
   border-color: var(--border);
+}
+
+:root[data-theme="dark"] .brief-outcome {
+  background: #2a2113;
+  border-color: #b45309;
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+:root[data-theme="dark"] .brief-outcome-help { color: #fcd34d; }
+:root[data-theme="dark"] .brief-outcome .brief-count-pill.required {
+  color: #fde68a;
+  background: #422006;
+  border-color: #b45309;
 }
 
 :root[data-theme="dark"] .staff-brief,

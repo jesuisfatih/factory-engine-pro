@@ -12,6 +12,8 @@ import type {
   ArchivePersonDailyCallResult,
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
+  RecordPersonTaskOutcomeInput,
+  PersonTaskOutcome,
   SavePersonEmailDraftInput,
   SavePersonCustomerNoteInput,
   SavePersonNoteInput,
@@ -146,6 +148,8 @@ export const transferTask = (id: string, input: TransferPersonTaskInput) =>
   personApi.transferPersonTask(id, input) as Promise<TransferTaskResult>;
 export const fetchTaskBrief = (id: string) => personApi.personTaskBrief(id) as Promise<TaskBriefDetail>;
 export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => personApi.savePersonTaskNote(id, input) as Promise<TaskBriefDetail>;
+export const recordTaskOutcome = (id: string, input: RecordPersonTaskOutcomeInput) =>
+  personApi.recordPersonTaskOutcome(id, input) as Promise<PersonTaskOutcome>;
 export const scheduleTaskFollowUp = (id: string, input: SchedulePersonTaskFollowUpInput) =>
   personApi.schedulePersonTaskFollowUp(id, input) as Promise<TaskBriefDetail>;
 export const fetchCustomers = (query: { limit: number; offset: number; search?: string }) =>

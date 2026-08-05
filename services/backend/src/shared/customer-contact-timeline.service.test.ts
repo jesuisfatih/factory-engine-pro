@@ -57,6 +57,7 @@ test('turns an ended Aircall event into a completed shared contact state', async
     },
   } as never, { require: () => ({ tenantId: 'ten_test' }) } as never, {
     findCustomer: async () => ({ id: 'cust_1', phone: '+18325550100' }),
+    capturePhonePoints: async () => [],
   } as never, {
     log: () => undefined,
     warn: () => undefined,
@@ -103,6 +104,7 @@ test('does not regress a completed call when an older ringing webhook arrives la
     },
   } as never, { require: () => ({ tenantId: 'ten_test' }) } as never, {
     findCustomer: async () => ({ id: 'cust_1', phone: '+18325550100' }),
+    capturePhonePoints: async () => [],
   } as never, {
     log: () => undefined,
     warn: () => undefined,

@@ -1629,7 +1629,7 @@ export interface WorkflowActionTrace {
   actionId: string;
   action: string;
   status: 'applied' | 'skipped';
-  targetType: 'service_request' | 'scheduled_action' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
+  targetType: 'staff_work_item' | 'service_request' | 'scheduled_action' | 'customer' | 'segment_membership' | 'member' | 'mail_delivery' | 'audit';
   targetId?: string;
   message: string;
   metadata?: Record<string, unknown>;

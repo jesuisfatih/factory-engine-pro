@@ -7,6 +7,7 @@ import {
   personCustomerArchiveQuerySchema,
   personDailyOperationsQuerySchema,
   reorderPersonDailyCallSchema,
+  recordPersonTaskOutcomeSchema,
   savePersonCustomerNoteSchema,
   savePersonEmailDraftSchema,
   sendPersonEmailSchema,
@@ -24,6 +25,7 @@ import {
   type PersonDailyOperationsQuery,
   type ReorderPersonDailyCallInput,
   type ReplyPersonNoteInput,
+  type RecordPersonTaskOutcomeInput,
   type SavePersonCustomerNoteInput,
   type SavePersonEmailDraftInput,
   type SendPersonEmailInput,
@@ -166,6 +168,15 @@ export class PersonWorkspaceController {
     @Body(new ZodValidationPipe(savePersonTaskNoteSchema)) body: SavePersonTaskNoteInput,
   ) {
     return this.workspace.saveTaskNote(id, body);
+  }
+
+  @Post('tasks/:id/outcomes')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  recordTaskOutcome(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(recordPersonTaskOutcomeSchema)) body: RecordPersonTaskOutcomeInput,
+  ) {
+    return this.workspace.recordTaskOutcome(id, body);
   }
 
   @Post('tasks/:id/calendar')

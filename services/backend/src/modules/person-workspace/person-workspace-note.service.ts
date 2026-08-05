@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { ReplyPersonNoteInput, SavePersonNoteInput } from '@factory-engine-pro/contracts';
 import type { Prisma } from '@prisma/client';
 import { prefixedId } from '../../shared/id.js';
@@ -41,6 +41,7 @@ export class PersonWorkspaceNoteService {
   }
 
   async save(memberId: string, input: SavePersonNoteInput) {
+    const links = await this.resolveLinks(input.linkedQueueId, input.linkedCustomer);
     if (input.id) {
       const existing = await this.prisma.db.personWorkspaceNote.findFirst({
         where: { id: input.id, deletedAt: null },
@@ -55,8 +56,9 @@ export class PersonWorkspaceNoteService {
           kind: input.kind,
           title: input.title,
           body: input.body,
-          linkedCustomerId: input.linkedCustomer ?? null,
-          linkedServiceRequestId: input.linkedQueueId ?? null,
+          linkedCustomerId: links.customerId,
+          linkedServiceRequestId: links.serviceRequestId,
+          linkedStaffWorkItemId: links.staffWorkItemId,
         },
       });
       this.logAndInvalidate('note.update', input.id, memberId);
@@ -71,8 +73,9 @@ export class PersonWorkspaceNoteService {
         kind: input.kind,
         title: input.title,
         body: input.body,
-        linkedCustomerId: input.linkedCustomer ?? null,
-        linkedServiceRequestId: input.linkedQueueId ?? null,
+        linkedCustomerId: links.customerId,
+        linkedServiceRequestId: links.serviceRequestId,
+        linkedStaffWorkItemId: links.staffWorkItemId,
       },
       include: noteInclude,
     });
@@ -141,7 +144,7 @@ export class PersonWorkspaceNoteService {
       authorRole: row.author.roleAssignments[0]?.role.name ?? 'Member',
       linkedCustomer: row.linkedCustomerId ?? undefined,
       linkedCustomerName: row.customer ? customerName(row.customer) : undefined,
-      linkedQueueId: row.linkedServiceRequestId ?? undefined,
+      linkedQueueId: row.linkedStaffWorkItemId ?? row.linkedServiceRequestId ?? undefined,
       createdAt: relative(row.createdAt),
       updatedAt: relative(row.updatedAt),
       canDelete: row.authorMemberId === memberId,
@@ -165,6 +168,33 @@ export class PersonWorkspaceNoteService {
       reason: `person.${action}`,
       at: new Date().toISOString(),
     });
+  }
+
+  private async resolveLinks(linkedQueueId?: string, linkedCustomerId?: string) {
+    const customerId = linkedCustomerId?.trim() || null;
+    if (customerId) {
+      const customer = await this.prisma.db.customer.findFirst({ where: { id: customerId }, select: { id: true } });
+      if (!customer) throw new NotFoundException('Linked customer not found');
+    }
+
+    const queueId = linkedQueueId?.trim();
+    if (!queueId) return { customerId, staffWorkItemId: null, serviceRequestId: null };
+
+    const [staffWorkItem, serviceRequest] = await Promise.all([
+      this.prisma.db.staffWorkItem.findFirst({ where: { id: queueId }, select: { id: true, customerId: true } }),
+      this.prisma.db.serviceRequest.findFirst({ where: { id: queueId }, select: { id: true, customerId: true } }),
+    ]);
+    if (!staffWorkItem && !serviceRequest) throw new NotFoundException('Linked follow-up not found');
+
+    const queueCustomerId = staffWorkItem?.customerId ?? serviceRequest?.customerId ?? null;
+    if (customerId && queueCustomerId && customerId !== queueCustomerId) {
+      throw new BadRequestException('The selected customer does not match the linked follow-up');
+    }
+    return {
+      customerId: customerId ?? queueCustomerId,
+      staffWorkItemId: staffWorkItem?.id ?? null,
+      serviceRequestId: staffWorkItem ? null : serviceRequest?.id ?? null,
+    };
   }
 
   private tenantId() {

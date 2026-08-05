@@ -51,6 +51,8 @@ export type AircallTranscriptExportQuery = z.infer<typeof aircallTranscriptExpor
 export const aircallDialSchema = z.object({
   phone: z.string().trim().min(3).max(40),
   customerId: z.string().trim().min(1).optional(),
+  staffWorkItemId: z.string().trim().min(1).optional(),
+  idempotencyKey: z.string().trim().min(8).max(160).optional(),
   source: z.enum(['customer_detail', 'task_brief', 'daily_card', 'priority_board', 'customer_table', 'calendar']).default('customer_detail'),
 });
 export type AircallDialInput = z.infer<typeof aircallDialSchema>;
@@ -64,6 +66,7 @@ export interface AircallDialResponse {
   message: string;
   telHref: string;
   providerStatus: number | null;
+  staffWorkItemId?: string | null;
 }
 
 export interface AircallUserDto {

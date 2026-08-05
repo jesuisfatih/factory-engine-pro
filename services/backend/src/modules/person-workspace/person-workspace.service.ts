@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, staffSafeDisplayText, transcriptResolverOutputSchema } from '@factory-engine-pro/contracts';
+import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, parseStoredTranscriptResolverOutput, staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
@@ -19,6 +19,7 @@ import type {
   PersonContactState,
   PersonQueueColumn,
   PersonTaskBriefDetail,
+  PersonTaskOutcome,
   PersonTaskTimelineEntry,
   PersonTransferTarget,
   TranscriptResolverOutput,
@@ -26,6 +27,7 @@ import type {
   ReorderPersonDailyCallInput,
   ReorderPersonDailyCallResult,
   ReplyPersonNoteInput,
+  RecordPersonTaskOutcomeInput,
   SavePersonEmailDraftInput,
   SavePersonCustomerNoteInput,
   SavePersonTaskNoteInput,
@@ -60,7 +62,7 @@ import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { RulesService } from '../rules/rules.service.js';
-import { isNonCatalogPromoPatchInquiry } from '../ai/transcript-operational-signals.js';
+import { StaffWorkService } from '../staff-work/staff-work.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 import { PersonWorkspaceNoteService } from './person-workspace-note.service.js';
 import { PersonWorkspacePinService } from './person-workspace-pin.service.js';
@@ -104,6 +106,22 @@ type ServiceRequestRow = Prisma.ServiceRequestGetPayload<{
   include: typeof serviceRequestInclude;
 }>;
 
+const staffWorkItemInclude = {
+  customer: {
+    include: {
+      insight: true,
+      segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+    },
+  },
+  assignedMember: true,
+  participants: true,
+  comments: { orderBy: { createdAt: 'asc' } },
+} satisfies Prisma.StaffWorkItemInclude;
+
+type StaffWorkItemRow = Prisma.StaffWorkItemGetPayload<{
+  include: typeof staffWorkItemInclude;
+}>;
+
 type AxisAssignments = Map<string, Set<string>>;
 
 type SegmentOwnershipRow = Prisma.SegmentOwnershipGetPayload<{
@@ -136,7 +154,7 @@ interface PersonDailyCallOrderRow {
 }
 
 interface PersonDailyTaskOrderRow {
-  serviceRequestId: string;
+  staffWorkItemId: string;
   position: number;
 }
 
@@ -269,6 +287,7 @@ export class PersonWorkspaceService {
     private readonly aircall: AircallService,
     private readonly mail: MailService,
     private readonly rules: RulesService,
+    private readonly staffWork: StaffWorkService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
     private readonly workspacePins: PersonWorkspacePinService,
@@ -280,7 +299,7 @@ export class PersonWorkspaceService {
     const member = await this.currentMember();
     const [operations, assigned, failedMail] = await Promise.all([
       this.dailyOperationsFor(member),
-      this.prisma.db.serviceRequest.count({
+      this.prisma.db.staffWorkItem.count({
         where: { assignedMemberId: member.id, status: { notIn: Array.from(CLOSED) } },
       }),
       this.prisma.db.mailDelivery.count({ where: { status: 'failed' } }),
@@ -347,7 +366,7 @@ export class PersonWorkspaceService {
     const segmentOwnerships = rawSegmentOwnerships.filter((ownership) => isShopifyNativeSegment(ownership.segment));
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
 
-    const [memberships, dailyTaskRows, dailyTaskOrderRows]: [SegmentMembershipRow[], ServiceRequestRow[], PersonDailyTaskOrderRow[]] = await Promise.all([
+    const [memberships, dailyTaskRows, dailyTaskOrderRows]: [SegmentMembershipRow[], StaffWorkItemRow[], PersonDailyTaskOrderRow[]] = await Promise.all([
       ownedSegmentIds.length > 0
         ? this.prisma.db.segmentCustomerMembership.findMany({
           where: {
@@ -378,7 +397,7 @@ export class PersonWorkspaceService {
           workDate: dailyWindow.orderDate,
         },
         select: {
-          serviceRequestId: true,
+          staffWorkItemId: true,
           position: true,
         },
         orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
@@ -387,7 +406,7 @@ export class PersonWorkspaceService {
 
     const pinRows = await this.workspacePins.list(member.id);
     const taskPinsByTarget = new Map(
-      pinRows.filter((pin) => pin.targetKind === 'service_request').map((pin) => [pin.targetId, pin] as const),
+      pinRows.filter((pin) => pin.targetKind === 'staff_work_item').map((pin) => [pin.targetId, pin] as const),
     );
     const customerPinsByTarget = new Map(
       pinRows.filter((pin) => pin.targetKind === 'customer').map((pin) => [pin.targetId, pin] as const),
@@ -409,18 +428,17 @@ export class PersonWorkspaceService {
     });
 
     const requestRows = await this.personRequestRows(member.id, visibleCustomerIds);
-    const allRequestRows = mergeRequestRows(requestRows, dailyTaskRows);
-
     const contextCustomerIds = uniqueStrings([
       ...visibleCustomerIds,
       ...memberships.map((membership) => membership.customerId),
       ...pinnedCustomerIds,
-      ...allRequestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
+      ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
+      ...dailyTaskRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
     const [initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats, contactStates] = await Promise.all([
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
-      this.cardCallContext(allRequestRows),
+      this.cardCallContext(dailyTaskRows),
       this.todayAircallStats(member, today.start, today.end),
       this.contactTimeline.latestForCustomers(contextCustomerIds),
     ]);
@@ -450,7 +468,7 @@ export class PersonWorkspaceService {
     });
     const contactSeeds = uniqueCustomers([
       ...selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)),
-      ...allRequestRows.flatMap((row) => row.customer ? [row.customer] : []),
+      ...dailyTaskRows.flatMap((row) => row.customer ? [row.customer] : []),
       ...customerPinRows.map((row) => row.customer),
     ]);
     const contactByCustomer = await this.contactResolver.resolveMany(contactSeeds);
@@ -508,7 +526,7 @@ export class PersonWorkspaceService {
     const scopedRows = requestRows
       .filter((row) => this.isQueueVisible(row))
       .filter((row) => this.isServiceRequestScoped(row, assignments, member.id));
-    const pinnedTasks = scopedRows
+    const pinnedTasks = dailyTaskRows
       .filter((row) => taskPinsByTarget.has(row.id))
       .map((row) => this.withContactState(this.withResolvedContact(
           this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies, taskPinsByTarget.get(row.id) ?? null),
@@ -559,21 +577,19 @@ export class PersonWorkspaceService {
   }
 
   private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
-    const ownerScope: Prisma.ServiceRequestWhereInput = end === null
-      ? {
-          OR: [
-            { assignedMemberId: member.id },
-            { metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } },
-          ],
-        }
-      : { assignedMemberId: member.id };
-    const archiveDateScope: Prisma.ServiceRequestWhereInput[] = end === null
+    const archiveDateScope: Prisma.StaffWorkItemWhereInput[] = end === null
       ? [
-          { createdAt: { lt: start } },
-          { metadata: { path: ['personArchivedBy', member.id], not: Prisma.JsonNull } },
+          { queueLocation: 'scheduled', visibleAfter: { lt: start } },
+          { queueLocation: { not: 'scheduled' }, sourceOccurredAt: { lt: start } },
+          { queueLocation: { not: 'scheduled' }, sourceOccurredAt: null, createdAt: { lt: start } },
+          { archivedAt: { not: null } },
         ]
-      : [{ createdAt: { gte: start, lt: end } }];
-    const workflowScope: Prisma.ServiceRequestWhereInput = {
+      : [
+          { queueLocation: 'scheduled', visibleAfter: { gte: start, lt: end } },
+          { queueLocation: { not: 'scheduled' }, sourceOccurredAt: { gte: start, lt: end } },
+          { queueLocation: { not: 'scheduled' }, sourceOccurredAt: null, createdAt: { gte: start, lt: end } },
+        ];
+    const workflowScope: Prisma.StaffWorkItemWhereInput = {
       OR: [
         { sourceCallId: { not: null } },
         { sourceEmailId: { not: null } },
@@ -581,18 +597,23 @@ export class PersonWorkspaceService {
         { metadata: { path: ['workflow'], not: Prisma.JsonNull } },
       ],
     };
-    return this.prisma.db.serviceRequest.findMany({
+    return this.prisma.db.staffWorkItem.findMany({
       where: {
+        assignedMemberId: member.id,
         axis: { in: Array.from(DAILY_WORKFLOW_AXES) },
         AND: [
-          ownerScope,
           workflowScope,
           { OR: archiveDateScope },
+          ...(end === null
+            ? []
+            : [{ archivedAt: null }, { queueLocation: { not: 'archive' } }, { OR: [{ visibleAfter: null }, { visibleAfter: { lte: new Date() } }] }]),
         ],
-        status: { notIn: Array.from(CLOSED) },
+        ...(end === null ? {} : { status: { notIn: Array.from(CLOSED) } }),
       },
-      include: serviceRequestInclude,
-      orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+      include: staffWorkItemInclude,
+      orderBy: end === null
+        ? [{ archivedAt: 'desc' }, { sourceOccurredAt: 'desc' }, { createdAt: 'desc' }]
+        : [{ sourceOccurredAt: 'desc' }, { createdAt: 'desc' }, { updatedAt: 'desc' }],
       take: 500,
     });
   }
@@ -647,7 +668,7 @@ export class PersonWorkspaceService {
     };
   }
 
-  private isDailyWorkflowTask(row: ServiceRequestRow) {
+  private isDailyWorkflowTask(row: StaffWorkItemRow) {
     const metadata = this.record(row.metadata);
     const workflow = this.record(metadata.workflow);
     const trigger = String(workflow.trigger ?? '');
@@ -670,7 +691,7 @@ export class PersonWorkspaceService {
     if (orderRows.length === 0) {
       return [...cards].sort((left, right) => strategy ? sortByPersonStrategy(strategy, left, right) || sortByCreatedAtDesc(left, right) : sortByCreatedAtDesc(left, right));
     }
-    const orderByTaskId = new Map(orderRows.map((row) => [row.serviceRequestId, row.position] as const));
+    const orderByTaskId = new Map(orderRows.map((row) => [row.staffWorkItemId, row.position] as const));
     return cards
       .map((card) => ({ card, position: orderByTaskId.get(card.id) ?? null }))
       .sort((left, right) => {
@@ -702,12 +723,13 @@ export class PersonWorkspaceService {
   async legacyQueue() {
     const member = await this.currentMember();
     const assignments = await this.axisAssignments(member.id);
-    const rows = await this.prisma.db.serviceRequest.findMany({
-      include: serviceRequestInclude,
+    const rows = await this.prisma.db.staffWorkItem.findMany({
+      where: { status: { notIn: Array.from(CLOSED) }, archivedAt: null },
+      include: staffWorkItemInclude,
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       take: 300,
     });
-    const visible = rows.filter((row) => this.isQueueVisible(row) && this.isServiceRequestScoped(row, assignments, member.id));
+    const visible = rows.filter((row) => this.isQueueVisible(row) && this.isStaffWorkScoped(row, assignments, member.id));
     const visibleCustomerIds = visible.map((row) => row.customerId).filter((id): id is string => Boolean(id));
     const [config, repeatCounts, cardContext, callContext, cardStrategies] = await Promise.all([
       this.urgencyConfig(),
@@ -724,20 +746,27 @@ export class PersonWorkspaceService {
 
   async moveQueueCard(id: string, input: MovePersonQueueCardInput) {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
     const metadata = { ...this.record(row.metadata), personColumnId: input.columnId, personColumnIndex: input.index };
-    await this.prisma.db.serviceRequest.updateMany({
-      where: { id },
-      data: { status: COLUMN_STATUS[input.columnId], metadata: metadata as Prisma.InputJsonValue },
+    await this.staffWork.transition(id, {
+      memberId: member.id,
+      toWorkState: COLUMN_STATUS[input.columnId],
+      toQueue: input.columnId === 'closed' ? 'archive' : 'follow_up',
+      reason: 'staff_queue_move',
+      data: {
+        status: COLUMN_STATUS[input.columnId],
+        metadata: metadata as Prisma.InputJsonValue,
+        ...(input.columnId === 'closed' ? { archivedAt: new Date(), archiveReason: 'queue_closed' } : { archivedAt: null, archiveReason: null }),
+      },
     });
     this.logger.log('person_workspace', 'queue.move', 'Person queue card moved', {
-      service_request_id: id,
+      staff_work_item_id: id,
       member_id: member.id,
       column_id: input.columnId,
     });
     this.emitCallCenterInvalidate('person.queue.move');
-    const updated = await this.requireServiceRequest(id);
+    const updated = await this.requireStaffWorkItem(id);
     const [config, repeatCount, cardContext, callContext, cardStrategies] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCount(updated.customerId),
@@ -777,16 +806,16 @@ export class PersonWorkspaceService {
             tenantId,
             memberId: member.id,
             workDate: dailyWindow.orderDate,
-            serviceRequestId: { notIn: orderedItemIds },
+            staffWorkItemId: { notIn: orderedItemIds },
           },
         }),
         ...orderedItemIds.map((id, index) => this.prisma.db.personDailyTaskOrder.upsert({
           where: {
-            tenantId_memberId_workDate_serviceRequestId: {
+            tenantId_memberId_workDate_staffWorkItemId: {
               tenantId,
               memberId: member.id,
               workDate: dailyWindow.orderDate,
-              serviceRequestId: id,
+              staffWorkItemId: id,
             },
           },
           create: {
@@ -794,7 +823,7 @@ export class PersonWorkspaceService {
             tenantId,
             memberId: member.id,
             workDate: dailyWindow.orderDate,
-            serviceRequestId: id,
+            staffWorkItemId: id,
             position: index,
           },
           update: {
@@ -884,28 +913,23 @@ export class PersonWorkspaceService {
 
   async archiveDailyCall(id: string): Promise<ArchivePersonDailyCallResult> {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
     if (!this.isDailyWorkflowTask(row)) {
       throw new BadRequestException('Only recent call follow-ups can be archived from this list');
     }
 
-    const archivedAt = new Date().toISOString();
-    const metadata = this.record(row.metadata);
-    const archivedBy = this.record(metadata.personArchivedBy);
-    archivedBy[member.id] = archivedAt;
-
-    await this.prisma.db.serviceRequest.updateMany({
-      where: { id: row.id },
-      data: {
-        metadata: {
-          ...metadata,
-          personArchivedBy: archivedBy,
-        } as Prisma.InputJsonValue,
-      },
+    const archivedDate = new Date();
+    const archivedAt = archivedDate.toISOString();
+    await this.staffWork.transition(row.id, {
+      memberId: member.id,
+      toWorkState: 'archived',
+      toQueue: 'archive',
+      reason: 'staff_archived',
+      data: { archivedAt: archivedDate, archiveReason: 'staff_archived' },
     });
     this.logger.log('person_workspace', 'daily.archive', 'Person daily call task archived', {
-      service_request_id: row.id,
+      staff_work_item_id: row.id,
       member_id: member.id,
       archived_at: archivedAt,
     });
@@ -947,14 +971,61 @@ export class PersonWorkspaceService {
   async dialCustomer(input: AircallDialInput): Promise<AircallDialResponse> {
     const member = await this.currentMember();
     if (input.customerId) await this.assertCustomerInWorkspace(input.customerId, member.id);
+    const existingTask = input.staffWorkItemId ? await this.requireStaffWorkItem(input.staffWorkItemId) : null;
+    if (existingTask) {
+      await this.assertStaffWorkScoped(existingTask, member.id);
+      if (input.customerId && existingTask.customerId && input.customerId !== existingTask.customerId) {
+        throw new BadRequestException('The selected phone does not belong to this follow-up.');
+      }
+    }
     const result = await this.aircall.dialForMember(member.id, input);
+    let dialActivityId: string | null = null;
     if (input.customerId) {
-      await this.contactTimeline.recordDial({
+      await this.contactResolver.capturePhonePoints(input.customerId, [{
+        value: input.phone,
+        source: 'call',
+        sourceRef: input.idempotencyKey ?? null,
+        priority: 70,
+        metadata: { surface: input.source, providerAccepted: result.ok },
+      }]);
+      const activity = await this.contactTimeline.recordDial({
         customerId: input.customerId,
         memberId: member.id,
         phone: input.phone,
         result,
       });
+      dialActivityId = activity.id;
+    }
+    let staffWorkItemId = existingTask?.id ?? null;
+    if (result.ok && result.mode === 'aircall_dial') {
+      if (!staffWorkItemId && input.source === 'priority_board' && input.customerId) {
+        const customer = await this.prisma.db.customer.findFirst({ where: { id: input.customerId } });
+        if (!customer) throw new NotFoundException('Customer not found.');
+        const work = await this.staffWork.create({
+          customerId: customer.id,
+          assignedMemberId: member.id,
+          axis: 'sales',
+          source: 'priority_call',
+          title: `${customerDisplayName(customer)} follow-up`,
+          description: 'Call accepted from the priority customer list. Save the outcome before leaving this follow-up.',
+          sourceEventId: dialActivityId ?? undefined,
+          idempotencyKey: `priority-dial:${input.idempotencyKey ?? dialActivityId ?? prefixedId('dial')}`,
+          metadata: {
+            personSource: 'priority_board',
+            phone: result.normalizedPhone,
+            providerStatus: result.providerStatus,
+          },
+        });
+        staffWorkItemId = work.id;
+      }
+      if (staffWorkItemId) {
+        await this.staffWork.recordOutcome(staffWorkItemId, member.id, {
+          disposition: 'not_selected',
+          phone: result.normalizedPhone,
+          providerResult: result.mode,
+          idempotencyKey: `dial-outcome:${input.idempotencyKey ?? dialActivityId ?? staffWorkItemId}`,
+        });
+      }
     }
     this.logger.log('person_workspace', 'aircall.dial', 'Person workspace Aircall dial requested', {
       member_id: member.id,
@@ -965,21 +1036,21 @@ export class PersonWorkspaceService {
       provider_status: result.providerStatus,
     });
     this.emitCallCenterInvalidate('person.aircall.dial');
-    return result;
+    return { ...result, staffWorkItemId };
   }
 
   async toggleQueuePin(id: string, input: TogglePersonQueuePinInput) {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
-    const pin = await this.workspacePins.toggle(member.id, 'service_request', id, input.pinned);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
+    const pin = await this.workspacePins.toggle(member.id, 'staff_work_item', id, input.pinned);
     this.logger.log('person_workspace', 'queue.pin', 'Person queue pin toggled', {
-      service_request_id: id,
+      staff_work_item_id: id,
       member_id: member.id,
       pinned: pin.pinned,
     });
     this.emitCallCenterInvalidate('person.queue.pin');
-    const updated = await this.requireServiceRequest(id);
+    const updated = await this.requireStaffWorkItem(id);
     const [config, repeatCount, cardContext, callContext, cardStrategies] = await Promise.all([
       this.urgencyConfig(),
       this.repeatCount(updated.customerId),
@@ -1046,8 +1117,8 @@ export class PersonWorkspaceService {
 
   async transferTask(id: string, input: TransferPersonTaskInput): Promise<PersonTaskTransferResult> {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
     if (CLOSED.has(row.status)) throw new BadRequestException('Closed or resolved tasks cannot be transferred');
     if (input.targetMemberId === member.id) throw new BadRequestException('Choose another teammate as transfer target');
 
@@ -1080,7 +1151,7 @@ export class PersonWorkspaceService {
       };
       const history = Array.isArray(metadata.transferHistory) ? metadata.transferHistory : [];
 
-      await tx.serviceRequest.updateMany({
+      await tx.staffWorkItem.updateMany({
         where: { id: row.id, tenantId },
         data: {
           assignedMemberId: target.id,
@@ -1097,11 +1168,11 @@ export class PersonWorkspaceService {
         },
       });
 
-      await tx.serviceRequestComment.create({
+      await tx.staffWorkComment.create({
         data: {
-          id: prefixedId('srcm'),
+          id: prefixedId('swc'),
           tenantId,
-          serviceRequestId: row.id,
+          staffWorkItemId: row.id,
           actorId: member.id,
           actorType: 'member',
           body: `Transferred from ${memberDisplayName(row.assignedMember ?? member)} to ${memberDisplayName(target)} (${fromAxis ?? 'unassigned'} -> ${toAxis}). Reason: ${reason}`,
@@ -1117,19 +1188,19 @@ export class PersonWorkspaceService {
       });
 
       if (row.assignedMemberId && row.assignedMemberId !== target.id) {
-        await tx.taskParticipant.upsert({
+        await tx.staffWorkParticipant.upsert({
           where: {
-            tenantId_serviceRequestId_memberId_role: {
+            tenantId_staffWorkItemId_memberId_role: {
               tenantId,
-              serviceRequestId: row.id,
+              staffWorkItemId: row.id,
               memberId: row.assignedMemberId,
               role: 'watcher',
             },
           },
           create: {
-            id: prefixedId('tpar'),
+            id: prefixedId('swp'),
             tenantId,
-            serviceRequestId: row.id,
+            staffWorkItemId: row.id,
             memberId: row.assignedMemberId,
             role: 'watcher',
             source: 'manual_transfer',
@@ -1214,7 +1285,7 @@ export class PersonWorkspaceService {
           source: 'person_workspace_transfer',
           reason,
           metadata: {
-            serviceRequestId: row.id,
+            staffWorkItemId: row.id,
             assignmentId: targetAssignment.id,
             fromAxis,
             toAxis,
@@ -1237,7 +1308,7 @@ export class PersonWorkspaceService {
             source: 'person_workspace_transfer',
             reason,
             metadata: {
-              serviceRequestId: row.id,
+              staffWorkItemId: row.id,
               toAxis,
               disabledSourceAssignmentIds: currentAssignments.map((assignment) => assignment.id),
             } as Prisma.InputJsonValue,
@@ -1249,7 +1320,7 @@ export class PersonWorkspaceService {
     });
 
     this.logger.log('person_workspace', 'task.transfer', 'Person workspace task transferred', {
-      service_request_id: row.id,
+      staff_work_item_id: row.id,
       customer_id: row.customerId,
       from_member_id: row.assignedMemberId ?? member.id,
       to_member_id: target.id,
@@ -1275,12 +1346,12 @@ export class PersonWorkspaceService {
 
   async taskBrief(id: string): Promise<PersonTaskBriefDetail> {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
 
     const customerId = row.customerId;
-    const customerEmail = row.customer?.email ?? row.customerUser?.email ?? null;
-    const customerPhone = row.customer?.phone ?? row.customerUser?.phone ?? null;
+    const customerEmail = row.customer?.email ?? null;
+    const customerPhone = row.customer?.phone ?? null;
     const aircallWhere = aircallWhereFor(customerEmail, customerPhone);
     const aircallScopes: Prisma.AircallCallEventWhereInput[] = [
       ...(row.sourceCallId ? [{ id: row.sourceCallId }] : []),
@@ -1369,13 +1440,13 @@ export class PersonWorkspaceService {
 
   async saveTaskNote(id: string, input: SavePersonTaskNoteInput) {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
-    await this.prisma.db.serviceRequestComment.create({
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
+    await this.prisma.db.staffWorkComment.create({
       data: {
-        id: prefixedId('srcm'),
+        id: prefixedId('swc'),
         tenantId: this.tenantId(),
-        serviceRequestId: row.id,
+        staffWorkItemId: row.id,
         actorId: member.id,
         actorType: 'member',
         body: input.body,
@@ -1383,9 +1454,9 @@ export class PersonWorkspaceService {
         attachmentsJson: [{ kind: 'person_task_note', customerId: row.customerId }] as Prisma.InputJsonValue,
       },
     });
-    await this.prisma.db.serviceRequest.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
+    await this.prisma.db.staffWorkItem.updateMany({ where: { id: row.id }, data: { updatedAt: new Date() } });
     this.logger.log('person_workspace', 'task.note', 'Task brief note saved', {
-      service_request_id: row.id,
+      staff_work_item_id: row.id,
       member_id: member.id,
       customer_id: row.customerId,
     });
@@ -1393,10 +1464,34 @@ export class PersonWorkspaceService {
     return this.taskBrief(id);
   }
 
+  async recordTaskOutcome(id: string, input: RecordPersonTaskOutcomeInput): Promise<PersonTaskOutcome> {
+    const member = await this.currentMember();
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
+    const outcome = await this.staffWork.recordOutcome(row.id, member.id, input);
+    if (row.customerId && outcome.visibleAfter) {
+      await this.contactTimeline.recordFollowUp({
+        customerId: row.customerId,
+        memberId: member.id,
+        scheduledAt: new Date(outcome.visibleAfter),
+        note: input.note,
+      });
+    }
+    this.logger.log('person_workspace', 'task.outcome', 'Person task outcome saved', {
+      staff_work_item_id: row.id,
+      member_id: member.id,
+      customer_id: row.customerId,
+      disposition: outcome.disposition,
+      queue_location: outcome.queueLocation,
+    });
+    this.emitCallCenterInvalidate('person.task.outcome');
+    return outcome;
+  }
+
   async scheduleTaskFollowUp(id: string, input: SchedulePersonTaskFollowUpInput) {
     const member = await this.currentMember();
-    const row = await this.requireServiceRequest(id);
-    await this.assertServiceRequestScoped(row, member.id);
+    const row = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(row, member.id);
     const scheduledAt = new Date(input.scheduledAt);
     if (Number.isNaN(scheduledAt.getTime())) throw new BadRequestException('Follow-up time is invalid');
     const metadata = this.record(row.metadata);
@@ -1410,10 +1505,16 @@ export class PersonWorkspaceService {
       createdByMemberId: member.id,
       createdAt: new Date().toISOString(),
     };
-    await this.prisma.db.serviceRequest.updateMany({
-      where: { id: row.id },
+    await this.staffWork.transition(row.id, {
+      memberId: member.id,
+      toWorkState: 'scheduled',
+      toQueue: 'scheduled',
+      reason: 'staff_scheduled_follow_up',
       data: {
         dueAt: scheduledAt,
+        visibleAfter: scheduledAt,
+        archivedAt: null,
+        archiveReason: null,
         status: CLOSED.has(row.status) ? 'open' : row.status,
         metadata: {
           ...metadata,
@@ -1421,11 +1522,11 @@ export class PersonWorkspaceService {
         } as Prisma.InputJsonValue,
       },
     });
-    await this.prisma.db.serviceRequestComment.create({
+    await this.prisma.db.staffWorkComment.create({
       data: {
-        id: prefixedId('srcm'),
+        id: prefixedId('swc'),
         tenantId: this.tenantId(),
-        serviceRequestId: row.id,
+        staffWorkItemId: row.id,
         actorId: member.id,
         actorType: 'member',
         body: input.note?.trim() ? `Follow-up scheduled: ${input.note.trim()}` : `Follow-up scheduled for ${scheduledAt.toISOString()}`,
@@ -1442,7 +1543,7 @@ export class PersonWorkspaceService {
       });
     }
     this.logger.log('person_workspace', 'task.calendar', 'Task follow-up scheduled', {
-      service_request_id: row.id,
+      staff_work_item_id: row.id,
       member_id: member.id,
       scheduled_at: scheduledAt.toISOString(),
     });
@@ -1657,10 +1758,14 @@ export class PersonWorkspaceService {
   }
 
   async calendar() {
+    const member = await this.currentMember();
     const [requests, calls, mail] = await Promise.all([
-      this.prisma.db.serviceRequest.findMany({
-        where: { status: { notIn: Array.from(CLOSED) } },
-        include: serviceRequestInclude,
+      this.prisma.db.staffWorkItem.findMany({
+        where: {
+          status: { notIn: Array.from(CLOSED) },
+          OR: [{ assignedMemberId: member.id }, { participants: { some: { memberId: member.id } } }],
+        },
+        include: staffWorkItemInclude,
         orderBy: [{ updatedAt: 'desc' }],
         take: 150,
       }),
@@ -2134,17 +2239,17 @@ export class PersonWorkspaceService {
     ]);
   }
 
-  private async assertServiceRequestScoped(row: ServiceRequestRow, memberId: string) {
+  private async assertStaffWorkScoped(row: StaffWorkItemRow, memberId: string) {
     const assignments = await this.axisAssignments(memberId);
     if (
-      !this.isServiceRequestScoped(row, assignments, memberId)
+      !this.isStaffWorkScoped(row, assignments, memberId)
       && !(await this.isDailyWorkflowOperatorScoped(row, memberId))
     ) {
       throw new ForbiddenException('Customer is outside your workspace scope');
     }
   }
 
-  private async isDailyWorkflowOperatorScoped(row: ServiceRequestRow, memberId: string) {
+  private async isDailyWorkflowOperatorScoped(row: StaffWorkItemRow, memberId: string) {
     if (!this.isDailyWorkflowTask(row) || !row.sourceCallId) return false;
     const aircallUserIds = await this.memberAircallUserIds(memberId);
     if (aircallUserIds.length === 0) return false;
@@ -2172,31 +2277,12 @@ export class PersonWorkspaceService {
     return row.axis ? axes.has(row.axis) : true;
   }
 
-  private isOwnedSegmentPriorityTask(
-    row: { customerId: string | null; axis: string | null },
+  private isStaffWorkScoped(
+    row: { customerId: string | null; assignedMemberId: string | null; axis: string | null; participants?: Array<{ memberId: string | null }> },
     assignments: AxisAssignments,
-    ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
-  ) {
-    if (!row.customerId) return false;
-    if (!ownedSegmentByCustomer.has(row.customerId)) return false;
-    const axes = assignments.get(row.customerId);
-    if (!axes) return false;
-    return row.axis ? axes.has(row.axis) : true;
-  }
-
-  private isGeneratedOrSegmentPriorityTask(row: { source: string; sourceCallId?: string | null; sourceEmailId?: string | null; metadata: Prisma.JsonValue }) {
-    const source = taskSource(row);
-    return hasGeneratedBrief(source);
-  }
-
-  private isPriorityKanbanTask(
-    row: ServiceRequestRow,
     memberId: string,
-    assignments: AxisAssignments,
-    ownedSegmentByCustomer: Map<string, OwnedSegmentContext>,
   ) {
-    if (taskSource(row) === 'admin_transfer') return row.assignedMemberId === memberId;
-    return this.isGeneratedOrSegmentPriorityTask(row) && this.isOwnedSegmentPriorityTask(row, assignments, ownedSegmentByCustomer);
+    return this.isServiceRequestScoped(row, assignments, memberId);
   }
 
   private async priorityCustomerContext(
@@ -2221,7 +2307,12 @@ export class PersonWorkspaceService {
     const emails = [...emailToCustomerId.keys()];
     const phones = [...phoneToCustomerId.keys()];
 
-    const [serviceRows, customerNoteRows, noteRows, commentRows, orderRows, callRows] = await Promise.all([
+    const [workRows, serviceRows, customerNoteRows, noteRows, commentRows, staffCommentRows, orderRows, callRows] = await Promise.all([
+      this.prisma.db.staffWorkItem.findMany({
+        where: { customerId: { in: ids }, status: { notIn: Array.from(CLOSED) } },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 20, 200), 3000),
+      }),
       this.prisma.db.serviceRequest.findMany({
         where: { customerId: { in: ids } },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -2249,6 +2340,18 @@ export class PersonWorkspaceService {
         orderBy: [{ createdAt: 'desc' }],
         take: Math.min(Math.max(ids.length * 8, 100), 1600),
       }),
+      this.prisma.db.staffWorkComment.findMany({
+        where: {
+          internal: true,
+          staffWorkItem: { customerId: { in: ids } },
+        },
+        include: {
+          actor: { select: { id: true, firstName: true, lastName: true, email: true } },
+          staffWorkItem: { select: { customerId: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 8, 100), 1600),
+      }),
       this.prisma.db.commerceOrder.findMany({
         where: { customerId: { in: ids } },
         orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
@@ -2272,17 +2375,24 @@ export class PersonWorkspaceService {
       ...customerNoteRows.map((row) => row.authorMemberId),
       ...noteRows.map((row) => row.createdByActorId),
       ...commentRows.map((row) => row.actorId),
+      ...staffCommentRows.map((row) => row.actorId),
     ]);
     const members = memberIds.length
       ? await this.prisma.db.member.findMany({ where: { id: { in: memberIds } }, select: { id: true, firstName: true, lastName: true, email: true } })
       : [];
     const memberById = new Map(members.map((member) => [member.id, memberDisplayName(member)] as const));
 
+    for (const row of workRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context || CLOSED.has(row.status)) continue;
+      context.openTasksCount += 1;
+    }
+
     for (const row of serviceRows) {
       if (!row.customerId) continue;
       const context = result.get(row.customerId);
       if (!context || CLOSED.has(row.status) || INTERNAL_WORKSPACE_KINDS.has(String(this.record(row.metadata).personWorkspaceKind))) continue;
-      context.openTasksCount += 1;
       if (isCustomerRequestLike(row)) context.openRequestsCount += 1;
     }
 
@@ -2322,6 +2432,21 @@ export class PersonWorkspaceService {
         id: row.id,
         body: row.body,
         authorName: memberById.get(row.actorId ?? '') ?? 'Staff member',
+        createdAt: row.createdAt.toISOString(),
+      };
+      context.notesCount += 1;
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+
+    for (const row of staffCommentRows) {
+      const customerId = row.staffWorkItem.customerId;
+      if (!customerId) continue;
+      const context = result.get(customerId);
+      if (!context) continue;
+      const note = {
+        id: row.id,
+        body: row.body,
+        authorName: row.actor ? memberDisplayName(row.actor) : memberById.get(row.actorId ?? '') ?? 'Staff member',
         createdAt: row.createdAt.toISOString(),
       };
       context.notesCount += 1;
@@ -2514,6 +2639,8 @@ export class PersonWorkspaceService {
       pinned: true,
       pinnedAt,
       source: 'manual' as const,
+      currentDisposition: null,
+      outcomeRequired: false,
       phone: customer.phone ?? undefined,
       email: customer.email ?? undefined,
       ordersCount: customer.ordersCount,
@@ -2551,6 +2678,8 @@ export class PersonWorkspaceService {
       pinned: item.pinned,
       pinnedAt: null,
       source: 'segment_priority',
+      currentDisposition: null,
+      outcomeRequired: false,
       phone: item.phone ?? undefined,
       email: item.email ?? undefined,
       ordersCount: item.ordersCount,
@@ -2593,10 +2722,10 @@ export class PersonWorkspaceService {
     return member;
   }
 
-  private async requireServiceRequest(id: string) {
-    const row = await this.prisma.db.serviceRequest.findFirst({
+  private async requireStaffWorkItem(id: string) {
+    const row = await this.prisma.db.staffWorkItem.findFirst({
       where: { id },
-      include: serviceRequestInclude,
+      include: staffWorkItemInclude,
     });
     if (!row) throw new NotFoundException('Follow-up not found');
     return row;
@@ -2635,7 +2764,7 @@ export class PersonWorkspaceService {
   }
 
   private queueCard(
-    row: ServiceRequestRow,
+    row: StaffWorkItemRow,
     memberId: string,
     config = this.scoring.configFrom({}),
     repeatCount = 0,
@@ -2653,7 +2782,6 @@ export class PersonWorkspaceService {
     const source = taskSource(row);
     const header = taskHeader(row, metadata, callContext);
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
-    const suppressLocalFallbackSignals = shouldSuppressLocalFallbackSignals(sourceCall);
     const ticket = ticketNumber(row);
     const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
     const generatedBrief = hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined;
@@ -2692,13 +2820,13 @@ export class PersonWorkspaceService {
       pinned: pinnedAt !== null,
       pinnedAt,
       source,
-      createdAt: row.createdAt.toISOString(),
+      createdAt: workDisplayTimestamp(row).toISOString(),
       unreached: missedNote !== null,
       missedNote,
       customerRisk: customerRisk.risk,
       customerRiskNote: customerRisk.note,
-      callIntent: suppressLocalFallbackSignals ? 'inquiry' : workflowBadges.callIntent,
-      psychTags: suppressLocalFallbackSignals ? [] : workflowBadges.psychTags,
+      callIntent: workflowBadges.callIntent,
+      psychTags: workflowBadges.psychTags,
       phone: header.phone ?? undefined,
       email: header.email ?? undefined,
       ordersCount: row.customer?.ordersCount ?? undefined,
@@ -2711,6 +2839,8 @@ export class PersonWorkspaceService {
       callExcerpt: staffDisplayText(generatedBrief?.transcriptSnippet) || null,
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
+      currentDisposition: row.currentDisposition,
+      outcomeRequired: row.currentDisposition === 'not_selected',
     };
     const displayCard = withPersonCardDisplay(card);
     return publicPersonQueueCard(strategies ? personCardWithStrategies(displayCard, strategies) : displayCard);
@@ -2753,7 +2883,7 @@ export class PersonWorkspaceService {
   private async repeatCounts(customerIds: string[]) {
     const uniqueIds = Array.from(new Set(customerIds));
     if (uniqueIds.length === 0) return new Map<string, number>();
-    const rows = await this.prisma.db.serviceRequest.groupBy({
+    const rows = await this.prisma.db.staffWorkItem.groupBy({
       by: ['customerId'],
       where: { customerId: { in: uniqueIds } },
       _count: { _all: true },
@@ -2786,7 +2916,7 @@ export class PersonWorkspaceService {
         _count: { _all: true },
         _sum: { totalPrice: true },
       }),
-      this.prisma.db.serviceRequest.groupBy({
+      this.prisma.db.staffWorkItem.groupBy({
         by: ['customerId'],
         where: { customerId: { in: uniqueIds }, createdAt: { gte: since } },
         _count: { _all: true },
@@ -2836,7 +2966,7 @@ export class PersonWorkspaceService {
     return { callsById: new Map(calls.map((call) => [call.id, call])) };
   }
 
-  private calendarFromRequest(row: ServiceRequestRow) {
+  private calendarFromRequest(row: StaffWorkItemRow) {
     const date = row.dueAt ?? (row.assignedMemberId ? row.updatedAt : row.createdAt);
     const source = taskSource(row);
     const display = calendarDisplayFromRequest(row, hasGeneratedBrief(source) ? this.brief(row) : null);
@@ -2845,9 +2975,9 @@ export class PersonWorkspaceService {
       serviceRequestId: row.id,
       customerId: row.customerId,
       title: row.title,
-      customer: row.customer?.companyName ?? row.customerUser?.email ?? null,
-      customerEmail: row.customer?.email ?? row.customerUser?.email ?? null,
-      customerPhone: row.customer?.phone ?? row.customerUser?.phone ?? null,
+      customer: row.customer?.companyName ?? row.customer?.email ?? null,
+      customerEmail: row.customer?.email ?? null,
+      customerPhone: row.customer?.phone ?? null,
       dayIso: isoDate(date),
       startHour: hour(date),
       durationMinutes: row.priority === 'critical' || row.priority === 'urgent' ? 30 : 20,
@@ -2857,22 +2987,21 @@ export class PersonWorkspaceService {
     };
   }
 
-  private brief(row: ServiceRequestRow, callContext?: CardCallContext): PersonTaskBrief {
+  private brief(row: StaffWorkItemRow, callContext?: CardCallContext): PersonTaskBrief {
     const metadata = this.record(row.metadata);
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
     const resolver = resolverForBrief(row, metadata, sourceCall);
     if (resolver) return transcriptPersonBrief(row, resolver, sourceCall);
 
     return {
-      whyCalling: row.description ?? row.title,
-      upsetAbout: row.priority === 'critical' || row.priority === 'urgent' ? 'High-priority customer follow-up needs a human response.' : 'No explicit complaint captured.',
-      callGoal: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Move the customer follow-up to the next accountable status.',
-      suggestedActions: ['Review customer context', 'Add an internal note', 'Update status before leaving the screen'],
-      promptKey: 'person.workspace.live-context',
-      promptVersion: 'live',
-      modelUsed: 'not-generated',
-      confidence: 1,
-      transcriptSnippet: row.description?.slice(0, 240),
+      whyCalling: 'Verified call analysis is not available yet.',
+      upsetAbout: 'Customer mood and issue are unavailable until the call analysis succeeds.',
+      callGoal: 'Review the original call before contacting this customer.',
+      suggestedActions: [],
+      promptKey: 'person.workspace.resolver-unavailable',
+      promptVersion: String(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
+      modelUsed: 'unavailable',
+      confidence: 0,
     };
   }
 
@@ -3013,14 +3142,29 @@ export class PersonWorkspaceService {
     return typeof kind !== 'string' || !INTERNAL_WORKSPACE_KINDS.has(kind);
   }
 
-  private isArchivedForMember(row: { metadata: Prisma.JsonValue }, memberId: string) {
+  private isArchivedForMember(
+    row: { metadata: Prisma.JsonValue; archivedAt?: Date | null; queueLocation?: string | null },
+    memberId: string,
+  ) {
+    if (row.archivedAt || row.queueLocation === 'archive') return true;
     const metadata = this.record(row.metadata);
     const archivedBy = this.record(metadata.personArchivedBy);
     return typeof archivedBy[memberId] === 'string' || typeof archivedBy[memberId] === 'number';
   }
 
-  private isDailyWorkflowArchived(row: { metadata: Prisma.JsonValue; createdAt: Date }, memberId: string, archiveStart: Date) {
-    return row.createdAt.getTime() < archiveStart.getTime() || this.isArchivedForMember(row, memberId);
+  private isDailyWorkflowArchived(
+    row: {
+      metadata: Prisma.JsonValue;
+      createdAt: Date;
+      sourceOccurredAt?: Date | null;
+      visibleAfter?: Date | null;
+      archivedAt?: Date | null;
+      queueLocation?: string | null;
+    },
+    memberId: string,
+    archiveStart: Date,
+  ) {
+    return workDisplayTimestamp(row).getTime() < archiveStart.getTime() || this.isArchivedForMember(row, memberId);
   }
 
   private isOperationalTrainingRequest(row: { status: string; priority: string; source: string; surface: string; title: string; metadata: Prisma.JsonValue }) {
@@ -3137,13 +3281,6 @@ function groupBy<T>(rows: T[], keyFn: (row: T) => string) {
   return grouped;
 }
 
-function mergeRequestRows(primary: ServiceRequestRow[], extra: ServiceRequestRow[]) {
-  const rows = new Map<string, ServiceRequestRow>();
-  for (const row of primary) rows.set(row.id, row);
-  for (const row of extra) rows.set(row.id, row);
-  return Array.from(rows.values());
-}
-
 function dailyWorkflowRange(range: PersonDailyOperationRange, today: BusinessDayRange, now = new Date()) {
   const sevenDayStart = new Date(now.getTime() - 7 * 86_400_000);
   if (range === 'today') {
@@ -3227,7 +3364,7 @@ function highIntentBandIds(strategy: AlgorithmStrategyDefinition) {
 }
 
 function resolverForBrief(
-  row: ServiceRequestRow,
+  row: StaffWorkItemRow,
   metadata: Record<string, unknown>,
   sourceCall?: CardCallRow | null,
 ): TranscriptResolverOutput | null {
@@ -3242,134 +3379,42 @@ function resolverForBrief(
     workflowState.resolver_output,
   ];
   for (const candidate of candidates) {
-    const parsed = transcriptResolverOutputSchema.safeParse(candidate);
+    const parsed = parseStoredTranscriptResolverOutput(candidate);
     if (parsed.success) return parsed.data;
   }
   return null;
 }
 
 function transcriptPersonBrief(
-  row: ServiceRequestRow,
+  row: StaffWorkItemRow,
   resolver: TranscriptResolverOutput,
   sourceCall?: CardCallRow | null,
 ): PersonTaskBrief {
-  if (shouldSuppressLocalFallbackSignals(sourceCall)) {
-    const transcript = sourceCall?.transcriptRaw?.replace(/\s+/g, ' ').trim() ?? '';
-    return {
-      whyCalling: 'Promo patch, embroidery, digitizing, or vendor-service talk was captured; no DTF Bank purchase or account follow-up request is confirmed.',
-      upsetAbout: 'No customer complaint or DTF Bank product request was confirmed in this call.',
-      callGoal: 'Do not treat this as a purchase follow-up unless a person confirms a real DTF Bank product need.',
-      suggestedActions: ['Skim the call excerpt for a real product request', 'If no DTF Bank product need exists, archive this follow-up', 'Do not promise refund, pricing, or reorder steps from this call alone'],
-      promptKey: 'person.workspace.local-fallback-suppressed',
-      promptVersion: String(sourceCall?.resolvedWithVersion ?? resolver.resolved_with_version ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
-      modelUsed: sourceCall?.resolverModel ?? 'local-rule-fallback',
-      confidence: 0.35,
-      transcriptSnippet: transcript.slice(0, 500) || row.description?.slice(0, 240),
-    };
-  }
   const personBrief = resolver.person_brief;
-  const synthesized = synthesizedResolverBrief(row, resolver, sourceCall);
-  const suggestedActions = cleanedActions(personBrief.suggested_actions);
   return {
-    whyCalling: staffBriefText(personBrief.why_calling, synthesized.whyCalling),
-    upsetAbout: staffBriefText(personBrief.upset_about, synthesized.upsetAbout),
-    callGoal: staffBriefText(personBrief.call_goal, synthesized.callGoal),
-    suggestedActions: suggestedActions.length > 0 ? suggestedActions : synthesized.suggestedActions,
+    whyCalling: staffBriefText(personBrief.why_calling, ''),
+    upsetAbout: staffBriefText(personBrief.upset_about || personBrief.issue, ''),
+    callGoal: staffBriefText(personBrief.call_goal || personBrief.next_action, ''),
+    suggestedActions: cleanedActions(personBrief.suggested_actions),
     promptKey: 'person.workspace.transcript-brief',
     promptVersion: String(sourceCall?.resolvedWithVersion ?? resolver.resolved_with_version ?? TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
     modelUsed: sourceCall?.resolverModel ?? 'transcript-resolver',
     confidence: resolverBriefConfidence(resolver),
-    transcriptSnippet: staffBriefText(personBrief.transcript_snippet, sourceCall?.transcriptRaw?.slice(0, 500) ?? resolver.summary ?? row.description ?? row.title),
+    transcriptSnippet: staffBriefText(personBrief.transcript_snippet, ''),
   };
-}
-
-function synthesizedResolverBrief(
-  row: ServiceRequestRow,
-  resolver: TranscriptResolverOutput,
-  sourceCall?: CardCallRow | null,
-) {
-  const primarySignal = resolver.operational_signals.find((signal) => signal.action_required && signal.intent !== 'no_action')
-    ?? resolver.operational_signals.find((signal) => signal.intent !== 'no_action')
-    ?? null;
-  const products = resolver.product_mentions
-    .map((mention) => mention.name_hint ?? mention.sku)
-    .filter((value): value is string => Boolean(value?.trim()));
-  const productText = products.length ? ` about ${products.slice(0, 3).join(', ')}` : '';
-  const tags = new Set(resolver.psych_tags);
-  const signalIntent = primarySignal?.intent ?? null;
-  const intent = signalIntent
-    ?? (resolver.payment_signals.refund_asked ? 'refund_requested' : null)
-    ?? (resolver.shipping_signals.tracking_asked || resolver.shipping_signals.complaint ? 'shipping_status_question' : null)
-    ?? (tags.has('follow_up') || resolver.call_intent === 'follow_up' ? 'callback_requested' : null)
-    ?? (tags.has('purchase_intent') || resolver.call_intent === 'sale' ? 'sales_follow_up' : null)
-    ?? (products.length > 0 ? 'product_fit_question' : 'no_action');
-
-  const whyByIntent: Record<string, string> = {
-    refund_requested: 'Customer mentioned refund, return, cancellation, or payment recovery; handle the account follow-up.',
-    shipping_status_question: 'Customer asked about shipping, delivery, tracking, freight, or address details.',
-    callback_requested: 'Customer or agent indicated a follow-up call is needed; call back and close the loop.',
-    sales_follow_up: `Customer showed purchase or sales intent${productText}; qualify the next sales step.`,
-    product_fit_question: `Customer needs product guidance${productText}; clarify fit before recommending the next step.`,
-    no_action: resolver.summary || row.description || row.title,
-  };
-  const goalByIntent: Record<string, string> = {
-    refund_requested: 'Clarify order number, reason, and the next account-side action.',
-    shipping_status_question: 'Clarify order/tracking context and give the next accountable shipping update.',
-    callback_requested: 'Reach the customer and confirm what decision, order, or question is pending.',
-    sales_follow_up: 'Qualify product need, timing, price path, and next sales action.',
-    product_fit_question: 'Clarify use case, volume, material, and size before recommending a product.',
-    no_action: CLOSED.has(row.status) ? 'Confirm the resolution and close the loop.' : 'Decide whether a human follow-up is still needed.',
-  };
-  const upsetAbout = resolver.payment_signals.refund_asked
-    ? 'Refund, return, cancellation, or payment recovery was mentioned.'
-    : resolver.shipping_signals.complaint || resolver.shipping_signals.tracking_asked
-      ? 'Shipping, delivery, tracking, freight, or address uncertainty was mentioned.'
-      : resolver.payment_signals.complaint
-        ? 'Payment, pricing, or refund friction was mentioned.'
-        : tags.has('complaint')
-          ? 'Complaint language was captured in the transcript.'
-          : 'No explicit complaint captured in the transcript.';
-
-  return {
-    whyCalling: primarySignal?.reason ?? whyByIntent[intent] ?? resolver.summary ?? row.description ?? row.title,
-    upsetAbout,
-    callGoal: goalByIntent[intent] ?? 'Move the customer to the next accountable purchase or care step.',
-    suggestedActions: cleanedActions([
-      ...(synthesizedActionsByIntent(intent, products)),
-      primarySignal?.suggested_task_title ? `Use follow-up context: ${primarySignal.suggested_task_title}` : null,
-      sourceCall?.transcriptRaw ? 'Record the call outcome before leaving the follow-up' : null,
-    ]),
-  };
-}
-
-function synthesizedActionsByIntent(intent: string, products: string[]) {
-  const productAction = products.length ? `Confirm product context: ${products.slice(0, 3).join(', ')}` : null;
-  const actions: Record<string, Array<string | null>> = {
-    refund_requested: ['Ask for order number and refund reason', 'Clarify whether replacement, return, or account review is needed', 'Set the next account-side action'],
-    shipping_status_question: ['Ask for order or tracking number', 'Clarify freight, address, or delivery issue', 'Give the next accountable update path'],
-    callback_requested: ['Call the customer back from the follow-up phone number', 'Confirm what decision or question is pending', 'Record the outcome before leaving the follow-up'],
-    sales_follow_up: ['Clarify product need, timing, and budget', productAction, 'Set quote or order next step'],
-    product_fit_question: ['Ask use case, volume, material, and size', productAction, 'Recommend the matching product family'],
-    no_action: ['Review call signal', 'Decide if follow-up is required', 'Record the outcome before leaving the follow-up'],
-  };
-  return actions[intent] ?? actions.no_action;
 }
 
 function resolverBriefConfidence(resolver: TranscriptResolverOutput) {
   const values = [
-    resolver.customer_match.confidence,
-    ...resolver.product_mentions.map((mention) => mention.confidence),
+    resolver.conversation.confidence,
+    resolver.customer_mood.confidence,
+    resolver.customer_issue.confidence,
+    resolver.promise.confidence,
+    resolver.next_action.confidence,
     ...resolver.operational_signals.map((signal) => signal.confidence),
   ].filter((value) => Number.isFinite(value));
-  return Math.max(0.1, Math.min(1, values.length > 0 ? Math.max(...values) : 0.7));
+  return Math.max(0, Math.min(1, values.length > 0 ? Math.max(...values) : 0));
 }
-
-function shouldSuppressLocalFallbackSignals(sourceCall?: CardCallRow | null) {
-  return sourceCall?.resolverModel === 'local-rule-fallback'
-    && Boolean(sourceCall.transcriptRaw)
-    && isNonCatalogPromoPatchInquiry(sourceCall.transcriptRaw ?? '');
-}
-
 function cleanedActions(values: Array<string | null | undefined>) {
   const seen = new Set<string>();
   const actions: string[] = [];
@@ -3413,6 +3458,19 @@ function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay)
 }
 
 function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
+  if (card.kind === 'task' && card.aiBrief?.modelUsed === 'unavailable') {
+    return {
+      displayTitle: staffDisplayText(card.title),
+      displayReason: 'Verified call analysis is not available yet.',
+      displayConcern: 'No verified customer mood or issue is available.',
+      displayOutcome: 'Review the original call before contacting this customer.',
+      displayActions: [],
+      displayBadges: [{ label: 'Call review required', tone: 'warning' }],
+      displayCustomerSummary: staffCustomerSummary(card),
+      displayCommerceSnapshot: staffCommerceSnapshot(card),
+      displayCallSnapshot: staffCallSnapshot(card),
+    };
+  }
   const actionLabel = staffActionLabelForCard(card);
   const actionTone = staffActionToneForCard(card);
   const reason = staffCardReason(card, actionLabel);
@@ -3629,7 +3687,7 @@ function staffFocusLabel(value: string | null | undefined) {
   return titleize(staffBriefText(normalized, normalized));
 }
 
-function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {
+function taskHeader(row: StaffWorkItemRow, metadata: Record<string, unknown>, callContext?: CardCallContext) {
   if (row.customer) {
     return {
       title: shopifyCustomerHeader(row.customer),
@@ -3645,7 +3703,6 @@ function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, c
   const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
   const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) : null;
   const phone = firstString(
-    row.customerUser?.phone,
     params.contactPhoneE164,
     params.customerPhone,
     params.phone,
@@ -3657,7 +3714,6 @@ function taskHeader(row: ServiceRequestRow, metadata: Record<string, unknown>, c
     sourceCall?.contactPhone,
   );
   const email = firstString(
-    row.customerUser?.email,
     params.customerEmail,
     params.email,
     params.contactEmail,
@@ -3848,7 +3904,7 @@ function callsSince<T extends { eventTimestamp: Date }>(rows: T[], since: Date) 
 }
 
 function taskTimeline(
-  row: ServiceRequestRow,
+  row: StaffWorkItemRow,
   orders: Array<{
     id: string;
     shopifyOrderNumber: string | null;
@@ -3997,21 +4053,6 @@ function latestCallSummary(calls: Array<{
 }>): PersonCallSummary | null {
   const call = calls.find((row) => row.resolverOutput) ?? calls.find((row) => row.transcriptRaw);
   if (!call) return null;
-  if (call.resolverModel === 'local-rule-fallback' && call.transcriptRaw && isNonCatalogPromoPatchInquiry(call.transcriptRaw)) {
-    return {
-      communicationStyle: 'No confirmed follow-up',
-      decisionMakingStyle: 'Low',
-      trustLevel: null,
-      engagementLevel: null,
-      winProbability: null,
-      motivators: [],
-      objections: [],
-      buyingSignals: [],
-      hesitationSignals: ['Promo/vendor-service conversation'],
-      talkTrack: 'The local fallback detected promo patch or vendor-service talk, but no confirmed DTF Bank product purchase or account follow-up request.',
-      generatedAt: call.resolvedAt?.toISOString() ?? call.eventTimestamp.toISOString(),
-    };
-  }
   const output = asRecord(call.resolverOutput);
   const tags = stringArray(output.psych_tags);
   const shipping = asRecord(output.shipping_signals);
@@ -4233,6 +4274,16 @@ function sortByCreatedAtDesc(
   const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
   const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
   return rightTime - leftTime || sortByUrgency(left, right);
+}
+
+function workDisplayTimestamp(row: {
+  createdAt: Date;
+  sourceOccurredAt?: Date | null;
+  visibleAfter?: Date | null;
+  queueLocation?: string | null;
+}) {
+  if (row.queueLocation === 'scheduled' && row.visibleAfter) return row.visibleAfter;
+  return row.sourceOccurredAt ?? row.createdAt;
 }
 
 function sortByPersonStrategy(strategy: AlgorithmStrategyDefinition, left: PersonQueueCardDto, right: PersonQueueCardDto) {

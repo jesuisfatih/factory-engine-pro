@@ -6,7 +6,7 @@ export interface BusinessDayRange {
   workDate: Date;
 }
 
-interface ZonedDateParts {
+export interface ZonedDateParts {
   year: number;
   month: number;
   day: number;
@@ -43,7 +43,7 @@ export function businessDayRange(timeZone: string, now = new Date()): BusinessDa
   };
 }
 
-function zonedDateTimeToUtc(parts: ZonedDateParts, timeZone: string) {
+export function zonedDateTimeToUtc(parts: ZonedDateParts, timeZone: string) {
   const target = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
   let guess = target;
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -56,7 +56,7 @@ function zonedDateTimeToUtc(parts: ZonedDateParts, timeZone: string) {
   return new Date(guess);
 }
 
-function zonedDateParts(date: Date, timeZone: string): ZonedDateParts {
+export function zonedDateParts(date: Date, timeZone: string): ZonedDateParts {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FrontendCustomizationModalSection, FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
+import type { FrontendCustomizationModalSection, FrontendCustomizationRuntimeDto, PersonCallDisposition } from '@factory-engine-pro/contracts';
 import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, ShoppingBag, DollarSign,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
 } from 'lucide-react';
-import { dialAircall, fetchTaskBrief, friendlyError, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { dialAircall, fetchTaskBrief, friendlyError, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
 import { FollowUpScheduler, initialFollowUpValue } from './FollowUpScheduler';
 import type { Card as CardData, TaskBriefDetail } from '../types';
@@ -35,6 +35,20 @@ const CALL_CONTEXT_SECTION_ORDER = [
   'timeline',
   'customCustomerContext',
 ] as const satisfies readonly FrontendCustomizationModalSection[];
+
+const CALL_OUTCOMES: Array<{ value: Exclude<PersonCallDisposition, 'not_selected'>; label: string }> = [
+  { value: 'customer_reached', label: 'Customer reached - follow-up remains open' },
+  { value: 'no_answer', label: 'No answer' },
+  { value: 'voicemail', label: 'Voicemail left' },
+  { value: 'callback_requested', label: 'Customer requested a callback' },
+  { value: 'follow_up_scheduled', label: 'Follow-up scheduled' },
+  { value: 'quote_sent', label: 'Quote sent' },
+  { value: 'order_placed', label: 'Order placed' },
+  { value: 'not_interested', label: 'Not interested' },
+  { value: 'wrong_number', label: 'Wrong number' },
+  { value: 'do_not_call', label: 'Do not call' },
+  { value: 'completed', label: 'Completed' },
+];
 
 function normalizeCallContextSectionOrder(sectionOrder: FrontendCustomizationModalSection[] | undefined) {
   if (!sectionOrder?.length) return sectionOrder;
@@ -177,10 +191,19 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const [note, setNote] = useState('');
   const [scheduleAt, setScheduleAt] = useState(() => initialFollowUpValue());
   const [scheduleNote, setScheduleNote] = useState('');
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(isTaskCard ? card.id : null);
+  const [outcomeRequired, setOutcomeRequired] = useState(Boolean(card.outcomeRequired));
+  const [disposition, setDisposition] = useState<PersonCallDisposition>('not_selected');
+  const [outcomeNote, setOutcomeNote] = useState('');
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
     onSuccess: (result) => {
       if (result.mode === 'tel_fallback') window.location.assign(result.telHref);
+      if (result.ok && result.mode === 'aircall_dial' && result.staffWorkItemId) {
+        setActiveTaskId(result.staffWorkItemId);
+        setOutcomeRequired(true);
+        setDisposition('not_selected');
+      }
       void queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
     },
   });
@@ -191,7 +214,9 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     dialCustomer.mutate({
       phone: liveCard.phone,
       customerId: liveCard.customerId ?? undefined,
-      source: 'task_brief',
+      staffWorkItemId: isTaskCard ? liveCard.id : undefined,
+      idempotencyKey: clientActionId('staff-dial'),
+      source: !isTaskCard && contextTone === 'priority' ? 'priority_board' : 'task_brief',
     });
   };
 
@@ -202,8 +227,13 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   }, [initial]);
 
   useEffect(() => {
+    if (isTaskCard) setActiveTaskId(liveCard.id);
+    if (liveCard.outcomeRequired) setOutcomeRequired(true);
+  }, [isTaskCard, liveCard.id, liveCard.outcomeRequired]);
+
+  useEffect(() => {
     if (embedded) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && !outcomeRequired) onClose(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -211,7 +241,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [embedded, onClose]);
+  }, [embedded, onClose, outcomeRequired]);
 
   const noteMutation = useMutation({
     mutationFn: () => saveTaskNote(card.id, { body: note }),
@@ -265,6 +295,31 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       onClose();
     },
   });
+
+  const outcomeNeedsSchedule = disposition === 'callback_requested' || disposition === 'follow_up_scheduled';
+  const outcomeMutation = useMutation({
+    mutationFn: () => recordTaskOutcome(activeTaskId!, {
+      disposition,
+      note: outcomeNote.trim() || undefined,
+      scheduledAt: outcomeNeedsSchedule && scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
+      phone: liveCard.phone,
+      providerResult: dialCustomer.data?.mode,
+      idempotencyKey: clientActionId('call-outcome'),
+    }),
+    onSuccess: () => {
+      setOutcomeRequired(false);
+      void queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      void queryClient.invalidateQueries({ queryKey: ['person', 'notes'] });
+      void queryClient.invalidateQueries({ queryKey: ['person', 'cal', 'events'] });
+      onClose();
+    },
+  });
+
+  const submitOutcome = (event?: FormEvent) => {
+    event?.preventDefault();
+    if (!activeTaskId || disposition === 'not_selected' || outcomeMutation.isPending) return;
+    outcomeMutation.mutate();
+  };
 
   const actionInput = {
     intent: liveCard.callIntent ?? liveCard.urgencyBreakdown.intent,
@@ -340,6 +395,45 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const followUpNotesSection = followUpNotesContent ? (
     <div style={sectionStyle('noteForm', 82)}>{followUpNotesContent}</div>
   ) : noteSection;
+  const outcomePanel = outcomeRequired && activeTaskId ? (
+    <form className="brief-block brief-outcome" style={{ order: 81 }} onSubmit={submitOutcome}>
+      <div className="brief-block-head">
+        <span className="lbl">Save call outcome</span>
+        <span className="brief-count-pill required">Required</span>
+      </div>
+      <p className="brief-outcome-help">Choose what happened before leaving this customer follow-up.</p>
+      <select
+        className="brief-edit"
+        value={disposition}
+        onChange={(event) => setDisposition(event.target.value as PersonCallDisposition)}
+        aria-label="Call outcome"
+      >
+        <option value="not_selected" disabled>Select an outcome</option>
+        {CALL_OUTCOMES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </select>
+      {outcomeNeedsSchedule ? (
+        <div className="brief-outcome-schedule">
+          <span className="lbl">Next call date</span>
+          <FollowUpScheduler value={scheduleAt} onChange={setScheduleAt} disabled={outcomeMutation.isPending} compact />
+        </div>
+      ) : null}
+      <textarea
+        className="brief-edit"
+        rows={2}
+        value={outcomeNote}
+        onChange={(event) => setOutcomeNote(event.target.value)}
+        placeholder="Add the useful result or next step to customer history"
+      />
+      <div className="brief-form-actions">
+        <span className={outcomeMutation.isError ? 'danger-text' : ''}>
+          {outcomeMutation.isError ? friendlyError(outcomeMutation.error) : 'This result updates the follow-up list and customer history.'}
+        </span>
+        <button type="submit" className="btn primary" disabled={disposition === 'not_selected' || outcomeMutation.isPending}>
+          <CheckCircle2 size={12} /> {outcomeMutation.isPending ? 'Saving' : 'Save outcome'}
+        </button>
+      </div>
+    </form>
+  ) : null;
 
   const modalContent = (
       <div className={`modal-card brief-modal brief-context-${contextTone} ${embedded ? 'brief-modal-embedded' : ''} ${frontendElementClassName(override, liveCard.urgencyScore)}`} role="document">
@@ -360,7 +454,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
               {latestOrder && <span><ShoppingBag size={11} /> {latestOrder.orderNumber ?? latestOrder.id} {fmtMoney(latestOrder.totalPrice, latestOrder.currency)}</span>}
             </div>
           </div>
-          <button type="button" className="close" onClick={onClose} aria-label="Close">
+          <button type="button" className="close" onClick={onClose} aria-label="Close" disabled={outcomeRequired} title={outcomeRequired ? 'Save the call outcome before closing' : 'Close'}>
             <X size={16} />
           </button>
         </header>
@@ -418,6 +512,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                         <div className="brief-transcript">{callExcerpt}</div>
                       </div>
                     ) : null}
+                    {outcomePanel}
                     {followUpNotesSection}
                   </>
                 ) : (
@@ -430,6 +525,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                         Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
                       </div>
                     </div>
+                    {outcomePanel}
                     {followUpNotesSection}
                   </>
                 )}
@@ -575,7 +671,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
             type="button"
             className="btn"
             onClick={() => snoozeMutation.mutate()}
-            disabled={!isTaskCard || snoozeMutation.isPending}
+            disabled={!isTaskCard || snoozeMutation.isPending || outcomeRequired}
             title="Move this follow-up to tomorrow 09:00"
           >
             <AlarmClockOff size={13} /> {snoozeMutation.isPending ? 'Snoozing' : frontendCopy(override, 'snoozeButton', 'Snooze to tomorrow')}
@@ -583,8 +679,13 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
           <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}>
             <Phone size={13} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callNowButton', 'Call now')}
           </button>
-          <button type="button" className="btn primary" onClick={onClose}>
-            <CheckCircle2 size={13} /> {frontendCopy(override, 'doneButton', 'Done')}
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => outcomeRequired ? submitOutcome() : onClose()}
+            disabled={outcomeMutation.isPending || (outcomeRequired && disposition === 'not_selected')}
+          >
+            <CheckCircle2 size={13} /> {outcomeRequired ? (disposition === 'not_selected' ? 'Select outcome' : 'Save and close') : frontendCopy(override, 'doneButton', 'Done')}
           </button>
         </footer> : null}
       </div>
@@ -595,7 +696,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   return (
     <div
       className="modal-backdrop"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      onClick={(event) => { if (event.target === event.currentTarget && !outcomeRequired) onClose(); }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="task-brief-title"
@@ -617,6 +718,13 @@ function orderedDisplayActions(actions: string[], modalActionOrder: string[] = [
 
 function actionKey(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function clientActionId(prefix: string) {
+  const value = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}:${value}`;
 }
 
 function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined, modalActionOrder: string[] = []) {

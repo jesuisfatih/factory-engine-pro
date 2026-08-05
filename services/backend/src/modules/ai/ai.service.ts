@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHash } from 'node:crypto';
 import {
   buildTranscriptResolverPromptFromEnums,
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
@@ -142,15 +143,51 @@ export class AiService {
     }
 
     const model = await this.resolveModel(credentials.key);
+    const inputHash = createHash('sha256').update(input.transcript, 'utf8').digest('hex');
     const response = await this.callAnthropicResolver(credentials.key, model, input, credentials.source);
+    const firstUsage = anthropicUsage(response);
     const text = extractAnthropicText(response);
-    const parsed = transcriptResolverOutputSchema.parse(parseJsonObject(text));
+    const firstParse = parseResolverOutput(text);
+    let parsed = firstParse.output;
+    let repaired = false;
+    let usage = firstUsage;
+
+    if (!parsed) {
+      const repairResponse = await this.callAnthropicRepair(
+        credentials.key,
+        model,
+        text,
+        firstParse.error,
+        credentials.source,
+      );
+      usage = addAnthropicUsage(usage, anthropicUsage(repairResponse));
+      const repairedParse = parseResolverOutput(extractAnthropicText(repairResponse));
+      if (!repairedParse.output) {
+        throw new BadRequestException({
+          message: 'Anthropic resolver returned invalid structured output after one repair attempt.',
+          code: 'anthropic_resolver_invalid_output',
+          validationError: repairedParse.error,
+        });
+      }
+      parsed = repairedParse.output;
+      repaired = true;
+    }
     const output = { ...parsed, resolved_with_version: TRANSCRIPT_RESOLVER_SCHEMA_VERSION };
     return {
       provider: 'anthropic',
       model,
       source: credentials.source === 'none' ? 'env' : credentials.source,
       promptKey: 'ai.transcript-resolver',
+      promptVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+      inputHash,
+      attemptCount: repaired ? 2 : 1,
+      repaired,
+      usage: {
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        totalTokens: usage.inputTokens + usage.outputTokens,
+      },
+      costMicros: this.resolverCostMicros(usage),
       output,
       latencyMs: Date.now() - startedAt,
       checkedAt: new Date().toISOString(),
@@ -213,11 +250,10 @@ export class AiService {
     const used = await this.prisma.db.aircallCallEvent.count({
       where: {
         resolvedAt: { gte: since },
-        resolverModel: { not: 'local-rule-fallback' },
       },
     });
     if (used >= dailyLimit) {
-      this.logger.warn('ai', 'resolver_budget_exceeded', 'Anthropic transcript resolver daily cap reached; local fallback will be used', {
+      this.logger.warn('ai', 'resolver_budget_exceeded', 'Anthropic transcript resolver daily cap reached; analysis will remain unavailable until explicitly retried', {
         daily_limit: dailyLimit,
         used_today: used,
         since: since.toISOString(),
@@ -348,6 +384,75 @@ export class AiService {
     return body;
   }
 
+  private async callAnthropicRepair(
+    key: string,
+    model: string,
+    invalidOutput: string,
+    validationError: string,
+    source: 'tenant_config' | 'env' | 'none',
+  ) {
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: this.anthropicTimeoutSignal(),
+        body: JSON.stringify({
+          model,
+          max_tokens: this.anthropicResolverMaxTokens(),
+          temperature: 0,
+          system: resolverRepairSystemPrompt(),
+          messages: [{
+            role: 'user',
+            content: JSON.stringify({
+              invalid_output: invalidOutput.slice(0, 14_000),
+              validation_error: validationError.slice(0, 2_000),
+            }),
+          }],
+        }),
+      });
+    } catch (error) {
+      const timeout = isTimeoutError(error);
+      const message = timeout
+        ? `Anthropic resolver repair timed out after ${this.anthropicTimeoutMs()}ms.`
+        : `Anthropic resolver repair could not reach provider: ${error instanceof Error ? error.message : String(error)}`;
+      throw new BadRequestException({
+        message,
+        code: timeout ? 'anthropic_resolver_repair_timeout' : 'anthropic_resolver_repair_network_error',
+      });
+    }
+    const text = await response.text();
+    const body = parseJson(text) as Record<string, unknown> | null;
+    if (!response.ok) {
+      const message = providerMessage(body as { error?: { message?: unknown } } | null, text)
+        ?? `Anthropic resolver repair failed with HTTP ${response.status}.`;
+      this.logger.error('ai', 'resolver_repair_failed', message, {
+        key_source: source,
+        model,
+        status_code: response.status,
+        latency_ms: Date.now() - startedAt,
+      });
+      throw new BadRequestException({
+        message,
+        code: 'anthropic_resolver_repair_failed',
+        status: response.status,
+      });
+    }
+    return body;
+  }
+
+  private resolverCostMicros(usage: AnthropicUsage) {
+    const inputPerMillion = positiveInt(this.config.get<string>('ANTHROPIC_INPUT_COST_PER_MILLION_MICROS'), 0);
+    const outputPerMillion = positiveInt(this.config.get<string>('ANTHROPIC_OUTPUT_COST_PER_MILLION_MICROS'), 0);
+    if (inputPerMillion <= 0 && outputPerMillion <= 0) return null;
+    return Math.round((usage.inputTokens * inputPerMillion + usage.outputTokens * outputPerMillion) / 1_000_000);
+  }
+
   private anthropicTimeoutMs() {
     const configured = Number(this.config.get<string>('ANTHROPIC_TIMEOUT_MS') ?? '15000');
     return Number.isFinite(configured) && configured >= 1000 && configured <= 120000 ? configured : 15000;
@@ -402,6 +507,21 @@ Return STRICT JSON only. The JSON must exactly match this schema:
   "shipping_signals": {"address_mentioned": boolean, "tracking_asked": boolean, "complaint": boolean},
   "payment_signals": {"method_mentioned": boolean, "refund_asked": boolean, "complaint": boolean},
   "urgency_signal": one allowed urgency_levels enum value,
+  "conversation": {
+    "direction": "inbound"|"outbound"|"unknown",
+    "kind": "customer_conversation"|"voicemail"|"automated_system"|"carrier_vendor"|"agent_only"|"unknown",
+    "customer_present": boolean,
+    "confidence": number,
+    "evidence": [{"speaker": "customer"|"agent"|"system"|"unknown", "text": string}]
+  },
+  "customer_mood": {
+    "label": "positive"|"calm"|"neutral"|"confused"|"anxious"|"frustrated"|"angry"|"urgent"|"unknown",
+    "confidence": number,
+    "evidence": [{"speaker": "customer"|"agent"|"system"|"unknown", "text": string}]
+  },
+  "customer_issue": {"detected": boolean, "category": string|null, "description": string|null, "confidence": number, "evidence": []},
+  "promise": {"made": boolean, "owner": "agent"|"customer"|"none", "commitment": string|null, "due_hint": string|null, "confidence": number, "evidence": []},
+  "next_action": {"required": boolean, "owner": "staff"|"customer"|"none", "action": string|null, "expected_outcome": string|null, "priority": "low"|"medium"|"high"|"urgent", "confidence": number, "evidence": []},
   "operational_signals": [{
     "intent": one allowed operational_intents enum value,
     "confidence": number,
@@ -415,7 +535,13 @@ Return STRICT JSON only. The JSON must exactly match this schema:
     "upset_about": string,
     "call_goal": string,
     "suggested_actions": string[],
-    "transcript_snippet": string
+    "transcript_snippet": string,
+    "direction": "inbound"|"outbound"|"unknown",
+    "mood": string,
+    "issue": string,
+    "promise": string,
+    "next_action": string,
+    "evidence": [{"speaker": "customer"|"agent"|"system"|"unknown", "text": string}]
   },
   "competitor_mentioned": string[],
   "summary": string under 200 tokens,
@@ -423,6 +549,9 @@ Return STRICT JSON only. The JSON must exactly match this schema:
   "resolved_with_version": ${TRANSCRIPT_RESOLVER_SCHEMA_VERSION}
 }
 Classify operational_signals for DTF Supply / Heat Press sales operations, not customer-request automation.
+The transcript is the only semantic source. Do not infer a customer request from metadata, phone direction, boilerplate, or generic sales assumptions.
+Every mood, issue, promise, and next action claim must be supported by evidence from the transcript. If evidence is absent, return unknown/null/false rather than guessing.
+The operational_signals array is authoritative. Downstream code will validate and deduplicate it but will never derive intent by keyword or regex.
 Map calls to concrete operational intent: heat press machine purchase, spare part purchase, generic heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, or no_action.
 Return at most one actionable operational_signals item. Choose the primary staff action; do not return multiple sales/account tasks for one call.
 Do not return callback_requested when another concrete intent is present. Callback is only primary when the customer explicitly asks to be called back and no stronger purchase, account, refund, shipping, quote, financing, product-fit, sample, upgrade, training, or reorder intent exists.
@@ -438,7 +567,13 @@ person_brief.suggested_actions: 2 to 5 specific call actions. Do not include gen
 person_brief.transcript_snippet: a short evidence snippet or tight paraphrase from the transcript.
 Do not use the words "AI", "automation", or "support case" in person_brief text.
 Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, installation, refund/account, or shipping/account follow-up opportunity.
-Use null or empty arrays when unknown. Confidence values must be 0..1.`;
+  Use null or empty arrays when unknown. Confidence values must be 0..1.`;
+}
+
+function resolverRepairSystemPrompt() {
+  return `${resolverSystemPrompt()}
+
+You are repairing a previous resolver response that failed JSON or schema validation. Return only the corrected JSON object. Do not add facts, reinterpret the transcript, or add markdown.`;
 }
 
 function extractAnthropicText(body: Record<string, unknown> | null) {
@@ -462,6 +597,45 @@ function parseJsonObject(text: string) {
   } catch {
     throw new BadRequestException('Anthropic resolver returned invalid JSON.');
   }
+}
+
+function parseResolverOutput(text: string): { output: ReturnType<typeof transcriptResolverOutputSchema.parse> | null; error: string } {
+  try {
+    const value = parseJsonObject(text);
+    const parsed = transcriptResolverOutputSchema.safeParse(value);
+    if (parsed.success) return { output: parsed.data, error: '' };
+    return {
+      output: null,
+      error: parsed.error.issues
+        .slice(0, 20)
+        .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
+        .join('; '),
+    };
+  } catch (error) {
+    return { output: null, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+type AnthropicUsage = { inputTokens: number; outputTokens: number };
+
+function anthropicUsage(body: Record<string, unknown> | null): AnthropicUsage {
+  const usage = body?.usage && typeof body.usage === 'object' ? body.usage as Record<string, unknown> : {};
+  return {
+    inputTokens: safeTokenCount(usage.input_tokens),
+    outputTokens: safeTokenCount(usage.output_tokens),
+  };
+}
+
+function addAnthropicUsage(left: AnthropicUsage, right: AnthropicUsage): AnthropicUsage {
+  return {
+    inputTokens: left.inputTokens + right.inputTokens,
+    outputTokens: left.outputTokens + right.outputTokens,
+  };
+}
+
+function safeTokenCount(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 function isTimeoutError(error: unknown) {

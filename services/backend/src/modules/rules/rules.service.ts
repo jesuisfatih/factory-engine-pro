@@ -40,7 +40,7 @@ import {
   WORKFLOW_ENUM_COUNTS,
   WORKFLOW_ENUM_VERSION,
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-  transcriptResolverOutputSchema,
+  parseStoredTranscriptResolverOutput,
   OPERATIONAL_INTENTS,
   OPERATIONAL_INTENT_REGISTRY,
   createTaskAxisSchema,
@@ -164,7 +164,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
-import { SupportService } from '../support/support.service.js';
+import { StaffWorkService } from '../staff-work/staff-work.service.js';
 import { transcriptOperationalSignals } from '../ai/transcript-operational-signals.js';
 import { RulesRepository } from './rules.repository.js';
 import { WorkflowExecutorService } from './workflow-executor.service.js';
@@ -491,7 +491,7 @@ export class RulesService {
     private readonly contactResolver: CustomerContactResolverService,
     private readonly customers: CustomersService,
     private readonly mail: MailService,
-    private readonly support: SupportService,
+    private readonly staffWork: StaffWorkService,
     private readonly executor: WorkflowExecutorService,
     private readonly prompt: WorkflowPromptService,
     private readonly logger: AppLogger,
@@ -590,7 +590,7 @@ export class RulesService {
     const [tasks, callEvents] = await Promise.all([
       taskIds.length === 0
         ? []
-        : this.prisma.db.serviceRequest.findMany({
+        : this.prisma.db.staffWorkItem.findMany({
             where: { tenantId, id: { in: taskIds } },
             include: {
               customer: true,
@@ -728,7 +728,7 @@ export class RulesService {
 
     const windowEnd = new Date();
     const windowStart = new Date(windowEnd.getTime() - parsed.recentDays * 24 * 60 * 60 * 1000);
-    const taskCountBefore = await this.prisma.db.serviceRequest.count({ where: {} });
+    const taskCountBefore = await this.prisma.db.staffWorkItem.count({ where: {} });
     const candidates = await this.backfillCandidates(rule.definition.trigger, windowStart, windowEnd, parsed.limit);
     const samples: WorkflowRuleBackfillSample[] = [];
 
@@ -736,7 +736,7 @@ export class RulesService {
       samples.push(await this.evaluateBackfillCandidate(rule, candidate));
     }
 
-    const taskCountAfter = await this.prisma.db.serviceRequest.count({ where: {} });
+    const taskCountAfter = await this.prisma.db.staffWorkItem.count({ where: {} });
     const actualTasksCreated = Math.max(0, taskCountAfter - taskCountBefore);
     const matchedEvents = samples.filter((sample) => sample.matched).length;
     const wouldCreateTasks = samples.reduce((sum, sample) => sum + sample.wouldCreateTaskCount, 0);
@@ -1079,7 +1079,7 @@ export class RulesService {
     if (taskIds.length === 0) {
       return { recover: false, reason: 'no_task_ids', taskIds, missingTaskCount: 0 };
     }
-    const existingTaskCount = await this.prisma.db.serviceRequest.count({
+    const existingTaskCount = await this.prisma.db.staffWorkItem.count({
       where: {
         tenantId: this.tenantId(),
         id: { in: taskIds },
@@ -1320,7 +1320,7 @@ export class RulesService {
     }
     if (condition === 'open_task_exists_for_intent') {
       const intent = stringParam(params, 'intent') ?? stringParam(params, 'callIntent') ?? expected;
-      const rows = await this.prisma.db.serviceRequest.findMany({
+      const rows = await this.prisma.db.staffWorkItem.findMany({
         where: {
           ...(state.customer ? { customerId: state.customer.id } : {}),
           status: { notIn: ['closed', 'resolved'] },
@@ -1328,7 +1328,7 @@ export class RulesService {
         select: { metadata: true },
         take: 100,
       });
-      return { value: rows.some((row) => JSON.stringify(row.metadata).includes(intent)), source: 'service_requests' };
+      return { value: rows.some((row) => JSON.stringify(row.metadata).includes(intent)), source: 'staff_work_items' };
     }
     if (condition === 'axis_primary_is') {
       return { value: stringParam(params, 'axisPrimary') ?? stringParam(params, 'assignedMemberId') ?? null, source: 'event_params' };
@@ -1553,7 +1553,7 @@ export class RulesService {
     windowEnd: Date,
     limit: number,
   ): Promise<BackfillCandidate[]> {
-    const tasks = await this.prisma.db.serviceRequest.findMany({
+    const tasks = await this.prisma.db.staffWorkItem.findMany({
       where: {
         tenantId: this.tenantId(),
         OR: [
@@ -1567,11 +1567,12 @@ export class RulesService {
     });
     return tasks.map((task) => ({
       eventId: `backfill:${trigger}:${task.id}:${task.updatedAt.getTime()}`,
-      sourceType: 'service_request',
+      sourceType: 'staff_work_item',
       sourceId: task.id,
       occurredAt: task.closedAt ?? task.updatedAt ?? task.createdAt,
       params: {
         taskId: task.id,
+        staffWorkItemId: task.id,
         serviceRequestId: task.id,
         customerId: task.customerId,
         assignedMemberId: task.assignedMemberId,
@@ -1637,25 +1638,30 @@ export class RulesService {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
+      const sourceOccurredAt = sourceCallId
+        ? (await this.findWorkflowSourceCall(sourceCallId))?.eventTimestamp ?? parseDate(stringParam(context.params, 'sourceOccurredAt')) ?? parseDate(context.occurredAt)
+        : parseDate(stringParam(context.params, 'sourceOccurredAt')) ?? parseDate(context.occurredAt);
       if (action.timing?.mode === 'deferred_materialization') {
         result = await this.scheduleDeferredCreateTask(action, context, taskStateSnapshot, assignment, sourceCallId);
       } else {
       const source = this.workflowTaskSource(context, sourceCallId);
-      const task = await this.support.create({
+      const task = await this.staffWork.create({
         customerId: context.state.customer?.id,
         title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
         description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
         source,
-        surface: 'internal',
         priority: priorityForRule(context.rule.priority),
         axis: assignment.axis,
-        assignedMemberId: assignment.assigneeMemberId,
+        assignedMemberId: assignment.assigneeMemberId ?? undefined,
         watcherMemberIds: assignment.watcherMemberIds,
         matchedRuleId: context.rule.id,
         sourceCallId: sourceCallId ?? undefined,
+        sourceEventId: context.eventId ?? undefined,
+        sourceOccurredAt,
         conditionTrace: context.conditionTrace,
         metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
         taskStateSnapshot,
+        idempotencyKey: `${context.rule.id}:${context.eventId}:${action.id}`,
       });
       result = {
         task: { id: task.id, title: task.title },
@@ -1663,7 +1669,7 @@ export class RulesService {
           actionId: action.id,
           action: action.action,
           status: 'applied',
-          targetType: 'service_request',
+          targetType: 'staff_work_item',
           targetId: task.id,
           message: 'Created workflow task from create_task action.',
           metadata: {
@@ -2150,7 +2156,7 @@ export class RulesService {
     if (!member) return skippedTrace(action, 'member', 'Member target was not found.');
     if (!taskId) {
       const scheduledActionId = this.targetScheduledActionId(context);
-      if (!scheduledActionId) return skippedTrace(action, 'service_request', 'No service request target was available for route_member.');
+      if (!scheduledActionId) return skippedTrace(action, 'staff_work_item', 'No staff work target was available for route_member.');
       const updated = await this.updateScheduledActionAssignment(scheduledActionId, member.id, {
         source: 'route_member',
         email: member.email,
@@ -2169,16 +2175,16 @@ export class RulesService {
         },
       };
     }
-    const updated = await this.prisma.db.serviceRequest.updateMany({ where: { id: taskId }, data: { assignedMemberId: member.id } });
-    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_member.');
+    const updated = await this.prisma.db.staffWorkItem.updateMany({ where: { id: taskId }, data: { assignedMemberId: member.id } });
+    if (updated.count === 0) return skippedTrace(action, 'staff_work_item', 'Staff work target was not found for route_member.');
     return {
       trace: {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'service_request' as const,
+        targetType: 'staff_work_item' as const,
         targetId: taskId,
-        message: 'Routed service request to member.',
+        message: 'Routed staff work to member.',
         metadata: { memberId: member.id, email: member.email },
       },
     };
@@ -2186,7 +2192,7 @@ export class RulesService {
 
   private async routeTaskToSegmentOwner(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
-    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_segment_owner.');
+    if (!taskId) return skippedTrace(action, 'staff_work_item', 'No staff work target was available for route_segment_owner.');
     const customerId = context.state.customer?.id ?? null;
     if (!customerId) return skippedTrace(action, 'customer', 'Customer target was not resolved for segment owner routing.');
     const segmentNameOrId = action.value.trim();
@@ -2218,11 +2224,11 @@ export class RulesService {
     });
     const owner = membership?.segment.ownerships.find((row) => row.member.status === 'active') ?? null;
     if (!membership || !owner) return skippedTrace(action, 'member', 'No active segment owner was found for this customer.');
-    const updated = await this.prisma.db.serviceRequest.updateMany({
+    const updated = await this.prisma.db.staffWorkItem.updateMany({
       where: { id: taskId },
       data: { assignedMemberId: owner.memberId },
     });
-    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_segment_owner.');
+    if (updated.count === 0) return skippedTrace(action, 'staff_work_item', 'Staff work target was not found for route_segment_owner.');
     await this.updateTaskWorkflow(taskId, (workflow) => ({
       ...workflow,
       assigneeResolution: {
@@ -2242,9 +2248,9 @@ export class RulesService {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'service_request' as const,
+        targetType: 'staff_work_item' as const,
         targetId: taskId,
-        message: 'Routed service request to segment owner.',
+        message: 'Routed staff work to segment owner.',
         metadata: {
           memberId: owner.memberId,
           email: owner.member.email,
@@ -2257,14 +2263,14 @@ export class RulesService {
 
   private async routeTaskToCallOwner(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
-    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for route_call_owner.');
+    if (!taskId) return skippedTrace(action, 'staff_work_item', 'No staff work target was available for route_call_owner.');
     const member = await this.resolveAircallOperatorMember(context);
     if (!member) return skippedTrace(action, 'member', 'No active Aircall call owner was resolved for route_call_owner.');
-    const updated = await this.prisma.db.serviceRequest.updateMany({
+    const updated = await this.prisma.db.staffWorkItem.updateMany({
       where: { id: taskId },
       data: { assignedMemberId: member.id },
     });
-    if (updated.count === 0) return skippedTrace(action, 'service_request', 'Service request target was not found for route_call_owner.');
+    if (updated.count === 0) return skippedTrace(action, 'staff_work_item', 'Staff work target was not found for route_call_owner.');
     await this.updateTaskWorkflow(taskId, (workflow) => ({
       ...workflow,
       assigneeResolution: {
@@ -2282,9 +2288,9 @@ export class RulesService {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'service_request' as const,
+        targetType: 'staff_work_item' as const,
         targetId: taskId,
-        message: 'Routed service request to Aircall call owner.',
+        message: 'Routed staff work to Aircall call owner.',
         metadata: { memberId: member.id, email: member.email },
       },
     };
@@ -2292,7 +2298,7 @@ export class RulesService {
 
   private async addTaskWatcher(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
-    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for add_watcher.');
+    if (!taskId) return skippedTrace(action, 'staff_work_item', 'No staff work target was available for add_watcher.');
     let member = await this.findMember(action.value || stringParam(context.params, 'watcherMemberId') || stringParam(context.params, 'memberId'));
     if (!member) {
       const axis = normalizeTaskAxis(action.value);
@@ -2304,16 +2310,16 @@ export class RulesService {
       watchers: uniqueStrings([...arrayParam(workflow, 'watchers'), member.id]),
       watcherEvents: [...recordArray(workflow.watcherEvents), { memberId: member.id, eventId: context.eventId, at: new Date().toISOString() }],
     }));
-    if (!updated) return skippedTrace(action, 'service_request', 'Service request target was not found for add_watcher.');
-    await this.support.addWatcher(taskId, member.id, 'workflow_action');
+    if (!updated) return skippedTrace(action, 'staff_work_item', 'Staff work target was not found for add_watcher.');
+    await this.staffWork.addWatcher(taskId, member.id, 'workflow_action');
     return {
       trace: {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'service_request' as const,
+        targetType: 'staff_work_item' as const,
         targetId: taskId,
-        message: 'Added member watcher to service request participant table.',
+        message: 'Added member watcher to staff work participant table.',
         metadata: { memberId: member.id, email: member.email },
       },
     };
@@ -2321,22 +2327,22 @@ export class RulesService {
 
   private async escalateTask(action: WorkflowRuleAction, context: WorkflowActionContext) {
     const taskId = this.targetTaskId(context);
-    if (!taskId) return skippedTrace(action, 'service_request', 'No service request target was available for escalate.');
+    if (!taskId) return skippedTrace(action, 'staff_work_item', 'No staff work target was available for escalate.');
     const updated = await this.updateTaskWorkflow(taskId, (workflow) => ({
       ...workflow,
       escalated: true,
       escalationReason: action.value?.trim() || 'Workflow escalation',
       escalationEvents: [...recordArray(workflow.escalationEvents), { eventId: context.eventId, at: new Date().toISOString() }],
     }), { priority: 'critical' });
-    if (!updated) return skippedTrace(action, 'service_request', 'Service request target was not found for escalate.');
+    if (!updated) return skippedTrace(action, 'staff_work_item', 'Staff work target was not found for escalate.');
     return {
       trace: {
         actionId: action.id,
         action: action.action,
         status: 'applied' as const,
-        targetType: 'service_request' as const,
+        targetType: 'staff_work_item' as const,
         targetId: taskId,
-        message: 'Escalated service request priority and workflow metadata.',
+        message: 'Escalated staff work priority and workflow metadata.',
       },
     };
   }
@@ -2511,10 +2517,10 @@ export class RulesService {
     return typeof trace?.expected === 'string' ? trace.expected : null;
   }
 
-  private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null): 'admin_created' {
-    void context;
-    void sourceCallId;
-    return 'admin_created';
+  private workflowTaskSource(context: WorkflowActionContext, sourceCallId: string | null) {
+    if (sourceCallId || this.workflowAiSource(context) === 'transcript') return 'transcript_workflow';
+    if (this.workflowAiSource(context) === 'segment') return 'segment_workflow';
+    return 'workflow';
   }
 
   private workflowAiSource(context: WorkflowActionContext) {
@@ -2542,6 +2548,7 @@ export class RulesService {
   private targetTaskId(context: WorkflowActionContext) {
     return context.taskIds.at(-1)
       ?? stringParam(context.params, 'taskId')
+      ?? stringParam(context.params, 'staffWorkItemId')
       ?? stringParam(context.params, 'serviceRequestId')
       ?? null;
   }
@@ -2587,13 +2594,13 @@ export class RulesService {
   private async updateTaskWorkflow(
     taskId: string,
     update: (workflow: Record<string, unknown>) => Record<string, unknown>,
-    data: Prisma.ServiceRequestUncheckedUpdateManyInput = {},
+    data: Prisma.StaffWorkItemUncheckedUpdateManyInput = {},
   ) {
-    const task = await this.prisma.db.serviceRequest.findFirst({ where: { id: taskId }, select: { metadata: true } });
+    const task = await this.prisma.db.staffWorkItem.findFirst({ where: { id: taskId }, select: { metadata: true } });
     if (!task) return false;
     const metadata = asRecord(task.metadata);
     const workflow = asRecord(metadata.workflow);
-    await this.prisma.db.serviceRequest.updateMany({
+    await this.prisma.db.staffWorkItem.updateMany({
       where: { id: taskId },
       data: {
         ...data,
@@ -3124,11 +3131,11 @@ export class RulesService {
     const strategy = parsed.strategyId
       ? (await this.resolveAlgorithmStrategyReference({ strategyId: parsed.strategyId })).strategy
       : await this.activeOrDefaultStrategyInput(surface);
-    const task = await this.prisma.db.serviceRequest.findFirst({
+    const task = await this.prisma.db.staffWorkItem.findFirst({
       where: { tenantId: this.tenantId(), id: parsed.serviceRequestId },
       include: { customer: { include: { insight: true, segmentMemberships: { include: { segment: true }, take: 3 } } } },
     });
-    if (!task) throw new NotFoundException('Service request was not found.');
+    if (!task) throw new NotFoundException('Staff follow-up was not found.');
     const signals = serviceRequestSignals(task);
     const visible = isVisibleByStrategy(strategy.definition, signals);
     return {
@@ -3323,6 +3330,11 @@ export class RulesService {
                     include: {
                       insight: true,
                       segmentMemberships: { include: { segment: true }, take: 3 },
+                      staffWorkItems: {
+                        where: { status: { notIn: [...ALGORITHM_CLOSED_TASK_STATUSES] } },
+                        orderBy: [{ updatedAt: 'desc' }],
+                        take: 5,
+                      },
                       serviceRequests: {
                         where: { status: { notIn: [...ALGORITHM_CLOSED_TASK_STATUSES] } },
                         orderBy: [{ updatedAt: 'desc' }],
@@ -3521,7 +3533,7 @@ export class RulesService {
 
   private async staffAlgorithmServiceRequestRows(memberEmail: string | null, windowStart: Date, windowEnd: Date, limit: number) {
     const member = memberEmail ? await this.memberByEmail(memberEmail) : null;
-    const workflowScope: Prisma.ServiceRequestWhereInput = {
+    const workflowScope: Prisma.StaffWorkItemWhereInput = {
       OR: [
         { source: 'workflow' },
         { sourceCallId: { not: null } },
@@ -3530,7 +3542,7 @@ export class RulesService {
         { metadata: { path: ['workflow'], not: Prisma.JsonNull } },
       ],
     };
-    return this.prisma.db.serviceRequest.findMany({
+    return this.prisma.db.staffWorkItem.findMany({
       where: {
         tenantId: this.tenantId(),
         axis: { in: ['sales', 'account'] },
@@ -4283,7 +4295,7 @@ export class RulesService {
     return {
       item: this.scheduledActionDto(row),
       explanation: {
-        visibleNow: row.status === 'executed' && Boolean(row.executedServiceRequestId),
+        visibleNow: row.status === 'executed' && Boolean(row.executedStaffWorkItemId),
         runAt: row.runAt.toISOString(),
         status: row.status as WorkflowMcpExplainScheduledWorkflowActionResponse['explanation']['status'],
         revalidation,
@@ -4348,16 +4360,16 @@ export class RulesService {
       const task = await this.materializeScheduledAction(row, now);
       await this.prisma.db.workflowScheduledAction.updateMany({
         where: { id, tenantId },
-        data: { status: 'executed', executedServiceRequestId: task.id, skipReason: null },
+        data: { status: 'executed', executedStaffWorkItemId: task.id, skipReason: null },
       });
       this.logger.log('rules', 'workflow_scheduled_action_executed', 'Deferred workflow task materialized', {
         scheduled_action_id: id,
-        service_request_id: task.id,
+        staff_work_item_id: task.id,
         rule_id: row.ruleId,
         customer_id: row.customerId,
         assigned_member_id: row.assignedMemberId,
       });
-      return { id, status: 'executed', serviceRequestId: task.id };
+      return { id, status: 'executed', staffWorkItemId: task.id };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.prisma.db.workflowScheduledAction.updateMany({
@@ -4400,7 +4412,7 @@ export class RulesService {
       idempotencyKey: row.idempotencyKey,
       skipReason: row.skipReason,
       errorMessage: row.errorMessage,
-      executedServiceRequestId: row.executedServiceRequestId,
+      executedServiceRequestId: row.executedStaffWorkItemId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -4414,12 +4426,12 @@ export class RulesService {
     if (policy.skipIfOpenTaskExistsForIntent && row.customerId) {
       const intent = scheduledOperationalIntent(row);
       if (intent) {
-        const openRows = await this.prisma.db.serviceRequest.findMany({
+        const openRows = await this.prisma.db.staffWorkItem.findMany({
           where: {
             tenantId: this.tenantId(),
             customerId: row.customerId,
             status: { notIn: [...SCHEDULED_ACTION_CLOSED_TASK_STATUSES] },
-            id: row.executedServiceRequestId ? { not: row.executedServiceRequestId } : undefined,
+            id: row.executedStaffWorkItemId ? { not: row.executedStaffWorkItemId } : undefined,
           },
           select: { id: true, metadata: true, conditionTrace: true },
           take: 100,
@@ -4476,7 +4488,7 @@ export class RulesService {
     const taskStateSnapshot = asRecord(payload.taskStateSnapshot);
     const priority = serviceRequestPriority(payload.priority, row.rule?.priority ?? 50);
     const visibleCopy = asRecord(asRecord(row.briefPayload).visibleCopy);
-    return this.support.create({
+    return this.staffWork.create({
       customerId: row.customerId ?? undefined,
       title: row.title,
       description: row.description
@@ -4485,14 +4497,15 @@ export class RulesService {
           sourceCallAt ? `From previous call on ${sourceCallAt.toISOString().slice(0, 10)}.` : null,
           'No purchase since that call.',
         ].filter(Boolean).join(' '),
-      source: 'admin_created',
-      surface: 'internal',
+      source: 'scheduled_workflow',
       priority,
       axis: createTaskAxisSchema.parse(row.axis),
       assignedMemberId: row.assignedMemberId ?? stringOrNull(assignment.assigneeMemberId) ?? undefined,
       watcherMemberIds: arrayParam(assignment, 'watcherMemberIds'),
       matchedRuleId: row.ruleId,
       sourceCallId: row.sourceCallId ?? undefined,
+      sourceEventId: row.sourceEventId ?? undefined,
+      sourceOccurredAt: row.runAt,
       conditionTrace,
       metadata: {
         ...metadata,
@@ -4511,6 +4524,8 @@ export class RulesService {
         },
       },
       taskStateSnapshot,
+      visibleAfter: row.runAt,
+      idempotencyKey: `scheduled:${row.id}`,
     });
   }
 
@@ -5015,7 +5030,7 @@ export class RulesService {
         signal: evaluation.signal,
         status: evaluation.status,
       }));
-      const parsedOutput = transcriptResolverOutputSchema.safeParse(row.resolverOutput);
+      const parsedOutput = parseStoredTranscriptResolverOutput(row.resolverOutput);
       if (!parsedOutput.success) {
         invalidResolverOutputCount += 1;
         if (signalCoverageSamples.length < 12) {
@@ -5032,8 +5047,7 @@ export class RulesService {
         continue;
       }
 
-      const customerMatched = await this.auditCustomerMatched(tenantId, row, parsedOutput.data);
-      const expectedSignals = transcriptOperationalSignals(parsedOutput.data, { customerMatched }).map((signal) => signal.intent);
+      const expectedSignals = transcriptOperationalSignals(parsedOutput.data).map((signal) => signal.intent);
       const expectedSet = new Set<string>(expectedSignals);
       const evaluatedExpectedSignals = expectedSignals.filter((signal) => evaluatedSignals.includes(signal));
       const completedSignals = uniqueStrings(rowEvaluations
@@ -5135,19 +5149,6 @@ export class RulesService {
       signalCoverageSamples,
       issues,
     };
-  }
-
-  private async auditCustomerMatched(
-    tenantId: string,
-    callEvent: { contactPhoneE164?: string | null; contactEmail?: string | null },
-    output: TranscriptResolverOutput,
-  ) {
-    if (this.tenantContext.require().tenantId !== tenantId) return false;
-    return Boolean(await this.contactResolver.findCustomer({
-      customerId: output.customer_match.customer_id,
-      email: callEvent.contactEmail,
-      phone: callEvent.contactPhoneE164 ?? output.customer_match.phone,
-    }));
   }
 
   private editedByMemberId() {
@@ -5707,9 +5708,10 @@ function serviceRequestSignals(row: any): Record<string, unknown> {
 function customerSignals(customer: any): Record<string, unknown> {
   const primarySegment = Array.isArray(customer.segmentMemberships) ? customer.segmentMemberships[0]?.segment : null;
   const openRequests = Array.isArray(customer.serviceRequests) ? customer.serviceRequests : [];
+  const openTasks = Array.isArray(customer.staffWorkItems) ? customer.staffWorkItems : [];
   const latestOrder = Array.isArray(customer.orders) ? customer.orders[0] : null;
-  const latestCallTask = openRequests.find((request: any) => Boolean(request.sourceCallId));
-  const latestUpdatedTask = openRequests[0] ?? null;
+  const latestCallTask = openTasks.find((task: any) => Boolean(task.sourceCallId));
+  const latestUpdatedTask = openTasks[0] ?? null;
   const latestOrderValue = numberOrZero(latestOrder?.totalPrice ?? customer.averageOrderValue);
   const lastOrderAt = customer.lastOrderAt ?? customer.insight?.lastOrderAt ?? latestOrder?.processedAt ?? latestOrder?.createdAt ?? null;
   return {
@@ -5721,10 +5723,10 @@ function customerSignals(customer: any): Record<string, unknown> {
     repeatCount: numberOrZero(customer.ordersCount),
     segmentPriority: Math.max(numberOrZero(primarySegment?.priorityGlobal), numberOrZero(primarySegment?.priority)),
     membershipScore: numberOrZero(customer.segmentMemberships?.[0]?.score),
-    openTasksCount: openRequests.length,
+    openTasksCount: openTasks.length,
     openRequestsCount: openRequests.length,
     notesCount: 0,
-    openFollowUp: openRequests.length > 0,
+    openFollowUp: openTasks.length > 0,
     latestOrderValue,
     lastCallRecency: latestCallTask?.updatedAt ? round1((Date.now() - latestCallTask.updatedAt.getTime()) / 86_400_000) : 0,
     notesSignal: Boolean(latestUpdatedTask?.updatedAt),
@@ -6037,7 +6039,7 @@ function scheduledActionInclude() {
     rule: { select: { id: true, name: true, priority: true } },
     customer: { select: { id: true, companyName: true, email: true, phone: true } },
     assignedMember: { select: { id: true, firstName: true, lastName: true, email: true } },
-    executedServiceRequest: { select: { id: true, title: true, createdAt: true } },
+    executedStaffWorkItem: { select: { id: true, title: true, createdAt: true } },
   } as const;
 }
 
@@ -8150,7 +8152,8 @@ function backfillCandidateSource(trigger: WorkflowTriggerFireInput['trigger']) {
     return 'aircall_call_events';
   }
   if (trigger.startsWith('segment.')) return 'segment_customer_memberships';
-  if (trigger.startsWith('support.') || trigger.startsWith('task.')) return 'service_requests';
+  if (trigger.startsWith('support.')) return 'service_requests';
+  if (trigger.startsWith('task.')) return 'staff_work_items';
   return 'customers';
 }
 

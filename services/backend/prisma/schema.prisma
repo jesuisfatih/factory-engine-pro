@@ -97,6 +97,11 @@ model Tenant {
   personWorkspaceNotes    PersonWorkspaceNote[]
   personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
   customerContactActivities CustomerContactActivity[]
+  customerContactPoints     CustomerContactPoint[]
+  customerContactPolicies   CustomerContactPolicy[]
+  customerCallOutcomes      CustomerCallOutcome[]
+  workItemStateTransitions  WorkItemStateTransition[]
+  businessCalendars         BusinessCalendar[]
   mailDeliveries          MailDelivery[]
   mailIdempotencyKeys     MailIdempotencyKey[]
   emailTemplates          EmailTemplate[]
@@ -153,6 +158,9 @@ model Tenant {
   algorithmStrategyVersions AlgorithmStrategyVersion[]
   algorithmStrategySimulations AlgorithmStrategySimulation[]
   taskParticipants        TaskParticipant[]
+  staffWorkItems          StaffWorkItem[]
+  staffWorkComments       StaffWorkComment[]
+  staffWorkParticipants   StaffWorkParticipant[]
   personDailyCallOrders   PersonDailyCallOrder[]
   personDailyTaskOrders   PersonDailyTaskOrder[]
   commissionProfiles      CommissionProfile[]
@@ -242,6 +250,9 @@ model Member {
   actorCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditActor")
   assignedServiceRequests ServiceRequest[]
   taskParticipants TaskParticipant[]
+  assignedStaffWorkItems StaffWorkItem[] @relation("StaffWorkItemAssignee")
+  staffWorkParticipants StaffWorkParticipant[]
+  staffWorkComments StaffWorkComment[] @relation("StaffWorkCommentActor")
   aircallMemberMaps AircallMemberMap[]
   workflowRuleVersions WorkflowRuleVersion[]
   workflowRuleBackfillReports WorkflowRuleBackfillReport[]
@@ -262,6 +273,9 @@ model Member {
   deletedPersonWorkspaceNotes PersonWorkspaceNote[] @relation("PersonWorkspaceNoteDeletedBy")
   personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
   customerContactActivities CustomerContactActivity[]
+  customerCallOutcomes CustomerCallOutcome[]
+  workItemStateTransitions WorkItemStateTransition[]
+  customerContactPolicies CustomerContactPolicy[] @relation("CustomerContactPolicySetter")
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -347,6 +361,7 @@ model Customer {
   segmentMemberships SegmentCustomerMembership[]
   segmentAssignments SegmentCustomerAssignment[]
   serviceRequests ServiceRequest[]
+  staffWorkItems StaffWorkItem[]
   workflowRuleCooldowns WorkflowRuleCooldown[]
   workflowScheduledActions WorkflowScheduledAction[]
   dailyCallOrders PersonDailyCallOrder[]
@@ -355,6 +370,10 @@ model Customer {
   internalNotes CustomerInternalNote[]
   personWorkspaceNotes PersonWorkspaceNote[]
   contactActivities CustomerContactActivity[]
+  contactPoints CustomerContactPoint[]
+  contactPolicies CustomerContactPolicy[]
+  callOutcomes CustomerCallOutcome[]
+  workItemStateTransitions WorkItemStateTransition[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -372,6 +391,8 @@ model CustomerInternalNote {
   source         String   @default("person_workspace")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  deletedByMemberId String? @map("deleted_by_member_id")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -379,6 +400,7 @@ model CustomerInternalNote {
 
   @@index([tenantId, customerId, createdAt])
   @@index([tenantId, authorMemberId, createdAt])
+  @@index([tenantId, customerId, deletedAt])
   @@map("customer_internal_notes")
 }
 
@@ -409,6 +431,7 @@ model PersonWorkspaceNote {
   body                   String    @default("")
   linkedCustomerId       String?   @map("linked_customer_id")
   linkedServiceRequestId String?   @map("linked_service_request_id")
+  linkedStaffWorkItemId  String?   @map("linked_staff_work_item_id")
   deletedAt              DateTime? @map("deleted_at")
   deletedByMemberId      String?   @map("deleted_by_member_id")
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -419,12 +442,14 @@ model PersonWorkspaceNote {
   deletedBy Member? @relation("PersonWorkspaceNoteDeletedBy", fields: [deletedByMemberId], references: [id], onDelete: SetNull)
   customer Customer? @relation(fields: [linkedCustomerId], references: [id], onDelete: SetNull)
   serviceRequest ServiceRequest? @relation(fields: [linkedServiceRequestId], references: [id], onDelete: SetNull)
+  staffWorkItem StaffWorkItem? @relation(fields: [linkedStaffWorkItemId], references: [id], onDelete: SetNull)
   replies PersonWorkspaceNoteReply[]
 
   @@index([tenantId, kind, updatedAt])
   @@index([tenantId, authorMemberId, updatedAt])
   @@index([tenantId, linkedCustomerId, updatedAt])
   @@index([tenantId, linkedServiceRequestId])
+  @@index([tenantId, linkedStaffWorkItemId])
   @@index([tenantId, deletedAt])
   @@map("person_workspace_notes")
 }
@@ -473,6 +498,75 @@ model CustomerContactActivity {
   @@index([tenantId, memberId, startedAt])
   @@index([tenantId, status, expiresAt])
   @@map("customer_contact_activities")
+}
+
+model CustomerContactPoint {
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  customerId      String    @map("customer_id")
+  type            String
+  value           String
+  normalizedValue String    @map("normalized_value")
+  source          String
+  sourceRef       String?   @map("source_ref")
+  priority        Int       @default(0)
+  isPrimary       Boolean   @default(false) @map("is_primary")
+  isValid         Boolean   @default(true) @map("is_valid")
+  invalidReason   String?   @map("invalid_reason")
+  invalidatedAt   DateTime? @map("invalidated_at")
+  verifiedAt      DateTime? @map("verified_at")
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  outcomes CustomerCallOutcome[]
+
+  @@unique([tenantId, customerId, type, normalizedValue, source])
+  @@index([tenantId, customerId, type, isValid, priority])
+  @@index([tenantId, normalizedValue, type])
+  @@map("customer_contact_points")
+}
+
+model CustomerContactPolicy {
+  id            String    @id
+  tenantId      String    @map("tenant_id")
+  customerId    String    @map("customer_id")
+  doNotCall     Boolean   @default(false) @map("do_not_call")
+  reason        String?
+  setByMemberId String?   @map("set_by_member_id")
+  setAt         DateTime? @map("set_at")
+  metadata      Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  setByMember Member?  @relation("CustomerContactPolicySetter", fields: [setByMemberId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, customerId])
+  @@index([tenantId, doNotCall, updatedAt])
+  @@map("customer_contact_policies")
+}
+
+model BusinessCalendar {
+  id             String   @id
+  tenantId       String   @map("tenant_id")
+  name           String   @default("default")
+  timezone       String
+  weeklyHours    Json     @default("{}") @map("weekly_hours")
+  holidays       Json     @default("[]")
+  repeatPolicy   Json     @default("{}") @map("repeat_policy")
+  isDefault      Boolean  @default(true) @map("is_default")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isDefault])
+  @@map("business_calendars")
 }
 
 model CustomerAssignment {
@@ -1235,7 +1329,7 @@ model PersonDailyTaskOrder {
   id               String   @id
   tenantId         String   @map("tenant_id")
   memberId         String   @map("member_id")
-  serviceRequestId String   @map("service_request_id")
+  staffWorkItemId  String   @map("staff_work_item_id")
   workDate         DateTime @map("work_date") @db.Date
   position         Int
   createdAt        DateTime @default(now()) @map("created_at")
@@ -1243,11 +1337,11 @@ model PersonDailyTaskOrder {
 
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, memberId, workDate, serviceRequestId])
+  @@unique([tenantId, memberId, workDate, staffWorkItemId])
   @@index([tenantId, memberId, workDate, position])
-  @@index([tenantId, serviceRequestId])
+  @@index([tenantId, staffWorkItemId])
   @@map("person_daily_task_orders")
 }
 
@@ -1404,8 +1498,6 @@ model ServiceRequest {
   assignedMember Member?               @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
   comments     ServiceRequestComment[]
   participants TaskParticipant[]
-  dailyTaskOrders PersonDailyTaskOrder[]
-  materializedWorkflowScheduledActions WorkflowScheduledAction[]
   personWorkspaceNotes PersonWorkspaceNote[]
 
   @@index([tenantId, customerId])
@@ -1418,6 +1510,167 @@ model ServiceRequest {
   @@index([tenantId, surface])
   @@index([tenantId, updatedAt])
   @@map("service_requests")
+}
+
+model StaffWorkItem {
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  customerId         String?   @map("customer_id")
+  assignedMemberId   String?   @map("assigned_member_id")
+  axis               String
+  matchedRuleId      String?   @map("matched_rule_id")
+  source             String    @default("workflow")
+  surface            String    @default("staff")
+  sourceCallId       String?   @map("source_call_id")
+  sourceEmailId      String?   @map("source_email_id")
+  sourceEventId      String?   @map("source_event_id")
+  sourceOccurredAt   DateTime? @map("source_occurred_at")
+  title              String
+  description        String?
+  status             String    @default("open")
+  priority           String    @default("medium")
+  createdByActorId   String?   @map("created_by_actor_id")
+  dueAt              DateTime? @map("due_at")
+  closedAt           DateTime? @map("closed_at")
+  resolutionCode     String?   @map("resolution_code")
+  resolutionNote     String?   @map("resolution_note")
+  metadata           Json      @default("{}")
+  conditionTrace     Json      @default("[]") @map("condition_trace")
+  taskStateSnapshot  Json      @default("{}") @map("task_state_snapshot")
+  workState          String    @default("open") @map("work_state")
+  queueLocation      String    @default("follow_up") @map("queue_location")
+  visibleAfter       DateTime? @map("visible_after")
+  archivedAt         DateTime? @map("archived_at")
+  archiveReason      String?   @map("archive_reason")
+  currentDisposition String?   @map("current_disposition")
+  currentOutcomeId   String?   @map("current_outcome_id")
+  idempotencyKey     String?   @map("idempotency_key")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedMember Member?  @relation("StaffWorkItemAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  comments       StaffWorkComment[]
+  participants   StaffWorkParticipant[]
+  dailyTaskOrders PersonDailyTaskOrder[]
+  materializedWorkflowScheduledActions WorkflowScheduledAction[]
+  personWorkspaceNotes PersonWorkspaceNote[]
+  callOutcomes   CustomerCallOutcome[]
+  stateTransitions WorkItemStateTransition[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, customerId])
+  @@index([tenantId, assignedMemberId, queueLocation, visibleAfter])
+  @@index([tenantId, assignedMemberId, archivedAt])
+  @@index([tenantId, axis])
+  @@index([tenantId, matchedRuleId])
+  @@index([tenantId, status])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, currentDisposition])
+  @@index([tenantId, sourceCallId])
+  @@index([tenantId, assignedMemberId, sourceOccurredAt])
+  @@map("staff_work_items")
+}
+
+model StaffWorkParticipant {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  staffWorkItemId String   @map("staff_work_item_id")
+  memberId        String   @map("member_id")
+  role            String   @default("watcher")
+  source          String   @default("axis_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  member        Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, staffWorkItemId, memberId, role])
+  @@index([tenantId, staffWorkItemId])
+  @@index([tenantId, memberId])
+  @@map("staff_work_participants")
+}
+
+model StaffWorkComment {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  staffWorkItemId String   @map("staff_work_item_id")
+  actorId         String?  @map("actor_id")
+  actorType       String?  @map("actor_type")
+  body            String
+  internal        Boolean  @default(true)
+  attachmentsJson Json     @default("[]") @map("attachments_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  actor         Member?       @relation("StaffWorkCommentActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, staffWorkItemId])
+  @@index([tenantId, actorId])
+  @@map("staff_work_comments")
+}
+
+model CustomerCallOutcome {
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  idempotencyKey     String?   @map("idempotency_key")
+  staffWorkItemId    String    @map("staff_work_item_id")
+  customerId         String?   @map("customer_id")
+  memberId           String    @map("member_id")
+  contactPointId     String?   @map("contact_point_id")
+  externalCallId     String?   @map("external_call_id")
+  providerResult     String?   @map("provider_result")
+  resolverSuggestion String?   @map("resolver_suggestion")
+  disposition        String
+  note               String?
+  resultingWorkState String    @map("resulting_work_state")
+  resultingQueue     String    @map("resulting_queue")
+  source             String    @default("staff")
+  metadata           Json      @default("{}")
+  selectedAt         DateTime  @default(now()) @map("selected_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem  StaffWorkItem         @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  customer       Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  member         Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  contactPoint   CustomerContactPoint? @relation(fields: [contactPointId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, staffWorkItemId, selectedAt])
+  @@index([tenantId, customerId, selectedAt])
+  @@index([tenantId, memberId, disposition, selectedAt])
+  @@index([tenantId, externalCallId])
+  @@unique([tenantId, memberId, idempotencyKey])
+  @@map("customer_call_outcomes")
+}
+
+model WorkItemStateTransition {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  staffWorkItemId  String   @map("staff_work_item_id")
+  customerId       String?  @map("customer_id")
+  memberId         String?  @map("member_id")
+  fromWorkState    String?  @map("from_work_state")
+  toWorkState      String   @map("to_work_state")
+  fromQueue        String?  @map("from_queue")
+  toQueue          String   @map("to_queue")
+  reason           String
+  outcomeId        String?  @map("outcome_id")
+  metadata         Json     @default("{}")
+  happenedAt       DateTime @default(now()) @map("happened_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem  StaffWorkItem  @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  member         Member?        @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, staffWorkItemId, happenedAt])
+  @@index([tenantId, memberId, happenedAt])
+  @@index([tenantId, toQueue, happenedAt])
+  @@map("work_item_state_transitions")
 }
 
 model TaskParticipant {
@@ -2467,6 +2720,14 @@ model AircallCallEvent {
   resolverError     String?   @map("resolver_error") @db.Text
   resolverModel     String?   @map("resolver_model")
   resolverPromptKey String?   @map("resolver_prompt_key")
+  resolverInputHash String?   @map("resolver_input_hash")
+  resolverAttemptCount Int    @default(0) @map("resolver_attempt_count")
+  resolverInputTokens Int?    @map("resolver_input_tokens")
+  resolverOutputTokens Int?   @map("resolver_output_tokens")
+  resolverCostMicros Int?     @map("resolver_cost_micros")
+  resolverRepairAttempted Boolean @default(false) @map("resolver_repair_attempted")
+  resolverFailureKind String? @map("resolver_failure_kind")
+  resolverNextRetryAt DateTime? @map("resolver_next_retry_at")
   resolverLatencyMs Int?      @map("resolver_latency_ms")
   resolvedAt        DateTime? @map("resolved_at")
   resolvedWithVersion Int?    @map("resolved_with_version")
@@ -2487,6 +2748,8 @@ model AircallCallEvent {
   @@index([contactPhoneE164])
   @@index([resolverQueuedAt])
   @@index([resolverStatus])
+  @@index([tenantId, resolverInputHash, resolvedWithVersion])
+  @@index([tenantId, resolverFailureKind, resolverNextRetryAt])
   @@index([resolvedAt])
   @@map("aircall_call_events")
 }
@@ -2507,6 +2770,10 @@ model Call {
   answeredAt        DateTime? @map("answered_at")
   endedAt           DateTime? @map("ended_at")
   durationSeconds   Int?      @map("duration_seconds")
+  missedAt          DateTime? @map("missed_at")
+  callbackResolvedAt DateTime? @map("callback_resolved_at")
+  reconciliationStatus String? @map("reconciliation_status")
+  ringGroupUserIds  Json      @default("[]") @map("ring_group_user_ids")
   transcriptRaw     String?   @map("transcript_raw") @db.Text
   rawPayload        Json?     @map("raw_payload")
   createdAt         DateTime  @default(now()) @map("created_at")
@@ -2522,6 +2789,8 @@ model Call {
   @@index([customerUserId])
   @@index([currentOperatorId])
   @@index([status])
+  @@index([tenantId, missedAt, callbackResolvedAt])
+  @@index([tenantId, reconciliationStatus, updatedAt])
   @@map("calls")
 }
 
@@ -2657,7 +2926,7 @@ model WorkflowScheduledAction {
   idempotencyKey           String   @map("idempotency_key")
   skipReason               String?  @map("skip_reason")
   errorMessage             String?  @map("error_message") @db.Text
-  executedServiceRequestId String?  @map("executed_service_request_id")
+  executedStaffWorkItemId  String?  @map("executed_staff_work_item_id")
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
@@ -2665,14 +2934,14 @@ model WorkflowScheduledAction {
   rule                   WorkflowRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   customer               Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   assignedMember         Member?         @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
-  executedServiceRequest ServiceRequest? @relation(fields: [executedServiceRequestId], references: [id], onDelete: SetNull)
+  executedStaffWorkItem StaffWorkItem? @relation(fields: [executedStaffWorkItemId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status, runAt])
   @@index([tenantId, ruleId])
   @@index([tenantId, customerId])
   @@index([tenantId, assignedMemberId])
-  @@index([tenantId, executedServiceRequestId])
+  @@index([tenantId, executedStaffWorkItemId])
   @@map("workflow_scheduled_actions")
 }
 
