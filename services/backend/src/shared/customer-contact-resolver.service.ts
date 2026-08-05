@@ -306,11 +306,11 @@ export class CustomerContactResolverService {
           )
           OR EXISTS (
             SELECT 1 FROM (
-              SELECT value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phone')
-              UNION ALL SELECT value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phone_number')
-              UNION ALL SELECT value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phoneNumber')
-              UNION ALL SELECT value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.telephone')
-              UNION ALL SELECT value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.mobile')
+              SELECT extracted.value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phone') AS extracted(value)
+              UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phone_number') AS extracted(value)
+              UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.phoneNumber') AS extracted(value)
+              UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.telephone') AS extracted(value)
+              UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(c.raw_data, '{}'::jsonb), '$.**.mobile') AS extracted(value)
             ) AS p(value)
             WHERE regexp_replace(COALESCE(p.value #>> '{}', ''), '[^0-9]', '', 'g') IN (${digits}, ${nationalDigits})
           )
@@ -323,11 +323,11 @@ export class CustomerContactResolverService {
                 OR regexp_replace(COALESCE(co.shipping_address->>'phone', co.shipping_address->>'phone_number', co.shipping_address->>'phoneNumber', co.shipping_address->>'mobile', ''), '[^0-9]', '', 'g') IN (${digits}, ${nationalDigits})
                 OR EXISTS (
                   SELECT 1 FROM (
-                    SELECT value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phone')
-                    UNION ALL SELECT value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phone_number')
-                    UNION ALL SELECT value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phoneNumber')
-                    UNION ALL SELECT value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.telephone')
-                    UNION ALL SELECT value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.mobile')
+                    SELECT extracted.value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phone') AS extracted(value)
+                    UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phone_number') AS extracted(value)
+                    UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.phoneNumber') AS extracted(value)
+                    UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.telephone') AS extracted(value)
+                    UNION ALL SELECT extracted.value FROM jsonb_path_query(COALESCE(co.raw_data, '{}'::jsonb), '$.**.mobile') AS extracted(value)
                   ) AS op(value)
                   WHERE regexp_replace(COALESCE(op.value #>> '{}', ''), '[^0-9]', '', 'g') IN (${digits}, ${nationalDigits})
                 )

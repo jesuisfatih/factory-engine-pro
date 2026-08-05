@@ -28,6 +28,23 @@ test('extracts nested Shopify checkout and address phone records only from phone
   assert.deepEqual(values, ['(254) 993-2442', '1-832-207-5225', '+1 713 555 0100']);
 });
 
+test('aliases PostgreSQL JSON path results before matching nested phone fields', async () => {
+  let queryText = '';
+  const service = new CustomerContactResolverService({
+    db: {
+      $queryRaw: async (query: { sql: string }) => {
+        queryText = query.sql;
+        return [];
+      },
+    },
+  } as never, { require: () => ({ tenantId: 'ten_test' }) } as never);
+
+  await service.matchingCustomerIds('(254) 993-2442');
+
+  assert.match(queryText, /AS extracted\(value\)/);
+  assert.doesNotMatch(queryText, /SELECT value FROM jsonb_path_query/);
+});
+
 test('resolves one canonical phone with stable source precedence for every workspace surface', async () => {
   const service = new CustomerContactResolverService({
     db: {
