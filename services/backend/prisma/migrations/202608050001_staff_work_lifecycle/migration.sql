@@ -357,21 +357,21 @@ JOIN "staff_work_items" item ON item."id" = participant."service_request_id" AND
 ON CONFLICT DO NOTHING;
 
 UPDATE "person_workspace_notes" note
-SET "linked_staff_work_item_id" = note."linked_service_request_id", "linked_service_request_id" = NULL
+SET "linked_staff_work_item_id" = note."linked_service_request_id"
 WHERE EXISTS (
   SELECT 1 FROM "staff_work_items" item
   WHERE item."id" = note."linked_service_request_id" AND item."tenant_id" = note."tenant_id"
 );
 
-ALTER TABLE "person_daily_task_orders" DROP CONSTRAINT "person_daily_task_orders_service_request_id_fkey";
-DROP INDEX "person_daily_task_orders_tenant_id_member_id_work_date_service_request_id_key";
-DROP INDEX "person_daily_task_orders_tenant_id_service_request_id_idx";
-DELETE FROM "person_daily_task_orders" ordering
-WHERE NOT EXISTS (
+ALTER TABLE "person_daily_task_orders"
+  ALTER COLUMN "service_request_id" DROP NOT NULL,
+  ADD COLUMN "staff_work_item_id" TEXT;
+UPDATE "person_daily_task_orders" ordering
+SET "staff_work_item_id" = ordering."service_request_id"
+WHERE EXISTS (
   SELECT 1 FROM "staff_work_items" item
   WHERE item."id" = ordering."service_request_id" AND item."tenant_id" = ordering."tenant_id"
 );
-ALTER TABLE "person_daily_task_orders" RENAME COLUMN "service_request_id" TO "staff_work_item_id";
 CREATE UNIQUE INDEX "person_daily_task_orders_tenant_id_member_id_work_date_staff_work_item_id_key"
   ON "person_daily_task_orders"("tenant_id", "member_id", "work_date", "staff_work_item_id");
 CREATE INDEX "person_daily_task_orders_tenant_id_staff_work_item_id_idx"
@@ -379,40 +379,43 @@ CREATE INDEX "person_daily_task_orders_tenant_id_staff_work_item_id_idx"
 ALTER TABLE "person_daily_task_orders"
   ADD CONSTRAINT "person_daily_task_orders_staff_work_item_id_fkey" FOREIGN KEY ("staff_work_item_id") REFERENCES "staff_work_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "workflow_scheduled_actions" DROP CONSTRAINT "workflow_scheduled_actions_executed_service_request_id_fkey";
-DROP INDEX "workflow_scheduled_actions_tenant_id_executed_service_request_id_idx";
+ALTER TABLE "workflow_scheduled_actions" ADD COLUMN "executed_staff_work_item_id" TEXT;
 UPDATE "workflow_scheduled_actions" action
-SET "executed_service_request_id" = NULL
+SET "executed_staff_work_item_id" = action."executed_service_request_id"
 WHERE action."executed_service_request_id" IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM "staff_work_items" item WHERE item."id" = action."executed_service_request_id");
-ALTER TABLE "workflow_scheduled_actions" RENAME COLUMN "executed_service_request_id" TO "executed_staff_work_item_id";
+  AND EXISTS (
+    SELECT 1 FROM "staff_work_items" item
+    WHERE item."id" = action."executed_service_request_id" AND item."tenant_id" = action."tenant_id"
+  );
 CREATE INDEX "workflow_scheduled_actions_tenant_id_executed_staff_work_item_id_idx"
   ON "workflow_scheduled_actions"("tenant_id", "executed_staff_work_item_id");
 ALTER TABLE "workflow_scheduled_actions"
   ADD CONSTRAINT "workflow_scheduled_actions_executed_staff_work_item_id_fkey" FOREIGN KEY ("executed_staff_work_item_id") REFERENCES "staff_work_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
-DELETE FROM "task_participants" participant
-WHERE EXISTS (SELECT 1 FROM "staff_work_items" item WHERE item."id" = participant."service_request_id");
-DELETE FROM "service_request_comments" comment
-WHERE EXISTS (SELECT 1 FROM "staff_work_items" item WHERE item."id" = comment."service_request_id");
-DELETE FROM "service_requests" request
-WHERE request."source" NOT IN ('manual', 'customer_self_service', 'admin_created')
-   OR request."matched_rule_id" IS NOT NULL
-   OR request."metadata"->'workflow'->>'action' = 'create_task';
-
-ALTER TABLE "service_requests"
-  ADD CONSTRAINT "service_requests_source_check" CHECK ("source" IN ('manual', 'customer_self_service', 'admin_created'));
+INSERT INTO "work_item_state_transitions" (
+  "id", "tenant_id", "staff_work_item_id", "customer_id", "from_work_state", "to_work_state",
+  "from_queue", "to_queue", "reason", "metadata", "happened_at", "created_at"
+)
+SELECT
+  'wst_' || substr(md5(item."tenant_id" || ':' || item."id" || ':migration'), 1, 24),
+  item."tenant_id", item."id", item."customer_id", NULL, item."work_state", NULL, item."queue_location",
+  CASE
+    WHEN item."archive_reason" = 'legacy_person_archive' THEN 'legacy_person_archive_backfill'
+    WHEN item."archive_reason" = 'age_window' THEN 'age_window_backfill'
+    ELSE 'staff_work_migration'
+  END,
+  jsonb_build_object('sourceServiceRequestId', item."id"),
+  COALESCE(item."archived_at", item."created_at"),
+  COALESCE(item."archived_at", item."created_at")
+FROM "staff_work_items" item
+ON CONFLICT DO NOTHING;
 
 UPDATE "aircall_call_events"
 SET
   "resolver_status" = 'degraded',
   "resolver_error" = 'Legacy local resolver output was retired. Explicit bounded model reprocessing is required.',
-  "resolver_output" = NULL,
-  "resolver_model" = NULL,
   "resolver_prompt_key" = 'ai.transcript-resolver',
-  "resolver_failure_kind" = 'legacy_local_fallback',
-  "resolved_at" = NULL,
-  "resolved_with_version" = NULL
+  "resolver_failure_kind" = 'legacy_local_fallback'
 WHERE "resolver_model" = 'local-rule-fallback';
 
 INSERT INTO "business_calendars" (

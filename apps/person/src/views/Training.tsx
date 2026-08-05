@@ -14,7 +14,7 @@ export function TrainingView() {
         <h2>Training</h2>
         <div className="sub">
           <BookOpenCheck size={11} style={{ verticalAlign: 'text-top', marginRight: 4 }} />
-          {data?.highPriorityCount ?? 0} high-priority customer moments shaping today&apos;s coaching queue
+          {data?.highPriorityCount ?? 0} verified customer moments in your coaching queue
         </div>
       </div>
 
@@ -22,8 +22,8 @@ export function TrainingView() {
         isLoading={isLoading}
         error={error ? new Error(friendlyError(error)) : null}
         empty={cards.length === 0}
-        emptyTitle="No live training cards"
-        emptyBody="Active customer lists and high-priority customer conversations will create coaching cards here."
+        emptyTitle="No verified coaching moments"
+        emptyBody="Assigned customer conversations with verified evidence will appear here."
       >
         <div className="announce-feed">
           {cards.map((card) => (
@@ -32,8 +32,13 @@ export function TrainingView() {
                 <span className="from">{personSafeText(card.source)}</span>
                 <span>{card.updatedAt}</span>
               </div>
+              {card.customerName ? <div className="training-customer">{personSafeText(card.customerName)}</div> : null}
               <h3>{personSafeText(card.title)}</h3>
               <p>{personSafeText(card.description)}</p>
+              {card.focus ? <div className="training-focus">Focus: {personSafeText(card.focus)}</div> : null}
+              <div className="training-evidence" aria-label="Conversation evidence">
+                {card.evidence.map((item) => <blockquote key={item}>{personSafeText(item)}</blockquote>)}
+              </div>
             </article>
           ))}
         </div>

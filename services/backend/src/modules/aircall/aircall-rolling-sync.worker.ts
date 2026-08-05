@@ -13,6 +13,9 @@ import {
 import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from './aircall.service.js';
+import { AircallIngestService } from './aircall-ingest.service.js';
+
+const AIRCALL_MISSED_RECONCILIATION_JOB = 'reconcile-missed-calls';
 
 interface AircallRollingSyncJobData {
   tenantId?: string;
@@ -27,6 +30,7 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
     @Inject(REDIS_CONNECTION) private readonly connection: ConnectionOptions | null,
     @Inject(AIRCALL_ROLLING_SYNC_QUEUE) private readonly queue: Queue | null,
     private readonly aircall: AircallService,
+    private readonly aircallIngest: AircallIngestService,
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly realtime: RealtimeService,
@@ -81,6 +85,28 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
         },
       );
       scheduled.push({ tenantId: tenant.id, slug: tenant.slug, schedulerId, nextJobId: String(job.id) });
+
+      const reconciliationSchedulerId = `aircall-missed-reconciliation:${tenant.id}:hourly`;
+      const reconciliationJob = await this.queue.upsertJobScheduler(
+        reconciliationSchedulerId,
+        { pattern: '15 * * * *' },
+        {
+          name: AIRCALL_MISSED_RECONCILIATION_JOB,
+          data: { tenantId: tenant.id, source: 'scheduled' } satisfies AircallRollingSyncJobData,
+          opts: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 30_000 },
+            removeOnComplete: { age: 24 * 60 * 60, count: 200 },
+            removeOnFail: { age: 7 * 24 * 60 * 60, count: 500 },
+          },
+        },
+      );
+      scheduled.push({
+        tenantId: tenant.id,
+        slug: tenant.slug,
+        schedulerId: reconciliationSchedulerId,
+        nextJobId: String(reconciliationJob.id),
+      });
     }
     this.logger.log('aircall', 'rolling_sync_schedulers_ready', 'Aircall rolling sync schedulers are ready', {
       scheduler_count: scheduled.length,
@@ -89,12 +115,14 @@ export class AircallRollingSyncWorker implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<AircallRollingSyncJobData>) {
-    if (job.name !== AIRCALL_ROLLING_SYNC_JOB) return;
+    if (job.name !== AIRCALL_ROLLING_SYNC_JOB && job.name !== AIRCALL_MISSED_RECONCILIATION_JOB) return;
     const tenantId = String(job.data?.tenantId ?? '');
     if (!tenantId) throw new Error('Aircall rolling sync job requires tenantId');
     return this.tenantContext.run(
       { requestId: `aircall-rolling-sync-${job.id}`, tenantId, permissions: [] },
-      () => this.syncTenant(tenantId),
+      () => job.name === AIRCALL_MISSED_RECONCILIATION_JOB
+        ? this.aircallIngest.reconcileMissedCalls()
+        : this.syncTenant(tenantId),
     );
   }
 

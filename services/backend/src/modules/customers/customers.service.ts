@@ -139,7 +139,7 @@ export class CustomersService {
     const email = contact.email;
     const aircallWhere = aircallWhereForContacts(email, contact.alternatePhones.map((entry) => entry.phone));
     const orderWhere: Prisma.CommerceOrderWhereInput = { OR: compactOrderCustomerMatchers(customer) };
-    const [orders, aircallCalls, serviceRequests, mailDeliveries, internalNotes, linkedNotes, linkedMessages] = await Promise.all([
+    const [orders, aircallCalls, serviceRequests, mailDeliveries, internalNotes, workspaceNotes, linkedNotes, linkedMessages] = await Promise.all([
       this.prisma.db.commerceOrder.findMany({
         where: orderWhere,
         orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
@@ -169,11 +169,19 @@ export class CustomersService {
           })
         : Promise.resolve([]),
       this.prisma.db.customerInternalNote.findMany({
-        where: { customerId: id },
+        where: { customerId: id, deletedAt: null },
         include: {
           author: { select: { id: true, email: true, firstName: true, lastName: true } },
         },
         orderBy: [{ createdAt: 'desc' }],
+        take: 50,
+      }),
+      this.prisma.db.personWorkspaceNote.findMany({
+        where: { linkedCustomerId: id, kind: 'queue', deletedAt: null },
+        include: {
+          author: { select: { id: true, email: true, firstName: true, lastName: true } },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         take: 50,
       }),
       this.prisma.db.serviceRequest.findMany({
@@ -219,6 +227,7 @@ export class CustomersService {
     const rulesById = new Map(rules.map((rule) => [rule.id, rule.name]));
     const authorIds = uniqueStrings([
       ...internalNotes.map((row) => row.authorMemberId),
+      ...workspaceNotes.map((row) => row.authorMemberId),
       ...linkedNotes.map((row) => row.createdByActorId),
       ...serviceRequests.flatMap((row) => row.comments.map((comment) => comment.actorId)),
     ]);
@@ -246,6 +255,18 @@ export class CustomersService {
         authorMemberId: row.authorMemberId,
         authorMemberName: row.author ? memberName(row.author) : null,
         authorMemberEmail: row.author?.email ?? null,
+      })),
+      ...workspaceNotes.map((row) => ({
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        kind: 'customer_note',
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        linkedQueueId: row.linkedStaffWorkItemId ?? row.linkedServiceRequestId,
+        authorMemberId: row.authorMemberId,
+        authorMemberName: memberName(row.author),
+        authorMemberEmail: row.author.email,
       })),
       ...linkedNotes.map((row) => this.mapLinkedNote(row, authorsById)),
       ...customerRequests.flatMap((row) => row.comments

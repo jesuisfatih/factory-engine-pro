@@ -37,6 +37,15 @@ export interface CreateStaffWorkItemInput {
   idempotencyKey?: string;
 }
 
+export interface ProactiveContactDecision {
+  allowed: boolean;
+  reason: string | null;
+  nextAllowedAt: Date | null;
+  callsInWindow: number;
+  maxCalls: number;
+  windowDays: number;
+}
+
 @Injectable()
 export class StaffWorkService {
   constructor(
@@ -119,6 +128,70 @@ export class StaffWorkService {
     return row;
   }
 
+  async proactiveContactDecision(customerId: string): Promise<ProactiveContactDecision> {
+    await this.requireCustomer(customerId);
+    const now = new Date();
+    const calendar = await this.businessClock.calendar();
+    const policy = await this.prisma.db.customerContactPolicy.findFirst({
+      where: { customerId },
+      select: { doNotCall: true, reason: true },
+    });
+    if (policy?.doNotCall) {
+      return {
+        allowed: false,
+        reason: policy.reason?.trim() || 'This customer asked not to receive calls.',
+        nextAllowedAt: null,
+        callsInWindow: 0,
+        maxCalls: calendar.repeatPolicy.maxCalls,
+        windowDays: calendar.repeatPolicy.windowDays,
+      };
+    }
+
+    const cutoff = await this.businessClock.addCalendarDays(now, -calendar.repeatPolicy.windowDays);
+    const acceptedCalls = await this.prisma.db.customerContactActivity.findMany({
+      where: {
+        customerId,
+        source: 'aircall_dial',
+        status: { in: ['calling', 'connected', 'no_answer', 'voicemail', 'completed'] },
+        startedAt: { gte: cutoff },
+      },
+      select: { startedAt: true },
+      orderBy: { startedAt: 'asc' },
+      take: calendar.repeatPolicy.maxCalls,
+    });
+    if (acceptedCalls.length < calendar.repeatPolicy.maxCalls) {
+      return {
+        allowed: true,
+        reason: null,
+        nextAllowedAt: null,
+        callsInWindow: acceptedCalls.length,
+        maxCalls: calendar.repeatPolicy.maxCalls,
+        windowDays: calendar.repeatPolicy.windowDays,
+      };
+    }
+    const nextAllowedAt = await this.businessClock.addCalendarDays(
+      acceptedCalls[0]!.startedAt,
+      calendar.repeatPolicy.windowDays,
+    );
+    return {
+      allowed: false,
+      reason: `This customer has already received ${calendar.repeatPolicy.maxCalls} calls in ${calendar.repeatPolicy.windowDays} days.`,
+      nextAllowedAt,
+      callsInWindow: acceptedCalls.length,
+      maxCalls: calendar.repeatPolicy.maxCalls,
+      windowDays: calendar.repeatPolicy.windowDays,
+    };
+  }
+
+  async assertProactiveDialAllowed(customerId: string) {
+    const decision = await this.proactiveContactDecision(customerId);
+    if (!decision.allowed) {
+      const retry = decision.nextAllowedAt ? ` Try again after ${decision.nextAllowedAt.toISOString()}.` : '';
+      throw new BadRequestException(`${decision.reason}${retry}`);
+    }
+    return decision;
+  }
+
   async assign(id: string, memberId: string) {
     await this.requireMember(memberId);
     const updated = await this.repository.update(id, { assignedMemberId: memberId });
@@ -197,6 +270,9 @@ export class StaffWorkService {
 
     const now = new Date();
     const plan = await this.outcomePlan(input.disposition, input.scheduledAt, now);
+    const completionVisibleAfter = input.disposition === 'completed'
+      ? await this.completionReappearanceAt(now)
+      : null;
     const normalizedPhone = normalizePhoneE164(input.phone);
     const contactPoint = row.customerId && normalizedPhone
       ? await this.prisma.db.customerContactPoint.findFirst({
@@ -308,6 +384,47 @@ export class StaffWorkService {
           },
         });
       }
+      if (input.disposition === 'completed' && row.customerId && row.assignedMemberId && completionVisibleAfter) {
+        const idempotencyKey = `completion-reappearance:${row.id}:${outcome.id}`;
+        await tx.staffWorkItem.upsert({
+          where: { tenantId_idempotencyKey: { tenantId, idempotencyKey } },
+          create: {
+            id: prefixedId('swi'),
+            tenantId,
+            customerId: row.customerId,
+            assignedMemberId: row.assignedMemberId,
+            axis: row.axis,
+            matchedRuleId: row.matchedRuleId,
+            source: 'completion_reappearance',
+            surface: 'staff',
+            sourceCallId: row.sourceCallId,
+            sourceEmailId: row.sourceEmailId,
+            sourceEventId: outcome.id,
+            sourceOccurredAt: now,
+            title: row.title,
+            description: row.description,
+            status: 'open',
+            priority: row.priority,
+            dueAt: completionVisibleAfter,
+            visibleAfter: completionVisibleAfter,
+            workState: 'scheduled',
+            queueLocation: 'scheduled',
+            metadata: {
+              ...asRecord(row.metadata),
+              lifecycle: {
+                sourceStaffWorkItemId: row.id,
+                sourceOutcomeId: outcome.id,
+                reason: 'completed_reappearance',
+                visibleAfter: completionVisibleAfter.toISOString(),
+              },
+            } as Prisma.InputJsonValue,
+            conditionTrace: row.conditionTrace === null ? [] : row.conditionTrace as Prisma.InputJsonValue,
+            taskStateSnapshot: row.taskStateSnapshot === null ? {} : row.taskStateSnapshot as Prisma.InputJsonValue,
+            idempotencyKey,
+          },
+          update: {},
+        });
+      }
       return outcome;
     });
 
@@ -330,7 +447,12 @@ export class StaffWorkService {
       disposition: input.disposition,
       queue_location: plan.queueLocation,
     });
-    return outcomeDto(outcome, plan.visibleAfter);
+    return outcomeDto(outcome, completionVisibleAfter ?? plan.visibleAfter);
+  }
+
+  private async completionReappearanceAt(now: Date) {
+    const calendar = await this.businessClock.calendar();
+    return this.businessClock.addCalendarDays(now, calendar.repeatPolicy.completionReappearanceDays);
   }
 
   private async outcomePlan(disposition: PersonCallDisposition, scheduledAt: string | undefined, now: Date) {

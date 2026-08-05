@@ -1644,45 +1644,86 @@ export class RulesService {
       if (action.timing?.mode === 'deferred_materialization') {
         result = await this.scheduleDeferredCreateTask(action, context, taskStateSnapshot, assignment, sourceCallId);
       } else {
-      const source = this.workflowTaskSource(context, sourceCallId);
-      const task = await this.staffWork.create({
-        customerId: context.state.customer?.id,
-        title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
-        description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
-        source,
-        priority: priorityForRule(context.rule.priority),
-        axis: assignment.axis,
-        assignedMemberId: assignment.assigneeMemberId ?? undefined,
-        watcherMemberIds: assignment.watcherMemberIds,
-        matchedRuleId: context.rule.id,
-        sourceCallId: sourceCallId ?? undefined,
-        sourceEventId: context.eventId ?? undefined,
-        sourceOccurredAt,
-        conditionTrace: context.conditionTrace,
-        metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
-        taskStateSnapshot,
-        idempotencyKey: `${context.rule.id}:${context.eventId}:${action.id}`,
-      });
-      result = {
-        task: { id: task.id, title: task.title },
-        trace: {
-          actionId: action.id,
-          action: action.action,
-          status: 'applied',
-          targetType: 'staff_work_item',
-          targetId: task.id,
-          message: 'Created workflow task from create_task action.',
-          metadata: {
-            axis: assignment.axis,
-            eventType: context.trigger,
-            assignedMemberId: assignment.assigneeMemberId,
-            watcherMemberIds: assignment.watcherMemberIds,
-            matchedRuleId: context.rule.id,
-            sourceCallId,
-            conditionTraceCount: context.conditionTrace.length,
-          },
-        },
-      };
+        const customerId = context.state.customer?.id ?? null;
+        const taskIdempotencyKey = `${context.rule.id}:${context.eventId}:${action.id}`;
+        const existingTask = await this.prisma.db.staffWorkItem.findFirst({
+          where: { tenantId: this.tenantId(), idempotencyKey: taskIdempotencyKey },
+          select: { id: true, title: true },
+        });
+        if (existingTask) {
+          result = {
+            task: existingTask,
+            trace: {
+              actionId: action.id,
+              action: action.action,
+              status: 'applied',
+              targetType: 'staff_work_item',
+              targetId: existingTask.id,
+              message: 'Workflow follow-up already exists for this event.',
+              metadata: { idempotentReplay: true },
+            },
+          };
+        } else {
+          const contactPolicy = customerId ? await this.staffWork.proactiveContactDecision(customerId) : null;
+          if (contactPolicy && !contactPolicy.allowed) {
+          result = {
+            trace: {
+              actionId: action.id,
+              action: action.action,
+              status: 'skipped',
+              targetType: 'staff_work_item',
+              message: contactPolicy.reason || 'Customer contact policy prevented a new follow-up.',
+              metadata: {
+                customerId,
+                nextAllowedAt: contactPolicy.nextAllowedAt?.toISOString() ?? null,
+                callsInWindow: contactPolicy.callsInWindow,
+                maxCalls: contactPolicy.maxCalls,
+                windowDays: contactPolicy.windowDays,
+              },
+            },
+          };
+          } else {
+            const source = this.workflowTaskSource(context, sourceCallId);
+            const task = await this.staffWork.create({
+              customerId: customerId ?? undefined,
+              title: action.value?.trim() || `Workflow task: ${context.rule.name}`,
+              description: `Created by workflow rule "${context.rule.name}" for trigger "${context.trigger}".`,
+              source,
+              priority: priorityForRule(context.rule.priority),
+              axis: assignment.axis,
+              assignedMemberId: assignment.assigneeMemberId ?? undefined,
+              watcherMemberIds: assignment.watcherMemberIds,
+              matchedRuleId: context.rule.id,
+              sourceCallId: sourceCallId ?? undefined,
+              sourceEventId: context.eventId ?? undefined,
+              sourceOccurredAt,
+              conditionTrace: context.conditionTrace,
+              metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
+              taskStateSnapshot,
+              idempotencyKey: taskIdempotencyKey,
+            });
+            result = {
+              task: { id: task.id, title: task.title },
+              trace: {
+                actionId: action.id,
+                action: action.action,
+                status: 'applied',
+                targetType: 'staff_work_item',
+                targetId: task.id,
+                message: 'Created workflow task from create_task action.',
+                metadata: {
+                  axis: assignment.axis,
+                  eventType: context.trigger,
+                  assignedMemberId: assignment.assigneeMemberId,
+                  watcherMemberIds: assignment.watcherMemberIds,
+                  matchedRuleId: context.rule.id,
+                  sourceCallId,
+                  conditionTraceCount: context.conditionTrace.length,
+                },
+              },
+            };
+          }
+        }
       }
     } else if (action.action === 'pin_customer') {
       result = await this.pinCustomer(action, context);
@@ -2440,10 +2481,10 @@ export class RulesService {
   }
 
   private workflowSourceCallId(context: WorkflowActionContext) {
-    return stringParam(context.params, 'callId')
+    return stringParam(context.params, 'aircallCallEventId')
       ?? stringParam(context.params, 'callEventId')
-      ?? stringParam(context.params, 'aircallCallEventId')
       ?? stringParam(context.params, 'externalCallId')
+      ?? stringParam(context.params, 'callId')
       ?? null;
   }
 
@@ -4422,6 +4463,10 @@ export class RulesService {
     const policy = asRecord(row.revalidationPolicy) as WorkflowActionRevalidate;
     const sourceCallAt = scheduledSourceCallAt(row);
     if (policy.skipIfNoCustomerMatch && !row.customerId) return 'No matched customer remained available.';
+    if (row.customerId) {
+      const contactPolicy = await this.staffWork.proactiveContactDecision(row.customerId);
+      if (!contactPolicy.allowed) return contactPolicy.reason || 'Customer contact policy prevented this follow-up.';
+    }
 
     if (policy.skipIfOpenTaskExistsForIntent && row.customerId) {
       const intent = scheduledOperationalIntent(row);

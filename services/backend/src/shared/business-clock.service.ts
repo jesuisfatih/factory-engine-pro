@@ -64,6 +64,21 @@ export class BusinessClockService {
       second: source.second,
     }, calendar.timeZone);
   }
+
+  async addCalendarDays(from: Date, count: number) {
+    const calendar = await this.calendar();
+    const source = zonedDateParts(from, calendar.timeZone);
+    const cursor = new Date(Date.UTC(source.year, source.month - 1, source.day));
+    cursor.setUTCDate(cursor.getUTCDate() + Math.trunc(count));
+    return zonedDateTimeToUtc({
+      year: cursor.getUTCFullYear(),
+      month: cursor.getUTCMonth() + 1,
+      day: cursor.getUTCDate(),
+      hour: source.hour,
+      minute: source.minute,
+      second: source.second,
+    }, calendar.timeZone);
+  }
 }
 
 const WEEKDAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;

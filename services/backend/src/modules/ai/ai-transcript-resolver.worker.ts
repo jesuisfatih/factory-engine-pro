@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import {
   TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
-  parseStoredTranscriptResolverOutput,
   type TranscriptOperationalSignal,
   type TranscriptResolverOutput,
   type WorkflowTriggerFireResponse,
@@ -24,6 +23,7 @@ import { CustomerContactResolverService } from '../../shared/customer-contact-re
 import { RulesService } from '../rules/rules.service.js';
 import { AiService } from './ai.service.js';
 import { transcriptOperationalSignals } from './transcript-operational-signals.js';
+import { currentModelResolverOutput } from './transcript-resolver-trust.js';
 
 type ResolverJobData = {
   tenantId?: string;
@@ -121,6 +121,24 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
       : null;
     const sameInput = !callEvent.resolverInputHash || callEvent.resolverInputHash === inputHash;
     if (!job.data?.forceReprocess && sameInput && callEvent.resolvedAt && (callEvent.resolvedWithVersion ?? 0) >= targetVersion) {
+      const storedOutput = currentModelResolverOutput(callEvent, targetVersion);
+      if (!storedOutput) {
+        this.logger.warn('ai', 'resolved_transcript_output_untrusted', 'Stored transcript output is not a current model result; workflow replay was blocked', {
+          call_event_id: callEvent.id,
+          external_call_id: callEvent.externalCallId,
+          resolver_status: callEvent.resolverStatus,
+          resolver_model: callEvent.resolverModel,
+          resolved_with_version: callEvent.resolvedWithVersion,
+        });
+        await this.prisma.db.aircallCallEvent.updateMany({
+          where: { id: callEvent.id },
+          data: {
+            resolverStatus: 'degraded',
+            resolverError: 'Stored resolver output is not a current model result. Explicit bounded model reprocessing is required.',
+          },
+        });
+        return { status: 'degraded_untrusted_stored_output', resolvedWithVersion: callEvent.resolvedWithVersion };
+      }
       const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
         where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
       });
@@ -128,55 +146,37 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion, evaluationCount };
       }
 
-      const storedOutput = parseStoredTranscriptResolverOutput(callEvent.resolverOutput);
-      if (storedOutput.success) {
-        await this.fireDerivedWorkflowTriggers(
-          callEvent,
-          storedOutput.data,
-          callEvent.resolverModel ?? 'stored-resolver-output',
-          Boolean(job.data?.forceWorkflowEvaluationRepair),
-        );
-        await this.prisma.db.aircallCallEvent.updateMany({
-          where: { id: callEvent.id },
-          data: {
-            resolverStatus: 'succeeded',
-            resolverError: null,
-            resolvedAt: callEvent.resolvedAt ?? new Date(),
-            resolvedWithVersion: callEvent.resolvedWithVersion ?? targetVersion,
-          },
-        });
-        const repairedEvaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
-          where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
-        });
-        this.logger.log('ai', 'transcript_workflow_evaluation_repaired', 'Resolved transcript was replayed through workflow flow because evaluations were missing', {
-          call_event_id: callEvent.id,
-          external_call_id: callEvent.externalCallId,
-          resolved_with_version: callEvent.resolvedWithVersion,
-          evaluations_created_or_updated: repairedEvaluationCount,
-        });
-        return {
-          status: job.data?.forceWorkflowEvaluationRepair
-            ? 'repaired_workflow_evaluations'
-            : 'repaired_missing_workflow_evaluations',
-          resolvedWithVersion: callEvent.resolvedWithVersion,
-          evaluationCount: repairedEvaluationCount,
-        };
-      }
-
-      this.logger.warn('ai', 'resolved_transcript_output_missing', 'Resolved transcript had no valid resolver output; resolver will run again to produce workflow evaluations', {
-        call_event_id: callEvent.id,
-        external_call_id: callEvent.externalCallId,
-        resolver_status: callEvent.resolverStatus,
-        resolved_with_version: callEvent.resolvedWithVersion,
-      });
+      await this.fireDerivedWorkflowTriggers(
+        callEvent,
+        storedOutput,
+        callEvent.resolverModel!,
+        Boolean(job.data?.forceWorkflowEvaluationRepair),
+      );
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEvent.id },
         data: {
-          resolverStatus: 'degraded',
-          resolverError: 'Stored resolver output is invalid. Explicit bounded reprocessing is required.',
+          resolverStatus: 'succeeded',
+          resolverError: null,
+          resolvedAt: callEvent.resolvedAt ?? new Date(),
+          resolvedWithVersion: callEvent.resolvedWithVersion ?? targetVersion,
         },
       });
-      return { status: 'degraded_invalid_stored_output', resolvedWithVersion: callEvent.resolvedWithVersion };
+      const repairedEvaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+        where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+      });
+      this.logger.log('ai', 'transcript_workflow_evaluation_repaired', 'Resolved transcript was replayed through workflow flow because evaluations were missing', {
+        call_event_id: callEvent.id,
+        external_call_id: callEvent.externalCallId,
+        resolved_with_version: callEvent.resolvedWithVersion,
+        evaluations_created_or_updated: repairedEvaluationCount,
+      });
+      return {
+        status: job.data?.forceWorkflowEvaluationRepair
+          ? 'repaired_workflow_evaluations'
+          : 'repaired_missing_workflow_evaluations',
+        resolvedWithVersion: callEvent.resolvedWithVersion,
+        evaluationCount: repairedEvaluationCount,
+      };
     }
 
     if (!transcript) {

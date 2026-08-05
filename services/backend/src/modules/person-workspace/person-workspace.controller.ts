@@ -6,6 +6,7 @@ import {
   movePersonQueueCardSchema,
   personCustomerArchiveQuerySchema,
   personDailyOperationsQuerySchema,
+  linkPersonTaskCustomerSchema,
   reorderPersonDailyCallSchema,
   recordPersonTaskOutcomeSchema,
   savePersonCustomerNoteSchema,
@@ -23,6 +24,7 @@ import {
   type MovePersonQueueCardInput,
   type PersonCustomerArchiveQuery,
   type PersonDailyOperationsQuery,
+  type LinkPersonTaskCustomerInput,
   type ReorderPersonDailyCallInput,
   type ReplyPersonNoteInput,
   type RecordPersonTaskOutcomeInput,
@@ -150,6 +152,15 @@ export class PersonWorkspaceController {
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   taskBrief(@Param('id') id: string) {
     return this.workspace.taskBrief(id);
+  }
+
+  @Post('tasks/:id/customer-link')
+  @RequirePermission(MEMBER_PERMISSIONS.customersWrite)
+  linkTaskCustomer(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(linkPersonTaskCustomerSchema)) body: LinkPersonTaskCustomerInput,
+  ) {
+    return this.workspace.linkTaskCustomer(id, body);
   }
 
   @Post('tasks/:id/transfer')

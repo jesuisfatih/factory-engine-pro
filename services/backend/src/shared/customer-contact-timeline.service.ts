@@ -295,8 +295,9 @@ function shouldKeepExistingEvent(
 }
 
 function contactStatusRank(status: PersonContactActivityStatus) {
-  if (status === 'no_answer' || status === 'voicemail' || status === 'completed') return 2;
-  if (status === 'connected') return 1;
+  if (status === 'completed') return 3;
+  if (status === 'connected') return 2;
+  if (status === 'no_answer' || status === 'voicemail') return 1;
   return 0;
 }
 

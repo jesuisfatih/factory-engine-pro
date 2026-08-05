@@ -56,7 +56,7 @@ export class ShopifyAdminContextService {
     const [contactState, internalNote, workspaceNote, taskComment, staffWorkComment] = await Promise.all([
       this.timeline.latestForCustomer(customer.id),
       this.prisma.db.customerInternalNote.findFirst({
-        where: { customerId: customer.id },
+        where: { customerId: customer.id, deletedAt: null },
         include: { author: true },
         orderBy: [{ createdAt: 'desc' }],
       }),

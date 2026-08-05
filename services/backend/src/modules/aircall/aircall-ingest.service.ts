@@ -10,6 +10,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { AIRCALL_INGEST_QUEUE, AI_TRANSCRIPT_RESOLVER_JOB, AI_TRANSCRIPT_RESOLVER_QUEUE } from '../../shared/queue.module.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { RulesService } from '../rules/rules.service.js';
 
@@ -51,6 +52,7 @@ export class AircallIngestService {
     private readonly customers: CustomersService,
     private readonly rules: RulesService,
     private readonly contactTimeline: CustomerContactTimelineService,
+    private readonly tenantContext: TenantContextService,
     @Inject(AIRCALL_INGEST_QUEUE) private readonly ingestQueue: Queue | null,
     @Inject(AI_TRANSCRIPT_RESOLVER_QUEUE) private readonly transcriptResolverQueue: Queue | null,
   ) {}
@@ -231,7 +233,7 @@ export class AircallIngestService {
         },
       });
 
-      let call = await this.mirrorCall(inbox.tenantId, externalCallId, eventType, data);
+      let call = await this.mirrorCall(inbox.tenantId, externalCallId, eventType, eventTimestamp, data);
       const contactActivity = await this.contactTimeline.recordAircallEvent({
         externalCallId,
         eventType,
@@ -270,12 +272,14 @@ export class AircallIngestService {
         ],
         skipDuplicates: true,
       });
-      await this.fireWorkflowTrigger({
-        eventType,
-        transcriptRaw,
-        callEvent,
-        call,
-      });
+      if (!isMissedCallEvent(eventType, data)) {
+        await this.fireWorkflowTrigger({
+          eventType,
+          transcriptRaw,
+          callEvent,
+          call,
+        });
+      }
 
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEvent.id },
@@ -299,13 +303,42 @@ export class AircallIngestService {
     }
   }
 
-  private async mirrorCall(tenantId: string, externalCallId: string, eventType: string, data: Record<string, unknown>) {
+  private async mirrorCall(
+    tenantId: string,
+    externalCallId: string,
+    eventType: string,
+    eventTimestamp: Date,
+    data: Record<string, unknown>,
+  ) {
+    const existing = await this.prisma.db.call.findUnique({
+      where: { tenantId_aircallCallId: { tenantId, aircallCallId: externalCallId } },
+    });
     const endedAt = dateFromUnknown(data.ended_at ?? data.endedAt);
-    const status = eventType === 'call.ended' || eventType === 'call.hungup'
+    const incomingStatus = eventType === 'call.ended' || eventType === 'call.hungup'
       ? 'closed'
       : stringOrNull(data.status) ?? 'open';
     const aircallUserId = nestedString(data, 'user.id') ?? stringOrNull(data.user_id);
     const currentOperatorId = await this.resolveMappedMemberId(tenantId, aircallUserId);
+    const answeredAt = dateFromUnknown(data.answered_at ?? data.answeredAt);
+    const durationSeconds = numberOrNull(data.duration);
+    const answered = Boolean(
+      existing?.answeredAt
+      || answeredAt
+      || Number(existing?.durationSeconds ?? 0) > 0
+      || Number(durationSeconds ?? 0) > 0
+      || isAnsweredCallEvent(eventType, data),
+    );
+    const missed = isMissedCallEvent(eventType, data) && !answered;
+    const ringGroupUserIds = uniqueStrings([
+      ...jsonStringArray(existing?.ringGroupUserIds),
+      ...extractRingGroupUserIds(data),
+      aircallUserId,
+    ]);
+    const status = answered
+      ? (endedAt || existing?.endedAt ? 'closed' : 'answered')
+      : missed
+        ? 'missed_pending'
+        : incomingStatus;
 
     return this.prisma.db.call.upsert({
       where: {
@@ -325,26 +358,193 @@ export class AircallIngestService {
         callerNumberE164: e164OrNull(contactPhone(data)),
         callerEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
         startedAt: dateFromUnknown(data.started_at ?? data.created_at ?? data.startedAt),
-        answeredAt: dateFromUnknown(data.answered_at ?? data.answeredAt),
+        answeredAt,
         endedAt,
-        durationSeconds: numberOrNull(data.duration),
+        durationSeconds,
+        missedAt: missed ? eventTimestamp : null,
+        callbackResolvedAt: answered ? eventTimestamp : null,
+        reconciliationStatus: answered ? 'answered_in_ring_group' : missed ? 'pending' : null,
+        ringGroupUserIds,
         transcriptRaw: extractTranscript(data),
         rawPayload: data as Prisma.InputJsonValue,
       },
       update: {
         direction: stringOrNull(data.direction),
         status,
-        currentOperatorId,
-        callerNumber: contactPhone(data),
-        callerNumberE164: e164OrNull(contactPhone(data)),
-        callerEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email'),
-        startedAt: dateFromUnknown(data.started_at ?? data.created_at ?? data.startedAt),
-        answeredAt: dateFromUnknown(data.answered_at ?? data.answeredAt),
-        endedAt,
-        durationSeconds: numberOrNull(data.duration),
-        transcriptRaw: extractTranscript(data),
+        currentOperatorId: currentOperatorId ?? undefined,
+        callerNumber: contactPhone(data) ?? undefined,
+        callerNumberE164: e164OrNull(contactPhone(data)) ?? undefined,
+        callerEmail: nestedString(data, 'customer.email') ?? nestedString(data, 'contact.email') ?? undefined,
+        startedAt: dateFromUnknown(data.started_at ?? data.created_at ?? data.startedAt) ?? undefined,
+        answeredAt: answeredAt ?? undefined,
+        endedAt: endedAt ?? undefined,
+        durationSeconds: durationSeconds ?? undefined,
+        missedAt: answered ? null : missed ? existing?.missedAt ?? eventTimestamp : undefined,
+        callbackResolvedAt: answered ? eventTimestamp : undefined,
+        reconciliationStatus: answered ? 'answered_in_ring_group' : missed ? 'pending' : undefined,
+        ringGroupUserIds,
+        transcriptRaw: extractTranscript(data) ?? undefined,
         rawPayload: data as Prisma.InputJsonValue,
       },
+    });
+  }
+
+  async reconcileMissedCalls(limit = 200) {
+    const tenantId = this.tenantId();
+    const now = new Date();
+    const settleBefore = new Date(now.getTime() - 5 * 60_000);
+    const calls = await this.prisma.db.call.findMany({
+      where: {
+        tenantId,
+        missedAt: { not: null, lte: settleBefore },
+        callbackResolvedAt: null,
+        reconciliationStatus: { in: ['pending', 'confirmed_missed'] },
+      },
+      orderBy: [{ missedAt: 'asc' }],
+      take: Math.max(1, Math.min(1000, Math.trunc(limit))),
+    });
+    const results = { scanned: calls.length, answeredInGroup: 0, callbackResolved: 0, confirmedMissed: 0, deferred: 0 };
+    for (const call of calls) {
+      if (call.answeredAt || Number(call.durationSeconds ?? 0) > 0) {
+        await this.resolveMissedCall(call, call.answeredAt ?? now, 'answered_in_ring_group');
+        results.answeredInGroup += 1;
+        continue;
+      }
+      const callback = await this.findCallbackForMissedCall(call);
+      if (callback?.startedAt) {
+        await this.resolveMissedCall(call, callback.startedAt, 'callback_resolved');
+        results.callbackResolved += 1;
+        continue;
+      }
+      if (call.reconciliationStatus === 'confirmed_missed') {
+        results.deferred += 1;
+        continue;
+      }
+      const missedEvent = await this.prisma.db.aircallCallEvent.findFirst({
+        where: {
+          tenantId,
+          externalCallId: call.aircallCallId ?? '',
+          OR: [
+            { eventType: { equals: 'call.missed', mode: 'insensitive' } },
+            { status: { in: ['missed', 'unanswered', 'no_answer'] } },
+          ],
+        },
+        orderBy: [{ eventTimestamp: 'desc' }],
+      });
+      if (!missedEvent) {
+        results.deferred += 1;
+        continue;
+      }
+      await this.fireWorkflowTrigger({
+        eventType: 'call.missed',
+        transcriptRaw: missedEvent.transcriptRaw,
+        callEvent: missedEvent,
+        call,
+      });
+      await this.prisma.db.call.update({
+        where: { id: call.id },
+        data: { status: 'missed', reconciliationStatus: 'confirmed_missed' },
+      });
+      results.confirmedMissed += 1;
+    }
+    this.logger.log('aircall', 'missed_call_reconciliation', 'Aircall missed call reconciliation completed', {
+      tenant_id: tenantId,
+      ...results,
+    });
+    return results;
+  }
+
+  private async findCallbackForMissedCall(call: {
+    id: string;
+    customerId: string | null;
+    callerNumber: string | null;
+    callerNumberE164: string | null;
+    missedAt: Date | null;
+  }) {
+    if (!call.missedAt) return null;
+    const tenantId = this.tenantId();
+    const phoneValues = uniqueStrings([call.callerNumberE164, call.callerNumber]);
+    if (!call.customerId && phoneValues.length === 0) return null;
+    return this.prisma.db.call.findFirst({
+      where: {
+        tenantId,
+        id: { not: call.id },
+        direction: { equals: 'outbound', mode: 'insensitive' },
+        startedAt: { gt: call.missedAt },
+        OR: [
+          ...(call.customerId ? [{ customerId: call.customerId }] : []),
+          ...(phoneValues.length > 0 ? [
+            { callerNumberE164: { in: phoneValues } },
+            { callerNumber: { in: phoneValues } },
+          ] : []),
+        ],
+      },
+      orderBy: [{ startedAt: 'asc' }],
+    });
+  }
+
+  private async resolveMissedCall(
+    call: { id: string; aircallCallId: string | null; customerId: string | null },
+    resolvedAt: Date,
+    reason: 'answered_in_ring_group' | 'callback_resolved',
+  ) {
+    const tenantId = this.tenantId();
+    const eventIds = call.aircallCallId
+      ? (await this.prisma.db.aircallCallEvent.findMany({
+          where: { tenantId, externalCallId: call.aircallCallId },
+          select: { id: true },
+          take: 100,
+        })).map((row) => row.id)
+      : [];
+    const sourceIds = uniqueStrings([call.id, call.aircallCallId, ...eventIds]);
+    await this.prisma.db.$transaction(async (tx) => {
+      await tx.call.update({
+        where: { id: call.id },
+        data: {
+          status: reason === 'answered_in_ring_group' ? 'closed' : 'callback_resolved',
+          missedAt: null,
+          callbackResolvedAt: resolvedAt,
+          reconciliationStatus: reason,
+        },
+      });
+      if (sourceIds.length === 0) return;
+      const workItems = await tx.staffWorkItem.findMany({
+        where: {
+          tenantId,
+          sourceCallId: { in: sourceIds },
+          status: { notIn: ['closed', 'resolved', 'completed'] },
+          metadata: { path: ['workflow', 'trigger'], equals: 'aircall.call.missed' },
+        },
+        select: { id: true, customerId: true, workState: true, queueLocation: true },
+      });
+      if (workItems.length === 0) return;
+      await tx.staffWorkItem.updateMany({
+        where: { id: { in: workItems.map((item) => item.id) } },
+        data: {
+          status: 'closed',
+          workState: 'completed',
+          queueLocation: 'archive',
+          archivedAt: resolvedAt,
+          archiveReason: reason,
+          closedAt: resolvedAt,
+          resolutionCode: reason,
+        },
+      });
+      await tx.workItemStateTransition.createMany({
+        data: workItems.map((item) => ({
+          id: prefixedId('wst'),
+          tenantId,
+          staffWorkItemId: item.id,
+          customerId: item.customerId,
+          fromWorkState: item.workState,
+          toWorkState: 'completed',
+          fromQueue: item.queueLocation,
+          toQueue: 'archive',
+          reason: `aircall_reconciliation:${reason}`,
+          metadata: { externalCallId: call.aircallCallId } as Prisma.InputJsonValue,
+          happenedAt: resolvedAt,
+        })),
+      });
     });
   }
 
@@ -645,6 +845,12 @@ export class AircallIngestService {
       data: { status: 'processed', processedAt: new Date() },
     });
   }
+
+  private tenantId() {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new Error('Tenant context is required for Aircall reconciliation');
+    return tenantId;
+  }
 }
 
 function extractTokenClaim(payload: Record<string, unknown>) {
@@ -718,6 +924,57 @@ function contactPhone(data: Record<string, unknown>) {
     ?? nestedString(data, 'contact.phone');
 }
 
+function isMissedCallEvent(eventType: string, data: Record<string, unknown>) {
+  const value = `${eventType} ${stringOrNull(data.status) ?? ''}`.toLowerCase();
+  return value.includes('missed') || value.includes('unanswered') || value.includes('no_answer');
+}
+
+function isAnsweredCallEvent(eventType: string, data: Record<string, unknown>) {
+  const value = `${eventType} ${stringOrNull(data.status) ?? ''}`.toLowerCase();
+  return value.includes('answered')
+    || value.includes('connected')
+    || Boolean(dateFromUnknown(data.answered_at ?? data.answeredAt));
+}
+
+function extractRingGroupUserIds(data: Record<string, unknown>) {
+  const candidates = [
+    data.users,
+    data.ring_group_users,
+    data.ringGroupUsers,
+    nestedValue(data, 'number.users'),
+    nestedValue(data, 'team.users'),
+  ];
+  const ids: Array<string | null> = [];
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    for (const value of candidate) {
+      ids.push(typeof value === 'object' && value !== null
+        ? stringOrNull((value as Record<string, unknown>).id)
+        : stringOrNull(value));
+    }
+  }
+  return uniqueStrings(ids);
+}
+
+function nestedValue(record: Record<string, unknown>, path: string): unknown {
+  let current: unknown = record;
+  for (const part of path.split('.')) {
+    if (!current || typeof current !== 'object') return null;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function jsonStringArray(value: Prisma.JsonValue | null | undefined) {
+  return Array.isArray(value)
+    ? value.map((item) => stringOrNull(item)).filter((item): item is string => Boolean(item))
+    : [];
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim()))];
+}
+
 function e164OrNull(phone: string | null) {
   if (!phone) return null;
   const cleaned = phone.replace(/[^\d+]/g, '');
@@ -789,7 +1046,6 @@ function normalizeTargetVersion(value: unknown) {
 
 function successfulResolverJobStatus(value: unknown) {
   return value === 'succeeded'
-    || value === 'succeeded_with_local_fallback'
     || value === 'skipped_already_resolved'
     || value === 'repaired_missing_workflow_evaluations'
     || value === 'repaired_workflow_evaluations';

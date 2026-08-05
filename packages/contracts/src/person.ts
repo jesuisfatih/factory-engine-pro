@@ -187,6 +187,7 @@ export const personQueueCardSchema = z.object({
   miniOrder: personMiniOrderSchema.optional(),
   performance30d: personPerformance30dSchema.optional(),
   createdAt: z.string().optional(),
+  archivedAt: z.string().nullable().optional(),
   unreached: z.boolean().optional(),
   missedNote: z.string().nullable().optional(),
   customerRisk: personCustomerRiskSchema.optional(),
@@ -365,6 +366,7 @@ export const personDailyOperationsSchema = z.object({
     segmentGroupCount: z.number(),
     businessTimezone: z.string(),
     businessDate: z.string(),
+    dailyFilterCounts: z.record(z.string(), z.number().int().min(0)),
   }),
   dailyCallList: z.array(personQueueCardSchema),
   priorityKanban: z.array(personQueueCardSchema),
@@ -377,8 +379,32 @@ export type PersonDailyOperationsDto = z.infer<typeof personDailyOperationsSchem
 export const personDailyOperationRangeSchema = z.enum(['last7d', 'today', 'archive']).default('last7d');
 export type PersonDailyOperationRange = z.infer<typeof personDailyOperationRangeSchema>;
 
+export const personDailyOperationFilterSchema = z.enum([
+  'all',
+  'urgent',
+  'at_risk',
+  'not_selected',
+  'customer_reached',
+  'no_answer',
+  'voicemail',
+  'callback_requested',
+  'follow_up_scheduled',
+  'quote_sent',
+  'order_placed',
+  'not_interested',
+  'wrong_number',
+  'do_not_call',
+  'completed',
+]).default('all');
+export type PersonDailyOperationFilter = z.infer<typeof personDailyOperationFilterSchema>;
+
+export const personDailyOperationSortSchema = z.enum(['newest', 'oldest']).default('newest');
+export type PersonDailyOperationSort = z.infer<typeof personDailyOperationSortSchema>;
+
 export const personDailyOperationsQuerySchema = z.object({
   range: personDailyOperationRangeSchema.optional().default('last7d'),
+  filter: personDailyOperationFilterSchema.optional().default('all'),
+  sort: personDailyOperationSortSchema.optional().default('newest'),
 });
 export type PersonDailyOperationsQuery = z.infer<typeof personDailyOperationsQuerySchema>;
 
@@ -509,6 +535,35 @@ export const personTaskOutcomeSchema = z.object({
   selectedAt: z.string(),
 });
 export type PersonTaskOutcome = z.infer<typeof personTaskOutcomeSchema>;
+
+export const linkPersonTaskCustomerSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('existing'),
+    customerId: z.string().trim().min(1),
+  }),
+  z.object({
+    mode: z.literal('create'),
+    companyName: z.string().trim().max(180).optional(),
+    firstName: z.string().trim().max(100).optional(),
+    lastName: z.string().trim().max(100).optional(),
+    email: z.string().trim().email().optional(),
+    phone: z.string().trim().min(3).max(40).optional(),
+  }).superRefine((value, context) => {
+    if (value.companyName || value.firstName || value.lastName || value.email || value.phone) return;
+    context.addIssue({ code: 'custom', message: 'Enter a customer name, email, or phone.' });
+  }),
+]);
+export type LinkPersonTaskCustomerInput = z.infer<typeof linkPersonTaskCustomerSchema>;
+
+export const linkPersonTaskCustomerResultSchema = z.object({
+  ok: z.literal(true),
+  taskId: z.string(),
+  customerId: z.string(),
+  customerName: z.string(),
+  created: z.boolean(),
+  matchedExisting: z.boolean(),
+});
+export type LinkPersonTaskCustomerResult = z.infer<typeof linkPersonTaskCustomerResultSchema>;
 
 export const sendPersonMessageSchema = z.object({
   threadId: z.string().trim().min(1),

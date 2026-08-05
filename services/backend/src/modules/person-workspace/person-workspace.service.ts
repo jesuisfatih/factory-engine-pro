@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, parseStoredTranscriptResolverOutput, staffSafeDisplayText } from '@factory-engine-pro/contracts';
+import { Prisma, type Customer } from '@prisma/client';
+import { MEMBER_PERMISSIONS, TRANSCRIPT_RESOLVER_SCHEMA_VERSION, staffSafeDisplayText } from '@factory-engine-pro/contracts';
 import type {
   CreatePersonRequestInput,
   MovePersonQueueCardInput,
@@ -43,16 +43,20 @@ import type {
   AircallDialInput,
   AircallDialResponse,
   AlgorithmStrategyDefinition,
+  LinkPersonTaskCustomerInput,
+  LinkPersonTaskCustomerResult,
 } from '@factory-engine-pro/contracts';
 import { aircallWhereFor, phoneVariants } from '../../shared/contact-match.js';
 import { BusinessClockService } from '../../shared/business-clock.service.js';
 import type { BusinessDayRange } from '../../shared/business-time.js';
 import {
   CustomerContactResolverService,
+  normalizePhoneE164,
   type ResolvedCustomerContact,
 } from '../../shared/customer-contact-resolver.service.js';
 import { CustomerInternalNotesService } from '../../shared/customer-internal-notes.service.js';
 import { CustomerContactTimelineService } from '../../shared/customer-contact-timeline.service.js';
+import { currentModelResolverOutput as trustedCurrentModelResolverOutput } from '../ai/transcript-resolver-trust.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -154,7 +158,7 @@ interface PersonDailyCallOrderRow {
 }
 
 interface PersonDailyTaskOrderRow {
-  staffWorkItemId: string;
+  staffWorkItemId: string | null;
   position: number;
 }
 
@@ -188,6 +192,7 @@ type PersonTaskBrief = {
 
 type PersonQueueCardInternalFields = {
   aiBrief?: PersonTaskBrief;
+  resolverOutput?: TranscriptResolverOutput | null;
   workflowTrace?: unknown;
   taskStateSnapshot?: unknown;
   matchedRuleId?: string | null;
@@ -223,13 +228,16 @@ interface CardCallContext {
 
 interface CardCallRow {
   id: string;
+  externalCallId: string;
   contactPhone: string | null;
   contactPhoneE164: string | null;
   contactEmail: string | null;
   transcriptRaw: string | null;
+  resolverStatus: string | null;
   resolverOutput: Prisma.JsonValue | null;
   resolverModel: string | null;
   resolverPromptKey: string | null;
+  resolvedAt: Date | null;
   resolvedWithVersion: number | null;
 }
 
@@ -318,9 +326,9 @@ export class PersonWorkspaceService {
     return (await this.dailyOperationsFor(member)).priorityKanban;
   }
 
-  async dailyOperations(query: PersonDailyOperationsQuery = { range: 'last7d' }) {
+  async dailyOperations(query: Partial<PersonDailyOperationsQuery> = {}) {
     const member = await this.currentMember();
-    return this.dailyOperationsFor(member, query.range);
+    return this.dailyOperationsFor(member, query);
   }
 
   async frontendCustomization() {
@@ -330,8 +338,11 @@ export class PersonWorkspaceService {
 
   private async dailyOperationsFor(
     member: Awaited<ReturnType<PersonWorkspaceService['currentMember']>>,
-    range: PersonDailyOperationRange = 'last7d',
+    query: Partial<PersonDailyOperationsQuery> = {},
   ) {
+    const range: PersonDailyOperationRange = query.range ?? 'last7d';
+    const selectedFilter = query.filter ?? 'all';
+    const archiveSort = query.sort ?? 'newest';
     const assignments = await this.axisAssignments(member.id);
     const visibleCustomerIds = Array.from(assignments.keys());
     const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
@@ -498,8 +509,7 @@ export class PersonWorkspaceService {
     });
 
     const ownedSegmentByCustomer = this.highestOwnedSegmentByCustomer(segmentOwnerships, memberships);
-    const dailyCallList = this.applyDailyTaskOrder(
-      dailyTaskRows
+    const allDailyCards = dailyTaskRows
         .filter((row) => this.isQueueVisible(row))
         .filter((row) => this.isDailyWorkflowTask(row))
         .filter((row) => range === 'archive'
@@ -509,9 +519,12 @@ export class PersonWorkspaceService {
             this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies, taskPinsByTarget.get(row.id) ?? null),
             contactByCustomer,
           ), contactStates))
-        .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card))),
-      dailyTaskOrderRows,
-      dailyRankingStrategy,
+        .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card)));
+    const dailyFilterCounts = personDailyFilterCounts(allDailyCards);
+    const selectedDailyCards = allDailyCards.filter((card) => personDailyFilterMatches(card, selectedFilter));
+    const dailyCallList = (range === 'archive'
+      ? selectedDailyCards.sort((left, right) => sortArchivedCards(left, right, archiveSort))
+      : this.applyDailyTaskOrder(selectedDailyCards, dailyTaskOrderRows, dailyRankingStrategy)
     ).slice(0, 150);
 
     const segmentPriorityCards = segmentGroups
@@ -539,7 +552,7 @@ export class PersonWorkspaceService {
         ), contactStates));
     const pinBoard = [...pinnedTasks, ...pinnedCustomers].sort(sortByUrgency).slice(0, 120);
     const openRequestsCount = scopedRows.filter((row) => !CLOSED.has(row.status) && isCustomerRequestLike(row)).length;
-    const missedFollowUpCount = dailyCallList.filter((card) => card.unreached || isMissedFollowUp(card, today.start)).length;
+    const missedFollowUpCount = allDailyCards.filter((card) => card.unreached || isMissedFollowUp(card, today.start)).length;
     const atRiskCustomerCount = segmentGroups.reduce(
       (total, group) => total + group.items.filter((item) => item.customerRisk !== 'none').length,
       0,
@@ -553,7 +566,7 @@ export class PersonWorkspaceService {
           name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email || member.id,
           roleNames: member.roleAssignments.map((assignment) => assignment.role.name),
         },
-        dailyCount: dailyCallList.length,
+        dailyCount: dailyFilterCounts.all ?? allDailyCards.length,
         priorityCount: segmentGroups.reduce((total, group) => total + group.items.length, 0),
         pinnedCount: pinBoard.length,
         highUrgencyCount: uniqueHighIntentCount(dailyCallList, dailyRankingStrategy, segmentPriorityCards, priorityCustomerStrategy),
@@ -567,6 +580,7 @@ export class PersonWorkspaceService {
         segmentGroupCount: segmentGroups.length,
         businessTimezone: today.timeZone,
         businessDate: today.localDate,
+        dailyFilterCounts,
       },
       dailyCallList,
       priorityKanban: segmentPriorityCards,
@@ -691,7 +705,11 @@ export class PersonWorkspaceService {
     if (orderRows.length === 0) {
       return [...cards].sort((left, right) => strategy ? sortByPersonStrategy(strategy, left, right) || sortByCreatedAtDesc(left, right) : sortByCreatedAtDesc(left, right));
     }
-    const orderByTaskId = new Map(orderRows.map((row) => [row.staffWorkItemId, row.position] as const));
+    const orderByTaskId = new Map(
+      orderRows
+        .filter((row): row is PersonDailyTaskOrderRow & { staffWorkItemId: string } => Boolean(row.staffWorkItemId))
+        .map((row) => [row.staffWorkItemId, row.position] as const),
+    );
     return cards
       .map((card) => ({ card, position: orderByTaskId.get(card.id) ?? null }))
       .sort((left, right) => {
@@ -791,7 +809,7 @@ export class PersonWorkspaceService {
     const tenantId = this.tenantId();
     if (!input.segmentId) {
       const dailyWindow = dailyWorkflowRange(input.range ?? 'last7d', await this.businessClock.currentDay());
-      const operations = await this.dailyOperationsFor(member, input.range ?? 'last7d');
+      const operations = await this.dailyOperationsFor(member, { range: input.range ?? 'last7d' });
       const currentById = new Map(operations.dailyCallList.map((item) => [item.id, item] as const));
       const requested = uniqueStrings(input.orderedItemIds).filter((id) => currentById.has(id));
       if (requested.length === 0) throw new BadRequestException('No valid daily call task cards were provided');
@@ -970,7 +988,10 @@ export class PersonWorkspaceService {
 
   async dialCustomer(input: AircallDialInput): Promise<AircallDialResponse> {
     const member = await this.currentMember();
-    if (input.customerId) await this.assertCustomerInWorkspace(input.customerId, member.id);
+    if (input.customerId) {
+      await this.assertCustomerInWorkspace(input.customerId, member.id);
+      await this.staffWork.assertProactiveDialAllowed(input.customerId);
+    }
     const existingTask = input.staffWorkItemId ? await this.requireStaffWorkItem(input.staffWorkItemId) : null;
     if (existingTask) {
       await this.assertStaffWorkScoped(existingTask, member.id);
@@ -1073,8 +1094,7 @@ export class PersonWorkspaceService {
 
   async toggleCustomerPin(id: string, input: TogglePersonQueuePinInput) {
     const member = await this.currentMember();
-    const assignments = await this.axisAssignments(member.id);
-    if (!assignments.has(id)) throw new ForbiddenException('Customer is outside your workspace scope');
+    await this.assertCustomerInWorkspace(id, member.id);
 
     const customer = await this.prisma.db.customer.findFirst({ where: { id } });
     if (!customer) throw new NotFoundException('Customer not found');
@@ -1438,6 +1458,152 @@ export class PersonWorkspaceService {
     };
   }
 
+  async linkTaskCustomer(id: string, input: LinkPersonTaskCustomerInput): Promise<LinkPersonTaskCustomerResult> {
+    const member = await this.currentMember();
+    const task = await this.requireStaffWorkItem(id);
+    await this.assertStaffWorkScoped(task, member.id);
+    const tenantId = this.tenantId();
+
+    let customer: Customer | null = null;
+    let created = false;
+    let matchedExisting = false;
+    if (input.mode === 'existing') {
+      customer = await this.prisma.db.customer.findFirst({ where: { id: input.customerId, tenantId } });
+      if (!customer) throw new NotFoundException('Customer not found.');
+    } else {
+      const normalizedEmail = input.email?.trim().toLowerCase() || null;
+      const normalizedPhone = normalizePhoneE164(input.phone);
+      const [emailMatches, phoneMatches] = await Promise.all([
+        normalizedEmail
+          ? this.prisma.db.customer.findMany({
+              where: {
+                tenantId,
+                OR: [
+                  { email: { equals: normalizedEmail, mode: 'insensitive' } },
+                  { customerUsers: { some: { email: { equals: normalizedEmail, mode: 'insensitive' } } } },
+                  { subUsers: { some: { email: { equals: normalizedEmail, mode: 'insensitive' } } } },
+                ],
+              },
+              take: 3,
+            })
+          : Promise.resolve([]),
+        normalizedPhone ? this.contactResolver.matchingCustomerIds(normalizedPhone) : Promise.resolve([]),
+      ]);
+      const candidateIds = uniqueStrings([...emailMatches.map((row) => row.id), ...phoneMatches]);
+      if (candidateIds.length > 1) {
+        throw new BadRequestException('More than one customer matches these contact details. Select the existing customer explicitly.');
+      }
+      if (candidateIds.length === 1) {
+        customer = await this.prisma.db.customer.findFirst({ where: { id: candidateIds[0], tenantId } });
+        matchedExisting = Boolean(customer);
+      }
+      if (!customer) {
+        const companyName = input.companyName?.trim()
+          || [input.firstName?.trim(), input.lastName?.trim()].filter(Boolean).join(' ')
+          || normalizedEmail
+          || normalizedPhone;
+        if (!companyName) throw new BadRequestException('Enter a customer name, email, or phone.');
+        customer = await this.prisma.db.customer.create({
+          data: {
+            id: prefixedId('cust'),
+            tenantId,
+            companyName,
+            firstName: input.firstName?.trim() || null,
+            lastName: input.lastName?.trim() || null,
+            email: normalizedEmail,
+            phone: normalizedPhone,
+            status: 'active',
+            rawData: {
+              source: 'person_workspace_unmatched_call',
+              sourceStaffWorkItemId: task.id,
+              createdByMemberId: member.id,
+            } as Prisma.InputJsonValue,
+          },
+        });
+        created = true;
+      }
+    }
+
+    if (!customer) throw new BadRequestException('Customer could not be linked.');
+    const sourceCall = task.sourceCallId
+      ? await this.prisma.db.aircallCallEvent.findFirst({
+          where: {
+            tenantId,
+            OR: [{ id: task.sourceCallId }, { externalCallId: task.sourceCallId }],
+          },
+          orderBy: { eventTimestamp: 'desc' },
+        })
+      : null;
+    const suppliedEmail = input.mode === 'create' ? input.email?.trim().toLowerCase() || null : null;
+    const suppliedPhone = input.mode === 'create' ? normalizePhoneE164(input.phone) : null;
+    const resolvedPhone = suppliedPhone
+      || customer.phone
+      || sourceCall?.contactPhoneE164
+      || sourceCall?.contactPhone
+      || null;
+    await this.prisma.db.$transaction(async (tx) => {
+      if ((suppliedEmail && !customer!.email) || (resolvedPhone && !customer!.phone)) {
+        customer = await tx.customer.update({
+          where: { id: customer!.id },
+          data: {
+            email: customer!.email || suppliedEmail,
+            phone: customer!.phone || resolvedPhone,
+          },
+        });
+      }
+      await tx.staffWorkItem.update({
+        where: { id: task.id },
+        data: {
+          customerId: customer!.id,
+          metadata: {
+            ...this.record(task.metadata),
+            customerLink: {
+              linkedAt: new Date().toISOString(),
+              linkedByMemberId: member.id,
+              created,
+              matchedExisting,
+            },
+          } as Prisma.InputJsonValue,
+        },
+      });
+      if (sourceCall) {
+        await tx.call.updateMany({
+          where: { tenantId, aircallCallId: sourceCall.externalCallId },
+          data: { customerId: customer!.id },
+        });
+      }
+    });
+    if (resolvedPhone) {
+      await this.contactResolver.capturePhonePoints(customer.id, [{
+        value: resolvedPhone,
+        source: sourceCall && !suppliedPhone ? 'call' : 'customer',
+        sourceRef: task.id,
+        priority: suppliedPhone ? 110 : 100,
+        isPrimary: true,
+        metadata: {
+          linkedFromStaffWorkItemId: task.id,
+          enteredByMemberId: suppliedPhone ? member.id : null,
+        },
+      }]);
+    }
+    this.logger.log('person_workspace', 'task.customer_link', 'Unmatched follow-up linked to customer', {
+      staff_work_item_id: task.id,
+      customer_id: customer.id,
+      member_id: member.id,
+      created,
+      matched_existing: matchedExisting,
+    });
+    this.emitCallCenterInvalidate('person.task.customer_link');
+    return {
+      ok: true,
+      taskId: task.id,
+      customerId: customer.id,
+      customerName: customerDisplayName(customer),
+      created,
+      matchedExisting,
+    };
+  }
+
   async saveTaskNote(id: string, input: SavePersonTaskNoteInput) {
     const member = await this.currentMember();
     const row = await this.requireStaffWorkItem(id);
@@ -1786,7 +1952,7 @@ export class PersonWorkspaceService {
         startHour: hour(row.eventTimestamp),
         durationMinutes: Math.max(15, Math.ceil((row.durationSeconds ?? 900) / 60)),
         kind: 'call',
-        source: row.transcriptRaw ? 'call_analysis' : 'manual',
+        source: currentResolverOutput(row) ? 'call_analysis' : 'manual',
         ...calendarDisplayFromCall(row),
       })),
       ...mail.map((row) => ({
@@ -2128,34 +2294,50 @@ export class PersonWorkspaceService {
   }
 
   async training() {
-    const [rawSegments, rawRequests] = await Promise.all([
-      this.prisma.db.segment.findMany({ where: { isActive: true }, orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }], take: 30 }),
-      this.prisma.db.serviceRequest.findMany({
-        where: { priority: { in: ['critical', 'urgent', 'high'] }, status: { notIn: Array.from(CLOSED) } },
-        orderBy: [{ updatedAt: 'desc' }],
-        take: 30,
-      }),
-    ]);
-    const segments = rawSegments.filter(isShopifyNativeSegment).slice(0, 8);
-    const requests = rawRequests.filter((request) => this.isOperationalTrainingRequest(request)).slice(0, 8);
+    const member = await this.currentMember();
+    const rows = await this.prisma.db.staffWorkItem.findMany({
+      where: {
+        sourceCallId: { not: null },
+        OR: [
+          { assignedMemberId: member.id },
+          { participants: { some: { memberId: member.id } } },
+        ],
+      },
+      include: staffWorkItemInclude,
+      orderBy: [{ sourceOccurredAt: 'desc' }, { updatedAt: 'desc' }],
+      take: 80,
+    });
+    const callContext = await this.cardCallContext(rows);
+    const cards = rows.flatMap((row) => {
+      const sourceCall = row.sourceCallId ? callContext.callsById.get(row.sourceCallId) ?? null : null;
+      const resolver = resolverForBrief(sourceCall);
+      if (!resolver) return [];
+      const evidence = uniqueStrings([
+        ...resolver.person_brief.evidence,
+        ...resolver.next_action.evidence,
+        ...resolver.customer_issue.evidence,
+        ...resolver.customer_mood.evidence,
+      ].map((item) => `${item.speaker}: ${item.text}`)).slice(0, 4);
+      if (evidence.length === 0) return [];
+      return [{
+        id: `coaching-${row.id}`,
+        title: staffDisplayText(resolver.person_brief.call_goal || resolver.next_action.action || row.title),
+        description: staffDisplayText(resolver.person_brief.why_calling || resolver.summary),
+        focus: staffDisplayText(
+          resolver.person_brief.issue
+          || resolver.customer_issue.description
+          || resolver.customer_issue.category
+          || resolver.customer_mood.label,
+        ),
+        evidence,
+        customerName: staffDisplayText(row.customer?.companyName || row.customer?.email || sourceCall?.contactPhoneE164 || sourceCall?.contactPhone),
+        source: 'Verified customer conversation',
+        updatedAt: relative(row.sourceOccurredAt ?? row.updatedAt),
+      }];
+    }).slice(0, 12);
     return {
-      highPriorityCount: requests.length,
-      cards: [
-        ...segments.map((segment) => ({
-          id: `segment-${segment.id}`,
-          title: `${staffDisplayText(segment.name)} customer-list context`,
-          description: staffDisplayText(segment.description) || `Live Shopify customer list with ${segment.customerCount} customer(s). Review customer history before calling.`,
-          source: 'Shopify customer list',
-          updatedAt: relative(segment.updatedAt),
-        })),
-        ...requests.map((request) => ({
-          id: `request-${request.id}`,
-          title: `${request.priority.toUpperCase()} customer follow-up`,
-          description: staffDisplayText(request.title),
-          source: 'Customer request',
-          updatedAt: relative(request.updatedAt),
-        })),
-      ].slice(0, 12),
+      highPriorityCount: cards.length,
+      cards,
     };
   }
 
@@ -2307,7 +2489,7 @@ export class PersonWorkspaceService {
     const emails = [...emailToCustomerId.keys()];
     const phones = [...phoneToCustomerId.keys()];
 
-    const [workRows, serviceRows, customerNoteRows, noteRows, commentRows, staffCommentRows, orderRows, callRows] = await Promise.all([
+    const [workRows, serviceRows, customerNoteRows, workspaceNoteRows, noteRows, commentRows, staffCommentRows, orderRows, callRows] = await Promise.all([
       this.prisma.db.staffWorkItem.findMany({
         where: { customerId: { in: ids }, status: { notIn: Array.from(CLOSED) } },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -2319,8 +2501,13 @@ export class PersonWorkspaceService {
         take: Math.min(Math.max(ids.length * 20, 200), 3000),
       }),
       this.prisma.db.customerInternalNote.findMany({
-        where: { customerId: { in: ids } },
+        where: { customerId: { in: ids }, deletedAt: null },
         orderBy: [{ createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 5, 100), 1000),
+      }),
+      this.prisma.db.personWorkspaceNote.findMany({
+        where: { linkedCustomerId: { in: ids }, kind: 'queue', deletedAt: null },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(Math.max(ids.length * 5, 100), 1000),
       }),
       this.prisma.db.serviceRequest.findMany({
@@ -2373,6 +2560,7 @@ export class PersonWorkspaceService {
 
     const memberIds = uniqueStrings([
       ...customerNoteRows.map((row) => row.authorMemberId),
+      ...workspaceNoteRows.map((row) => row.authorMemberId),
       ...noteRows.map((row) => row.createdByActorId),
       ...commentRows.map((row) => row.actorId),
       ...staffCommentRows.map((row) => row.actorId),
@@ -2418,6 +2606,20 @@ export class PersonWorkspaceService {
         body: row.body,
         authorName: memberById.get(row.authorMemberId ?? '') ?? 'Staff member',
         createdAt: row.createdAt.toISOString(),
+      };
+      context.notesCount += 1;
+      if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
+    }
+
+    for (const row of workspaceNoteRows) {
+      if (!row.linkedCustomerId) continue;
+      const context = result.get(row.linkedCustomerId);
+      if (!context) continue;
+      const note = {
+        id: row.id,
+        body: row.body || row.title,
+        authorName: memberById.get(row.authorMemberId) ?? 'Staff member',
+        createdAt: row.updatedAt.toISOString(),
       };
       context.notesCount += 1;
       if (!context.latestNote || note.createdAt > context.latestNote.createdAt) context.latestNote = note;
@@ -2471,12 +2673,13 @@ export class PersonWorkspaceService {
       if (!customerId) continue;
       const context = result.get(customerId);
       if (!context) continue;
-      const resolver = asRecord(row.resolverOutput);
+      const resolver = currentResolverOutput(row);
+      const personBrief = resolver?.person_brief;
       const call = {
         id: row.id,
         phone: row.contactPhoneE164 ?? row.contactPhone,
         email: row.contactEmail,
-        summary: stringOrNull(resolver.summary) ?? row.transcriptRaw?.slice(0, 180) ?? row.status,
+        summary: personBrief?.why_calling || resolver?.summary || 'Call analysis unavailable.',
         at: row.eventTimestamp.toISOString(),
       };
       context.callsCount += 1;
@@ -2783,8 +2986,9 @@ export class PersonWorkspaceService {
     const header = taskHeader(row, metadata, callContext);
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
     const ticket = ticketNumber(row);
-    const workflowBadges = workflowBadgesFromMetadata(metadata, row.taskStateSnapshot);
+    const workflowBadges = workflowBadgesFromMetadata(metadata);
     const generatedBrief = hasGeneratedBrief(source) ? this.brief(row, callContext) : undefined;
+    const resolverOutput = hasGeneratedBrief(source) ? resolverForBrief(sourceCall) : null;
     const missedNote = followUpMissedNote(row);
     const customerRisk = customerRiskFromSignals({
       churnRisk: row.customer?.insight?.churnRisk,
@@ -2821,6 +3025,7 @@ export class PersonWorkspaceService {
       pinnedAt,
       source,
       createdAt: workDisplayTimestamp(row).toISOString(),
+      archivedAt: row.archivedAt?.toISOString() ?? null,
       unreached: missedNote !== null,
       missedNote,
       customerRisk: customerRisk.risk,
@@ -2836,6 +3041,7 @@ export class PersonWorkspaceService {
       segmentPriority: ownedSegment?.segmentPriority ?? row.customer?.segmentMemberships[0]?.segment.priorityGlobal ?? row.customer?.segmentMemberships[0]?.segment.priority ?? null,
       segmentOwnershipPriority: ownedSegment?.ownershipPriority ?? null,
       aiBrief: generatedBrief,
+      resolverOutput,
       callExcerpt: staffDisplayText(generatedBrief?.transcriptSnippet) || null,
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
@@ -2950,20 +3156,29 @@ export class PersonWorkspaceService {
     const sourceCallIds = uniqueStrings(rows.map((row) => row.sourceCallId).filter((id): id is string => Boolean(id)));
     if (sourceCallIds.length === 0) return { callsById: new Map() };
     const calls = await this.prisma.db.aircallCallEvent.findMany({
-      where: { id: { in: sourceCallIds } },
+      where: { OR: [{ id: { in: sourceCallIds } }, { externalCallId: { in: sourceCallIds } }] },
       select: {
         id: true,
+        externalCallId: true,
         contactPhone: true,
         contactPhoneE164: true,
         contactEmail: true,
         transcriptRaw: true,
+        resolverStatus: true,
         resolverOutput: true,
         resolverModel: true,
         resolverPromptKey: true,
+        resolvedAt: true,
         resolvedWithVersion: true,
       },
+      orderBy: { eventTimestamp: 'desc' },
     });
-    return { callsById: new Map(calls.map((call) => [call.id, call])) };
+    const callsById = new Map<string, CardCallRow>();
+    for (const call of calls) {
+      callsById.set(call.id, call);
+      if (!callsById.has(call.externalCallId)) callsById.set(call.externalCallId, call);
+    }
+    return { callsById };
   }
 
   private calendarFromRequest(row: StaffWorkItemRow) {
@@ -2990,7 +3205,7 @@ export class PersonWorkspaceService {
   private brief(row: StaffWorkItemRow, callContext?: CardCallContext): PersonTaskBrief {
     const metadata = this.record(row.metadata);
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
-    const resolver = resolverForBrief(row, metadata, sourceCall);
+    const resolver = resolverForBrief(sourceCall);
     if (resolver) return transcriptPersonBrief(row, resolver, sourceCall);
 
     return {
@@ -3363,26 +3578,11 @@ function highIntentBandIds(strategy: AlgorithmStrategyDefinition) {
   return Array.isArray(raw) ? raw.map((value) => String(value).trim()).filter(Boolean) : [];
 }
 
-function resolverForBrief(
-  row: StaffWorkItemRow,
-  metadata: Record<string, unknown>,
-  sourceCall?: CardCallRow | null,
-): TranscriptResolverOutput | null {
-  const workflow = asRecord(metadata.workflow);
-  const workflowState = asRecord(workflow.stateSnapshot ?? workflow.state_snapshot);
-  const snapshot = asRecord(row.taskStateSnapshot);
-  const candidates = [
-    sourceCall?.resolverOutput,
-    snapshot.resolverOutput,
-    snapshot.resolver_output,
-    workflowState.resolverOutput,
-    workflowState.resolver_output,
-  ];
-  for (const candidate of candidates) {
-    const parsed = parseStoredTranscriptResolverOutput(candidate);
-    if (parsed.success) return parsed.data;
-  }
-  return null;
+function resolverForBrief(sourceCall?: CardCallRow | null): TranscriptResolverOutput | null {
+  if (!sourceCall
+    || sourceCall.resolverStatus !== 'succeeded'
+  ) return null;
+  return trustedCurrentModelResolverOutput(sourceCall, TRANSCRIPT_RESOLVER_SCHEMA_VERSION);
 }
 
 function transcriptPersonBrief(
@@ -3445,6 +3645,7 @@ function withPersonCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueue
 function publicPersonQueueCard(card: PersonQueueCardInternal): PersonQueueCardDto {
   const {
     aiBrief: _aiBrief,
+    resolverOutput: _resolverOutput,
     workflowTrace: _workflowTrace,
     taskStateSnapshot: _taskStateSnapshot,
     matchedRuleId: _matchedRuleId,
@@ -3466,6 +3667,41 @@ function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCard
       displayOutcome: 'Review the original call before contacting this customer.',
       displayActions: [],
       displayBadges: [{ label: 'Call review required', tone: 'warning' }],
+      displayCustomerSummary: staffCustomerSummary(card),
+      displayCommerceSnapshot: staffCommerceSnapshot(card),
+      displayCallSnapshot: staffCallSnapshot(card),
+    };
+  }
+  if (card.kind === 'task' && card.resolverOutput && card.aiBrief) {
+    const priority = card.resolverOutput.next_action.priority;
+    const mood = card.resolverOutput.customer_mood.label;
+    const primarySignal = card.resolverOutput.operational_signals
+      .filter((signal) => signal.action_required)
+      .sort((left, right) => right.confidence - left.confidence)[0] ?? null;
+    const badgeLabel = staffDisplayText(
+      primarySignal?.suggested_task_title
+      ?? card.resolverOutput.next_action.action
+      ?? card.aiBrief.callGoal
+      ?? 'Customer follow-up',
+    ).slice(0, 96) || 'Customer follow-up';
+    const tone: PersonQueueCardDisplayFields['displayBadges'][number]['tone'] =
+      priority === 'urgent' || mood === 'angry' ? 'danger'
+        : priority === 'high' || mood === 'frustrated' || mood === 'anxious' ? 'warning'
+          : card.resolverOutput.call_intent === 'sale' ? 'success' : 'info';
+    return {
+      displayTitle: staffDisplayText(card.title),
+      displayReason: staffDisplayText(card.aiBrief.whyCalling) || 'The reason for this call was not captured in the verified analysis.',
+      displayConcern: staffDisplayText(card.aiBrief.upsetAbout) || 'No customer mood or issue was captured in the verified analysis.',
+      displayOutcome: staffDisplayText(card.aiBrief.callGoal) || 'No required outcome was captured in the verified analysis.',
+      displayActions: cleanedActions(card.aiBrief.suggestedActions),
+      displayBadges: [
+        { label: badgeLabel, tone },
+        card.customerRisk === 'lost'
+          ? { label: 'Critical customer risk', tone: 'danger' as const }
+          : card.customerRisk === 'at_risk'
+            ? { label: 'At-risk customer', tone: 'warning' as const }
+            : null,
+      ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge)),
       displayCustomerSummary: staffCustomerSummary(card),
       displayCommerceSnapshot: staffCommerceSnapshot(card),
       displayCallSnapshot: staffCallSnapshot(card),
@@ -3700,7 +3936,6 @@ function taskHeader(row: StaffWorkItemRow, metadata: Record<string, unknown>, ca
   const params = asRecord(workflow.params);
   const snapshot = asRecord(row.taskStateSnapshot);
   const snapshotCustomer = asRecord(snapshot.customer);
-  const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
   const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) : null;
   const phone = firstString(
     params.contactPhoneE164,
@@ -3708,8 +3943,6 @@ function taskHeader(row: StaffWorkItemRow, metadata: Record<string, unknown>, ca
     params.phone,
     params.contactPhone,
     snapshotCustomer.phone,
-    resolverOutput.customer_phone,
-    resolverOutput.phone,
     sourceCall?.contactPhoneE164,
     sourceCall?.contactPhone,
   );
@@ -3718,8 +3951,6 @@ function taskHeader(row: StaffWorkItemRow, metadata: Record<string, unknown>, ca
     params.email,
     params.contactEmail,
     snapshotCustomer.email,
-    resolverOutput.customer_email,
-    resolverOutput.email,
     sourceCall?.contactEmail,
   );
 
@@ -3845,27 +4076,15 @@ function firstString(...values: unknown[]) {
   return null;
 }
 
-function workflowBadgesFromMetadata(metadata: Record<string, unknown>, taskStateSnapshot: unknown) {
+function workflowBadgesFromMetadata(metadata: Record<string, unknown>) {
   const workflow = asRecord(metadata.workflow);
   const params = asRecord(workflow.params);
-  const snapshot = asRecord(taskStateSnapshot);
-  const workflowSnapshot = asRecord(workflow.stateSnapshot ?? workflow.state_snapshot);
-  const resolverOutput = asRecord(
-    snapshot.resolverOutput
-    ?? snapshot.resolver_output
-    ?? workflowSnapshot.resolverOutput
-    ?? workflowSnapshot.resolver_output,
-  );
   const callIntent = stringOrNull(params.intent)
     ?? stringOrNull(params.callIntent)
-    ?? stringOrNull(params.call_intent)
-    ?? stringOrNull(resolverOutput.call_intent)
-    ?? stringOrNull(resolverOutput.callIntent);
+    ?? stringOrNull(params.call_intent);
   const psychTags = uniqueStrings([
     ...stringArray(params.psychTags),
     ...stringArray(params.psych_tags),
-    ...stringArray(resolverOutput.psych_tags),
-    ...stringArray(resolverOutput.psychTags),
     stringOrNull(params.tag),
     stringOrNull(params.psychTag),
     stringOrNull(params.psych_tag),
@@ -3923,7 +4142,11 @@ function taskTimeline(
     status: string | null;
     durationSeconds: number | null;
     transcriptRaw: string | null;
+    resolverStatus: string | null;
+    resolverModel: string | null;
     resolverOutput: Prisma.JsonValue | null;
+    resolvedAt: Date | null;
+    resolvedWithVersion: number | null;
   }>,
   activityLogs: Array<{
     id: string;
@@ -3973,18 +4196,20 @@ function taskTimeline(
   }
 
   for (const call of calls) {
-    const resolver = asRecord(call.resolverOutput);
+    const resolver = call.resolverStatus === 'succeeded'
+      ? trustedCurrentModelResolverOutput(call, TRANSCRIPT_RESOLVER_SCHEMA_VERSION)
+      : null;
     entries.push({
       id: `aircall-${call.id}`,
       kind: 'aircall',
       title: `${titleize(call.eventType)} ${call.direction ?? 'call'}`.trim(),
-      summary: stringOrNull(resolver.summary) ?? call.transcriptRaw?.slice(0, 220) ?? call.status,
+      summary: resolver?.summary ?? call.transcriptRaw?.slice(0, 220) ?? call.status,
       at: call.eventTimestamp.toISOString(),
       meta: {
         durationSeconds: call.durationSeconds,
         status: call.status,
-        intent: stringOrNull(resolver.call_intent),
-        psychTags: stringArray(resolver.psych_tags),
+        intent: resolver?.call_intent ?? null,
+        psychTags: resolver?.psych_tags ?? [],
       },
     });
   }
@@ -4047,18 +4272,26 @@ function taskTimeline(
 function latestCallSummary(calls: Array<{
   eventTimestamp: Date;
   resolvedAt: Date | null;
+  resolverStatus: string | null;
   resolverModel: string | null;
   resolverOutput: Prisma.JsonValue | null;
+  resolvedWithVersion: number | null;
   transcriptRaw: string | null;
 }>): PersonCallSummary | null {
-  const call = calls.find((row) => row.resolverOutput) ?? calls.find((row) => row.transcriptRaw);
-  if (!call) return null;
-  const output = asRecord(call.resolverOutput);
-  const tags = stringArray(output.psych_tags);
-  const shipping = asRecord(output.shipping_signals);
-  const payment = asRecord(output.payment_signals);
-  const products = valueArray(output.product_mentions)
-    .map((item) => asRecord(item))
+  const trusted = calls
+    .map((call) => ({
+      call,
+      output: call.resolverStatus === 'succeeded'
+        ? trustedCurrentModelResolverOutput(call, TRANSCRIPT_RESOLVER_SCHEMA_VERSION)
+        : null,
+    }))
+    .find((entry) => entry.output !== null);
+  if (!trusted?.output) return null;
+  const { call, output } = trusted;
+  const tags = output.psych_tags;
+  const shipping = output.shipping_signals;
+  const payment = output.payment_signals;
+  const products = output.product_mentions
     .map((item) => stringOrNull(item.name_hint ?? item.sku))
     .filter((item): item is string => Boolean(item));
   const objections = uniqueStrings([
@@ -4076,11 +4309,11 @@ function latestCallSummary(calls: Array<{
   const hesitationSignals = uniqueStrings([
     tags.includes('shipping_issue') ? 'Shipping issue' : null,
     tags.includes('info_request') ? 'Information request' : null,
-    stringOrNull(output.urgency_signal) ? `Urgency ${stringOrNull(output.urgency_signal)}` : null,
+    output.urgency_signal ? `Urgency ${output.urgency_signal}` : null,
   ]);
   return {
-    communicationStyle: stringOrNull(output.call_intent),
-    decisionMakingStyle: stringOrNull(output.urgency_signal),
+    communicationStyle: output.call_intent,
+    decisionMakingStyle: output.urgency_signal,
     trustLevel: null,
     engagementLevel: null,
     winProbability: null,
@@ -4088,7 +4321,7 @@ function latestCallSummary(calls: Array<{
     objections,
     buyingSignals,
     hesitationSignals,
-    talkTrack: stringOrNull(output.summary) ?? call.transcriptRaw?.slice(0, 320) ?? null,
+    talkTrack: output.summary,
     generatedAt: call.resolvedAt?.toISOString() ?? call.eventTimestamp.toISOString(),
   };
 }
@@ -4112,10 +4345,6 @@ function stringOrNull(value: unknown) {
 
 function stringArray(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
-}
-
-function valueArray(value: unknown) {
-  return Array.isArray(value) ? value : [];
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {
@@ -4189,6 +4418,15 @@ function calendarDisplayFromRequest(
   row: { title: string; description: string | null; priority: string },
   brief: PersonTaskBrief | null,
 ) {
+  if (brief?.modelUsed === 'unavailable') {
+    return {
+      displayReason: 'Verified call analysis is not available yet.',
+      displayConcern: 'No verified customer mood or issue is available.',
+      displayOutcome: 'Review the original call before contacting this customer.',
+      displayActions: [],
+      callExcerpt: staffDisplayText(brief.transcriptSnippet),
+    };
+  }
   const actions = cleanedActions(brief?.suggestedActions ?? []);
   return {
     displayReason: firstMeaningfulStaffText([brief?.whyCalling, row.description, row.title]) || staffDisplayText(row.title),
@@ -4204,31 +4442,44 @@ function calendarDisplayFromRequest(
 function calendarDisplayFromCall(row: {
   transcriptRaw: string | null;
   resolverOutput: Prisma.JsonValue | null;
+  resolverStatus: string | null;
+  resolverModel: string | null;
+  resolvedAt: Date | null;
+  resolvedWithVersion: number | null;
   eventType: string;
   contactPhoneE164: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
 }) {
-  const resolver = asRecord(row.resolverOutput);
-  const personBrief = asRecord(resolver.person_brief);
-  const summary = stringOrNull(personBrief.why_calling)
-    ?? stringOrNull(resolver.summary)
-    ?? row.transcriptRaw?.slice(0, 240)
-    ?? `${titleize(row.eventType)} call captured.`;
-  const concern = stringOrNull(personBrief.upset_about)
-    ?? stringOrNull(resolver.customer_problem)
-    ?? stringOrNull(resolver.objection_summary)
-    ?? 'Review call notes for the customer issue.';
-  const outcome = stringOrNull(personBrief.call_goal)
-    ?? 'Save the next customer outcome or schedule the next follow-up.';
-  const actions = cleanedActions(stringArray(personBrief.suggested_actions));
+  const resolver = currentResolverOutput(row);
+  if (!resolver) {
+    return {
+      displayReason: 'Verified call analysis is not available yet.',
+      displayConcern: 'No verified customer mood or issue is available.',
+      displayOutcome: 'Review the original call before contacting this customer.',
+      displayActions: [],
+      callExcerpt: staffDisplayText(row.transcriptRaw?.slice(0, 240)),
+    };
+  }
+  const personBrief = resolver.person_brief;
   return {
-    displayReason: staffDisplayText(summary),
-    displayConcern: staffDisplayText(concern),
-    displayOutcome: staffDisplayText(outcome),
-    displayActions: actions.length > 0 ? actions : ['Review call context', 'Add call notes', 'Schedule follow-up if needed'],
-    callExcerpt: staffDisplayText(stringOrNull(personBrief.transcript_snippet) ?? row.transcriptRaw?.slice(0, 240)),
+    displayReason: staffDisplayText(personBrief.why_calling || resolver.summary),
+    displayConcern: staffDisplayText(personBrief.upset_about || personBrief.issue),
+    displayOutcome: staffDisplayText(personBrief.call_goal || personBrief.next_action),
+    displayActions: cleanedActions(personBrief.suggested_actions),
+    callExcerpt: staffDisplayText(personBrief.transcript_snippet || row.transcriptRaw?.slice(0, 240)),
   };
+}
+
+function currentResolverOutput(row: {
+  resolverOutput: Prisma.JsonValue | null;
+  resolverStatus: string | null;
+  resolverModel: string | null;
+  resolvedAt: Date | null;
+  resolvedWithVersion: number | null;
+}) {
+  if (row.resolverStatus !== 'succeeded') return null;
+  return trustedCurrentModelResolverOutput(row, TRANSCRIPT_RESOLVER_SCHEMA_VERSION);
 }
 
 function taskCategoryLabel(value: unknown) {
@@ -4274,6 +4525,52 @@ function sortByCreatedAtDesc(
   const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
   const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
   return rightTime - leftTime || sortByUrgency(left, right);
+}
+
+const DAILY_OUTCOME_FILTERS = [
+  'not_selected',
+  'customer_reached',
+  'no_answer',
+  'voicemail',
+  'callback_requested',
+  'follow_up_scheduled',
+  'quote_sent',
+  'order_placed',
+  'not_interested',
+  'wrong_number',
+  'do_not_call',
+  'completed',
+] as const;
+
+function personDailyFilterCounts(cards: PersonQueueCardDto[]) {
+  const counts: Record<string, number> = {
+    all: cards.length,
+    urgent: cards.filter((card) => card.urgencyScore >= 8).length,
+    at_risk: cards.filter((card) => card.customerRisk === 'at_risk' || card.customerRisk === 'lost').length,
+  };
+  for (const disposition of DAILY_OUTCOME_FILTERS) {
+    counts[disposition] = cards.filter((card) => personDailyFilterMatches(card, disposition)).length;
+  }
+  return counts;
+}
+
+function personDailyFilterMatches(card: PersonQueueCardDto, filter: PersonDailyOperationsQuery['filter']) {
+  if (filter === 'all') return true;
+  if (filter === 'urgent') return card.urgencyScore >= 8;
+  if (filter === 'at_risk') return card.customerRisk === 'at_risk' || card.customerRisk === 'lost';
+  const disposition = card.currentDisposition ?? (card.outcomeRequired ? 'not_selected' : null);
+  return disposition === filter;
+}
+
+function sortArchivedCards(
+  left: PersonQueueCardDto,
+  right: PersonQueueCardDto,
+  sort: PersonDailyOperationsQuery['sort'],
+) {
+  const leftTime = Date.parse(left.archivedAt ?? left.createdAt ?? '') || 0;
+  const rightTime = Date.parse(right.archivedAt ?? right.createdAt ?? '') || 0;
+  const compared = rightTime - leftTime;
+  return (sort === 'oldest' ? -compared : compared) || sortByUrgency(left, right);
 }
 
 function workDisplayTimestamp(row: {
@@ -4323,7 +4620,7 @@ function personStrategyScore(strategy: AlgorithmStrategyDefinition, signals: Rec
   return Math.round(score * 10) / 10;
 }
 
-function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unknown> {
+function personCardStrategySignals(card: PersonQueueCardDto | PersonQueueCardInternal): Record<string, unknown> {
   const createdAtMs = card.createdAt ? Date.parse(card.createdAt) : 0;
   const waitingHours = createdAtMs > 0 ? Math.max(0, (Date.now() - createdAtMs) / 3_600_000) : 0;
   const openTasksCount = card.performance30d?.serviceRequests ?? 0;
@@ -4332,6 +4629,31 @@ function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unk
   const totalSpent = card.totalSpent ?? 0;
   const hasOpenTask = !CLOSED.has(card.columnId);
   const isCallSource = card.source === 'call_analysis' || Boolean(card.callIntent);
+  const resolver = 'resolverOutput' in card ? card.resolverOutput : null;
+  const operationalIntents = new Set(resolver?.operational_signals.map((signal) => signal.intent) ?? []);
+  const psychTags = new Set(card.psychTags ?? []);
+  const complaint = Boolean(
+    resolver?.shipping_signals.complaint
+    || resolver?.payment_signals.complaint
+    || resolver?.customer_issue.detected
+    || resolver?.customer_mood.label === 'angry'
+    || resolver?.customer_mood.label === 'frustrated'
+    || psychTags.has('complaint'),
+  );
+  const refundOrPaymentIssue = Boolean(resolver?.payment_signals.refund_asked || resolver?.payment_signals.complaint);
+  const shippingIssue = Boolean(
+    resolver?.shipping_signals.complaint
+    || resolver?.shipping_signals.tracking_asked
+    || resolver?.shipping_signals.address_mentioned,
+  );
+  const purchaseIntent = card.callIntent === 'sale'
+    || operationalIntents.has('heat_press_machine_purchase_intent')
+    || operationalIntents.has('spare_part_purchase_intent')
+    || operationalIntents.has('heat_press_purchase_intent')
+    || operationalIntents.has('dtf_supply_reorder_signal')
+    || operationalIntents.has('quote_request')
+    || operationalIntents.has('machine_upgrade_interest')
+    || operationalIntents.has('existing_customer_expansion_signal');
   return {
     createdAt: card.createdAt ?? null,
     updatedAt: card.createdAt ?? null,
@@ -4340,7 +4662,7 @@ function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unk
     customerName: card.title,
     intent: card.callIntent ?? card.axis ?? card.source,
     callIntent: card.callIntent ?? null,
-    psychTags: card.psychTags?.join(',') ?? '',
+    psychTags: Array.from(psychTags).join(','),
     priority: card.priority,
     source: card.source,
     axis: card.axis,
@@ -4355,22 +4677,22 @@ function personCardStrategySignals(card: PersonQueueCardDto): Record<string, unk
     lastOrderAt: card.miniOrder?.processedAt ?? null,
     lastCallAt: isCallSource ? card.createdAt ?? null : null,
     latestNoteAt: null,
-    purchaseIntent: card.callIntent === 'sale' || card.urgencyBreakdown.intent === 'sales' || card.urgencyBreakdown.intent === 'purchase_intent',
-    refundOrPaymentIssue: includesCardText(card, ['refund', 'payment', 'price', 'pricing']),
-    shippingIssue: includesCardText(card, ['shipping', 'delivery', 'tracking', 'freight']),
-    complaint: includesCardText(card, ['complaint', 'angry', 'upset', 'frustrated']),
+    purchaseIntent,
+    refundOrPaymentIssue,
+    shippingIssue,
+    complaint,
     customerMatched: Boolean(card.customerId),
     hasOpenTask,
-    callNow: isCallSource || includesCardText(card, ['callback', 'call back', 'phone']),
+    callNow: Boolean(resolver?.next_action.required && resolver.next_action.owner === 'staff') || isCallSource,
     noteFirst: true,
-    scheduleFirst: Boolean(card.displayActions.some((action) => action.toLowerCase().includes('schedule'))),
-    emailFirst: Boolean(card.displayActions.some((action) => action.toLowerCase().includes('email'))),
+    scheduleFirst: Boolean(resolver?.promise.made && resolver.promise.due_hint),
+    emailFirst: false,
     reviewOrderFirst: Boolean(card.miniOrder) || ordersCount > 0,
-    complaintTone: includesCardText(card, ['complaint', 'angry', 'upset', 'frustrated']),
-    refundRisk: includesCardText(card, ['refund', 'return', 'chargeback', 'payment']),
-    shippingConcern: includesCardText(card, ['shipping', 'delivery', 'tracking', 'freight']),
+    complaintTone: complaint,
+    refundRisk: refundOrPaymentIssue,
+    shippingConcern: shippingIssue,
     customerHistory: ordersCount > 0 || totalSpent > 0,
-    productSpecificity: includesCardText(card, ['hydro', 'dtf', 'printer', 'press', 'ink', 'film', 'powder', 'sku']),
+    productSpecificity: Boolean(resolver?.product_mentions.length),
     openTaskPenalty: hasOpenTask,
     unmatchedCustomerPenalty: !card.customerId,
     recentCallBoost: isCallSource && waitingHours <= 168,
@@ -4461,26 +4783,6 @@ function uniqueAllowedStrings(values: string[], allowed: readonly string[]) {
     result.push(normalized);
   }
   return result;
-}
-
-function includesCardText(card: PersonQueueCardDto, needles: string[]) {
-  const text = [
-    card.title,
-    card.summary,
-    card.displayTitle,
-    card.displayReason,
-    card.displayConcern,
-    card.displayOutcome,
-    card.displayCustomerSummary,
-    card.displayCommerceSnapshot,
-    card.displayCallSnapshot,
-    card.callExcerpt,
-    card.callIntent,
-    ...(card.psychTags ?? []),
-    ...card.displayActions,
-    ...card.displayBadges.map((badge) => badge.label),
-  ].join(' ').toLowerCase();
-  return needles.some((needle) => text.includes(needle));
 }
 
 function personConditionMatches(condition: AlgorithmStrategyDefinition['conditions'][number], signals: Record<string, unknown>) {

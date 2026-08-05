@@ -1326,21 +1326,25 @@ model PersonDailyCallOrder {
 }
 
 model PersonDailyTaskOrder {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
-  memberId         String   @map("member_id")
-  staffWorkItemId  String   @map("staff_work_item_id")
-  workDate         DateTime @map("work_date") @db.Date
+  id               String    @id
+  tenantId         String    @map("tenant_id")
+  memberId         String    @map("member_id")
+  serviceRequestId String?   @map("service_request_id")
+  staffWorkItemId  String?   @map("staff_work_item_id")
+  workDate         DateTime  @map("work_date") @db.Date
   position         Int
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  staffWorkItem  StaffWorkItem?  @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, memberId, workDate, serviceRequestId])
   @@unique([tenantId, memberId, workDate, staffWorkItemId])
   @@index([tenantId, memberId, workDate, position])
+  @@index([tenantId, serviceRequestId])
   @@index([tenantId, staffWorkItemId])
   @@map("person_daily_task_orders")
 }
@@ -1498,6 +1502,8 @@ model ServiceRequest {
   assignedMember Member?               @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
   comments     ServiceRequestComment[]
   participants TaskParticipant[]
+  dailyTaskOrders PersonDailyTaskOrder[]
+  materializedWorkflowScheduledActions WorkflowScheduledAction[]
   personWorkspaceNotes PersonWorkspaceNote[]
 
   @@index([tenantId, customerId])
@@ -2926,6 +2932,7 @@ model WorkflowScheduledAction {
   idempotencyKey           String   @map("idempotency_key")
   skipReason               String?  @map("skip_reason")
   errorMessage             String?  @map("error_message") @db.Text
+  executedServiceRequestId String?  @map("executed_service_request_id")
   executedStaffWorkItemId  String?  @map("executed_staff_work_item_id")
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
@@ -2934,13 +2941,15 @@ model WorkflowScheduledAction {
   rule                   WorkflowRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   customer               Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   assignedMember         Member?         @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
-  executedStaffWorkItem StaffWorkItem? @relation(fields: [executedStaffWorkItemId], references: [id], onDelete: SetNull)
+  executedServiceRequest ServiceRequest? @relation(fields: [executedServiceRequestId], references: [id], onDelete: SetNull)
+  executedStaffWorkItem  StaffWorkItem?  @relation(fields: [executedStaffWorkItemId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status, runAt])
   @@index([tenantId, ruleId])
   @@index([tenantId, customerId])
   @@index([tenantId, assignedMemberId])
+  @@index([tenantId, executedServiceRequestId])
   @@index([tenantId, executedStaffWorkItemId])
   @@map("workflow_scheduled_actions")
 }

@@ -5,12 +5,13 @@ import {
   X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, ShoppingBag, DollarSign,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
+  UserPlus,
 } from 'lucide-react';
-import { dialAircall, fetchTaskBrief, friendlyError, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { dialAircall, fetchTaskBrief, friendlyError, linkTaskCustomer, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
 import { FollowUpScheduler, initialFollowUpValue } from './FollowUpScheduler';
 import type { Card as CardData, TaskBriefDetail } from '../types';
-import { humanize, personSafeText, staffActionLabel, staffBriefLine } from '../lib/personTerminology';
+import { humanize, personSafeText } from '../lib/personTerminology';
 
 interface Props {
   card: CardData;
@@ -178,12 +179,12 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
-  const hasBrief = liveCard.source !== 'manual' && Boolean(liveCard.displayReason || liveCard.displayOutcome || liveCard.displayActions.length > 0);
+  const hasBrief = liveCard.source !== 'manual' && Boolean(liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome);
   const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
-    why: personSafeText(liveCard.displayReason || 'Review the customer context before calling.'),
-    upset: personSafeText(liveCard.displayConcern || 'No customer concern captured yet.'),
-    goal: personSafeText(liveCard.displayOutcome || 'Save the next customer outcome.'),
+    why: personSafeText(liveCard.displayReason || 'Verified call analysis is not available yet.'),
+    upset: personSafeText(liveCard.displayConcern || 'Analysis unavailable.'),
+    goal: personSafeText(liveCard.displayOutcome || 'Analysis unavailable.'),
   }), [liveCard.displayConcern, liveCard.displayOutcome, liveCard.displayReason]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
@@ -195,6 +196,9 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const [outcomeRequired, setOutcomeRequired] = useState(Boolean(card.outcomeRequired));
   const [disposition, setDisposition] = useState<PersonCallDisposition>('not_selected');
   const [outcomeNote, setOutcomeNote] = useState('');
+  const [linkName, setLinkName] = useState('');
+  const [linkEmail, setLinkEmail] = useState(liveCard.email ?? '');
+  const [linkPhone, setLinkPhone] = useState(liveCard.phone ?? '');
   const dialCustomer = useMutation({
     mutationFn: dialAircall,
     onSuccess: (result) => {
@@ -320,23 +324,10 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     if (!activeTaskId || disposition === 'not_selected' || outcomeMutation.isPending) return;
     outcomeMutation.mutate();
   };
-
-  const actionInput = {
-    intent: liveCard.callIntent ?? liveCard.urgencyBreakdown.intent,
-    tags: liveCard.psychTags,
-    upset,
-    goal,
-    summary: why || liveCard.summary,
-    urgencyScore: liveCard.urgencyScore,
-  };
-  const primaryBadge = liveCard.displayBadges[0];
-  const actionLabel = personSafeText(primaryBadge?.label) || staffActionLabel(actionInput);
-  const primaryBrief = personSafeText(liveCard.displayOutcome) || staffBriefLine(actionInput);
+  const primaryBrief = personSafeText(liveCard.displayOutcome) || 'Verified call analysis is not available yet.';
   const modalActionOrder = liveCard.modalActionOrder ?? [];
   const safeDisplayActions = liveCard.displayActions.map((action) => personSafeText(action)).filter(Boolean);
-  const directActions = safeDisplayActions.length > 0
-    ? orderedDisplayActions(safeDisplayActions, modalActionOrder)
-    : directiveActions(actionLabel, liveCard.phone, undefined, modalActionOrder);
+  const directActions = orderedDisplayActions(safeDisplayActions, modalActionOrder);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
   const purchaseSummary = personSafeText(liveCard.displayCommerceSnapshot) || (latestOrder
@@ -350,7 +341,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     : 'Confirm phone or email before promising order, refund, or pricing details.';
   const summarySignals = detail?.callSummary?.motivators.map(personSafeText).filter(Boolean) ?? [];
   const summaryFriction = detail?.callSummary?.objections.map(personSafeText).filter(Boolean) ?? [];
-  const summaryChecks = safeDisplayActions.length > 0 ? safeDisplayActions : directActions;
+  const summaryChecks = safeDisplayActions;
   const callExcerpt = personSafeText(liveCard.callExcerpt);
   const tier = riskTier(liveCard.priority);
   const safeTitle = personSafeText(liveCard.displayTitle || liveCard.title);
@@ -359,6 +350,20 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     ...(showField('purchaseHistory') ? [sectionStyle('purchaseHistory', 90).order] : []),
     ...(showField('callSummary') ? [sectionStyle('callSummary', 100).order] : []),
   );
+
+  const linkCustomerMutation = useMutation({
+    mutationFn: () => linkTaskCustomer(card.id, {
+      mode: 'create',
+      companyName: linkName.trim() || undefined,
+      email: linkEmail.trim() || undefined,
+      phone: linkPhone.trim() || undefined,
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+      await queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
+      await queryClient.invalidateQueries({ queryKey: ['person', 'customers'] });
+    },
+  });
 
   const noteSection = isTaskCard && showField('noteForm') ? (
     <form className="brief-block" style={sectionStyle('noteForm', 82)} onSubmit={submitNote}>
@@ -396,7 +401,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     <div style={sectionStyle('noteForm', 82)}>{followUpNotesContent}</div>
   ) : noteSection;
   const outcomePanel = outcomeRequired && activeTaskId ? (
-    <form className="brief-block brief-outcome" style={{ order: 81 }} onSubmit={submitOutcome}>
+    <form className="brief-block brief-outcome" style={{ order: 70 }} onSubmit={submitOutcome}>
       <div className="brief-block-head">
         <span className="lbl">Save call outcome</span>
         <span className="brief-count-pill required">Required</span>
@@ -504,6 +509,13 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                       </div>
                     ) : null}
 
+                    {!directActions.length && showField('extraChecks') ? (
+                      <div className="brief-block brief-analysis-unavailable" style={sectionStyle('extraChecks', 70)}>
+                        <div className="brief-block-head"><span className="lbl">Suggested actions</span></div>
+                        <div className="brief-val brief-val-muted">Analysis unavailable. Review the call excerpt before contacting the customer.</div>
+                      </div>
+                    ) : null}
+
                     {callExcerpt && showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
@@ -555,6 +567,27 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                             ))}
                           </div>
                         )}
+                        {!customerMatched && isTaskCard ? (
+                          <form
+                            className="brief-customer-link"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              if (!linkName.trim() && !linkEmail.trim() && !linkPhone.trim()) return;
+                              linkCustomerMutation.mutate();
+                            }}
+                          >
+                            <div className="brief-block-head"><span className="lbl">Link this caller</span></div>
+                            <input className="brief-edit" value={linkName} onChange={(event) => setLinkName(event.target.value)} placeholder="Customer or company name" />
+                            <div className="brief-link-grid">
+                              <input className="brief-edit" type="email" value={linkEmail} onChange={(event) => setLinkEmail(event.target.value)} placeholder="Email" />
+                              <input className="brief-edit" value={linkPhone} onChange={(event) => setLinkPhone(event.target.value)} placeholder="Phone" />
+                            </div>
+                            {linkCustomerMutation.isError ? <div className="danger-text">{friendlyError(linkCustomerMutation.error)}</div> : null}
+                            <button className="btn" type="submit" disabled={linkCustomerMutation.isPending || (!linkName.trim() && !linkEmail.trim() && !linkPhone.trim())}>
+                              <UserPlus size={12} /> {linkCustomerMutation.isPending ? 'Linking' : 'Create or link customer'}
+                            </button>
+                          </form>
+                        ) : null}
                       </>
                     ) : (
                       <div className="brief-val brief-val-muted">Open the live brief to see Shopify match data.</div>
@@ -566,8 +599,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     {liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.callSummary ? (
                       <div className="brief-psych">
                         <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.callSummary?.communicationStyle || 'Not captured')}</strong></div>
-                        <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief || 'Save the next customer outcome')}</strong></div>
-                        <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Review order and call context'}</strong></div>
+                        <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief || 'Analysis unavailable')}</strong></div>
+                        <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Analysis unavailable'}</strong></div>
                         <div><span>Signals</span><strong>{summarySignals.join(', ') || 'None captured'}</strong></div>
                         <div><span>Friction</span><strong>{summaryFriction.join(', ') || 'None captured'}</strong></div>
                         <p>{personSafeText(liveCard.displayReason || callSignal)}</p>
@@ -599,6 +632,19 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     <div className="brief-val brief-val-muted">No customer history entries yet.</div>
                   )}
                 </div> : null}
+                {isTaskCard && showField('scheduleForm') ? (
+                  <form className="brief-block brief-main-schedule" style={sectionStyle('scheduleForm', 115)} onSubmit={submitSchedule}>
+                    <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span></div>
+                    <div className="brief-schedule-grid">
+                      <FollowUpScheduler value={scheduleAt} onChange={setScheduleAt} disabled={scheduleMutation.isPending} compact />
+                      <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
+                      <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
+                        <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
+                      </button>
+                    </div>
+                    {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
+                  </form>
+                ) : null}
                 <div className="brief-section-shell" style={sectionStyle('customCustomerContext', 120)}>
                   <FrontendCustomizationSlotView customization={customization} slot="modal.customer_context" context={customizationContext} />
                 </div>
@@ -607,7 +653,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
             )}
           </div>
 
-          {showField('customerSidePanel') ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
+          {showField('customerSidePanel', false) ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
             <div className="brief-stats">
               <div className="brief-stat">
                 <ShoppingBag size={11} />
@@ -647,21 +693,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
             <div className="brief-quick-actions">
               <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>
             </div>
-            {isTaskCard && showField('scheduleForm') ? (
-              <form className="brief-block brief-side-schedule" style={sectionStyle('scheduleForm', 145)} onSubmit={submitSchedule}>
-                <div className="brief-block-head">
-                  <span className="lbl">{frontendCopy(override, 'calendarLabel', 'Calendar action')}</span>
-                </div>
-                <div className="brief-schedule-grid side">
-                  <FollowUpScheduler value={scheduleAt} onChange={setScheduleAt} disabled={scheduleMutation.isPending} compact />
-                  <input className="brief-edit" value={scheduleNote} onChange={(event) => setScheduleNote(event.target.value)} placeholder="Follow-up note" />
-                  <button type="submit" className="btn" disabled={!scheduleAt || scheduleMutation.isPending}>
-                    <CalendarClock size={12} /> {scheduleMutation.isPending ? 'Scheduling' : 'Schedule'}
-                  </button>
-                </div>
-                {scheduleMutation.isError ? <div className="danger-text">{friendlyError(scheduleMutation.error)}</div> : null}
-              </form>
-            ) : null}
           </aside> : null}
         </div>
 
@@ -727,75 +758,6 @@ function clientActionId(prefix: string) {
   return `${prefix}:${value}`;
 }
 
-function directiveActions(actionLabel: string, phone: string | undefined, suggestedActions: string[] | undefined, modalActionOrder: string[] = []) {
-  const normalized = actionLabel.toLowerCase();
-  const callStep = phone ? `Call ${phone} now.` : 'Find a valid phone number before closing this follow-up.';
-  const cleaned = (suggestedActions ?? []).map((action) => personSafeText(action).trim()).filter(Boolean);
-  const ordered = modalActionOrder
-    .map((action) => modalActionText(action, callStep, cleaned))
-    .filter((action): action is string => Boolean(action));
-  if (ordered.length >= 2) return uniqueActions(ordered).slice(0, 3);
-  if (cleaned.length >= 2) return [callStep, ...cleaned].slice(0, 3);
-  if (normalized.includes('payment') || normalized.includes('refund')) {
-    return [
-      callStep,
-      'Ask for the order number and the exact refund, payment, or pricing issue.',
-      'Tell the customer the next accountable step and save the outcome note.',
-    ];
-  }
-  if (normalized.includes('delivery')) {
-    return [
-      callStep,
-      'Ask for the order or tracking number first.',
-      'Give one clear shipping update path, then save what you promised.',
-    ];
-  }
-  if (normalized.includes('callback')) {
-    return [
-      callStep,
-      'Ask what decision, order, or question is still pending.',
-      'Do not close this until the answer or next callback time is saved.',
-    ];
-  }
-  if (normalized.includes('purchase')) {
-    return [
-      callStep,
-      'Ask product need, quantity, timing, and budget.',
-      'Set the next purchase step: quote, order, sample, or scheduled follow-up.',
-    ];
-  }
-  if (normalized.includes('concern')) {
-    return [
-      callStep,
-      'Let the customer explain the issue without arguing.',
-      'Repeat the issue back, assign the next owner, and save the exact promise.',
-    ];
-  }
-  return [callStep, ...cleaned, 'Save the result before leaving this screen.'].slice(0, 4);
-}
-
-function modalActionText(action: string, callStep: string, suggestedActions: string[]) {
-  const firstSuggested = suggestedActions[0] ?? 'Review the customer context before calling.';
-  const secondSuggested = suggestedActions[1] ?? 'Ask the customer what is still pending.';
-  const map: Record<string, string> = {
-    call_customer: callStep,
-    confirm_need: secondSuggested,
-    capture_outcome: 'Save the exact result before leaving this follow-up.',
-    check_order: 'Check the latest Shopify order before promising a next step.',
-    schedule_follow_up: 'Schedule the next follow-up time if the customer is not ready now.',
-    add_note: 'Add a clear internal note with the promise, owner, and next date.',
-    review_context: firstSuggested,
-    review_shopify_orders: 'Review Shopify order history before discussing price, refund, or reorder details.',
-    open_customer_history: 'Open the customer history and scan recent calls, notes, and orders.',
-    ask_specific_question: secondSuggested,
-    state_reason: firstSuggested,
-    confirm_next_step: 'Confirm the single next accountable step with the customer.',
-    save_outcome: 'Save the outcome so the next person sees exactly what happened.',
-    archive_if_not_needed: 'Archive only if the call has no real customer follow-up need.',
-  };
-  return map[action];
-}
-
 function uniqueActions(actions: string[]) {
   const seen = new Set<string>();
   return actions.filter((action) => {
@@ -808,10 +770,10 @@ function uniqueActions(actions: string[]) {
 
 function callSignalText(detail: TaskBriefDetail | undefined) {
   const analysis = detail?.callSummary;
-  if (!analysis) return 'No call signal is attached yet. Use the action plan above and save the result.';
+  if (!analysis) return 'Verified call analysis is not available yet.';
   const parts = [
     analysis.motivators.length ? `Motivators: ${analysis.motivators.map(personSafeText).join(', ')}.` : null,
     analysis.objections.length ? `Objections: ${analysis.objections.map(personSafeText).join(', ')}.` : null,
   ].filter(Boolean);
-  return parts.join(' ') || 'No strong motivator or objection was captured. Use the action plan above.';
+  return parts.join(' ') || 'No verified motivator or objection was captured.';
 }

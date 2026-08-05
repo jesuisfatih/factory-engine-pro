@@ -6,7 +6,7 @@ import type {
   AircallDialResponse,
   PersonEmailContact,
   PersonNoteRow,
-  PersonDailyOperationRange,
+  PersonDailyOperationsQuery,
   PersonTaskSyncResult,
   ReplyPersonNoteInput,
   ArchivePersonDailyCallResult,
@@ -21,6 +21,8 @@ import type {
   SchedulePersonTaskFollowUpInput,
   SendPersonEmailInput,
   TransferPersonTaskInput,
+  LinkPersonTaskCustomerInput,
+  LinkPersonTaskCustomerResult,
 } from '@factory-engine-pro/contracts';
 import { apiErrorMessage, personApi } from '../lib/api';
 import type { Card, ColumnId, CustomerArchivePage, CustomerRow, DailyOperations, TaskBriefDetail, TransferTarget, TransferTaskResult } from '../types';
@@ -105,6 +107,9 @@ export interface TrainingCard {
   id: string;
   title: string;
   description: string;
+  focus: string;
+  evidence: string[];
+  customerName: string;
   source: string;
   updatedAt: string;
 }
@@ -129,8 +134,8 @@ export function friendlyError(error: unknown) {
 
 export const fetchSummary = () => personApi.personWorkspaceSummary() as Promise<PersonSummary>;
 export const fetchCards = () => personApi.personQueueCards() as Promise<Card[]>;
-export const fetchDailyOperations = (range: PersonDailyOperationRange = 'last7d') =>
-  personApi.personDailyOperations(range) as Promise<DailyOperations>;
+export const fetchDailyOperations = (query: Partial<PersonDailyOperationsQuery> = {}) =>
+  personApi.personDailyOperations(query) as Promise<DailyOperations>;
 export const fetchFrontendCustomization = () =>
   personApi.personFrontendCustomization() as Promise<PersonFrontendCustomizationRuntime>;
 export const moveCard = (input: { id: string; columnId: ColumnId; index: number }) =>
@@ -147,6 +152,8 @@ export const fetchTransferTargets = () => personApi.personTransferTargets() as P
 export const transferTask = (id: string, input: TransferPersonTaskInput) =>
   personApi.transferPersonTask(id, input) as Promise<TransferTaskResult>;
 export const fetchTaskBrief = (id: string) => personApi.personTaskBrief(id) as Promise<TaskBriefDetail>;
+export const linkTaskCustomer = (id: string, input: LinkPersonTaskCustomerInput) =>
+  personApi.linkPersonTaskCustomer(id, input) as Promise<LinkPersonTaskCustomerResult>;
 export const saveTaskNote = (id: string, input: SavePersonTaskNoteInput) => personApi.savePersonTaskNote(id, input) as Promise<TaskBriefDetail>;
 export const recordTaskOutcome = (id: string, input: RecordPersonTaskOutcomeInput) =>
   personApi.recordPersonTaskOutcome(id, input) as Promise<PersonTaskOutcome>;

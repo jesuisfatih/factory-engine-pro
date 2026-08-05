@@ -8,7 +8,7 @@ import { CustomerDetailPanel, CustomerInternalNoteComposer } from '@factory-engi
 import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
 import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
-import type { Card as CardData, DailyCallItem, DailyOperationRange, DailyOperations, SegmentDailyGroup } from '../types';
+import type { Card as CardData, DailyCallItem, DailyOperationFilter, DailyOperationRange, DailyOperationSort, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
@@ -20,8 +20,22 @@ import { focusLabel, personSafeText, staffActionLabel } from '../lib/personTermi
 import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
-type DailyFilter = 'all' | 'urgent' | 'unreached' | 'at_risk';
 type WorkSection = 'missed' | 'risk' | 'followup' | 'priority';
+
+const DAILY_OUTCOME_FILTERS: Array<{ value: DailyOperationFilter; label: string }> = [
+  { value: 'not_selected', label: 'Needs outcome' },
+  { value: 'customer_reached', label: 'Customer reached' },
+  { value: 'no_answer', label: 'No answer' },
+  { value: 'voicemail', label: 'Voicemail' },
+  { value: 'callback_requested', label: 'Callback requested' },
+  { value: 'follow_up_scheduled', label: 'Follow-up scheduled' },
+  { value: 'quote_sent', label: 'Quote sent' },
+  { value: 'order_placed', label: 'Order placed' },
+  { value: 'not_interested', label: 'Not interested' },
+  { value: 'wrong_number', label: 'Wrong number' },
+  { value: 'do_not_call', label: 'Do not call' },
+  { value: 'completed', label: 'Completed' },
+];
 
 export function CallQueueView({ range: initialRange = 'last7d', archive = false }: { range?: DailyOperationRange; archive?: boolean } = {}) {
   const qc = useQueryClient();
@@ -35,14 +49,15 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
-  const [dailyFilter, setDailyFilter] = useState<DailyFilter>('all');
+  const [dailyFilter, setDailyFilter] = useState<DailyOperationFilter>('all');
+  const [archiveSort, setArchiveSort] = useState<DailyOperationSort>('newest');
   const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
   const [kanbanSegment, setKanbanSegment] = useState<string>('all');
   const [completeCandidate, setCompleteCandidate] = useState<CardData | null>(null);
-  const queryKey = [...QK_BASE, range] as const;
+  const queryKey = [...QK_BASE, range, dailyFilter, archiveSort] as const;
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey,
-    queryFn: () => fetchDailyOperations(range),
+    queryFn: () => fetchDailyOperations({ range, filter: dailyFilter, sort: archiveSort }),
     refetchInterval: archive ? false : 15000,
     refetchIntervalInBackground: false,
   });
@@ -65,11 +80,10 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
   const summary = data?.summary;
-  const filteredDaily = useMemo(() => filterDailyCards(daily, dailyFilter), [daily, dailyFilter]);
+  const filteredDaily = daily;
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
-  const urgentCount = daily.filter((card) => card.urgencyScore >= 12).length;
-  const unreachedCount = daily.filter((card) => card.unreached).length;
+  const urgentCount = summary?.dailyFilterCounts.urgent ?? 0;
   const detailMatchedCard = useMemo(() => {
     if (!detailCustomerId) return null;
     return [...daily, ...priority, ...pinned].find((card) => card.customerId === detailCustomerId) ?? null;
@@ -479,13 +493,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             </div>
             {activeSection === 'followup' ? (
               <div className="followup-body">
-                {!archive ? (
+                <div className="daily-list-toolbar">
                   <div className="filter-chips" role="tablist" aria-label="Follow-up filters">
                     {([
-                      { id: 'all', label: 'All', count: daily.length },
+                      { id: 'all', label: 'All', count: summary?.dailyFilterCounts.all ?? 0 },
                       { id: 'urgent', label: 'Urgent', count: urgentCount },
-                      { id: 'unreached', label: 'Not reached', count: unreachedCount },
-                      { id: 'at_risk', label: 'At risk', count: churnFollowUps.length },
+                      { id: 'at_risk', label: 'At risk', count: summary?.dailyFilterCounts.at_risk ?? 0 },
                     ] as const).map((filter) => (
                       <button
                         key={filter.id}
@@ -498,7 +511,27 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                       </button>
                     ))}
                   </div>
-                ) : null}
+                  <label className="daily-filter-select">
+                    <span>Outcome</span>
+                    <select value={DAILY_OUTCOME_FILTERS.some((item) => item.value === dailyFilter) ? dailyFilter : ''} onChange={(event) => setDailyFilter((event.target.value || 'all') as DailyOperationFilter)}>
+                      <option value="">Any outcome</option>
+                      {DAILY_OUTCOME_FILTERS.map((filter) => (
+                        <option key={filter.value} value={filter.value}>
+                          {filter.label} ({summary?.dailyFilterCounts[filter.value] ?? 0})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {archive ? (
+                    <label className="daily-filter-select">
+                      <span>Archived</span>
+                      <select value={archiveSort} onChange={(event) => setArchiveSort(event.target.value as DailyOperationSort)}>
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
                 {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
                 {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
                 {completeFollowUp.error ? <div className="ops-inline-error">{friendlyError(completeFollowUp.error)}</div> : null}
@@ -509,8 +542,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   summary={summary}
                   businessTimeZone={summary?.businessTimezone ?? 'America/Chicago'}
                   businessDate={summary?.businessDate}
+                  archived={archive}
                   emptyLabel={archive ? 'No archived follow-ups.' : dailyFilter !== 'all' ? 'No follow-ups match this focus.' : range === 'today' ? 'No follow-ups for today.' : 'No follow-ups from the last 7 days.'}
-                  reorderDisabled={reorderDaily.isPending}
+                  reorderDisabled={archive || dailyFilter !== 'all' || reorderDaily.isPending}
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
                   onTogglePin={(card) => taskPin.mutate({ card, pinned: !card.pinned })}
                   onArchive={(card) => setCompleteCandidate(card)}
@@ -737,6 +771,7 @@ function DailyWorkflowList({
   summary,
   businessTimeZone,
   businessDate,
+  archived,
   emptyLabel,
   reorderDisabled,
   onReorder,
@@ -752,6 +787,7 @@ function DailyWorkflowList({
   summary?: unknown;
   businessTimeZone: string;
   businessDate?: string;
+  archived: boolean;
   emptyLabel: string;
   reorderDisabled: boolean;
   onReorder: (orderedItemIds: string[]) => void;
@@ -764,7 +800,7 @@ function DailyWorkflowList({
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const itemIds = cards.map((card) => card.id);
-  const rows = dailyListRows(cards, businessTimeZone, businessDate);
+  const rows = dailyListRows(cards, businessTimeZone, businessDate, archived);
   const handleDragEnd = (event: DragEndEvent) => {
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
@@ -1126,12 +1162,7 @@ function displayNameForGroup(group: SegmentDailyGroup) {
 
 function priorityCustomerBrief(item: DailyCallItem) {
   if (item.displayConcern) return item.displayConcern;
-  const recentCall = item.latestCall ? `Last call ${relativeTime(item.latestCall.at)}` : 'No recent call captured';
-  if (item.openRequestsCount > 0) return `${item.openRequestsCount} customer request${item.openRequestsCount === 1 ? '' : 's'} open - review before outreach.`;
-  if (item.ordersCount > 0 && item.latestCall) return `${recentCall} - check order context before calling.`;
-  if (item.ordersCount > 0) return `${item.ordersCount} previous orders - good purchase follow-up candidate.`;
-  if (item.latestCall) return `${recentCall} - call history needs a human next step.`;
-  return 'Assigned priority customer - review history and choose the next outreach.';
+  return 'No verified customer concern is available.';
 }
 
 function priorityItemMainInfo(item: DailyCallItem): CustomerDetailMainInfo {
@@ -1223,13 +1254,6 @@ function cardActionInput(card: CardData) {
   };
 }
 
-function filterDailyCards(cards: CardData[], filter: DailyFilter) {
-  if (filter === 'all') return cards;
-  if (filter === 'urgent') return cards.filter((card) => card.urgencyScore >= 12);
-  if (filter === 'unreached') return cards.filter((card) => card.unreached);
-  return cards.filter((card) => card.customerRisk === 'lost' || card.customerRisk === 'at_risk' || Boolean(card.customerRiskNote));
-}
-
 function CustomerNoteModal({
   customer,
   body,
@@ -1299,14 +1323,15 @@ type DailyListRow =
   | { kind: 'separator'; key: string; label: string }
   | { kind: 'card'; card: CardData };
 
-function dailyListRows(cards: CardData[], timeZone: string, businessDate?: string): DailyListRow[] {
+function dailyListRows(cards: CardData[], timeZone: string, businessDate?: string, archived = false): DailyListRow[] {
   const rows: DailyListRow[] = [];
   let currentKey = '';
   for (const card of cards) {
-    const key = businessDateKey(card.createdAt, timeZone);
+    const displayAt = archived ? card.archivedAt ?? card.createdAt : card.createdAt;
+    const key = businessDateKey(displayAt, timeZone);
     if (key !== currentKey) {
       currentKey = key;
-      rows.push({ kind: 'separator', key: `date-${key}`, label: dailyDateLabel(card.createdAt, key, timeZone, businessDate) });
+      rows.push({ kind: 'separator', key: `date-${key}`, label: dailyDateLabel(displayAt, key, timeZone, businessDate) });
     }
     rows.push({ kind: 'card', card });
   }

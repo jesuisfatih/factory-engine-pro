@@ -1,6 +1,8 @@
 import type {
   PersonDailyCallItem,
   PersonDailyOperationRange,
+  PersonDailyOperationFilter,
+  PersonDailyOperationSort,
   PersonDailyOperationsDto,
   PersonSegmentDailyGroup,
   PersonMiniOrder,
@@ -50,6 +52,7 @@ export interface Card {
   pinnedAt: number | null;
   source: TaskSource;
   createdAt?: string;
+  archivedAt?: string | null;
   unreached?: boolean;
   missedNote?: string | null;
   customerRisk?: 'none' | 'at_risk' | 'lost';
@@ -75,6 +78,8 @@ export type DailyCallItem = PersonDailyCallItem;
 export type SegmentDailyGroup = PersonSegmentDailyGroup;
 export type DailyOperations = PersonDailyOperationsDto;
 export type DailyOperationRange = PersonDailyOperationRange;
+export type DailyOperationFilter = PersonDailyOperationFilter;
+export type DailyOperationSort = PersonDailyOperationSort;
 export type TaskBriefDetail = PersonTaskBriefDetail;
 export type TransferTarget = PersonTransferTarget;
 export type TransferTaskInput = TransferPersonTaskInput;

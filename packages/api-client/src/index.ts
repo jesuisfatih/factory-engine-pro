@@ -199,7 +199,7 @@ import type {
   PatchMailFlowInput,
   PatchMailFlowWebhookDestinationInput,
   MovePersonQueueCardInput,
-  PersonDailyOperationRange,
+  PersonDailyOperationsQuery,
   PersonFrontendCustomizationRuntime,
   PersonCustomerArchiveQuery,
   ArchivePersonDailyCallResult,
@@ -245,6 +245,8 @@ import type {
   TogglePersonQueuePinInput,
   CreatePersonRequestInput,
   PersonTaskBriefDetail,
+  LinkPersonTaskCustomerInput,
+  LinkPersonTaskCustomerResult,
   PersonTaskOutcome,
   PersonEmailContact,
   PersonTaskSyncResult,
@@ -888,9 +890,13 @@ export class ApiClient {
     return this.get('/person/workspace/queue');
   }
 
-  personDailyOperations(range: PersonDailyOperationRange = 'last7d') {
-    const query = range === 'last7d' ? '' : `?range=${encodeURIComponent(range)}`;
-    return this.get(`/person/workspace/daily-operations${query}`);
+  personDailyOperations(input: Partial<PersonDailyOperationsQuery> = {}) {
+    const query = new URLSearchParams();
+    if (input.range && input.range !== 'last7d') query.set('range', input.range);
+    if (input.filter && input.filter !== 'all') query.set('filter', input.filter);
+    if (input.sort && input.sort !== 'newest') query.set('sort', input.sort);
+    const suffix = query.size > 0 ? `?${query.toString()}` : '';
+    return this.get(`/person/workspace/daily-operations${suffix}`);
   }
 
   personFrontendCustomization() {
@@ -935,6 +941,10 @@ export class ApiClient {
 
   personTaskBrief(id: string) {
     return this.get<PersonTaskBriefDetail>(`/person/workspace/tasks/${encodeURIComponent(id)}/brief`);
+  }
+
+  linkPersonTaskCustomer(id: string, input: LinkPersonTaskCustomerInput) {
+    return this.post<LinkPersonTaskCustomerResult>(`/person/workspace/tasks/${encodeURIComponent(id)}/customer-link`, input);
   }
 
   savePersonTaskNote(id: string, input: SavePersonTaskNoteInput) {

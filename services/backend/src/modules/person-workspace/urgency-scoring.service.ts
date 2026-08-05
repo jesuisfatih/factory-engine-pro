@@ -30,13 +30,10 @@ export class UrgencyScoringService {
     const snapshot = asRecord(input.taskStateSnapshot);
     const workflow = asRecord(metadata.workflow);
     const params = asRecord(workflow.params);
-    const resolverOutput = asRecord(snapshot.resolverOutput ?? snapshot.resolver_output);
     const intent = normalizeKey(
       stringValue(params.intent)
         ?? stringValue(params.callIntent)
         ?? stringValue(params.taskIntent)
-        ?? stringValue(resolverOutput.call_intent)
-        ?? stringValue(resolverOutput.intent)
         ?? input.axis
         ?? input.source,
     );
@@ -44,10 +41,7 @@ export class UrgencyScoringService {
       stringValue(params.signalUrgency)
         ?? stringValue(params.aiUrgency)
         ?? stringValue(params.urgency)
-        ?? stringValue(params.urgencyLevel)
-        ?? stringValue(resolverOutput.urgency)
-        ?? stringValue(resolverOutput.ai_urgency)
-        ?? stringValue(resolverOutput.urgency_level),
+        ?? stringValue(params.urgencyLevel),
     );
     const segmentScore = Math.max(0, numberValue(input.segmentPriority) ?? segmentPriorityFromSnapshot(snapshot));
     const repeatCount = Math.max(0, input.repeatCount);
