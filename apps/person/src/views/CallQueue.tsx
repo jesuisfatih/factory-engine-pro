@@ -494,34 +494,54 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             {activeSection === 'followup' ? (
               <div className="followup-body">
                 <div className="daily-list-toolbar">
-                  <div className="filter-chips" role="tablist" aria-label="Follow-up filters">
-                    {([
-                      { id: 'all', label: 'All', count: summary?.dailyFilterCounts.all ?? 0 },
-                      { id: 'urgent', label: 'Urgent', count: urgentCount },
-                      { id: 'at_risk', label: 'At risk', count: summary?.dailyFilterCounts.at_risk ?? 0 },
-                    ] as const).map((filter) => (
-                      <button
-                        key={filter.id}
-                        type="button"
-                        className={`filter-chip${dailyFilter === filter.id ? ' active' : ''}`}
-                        aria-pressed={dailyFilter === filter.id}
-                        onClick={() => setDailyFilter(filter.id)}
-                      >
-                        {filter.label} - {filter.count}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="daily-filter-select">
-                    <span>Outcome</span>
-                    <select value={DAILY_OUTCOME_FILTERS.some((item) => item.value === dailyFilter) ? dailyFilter : ''} onChange={(event) => setDailyFilter((event.target.value || 'all') as DailyOperationFilter)}>
-                      <option value="">Any outcome</option>
+                  {!archive ? (
+                    <div className="daily-filter-group" aria-label="Follow-up focus filters">
+                      <span className="daily-filter-label">Focus</span>
+                      <div className="filter-chips" role="group">
+                        {([
+                          { id: 'all', label: 'All', count: summary?.dailyFilterCounts.all ?? 0 },
+                          { id: 'urgent', label: 'Urgent', count: urgentCount },
+                          { id: 'at_risk', label: 'At risk', count: summary?.dailyFilterCounts.at_risk ?? 0 },
+                        ] as const).map((filter) => (
+                          <button
+                            key={filter.id}
+                            type="button"
+                            className={`filter-chip${dailyFilter === filter.id ? ' active' : ''}`}
+                            aria-pressed={dailyFilter === filter.id}
+                            onClick={() => setDailyFilter(filter.id)}
+                          >
+                            {filter.label} <span>{filter.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="daily-filter-group outcome-filter-group" aria-label="Follow-up outcome filters">
+                    <span className="daily-filter-label">Outcome</span>
+                    <div className="filter-chips" role="group">
+                      {archive ? (
+                        <button
+                          type="button"
+                          className={`filter-chip${dailyFilter === 'all' ? ' active' : ''}`}
+                          aria-pressed={dailyFilter === 'all'}
+                          onClick={() => setDailyFilter('all')}
+                        >
+                          All <span>{summary?.dailyFilterCounts.all ?? 0}</span>
+                        </button>
+                      ) : null}
                       {DAILY_OUTCOME_FILTERS.map((filter) => (
-                        <option key={filter.value} value={filter.value}>
-                          {filter.label} ({summary?.dailyFilterCounts[filter.value] ?? 0})
-                        </option>
+                        <button
+                          key={filter.value}
+                          type="button"
+                          className={`filter-chip${dailyFilter === filter.value ? ' active' : ''}`}
+                          aria-pressed={dailyFilter === filter.value}
+                          onClick={() => setDailyFilter(filter.value)}
+                        >
+                          {filter.label} <span>{summary?.dailyFilterCounts[filter.value] ?? 0}</span>
+                        </button>
                       ))}
-                    </select>
-                  </label>
+                    </div>
+                  </div>
                   {archive ? (
                     <label className="daily-filter-select">
                       <span>Archived</span>
