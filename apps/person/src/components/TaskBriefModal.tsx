@@ -179,7 +179,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
-  const hasBrief = liveCard.source !== 'manual' && Boolean(liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome);
+  const hasBrief = liveCard.source !== 'manual';
   const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
     why: personSafeText(liveCard.displayReason || 'Verified call analysis is not available yet.'),
@@ -516,12 +516,14 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                       </div>
                     ) : null}
 
-                    {callExcerpt && showField('callExcerpt') ? (
+                    {(callExcerpt || liveCard.source === 'call_analysis') && showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
-                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Transcript snippet')}</span>
+                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
                         </div>
-                        <div className="brief-transcript">{callExcerpt}</div>
+                        <div className={callExcerpt ? 'brief-transcript' : 'brief-val brief-val-muted'}>
+                          {callExcerpt || 'No call excerpt is available. Review the original call before contacting the customer.'}
+                        </div>
                       </div>
                     ) : null}
                     {outcomePanel}

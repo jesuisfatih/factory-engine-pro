@@ -321,8 +321,6 @@ export class AircallIngestService {
     const answered = Boolean(
       existing?.answeredAt
       || answeredAt
-      || Number(existing?.durationSeconds ?? 0) > 0
-      || Number(durationSeconds ?? 0) > 0
       || isAnsweredCallEvent(eventType, data),
     );
     const missed = isMissedCallEvent(eventType, data) && !answered;
@@ -415,7 +413,7 @@ export class AircallIngestService {
     });
     const results = { scanned: calls.length, answeredInGroup: 0, callbackResolved: 0, confirmedMissed: 0, deferred: 0 };
     for (const call of calls) {
-      if (call.answeredAt || Number(call.durationSeconds ?? 0) > 0) {
+      if (call.answeredAt) {
         await this.resolveMissedCall(call, call.answeredAt ?? now, 'answered_in_ring_group');
         results.answeredInGroup += 1;
         continue;
@@ -935,14 +933,24 @@ function contactPhone(data: Record<string, unknown>) {
 }
 
 function isMissedCallEvent(eventType: string, data: Record<string, unknown>) {
-  const value = `${eventType} ${stringOrNull(data.status) ?? ''}`.toLowerCase();
-  return value.includes('missed') || value.includes('unanswered') || value.includes('no_answer');
+  const event = eventType.trim().toLowerCase();
+  const status = (stringOrNull(data.status) ?? '').toLowerCase();
+  const missedReason = stringOrNull(data.missed_call_reason ?? data.missedCallReason);
+  return Boolean(missedReason)
+    || event === 'call.missed'
+    || event.endsWith('.missed')
+    || ['missed', 'unanswered', 'no_answer', 'no-answer'].includes(status);
 }
 
 function isAnsweredCallEvent(eventType: string, data: Record<string, unknown>) {
-  const value = `${eventType} ${stringOrNull(data.status) ?? ''}`.toLowerCase();
-  return value.includes('answered')
-    || value.includes('connected')
+  const event = eventType.trim().toLowerCase();
+  const status = (stringOrNull(data.status) ?? '').toLowerCase();
+  return event === 'call.answered'
+    || event.endsWith('.answered')
+    || event === 'call.connected'
+    || event.endsWith('.connected')
+    || status === 'answered'
+    || status === 'connected'
     || Boolean(dateFromUnknown(data.answered_at ?? data.answeredAt));
 }
 
