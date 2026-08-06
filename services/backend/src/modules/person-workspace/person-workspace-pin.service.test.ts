@@ -29,9 +29,9 @@ test('pins and unpins the same workspace target without creating duplicate state
     },
   } as never, { require: () => ({ tenantId: 'ten_test' }) } as never);
 
-  const first = await service.toggle('tmbr_linda', 'customer', 'cust_1', true);
-  const second = await service.toggle('tmbr_linda', 'customer', 'cust_1', true);
-  const removed = await service.toggle('tmbr_linda', 'customer', 'cust_1', false);
+  const first = await service.toggle('tmbr_linda', 'staff_work_item', 'swi_1', true);
+  const second = await service.toggle('tmbr_linda', 'staff_work_item', 'swi_1', true);
+  const removed = await service.toggle('tmbr_linda', 'staff_work_item', 'swi_1', false);
 
   assert.equal(first.pinned, true);
   assert.equal(second.id, first.id);
