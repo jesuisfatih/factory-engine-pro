@@ -825,7 +825,7 @@ button { font-family: inherit; }
 .brief-identity { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
 .brief-identity span { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; border-radius: 0; padding: 0; font-weight: 600; }
 
-.brief-body { grid-template-columns: 1.5fr 1fr; gap: 18px; }
+.brief-body { grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .brief-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .brief-snapshot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .brief-snapshot-card { min-width: 0; border: 1px solid #D6E1EF; border-radius: 10px; background: #FFFFFF; padding: 12px; box-shadow: var(--shadow); }

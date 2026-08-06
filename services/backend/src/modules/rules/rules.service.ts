@@ -6347,7 +6347,6 @@ const FRONTEND_MCP_ELEMENT_FIELDS: Record<string, FrontendCustomizationElementFi
     'timeline',
     'noteForm',
     'scheduleForm',
-    'customerSidePanel',
     'footer',
   ],
   'customer.detail.popup': ['customerName', 'phone', 'email', 'latestOrder', 'latestCall', 'openFollowUp', 'latestNote'],

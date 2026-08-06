@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FrontendCustomizationModalSection, FrontendCustomizationRuntimeDto, PersonCallDisposition } from '@factory-engine-pro/contracts';
 import {
-  X, Phone, Mail, ExternalLink, AlarmClockOff, CheckCircle2,
-  Pencil, RotateCcw, ShoppingBag, DollarSign,
+  X, Phone, Mail, AlarmClockOff, CheckCircle2,
+  Pencil, RotateCcw, ShoppingBag,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
   UserPlus,
 } from 'lucide-react';
@@ -180,7 +180,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
   const hasBrief = liveCard.source !== 'manual';
-  const customerDetailUrl = detail?.customerDetailUrl ?? (liveCard.customerId ? `/staff/customers?customerId=${encodeURIComponent(liveCard.customerId)}` : '#');
   const initial = useMemo(() => ({
     why: personSafeText(liveCard.displayReason || 'Verified call analysis is not available yet.'),
     upset: personSafeText(liveCard.displayConcern || 'Analysis unavailable.'),
@@ -212,7 +211,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     },
   });
   const latestOrder = liveCard.miniOrder ?? detail?.recentOrders[0];
-  const performance = detail?.performance30d ?? liveCard.performance30d;
   const callCustomer = () => {
     if (!liveCard.phone) return;
     dialCustomer.mutate({
@@ -330,15 +328,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const directActions = orderedDisplayActions(safeDisplayActions, modalActionOrder);
   const callSignal = callSignalText(detail);
   const customerMatched = Boolean(liveCard.customerId || detail?.shopifyCustomer.customerId || detail?.shopifyCustomer.phoneMatched || detail?.shopifyCustomer.emailMatched);
-  const purchaseSummary = personSafeText(liveCard.displayCommerceSnapshot) || (latestOrder
-    ? `${latestOrder.orderNumber ?? latestOrder.id} - ${fmtMoney(latestOrder.totalPrice, latestOrder.currency)}`
-    : liveCard.ordersCount
-      ? `${liveCard.ordersCount} orders - ${fmtMoney(liveCard.totalSpent ?? 0)}`
-      : 'No linked Shopify order yet');
-  const matchLabel = customerMatched ? 'Matched customer' : 'Caller not matched yet';
-  const matchHint = customerMatched
-    ? 'Use order and note history before calling.'
-    : 'Confirm phone or email before promising order, refund, or pricing details.';
   const summarySignals = detail?.callSummary?.motivators.map(personSafeText).filter(Boolean) ?? [];
   const summaryFriction = detail?.callSummary?.objections.map(personSafeText).filter(Boolean) ?? [];
   const summaryChecks = safeDisplayActions;
@@ -655,47 +644,6 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
             )}
           </div>
 
-          {showField('customerSidePanel', false) ? <aside className="brief-side" style={sectionStyle('customerSidePanel', 140)}>
-            <div className="brief-stats">
-              <div className="brief-stat">
-                <ShoppingBag size={11} />
-                <div><div className="lbl">{frontendCopy(override, 'ordersLabel', 'Orders')}</div><div className="val">{liveCard.ordersCount ?? 'N/A'}</div></div>
-              </div>
-              <div className="brief-stat">
-                <DollarSign size={11} />
-                <div><div className="lbl">{frontendCopy(override, 'ltvLabel', 'LTV')}</div><div className="val">{liveCard.totalSpent ? fmtMoney(liveCard.totalSpent) : 'N/A'}</div></div>
-              </div>
-              <div className="brief-stat">
-                <Activity size={11} />
-                <div><div className="lbl">{frontendCopy(override, 'revenue30dLabel', '30d revenue')}</div><div className="val">{performance ? fmtMoney(performance.revenue) : 'N/A'}</div></div>
-              </div>
-              <div className="brief-stat">
-                <Phone size={11} />
-                <div><div className="lbl">{frontendCopy(override, 'calls30dLabel', '30d calls')}</div><div className="val">{performance?.calls ?? 'N/A'}</div></div>
-              </div>
-            </div>
-
-            {showField('snapshotGrid') ? (
-              <div className="brief-card brief-card-meta" style={sectionStyle('snapshotGrid', 141)}>
-                <div className="brief-card-head"><Activity size={12} /> {frontendCopy(override, 'whatHappenedLabel', 'Live customer context')}</div>
-                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'customerMatchLabel', 'Customer match')}</span><span className="val">{matchLabel}</span></div>
-                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'purchaseHistoryLabel', 'Purchase history')}</span><span className="val">{purchaseSummary}</span></div>
-                <div className="brief-card-row"><span className="lbl">{frontendCopy(override, 'outcomeLabel', 'Outcome')}</span><span className="val">{goal || primaryBrief}</span></div>
-                <div className="brief-val brief-val-muted">{matchHint}</div>
-              </div>
-            ) : null}
-
-            <div className="brief-quick-actions">
-              <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}><Phone size={12} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callButton', 'Call')}</button>
-              <a className="btn" href={liveCard.email ? `mailto:${liveCard.email}` : undefined}><Mail size={12} /> {frontendCopy(override, 'emailButton', 'Email')}</a>
-            </div>
-            {dialCustomer.data?.message || dialCustomer.error ? (
-              <div className="brief-call-status">{dialCustomer.data?.message ?? friendlyError(dialCustomer.error)}</div>
-            ) : null}
-            <div className="brief-quick-actions">
-              <a className="btn" href={customerDetailUrl}><ExternalLink size={12} /> {frontendCopy(override, 'customerDetailButton', 'Customer detail')}</a>
-            </div>
-          </aside> : null}
         </div>
 
         {showField('footer') ? <footer className="modal-foot" style={sectionStyle('footer', 150)}>
