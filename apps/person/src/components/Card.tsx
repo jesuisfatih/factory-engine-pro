@@ -61,15 +61,17 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const safeCardTitle = personSafeText(card.displayTitle || card.title);
   const analysisUnavailable = card.analysisStatus === 'unavailable';
   const primaryBadge = card.displayBadges[0];
-  const actionLabel = personSafeText(primaryBadge?.label)
-    || (analysisUnavailable ? 'Analysis unavailable' : '');
-  const actionTone = displayToneClass(primaryBadge?.tone ?? (analysisUnavailable ? 'warning' : 'info'));
-  const briefLine = frontendCopy(
-    override,
-    'requiredAction',
-    personSafeText(card.displayOutcome || card.displayReason)
-      || (analysisUnavailable ? 'Analysis unavailable.' : ''),
-  );
+  const actionLabel = analysisUnavailable
+    ? 'Analysis unavailable'
+    : personSafeText(primaryBadge?.label);
+  const actionTone = displayToneClass(analysisUnavailable ? 'warning' : primaryBadge?.tone);
+  const briefLine = analysisUnavailable
+    ? 'Analysis unavailable.'
+    : frontendCopy(
+        override,
+        'requiredAction',
+        personSafeText(card.displayOutcome || card.displayReason),
+      );
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
     : card.ordersCount
@@ -96,7 +98,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
           {meta && actionLabel && frontendFieldVisible(override, 'actionBadge') ? (
             <span className={`action-badge tone-${actionTone}`} title={meta.label}>
               <meta.icon size={9} />
-              <span>{frontendCopy(override, 'actionLabel', actionLabel)}</span>
+              <span>{analysisUnavailable ? actionLabel : frontendCopy(override, 'actionLabel', actionLabel)}</span>
             </span>
           ) : null}
           {staffSegment && frontendFieldVisible(override, 'segmentChip') ? <span className="chip" style={{ background: card.segmentColor }}>{staffSegment}</span> : null}
