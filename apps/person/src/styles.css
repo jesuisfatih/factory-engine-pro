@@ -1602,19 +1602,19 @@ html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; col
 .kanban-icon { background: rgba(34, 197, 94, .16); color: #15803d; }
 .kanban-badge { color: #15803d; background: rgba(34, 197, 94, .12); }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.daily-list-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px 16px; margin-bottom: 10px; }
+.daily-list-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); align-items: end; gap: 10px 16px; margin-bottom: 10px; }
 .daily-filter-group { min-width: 0; display: grid; gap: 5px; }
-.daily-filter-group + .daily-filter-group { grid-column: 1 / -1; }
 .daily-filter-label { color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .daily-list-toolbar .filter-chips { margin-bottom: 0; }
 .daily-list-toolbar .filter-chip > span { min-width: 18px; padding: 1px 5px; border-radius: 999px; background: var(--surface-2); color: var(--text); text-align: center; }
 .daily-list-toolbar .filter-chip.active > span { background: rgba(255, 255, 255, .2); color: inherit; }
-.outcome-filter-group .filter-chips { row-gap: 7px; }
 .daily-filter-select { display: grid; gap: 4px; color: var(--text-muted); font-size: 11px; }
 .daily-filter-select select { min-width: 150px; height: 32px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); color: var(--text); padding: 0 9px; font: inherit; font-size: 12px; }
+.outcome-filter-select { width: 100%; justify-self: end; }
+.outcome-filter-select select { width: 100%; }
 @media (max-width: 760px) {
   .daily-list-toolbar { grid-template-columns: 1fr; }
-  .daily-filter-group + .daily-filter-group { grid-column: auto; }
+  .outcome-filter-select { justify-self: stretch; }
   .daily-filter-select select { width: 100%; }
 }
 .brief-customer-link { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }

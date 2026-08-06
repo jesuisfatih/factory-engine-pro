@@ -516,32 +516,20 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                       </div>
                     </div>
                   ) : null}
-                  <div className="daily-filter-group outcome-filter-group" aria-label="Follow-up outcome filters">
+                  <label className="daily-filter-select outcome-filter-select" aria-label="Follow-up outcome filter">
                     <span className="daily-filter-label">Outcome</span>
-                    <div className="filter-chips" role="group">
-                      {archive ? (
-                        <button
-                          type="button"
-                          className={`filter-chip${dailyFilter === 'all' ? ' active' : ''}`}
-                          aria-pressed={dailyFilter === 'all'}
-                          onClick={() => setDailyFilter('all')}
-                        >
-                          All <span>{summary?.dailyFilterCounts.all ?? 0}</span>
-                        </button>
-                      ) : null}
+                    <select
+                      value={DAILY_OUTCOME_FILTERS.some((filter) => filter.value === dailyFilter) ? dailyFilter : 'all'}
+                      onChange={(event) => setDailyFilter(event.target.value as DailyOperationFilter)}
+                    >
+                      <option value="all">All outcomes ({summary?.dailyFilterCounts.all ?? 0})</option>
                       {DAILY_OUTCOME_FILTERS.map((filter) => (
-                        <button
-                          key={filter.value}
-                          type="button"
-                          className={`filter-chip${dailyFilter === filter.value ? ' active' : ''}`}
-                          aria-pressed={dailyFilter === filter.value}
-                          onClick={() => setDailyFilter(filter.value)}
-                        >
-                          {filter.label} <span>{summary?.dailyFilterCounts[filter.value] ?? 0}</span>
-                        </button>
+                        <option key={filter.value} value={filter.value}>
+                          {filter.label} ({summary?.dailyFilterCounts[filter.value] ?? 0})
+                        </option>
                       ))}
-                    </div>
-                  </div>
+                    </select>
+                  </label>
                   {archive ? (
                     <label className="daily-filter-select">
                       <span>Archived</span>
