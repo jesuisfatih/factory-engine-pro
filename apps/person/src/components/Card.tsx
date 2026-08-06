@@ -1,4 +1,4 @@
-import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, Phone, ShoppingBag, Tags, UserRound } from 'lucide-react';
+import { Activity, AlarmClockOff, ArrowRightLeft, ClipboardCheck, FileText, Phone, ShoppingBag, Tags, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import type { Card as CardData, TaskSource } from '../types';
@@ -62,11 +62,11 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const analysisUnavailable = card.analysisStatus === 'unavailable';
   const primaryBadge = card.displayBadges[0];
   const actionLabel = analysisUnavailable
-    ? 'Analysis unavailable'
+    ? 'Review required'
     : personSafeText(primaryBadge?.label);
   const actionTone = displayToneClass(analysisUnavailable ? 'warning' : primaryBadge?.tone);
   const briefLine = analysisUnavailable
-    ? 'Analysis unavailable.'
+    ? 'Conversation analysis is unavailable. Manager review or retry is required before outreach.'
     : frontendCopy(
         override,
         'requiredAction',
@@ -161,16 +161,16 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
               <button
                 type="button"
                 className="archive-btn"
-                title={frontendCopy(override, 'archiveTitle', 'Archive from my Daily list')}
-                aria-label={`Archive ${safeCardTitle}`}
+                title={frontendCopy(override, 'archiveTitle', 'Record the call outcome')}
+                aria-label={`Record outcome for ${safeCardTitle}`}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation();
                   onArchive(card);
                 }}
               >
-                <Archive size={12} />
-                <span>{frontendCopy(override, 'archiveLabel', 'Archive')}</span>
+                <ClipboardCheck size={12} />
+                <span>{frontendCopy(override, 'archiveLabel', 'Outcome')}</span>
               </button>
             ) : null}
             {card.kind === 'task' && frontendFieldVisible(override, 'transferButton') ? (

@@ -178,6 +178,9 @@ button { font-family: inherit; }
 }
 .topbar .topbar-update:disabled { opacity: .68; cursor: progress; }
 .topbar-update-label { font-size: 11px; font-weight: 600; }
+.topbar-version-ready { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 10px; border: 1px solid #f59e0b; border-radius: 6px; background: #fffbeb; color: #92400e; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.topbar-version-ready:hover { background: #fef3c7; }
+:root[data-theme="dark"] .topbar-version-ready { border-color: #b45309; background: #2a1d08; color: #fbbf24; }
 .topbar-workspace { display: inline-flex; align-items: center; gap: 7px; max-width: 220px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 3px 9px 3px 4px; color: var(--text); }
 .topbar-workspace span, .topbar-workspace img { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
 .topbar-workspace span { display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .2px; }

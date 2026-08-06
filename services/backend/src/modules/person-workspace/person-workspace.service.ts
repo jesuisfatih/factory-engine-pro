@@ -3678,12 +3678,12 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
   if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
       analysisStatus: 'unavailable',
-      displayTitle: staffDisplayText(card.title),
+      displayTitle: 'Review required',
       displayReason: '',
       displayConcern: '',
       displayOutcome: '',
       displayActions: [],
-      displayBadges: [{ label: 'Analysis unavailable', tone: 'warning' }],
+      displayBadges: [{ label: 'Review required', tone: 'warning' }],
       displayCustomerSummary: staffCustomerSummary(card),
       displayCommerceSnapshot: staffCommerceSnapshot(card),
       displayCallSnapshot: staffCallSnapshot(card),

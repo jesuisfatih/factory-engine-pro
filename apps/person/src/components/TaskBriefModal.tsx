@@ -486,8 +486,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                   <>
                     <div className="brief-state" style={sectionStyle('reasonField', 10)}>
                       <AlertTriangle size={16} />
-                      <strong>Analysis unavailable</strong>
-                      <span>No model-generated call plan is available for this call.</span>
+                      <strong>Review required</strong>
+                      <span>No model-generated call plan is available. A manager must review or retry the analysis before outreach.</span>
                     </div>
                     {showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
@@ -600,7 +600,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                   {showField('callSummary') ? <div className="brief-block" style={sectionStyle('callSummary', 100)}>
                     <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'callSummaryLabel', 'Call summary')}</span></div>
                     {analysisUnavailable ? (
-                      <div className="brief-val brief-val-muted">Analysis unavailable.</div>
+                      <div className="brief-val brief-val-muted">No model-generated summary is available. Manager review or resolver retry is required.</div>
                     ) : liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.callSummary ? (
                       <div className="brief-psych">
                         <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.callSummary?.communicationStyle || 'Not captured')}</strong></div>

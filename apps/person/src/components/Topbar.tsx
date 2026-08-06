@@ -6,6 +6,7 @@ import { syncPersonTasks } from '../api/live';
 import { useTheme } from '../theme';
 import { resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '../lib/workspace-brand';
+import { useAppVersion } from '../lib/app-version';
 
 interface Props {
   title: string;
@@ -20,6 +21,7 @@ export function Topbar({ title, onToggleSidebar }: Props) {
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
   const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, theme === 'dark' ? 'dark' : 'light');
   const [search, setSearch] = useState(() => currentSearchFromUrl());
+  const appVersion = useAppVersion();
   const syncTasks = useMutation({
     mutationFn: syncPersonTasks,
     onSuccess: async () => {
@@ -60,6 +62,12 @@ export function Topbar({ title, onToggleSidebar }: Props) {
         />
       </form>
       <div className="right">
+        {appVersion.updateAvailable ? (
+          <button type="button" className="topbar-version-ready" onClick={appVersion.activate}>
+            <RefreshCw size={14} />
+            <span>New version ready</span>
+          </button>
+        ) : null}
         <div className="topbar-workspace" title={brandName}>
           {brandLogo ? <img src={brandLogo} alt="" /> : <span>{brandBadge}</span>}
           <strong>{brandName}</strong>

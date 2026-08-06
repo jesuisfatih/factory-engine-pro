@@ -7,10 +7,9 @@ import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contra
 import { CustomerDetailPanel, CustomerInternalNoteComposer } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { archiveDailyCall, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, saveTaskNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationFilter, DailyOperationRange, DailyOperationSort, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
-import { CompleteTaskDialog } from '../components/CompleteTaskDialog';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
 import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
@@ -53,7 +52,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [archiveSort, setArchiveSort] = useState<DailyOperationSort>('newest');
   const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
   const [kanbanSegment, setKanbanSegment] = useState<string>('all');
-  const [completeCandidate, setCompleteCandidate] = useState<CardData | null>(null);
   const queryKey = [...QK_BASE, range, dailyFilter, archiveSort] as const;
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey,
@@ -181,17 +179,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       if (context?.previous) qc.setQueryData(queryKey, context.previous);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: QK_BASE });
-    },
-  });
-
-  const completeFollowUp = useMutation({
-    mutationFn: async ({ card, note }: { card: CardData; note: string }) => {
-      if (note) await saveTaskNote(card.id, { body: note });
-      return archiveDailyCall(card.id);
-    },
-    onSuccess: () => {
-      setCompleteCandidate(null);
       qc.invalidateQueries({ queryKey: QK_BASE });
     },
   });
@@ -547,7 +534,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 </div>
                 {dailyFilter !== 'all' ? <button type="button" className="clear-filter" onClick={() => setDailyFilter('all')}>Clear filter</button> : null}
                 {reorderDaily.error ? <div className="ops-inline-error">{friendlyError(reorderDaily.error)}</div> : null}
-                {completeFollowUp.error ? <div className="ops-inline-error">{friendlyError(completeFollowUp.error)}</div> : null}
                 <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.before_list" context={{ summary }} />
                 <DailyWorkflowList
                   cards={filteredDaily}
@@ -560,7 +546,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                   reorderDisabled={archive || dailyFilter !== 'all' || reorderDaily.isPending}
                   onReorder={(orderedItemIds) => reorderDaily.mutate({ range, orderedItemIds })}
                   onTogglePin={(card) => taskPin.mutate({ card, pinned: !card.pinned })}
-                  onArchive={(card) => setCompleteCandidate(card)}
+                  onArchive={(card) => openTaskBrief(card.id, 'followup')}
                   onOpen={(taskId) => openTaskBrief(taskId, 'followup')}
                   onCall={(card) => {
                     if (!card.phone) return;
@@ -698,15 +684,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} contextTone={selectedContextTone} onClose={closeTaskModal} />}
-      {completeCandidate ? (
-        <CompleteTaskDialog
-          followUpTitle={personSafeText(completeCandidate.displayTitle || completeCandidate.title)}
-          busy={completeFollowUp.isPending}
-          errorText={completeFollowUp.error ? friendlyError(completeFollowUp.error) : null}
-          onCancel={() => setCompleteCandidate(null)}
-          onConfirm={(note) => completeFollowUp.mutate({ card: completeCandidate, note })}
-        />
-      ) : null}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}
