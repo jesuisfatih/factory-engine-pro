@@ -516,20 +516,25 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                       </div>
                     </div>
                   ) : null}
-                  <label className="daily-filter-select outcome-filter-select" aria-label="Follow-up outcome filter">
+                  <div className="daily-filter-group daily-outcome-group" aria-label="Follow-up outcome filters">
                     <span className="daily-filter-label">Outcome</span>
-                    <select
-                      value={DAILY_OUTCOME_FILTERS.some((filter) => filter.value === dailyFilter) ? dailyFilter : 'all'}
-                      onChange={(event) => setDailyFilter(event.target.value as DailyOperationFilter)}
-                    >
-                      <option value="all">All outcomes ({summary?.dailyFilterCounts.all ?? 0})</option>
-                      {DAILY_OUTCOME_FILTERS.map((filter) => (
-                        <option key={filter.value} value={filter.value}>
-                          {filter.label} ({summary?.dailyFilterCounts[filter.value] ?? 0})
-                        </option>
+                    <div className="filter-chips outcome-filter-chips" role="group">
+                      {([
+                        { value: 'all' as const, label: 'All outcomes' },
+                        ...DAILY_OUTCOME_FILTERS,
+                      ]).map((filter) => (
+                        <button
+                          key={filter.value}
+                          type="button"
+                          className={`filter-chip${dailyFilter === filter.value ? ' active' : ''}`}
+                          aria-pressed={dailyFilter === filter.value}
+                          onClick={() => setDailyFilter(filter.value)}
+                        >
+                          {filter.label} <span>{summary?.dailyFilterCounts[filter.value] ?? 0}</span>
+                        </button>
                       ))}
-                    </select>
-                  </label>
+                    </div>
+                  </div>
                   {archive ? (
                     <label className="daily-filter-select">
                       <span>Archived</span>
@@ -1215,8 +1220,8 @@ function cardMainInfo(card: CardData): CustomerDetailMainInfo {
       ? `${card.ordersCount} orders | ${fmtMoney(card.totalSpent ?? 0)}`
       : personSafeText(card.displayCommerceSnapshot) || 'No linked order yet';
   return {
-    reason: personSafeText(card.displayReason || card.displayOutcome || card.summary || 'Review this customer before outreach.'),
-    segmentLabel: personSafeText(card.segment || card.displayCustomerSummary || 'Customer follow-up'),
+    reason: personSafeText(card.displayReason || card.displayOutcome || card.summary || 'No verified follow-up reason is available.'),
+    segmentLabel: personSafeText(card.segment || card.displayCustomerSummary || 'Customer'),
     segmentColor: card.segmentColor || '#2563eb',
     urgencyScore: card.urgencyScore,
     churnRisk: card.customerRisk === 'lost' || card.customerRisk === 'at_risk' ? card.customerRisk : null,

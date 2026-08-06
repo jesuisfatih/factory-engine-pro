@@ -3665,7 +3665,7 @@ function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCard
       displayTitle: staffDisplayText(card.title),
       displayReason: 'Verified call analysis is not available yet.',
       displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'Review the original call before contacting this customer.',
+      displayOutcome: 'No verified required outcome is available.',
       displayActions: [],
       displayBadges: [{ label: 'Call review required', tone: 'warning' }],
       displayCustomerSummary: staffCustomerSummary(card),
@@ -4424,7 +4424,7 @@ function calendarDisplayFromRequest(
       analysisAvailable: false,
       displayReason: 'Verified call analysis is not available yet.',
       displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'Review the original call before contacting this customer.',
+      displayOutcome: 'No verified required outcome is available.',
       displayActions: [],
       callExcerpt: staffDisplayText(brief.transcriptSnippet),
     };
@@ -4460,7 +4460,7 @@ function calendarDisplayFromCall(row: {
       analysisAvailable: false,
       displayReason: 'Verified call analysis is not available yet.',
       displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'Review the original call before contacting this customer.',
+      displayOutcome: 'No verified required outcome is available.',
       displayActions: [],
       callExcerpt: staffDisplayText(row.transcriptRaw?.slice(0, 240)),
     };

@@ -67,7 +67,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
     override,
     'requiredAction',
     personSafeText(card.displayOutcome || card.displayReason)
-      || (card.source === 'call_analysis' ? 'Analysis unavailable. Review the original call before outreach.' : actionLabel),
+      || (card.source === 'call_analysis' ? 'Verified call analysis is not available yet.' : actionLabel),
   );
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
