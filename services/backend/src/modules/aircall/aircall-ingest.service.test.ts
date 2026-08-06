@@ -5,6 +5,7 @@ import { AircallIngestService } from './aircall-ingest.service.js';
 test('mirrors an Aircall event through a tenant-safe call lookup', async () => {
   let lookupWhere: Record<string, unknown> = {};
   let upsertInput: Record<string, unknown> = {};
+  let updateInput: Record<string, unknown> = {};
   const service = new AircallIngestService({
     db: {
       call: {
@@ -15,6 +16,10 @@ test('mirrors an Aircall event through a tenant-safe call lookup', async () => {
         upsert: async (input: Record<string, unknown>) => {
           upsertInput = input;
           return { id: 'call_1' };
+        },
+        updateMany: async (input: Record<string, unknown>) => {
+          updateInput = input;
+          return { count: 1 };
         },
       },
     },
@@ -38,4 +43,18 @@ test('mirrors an Aircall event through a tenant-safe call lookup', async () => {
   assert.deepEqual(upsertInput.where, {
     tenantId_aircallCallId: { tenantId: 'ten_test', aircallCallId: '4025985803' },
   });
+
+  const linked = await (service as unknown as {
+    attachCustomer: <T extends { id: string; customerId: string | null }>(
+      tenantId: string,
+      call: T,
+      customerId: string,
+    ) => Promise<T>;
+  }).attachCustomer('ten_test', { id: 'call_1', customerId: null }, 'cust_1');
+
+  assert.deepEqual(updateInput, {
+    where: { tenantId: 'ten_test', id: 'call_1' },
+    data: { customerId: 'cust_1' },
+  });
+  assert.equal(linked.customerId, 'cust_1');
 });

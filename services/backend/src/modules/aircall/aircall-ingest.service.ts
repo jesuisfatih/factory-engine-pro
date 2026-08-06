@@ -247,10 +247,7 @@ export class AircallIngestService {
         rawStatus: stringOrNull(data.status),
       });
       if (contactActivity && call.customerId !== contactActivity.customerId) {
-        call = await this.prisma.db.call.update({
-          where: { id: call.id },
-          data: { customerId: contactActivity.customerId },
-        });
+        call = await this.attachCustomer(inbox.tenantId, call, contactActivity.customerId);
       }
       await this.enqueueTranscriptResolver(callEvent.id, transcriptRaw);
       await this.prisma.db.callEvent.createMany({
@@ -389,6 +386,19 @@ export class AircallIngestService {
     });
   }
 
+  private async attachCustomer<T extends { id: string; customerId: string | null }>(
+    tenantId: string,
+    call: T,
+    customerId: string,
+  ): Promise<T> {
+    if (call.customerId === customerId) return call;
+    await this.prisma.db.call.updateMany({
+      where: { tenantId, id: call.id },
+      data: { customerId },
+    });
+    return { ...call, customerId };
+  }
+
   async reconcileMissedCalls(limit = 200) {
     const tenantId = this.tenantId();
     const now = new Date();
@@ -441,8 +451,8 @@ export class AircallIngestService {
         callEvent: missedEvent,
         call,
       });
-      await this.prisma.db.call.update({
-        where: { id: call.id },
+      await this.prisma.db.call.updateMany({
+        where: { tenantId, id: call.id },
         data: { status: 'missed', reconciliationStatus: 'confirmed_missed' },
       });
       results.confirmedMissed += 1;
@@ -498,8 +508,8 @@ export class AircallIngestService {
       : [];
     const sourceIds = uniqueStrings([call.id, call.aircallCallId, ...eventIds]);
     await this.prisma.db.$transaction(async (tx) => {
-      await tx.call.update({
-        where: { id: call.id },
+      await tx.call.updateMany({
+        where: { tenantId, id: call.id },
         data: {
           status: reason === 'answered_in_ring_group' ? 'closed' : 'callback_resolved',
           missedAt: null,
