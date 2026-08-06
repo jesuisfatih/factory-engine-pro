@@ -44,10 +44,14 @@ test('records an active dial with a ten minute collision window', async () => {
 
 test('turns an ended Aircall event into a completed shared contact state', async () => {
   let upserted: Record<string, unknown> = {};
+  let lookupWhere: Record<string, unknown> = {};
   const service = new CustomerContactTimelineService({
     db: {
       customerContactActivity: {
-        findUnique: async () => null,
+        findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+          lookupWhere = where;
+          return null;
+        },
         upsert: async (input: Record<string, unknown>) => {
           upserted = input;
           return { id: 'cca_1', customerId: 'cust_1' };
@@ -75,6 +79,7 @@ test('turns an ended Aircall event into a completed shared contact state', async
   });
 
   assert.ok(Object.keys(upserted).length > 0);
+  assert.deepEqual(lookupWhere, { tenantId: 'ten_test', externalCallId: 'call_1' });
   const create = upserted.create as Record<string, unknown>;
   assert.equal(create.status, 'completed');
   assert.ok(create.endedAt instanceof Date);
@@ -86,7 +91,7 @@ test('does not regress a completed call when an older ringing webhook arrives la
   const service = new CustomerContactTimelineService({
     db: {
       customerContactActivity: {
-        findUnique: async () => ({
+        findFirst: async () => ({
           id: 'cca_1',
           status: 'completed',
           startedAt: new Date('2026-08-04T12:00:00.000Z'),

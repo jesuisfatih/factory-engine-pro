@@ -120,8 +120,8 @@ export class CustomerContactTimelineService {
 
     const incomingStatus = contactStatus(input.eventType, input.durationSeconds, input.rawStatus);
     const tenantId = this.tenantId();
-    const existing = await this.prisma.db.customerContactActivity.findUnique({
-      where: { tenantId_externalCallId: { tenantId, externalCallId: input.externalCallId } },
+    const existing = await this.prisma.db.customerContactActivity.findFirst({
+      where: { tenantId, externalCallId: input.externalCallId },
     });
     const keepExisting = shouldKeepExistingEvent(existing, incomingStatus, input.eventAt);
     const status = keepExisting ? safeStatus(existing!.status) : incomingStatus;

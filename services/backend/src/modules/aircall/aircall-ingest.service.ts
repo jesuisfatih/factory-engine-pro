@@ -310,8 +310,8 @@ export class AircallIngestService {
     eventTimestamp: Date,
     data: Record<string, unknown>,
   ) {
-    const existing = await this.prisma.db.call.findUnique({
-      where: { tenantId_aircallCallId: { tenantId, aircallCallId: externalCallId } },
+    const existing = await this.prisma.db.call.findFirst({
+      where: { tenantId, aircallCallId: externalCallId },
     });
     const endedAt = dateFromUnknown(data.ended_at ?? data.endedAt);
     const incomingStatus = eventType === 'call.ended' || eventType === 'call.hungup'
