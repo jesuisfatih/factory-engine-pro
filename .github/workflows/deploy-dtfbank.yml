@@ -1,0 +1,149 @@
+name: Deploy DTFBank
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: Exact commit to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dtfbank-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOY_HOST: 144.202.125.169
+      DEPLOY_USER: root
+      RELEASE_DIR: /opt/apps/custom/factoryengine/factory-engine-pro-dtfbank
+      CONTAINER: factoryengine-dtfbank-app
+    steps:
+      - name: Check out exact release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.deploy_ref }}
+          fetch-depth: 1
+
+      - name: Package tracked source
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          test "$sha" = "$(git rev-parse '${{ inputs.deploy_ref }}^{commit}')"
+          archive="/tmp/factory-engine-pro-${sha}.tar"
+          git archive --format=tar --output="$archive" "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Configure temporary SSH identity
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.FE_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_SSH_KEY"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy"
+          chmod 600 "$HOME/.ssh/deploy"
+          ssh-keyscan -T 15 -H "$DEPLOY_HOST" >> "$HOME/.ssh/known_hosts"
+
+      - name: Verify isolated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=20 -i "$HOME/.ssh/deploy" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "test -d '$RELEASE_DIR' && test \"\$(docker inspect -f '{{range .Mounts}}{{if eq .Destination \"/app\"}}{{.Source}}{{end}}{{end}}' '$CONTAINER')\" = '$RELEASE_DIR'"
+
+      - name: Upload release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${{ steps.release.outputs.archive }}"
+          sha="${{ steps.release.outputs.sha }}"
+          scp -o BatchMode=yes -o ConnectTimeout=20 -i "$HOME/.ssh/deploy" \
+            "$archive" "$DEPLOY_USER@$DEPLOY_HOST:/tmp/factory-engine-pro-${sha}.tar"
+
+      - name: Deploy only DTFBank container
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="${{ steps.release.outputs.sha }}"
+          ssh -o BatchMode=yes -o ConnectTimeout=20 -i "$HOME/.ssh/deploy" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "RELEASE_SHA='$sha' RELEASE_ARCHIVE='/tmp/factory-engine-pro-${sha}.tar' RELEASE_DIR='$RELEASE_DIR' RELEASE_CONTAINER='$CONTAINER' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          base=/opt/apps/custom/factoryengine
+          case "$RELEASE_DIR" in
+            "$base"/factory-engine-pro-dtfbank) ;;
+            *) echo "unsafe release path: $RELEASE_DIR" >&2; exit 90 ;;
+          esac
+
+          test -f "$RELEASE_ARCHIVE"
+          test -d "$RELEASE_DIR"
+          test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}' "$RELEASE_CONTAINER")" = "$RELEASE_DIR"
+
+          before_file="/tmp/factory-engine-other-containers-before-$$.txt"
+          after_file="/tmp/factory-engine-other-containers-after-$$.txt"
+          mapfile -t other_containers < <(docker ps -a --format '{{.Names}}' | grep -v "^${RELEASE_CONTAINER}$" | sort)
+          for other in "${other_containers[@]}"; do
+            docker inspect -f '{{.Name}} {{.State.StartedAt}} {{.State.Status}}' "$other"
+          done > "$before_file"
+
+          stamp="$(date +%Y%m%d%H%M%S)"
+          backup="$base/backups/factory-engine-pro-dtfbank-pre-${RELEASE_SHA:0:12}-$stamp.tar.gz"
+          mkdir -p "$base/backups"
+          tar \
+            --exclude='node_modules' \
+            --exclude='*/node_modules' \
+            --exclude='dist' \
+            --exclude='*/dist' \
+            --exclude='.turbo' \
+            --exclude='*/.turbo' \
+            -czf "$backup" -C "$RELEASE_DIR" .
+
+          tar -xf "$RELEASE_ARCHIVE" -C "$RELEASE_DIR"
+          printf '%s\n' "$RELEASE_SHA" > "$RELEASE_DIR/.build-sha"
+          chmod +x "$RELEASE_DIR/scripts/mutagen-runtime.sh"
+          docker restart "$RELEASE_CONTAINER" >/dev/null
+
+          ready=0
+          for _attempt in $(seq 1 120); do
+            if docker exec "$RELEASE_CONTAINER" node -e 'fetch("http://127.0.0.1:4000/api/v1/health").then(async response=>{const body=await response.text();if(!response.ok||!body.includes("\\\"ok\\\":true"))process.exit(1)}).catch(()=>process.exit(1))' >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = 1
+
+          test "$(docker exec "$RELEASE_CONTAINER" cat /app/.build-sha)" = "$RELEASE_SHA"
+          docker exec "$RELEASE_CONTAINER" bash -lc 'pm2 jlist | node -e "let input=\"\";process.stdin.on(\"data\",chunk=>input+=chunk).on(\"end\",()=>{const rows=JSON.parse(input).filter(process=>process.name.startsWith(\"factory-engine-pro-\")).map(process=>({name:process.name,status:process.pm2_env.status,restarts:process.pm2_env.restart_time}));if(rows.length!==4||rows.some(process=>process.status!==\"online\"))process.exit(1);console.log(JSON.stringify(rows))})"'
+          docker exec "$RELEASE_CONTAINER" node -e 'Promise.all([3000,3001,3002].map(port=>fetch(`http://127.0.0.1:${port}/`).then(response=>{if(!response.ok)throw new Error(`${port}:${response.status}`);return port}))).then(ports=>console.log(JSON.stringify({frontends:ports,status:"ok"}))).catch(error=>{console.error(error.message);process.exit(1)})'
+
+          for other in "${other_containers[@]}"; do
+            docker inspect -f '{{.Name}} {{.State.StartedAt}} {{.State.Status}}' "$other"
+          done > "$after_file"
+          diff -u "$before_file" "$after_file"
+
+          printf 'BUILD_SHA=%s\n' "$(docker exec "$RELEASE_CONTAINER" cat /app/.build-sha)"
+          printf 'HEALTH='
+          docker exec "$RELEASE_CONTAINER" node -e 'fetch("http://127.0.0.1:4000/api/v1/health").then(response=>response.text()).then(console.log)'
+          printf 'OTHER_CONTAINERS_UNCHANGED=true\n'
+          printf 'BACKUP=%s\n' "$backup"
+          rm -f "$RELEASE_ARCHIVE" "$before_file" "$after_file"
+          REMOTE
+
+      - name: Remove temporary SSH identity
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.ssh/deploy"
