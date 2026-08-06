@@ -183,3 +183,133 @@ test('reconciliation does not close a missed call because ringing duration is no
     data: { status: 'missed', reconciliationStatus: 'confirmed_missed' },
   });
 });
+
+test('ring-group answer resolves the aggregate without firing a missed workflow', async () => {
+  let fired = 0;
+  let resolvedUpdate: Record<string, unknown> = {};
+  const answeredAt = new Date('2026-08-06T00:02:00.000Z');
+  const service = new AircallIngestService({
+    db: {
+      call: {
+        findMany: async () => [{
+          id: 'call_ring_group',
+          aircallCallId: 'ring_group_1',
+          customerId: 'cust_1',
+          callerNumber: '+13125550101',
+          callerNumberE164: '+13125550101',
+          missedAt: new Date('2026-08-05T23:55:00.000Z'),
+          answeredAt,
+          durationSeconds: 45,
+          reconciliationStatus: 'pending',
+        }],
+      },
+      aircallCallEvent: {
+        findMany: async () => [{ id: 'acev_ring_group' }],
+      },
+      $transaction: async (callback: (tx: Record<string, unknown>) => Promise<void>) => callback({
+        call: {
+          updateMany: async (input: Record<string, unknown>) => {
+            resolvedUpdate = input;
+            return { count: 1 };
+          },
+        },
+        staffWorkItem: {
+          findMany: async () => [],
+        },
+      }),
+    },
+  } as never, {} as never, {} as never, { log: () => undefined } as never, {} as never, {} as never, {} as never, {
+    require: () => ({ tenantId: 'ten_test' }),
+  } as never, null, null);
+  (service as unknown as { fireWorkflowTrigger: () => Promise<void> }).fireWorkflowTrigger = async () => {
+    fired += 1;
+  };
+
+  const result = await service.reconcileMissedCalls();
+
+  assert.equal(fired, 0);
+  assert.equal(result.answeredInGroup, 1);
+  assert.deepEqual(resolvedUpdate, {
+    where: { tenantId: 'ten_test', id: 'call_ring_group' },
+    data: {
+      status: 'closed',
+      missedAt: null,
+      callbackResolvedAt: answeredAt,
+      reconciliationStatus: 'answered_in_ring_group',
+    },
+  });
+});
+
+test('callback reconciliation archives the one open missed-call work item', async () => {
+  let fired = 0;
+  let workUpdate: Record<string, unknown> = {};
+  let transitions: Array<Record<string, unknown>> = [];
+  const callbackAt = new Date('2026-08-06T00:10:00.000Z');
+  const service = new AircallIngestService({
+    db: {
+      call: {
+        findMany: async () => [{
+          id: 'call_missed_callback',
+          aircallCallId: 'missed_callback_1',
+          customerId: 'cust_2',
+          callerNumber: '+13125550102',
+          callerNumberE164: '+13125550102',
+          missedAt: new Date('2026-08-05T23:55:00.000Z'),
+          answeredAt: null,
+          durationSeconds: 0,
+          reconciliationStatus: 'confirmed_missed',
+        }],
+        findFirst: async () => ({ id: 'call_callback', startedAt: callbackAt }),
+      },
+      aircallCallEvent: {
+        findMany: async () => [{ id: 'acev_missed_callback' }],
+      },
+      $transaction: async (callback: (tx: Record<string, unknown>) => Promise<void>) => callback({
+        call: { updateMany: async () => ({ count: 1 }) },
+        staffWorkItem: {
+          findMany: async () => [{
+            id: 'swi_missed_callback',
+            customerId: 'cust_2',
+            workState: 'ready',
+            queueLocation: 'daily',
+          }],
+          updateMany: async (input: Record<string, unknown>) => {
+            workUpdate = input;
+            return { count: 1 };
+          },
+        },
+        workItemStateTransition: {
+          createMany: async ({ data }: { data: Array<Record<string, unknown>> }) => {
+            transitions = data;
+            return { count: data.length };
+          },
+        },
+      }),
+    },
+  } as never, {} as never, {} as never, { log: () => undefined } as never, {} as never, {} as never, {} as never, {
+    require: () => ({ tenantId: 'ten_test' }),
+  } as never, null, null);
+  (service as unknown as { fireWorkflowTrigger: () => Promise<void> }).fireWorkflowTrigger = async () => {
+    fired += 1;
+  };
+
+  const result = await service.reconcileMissedCalls();
+
+  assert.equal(fired, 0);
+  assert.equal(result.callbackResolved, 1);
+  assert.deepEqual(workUpdate, {
+    where: { id: { in: ['swi_missed_callback'] } },
+    data: {
+      status: 'closed',
+      workState: 'completed',
+      queueLocation: 'archive',
+      archivedAt: callbackAt,
+      archiveReason: 'callback_resolved',
+      closedAt: callbackAt,
+      resolutionCode: 'callback_resolved',
+    },
+  });
+  assert.equal(transitions.length, 1);
+  assert.equal(transitions[0]?.staffWorkItemId, 'swi_missed_callback');
+  assert.equal(transitions[0]?.reason, 'aircall_reconciliation:callback_resolved');
+});

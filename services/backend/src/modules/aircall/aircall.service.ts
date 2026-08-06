@@ -704,9 +704,21 @@ export class AircallService {
 
           const existing = await this.prisma.db.aircallCallEvent.findFirst({
             where: { tenantId: tenant.id, externalCallId, eventType: 'call.ended' },
-            select: { id: true, transcriptRaw: true, resolverQueuedAt: true, resolverStatus: true },
+            select: {
+              id: true,
+              transcriptRaw: true,
+              resolverQueuedAt: true,
+              resolverStatus: true,
+              resolvedAt: true,
+            },
           });
           if (existing?.transcriptRaw) {
+            if (existingTranscriptSyncAction(existing) === 'queue') {
+              const queueResult = await this.ingest.enqueueTranscriptResolver(existing.id, existing.transcriptRaw, {
+                source: 'rolling_backfill',
+              });
+              if (queueResult.queued) resolverQueued++;
+            }
             skipped++;
             continue;
           }
@@ -1785,6 +1797,20 @@ function uniqueById<T extends { id: string }>(rows: T[]) {
     unique.push(row);
   }
   return unique;
+}
+
+export function existingTranscriptSyncAction(row: {
+  transcriptRaw: string | null;
+  resolverQueuedAt: Date | null;
+  resolverStatus: string | null;
+  resolvedAt: Date | null;
+}): 'queue' | 'skip' {
+  if (!row.transcriptRaw?.trim()) return 'skip';
+  if (row.resolvedAt || row.resolverQueuedAt) return 'skip';
+  if (row.resolverStatus === 'queued' || row.resolverStatus === 'processing' || row.resolverStatus === 'succeeded' || row.resolverStatus === 'failed') {
+    return 'skip';
+  }
+  return 'queue';
 }
 
 function workflowRepairMode(row: {

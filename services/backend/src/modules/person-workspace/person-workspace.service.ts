@@ -2888,17 +2888,6 @@ export class PersonWorkspaceService {
       email: item.email ?? undefined,
       ordersCount: item.ordersCount,
       totalSpent: item.totalSpent,
-      aiBrief: {
-        whyCalling: `Customer is in ${item.segment.name}, a Shopify segment assigned to this workspace.`,
-        upsetAbout: 'No complaint captured from the segment signal.',
-        callGoal: 'Review recent Shopify activity and decide the next human outreach step.',
-        suggestedActions: ['Review latest order', 'Call or email the customer', 'Pin if follow-up is needed'],
-        promptKey: 'person.workspace.segment-priority',
-        promptVersion: 'live',
-        modelUsed: 'not-generated',
-        confidence: 1,
-        transcriptSnippet: item.reason,
-      },
       miniOrder: cardContext?.miniOrders.get(item.customerId),
       performance30d: cardContext?.performance.get(item.customerId) ?? { ...EMPTY_PERFORMANCE_30D },
       customerRisk: item.customerRisk,
@@ -3659,7 +3648,7 @@ function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay)
   return { ...item, ...personDailyCallItemDisplay(item) };
 }
 
-function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
+export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
   if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
       displayTitle: staffDisplayText(card.title),
@@ -3708,6 +3697,34 @@ function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCard
       displayCallSnapshot: staffCallSnapshot(card),
     };
   }
+  if (card.kind === 'customer') {
+    const concern = firstMeaningfulStaffText([card.customerRiskNote, card.missedNote])
+      || 'No customer concern has been recorded.';
+    const badges = [
+      card.segment ? { label: staffDisplayText(card.segment), tone: 'info' as const } : null,
+      card.customerRisk === 'lost'
+        ? { label: 'Critical customer risk', tone: 'danger' as const }
+        : card.customerRisk === 'at_risk'
+          ? { label: 'At-risk customer', tone: 'warning' as const }
+          : null,
+      card.pinned ? { label: 'Pinned', tone: 'accent' as const } : null,
+    ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
+    return {
+      displayTitle: staffDisplayText(card.title),
+      displayReason: card.segment
+        ? `Customer belongs to the assigned ${staffDisplayText(card.segment)} list.`
+        : card.pinned
+          ? 'Customer is saved on the pinned board.'
+          : 'Customer is available in the assigned portfolio.',
+      displayConcern: concern,
+      displayOutcome: 'No required outcome has been recorded for this portfolio customer.',
+      displayActions: [],
+      displayBadges: badges,
+      displayCustomerSummary: staffCustomerSummary(card),
+      displayCommerceSnapshot: staffCommerceSnapshot(card),
+      displayCallSnapshot: staffCallSnapshot(card),
+    };
+  }
   const actionLabel = staffActionLabelForCard(card);
   const actionTone = staffActionToneForCard(card);
   const reason = staffCardReason(card, actionLabel);
@@ -3737,7 +3754,7 @@ function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCard
   };
 }
 
-function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): PersonDailyCallItemDisplayFields {
+export function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): PersonDailyCallItemDisplayFields {
   const concern = firstMeaningfulStaffText([
     item.customerRiskNote,
     item.latestCall?.summary,
@@ -3762,13 +3779,9 @@ function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay): Pe
     displayReason: staffDisplayText(item.reason || concern),
     displayConcern: concern,
     displayOutcome: item.openRequestsCount > 0
-      ? 'Review the request, check order and call context, then choose the next outreach.'
-      : 'Review history and decide whether to call, note, pin, or leave the customer in the portfolio.',
-    displayActions: [
-      'Review latest order',
-      'Review latest call or note',
-      item.phone ? 'Call if action is needed' : 'Confirm a reachable phone before calling',
-    ],
+      ? `${item.openRequestsCount} open customer request${item.openRequestsCount === 1 ? ' is' : 's are'} attached to this customer.`
+      : 'No required outcome has been recorded for this portfolio customer.',
+    displayActions: [],
     displayBadges: badges,
     displayCustomerSummary: [
       item.phone ? `Phone ${item.phone}` : 'No phone on file',
