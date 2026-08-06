@@ -2,7 +2,7 @@ import { Activity, AlarmClockOff, Archive, ArrowRightLeft, FileText, Phone, Shop
 import type { LucideIcon } from 'lucide-react';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import type { Card as CardData, TaskSource } from '../types';
-import { focusLabel, personSafeText, staffActionLabel, staffActionTone, taskSourceLabel } from '../lib/personTerminology';
+import { focusLabel, personSafeText, taskSourceLabel } from '../lib/personTerminology';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible } from './FrontendCustomization';
 
 interface Props {
@@ -60,20 +60,14 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
   const safeCardTitle = personSafeText(card.displayTitle || card.title);
   const primaryBadge = card.displayBadges[0];
-  const actionInput = {
-    intent: card.callIntent ?? card.urgencyBreakdown.intent,
-    tags: card.psychTags,
-    upset: card.displayConcern,
-    goal: card.displayOutcome,
-    summary: card.displayReason,
-    urgencyScore: card.urgencyScore,
-  };
-  const actionLabel = personSafeText(primaryBadge?.label) || staffActionLabel(actionInput);
-  const actionTone = displayToneClass(primaryBadge?.tone ?? staffActionTone(actionInput));
+  const actionLabel = personSafeText(primaryBadge?.label)
+    || (card.source === 'call_analysis' ? 'Analysis unavailable' : 'Customer follow-up');
+  const actionTone = displayToneClass(primaryBadge?.tone ?? (card.source === 'call_analysis' ? 'warning' : 'info'));
   const briefLine = frontendCopy(
     override,
     'requiredAction',
-    personSafeText(card.displayOutcome || card.displayReason || actionLabel || 'Review this customer and save the next step.'),
+    personSafeText(card.displayOutcome || card.displayReason)
+      || (card.source === 'call_analysis' ? 'Analysis unavailable. Review the original call before outreach.' : actionLabel),
   );
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`

@@ -69,6 +69,7 @@ export interface CalEvent {
   durationMinutes: number;
   kind: EventKind;
   source: EventSource;
+  analysisAvailable?: boolean | null;
   displayReason?: string;
   displayConcern?: string;
   displayOutcome?: string;

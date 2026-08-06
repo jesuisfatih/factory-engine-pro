@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import {
@@ -39,7 +39,7 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
-import { AircallApiError, AircallClient, type AircallCredentials } from './aircall.client.js';
+import { AircallApiError, AircallClient, AircallTransportError, type AircallCredentials } from './aircall.client.js';
 import { AircallIngestService } from './aircall-ingest.service.js';
 import { AircallRepository } from './aircall.repository.js';
 import { transcriptOperationalSignals } from '../ai/transcript-operational-signals.js';
@@ -102,8 +102,15 @@ type AircallWorkflowSignalState = {
   invalidResolverOutput: boolean;
 };
 
+type RunningRecentBackfill = {
+  input: AircallBackfillRecentInput;
+  operation: Promise<AircallBackfillRecentResponse>;
+};
+
 @Injectable()
 export class AircallService {
+  private readonly recentBackfills = new Map<string, RunningRecentBackfill>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
@@ -613,6 +620,45 @@ export class AircallService {
   }
 
   async backfillRecentCalls(input: AircallBackfillRecentInput): Promise<AircallBackfillRecentResponse> {
+    const tenantId = this.tenantContext.require().tenantId;
+    if (!tenantId) throw new Error('Tenant context is required');
+    const running = this.recentBackfills.get(tenantId);
+    if (running) {
+      if (sameRecentBackfillInput(running.input, input)) {
+        this.logger.log('aircall', 'recent_backfill_joined', 'Aircall recent backfill joined the running tenant sync', {
+          tenant_id: tenantId,
+          recent_days: input.recentDays,
+          max_pages: input.maxPages,
+        });
+        return running.operation;
+      }
+
+      this.logger.log('aircall', 'recent_backfill_queued', 'Aircall recent backfill is waiting for a tenant sync with a different scope', {
+        tenant_id: tenantId,
+        running_recent_days: running.input.recentDays,
+        running_max_pages: running.input.maxPages,
+        requested_recent_days: input.recentDays,
+        requested_max_pages: input.maxPages,
+      });
+      try {
+        await running.operation;
+      } catch {
+        // A queued sync still gets its own attempt after the running operation fails.
+      }
+      return this.backfillRecentCalls(input);
+    }
+
+    const operation = this.runRecentBackfill(input);
+    const entry = { input, operation };
+    this.recentBackfills.set(tenantId, entry);
+    try {
+      return await operation;
+    } finally {
+      if (this.recentBackfills.get(tenantId) === entry) this.recentBackfills.delete(tenantId);
+    }
+  }
+
+  private async runRecentBackfill(input: AircallBackfillRecentInput): Promise<AircallBackfillRecentResponse> {
     const startedAt = new Date();
     const tenant = await this.currentTenant();
     const client = new AircallClient(await this.resolveCredentials());
@@ -771,6 +817,13 @@ export class AircallService {
         finishedAt: new Date(),
         metadata: { recentDays, from: from.toISOString(), to: to.toISOString(), page, fetched, ingested },
       });
+      if (error instanceof AircallTransportError || (error instanceof AircallApiError && isTransientAircallStatus(error.status))) {
+        throw new ServiceUnavailableException({
+          message: 'Aircall is temporarily unavailable. Existing calls were not reprocessed; try sync again shortly.',
+          code: error instanceof AircallTransportError ? `aircall_${error.kind}_error` : 'aircall_temporarily_unavailable',
+          details: error instanceof AircallApiError ? { status: error.status } : undefined,
+        });
+      }
       if (error instanceof AircallApiError) {
         throw new BadRequestException({
           message: 'Aircall recent call backfill failed.',
@@ -1960,6 +2013,14 @@ function normalizeDialPhone(value: string) {
     message: 'Phone number must be a valid international dial target.',
     code: 'aircall_phone_invalid',
   });
+}
+
+function isTransientAircallStatus(status: number) {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function sameRecentBackfillInput(left: AircallBackfillRecentInput, right: AircallBackfillRecentInput) {
+  return left.recentDays === right.recentDays && left.maxPages === right.maxPages;
 }
 
 function stringOrNull(value: unknown) {

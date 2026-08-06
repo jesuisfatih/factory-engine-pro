@@ -16,7 +16,7 @@ import { PinPanel } from '../components/PinPanel';
 import { QueryState } from '../components/QueryState';
 import { TaskBriefContent, TaskBriefModal, type TaskBriefContextTone } from '../components/TaskBriefModal';
 import { TransferTaskModal } from '../components/TransferTaskModal';
-import { focusLabel, personSafeText, staffActionLabel } from '../lib/personTerminology';
+import { focusLabel, personSafeText } from '../lib/personTerminology';
 import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
@@ -928,10 +928,10 @@ function initialsFor(title: string) {
 }
 
 function missedActionFor(card: CardData) {
-  const actionInput = cardActionInput(card);
-  const label = staffActionLabel(actionInput);
+  const label = personSafeText(card.displayBadges[0]?.label);
   if (card.urgencyScore >= 12 || card.customerRisk === 'lost') return { label: 'Call again', cls: 'red' };
   if (card.customerRisk === 'at_risk') return { label: 'Review', cls: 'amber' };
+  if (card.source === 'call_analysis' && card.displayActions.length === 0) return { label: 'Review call', cls: 'amber' };
   if (label.toLowerCase().includes('call')) return { label: 'Call back', cls: 'amber' };
   return { label: 'Follow up', cls: 'amber' };
 }
@@ -1241,17 +1241,6 @@ function priorityUrgencyClass(score: number) {
   if (score >= 6) return 'p7';
   if (score >= 4) return 'p5';
   return 'p3';
-}
-
-function cardActionInput(card: CardData) {
-  return {
-    intent: card.callIntent ?? card.urgencyBreakdown.intent,
-    tags: card.psychTags,
-    upset: card.displayConcern,
-    goal: card.displayOutcome,
-    summary: card.displayReason,
-    urgencyScore: card.urgencyScore,
-  };
 }
 
 function CustomerNoteModal({

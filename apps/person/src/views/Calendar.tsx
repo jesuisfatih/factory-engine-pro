@@ -281,15 +281,15 @@ export function CalendarView() {
                   </div>
                   <div className="row">
                     <div className="lbl">Reason</div>
-                    <div className="val">{personSafeText(selected.displayReason) || 'Review customer context before outreach.'}</div>
+                    <div className="val">{personSafeText(selected.displayReason) || (selected.analysisAvailable === false ? 'Analysis unavailable.' : 'No reason was recorded.')}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Concern</div>
-                    <div className="val">{personSafeText(selected.displayConcern) || 'No customer concern captured yet.'}</div>
+                    <div className="val">{personSafeText(selected.displayConcern) || (selected.analysisAvailable === false ? 'Analysis unavailable.' : 'No customer concern was recorded.')}</div>
                   </div>
                   <div className="row">
                     <div className="lbl">Outcome</div>
-                    <div className="val"><strong>{personSafeText(selected.displayOutcome) || 'Save the next customer outcome.'}</strong></div>
+                    <div className="val"><strong>{personSafeText(selected.displayOutcome) || (selected.analysisAvailable === false ? 'Analysis unavailable.' : 'No required outcome was recorded.')}</strong></div>
                   </div>
                   {selected.callExcerpt && (
                     <div className="row">
@@ -299,7 +299,11 @@ export function CalendarView() {
                   )}
                   <div className="row">
                     <div className="lbl">Next actions</div>
-                    <ul>{(selectedActions.length ? selectedActions : ['Review context', 'Call or update the follow-up', 'Save the outcome']).map((action) => <li key={action}>{action}</li>)}</ul>
+                    {selectedActions.length ? (
+                      <ul>{selectedActions.map((action) => <li key={action}>{action}</li>)}</ul>
+                    ) : (
+                      <div className="val">{selected.analysisAvailable === false ? 'Analysis unavailable. Review the original call before outreach.' : 'No next actions were recorded for this event.'}</div>
+                    )}
                   </div>
                 </div>
               ) : (

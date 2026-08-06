@@ -1938,8 +1938,9 @@ export class PersonWorkspaceService {
       this.prisma.db.aircallCallEvent.findMany({ orderBy: { eventTimestamp: 'desc' }, take: 25 }),
       this.prisma.db.mailDelivery.findMany({ where: { status: 'failed' }, orderBy: { updatedAt: 'desc' }, take: 15 }),
     ]);
+    const callContext = await this.cardCallContext(requests);
     return [
-      ...requests.filter((row) => this.isQueueVisible(row)).slice(0, 50).map((row) => this.calendarFromRequest(row)),
+      ...requests.filter((row) => this.isQueueVisible(row)).slice(0, 50).map((row) => this.calendarFromRequest(row, callContext)),
       ...calls.map((row) => ({
         id: `call-${row.id}`,
         serviceRequestId: null,
@@ -3181,10 +3182,10 @@ export class PersonWorkspaceService {
     return { callsById };
   }
 
-  private calendarFromRequest(row: StaffWorkItemRow) {
+  private calendarFromRequest(row: StaffWorkItemRow, callContext?: CardCallContext) {
     const date = row.dueAt ?? (row.assignedMemberId ? row.updatedAt : row.createdAt);
     const source = taskSource(row);
-    const display = calendarDisplayFromRequest(row, hasGeneratedBrief(source) ? this.brief(row) : null);
+    const display = calendarDisplayFromRequest(row, hasGeneratedBrief(source) ? this.brief(row, callContext) : null);
     return {
       id: `sr-${row.id}`,
       serviceRequestId: row.id,
@@ -3659,7 +3660,7 @@ function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay)
 }
 
 function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
-  if (card.kind === 'task' && card.aiBrief?.modelUsed === 'unavailable') {
+  if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
       displayTitle: staffDisplayText(card.title),
       displayReason: 'Verified call analysis is not available yet.',
@@ -4420,6 +4421,7 @@ function calendarDisplayFromRequest(
 ) {
   if (brief?.modelUsed === 'unavailable') {
     return {
+      analysisAvailable: false,
       displayReason: 'Verified call analysis is not available yet.',
       displayConcern: 'No verified customer mood or issue is available.',
       displayOutcome: 'Review the original call before contacting this customer.',
@@ -4429,6 +4431,7 @@ function calendarDisplayFromRequest(
   }
   const actions = cleanedActions(brief?.suggestedActions ?? []);
   return {
+    analysisAvailable: brief ? true : null,
     displayReason: firstMeaningfulStaffText([brief?.whyCalling, row.description, row.title]) || staffDisplayText(row.title),
     displayConcern: firstMeaningfulStaffText([brief?.upsetAbout]) || (row.priority === 'critical' || row.priority === 'urgent'
       ? 'High-priority customer follow-up needs a human response.'
@@ -4454,6 +4457,7 @@ function calendarDisplayFromCall(row: {
   const resolver = currentResolverOutput(row);
   if (!resolver) {
     return {
+      analysisAvailable: false,
       displayReason: 'Verified call analysis is not available yet.',
       displayConcern: 'No verified customer mood or issue is available.',
       displayOutcome: 'Review the original call before contacting this customer.',
@@ -4463,6 +4467,7 @@ function calendarDisplayFromCall(row: {
   }
   const personBrief = resolver.person_brief;
   return {
+    analysisAvailable: true,
     displayReason: staffDisplayText(personBrief.why_calling || resolver.summary),
     displayConcern: staffDisplayText(personBrief.upset_about || personBrief.issue),
     displayOutcome: staffDisplayText(personBrief.call_goal || personBrief.next_action),
