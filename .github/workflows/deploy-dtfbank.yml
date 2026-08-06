@@ -118,7 +118,7 @@ jobs:
 
           ready=0
           for _attempt in $(seq 1 120); do
-            if docker exec "$RELEASE_CONTAINER" node -e 'fetch("http://127.0.0.1:4000/api/v1/health").then(async response=>{const body=await response.text();if(!response.ok||!body.includes("\\\"ok\\\":true"))process.exit(1)}).catch(()=>process.exit(1))' >/dev/null 2>&1; then
+            if docker exec "$RELEASE_CONTAINER" node -e 'fetch("http://127.0.0.1:4000/api/v1/health").then(async response=>{const body=await response.json();if(!response.ok||body.ok!==true)process.exit(1)}).catch(()=>process.exit(1))' >/dev/null 2>&1; then
               ready=1
               break
             fi
