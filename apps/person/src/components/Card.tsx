@@ -59,15 +59,16 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const meta = card.source === 'manual' ? null : SOURCE_META[card.source];
   const override = frontendElementOverride(customization, 'daily.card', { dailyCall: card, summary });
   const safeCardTitle = personSafeText(card.displayTitle || card.title);
+  const analysisUnavailable = card.analysisStatus === 'unavailable';
   const primaryBadge = card.displayBadges[0];
   const actionLabel = personSafeText(primaryBadge?.label)
-    || (card.source === 'call_analysis' ? 'Analysis unavailable' : 'Customer follow-up');
-  const actionTone = displayToneClass(primaryBadge?.tone ?? (card.source === 'call_analysis' ? 'warning' : 'info'));
+    || (analysisUnavailable ? 'Analysis unavailable' : '');
+  const actionTone = displayToneClass(primaryBadge?.tone ?? (analysisUnavailable ? 'warning' : 'info'));
   const briefLine = frontendCopy(
     override,
     'requiredAction',
     personSafeText(card.displayOutcome || card.displayReason)
-      || (card.source === 'call_analysis' ? 'Verified call analysis is not available yet.' : actionLabel),
+      || (analysisUnavailable ? 'Analysis unavailable.' : ''),
   );
   const lastOrder = card.miniOrder
     ? `${card.miniOrder.orderNumber ?? card.miniOrder.id} ${fmtMoney(card.miniOrder.totalPrice, card.miniOrder.currency)}`
@@ -92,7 +93,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
       <div className="card-body">
         <div className="row1">
           {frontendFieldVisible(override, 'title') ? <span className="title">{safeCardTitle}</span> : null}
-          {meta && frontendFieldVisible(override, 'actionBadge') ? (
+          {meta && actionLabel && frontendFieldVisible(override, 'actionBadge') ? (
             <span className={`action-badge tone-${actionTone}`} title={meta.label}>
               <meta.icon size={9} />
               <span>{frontendCopy(override, 'actionLabel', actionLabel)}</span>
@@ -105,7 +106,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
             </span>
           ) : null}
         </div>
-        {frontendFieldVisible(override, 'requiredAction') ? <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div> : null}
+        {briefLine && frontendFieldVisible(override, 'requiredAction') ? <div className={`staff-brief tone-${actionTone}`}>{briefLine}</div> : null}
         {card.contactState ? (
           <div className={`contact-state${card.contactState.active ? ' active' : ''}`} role={card.contactState.active ? 'status' : undefined}>
             <Phone size={12} />

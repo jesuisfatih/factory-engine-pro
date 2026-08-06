@@ -94,6 +94,7 @@ export class StaffWorkService {
       dueAt,
       visibleAfter,
       queueLocation,
+      currentDisposition: queueLocation === 'follow_up' ? 'not_selected' : null,
       metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
       conditionTrace: (input.conditionTrace ?? []) as Prisma.InputJsonValue,
       taskStateSnapshot: (input.taskStateSnapshot ?? {}) as Prisma.InputJsonValue,

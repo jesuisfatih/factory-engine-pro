@@ -123,6 +123,9 @@ export const personQueueCardDisplayBadgeSchema = z.object({
 });
 export type PersonQueueCardDisplayBadge = z.infer<typeof personQueueCardDisplayBadgeSchema>;
 
+export const personAnalysisStatusSchema = z.enum(['available', 'unavailable', 'not_applicable']);
+export type PersonAnalysisStatus = z.infer<typeof personAnalysisStatusSchema>;
+
 export const personContactActivityStatusSchema = z.enum([
   'calling',
   'attempted',
@@ -157,6 +160,7 @@ export const personQueueCardSchema = z.object({
   axis: customerAssignmentAxisSchema.nullable().optional(),
   title: z.string(),
   summary: z.string(),
+  analysisStatus: personAnalysisStatusSchema.default('not_applicable'),
   displayTitle: z.string(),
   displayReason: z.string(),
   displayConcern: z.string(),
@@ -264,6 +268,7 @@ export const personDailyCallItemSchema = z.object({
   id: z.string(),
   customerId: z.string(),
   customerName: z.string(),
+  analysisStatus: personAnalysisStatusSchema.default('not_applicable'),
   displayTitle: z.string(),
   displayReason: z.string(),
   displayConcern: z.string(),

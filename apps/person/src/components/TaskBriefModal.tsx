@@ -179,11 +179,12 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const showField = (field: Parameters<typeof frontendFieldVisible>[1], defaultVisible = true) => frontendFieldVisible(override, field, defaultVisible);
   const loadingTaskBrief = isTaskCard && isLoading;
   const taskBriefError = isTaskCard && isError;
-  const hasBrief = liveCard.source !== 'manual';
+  const analysisUnavailable = liveCard.analysisStatus === 'unavailable';
+  const hasBrief = liveCard.analysisStatus === 'available';
   const initial = useMemo(() => ({
-    why: personSafeText(liveCard.displayReason || 'Verified call analysis is not available yet.'),
-    upset: personSafeText(liveCard.displayConcern || 'Analysis unavailable.'),
-    goal: personSafeText(liveCard.displayOutcome || 'Analysis unavailable.'),
+    why: personSafeText(liveCard.displayReason),
+    upset: personSafeText(liveCard.displayConcern),
+    goal: personSafeText(liveCard.displayOutcome),
   }), [liveCard.displayConcern, liveCard.displayOutcome, liveCard.displayReason]);
   const [why, setWhy] = useState(initial.why);
   const [upset, setUpset] = useState(initial.upset);
@@ -322,7 +323,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     if (!activeTaskId || disposition === 'not_selected' || outcomeMutation.isPending) return;
     outcomeMutation.mutate();
   };
-  const primaryBrief = personSafeText(liveCard.displayOutcome) || 'Verified call analysis is not available yet.';
+  const primaryBrief = personSafeText(liveCard.displayOutcome);
   const modalActionOrder = liveCard.modalActionOrder ?? [];
   const safeDisplayActions = liveCard.displayActions.map((action) => personSafeText(action)).filter(Boolean);
   const directActions = orderedDisplayActions(safeDisplayActions, modalActionOrder);
@@ -481,7 +482,27 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
 
             {!taskBriefError && (
               <>
-                {hasBrief ? (
+                {analysisUnavailable ? (
+                  <>
+                    <div className="brief-state" style={sectionStyle('reasonField', 10)}>
+                      <AlertTriangle size={16} />
+                      <strong>Analysis unavailable</strong>
+                      <span>No model-generated call plan is available for this call.</span>
+                    </div>
+                    {showField('callExcerpt') ? (
+                      <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
+                        <div className="brief-block-head">
+                          <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
+                        </div>
+                        <div className={callExcerpt ? 'brief-transcript' : 'brief-val brief-val-muted'}>
+                          {callExcerpt || 'No call excerpt is available.'}
+                        </div>
+                      </div>
+                    ) : null}
+                    {outcomePanel}
+                    {followUpNotesSection}
+                  </>
+                ) : hasBrief ? (
                   <>
                     {showField('reasonField') ? <div style={sectionStyle('reasonField', 10)}><NarrativeField label={frontendCopy(override, 'reasonLabel', "Why you're calling")} suggestedValue={initial.why} value={why} onChange={setWhy} multiLine /></div> : null}
                     {showField('moodField') ? <div style={sectionStyle('moodField', 20)}><NarrativeField label={frontendCopy(override, 'moodLabel', "What they're upset about")} suggestedValue={initial.upset} value={upset} onChange={setUpset} multiLine /></div> : null}
@@ -498,20 +519,13 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                       </div>
                     ) : null}
 
-                    {!directActions.length && showField('extraChecks') ? (
-                      <div className="brief-block brief-analysis-unavailable" style={sectionStyle('extraChecks', 70)}>
-                        <div className="brief-block-head"><span className="lbl">Suggested actions</span></div>
-                        <div className="brief-val brief-val-muted">Analysis unavailable. Review the call excerpt before contacting the customer.</div>
-                      </div>
-                    ) : null}
-
                     {(callExcerpt || liveCard.source === 'call_analysis') && showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>
                         <div className="brief-block-head">
                           <span className="lbl">{frontendCopy(override, 'callExcerptLabel', 'Call excerpt')}</span>
                         </div>
                         <div className={callExcerpt ? 'brief-transcript' : 'brief-val brief-val-muted'}>
-                          {callExcerpt || 'No call excerpt is available. Review the original call before contacting the customer.'}
+                          {callExcerpt || 'No call excerpt is available.'}
                         </div>
                       </div>
                     ) : null}
@@ -524,9 +538,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                       <div className="brief-block-head">
                         <span className="lbl">Manual follow-up</span>
                       </div>
-                      <div className="brief-val brief-val-muted">
-                        Created by an operator. Add a follow-up note or schedule the next outreach to enrich the customer history.
-                      </div>
+                      <div className="brief-val brief-val-muted">Created by an operator.</div>
                     </div>
                     {outcomePanel}
                     {followUpNotesSection}
@@ -587,11 +599,13 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
 
                   {showField('callSummary') ? <div className="brief-block" style={sectionStyle('callSummary', 100)}>
                     <div className="brief-block-head"><span className="lbl">{frontendCopy(override, 'callSummaryLabel', 'Call summary')}</span></div>
-                    {liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.callSummary ? (
+                    {analysisUnavailable ? (
+                      <div className="brief-val brief-val-muted">Analysis unavailable.</div>
+                    ) : liveCard.displayReason || liveCard.displayConcern || liveCard.displayOutcome || detail?.callSummary ? (
                       <div className="brief-psych">
                         <div><span>Issue</span><strong>{personSafeText(liveCard.displayConcern || detail?.callSummary?.communicationStyle || 'Not captured')}</strong></div>
-                        <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief || 'Analysis unavailable')}</strong></div>
-                        <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Analysis unavailable'}</strong></div>
+                        <div><span>Next step</span><strong>{personSafeText(liveCard.displayOutcome || primaryBrief) || 'Not provided by analysis'}</strong></div>
+                        <div><span>Checks</span><strong>{summaryChecks.slice(0, 3).map(personSafeText).join(', ') || 'Not provided by analysis'}</strong></div>
                         <div><span>Signals</span><strong>{summarySignals.join(', ') || 'None captured'}</strong></div>
                         <div><span>Friction</span><strong>{summaryFriction.join(', ') || 'None captured'}</strong></div>
                         <p>{personSafeText(liveCard.displayReason || callSignal)}</p>
@@ -720,10 +734,10 @@ function uniqueActions(actions: string[]) {
 
 function callSignalText(detail: TaskBriefDetail | undefined) {
   const analysis = detail?.callSummary;
-  if (!analysis) return 'Verified call analysis is not available yet.';
+  if (!analysis) return '';
   const parts = [
     analysis.motivators.length ? `Motivators: ${analysis.motivators.map(personSafeText).join(', ')}.` : null,
     analysis.objections.length ? `Objections: ${analysis.objections.map(personSafeText).join(', ')}.` : null,
   ].filter(Boolean);
-  return parts.join(' ') || 'No verified motivator or objection was captured.';
+  return parts.join(' ');
 }

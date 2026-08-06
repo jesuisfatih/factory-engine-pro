@@ -29,6 +29,7 @@ export interface Card {
   axis?: 'sales' | 'support' | 'account' | null;
   title: string;
   summary: string;
+  analysisStatus: 'available' | 'unavailable' | 'not_applicable';
   displayTitle: string;
   displayReason: string;
   displayConcern: string;

@@ -302,7 +302,7 @@ export function CalendarView() {
                     {selectedActions.length ? (
                       <ul>{selectedActions.map((action) => <li key={action}>{action}</li>)}</ul>
                     ) : (
-                      <div className="val">{selected.analysisAvailable === false ? 'Analysis unavailable. Review the original call before outreach.' : 'No next actions were recorded for this event.'}</div>
+                      <div className="val">{selected.analysisAvailable === false ? 'Analysis unavailable.' : 'No next actions were recorded for this event.'}</div>
                     )}
                   </div>
                 </div>

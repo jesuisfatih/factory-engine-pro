@@ -28,9 +28,10 @@ test('priority customer cards expose recorded portfolio facts without invented a
     outcomeRequired: false,
   } as never);
 
-  assert.equal(display.displayReason, 'Customer belongs to the assigned Wholesale Customers list.');
-  assert.equal(display.displayConcern, 'No customer concern has been recorded.');
-  assert.equal(display.displayOutcome, 'No required outcome has been recorded for this portfolio customer.');
+  assert.equal(display.analysisStatus, 'not_applicable');
+  assert.equal(display.displayReason, 'Assigned customer list: Wholesale Customers.');
+  assert.equal(display.displayConcern, '');
+  assert.equal(display.displayOutcome, '');
   assert.deepEqual(display.displayActions, []);
   assert.equal(display.displayBadges[0]?.label, 'Wholesale Customers');
 });
@@ -68,4 +69,77 @@ test('priority list rows report open requests without manufacturing a playbook',
 
   assert.equal(display.displayOutcome, '2 open customer requests are attached to this customer.');
   assert.deepEqual(display.displayActions, []);
+});
+
+test('failed call analysis exposes an explicit unavailable state without invented guidance', () => {
+  const display = personCardDisplay({
+    kind: 'task',
+    id: 'swi_1',
+    customerId: 'cust_1',
+    assignedMemberId: 'tmbr_1',
+    assignedMemberName: 'Linda',
+    axis: 'sales',
+    title: 'Call follow-up',
+    summary: 'Payment refund callback shipping purchase intent',
+    segment: 'Call analysis',
+    segmentColor: '#2563eb',
+    priority: 8,
+    urgencyScore: 8,
+    urgencyBreakdown: { score: 8, factors: [] },
+    columnId: 'unassigned',
+    pinned: false,
+    pinnedAt: null,
+    source: 'call_analysis',
+    customerRisk: 'none',
+    customerRiskNote: null,
+    resolverOutput: null,
+    aiBrief: {
+      whyCalling: '',
+      upsetAbout: '',
+      callGoal: '',
+      suggestedActions: [],
+      promptKey: 'person.workspace.resolver-unavailable',
+      promptVersion: '5',
+      modelUsed: 'unavailable',
+      confidence: 0,
+    },
+    currentDisposition: 'not_selected',
+    outcomeRequired: true,
+  } as never);
+
+  assert.equal(display.analysisStatus, 'unavailable');
+  assert.equal(display.displayReason, '');
+  assert.equal(display.displayConcern, '');
+  assert.equal(display.displayOutcome, '');
+  assert.deepEqual(display.displayActions, []);
+  assert.deepEqual(display.displayBadges, [{ label: 'Analysis unavailable', tone: 'warning' }]);
+});
+
+test('manual text containing intent keywords is not converted into a generated playbook', () => {
+  const display = personCardDisplay({
+    kind: 'task',
+    id: 'swi_manual',
+    customerId: 'cust_1',
+    title: 'Refund and shipping follow-up',
+    summary: 'Payment refund callback shipping purchase intent',
+    segment: 'Manual follow-up',
+    segmentColor: '#2563eb',
+    priority: 8,
+    urgencyScore: 8,
+    urgencyBreakdown: { score: 8, factors: [] },
+    columnId: 'unassigned',
+    pinned: false,
+    pinnedAt: null,
+    source: 'manual',
+    customerRisk: 'none',
+    customerRiskNote: null,
+    currentDisposition: 'not_selected',
+    outcomeRequired: true,
+  } as never);
+
+  assert.equal(display.analysisStatus, 'not_applicable');
+  assert.equal(display.displayReason, 'Payment refund callback shipping purchase intent');
+  assert.equal(display.displayOutcome, '');
+  assert.deepEqual(display.displayActions, []);
+  assert.deepEqual(display.displayBadges, []);
 });

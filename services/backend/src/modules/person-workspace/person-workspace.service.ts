@@ -164,6 +164,7 @@ interface PersonDailyTaskOrderRow {
 
 type PersonQueueCardDisplayFields = Pick<
   PersonQueueCardDto,
+  | 'analysisStatus'
   | 'displayTitle'
   | 'displayReason'
   | 'displayConcern'
@@ -1635,6 +1636,31 @@ export class PersonWorkspaceService {
     const row = await this.requireStaffWorkItem(id);
     await this.assertStaffWorkScoped(row, member.id);
     const outcome = await this.staffWork.recordOutcome(row.id, member.id, input);
+    if (outcome.disposition === 'completed') {
+      try {
+        await this.rules.fireTrigger({
+          trigger: 'task.completed',
+          eventId: `staff-work:${row.id}:outcome:${outcome.id}`,
+          source: 'person_workspace',
+          params: {
+            taskId: row.id,
+            staffWorkItemId: row.id,
+            customerId: row.customerId,
+            assignedMemberId: row.assignedMemberId,
+            outcomeId: outcome.id,
+            disposition: outcome.disposition,
+            selectedAt: outcome.selectedAt,
+            visibleAfter: outcome.visibleAfter,
+          },
+        });
+      } catch (error) {
+        this.logger.warn('person_workspace', 'task.completed.trigger_failed', 'Completed task event could not be emitted', {
+          staff_work_item_id: row.id,
+          outcome_id: outcome.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     if (row.customerId && outcome.visibleAfter) {
       await this.contactTimeline.recordFollowUp({
         customerId: row.customerId,
@@ -3035,8 +3061,8 @@ export class PersonWorkspaceService {
       callExcerpt: staffDisplayText(generatedBrief?.transcriptSnippet) || null,
       miniOrder: row.customerId ? cardContext?.miniOrders.get(row.customerId) : undefined,
       performance30d: row.customerId ? cardContext?.performance.get(row.customerId) ?? { ...EMPTY_PERFORMANCE_30D } : undefined,
-      currentDisposition: row.currentDisposition,
-      outcomeRequired: row.currentDisposition === 'not_selected',
+      currentDisposition: effectiveWorkDisposition(row),
+      outcomeRequired: effectiveWorkDisposition(row) === 'not_selected',
     };
     const displayCard = withPersonCardDisplay(card);
     return publicPersonQueueCard(strategies ? personCardWithStrategies(displayCard, strategies) : displayCard);
@@ -3193,20 +3219,20 @@ export class PersonWorkspaceService {
   }
 
   private brief(row: StaffWorkItemRow, callContext?: CardCallContext): PersonTaskBrief {
-    const metadata = this.record(row.metadata);
     const sourceCall = row.sourceCallId ? callContext?.callsById.get(row.sourceCallId) ?? null : null;
     const resolver = resolverForBrief(sourceCall);
     if (resolver) return transcriptPersonBrief(row, resolver, sourceCall);
 
     return {
-      whyCalling: 'Verified call analysis is not available yet.',
-      upsetAbout: 'Customer mood and issue are unavailable until the call analysis succeeds.',
-      callGoal: 'Review the original call before contacting this customer.',
+      whyCalling: '',
+      upsetAbout: '',
+      callGoal: '',
       suggestedActions: [],
       promptKey: 'person.workspace.resolver-unavailable',
       promptVersion: String(TRANSCRIPT_RESOLVER_SCHEMA_VERSION),
       modelUsed: 'unavailable',
       confidence: 0,
+      transcriptSnippet: sourceCall?.transcriptRaw?.slice(0, 600) || undefined,
     };
   }
 
@@ -3651,12 +3677,13 @@ function withPersonDailyCallItemDisplay(item: PersonDailyCallItemWithoutDisplay)
 export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields {
   if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
+      analysisStatus: 'unavailable',
       displayTitle: staffDisplayText(card.title),
-      displayReason: 'Verified call analysis is not available yet.',
-      displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'No verified required outcome is available.',
+      displayReason: '',
+      displayConcern: '',
+      displayOutcome: '',
       displayActions: [],
-      displayBadges: [{ label: 'Call review required', tone: 'warning' }],
+      displayBadges: [{ label: 'Analysis unavailable', tone: 'warning' }],
       displayCustomerSummary: staffCustomerSummary(card),
       displayCommerceSnapshot: staffCommerceSnapshot(card),
       displayCallSnapshot: staffCallSnapshot(card),
@@ -3671,18 +3698,18 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
     const badgeLabel = staffDisplayText(
       primarySignal?.suggested_task_title
       ?? card.resolverOutput.next_action.action
-      ?? card.aiBrief.callGoal
-      ?? 'Customer follow-up',
-    ).slice(0, 96) || 'Customer follow-up';
+      ?? card.aiBrief.callGoal,
+    ).slice(0, 96) || 'Verified call context';
     const tone: PersonQueueCardDisplayFields['displayBadges'][number]['tone'] =
       priority === 'urgent' || mood === 'angry' ? 'danger'
         : priority === 'high' || mood === 'frustrated' || mood === 'anxious' ? 'warning'
           : card.resolverOutput.call_intent === 'sale' ? 'success' : 'info';
     return {
+      analysisStatus: 'available',
       displayTitle: staffDisplayText(card.title),
-      displayReason: staffDisplayText(card.aiBrief.whyCalling) || 'The reason for this call was not captured in the verified analysis.',
-      displayConcern: staffDisplayText(card.aiBrief.upsetAbout) || 'No customer mood or issue was captured in the verified analysis.',
-      displayOutcome: staffDisplayText(card.aiBrief.callGoal) || 'No required outcome was captured in the verified analysis.',
+      displayReason: staffDisplayText(card.aiBrief.whyCalling),
+      displayConcern: staffDisplayText(card.aiBrief.upsetAbout),
+      displayOutcome: staffDisplayText(card.aiBrief.callGoal),
       displayActions: cleanedActions(card.aiBrief.suggestedActions),
       displayBadges: [
         { label: badgeLabel, tone },
@@ -3698,8 +3725,7 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
     };
   }
   if (card.kind === 'customer') {
-    const concern = firstMeaningfulStaffText([card.customerRiskNote, card.missedNote])
-      || 'No customer concern has been recorded.';
+    const concern = firstMeaningfulStaffText([card.customerRiskNote, card.missedNote]);
     const badges = [
       card.segment ? { label: staffDisplayText(card.segment), tone: 'info' as const } : null,
       card.customerRisk === 'lost'
@@ -3710,14 +3736,15 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
       card.pinned ? { label: 'Pinned', tone: 'accent' as const } : null,
     ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
     return {
+      analysisStatus: 'not_applicable',
       displayTitle: staffDisplayText(card.title),
       displayReason: card.segment
-        ? `Customer belongs to the assigned ${staffDisplayText(card.segment)} list.`
+        ? `Assigned customer list: ${staffDisplayText(card.segment)}.`
         : card.pinned
-          ? 'Customer is saved on the pinned board.'
-          : 'Customer is available in the assigned portfolio.',
+          ? 'Pinned customer.'
+          : '',
       displayConcern: concern,
-      displayOutcome: 'No required outcome has been recorded for this portfolio customer.',
+      displayOutcome: '',
       displayActions: [],
       displayBadges: badges,
       displayCustomerSummary: staffCustomerSummary(card),
@@ -3725,14 +3752,9 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
       displayCallSnapshot: staffCallSnapshot(card),
     };
   }
-  const actionLabel = staffActionLabelForCard(card);
-  const actionTone = staffActionToneForCard(card);
-  const reason = staffCardReason(card, actionLabel);
-  const concern = staffCardConcern(card);
-  const outcome = staffCardOutcome(card, actionLabel);
-  const actions = staffCardActions(card, actionLabel);
   const badges = [
-    { label: actionLabel, tone: actionTone },
+    card.source === 'admin_transfer' ? { label: 'Team transfer', tone: 'info' as const } : null,
+    card.source === 'stale_follow_up' ? { label: 'Scheduled follow-up', tone: 'warning' as const } : null,
     card.customerRisk === 'lost'
       ? { label: 'Critical customer risk', tone: 'danger' as const }
       : card.customerRisk === 'at_risk'
@@ -3742,11 +3764,12 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
     card.source === 'segment_priority' ? { label: 'Customer portfolio', tone: 'info' as const } : null,
   ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
   return {
+    analysisStatus: 'not_applicable',
     displayTitle: staffDisplayText(card.title),
-    displayReason: reason,
-    displayConcern: concern,
-    displayOutcome: outcome,
-    displayActions: actions,
+    displayReason: firstMeaningfulStaffText([card.summary, card.missedNote]),
+    displayConcern: firstMeaningfulStaffText([card.customerRiskNote]),
+    displayOutcome: '',
+    displayActions: [],
     displayBadges: badges,
     displayCustomerSummary: staffCustomerSummary(card),
     displayCommerceSnapshot: staffCommerceSnapshot(card),
@@ -3759,28 +3782,23 @@ export function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDispl
     item.customerRiskNote,
     item.latestCall?.summary,
     item.latestNote?.body,
-  ]) || (item.openRequestsCount > 0
-    ? `${item.openRequestsCount} customer request${item.openRequestsCount === 1 ? '' : 's'} open - review before outreach.`
-    : 'No customer concern captured yet.');
-  const actionLabel = item.openRequestsCount > 0
-    ? 'Customer request open - review before outreach'
-    : item.customerRisk === 'lost'
-      ? 'Critical customer risk - review history'
-      : item.latestCall
-        ? 'Recent call - check context'
-        : 'Portfolio customer - review next step';
+  ]);
   const badges = [
-    { label: actionLabel, tone: item.openRequestsCount > 0 || item.customerRisk === 'lost' ? 'danger' as const : item.customerRisk === 'at_risk' ? 'warning' as const : 'info' as const },
+    { label: staffDisplayText(item.segment.name), tone: 'info' as const },
+    item.openRequestsCount > 0 ? { label: `${item.openRequestsCount} open customer request${item.openRequestsCount === 1 ? '' : 's'}`, tone: 'warning' as const } : null,
+    item.customerRisk === 'lost' ? { label: 'Critical customer risk', tone: 'danger' as const } : null,
+    item.customerRisk === 'at_risk' ? { label: 'At-risk customer', tone: 'warning' as const } : null,
     item.ordersCount > 0 ? { label: 'Has purchase history', tone: 'success' as const } : null,
     item.pinned ? { label: 'Pinned', tone: 'accent' as const } : null,
   ].filter((badge): badge is NonNullable<typeof badge> => Boolean(badge));
   return {
+    analysisStatus: 'not_applicable',
     displayTitle: staffDisplayText(item.customerName),
-    displayReason: staffDisplayText(item.reason || concern),
+    displayReason: `Assigned customer list: ${staffDisplayText(item.segment.name)}.`,
     displayConcern: concern,
     displayOutcome: item.openRequestsCount > 0
       ? `${item.openRequestsCount} open customer request${item.openRequestsCount === 1 ? ' is' : 's are'} attached to this customer.`
-      : 'No required outcome has been recorded for this portfolio customer.',
+      : '',
     displayActions: [],
     displayBadges: badges,
     displayCustomerSummary: [
@@ -3799,77 +3817,6 @@ export function personDailyCallItemDisplay(item: PersonDailyCallItemWithoutDispl
         ? `${item.callsCount} calls linked to this customer`
         : 'No recent call activity attached yet.',
   };
-}
-
-function staffActionLabelForCard(card: PersonQueueCardWithoutDisplay) {
-  const signal = staffPrimarySignal(card);
-  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing')) return 'Payment/refund issue - clarify next step';
-  if (signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'Customer concern - handle carefully';
-  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('freight')) return 'Delivery issue - give next step';
-  if (signal.includes('callback') || signal.includes('follow up') || signal.includes('call back')) return 'Callback requested - call back';
-  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('reorder')) return 'Purchase intent - qualify next step';
-  if (signal.includes('product') || signal.includes('fit') || signal.includes('information') || signal.includes('inquiry')) return 'Product question - guide the customer';
-  if (card.urgencyScore >= 8) return 'High priority - act today';
-  return card.kind === 'customer' ? 'Review customer before outreach' : 'Customer follow-up';
-}
-
-function staffActionToneForCard(card: PersonQueueCardWithoutDisplay): PersonQueueCardDisplayFields['displayBadges'][number]['tone'] {
-  const signal = staffPrimarySignal(card);
-  if (signal.includes('refund') || signal.includes('payment') || signal.includes('pricing') || signal.includes('complaint') || signal.includes('upset') || signal.includes('angry')) return 'danger';
-  if (signal.includes('shipping') || signal.includes('delivery') || signal.includes('tracking') || signal.includes('callback') || signal.includes('follow up')) return 'warning';
-  if (signal.includes('purchase') || signal.includes('quote') || signal.includes('price') || signal.includes('reorder')) return 'success';
-  if (card.urgencyScore >= 8) return 'danger';
-  if (card.urgencyScore >= 6) return 'warning';
-  return 'info';
-}
-
-function staffCardReason(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
-  const candidates = [
-    card.aiBrief?.whyCalling,
-    card.summary,
-    card.missedNote,
-    card.customerRiskNote,
-  ];
-  const reason = firstMeaningfulStaffText(candidates);
-  if (reason) return reason;
-  if (card.kind === 'customer') return `Customer is in ${staffDisplayText(card.segment)}. Review order and call context before outreach.`;
-  return actionLabel;
-}
-
-function staffCardConcern(card: PersonQueueCardWithoutDisplay) {
-  const concern = firstMeaningfulStaffText([
-    card.aiBrief?.upsetAbout,
-    card.customerRiskNote,
-    card.missedNote,
-  ]);
-  if (concern) return concern;
-  if (card.customerRisk === 'lost') return 'Customer may be lost or inactive; review history before outreach.';
-  if (card.customerRisk === 'at_risk') return 'Customer may need attention based on recent activity.';
-  return 'No customer concern captured yet.';
-}
-
-function staffCardOutcome(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
-  const outcome = firstMeaningfulStaffText([card.aiBrief?.callGoal]);
-  if (outcome) return outcome;
-  if (actionLabel.includes('Payment/refund')) return 'Confirm the exact issue, order context, and next accountable step.';
-  if (actionLabel.includes('Purchase intent')) return 'Confirm product need, quantity, timing, and order or quote path.';
-  if (actionLabel.includes('Delivery issue')) return 'Confirm order or tracking context and save the promised update.';
-  if (actionLabel.includes('Callback')) return 'Reach the customer and save the result or next callback time.';
-  if (card.kind === 'customer') return 'Review history, decide whether to call, and save the next human follow-up.';
-  return 'Move the customer follow-up to the next accountable status.';
-}
-
-function staffCardActions(card: PersonQueueCardWithoutDisplay, actionLabel: string) {
-  const actions = cleanedActions([
-    ...(card.aiBrief?.suggestedActions ?? []),
-  ]);
-  if (actions.length > 0) return actions.slice(0, 5);
-  if (actionLabel.includes('Payment/refund')) return ['Ask for the order number', 'Clarify the exact issue', 'Save the promised next step'];
-  if (actionLabel.includes('Purchase intent')) return ['Confirm product and quantity', 'Check recent order context', 'Guide the order or quote path'];
-  if (actionLabel.includes('Delivery issue')) return ['Ask for order or tracking number', 'Clarify delivery issue', 'Save the next update path'];
-  if (actionLabel.includes('Callback')) return ['Call the customer', 'Confirm what is pending', 'Save the outcome'];
-  if (card.kind === 'customer') return ['Review latest order', 'Review latest call or note', 'Call or add a note if action is needed'];
-  return ['Review customer context', 'Call or update the follow-up', 'Save the outcome'];
 }
 
 function staffCustomerSummary(card: PersonQueueCardWithoutDisplay) {
@@ -3900,28 +3847,11 @@ function staffCallSnapshot(card: PersonQueueCardWithoutDisplay) {
   return 'No recent call activity attached yet.';
 }
 
-function staffPrimarySignal(card: PersonQueueCardWithoutDisplay) {
-  return [
-    card.aiBrief?.upsetAbout,
-    card.aiBrief?.callGoal,
-    card.aiBrief?.whyCalling,
-    card.summary,
-    card.callIntent,
-    ...(card.psychTags ?? []),
-    card.missedNote,
-    card.customerRiskNote,
-  ].map((value) => staffSignalText(value)).filter(Boolean).join(' ');
-}
-
 function firstMeaningfulStaffText(values: Array<unknown>) {
   return values
     .map((value) => staffDisplayText(value))
     .find((value) => value && !/^no explicit complaint/i.test(value) && !/^no customer complaint/i.test(value) && !/^no customer request/i.test(value))
     ?? '';
-}
-
-function staffSignalText(value: unknown) {
-  return staffDisplayText(value).toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function staffDisplayText(value: unknown) {
@@ -4435,9 +4365,9 @@ function calendarDisplayFromRequest(
   if (brief?.modelUsed === 'unavailable') {
     return {
       analysisAvailable: false,
-      displayReason: 'Verified call analysis is not available yet.',
-      displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'No verified required outcome is available.',
+      displayReason: '',
+      displayConcern: '',
+      displayOutcome: '',
       displayActions: [],
       callExcerpt: staffDisplayText(brief.transcriptSnippet),
     };
@@ -4445,12 +4375,10 @@ function calendarDisplayFromRequest(
   const actions = cleanedActions(brief?.suggestedActions ?? []);
   return {
     analysisAvailable: brief ? true : null,
-    displayReason: firstMeaningfulStaffText([brief?.whyCalling, row.description, row.title]) || staffDisplayText(row.title),
-    displayConcern: firstMeaningfulStaffText([brief?.upsetAbout]) || (row.priority === 'critical' || row.priority === 'urgent'
-      ? 'High-priority customer follow-up needs a human response.'
-      : 'No customer concern captured yet.'),
-    displayOutcome: firstMeaningfulStaffText([brief?.callGoal]) || 'Save the next customer outcome before leaving this event.',
-    displayActions: actions.length > 0 ? actions : ['Review customer context', 'Call or update the follow-up', 'Save the outcome'],
+    displayReason: brief ? staffDisplayText(brief.whyCalling) : firstMeaningfulStaffText([row.description, row.title]),
+    displayConcern: brief ? staffDisplayText(brief.upsetAbout) : '',
+    displayOutcome: brief ? staffDisplayText(brief.callGoal) : '',
+    displayActions: actions,
     callExcerpt: staffDisplayText(brief?.transcriptSnippet),
   };
 }
@@ -4471,9 +4399,9 @@ function calendarDisplayFromCall(row: {
   if (!resolver) {
     return {
       analysisAvailable: false,
-      displayReason: 'Verified call analysis is not available yet.',
-      displayConcern: 'No verified customer mood or issue is available.',
-      displayOutcome: 'No verified required outcome is available.',
+      displayReason: '',
+      displayConcern: '',
+      displayOutcome: '',
       displayActions: [],
       callExcerpt: staffDisplayText(row.transcriptRaw?.slice(0, 240)),
     };
@@ -4578,6 +4506,10 @@ function personDailyFilterMatches(card: PersonQueueCardDto, filter: PersonDailyO
   if (filter === 'at_risk') return card.customerRisk === 'at_risk' || card.customerRisk === 'lost';
   const disposition = card.currentDisposition ?? (card.outcomeRequired ? 'not_selected' : null);
   return disposition === filter;
+}
+
+function effectiveWorkDisposition(row: { currentDisposition: string | null; queueLocation: string }) {
+  return row.currentDisposition ?? (row.queueLocation === 'follow_up' ? 'not_selected' : null);
 }
 
 function sortArchivedCards(
