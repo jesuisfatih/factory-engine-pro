@@ -22,6 +22,7 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
 import { RulesService } from '../rules/rules.service.js';
 import { AiService } from './ai.service.js';
+import { boundedPositiveInt } from './ai-runtime-config.js';
 import { transcriptOperationalSignals } from './transcript-operational-signals.js';
 import { currentModelResolverOutput } from './transcript-resolver-trust.js';
 
@@ -547,7 +548,10 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
 }
 
 function prepareResolverTranscript(transcript: string) {
-  const maxLength = positiveInt(process.env.ANTHROPIC_TRANSCRIPT_MAX_CHARS, 80_000, { min: 12_000, max: 160_000 });
+  const maxLength = boundedPositiveInt(process.env.ANTHROPIC_TRANSCRIPT_MAX_CHARS, 80_000, {
+    min: 12_000,
+    max: 160_000,
+  });
   const normalized = transcript.replace(/\r/g, '').replace(/[ \t]+/g, ' ').trim();
   return {
     transcript: normalized,
@@ -579,11 +583,6 @@ function isRetryableResolverError(error: unknown) {
   return false;
 }
 
-function positiveInt(value: string | undefined, fallback: number, bounds: { min: number; max: number }) {
-  const parsed = Number(value ?? '');
-  if (!Number.isInteger(parsed)) return fallback;
-  return Math.min(bounds.max, Math.max(bounds.min, parsed));
-}
 function transcriptEvaluationStatus(signal: TranscriptOperationalSignal, response: WorkflowTriggerFireResponse | null) {
   if (!response) return 'failed';
   if (workflowResponseHasTaskOutcome(response)) return 'task_created';

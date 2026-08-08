@@ -13,6 +13,7 @@ import {
 import { CryptoService } from '../../shared/crypto.service.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { boundedPositiveInt } from './ai-runtime-config.js';
 
 @Injectable()
 export class AiService {
@@ -454,8 +455,11 @@ export class AiService {
   }
 
   private anthropicTimeoutMs() {
-    const configured = Number(this.config.get<string>('ANTHROPIC_TIMEOUT_MS') ?? '15000');
-    return Number.isFinite(configured) && configured >= 1000 && configured <= 120000 ? configured : 15000;
+    // Structured resolver responses routinely need more than 15 seconds under provider load.
+    return boundedPositiveInt(this.config.get<string>('ANTHROPIC_TIMEOUT_MS'), 45_000, {
+      min: 1_000,
+      max: 120_000,
+    });
   }
 
   private anthropicTimeoutSignal() {
@@ -487,12 +491,6 @@ function providerMessage(body: { error?: { message?: unknown } } | null, fallbac
 function positiveInt(value: string | undefined, fallback: number) {
   const parsed = Number(value ?? '');
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function boundedPositiveInt(value: string | undefined, fallback: number, bounds: { min: number; max: number }) {
-  const parsed = Number(value ?? '');
-  if (!Number.isInteger(parsed)) return fallback;
-  return Math.min(bounds.max, Math.max(bounds.min, parsed));
 }
 
 function startOfUtcDay(value: Date) {
