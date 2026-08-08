@@ -463,7 +463,11 @@ export class AiService {
   }
 
   private anthropicResolverMaxTokens() {
-    return boundedPositiveInt(this.config.get<string>('ANTHROPIC_RESOLVER_MAX_TOKENS'), 750, { min: 300, max: 1000 });
+    // Resolver v5 emits a complete staff brief plus evidence-backed operational signals.
+    // A smaller cap truncates valid JSON and then spends a second request on a repair
+    // that is subject to the same cap. This is an output ceiling, not a usage target;
+    // Anthropic stops charging output tokens as soon as the JSON is complete.
+    return boundedPositiveInt(this.config.get<string>('ANTHROPIC_RESOLVER_MAX_TOKENS'), 2400, { min: 2000, max: 4096 });
   }
 }
 
