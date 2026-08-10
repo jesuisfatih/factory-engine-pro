@@ -136,14 +136,6 @@ SET "executed_staff_work_item_id" = merge."winner_id"
 FROM "staff_work_lifecycle_merge" AS merge
 WHERE scheduled."executed_staff_work_item_id" = merge."loser_id";
 
-DELETE FROM "person_daily_task_orders" AS task_order
-USING "staff_work_lifecycle_merge" AS merge
-WHERE task_order."staff_work_item_id" = merge."loser_id";
-
-DELETE FROM "staff_work_participants" AS participant
-USING "staff_work_lifecycle_merge" AS merge
-WHERE participant."staff_work_item_id" = merge."loser_id";
-
 UPDATE "staff_work_items" AS item
 SET
   "status" = 'closed',

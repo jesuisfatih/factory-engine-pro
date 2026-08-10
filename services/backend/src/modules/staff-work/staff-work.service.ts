@@ -253,8 +253,6 @@ export class StaffWorkService {
           where: { executedStaffWorkItemId: contactItem.id },
           data: { executedStaffWorkItemId: customerItem.id, customerId: input.customerId },
         });
-        await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: contactItem.id } });
-        await tx.staffWorkParticipant.deleteMany({ where: { staffWorkItemId: contactItem.id } });
         await tx.staffWorkItem.update({
           where: { id: contactItem.id },
           data: {
