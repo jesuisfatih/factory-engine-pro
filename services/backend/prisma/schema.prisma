@@ -1535,6 +1535,7 @@ model StaffWorkItem {
   sourceOccurredAt   DateTime? @map("source_occurred_at")
   operationalIntent  String?   @map("operational_intent")
   contactIdentityKey String?   @map("contact_identity_key")
+  contactIdentityAliases String[] @default([]) @map("contact_identity_aliases")
   occurrenceCount    Int       @default(0) @map("occurrence_count")
   firstSignalAt      DateTime? @map("first_signal_at")
   lastSignalAt       DateTime? @map("last_signal_at")

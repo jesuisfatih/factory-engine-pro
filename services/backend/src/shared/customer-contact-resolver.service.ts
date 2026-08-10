@@ -61,11 +61,17 @@ export interface CustomerIdentityInput {
   phone?: string | null;
 }
 
-export function provisionalCustomerIdentityKey(input: Pick<CustomerIdentityInput, 'phone' | 'email'>) {
+export function provisionalCustomerIdentityKeys(input: Pick<CustomerIdentityInput, 'phone' | 'email'>) {
   const phone = normalizePhoneE164(input.phone);
-  if (phone) return `phone:${phone}`;
   const email = normalizeEmail(input.email);
-  return email ? `email:${email}` : null;
+  return [
+    phone ? `phone:${phone}` : null,
+    email ? `email:${email}` : null,
+  ].filter((value): value is string => Boolean(value));
+}
+
+export function provisionalCustomerIdentityKey(input: Pick<CustomerIdentityInput, 'phone' | 'email'>) {
+  return provisionalCustomerIdentityKeys(input)[0] ?? null;
 }
 
 interface PhoneCandidate {

@@ -9,7 +9,10 @@ import {
   type RecordPersonTaskOutcomeInput,
 } from '@factory-engine-pro/contracts';
 import { BusinessClockService } from '../../shared/business-clock.service.js';
-import { normalizePhoneE164 } from '../../shared/customer-contact-resolver.service.js';
+import {
+  normalizePhoneE164,
+  provisionalCustomerIdentityKeys,
+} from '../../shared/customer-contact-resolver.service.js';
 import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
@@ -46,6 +49,7 @@ export interface CreateStaffWorkItemInput {
 export interface ContinueStaffWorkItemInput extends CreateStaffWorkItemInput {
   sourceEventId: string;
   operationalIntent: OperationalIntent;
+  contactIdentityKeys?: string[];
   occurrenceMetadata?: Record<string, unknown>;
 }
 
@@ -148,7 +152,7 @@ export class StaffWorkService {
   }> {
     const axis = createTaskAxisSchema.safeParse(input.axis);
     if (!axis.success) throw new BadRequestException('Staff work axis must be sales or account.');
-    if (input.customerId) await this.requireCustomer(input.customerId);
+    const customer = input.customerId ? await this.requireCustomer(input.customerId) : null;
     if (input.assignedMemberId) await this.requireMember(input.assignedMemberId);
     const watcherMemberIds = uniqueStrings(input.watcherMemberIds ?? []).filter((id) => id !== input.assignedMemberId);
     for (const memberId of watcherMemberIds) await this.requireMember(memberId);
@@ -156,8 +160,13 @@ export class StaffWorkService {
     const tenantId = this.tenantId();
     const sourceEventId = input.sourceEventId.trim();
     if (!sourceEventId) throw new BadRequestException('Workflow lifecycle requires a source event id.');
-    const contactIdentityKey = cleanString(input.contactIdentityKey);
-    if (!input.customerId && !contactIdentityKey) {
+    const contactIdentityKeys = uniqueStrings([
+      cleanString(input.contactIdentityKey),
+      ...(input.contactIdentityKeys ?? []).map((value) => cleanString(value)),
+      ...provisionalCustomerIdentityKeys({ phone: customer?.phone, email: customer?.email }),
+    ]);
+    const contactIdentityKey = cleanString(input.contactIdentityKey) ?? contactIdentityKeys[0] ?? null;
+    if (!input.customerId && contactIdentityKeys.length === 0) {
       throw new BadRequestException('Workflow lifecycle requires a customer or provisional contact identity.');
     }
     const occurredAt = asDate(input.sourceOccurredAt) ?? new Date();
@@ -166,7 +175,7 @@ export class StaffWorkService {
     const queueLocation = visibleAfter && visibleAfter.getTime() > Date.now() ? 'scheduled' : 'follow_up';
     const lockKeys = uniqueStrings([
       input.customerId ? `${tenantId}:customer:${input.customerId}:${input.operationalIntent}` : null,
-      contactIdentityKey ? `${tenantId}:contact:${contactIdentityKey}:${input.operationalIntent}` : null,
+      ...contactIdentityKeys.map((identityKey) => `${tenantId}:contact:${identityKey}:${input.operationalIntent}`),
     ]).sort();
 
     const transactionResult = await this.prisma.db.$transaction(async (tx) => {
@@ -189,20 +198,37 @@ export class StaffWorkService {
             orderBy: [{ lastSignalAt: 'desc' }, { updatedAt: 'desc' }],
           })
         : null;
-      const contactItem = contactIdentityKey
-        ? await tx.staffWorkItem.findFirst({
-            where: { customerId: null, contactIdentityKey, operationalIntent: input.operationalIntent, ...activeWhere },
+      const contactItems = contactIdentityKeys.length > 0
+        ? await tx.staffWorkItem.findMany({
+            where: {
+              customerId: null,
+              operationalIntent: input.operationalIntent,
+              ...activeWhere,
+              OR: [
+                { contactIdentityKey: { in: contactIdentityKeys } },
+                { contactIdentityAliases: { hasSome: contactIdentityKeys } },
+              ],
+            },
             orderBy: [{ lastSignalAt: 'desc' }, { updatedAt: 'desc' }],
           })
-        : null;
-      const existing = customerItem ?? contactItem;
+        : [];
+      const existing = customerItem ?? contactItems[0] ?? null;
+      const mergeItems = existing
+        ? contactItems.filter((item) => item.id !== existing.id)
+        : [];
       let mergedOccurrenceCount = 0;
       let mergedFirstSignalAt: Date | null = null;
       let mergedLastSignalAt: Date | null = null;
       let mergedAssignedMemberId: string | null = null;
       let mergedMetadata: Record<string, unknown> | null = null;
+      let mergedMetadataAt = dateTime(existing?.lastSignalAt);
+      const mergedIdentityAliases = uniqueStrings([
+        ...contactIdentityKeys,
+        ...(existing?.contactIdentityAliases ?? []),
+      ]);
 
-      if (customerItem && contactItem && customerItem.id !== contactItem.id) {
+      for (const contactItem of mergeItems) {
+        if (!existing) throw new Error('Lifecycle merge target is missing.');
         const contactParticipants = await tx.staffWorkParticipant.findMany({
           where: { staffWorkItemId: contactItem.id },
           select: { memberId: true, role: true, source: true },
@@ -212,7 +238,7 @@ export class StaffWorkService {
             where: {
               tenantId_staffWorkItemId_memberId_role: {
                 tenantId,
-                staffWorkItemId: customerItem.id,
+                staffWorkItemId: existing.id,
                 memberId: participant.memberId,
                 role: participant.role,
               },
@@ -220,7 +246,7 @@ export class StaffWorkService {
             create: {
               id: prefixedId('swp'),
               tenantId,
-              staffWorkItemId: customerItem.id,
+              staffWorkItemId: existing.id,
               memberId: participant.memberId,
               role: participant.role,
               source: participant.source,
@@ -231,28 +257,56 @@ export class StaffWorkService {
 
         await tx.staffWorkOccurrence.updateMany({
           where: { staffWorkItemId: contactItem.id },
-          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+          data: { staffWorkItemId: existing.id, customerId: input.customerId ?? existing.customerId },
         });
         await tx.staffWorkComment.updateMany({
           where: { staffWorkItemId: contactItem.id },
-          data: { staffWorkItemId: customerItem.id },
+          data: { staffWorkItemId: existing.id },
         });
         await tx.customerCallOutcome.updateMany({
           where: { staffWorkItemId: contactItem.id },
-          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+          data: { staffWorkItemId: existing.id, customerId: input.customerId ?? existing.customerId },
         });
         await tx.workItemStateTransition.updateMany({
           where: { staffWorkItemId: contactItem.id },
-          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+          data: { staffWorkItemId: existing.id, customerId: input.customerId ?? existing.customerId },
         });
         await tx.personWorkspaceNote.updateMany({
           where: { linkedStaffWorkItemId: contactItem.id },
-          data: { linkedStaffWorkItemId: customerItem.id, linkedCustomerId: input.customerId },
+          data: { linkedStaffWorkItemId: existing.id, linkedCustomerId: input.customerId ?? existing.customerId },
         });
         await tx.workflowScheduledAction.updateMany({
           where: { executedStaffWorkItemId: contactItem.id },
-          data: { executedStaffWorkItemId: customerItem.id, customerId: input.customerId },
+          data: { executedStaffWorkItemId: existing.id, customerId: input.customerId ?? existing.customerId },
         });
+        const pins = await tx.personWorkspacePin.findMany({
+          where: { targetKind: 'staff_work_item', targetId: contactItem.id },
+        });
+        for (const pin of pins) {
+          await tx.personWorkspacePin.upsert({
+            where: {
+              tenantId_memberId_targetKind_targetId: {
+                tenantId,
+                memberId: pin.memberId,
+                targetKind: 'staff_work_item',
+                targetId: existing.id,
+              },
+            },
+            create: {
+              id: prefixedId('pwp'),
+              tenantId,
+              memberId: pin.memberId,
+              targetKind: 'staff_work_item',
+              targetId: existing.id,
+              createdAt: pin.createdAt,
+            },
+            update: {},
+          });
+        }
+        await tx.personWorkspacePin.deleteMany({
+          where: { targetKind: 'staff_work_item', targetId: contactItem.id },
+        });
+        await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: contactItem.id } });
         await tx.staffWorkItem.update({
           where: { id: contactItem.id },
           data: {
@@ -263,21 +317,23 @@ export class StaffWorkService {
             archivedAt: new Date(),
             archiveReason: 'provisional_identity_merged',
             resolutionCode: 'provisional_identity_merged',
-            resolutionNote: `Merged into ${customerItem.id} after the Shopify customer was resolved.`,
+            resolutionNote: `Merged into ${existing.id} after the customer identity was resolved.`,
             metadata: {
               ...asRecord(contactItem.metadata),
-              lifecycleMergedInto: customerItem.id,
+              lifecycleMergedInto: existing.id,
               lifecycleMergeReason: 'provisional_identity_resolved',
             } as Prisma.InputJsonValue,
           },
         });
 
-        mergedOccurrenceCount = Math.max(0, contactItem.occurrenceCount);
-        mergedFirstSignalAt = contactItem.firstSignalAt;
-        mergedLastSignalAt = contactItem.lastSignalAt;
-        mergedAssignedMemberId = contactItem.assignedMemberId;
-        if (dateTime(contactItem.lastSignalAt) > dateTime(customerItem.lastSignalAt)) {
+        mergedOccurrenceCount += Math.max(0, contactItem.occurrenceCount);
+        mergedFirstSignalAt = earliestDate(mergedFirstSignalAt, contactItem.firstSignalAt);
+        mergedLastSignalAt = latestDate(mergedLastSignalAt, contactItem.lastSignalAt);
+        mergedAssignedMemberId ??= contactItem.assignedMemberId;
+        mergedIdentityAliases.push(...contactItem.contactIdentityAliases);
+        if (dateTime(contactItem.lastSignalAt) > mergedMetadataAt) {
           mergedMetadata = asRecord(contactItem.metadata);
+          mergedMetadataAt = dateTime(contactItem.lastSignalAt);
         }
       }
 
@@ -293,6 +349,7 @@ export class StaffWorkService {
           ...asRecord(currentMetadata.lifecycle),
           operationalIntent: input.operationalIntent,
           contactIdentityKey,
+          contactIdentityAliases: uniqueStrings(mergedIdentityAliases),
           occurrenceCount,
           firstSignalAt: firstSignalAt.toISOString(),
           lastSignalAt: lastSignalAt.toISOString(),
@@ -319,6 +376,7 @@ export class StaffWorkService {
           data: {
             customerId: input.customerId ?? existing.customerId,
             contactIdentityKey: contactIdentityKey ?? existing.contactIdentityKey,
+            contactIdentityAliases: uniqueStrings(mergedIdentityAliases),
             occurrenceCount,
             firstSignalAt,
             lastSignalAt,
@@ -386,6 +444,7 @@ export class StaffWorkService {
           ...asRecord(asRecord(input.metadata).lifecycle),
           operationalIntent: input.operationalIntent,
           contactIdentityKey,
+          contactIdentityAliases: contactIdentityKeys,
           occurrenceCount: 1,
           firstSignalAt: occurredAt.toISOString(),
           lastSignalAt: occurredAt.toISOString(),
@@ -409,6 +468,7 @@ export class StaffWorkService {
           sourceOccurredAt: occurredAt,
           operationalIntent: input.operationalIntent,
           contactIdentityKey,
+          contactIdentityAliases: contactIdentityKeys,
           occurrenceCount: 1,
           firstSignalAt: occurredAt,
           lastSignalAt: occurredAt,
@@ -738,6 +798,7 @@ export class StaffWorkService {
             sourceOccurredAt: now,
             operationalIntent: row.operationalIntent,
             contactIdentityKey: row.contactIdentityKey,
+            contactIdentityAliases: row.contactIdentityAliases,
             occurrenceCount: 0,
             title: row.title,
             description: row.description,
@@ -841,8 +902,12 @@ export class StaffWorkService {
   }
 
   private async requireCustomer(id: string) {
-    const row = await this.prisma.db.customer.findFirst({ where: { id }, select: { id: true } });
+    const row = await this.prisma.db.customer.findFirst({
+      where: { id },
+      select: { id: true, phone: true, email: true },
+    });
     if (!row) throw new BadRequestException('Customer was not found in this workspace.');
+    return row;
   }
 
   private tenantId() {

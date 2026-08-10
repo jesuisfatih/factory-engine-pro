@@ -163,7 +163,7 @@ import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import {
   CustomerContactResolverService,
-  provisionalCustomerIdentityKey,
+  provisionalCustomerIdentityKeys,
 } from '../../shared/customer-contact-resolver.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
@@ -1343,7 +1343,7 @@ export class RulesService {
         return { value: false, source: 'staff_work_lifecycle_continuation' };
       }
 
-      const contactIdentityKey = provisionalCustomerIdentityKey({
+      const contactIdentityKeys = provisionalCustomerIdentityKeys({
         phone: stringParam(params, 'customerPhone')
           ?? stringParam(params, 'phone')
           ?? stringParam(params, 'contactPhoneE164'),
@@ -1351,7 +1351,7 @@ export class RulesService {
           ?? stringParam(params, 'email')
           ?? stringParam(params, 'contactEmail'),
       });
-      if (!state.customer && !contactIdentityKey) {
+      if (!state.customer && contactIdentityKeys.length === 0) {
         return { value: false, source: 'staff_work_lifecycle_identity_missing' };
       }
       const existing = await this.prisma.db.staffWorkItem.findFirst({
@@ -1360,7 +1360,13 @@ export class RulesService {
           status: { notIn: ['closed', 'resolved', 'transferred'] },
           ...(state.customer
             ? { customerId: state.customer.id }
-            : { customerId: null, contactIdentityKey }),
+            : {
+                customerId: null,
+                OR: [
+                  { contactIdentityKey: { in: contactIdentityKeys } },
+                  { contactIdentityAliases: { hasSome: contactIdentityKeys } },
+                ],
+              }),
         },
         select: { id: true },
       });
@@ -1682,17 +1688,24 @@ export class RulesService {
       const lifecycleManaged = context.trigger === 'call.operational_signal.detected'
         && parsedOperationalIntent.success
         && parsedOperationalIntent.data !== 'no_action';
-      const contactIdentityKey = provisionalCustomerIdentityKey({
-        phone: sourceCall?.contactPhoneE164
-          ?? sourceCall?.contactPhone
-          ?? stringParam(context.params, 'contactPhoneE164')
-          ?? stringParam(context.params, 'customerPhone')
-          ?? stringParam(context.params, 'phone'),
-        email: sourceCall?.contactEmail
-          ?? stringParam(context.params, 'contactEmail')
-          ?? stringParam(context.params, 'customerEmail')
-          ?? stringParam(context.params, 'email'),
-      });
+      const contactIdentityKeys = uniqueStrings([
+        ...provisionalCustomerIdentityKeys({
+          phone: sourceCall?.contactPhoneE164
+            ?? sourceCall?.contactPhone
+            ?? stringParam(context.params, 'contactPhoneE164')
+            ?? stringParam(context.params, 'customerPhone')
+            ?? stringParam(context.params, 'phone'),
+          email: sourceCall?.contactEmail
+            ?? stringParam(context.params, 'contactEmail')
+            ?? stringParam(context.params, 'customerEmail')
+            ?? stringParam(context.params, 'email'),
+        }),
+        ...provisionalCustomerIdentityKeys({
+          phone: context.state.customer?.phone,
+          email: context.state.customer?.email,
+        }),
+      ]);
+      const contactIdentityKey = contactIdentityKeys[0] ?? null;
       if (action.timing?.mode === 'deferred_materialization') {
         result = await this.scheduleDeferredCreateTask(action, context, taskStateSnapshot, assignment, sourceCallId);
       } else {
@@ -1736,6 +1749,7 @@ export class RulesService {
             sourceOccurredAt,
             operationalIntent: parsedOperationalIntent.data,
             contactIdentityKey,
+            contactIdentityKeys,
             conditionTrace: context.conditionTrace,
             metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
             occurrenceMetadata: {

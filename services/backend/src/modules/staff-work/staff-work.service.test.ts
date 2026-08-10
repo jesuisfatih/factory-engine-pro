@@ -14,6 +14,12 @@ const baseRow = {
   sourceEmailId: null,
   sourceEventId: null,
   sourceOccurredAt: new Date('2026-08-06T12:00:00.000Z'),
+  operationalIntent: 'callback_requested',
+  contactIdentityKey: 'phone:+13125550100',
+  contactIdentityAliases: ['phone:+13125550100'],
+  occurrenceCount: 1,
+  firstSignalAt: new Date('2026-08-06T12:00:00.000Z'),
+  lastSignalAt: new Date('2026-08-06T12:00:00.000Z'),
   title: 'Customer follow-up',
   description: 'Call customer',
   status: 'open',
@@ -197,6 +203,7 @@ interface LifecycleRow extends Record<string, unknown> {
   tenantId: string;
   customerId: string | null;
   contactIdentityKey: string | null;
+  contactIdentityAliases: string[];
   operationalIntent: string;
   occurrenceCount: number;
   firstSignalAt: Date | null;
@@ -224,6 +231,7 @@ interface LifecycleOccurrence extends Record<string, unknown> {
 function lifecycleHarness() {
   const rows: LifecycleRow[] = [];
   const occurrences: LifecycleOccurrence[] = [];
+  const pins: Array<Record<string, unknown>> = [];
   let clearedCustomOrders = 0;
 
   const repository = {
@@ -236,14 +244,25 @@ function lifecycleHarness() {
     },
   };
 
-  const findActive = (where: Record<string, unknown>) => rows
+  const findActiveRows = (where: Record<string, unknown>) => rows
     .filter((row) => {
       if ('customerId' in where && row.customerId !== where.customerId) return false;
-      if ('contactIdentityKey' in where && row.contactIdentityKey !== where.contactIdentityKey) return false;
+      if ('contactIdentityKey' in where && typeof where.contactIdentityKey === 'string' && row.contactIdentityKey !== where.contactIdentityKey) return false;
       if ('operationalIntent' in where && row.operationalIntent !== where.operationalIntent) return false;
+      const conditions = Array.isArray(where.OR) ? where.OR as Array<Record<string, unknown>> : [];
+      if (conditions.length > 0) {
+        const matched = conditions.some((condition) => {
+          const keyFilter = condition.contactIdentityKey as { in?: string[] } | undefined;
+          if (keyFilter?.in?.includes(row.contactIdentityKey ?? '')) return true;
+          const aliasFilter = condition.contactIdentityAliases as { hasSome?: string[] } | undefined;
+          return Boolean(aliasFilter?.hasSome?.some((key) => row.contactIdentityAliases.includes(key)));
+        });
+        if (!matched) return false;
+      }
       return !['closed', 'resolved', 'transferred'].includes(row.status);
     })
-    .sort((left, right) => (right.lastSignalAt?.getTime() ?? 0) - (left.lastSignalAt?.getTime() ?? 0))[0] ?? null;
+    .sort((left, right) => (right.lastSignalAt?.getTime() ?? 0) - (left.lastSignalAt?.getTime() ?? 0));
+  const findActive = (where: Record<string, unknown>) => findActiveRows(where)[0] ?? null;
 
   const tx = {
     $queryRaw: async () => [],
@@ -256,16 +275,27 @@ function lifecycleHarness() {
         occurrences.push(data);
         return data;
       },
+      updateMany: async ({ where, data }: { where: { staffWorkItemId: string }; data: Record<string, unknown> }) => {
+        let count = 0;
+        for (const occurrence of occurrences) {
+          if (occurrence.staffWorkItemId !== where.staffWorkItemId) continue;
+          Object.assign(occurrence, data);
+          count += 1;
+        }
+        return { count };
+      },
     },
     staffWorkItem: {
       findFirst: async ({ where }: { where: Record<string, unknown> }) => findActive(where),
+      findMany: async ({ where }: { where: Record<string, unknown> }) => findActiveRows(where),
       create: async ({ data }: { data: Record<string, unknown> }) => {
         const now = new Date();
         const row = {
+          contactIdentityAliases: [],
           ...data,
           updatedAt: now,
           createdAt: now,
-        } as LifecycleRow;
+        } as unknown as LifecycleRow;
         rows.push(row);
         return row;
       },
@@ -282,12 +312,43 @@ function lifecycleHarness() {
         return { count: 1 };
       },
     },
-    workItemStateTransition: { create: async ({ data }: { data: Record<string, unknown> }) => data },
+    staffWorkParticipant: {
+      findMany: async () => [],
+      upsert: async ({ create }: { create: Record<string, unknown> }) => create,
+    },
+    staffWorkComment: { updateMany: async () => ({ count: 0 }) },
+    customerCallOutcome: { updateMany: async () => ({ count: 0 }) },
+    personWorkspaceNote: { updateMany: async () => ({ count: 0 }) },
+    workflowScheduledAction: { updateMany: async () => ({ count: 0 }) },
+    personWorkspacePin: {
+      findMany: async ({ where }: { where: { targetId: string } }) => pins.filter((pin) => pin.targetId === where.targetId),
+      upsert: async ({ where, create }: { where: { tenantId_memberId_targetKind_targetId: Record<string, string> }; create: Record<string, unknown> }) => {
+        const key = where.tenantId_memberId_targetKind_targetId;
+        const existing = pins.find((pin) => pin.tenantId === key.tenantId
+          && pin.memberId === key.memberId
+          && pin.targetKind === key.targetKind
+          && pin.targetId === key.targetId);
+        if (existing) return existing;
+        pins.push(create);
+        return create;
+      },
+      deleteMany: async ({ where }: { where: { targetId: string } }) => {
+        const before = pins.length;
+        for (let index = pins.length - 1; index >= 0; index -= 1) {
+          if (pins[index]?.targetId === where.targetId) pins.splice(index, 1);
+        }
+        return { count: before - pins.length };
+      },
+    },
+    workItemStateTransition: {
+      create: async ({ data }: { data: Record<string, unknown> }) => data,
+      updateMany: async () => ({ count: 0 }),
+    },
   };
 
   const prisma = {
     db: {
-      customer: { findFirst: async ({ where }: { where: { id: string } }) => ({ id: where.id }) },
+      customer: { findFirst: async ({ where }: { where: { id: string } }) => ({ id: where.id, phone: null, email: null }) },
       member: { findFirst: async ({ where }: { where: { id: string } }) => ({ id: where.id }) },
       $transaction: async (operation: (client: typeof tx) => Promise<unknown>) => operation(tx),
     },
@@ -306,6 +367,7 @@ function lifecycleHarness() {
     service,
     rows,
     occurrences,
+    pins,
     clearedCustomOrders: () => clearedCustomOrders,
   };
 }
@@ -382,4 +444,61 @@ test('a provisional phone lifecycle attaches to the resolved Shopify customer wi
   assert.equal(resolved.item.customerId, 'cust_1');
   assert.equal(resolved.item.occurrenceCount, 2);
   assert.equal(harness.occurrences.length, 2);
+});
+
+test('an email-only provisional lifecycle attaches when the resolved customer later supplies phone and email aliases', async () => {
+  const harness = lifecycleHarness();
+  const provisional = await harness.service.continueOrCreate(lifecycleInput('event_1', {
+    customerId: undefined,
+    contactIdentityKey: 'email:buyer@example.com',
+    contactIdentityKeys: ['email:buyer@example.com'],
+  }));
+  const resolved = await harness.service.continueOrCreate(lifecycleInput('event_2', {
+    contactIdentityKey: 'phone:+13125550100',
+    contactIdentityKeys: ['phone:+13125550100', 'email:buyer@example.com'],
+  }));
+
+  assert.equal(resolved.outcome, 'continued');
+  assert.equal(resolved.item.id, provisional.item.id);
+  assert.equal(resolved.item.customerId, 'cust_1');
+  assert.equal(resolved.item.occurrenceCount, 2);
+  assert.deepEqual(resolved.item.contactIdentityAliases.sort(), [
+    'email:buyer@example.com',
+    'phone:+13125550100',
+  ]);
+});
+
+test('separate customer and provisional lifecycles merge without losing the provisional pin or call history', async () => {
+  const harness = lifecycleHarness();
+  const customerLifecycle = await harness.service.continueOrCreate(lifecycleInput('event_1', {
+    contactIdentityKey: 'phone:+13125550100',
+    contactIdentityKeys: ['phone:+13125550100'],
+  }));
+  const provisional = await harness.service.continueOrCreate(lifecycleInput('event_2', {
+    customerId: undefined,
+    contactIdentityKey: 'email:buyer@example.com',
+    contactIdentityKeys: ['email:buyer@example.com'],
+    sourceOccurredAt: new Date('2026-08-09T10:00:00.000Z'),
+  }));
+  harness.pins.push({
+    id: 'pwp_test',
+    tenantId: 'ten_test',
+    memberId: 'tmbr_1',
+    targetKind: 'staff_work_item',
+    targetId: provisional.item.id,
+    createdAt: new Date('2026-08-09T10:30:00.000Z'),
+  });
+
+  const merged = await harness.service.continueOrCreate(lifecycleInput('event_3', {
+    contactIdentityKey: 'phone:+13125550100',
+    contactIdentityKeys: ['phone:+13125550100', 'email:buyer@example.com'],
+    sourceOccurredAt: new Date('2026-08-10T10:00:00.000Z'),
+  }));
+
+  assert.equal(merged.item.id, customerLifecycle.item.id);
+  assert.equal(merged.item.occurrenceCount, 3);
+  assert.equal(harness.occurrences.filter((occurrence) => occurrence.staffWorkItemId === merged.item.id).length, 3);
+  assert.equal(harness.rows.find((row) => row.id === provisional.item.id)?.status, 'closed');
+  assert.equal(harness.pins.length, 1);
+  assert.equal(harness.pins[0]?.targetId, merged.item.id);
 });
