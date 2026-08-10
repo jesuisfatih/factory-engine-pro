@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, type StaffWorkItem } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   createTaskAxisSchema,
   type CreateTaskAxis,
+  type OperationalIntent,
   type PersonCallDisposition,
   type PersonTaskOutcome,
   type RecordPersonTaskOutcomeInput,
@@ -26,6 +27,11 @@ export interface CreateStaffWorkItemInput {
   sourceEmailId?: string;
   sourceEventId?: string;
   sourceOccurredAt?: Date | string | null;
+  operationalIntent?: OperationalIntent | null;
+  contactIdentityKey?: string | null;
+  occurrenceCount?: number;
+  firstSignalAt?: Date | string | null;
+  lastSignalAt?: Date | string | null;
   title: string;
   description?: string | null;
   priority?: string;
@@ -36,6 +42,14 @@ export interface CreateStaffWorkItemInput {
   taskStateSnapshot?: Record<string, unknown>;
   idempotencyKey?: string;
 }
+
+export interface ContinueStaffWorkItemInput extends CreateStaffWorkItemInput {
+  sourceEventId: string;
+  operationalIntent: OperationalIntent;
+  occurrenceMetadata?: Record<string, unknown>;
+}
+
+export type ContinueStaffWorkItemOutcome = 'created' | 'continued' | 'replayed';
 
 export interface ProactiveContactDecision {
   allowed: boolean;
@@ -86,6 +100,11 @@ export class StaffWorkService {
       sourceEmailId: input.sourceEmailId ?? null,
       sourceEventId: input.sourceEventId ?? null,
       sourceOccurredAt: asDate(input.sourceOccurredAt),
+      operationalIntent: input.operationalIntent ?? null,
+      contactIdentityKey: cleanString(input.contactIdentityKey),
+      occurrenceCount: Math.max(0, Math.trunc(input.occurrenceCount ?? 0)),
+      firstSignalAt: asDate(input.firstSignalAt),
+      lastSignalAt: asDate(input.lastSignalAt),
       title: input.title.trim(),
       description: input.description?.trim() || null,
       status: 'open',
@@ -121,6 +140,323 @@ export class StaffWorkService {
       source_call_id: created.sourceCallId,
     });
     return this.require(created.id);
+  }
+
+  async continueOrCreate(input: ContinueStaffWorkItemInput): Promise<{
+    item: Awaited<ReturnType<StaffWorkService['require']>>;
+    outcome: ContinueStaffWorkItemOutcome;
+  }> {
+    const axis = createTaskAxisSchema.safeParse(input.axis);
+    if (!axis.success) throw new BadRequestException('Staff work axis must be sales or account.');
+    if (input.customerId) await this.requireCustomer(input.customerId);
+    if (input.assignedMemberId) await this.requireMember(input.assignedMemberId);
+    const watcherMemberIds = uniqueStrings(input.watcherMemberIds ?? []).filter((id) => id !== input.assignedMemberId);
+    for (const memberId of watcherMemberIds) await this.requireMember(memberId);
+
+    const tenantId = this.tenantId();
+    const sourceEventId = input.sourceEventId.trim();
+    if (!sourceEventId) throw new BadRequestException('Workflow lifecycle requires a source event id.');
+    const contactIdentityKey = cleanString(input.contactIdentityKey);
+    if (!input.customerId && !contactIdentityKey) {
+      throw new BadRequestException('Workflow lifecycle requires a customer or provisional contact identity.');
+    }
+    const occurredAt = asDate(input.sourceOccurredAt) ?? new Date();
+    const dueAt = asDate(input.dueAt);
+    const visibleAfter = asDate(input.visibleAfter) ?? (dueAt && dueAt.getTime() > Date.now() ? dueAt : null);
+    const queueLocation = visibleAfter && visibleAfter.getTime() > Date.now() ? 'scheduled' : 'follow_up';
+    const lockKeys = uniqueStrings([
+      input.customerId ? `${tenantId}:customer:${input.customerId}:${input.operationalIntent}` : null,
+      contactIdentityKey ? `${tenantId}:contact:${contactIdentityKey}:${input.operationalIntent}` : null,
+    ]).sort();
+
+    const transactionResult = await this.prisma.db.$transaction(async (tx) => {
+      for (const lockKey of lockKeys) {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      }
+
+      const replay = await tx.staffWorkOccurrence.findUnique({
+        where: { tenantId_sourceEventId: { tenantId, sourceEventId } },
+        select: { staffWorkItemId: true },
+      });
+      if (replay) return { id: replay.staffWorkItemId, outcome: 'replayed' as const };
+
+      const activeWhere: Prisma.StaffWorkItemWhereInput = {
+        status: { notIn: ['closed', 'resolved', 'transferred'] },
+      };
+      const customerItem = input.customerId
+        ? await tx.staffWorkItem.findFirst({
+            where: { customerId: input.customerId, operationalIntent: input.operationalIntent, ...activeWhere },
+            orderBy: [{ lastSignalAt: 'desc' }, { updatedAt: 'desc' }],
+          })
+        : null;
+      const contactItem = contactIdentityKey
+        ? await tx.staffWorkItem.findFirst({
+            where: { customerId: null, contactIdentityKey, operationalIntent: input.operationalIntent, ...activeWhere },
+            orderBy: [{ lastSignalAt: 'desc' }, { updatedAt: 'desc' }],
+          })
+        : null;
+      const existing = customerItem ?? contactItem;
+      let mergedOccurrenceCount = 0;
+      let mergedFirstSignalAt: Date | null = null;
+      let mergedLastSignalAt: Date | null = null;
+      let mergedAssignedMemberId: string | null = null;
+      let mergedMetadata: Record<string, unknown> | null = null;
+
+      if (customerItem && contactItem && customerItem.id !== contactItem.id) {
+        const contactParticipants = await tx.staffWorkParticipant.findMany({
+          where: { staffWorkItemId: contactItem.id },
+          select: { memberId: true, role: true, source: true },
+        });
+        for (const participant of contactParticipants) {
+          await tx.staffWorkParticipant.upsert({
+            where: {
+              tenantId_staffWorkItemId_memberId_role: {
+                tenantId,
+                staffWorkItemId: customerItem.id,
+                memberId: participant.memberId,
+                role: participant.role,
+              },
+            },
+            create: {
+              id: prefixedId('swp'),
+              tenantId,
+              staffWorkItemId: customerItem.id,
+              memberId: participant.memberId,
+              role: participant.role,
+              source: participant.source,
+            },
+            update: { source: participant.source },
+          });
+        }
+
+        await tx.staffWorkOccurrence.updateMany({
+          where: { staffWorkItemId: contactItem.id },
+          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+        });
+        await tx.staffWorkComment.updateMany({
+          where: { staffWorkItemId: contactItem.id },
+          data: { staffWorkItemId: customerItem.id },
+        });
+        await tx.customerCallOutcome.updateMany({
+          where: { staffWorkItemId: contactItem.id },
+          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+        });
+        await tx.workItemStateTransition.updateMany({
+          where: { staffWorkItemId: contactItem.id },
+          data: { staffWorkItemId: customerItem.id, customerId: input.customerId },
+        });
+        await tx.personWorkspaceNote.updateMany({
+          where: { linkedStaffWorkItemId: contactItem.id },
+          data: { linkedStaffWorkItemId: customerItem.id, linkedCustomerId: input.customerId },
+        });
+        await tx.workflowScheduledAction.updateMany({
+          where: { executedStaffWorkItemId: contactItem.id },
+          data: { executedStaffWorkItemId: customerItem.id, customerId: input.customerId },
+        });
+        await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: contactItem.id } });
+        await tx.staffWorkParticipant.deleteMany({ where: { staffWorkItemId: contactItem.id } });
+        await tx.staffWorkItem.update({
+          where: { id: contactItem.id },
+          data: {
+            status: 'closed',
+            workState: 'completed',
+            queueLocation: 'archive',
+            closedAt: new Date(),
+            archivedAt: new Date(),
+            archiveReason: 'provisional_identity_merged',
+            resolutionCode: 'provisional_identity_merged',
+            resolutionNote: `Merged into ${customerItem.id} after the Shopify customer was resolved.`,
+            metadata: {
+              ...asRecord(contactItem.metadata),
+              lifecycleMergedInto: customerItem.id,
+              lifecycleMergeReason: 'provisional_identity_resolved',
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        mergedOccurrenceCount = Math.max(0, contactItem.occurrenceCount);
+        mergedFirstSignalAt = contactItem.firstSignalAt;
+        mergedLastSignalAt = contactItem.lastSignalAt;
+        mergedAssignedMemberId = contactItem.assignedMemberId;
+        if (dateTime(contactItem.lastSignalAt) > dateTime(customerItem.lastSignalAt)) {
+          mergedMetadata = asRecord(contactItem.metadata);
+        }
+      }
+
+      if (existing) {
+        const firstSignalAt = earliestDate(existing.firstSignalAt, mergedFirstSignalAt, occurredAt) ?? occurredAt;
+        const priorLastSignalAt = latestDate(existing.lastSignalAt, mergedLastSignalAt);
+        const lastSignalAt = latestDate(priorLastSignalAt, occurredAt) ?? occurredAt;
+        const latest = !priorLastSignalAt || occurredAt.getTime() >= priorLastSignalAt.getTime();
+        const occurrenceCount = Math.max(0, existing.occurrenceCount) + mergedOccurrenceCount + 1;
+        const existingMetadata = mergedMetadata ?? asRecord(existing.metadata);
+        const currentMetadata = latest ? { ...existingMetadata, ...(input.metadata ?? {}) } : existingMetadata;
+        const lifecycleMetadata = {
+          ...asRecord(currentMetadata.lifecycle),
+          operationalIntent: input.operationalIntent,
+          contactIdentityKey,
+          occurrenceCount,
+          firstSignalAt: firstSignalAt.toISOString(),
+          lastSignalAt: lastSignalAt.toISOString(),
+          latestSourceEventId: latest ? sourceEventId : asRecord(currentMetadata.lifecycle).latestSourceEventId ?? existing.sourceEventId,
+          latestSourceCallId: latest ? input.sourceCallId ?? null : asRecord(currentMetadata.lifecycle).latestSourceCallId ?? existing.sourceCallId,
+        };
+
+        await tx.staffWorkOccurrence.create({
+          data: {
+            id: prefixedId('swo'),
+            tenantId,
+            staffWorkItemId: existing.id,
+            customerId: input.customerId ?? existing.customerId,
+            operationalIntent: input.operationalIntent,
+            contactIdentityKey,
+            sourceCallId: input.sourceCallId ?? null,
+            sourceEventId,
+            occurredAt,
+            metadata: (input.occurrenceMetadata ?? {}) as Prisma.InputJsonValue,
+          },
+        });
+        await tx.staffWorkItem.update({
+          where: { id: existing.id },
+          data: {
+            customerId: input.customerId ?? existing.customerId,
+            contactIdentityKey: contactIdentityKey ?? existing.contactIdentityKey,
+            occurrenceCount,
+            firstSignalAt,
+            lastSignalAt,
+            assignedMemberId: existing.assignedMemberId ?? mergedAssignedMemberId ?? input.assignedMemberId ?? null,
+            ...(latest ? {
+              matchedRuleId: input.matchedRuleId ?? existing.matchedRuleId,
+              source: input.source,
+              sourceCallId: input.sourceCallId ?? null,
+              sourceEmailId: input.sourceEmailId ?? null,
+              sourceEventId,
+              sourceOccurredAt: occurredAt,
+              title: input.title.trim(),
+              description: input.description?.trim() || null,
+              priority: input.priority ?? existing.priority,
+              status: 'open',
+              workState: 'open',
+              queueLocation: 'follow_up',
+              visibleAfter: null,
+              dueAt: null,
+              archivedAt: null,
+              archiveReason: null,
+              closedAt: null,
+              resolutionCode: null,
+              resolutionNote: null,
+              currentDisposition: 'not_selected',
+              conditionTrace: (input.conditionTrace ?? []) as Prisma.InputJsonValue,
+              taskStateSnapshot: (input.taskStateSnapshot ?? {}) as Prisma.InputJsonValue,
+            } : {}),
+            metadata: { ...currentMetadata, lifecycle: lifecycleMetadata } as Prisma.InputJsonValue,
+          },
+        });
+        if (latest) {
+          await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: existing.id } });
+        }
+        await tx.workItemStateTransition.create({
+          data: {
+            id: prefixedId('wst'),
+            tenantId,
+            staffWorkItemId: existing.id,
+            customerId: input.customerId ?? existing.customerId,
+            memberId: existing.assignedMemberId ?? mergedAssignedMemberId ?? input.assignedMemberId ?? null,
+            fromWorkState: existing.workState,
+            toWorkState: latest ? 'open' : existing.workState,
+            fromQueue: existing.queueLocation,
+            toQueue: latest ? 'follow_up' : existing.queueLocation,
+            reason: 'workflow_signal_continued',
+            metadata: {
+              operationalIntent: input.operationalIntent,
+              sourceEventId,
+              sourceCallId: input.sourceCallId ?? null,
+              occurredAt: occurredAt.toISOString(),
+              occurrenceCount,
+              latest,
+            } as Prisma.InputJsonValue,
+          },
+        });
+        await upsertParticipantsTx(tx, tenantId, existing.id, watcherMemberIds, 'watcher', 'workflow_continuation');
+        return { id: existing.id, outcome: 'continued' as const };
+      }
+
+      const id = prefixedId('swi');
+      const metadata = {
+        ...(input.metadata ?? {}),
+        lifecycle: {
+          ...asRecord(asRecord(input.metadata).lifecycle),
+          operationalIntent: input.operationalIntent,
+          contactIdentityKey,
+          occurrenceCount: 1,
+          firstSignalAt: occurredAt.toISOString(),
+          lastSignalAt: occurredAt.toISOString(),
+          latestSourceEventId: sourceEventId,
+          latestSourceCallId: input.sourceCallId ?? null,
+        },
+      };
+      await tx.staffWorkItem.create({
+        data: {
+          id,
+          tenantId,
+          customerId: input.customerId ?? null,
+          assignedMemberId: input.assignedMemberId ?? null,
+          axis: axis.data,
+          matchedRuleId: input.matchedRuleId ?? null,
+          source: input.source,
+          surface: 'staff',
+          sourceCallId: input.sourceCallId ?? null,
+          sourceEmailId: input.sourceEmailId ?? null,
+          sourceEventId,
+          sourceOccurredAt: occurredAt,
+          operationalIntent: input.operationalIntent,
+          contactIdentityKey,
+          occurrenceCount: 1,
+          firstSignalAt: occurredAt,
+          lastSignalAt: occurredAt,
+          title: input.title.trim(),
+          description: input.description?.trim() || null,
+          status: 'open',
+          priority: input.priority ?? 'medium',
+          createdByActorId: this.tenantContext.get()?.principalId ?? null,
+          dueAt,
+          visibleAfter,
+          queueLocation,
+          currentDisposition: queueLocation === 'follow_up' ? 'not_selected' : null,
+          metadata: metadata as Prisma.InputJsonValue,
+          conditionTrace: (input.conditionTrace ?? []) as Prisma.InputJsonValue,
+          taskStateSnapshot: (input.taskStateSnapshot ?? {}) as Prisma.InputJsonValue,
+          idempotencyKey: input.idempotencyKey?.trim() || null,
+        },
+      });
+      await tx.staffWorkOccurrence.create({
+        data: {
+          id: prefixedId('swo'),
+          tenantId,
+          staffWorkItemId: id,
+          customerId: input.customerId ?? null,
+          operationalIntent: input.operationalIntent,
+          contactIdentityKey,
+          sourceCallId: input.sourceCallId ?? null,
+          sourceEventId,
+          occurredAt,
+          metadata: (input.occurrenceMetadata ?? {}) as Prisma.InputJsonValue,
+        },
+      });
+      await upsertParticipantsTx(tx, tenantId, id, watcherMemberIds, 'watcher', 'workflow_assignment');
+      return { id, outcome: 'created' as const };
+    });
+
+    const item = await this.require(transactionResult.id);
+    this.logger.log('staff_work', `lifecycle.${transactionResult.outcome}`, 'Staff work lifecycle applied', {
+      staff_work_item_id: item.id,
+      customer_id: item.customerId,
+      operational_intent: input.operationalIntent,
+      contact_identity_key: contactIdentityKey,
+      source_event_id: sourceEventId,
+      occurrence_count: item.occurrenceCount,
+    });
+    return { item, outcome: transactionResult.outcome };
   }
 
   async require(id: string) {
@@ -402,6 +738,9 @@ export class StaffWorkService {
             sourceEmailId: row.sourceEmailId,
             sourceEventId: outcome.id,
             sourceOccurredAt: now,
+            operationalIntent: row.operationalIntent,
+            contactIdentityKey: row.contactIdentityKey,
+            occurrenceCount: 0,
             title: row.title,
             description: row.description,
             status: 'open',
@@ -550,4 +889,53 @@ function asDate(value: Date | string | null | undefined) {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.filter((value): value is string => Boolean(value)).map((value) => value.trim()).filter(Boolean)));
+}
+
+function cleanString(value: string | null | undefined) {
+  const cleaned = value?.trim();
+  return cleaned || null;
+}
+
+function earliestDate(...values: Array<Date | null | undefined>) {
+  const dates = values.filter((value): value is Date => value instanceof Date);
+  return dates.length > 0
+    ? dates.reduce((earliest, value) => value.getTime() < earliest.getTime() ? value : earliest)
+    : null;
+}
+
+function latestDate(...values: Array<Date | null | undefined>) {
+  const dates = values.filter((value): value is Date => value instanceof Date);
+  return dates.length > 0
+    ? dates.reduce((latest, value) => value.getTime() > latest.getTime() ? value : latest)
+    : null;
+}
+
+function dateTime(value: Date | null | undefined) {
+  return value?.getTime() ?? Number.NEGATIVE_INFINITY;
+}
+
+async function upsertParticipantsTx(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  staffWorkItemId: string,
+  memberIds: string[],
+  role: string,
+  source: string,
+) {
+  for (const memberId of memberIds) {
+    await tx.staffWorkParticipant.upsert({
+      where: {
+        tenantId_staffWorkItemId_memberId_role: { tenantId, staffWorkItemId, memberId, role },
+      },
+      create: {
+        id: prefixedId('swp'),
+        tenantId,
+        staffWorkItemId,
+        memberId,
+        role,
+        source,
+      },
+      update: { source },
+    });
+  }
 }

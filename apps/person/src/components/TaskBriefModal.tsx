@@ -5,7 +5,7 @@ import {
   X, Phone, Mail, AlarmClockOff, CheckCircle2,
   Pencil, RotateCcw, ShoppingBag,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
-  UserPlus,
+  History, UserPlus,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, linkTaskCustomer, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
@@ -447,6 +447,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
               {liveCard.phone && showField('phone') ? <span><Phone size={11} /> {liveCard.phone}</span> : null}
               {liveCard.email && showField('email') ? <span><Mail size={11} /> {liveCard.email}</span> : null}
               {latestOrder && <span><ShoppingBag size={11} /> {latestOrder.orderNumber ?? latestOrder.id} {fmtMoney(latestOrder.totalPrice, latestOrder.currency)}</span>}
+              {liveCard.occurrenceCount > 1 ? <span><History size={11} /> {liveCard.occurrenceCount} related calls in this follow-up</span> : null}
             </div>
           </div>
           <button type="button" className="close" onClick={onClose} aria-label="Close" disabled={outcomeRequired} title={outcomeRequired ? 'Save the call outcome before closing' : 'Close'}>

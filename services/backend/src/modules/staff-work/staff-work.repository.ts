@@ -14,6 +14,7 @@ export const staffWorkItemInclude = {
   assignedMember: true,
   participants: true,
   comments: { orderBy: { createdAt: 'asc' } },
+  occurrences: { orderBy: { occurredAt: 'asc' } },
 } satisfies Prisma.StaffWorkItemInclude;
 
 @Injectable()

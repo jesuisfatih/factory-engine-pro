@@ -53,6 +53,9 @@ export interface Card {
   pinnedAt: number | null;
   source: TaskSource;
   createdAt?: string;
+  occurrenceCount: number;
+  firstSignalAt?: string | null;
+  lastSignalAt?: string | null;
   archivedAt?: string | null;
   unreached?: boolean;
   missedNote?: string | null;

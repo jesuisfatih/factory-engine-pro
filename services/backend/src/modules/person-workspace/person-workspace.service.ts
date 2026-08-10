@@ -120,6 +120,7 @@ const staffWorkItemInclude = {
   assignedMember: true,
   participants: true,
   comments: { orderBy: { createdAt: 'asc' } },
+  occurrences: { orderBy: { occurredAt: 'asc' } },
 } satisfies Prisma.StaffWorkItemInclude;
 
 type StaffWorkItemRow = Prisma.StaffWorkItemGetPayload<{
@@ -1374,8 +1375,14 @@ export class PersonWorkspaceService {
     const customerEmail = row.customer?.email ?? null;
     const customerPhone = row.customer?.phone ?? null;
     const aircallWhere = aircallWhereFor(customerEmail, customerPhone);
+    const lifecycleCallIds = uniqueStrings([
+      row.sourceCallId,
+      ...row.occurrences.map((occurrence) => occurrence.sourceCallId),
+    ].filter((value): value is string => Boolean(value)));
     const aircallScopes: Prisma.AircallCallEventWhereInput[] = [
-      ...(row.sourceCallId ? [{ id: row.sourceCallId }] : []),
+      ...(lifecycleCallIds.length > 0
+        ? [{ OR: [{ id: { in: lifecycleCallIds } }, { externalCallId: { in: lifecycleCallIds } }] }]
+        : []),
       ...(aircallWhere ? [aircallWhere] : []),
     ];
     const [
@@ -2869,6 +2876,7 @@ export class PersonWorkspaceService {
       pinned: true,
       pinnedAt,
       source: 'manual' as const,
+      occurrenceCount: 0,
       currentDisposition: null,
       outcomeRequired: false,
       phone: customer.phone ?? undefined,
@@ -2908,6 +2916,7 @@ export class PersonWorkspaceService {
       pinned: item.pinned,
       pinnedAt: null,
       source: 'segment_priority',
+      occurrenceCount: 0,
       currentDisposition: null,
       outcomeRequired: false,
       phone: item.phone ?? undefined,
@@ -3041,6 +3050,9 @@ export class PersonWorkspaceService {
       pinnedAt,
       source,
       createdAt: workDisplayTimestamp(row).toISOString(),
+      occurrenceCount: row.occurrenceCount,
+      firstSignalAt: row.firstSignalAt?.toISOString() ?? null,
+      lastSignalAt: row.lastSignalAt?.toISOString() ?? null,
       archivedAt: row.archivedAt?.toISOString() ?? null,
       unreached: missedNote !== null,
       missedNote,
@@ -3168,8 +3180,14 @@ export class PersonWorkspaceService {
     return { miniOrders, performance };
   }
 
-  private async cardCallContext(rows: Array<{ sourceCallId: string | null }>): Promise<CardCallContext> {
-    const sourceCallIds = uniqueStrings(rows.map((row) => row.sourceCallId).filter((id): id is string => Boolean(id)));
+  private async cardCallContext(rows: Array<{
+    sourceCallId: string | null;
+    occurrences?: Array<{ sourceCallId: string | null }>;
+  }>): Promise<CardCallContext> {
+    const sourceCallIds = uniqueStrings(rows.flatMap((row) => [
+      row.sourceCallId,
+      ...(row.occurrences ?? []).map((occurrence) => occurrence.sourceCallId),
+    ]).filter((id): id is string => Boolean(id)));
     if (sourceCallIds.length === 0) return { callsById: new Map() };
     const calls = await this.prisma.db.aircallCallEvent.findMany({
       where: { OR: [{ id: { in: sourceCallIds } }, { externalCallId: { in: sourceCallIds } }] },
@@ -3840,6 +3858,9 @@ function staffCommerceSnapshot(card: PersonQueueCardWithoutDisplay) {
 }
 
 function staffCallSnapshot(card: PersonQueueCardWithoutDisplay) {
+  if (card.occurrenceCount > 1) {
+    return `${card.occurrenceCount} related calls in this follow-up`;
+  }
   if (card.performance30d) {
     return `${card.performance30d.calls} calls and ${card.performance30d.serviceRequests} follow-ups in 30 days`;
   }

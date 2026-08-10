@@ -161,7 +161,10 @@ import { prefixedId } from '../../shared/id.js';
 import { AppLogger } from '../../shared/logger.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
-import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
+import {
+  CustomerContactResolverService,
+  provisionalCustomerIdentityKey,
+} from '../../shared/customer-contact-resolver.service.js';
 import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { StaffWorkService } from '../staff-work/staff-work.service.js';
@@ -424,6 +427,14 @@ const DEFAULT_WORKFLOW_RULES: SaveWorkflowRuleInput[] = [
     [defaultCondition('intent_existing_expansion', 'operational_intent', '=', 'existing_customer_expansion_signal')],
     [defaultAction('create_existing_expansion_task', 'create_task', 'Existing customer expansion follow-up', 'sales')],
     65,
+  ),
+  defaultRule(
+    'operational_human_review_account_task',
+    'Default: Review unresolved call outcome',
+    'call.operational_signal.detected',
+    [defaultCondition('intent_human_review', 'operational_intent', '=', 'human_review_required')],
+    [defaultAction('create_human_review_task', 'create_task', 'Review call outcome', 'account')],
+    80,
   ),
   defaultRule(
     'operational_no_action_audit',
@@ -1319,16 +1330,41 @@ export class RulesService {
       return { value: Math.floor((state.now.getTime() - state.customer.lastOrderAt.getTime()) / (24 * 60 * 60 * 1000)), source: 'customers.last_order_at' };
     }
     if (condition === 'open_task_exists_for_intent') {
-      const intent = stringParam(params, 'intent') ?? stringParam(params, 'callIntent') ?? expected;
-      const rows = await this.prisma.db.staffWorkItem.findMany({
-        where: {
-          ...(state.customer ? { customerId: state.customer.id } : {}),
-          status: { notIn: ['closed', 'resolved'] },
-        },
-        select: { metadata: true },
-        take: 100,
+      const parsedIntent = operationalIntentSchema.safeParse(
+        stringParam(params, 'operationalIntent') ?? expected,
+      );
+      if (!parsedIntent.success || parsedIntent.data === 'no_action') {
+        return { value: false, source: 'staff_work_lifecycle_invalid_intent' };
+      }
+
+      // Operational-signal tasks are continued atomically by create_task. The legacy
+      // duplicate guard must not suppress the action that appends the new occurrence.
+      if (state.callEvent && stringParam(params, 'operationalIntent')) {
+        return { value: false, source: 'staff_work_lifecycle_continuation' };
+      }
+
+      const contactIdentityKey = provisionalCustomerIdentityKey({
+        phone: stringParam(params, 'customerPhone')
+          ?? stringParam(params, 'phone')
+          ?? stringParam(params, 'contactPhoneE164'),
+        email: stringParam(params, 'customerEmail')
+          ?? stringParam(params, 'email')
+          ?? stringParam(params, 'contactEmail'),
       });
-      return { value: rows.some((row) => JSON.stringify(row.metadata).includes(intent)), source: 'staff_work_items' };
+      if (!state.customer && !contactIdentityKey) {
+        return { value: false, source: 'staff_work_lifecycle_identity_missing' };
+      }
+      const existing = await this.prisma.db.staffWorkItem.findFirst({
+        where: {
+          operationalIntent: parsedIntent.data,
+          status: { notIn: ['closed', 'resolved', 'transferred'] },
+          ...(state.customer
+            ? { customerId: state.customer.id }
+            : { customerId: null, contactIdentityKey }),
+        },
+        select: { id: true },
+      });
+      return { value: Boolean(existing), source: 'staff_work_lifecycle' };
     }
     if (condition === 'axis_primary_is') {
       return { value: stringParam(params, 'axisPrimary') ?? stringParam(params, 'assignedMemberId') ?? null, source: 'event_params' };
@@ -1638,9 +1674,25 @@ export class RulesService {
       const taskStateSnapshot = await this.fireTimeStateSnapshot(context.state);
       const assignment = await this.resolveTaskAssignment(context, action);
       const sourceCallId = this.workflowSourceCallId(context);
-      const sourceOccurredAt = sourceCallId
-        ? (await this.findWorkflowSourceCall(sourceCallId))?.eventTimestamp ?? parseDate(stringParam(context.params, 'sourceOccurredAt')) ?? parseDate(context.occurredAt)
-        : parseDate(stringParam(context.params, 'sourceOccurredAt')) ?? parseDate(context.occurredAt);
+      const sourceCall = sourceCallId ? await this.findWorkflowSourceCall(sourceCallId) : null;
+      const sourceOccurredAt = sourceCall?.eventTimestamp
+        ?? parseDate(stringParam(context.params, 'sourceOccurredAt'))
+        ?? parseDate(context.occurredAt);
+      const parsedOperationalIntent = operationalIntentSchema.safeParse(this.operationalIntentFromContext(context));
+      const lifecycleManaged = context.trigger === 'call.operational_signal.detected'
+        && parsedOperationalIntent.success
+        && parsedOperationalIntent.data !== 'no_action';
+      const contactIdentityKey = provisionalCustomerIdentityKey({
+        phone: sourceCall?.contactPhoneE164
+          ?? sourceCall?.contactPhone
+          ?? stringParam(context.params, 'contactPhoneE164')
+          ?? stringParam(context.params, 'customerPhone')
+          ?? stringParam(context.params, 'phone'),
+        email: sourceCall?.contactEmail
+          ?? stringParam(context.params, 'contactEmail')
+          ?? stringParam(context.params, 'customerEmail')
+          ?? stringParam(context.params, 'email'),
+      });
       if (action.timing?.mode === 'deferred_materialization') {
         result = await this.scheduleDeferredCreateTask(action, context, taskStateSnapshot, assignment, sourceCallId);
       } else {
@@ -1661,6 +1713,68 @@ export class RulesService {
               targetId: existingTask.id,
               message: 'Workflow follow-up already exists for this event.',
               metadata: { idempotentReplay: true },
+            },
+          };
+        } else if (lifecycleManaged && (customerId || contactIdentityKey)) {
+          const source = this.workflowTaskSource(context, sourceCallId);
+          const lifecycle = await this.staffWork.continueOrCreate({
+            customerId: customerId ?? undefined,
+            title: action.value?.trim()
+              || stringParam(context.params, 'suggestedTaskTitle')
+              || registryTaskTitleForOperationalIntent(parsedOperationalIntent.data)
+              || 'Review customer follow-up',
+            description: stringParam(context.params, 'reason')
+              || `A new customer conversation requires ${expectedOutcomeForOperationalIntent(parsedOperationalIntent.data).toLowerCase()}.`,
+            source,
+            priority: priorityForRule(context.rule.priority),
+            axis: assignment.axis,
+            assignedMemberId: assignment.assigneeMemberId ?? undefined,
+            watcherMemberIds: assignment.watcherMemberIds,
+            matchedRuleId: context.rule.id,
+            sourceCallId: sourceCallId ?? undefined,
+            sourceEventId: context.eventId,
+            sourceOccurredAt,
+            operationalIntent: parsedOperationalIntent.data,
+            contactIdentityKey,
+            conditionTrace: context.conditionTrace,
+            metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
+            occurrenceMetadata: {
+              trigger: context.trigger,
+              source: context.source,
+              matchedRuleId: context.rule.id,
+              actionId: action.id,
+              reason: stringParam(context.params, 'reason'),
+              confidence: numberParam(context.params, 'operationalConfidence'),
+            },
+            taskStateSnapshot,
+            idempotencyKey: taskIdempotencyKey,
+          });
+          result = {
+            task: { id: lifecycle.item.id, title: lifecycle.item.title },
+            trace: {
+              actionId: action.id,
+              action: action.action,
+              status: 'applied',
+              targetType: 'staff_work_item',
+              targetId: lifecycle.item.id,
+              message: lifecycle.outcome === 'created'
+                ? 'Created the customer intent lifecycle.'
+                : lifecycle.outcome === 'continued'
+                  ? 'Added the call to the existing customer intent lifecycle.'
+                  : 'The call was already recorded in this customer intent lifecycle.',
+              metadata: {
+                axis: assignment.axis,
+                eventType: context.trigger,
+                assignedMemberId: lifecycle.item.assignedMemberId,
+                watcherMemberIds: assignment.watcherMemberIds,
+                matchedRuleId: context.rule.id,
+                sourceCallId,
+                operationalIntent: parsedOperationalIntent.data,
+                contactIdentityKey,
+                lifecycleOutcome: lifecycle.outcome,
+                occurrenceCount: lifecycle.item.occurrenceCount,
+                conditionTraceCount: context.conditionTrace.length,
+              },
             },
           };
         } else {
@@ -1697,6 +1811,8 @@ export class RulesService {
               sourceCallId: sourceCallId ?? undefined,
               sourceEventId: context.eventId ?? undefined,
               sourceOccurredAt,
+              operationalIntent: parsedOperationalIntent.success ? parsedOperationalIntent.data : null,
+              contactIdentityKey,
               conditionTrace: context.conditionTrace,
               metadata: this.workflowMetadata(action, context, taskStateSnapshot, assignment),
               taskStateSnapshot,

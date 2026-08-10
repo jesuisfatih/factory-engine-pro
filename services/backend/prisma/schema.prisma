@@ -159,6 +159,7 @@ model Tenant {
   algorithmStrategySimulations AlgorithmStrategySimulation[]
   taskParticipants        TaskParticipant[]
   staffWorkItems          StaffWorkItem[]
+  staffWorkOccurrences    StaffWorkOccurrence[]
   staffWorkComments       StaffWorkComment[]
   staffWorkParticipants   StaffWorkParticipant[]
   personDailyCallOrders   PersonDailyCallOrder[]
@@ -374,6 +375,7 @@ model Customer {
   contactPolicies CustomerContactPolicy[]
   callOutcomes CustomerCallOutcome[]
   workItemStateTransitions WorkItemStateTransition[]
+  staffWorkOccurrences StaffWorkOccurrence[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -1531,6 +1533,11 @@ model StaffWorkItem {
   sourceEmailId      String?   @map("source_email_id")
   sourceEventId      String?   @map("source_event_id")
   sourceOccurredAt   DateTime? @map("source_occurred_at")
+  operationalIntent  String?   @map("operational_intent")
+  contactIdentityKey String?   @map("contact_identity_key")
+  occurrenceCount    Int       @default(0) @map("occurrence_count")
+  firstSignalAt      DateTime? @map("first_signal_at")
+  lastSignalAt       DateTime? @map("last_signal_at")
   title              String
   description        String?
   status             String    @default("open")
@@ -1564,6 +1571,7 @@ model StaffWorkItem {
   personWorkspaceNotes PersonWorkspaceNote[]
   callOutcomes   CustomerCallOutcome[]
   stateTransitions WorkItemStateTransition[]
+  occurrences    StaffWorkOccurrence[]
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, customerId])
@@ -1576,7 +1584,33 @@ model StaffWorkItem {
   @@index([tenantId, currentDisposition])
   @@index([tenantId, sourceCallId])
   @@index([tenantId, assignedMemberId, sourceOccurredAt])
+  @@index([tenantId, customerId, operationalIntent, status])
+  @@index([tenantId, contactIdentityKey, operationalIntent, status])
   @@map("staff_work_items")
+}
+
+model StaffWorkOccurrence {
+  id                 String   @id
+  tenantId           String   @map("tenant_id")
+  staffWorkItemId    String   @map("staff_work_item_id")
+  customerId         String?  @map("customer_id")
+  operationalIntent  String   @map("operational_intent")
+  contactIdentityKey String?  @map("contact_identity_key")
+  sourceCallId       String?  @map("source_call_id")
+  sourceEventId      String   @map("source_event_id")
+  occurredAt         DateTime @map("occurred_at")
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, sourceEventId])
+  @@index([tenantId, staffWorkItemId, occurredAt])
+  @@index([tenantId, customerId, operationalIntent, occurredAt])
+  @@index([tenantId, contactIdentityKey, operationalIntent, occurredAt])
+  @@map("staff_work_occurrences")
 }
 
 model StaffWorkParticipant {

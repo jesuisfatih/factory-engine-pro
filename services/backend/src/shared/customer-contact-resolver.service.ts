@@ -61,6 +61,13 @@ export interface CustomerIdentityInput {
   phone?: string | null;
 }
 
+export function provisionalCustomerIdentityKey(input: Pick<CustomerIdentityInput, 'phone' | 'email'>) {
+  const phone = normalizePhoneE164(input.phone);
+  if (phone) return `phone:${phone}`;
+  const email = normalizeEmail(input.email);
+  return email ? `email:${email}` : null;
+}
+
 interface PhoneCandidate {
   value: unknown;
   source: CustomerPhoneSource;

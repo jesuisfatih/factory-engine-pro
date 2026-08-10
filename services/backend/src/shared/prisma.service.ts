@@ -56,6 +56,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'CustomerContactPolicy',
   'CustomerCallOutcome',
   'WorkItemStateTransition',
+  'StaffWorkOccurrence',
   'BusinessCalendar',
   'MailDelivery',
   'MailProviderEvent',

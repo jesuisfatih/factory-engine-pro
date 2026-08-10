@@ -1,4 +1,4 @@
-import { Activity, AlarmClockOff, ArrowRightLeft, ClipboardCheck, FileText, Phone, ShoppingBag, Tags, UserRound } from 'lucide-react';
+import { Activity, AlarmClockOff, ArrowRightLeft, ClipboardCheck, FileText, History, Phone, ShoppingBag, Tags, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import type { Card as CardData, TaskSource } from '../types';
@@ -120,6 +120,7 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
             {frontendFieldVisible(override, 'phone') ? <span title="Phone"><span className="sig-ic green"><Phone size={11} /></span> {card.phone || 'No phone'}</span> : null}
             {frontendFieldVisible(override, 'latestOrder') ? <span title={frontendCopy(override, 'latestOrderTitle', 'Latest Shopify order')}><span className="sig-ic indigo"><ShoppingBag size={11} /></span> {personSafeText(card.displayCommerceSnapshot) || lastOrder}</span> : null}
             {frontendFieldVisible(override, 'performance30d') ? <span title={frontendCopy(override, 'performanceTitle', 'Last 30 days')}><span className="sig-ic amber"><Activity size={11} /></span> {performance}</span> : null}
+            {card.occurrenceCount > 1 ? <span title="Calls linked to this follow-up"><span className="sig-ic blue"><History size={11} /></span> {card.occurrenceCount} related calls</span> : null}
             {frontendFieldVisible(override, 'assignee') ? <span title="Owner"><span className="sig-ic blue"><UserRound size={11} /></span> {card.assignedMemberName ? card.assignedMemberName : frontendCopy(override, 'assigneeFallback', 'Unassigned')}</span> : null}
             {frontendFieldVisible(override, 'focus') ? <span>{frontendCopy(override, 'focusLabel', focusLabel(card.axis))}</span> : null}
             {frontendFieldVisible(override, 'segmentPriority') && card.segmentPriority !== null && card.segmentPriority !== undefined ? (

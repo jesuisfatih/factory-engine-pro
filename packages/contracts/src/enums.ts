@@ -44,6 +44,7 @@ export const OPERATIONAL_INTENTS = [
   'machine_upgrade_interest',
   'training_installation_need',
   'existing_customer_expansion_signal',
+  'human_review_required',
   'no_action',
 ] as const;
 
@@ -510,6 +511,13 @@ export const OPERATIONAL_INTENT_REGISTRY = [
     'second unit',
   ], [
     'Create an expansion task when an existing customer is adding capacity.',
+  ]),
+  operationalIntentEntry('human_review_required', 'account', 'Review call outcome', [
+    'human review required',
+    'structured output conflict',
+    'uncertain operational intent',
+  ], [
+    'Create a review task when structured resolver fields require staff action but no reliable operational intent is available.',
   ]),
   operationalIntentEntry('no_action', null, null, [
     'no action',

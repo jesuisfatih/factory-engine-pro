@@ -47,6 +47,7 @@ export type IdPrefix =
   | 'srcm'
   | 'tpar'
   | 'swi'
+  | 'swo'
   | 'swp'
   | 'swc'
   | 'cco'

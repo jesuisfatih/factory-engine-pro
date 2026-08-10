@@ -554,7 +554,7 @@ Classify operational_signals for DTF Supply / Heat Press sales operations, not c
 The transcript is the only semantic source. Do not infer a customer request from metadata, phone direction, boilerplate, or generic sales assumptions.
 Every mood, issue, promise, and next action claim must be supported by evidence from the transcript. If evidence is absent, return unknown/null/false rather than guessing.
 The operational_signals array is authoritative. Downstream code will validate and deduplicate it but will never derive intent by keyword or regex.
-Map calls to concrete operational intent: heat press machine purchase, spare part purchase, generic heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, or no_action.
+Map calls to concrete operational intent: heat press machine purchase, spare part purchase, generic heat press purchase, DTF supply reorder, quote, callback, refund/account review, shipping/account review, financing, price objection, product-fit consultation, sample, machine upgrade, training/installation, existing-customer expansion, human_review_required, or no_action.
 Return at most one actionable operational_signals item. Choose the primary staff action; do not return multiple sales/account tasks for one call.
 Do not return callback_requested when another concrete intent is present. Callback is only primary when the customer explicitly asks to be called back and no stronger purchase, account, refund, shipping, quote, financing, product-fit, sample, upgrade, training, or reorder intent exists.
 Do not create or imply an automatic support case, ticket, or customer request. Staff may later open a case manually if the customer explicitly asks.
@@ -569,6 +569,7 @@ person_brief.suggested_actions: 2 to 5 specific call actions. Do not include gen
 person_brief.transcript_snippet: a short evidence snippet or tight paraphrase from the transcript.
 Do not use the words "AI", "automation", or "support case" in person_brief text.
 Use no_action only when there is no callback, quote, purchase, reorder, financing, product-fit, sample, upgrade, training, installation, refund/account, or shipping/account follow-up opportunity.
+Use human_review_required when the structured evidence says staff action is required but the concrete operational intent cannot be selected reliably. Never hide a staff-owned promise or required next action behind no_action.
   Use null or empty arrays when unknown. Confidence values must be 0..1.`;
 }
 
