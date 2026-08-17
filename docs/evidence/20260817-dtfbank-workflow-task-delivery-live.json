@@ -1,0 +1,86 @@
+{
+  "verifiedAt": "2026-08-17T11:21:00Z",
+  "tenantId": "ten_dtfbank",
+  "deployedCommit": "a9cc41265df74205f950f647f37d6b0e8f6fa155",
+  "scope": {
+    "kind": "recent",
+    "recentDays": 3,
+    "modelReplay": "stored_resolver_output",
+    "modelRecalled": false
+  },
+  "repair": {
+    "scanned": 17,
+    "queued": 10,
+    "skipped": 7,
+    "alreadyEvaluated": 6,
+    "repairMode": "replay_stored_output"
+  },
+  "coverageAfterRepair": {
+    "transcriptEvents": 17,
+    "resolvedEvents": 17,
+    "evaluatedEvents": 17,
+    "flowCompletedEvents": 14,
+    "evaluationRows": 17,
+    "actionableEvaluations": 7,
+    "taskCreatedEvaluations": 8,
+    "matchedWithoutTaskEvaluations": 0,
+    "failedEvaluations": 0,
+    "resolverQueuedOrProcessing": 0,
+    "resolverFailed": 0,
+    "unmatchedEvaluations": 3,
+    "missingFlowOutcomeEvents": 3,
+    "note": "The three unmatched transcripts are intentionally outside this repair scope; the user will define their manual task conversion behavior next."
+  },
+  "structuredLogProof": {
+    "externalCallId": "4051797394",
+    "callEventId": "acev_tovdbn2z9byoxnzdp533ik5a",
+    "operationalIntent": "financing_question",
+    "matchedRules": 1,
+    "tasksCreated": 1,
+    "staffWorkItemId": "swi_t8prue06dc79xji5445q9l1l",
+    "actions": [
+      "staff_work.lifecycle.created",
+      "rules.workflow_action_applied:create_task",
+      "rules.workflow_action_applied:route_call_owner",
+      "rules.trigger_fired",
+      "ai.transcript_workflow_evaluation_repaired"
+    ]
+  },
+  "charletteLiveQueue": {
+    "principalId": "tmbr_ten_dtfbank_charlette_boatman",
+    "email": "charlette@dtfbank.com",
+    "businessTimezone": "America/Chicago",
+    "dailyCardCount": 4,
+    "dailyFilterCounts": {
+      "all": 4,
+      "urgent": 3,
+      "needsOutcome": 3,
+      "noAnswer": 1
+    },
+    "repairedCards": [
+      {
+        "id": "swi_rq7i123y9h8g4o8pvzgyaiws",
+        "displayTitle": "Avery Donihoo",
+        "phone": "+19032276264",
+        "assignedMemberName": "Charlette Boatman"
+      },
+      {
+        "id": "swi_t8prue06dc79xji5445q9l1l",
+        "displayTitle": "+15304405250",
+        "phone": "+15304405250",
+        "assignedMemberName": "Charlette Boatman"
+      },
+      {
+        "id": "swi_svnn1y8gsph2fmj7thi6gips",
+        "displayTitle": "+16183341321",
+        "phone": "+16183341321",
+        "assignedMemberName": "Charlette Boatman"
+      }
+    ]
+  },
+  "uiProof": [
+    "docs/evidence/20260817-dtfbank-charlette-workflow-task-delivery-live.png",
+    "docs/evidence/20260817-dtfbank-charlette-rule-matched-cards-live.png",
+    "docs/evidence/20260817-dtfbank-charlette-rule-task-brief-live.png"
+  ]
+}
