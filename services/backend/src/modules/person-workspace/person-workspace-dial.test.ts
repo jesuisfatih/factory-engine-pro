@@ -51,6 +51,7 @@ test('an accepted priority call creates one outcome-required staff work item', a
     {} as never,
     {} as never,
     staffWork as never,
+    {} as never,
     { log: () => undefined } as never,
     { emitTenantInvalidate: () => undefined } as never,
     {} as never,

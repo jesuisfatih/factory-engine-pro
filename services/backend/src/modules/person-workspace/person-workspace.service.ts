@@ -67,6 +67,7 @@ import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { RulesService } from '../rules/rules.service.js';
 import { StaffWorkService } from '../staff-work/staff-work.service.js';
+import { TranscriptReviewService } from '../staff-work/transcript-review.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 import { PersonWorkspaceNoteService } from './person-workspace-note.service.js';
 import { PersonWorkspacePinService } from './person-workspace-pin.service.js';
@@ -298,6 +299,7 @@ export class PersonWorkspaceService {
     private readonly mail: MailService,
     private readonly rules: RulesService,
     private readonly staffWork: StaffWorkService,
+    private readonly transcriptReviews: TranscriptReviewService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
     private readonly workspacePins: PersonWorkspacePinService,
@@ -350,6 +352,7 @@ export class PersonWorkspaceService {
     const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
     const today = await this.businessClock.currentDay();
     const dailyWindow = dailyWorkflowRange(range, today);
+    const needsReview = range === 'archive' ? [] : await this.transcriptReviews.list(100);
 
     const [
       config,
@@ -585,11 +588,20 @@ export class PersonWorkspaceService {
         dailyFilterCounts,
       },
       dailyCallList,
+      needsReview,
       priorityKanban: segmentPriorityCards,
       pinBoard,
       segmentGroups,
       frontendCustomization,
     };
+  }
+
+  assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) {
+    return this.transcriptReviews.assign(callEventId, input, true);
+  }
+
+  dismissTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) {
+    return this.transcriptReviews.dismiss(callEventId, input);
   }
 
   private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {

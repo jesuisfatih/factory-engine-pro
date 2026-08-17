@@ -137,6 +137,10 @@ export const fetchSummary = () => personApi.personWorkspaceSummary() as Promise<
 export const fetchCards = () => personApi.personQueueCards() as Promise<Card[]>;
 export const fetchDailyOperations = (query: Partial<PersonDailyOperationsQuery> = {}) =>
   personApi.personDailyOperations(query) as Promise<DailyOperations>;
+export const assignTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) =>
+  personApi.personAssignTranscriptReview(id, input);
+export const dismissTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) =>
+  personApi.personDismissTranscriptReview(id, input);
 export const fetchFrontendCustomization = () =>
   personApi.personFrontendCustomization() as Promise<PersonFrontendCustomizationRuntime>;
 export const moveCard = (input: { id: string; columnId: ColumnId; index: number }) =>

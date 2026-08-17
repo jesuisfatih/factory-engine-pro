@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { unmatchedTranscriptReviewItemSchema } from './call-center.js';
 import { emailSchema } from './common.js';
 import { serviceRequestPrioritySchema } from './operations.js';
 import { customerAssignmentAxisSchema } from './commerce.js';
@@ -377,6 +378,7 @@ export const personDailyOperationsSchema = z.object({
     dailyFilterCounts: z.record(z.string(), z.number().int().min(0)),
   }),
   dailyCallList: z.array(personQueueCardSchema),
+  needsReview: z.array(unmatchedTranscriptReviewItemSchema),
   priorityKanban: z.array(personQueueCardSchema),
   pinBoard: z.array(personQueueCardSchema),
   segmentGroups: z.array(personSegmentDailyGroupSchema),

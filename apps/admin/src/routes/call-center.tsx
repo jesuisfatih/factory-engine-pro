@@ -14,12 +14,14 @@ import {
   StickyNote,
   Activity,
 } from 'lucide-react';
-import type { CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer } from '@factory-engine-pro/contracts';
+import type { CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { apiErrorMessage } from '@/lib/api';
 import {
   createCallCenterCustomerTask,
+  assignCallCenterTranscriptReview,
+  dismissCallCenterTranscriptReview,
   fetchCallCenterCustomerDetail,
   fetchCallCenterOverview,
   replyCallCenterNote,
@@ -319,6 +321,7 @@ function KanbanTab({
 }) {
   return (
     <>
+      <NeedsReviewPanel data={data} items={kanban.needsReview} />
       <div className="orders-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
         <div className="orders-search" style={{ minWidth: 260, flex: 1 }}>
           <input
@@ -518,6 +521,25 @@ function KanbanTab({
     </div>
     </>
   );
+}
+
+function NeedsReviewPanel({ data, items }: { data: CallCenterOverview; items: UnmatchedTranscriptReviewItem[] }) {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<UnmatchedTranscriptReviewItem | null>(null);
+  const [targetMemberId, setTargetMemberId] = useState('');
+  const [description, setDescription] = useState('');
+  const action = useMutation({
+    mutationFn: (mode: 'assign' | 'dismiss') => mode === 'assign'
+      ? assignCallCenterTranscriptReview(selected!.id, { targetMemberId, description })
+      : dismissCallCenterTranscriptReview(selected!.id, { reason: description }),
+    onSuccess: async () => { setSelected(null); setDescription(''); setTargetMemberId(''); await qc.invalidateQueries({ queryKey: ['call-center'] }); },
+  });
+  const open = (item: UnmatchedTranscriptReviewItem) => { setSelected(item); setDescription(''); setTargetMemberId(data.members[0]?.id ?? ''); };
+  return <section className="call-center-panel needs-review-panel">
+    <PanelHead title="Needs review" meta={`${items.length} calls`} />
+    {items.length === 0 ? <EmptyLine>No calls need manual review.</EmptyLine> : <div className="review-card-list">{items.map((item) => <button key={item.id} type="button" className="call-center-task-card review-card" onClick={() => open(item)}><strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small></button>)}</div>}
+    {selected ? <div className="dialog-overlay" onMouseDown={() => !action.isPending && setSelected(null)}><div className="dialog" role="dialog" aria-modal="true" aria-labelledby="admin-review-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="admin-review-title">Assign follow-up</h2><p><strong>{selected.customerName ?? selected.phone}</strong></p><label>Staff member<select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>{data.members.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>What should they do?<textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} autoFocus /></label>{action.error ? <div className="state-error">{apiErrorMessage(action.error)}</div> : null}<div className="dialog-actions"><button className="btn primary" type="button" disabled={!targetMemberId || !description.trim() || action.isPending} onClick={() => action.mutate('assign')}>{action.isPending ? 'Saving…' : 'Assign follow-up'}</button><button className="btn" type="button" disabled={!description.trim() || action.isPending} onClick={() => action.mutate('dismiss')}>No follow-up needed</button></div><hr /><h3>Call summary</h3><p>{selected.summary}</p><p>{selected.concern}</p><p>{selected.goal}</p>{selected.excerpt ? <blockquote>{selected.excerpt}</blockquote> : null}</div></div> : null}
+  </section>;
 }
 
 function CalendarTab({ data }: { data: CallCenterOverview }) {
@@ -952,7 +974,8 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
     ])
   ));
 
-  return { dailyCallList, priorityGroups, pinBoard };
+  const needsReview = data.kanban.needsReview.filter((item) => matchesText(normalized, [item.customerName, item.phone, item.summary, item.concern, item.goal]));
+  return { needsReview, dailyCallList, priorityGroups, pinBoard };
 }
 
 function groupActiveLabel(group: CallCenterOverview['kanban']['priorityGroups'][number]) {

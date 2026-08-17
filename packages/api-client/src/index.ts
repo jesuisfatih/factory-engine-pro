@@ -57,6 +57,9 @@ import type {
   CallCenterSendMessageInput,
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
+  AssignUnmatchedTranscriptReviewInput,
+  DismissUnmatchedTranscriptReviewInput,
+  UnmatchedTranscriptReviewActionResult,
   CommissionProfileDto,
   CommissionRequestDto,
   CustomerAxisAssignmentsResponse,
@@ -854,6 +857,14 @@ export class ApiClient {
     return this.post<CallCenterActionResult>(`/call-center/customers/${encodeURIComponent(customerId)}/tasks`, input);
   }
 
+  callCenterAssignTranscriptReview(id: string, input: AssignUnmatchedTranscriptReviewInput) {
+    return this.post<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/assign`, input);
+  }
+
+  callCenterDismissTranscriptReview(id: string, input: DismissUnmatchedTranscriptReviewInput) {
+    return this.post<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/dismiss`, input);
+  }
+
   commissionProfiles() {
     return this.get<CommissionProfileDto[]>('/commissions/profiles');
   }
@@ -897,6 +908,14 @@ export class ApiClient {
     if (input.sort && input.sort !== 'newest') query.set('sort', input.sort);
     const suffix = query.size > 0 ? `?${query.toString()}` : '';
     return this.get(`/person/workspace/daily-operations${suffix}`);
+  }
+
+  personAssignTranscriptReview(id: string, input: AssignUnmatchedTranscriptReviewInput) {
+    return this.post<UnmatchedTranscriptReviewActionResult>(`/person/workspace/transcript-reviews/${encodeURIComponent(id)}/assign`, input);
+  }
+
+  personDismissTranscriptReview(id: string, input: DismissUnmatchedTranscriptReviewInput) {
+    return this.post<UnmatchedTranscriptReviewActionResult>(`/person/workspace/transcript-reviews/${encodeURIComponent(id)}/dismiss`, input);
   }
 
   personFrontendCustomization() {

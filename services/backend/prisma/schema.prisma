@@ -57,6 +57,7 @@ model Tenant {
   memberRoles             MemberRole[]
   memberRoleAssignments   MemberRoleAssignment[]
   customers               Customer[]
+  transcriptReviewDecisions TranscriptReviewDecision[]
   customerUsers           CustomerUser[]
   subUsers                SubUser[]
   customerRoles           CustomerRole[]
@@ -3207,6 +3208,28 @@ model TranscriptWorkflowEvaluation {
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
   @@map("transcript_workflow_evaluations")
+}
+
+model TranscriptReviewDecision {
+  id                    String    @id
+  tenantId              String    @map("tenant_id")
+  callEventId           String    @map("call_event_id")
+  evaluationIds         String[]  @default([]) @map("evaluation_ids")
+  status                String    @default("pending_review")
+  assignedStaffWorkItemId String? @map("assigned_staff_work_item_id")
+  reviewedByMemberId    String?   @map("reviewed_by_member_id")
+  reviewedAt            DateTime? @map("reviewed_at")
+  humanDescription      String?   @map("human_description") @db.Text
+  dismissalReason       String?   @map("dismissal_reason") @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, callEventId])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, reviewedByMemberId])
+  @@map("transcript_review_decisions")
 }
 
 model WorkflowRuleCooldown {

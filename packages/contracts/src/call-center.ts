@@ -11,6 +11,48 @@ export const callCenterMemberSchema = z.object({
 });
 export type CallCenterMember = z.infer<typeof callCenterMemberSchema>;
 
+export const unmatchedTranscriptReviewItemSchema = z.object({
+  id: z.string(),
+  callEventId: z.string(),
+  phone: z.string().nullable(),
+  customerId: z.string().nullable(),
+  customerName: z.string().nullable(),
+  occurredAt: z.string(),
+  direction: z.enum(['inbound', 'outbound', 'unknown']),
+  reason: z.string(),
+  summary: z.string(),
+  concern: z.string(),
+  goal: z.string(),
+  suggestedActions: z.array(z.string()),
+  excerpt: z.string().nullable(),
+  mood: z.string().nullable(),
+  intents: z.array(z.string()),
+  psychTags: z.array(z.string()),
+  shopifyMatched: z.boolean(),
+  lastOrderSummary: z.string().nullable(),
+  lastCallSummary: z.string().nullable(),
+});
+export type UnmatchedTranscriptReviewItem = z.infer<typeof unmatchedTranscriptReviewItemSchema>;
+
+export const assignUnmatchedTranscriptReviewSchema = z.object({
+  targetMemberId: z.string().trim().min(1),
+  description: z.string().trim().min(1).max(2000),
+});
+export type AssignUnmatchedTranscriptReviewInput = z.infer<typeof assignUnmatchedTranscriptReviewSchema>;
+
+export const dismissUnmatchedTranscriptReviewSchema = z.object({
+  reason: z.string().trim().min(1).max(2000),
+});
+export type DismissUnmatchedTranscriptReviewInput = z.infer<typeof dismissUnmatchedTranscriptReviewSchema>;
+
+export const unmatchedTranscriptReviewActionResultSchema = z.object({
+  ok: z.literal(true),
+  reviewId: z.string(),
+  status: z.enum(['assigned', 'dismissed']),
+  staffWorkItemId: z.string().nullable(),
+});
+export type UnmatchedTranscriptReviewActionResult = z.infer<typeof unmatchedTranscriptReviewActionResultSchema>;
+
 export const callCenterTaskSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -203,6 +245,7 @@ export const callCenterOverviewSchema = z.object({
   members: z.array(callCenterMemberSchema),
   preview: callCenterPreviewSchema,
   kanban: z.object({
+    needsReview: z.array(unmatchedTranscriptReviewItemSchema),
     dailyCallList: z.array(callCenterTaskSchema),
     priorityGroups: z.array(callCenterPriorityGroupSchema),
     pinBoard: z.array(callCenterPinSchema),

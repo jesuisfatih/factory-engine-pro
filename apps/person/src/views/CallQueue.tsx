@@ -3,11 +3,11 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
+import type { FrontendCustomizationRuntimeDto, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel, CustomerInternalNoteComposer } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { assignTranscriptReview, dismissTranscriptReview, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationFilter, DailyOperationRange, DailyOperationSort, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
@@ -48,6 +48,8 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
+  const [reviewItem, setReviewItem] = useState<UnmatchedTranscriptReviewItem | null>(null);
+  const [reviewDescription, setReviewDescription] = useState('');
   const [dailyFilter, setDailyFilter] = useState<DailyOperationFilter>('all');
   const [archiveSort, setArchiveSort] = useState<DailyOperationSort>('newest');
   const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
@@ -78,6 +80,13 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
   const summary = data?.summary;
+  const needsReview = data?.needsReview ?? [];
+  const reviewAction = useMutation({
+    mutationFn: (input: { mode: 'assign' | 'dismiss'; item: UnmatchedTranscriptReviewItem; text: string }) => input.mode === 'assign'
+      ? assignTranscriptReview(input.item.id, { targetMemberId: summary!.viewer.id, description: input.text })
+      : dismissTranscriptReview(input.item.id, { reason: input.text }),
+    onSuccess: async () => { setReviewItem(null); setReviewDescription(''); await qc.invalidateQueries({ queryKey: QK_BASE }); },
+  });
   const filteredDaily = daily;
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
@@ -457,6 +466,19 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             </section>
           ) : null}
 
+          {!archive && <section className="missed-v2 transcript-review-section" aria-labelledby="needs-review-title">
+            <div className="missed-v2-head">
+              <span className="missed-v2-icon"><ShieldAlert size={15} /></span>
+              <div className="missed-v2-title"><h2 id="needs-review-title">Needs review</h2><p>Review calls that do not have a follow-up yet.</p></div>
+              <span className="missed-v2-badge">{needsReview.length}</span>
+            </div>
+            {needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : <div className="review-card-list">{needsReview.map((item) => (
+              <button type="button" className="review-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
+                <strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small>
+              </button>
+            ))}</div>}
+          </section>}
+
           <section className="missed-v2 followup-v2" id="followup-list-section">
             <div className="missed-v2-head followup-head">
               <span className="missed-v2-icon followup-icon"><ListChecks size={15} /></span>
@@ -684,6 +706,17 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} contextTone={selectedContextTone} onClose={closeTaskModal} />}
+      {reviewItem && <div className="dialog-backdrop" role="presentation" onMouseDown={() => !reviewAction.isPending && setReviewItem(null)}>
+        <section className="dialog-card transcript-review-modal" role="dialog" aria-modal="true" aria-labelledby="assign-review-title" onMouseDown={(event) => event.stopPropagation()}>
+          <button type="button" className="dialog-close" aria-label="Close" onClick={() => setReviewItem(null)}><X size={18} /></button>
+          <h2 id="assign-review-title">Assign follow-up</h2><p><strong>{reviewItem.customerName ?? reviewItem.phone ?? 'Unknown caller'}</strong></p>
+          <label>Assigned to<input value={summary?.viewer.name ?? ''} disabled /></label>
+          <label>What should they do?<textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={4} autoFocus /></label>
+          {reviewAction.error ? <div className="ops-inline-error">{friendlyError(reviewAction.error)}</div> : null}
+          <div className="dialog-actions"><button type="button" className="btn" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>Assign follow-up</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
+          <hr /><h3>Call summary</h3><p>{reviewItem.summary}</p><p>{reviewItem.concern}</p><p>{reviewItem.goal}</p>{reviewItem.excerpt ? <blockquote>{reviewItem.excerpt}</blockquote> : null}
+        </section>
+      </div>}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}

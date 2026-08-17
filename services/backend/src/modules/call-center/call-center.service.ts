@@ -28,6 +28,7 @@ import { RealtimeService } from '../../shared/realtime.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import { AircallService } from '../aircall/aircall.service.js';
 import { CustomersService } from '../customers/customers.service.js';
+import { TranscriptReviewService } from '../staff-work/transcript-review.service.js';
 
 const CLOSED = new Set(['closed', 'resolved', 'cancelled']);
 const DAILY_AXES = ['sales', 'account'];
@@ -45,6 +46,7 @@ export class CallCenterService {
     private readonly aircall: AircallService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
+    private readonly transcriptReviews: TranscriptReviewService,
   ) {}
 
   async overview(): Promise<CallCenterOverview> {
@@ -68,6 +70,7 @@ export class CallCenterService {
       callStats,
       taskActivity,
       activeRuleFire,
+      needsReview,
     ] = await Promise.all([
       this.dailyCallList(weekStart, memberById),
       this.priorityGroups(memberById),
@@ -80,6 +83,7 @@ export class CallCenterService {
       this.callStats(todayStart, memberByAircallId),
       this.taskActivity(memberById),
       this.activeRuleFire(weekStart),
+      this.transcriptReviews.list(100),
     ]);
 
     return {
@@ -94,6 +98,7 @@ export class CallCenterService {
         activeRuleFire,
       },
       kanban: {
+        needsReview,
         dailyCallList,
         priorityGroups,
         pinBoard,
@@ -102,6 +107,14 @@ export class CallCenterService {
       notes,
       messages,
     };
+  }
+
+  assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) {
+    return this.transcriptReviews.assign(callEventId, input, false);
+  }
+
+  dismissTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) {
+    return this.transcriptReviews.dismiss(callEventId, input);
   }
 
   async customerDetail(id: string): Promise<CustomerDetailPanelDto> {

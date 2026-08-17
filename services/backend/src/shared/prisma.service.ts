@@ -103,6 +103,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'WorkflowRule',
   'WorkflowRuleExecution',
   'TranscriptWorkflowEvaluation',
+  'TranscriptReviewDecision',
   'WorkflowRuleCooldown',
   'WorkflowRuleVersion',
   'WorkflowRuleBackfillReport',

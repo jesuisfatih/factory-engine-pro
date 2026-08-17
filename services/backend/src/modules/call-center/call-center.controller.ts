@@ -5,12 +5,16 @@ import {
   callCenterSaveCustomerNoteSchema,
   callCenterSendMessageSchema,
   callCenterTransferTaskSchema,
+  assignUnmatchedTranscriptReviewSchema,
+  dismissUnmatchedTranscriptReviewSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
   type CallCenterReplyNoteInput,
   type CallCenterSaveCustomerNoteInput,
   type CallCenterSendMessageInput,
   type CallCenterTransferTaskInput,
+  type AssignUnmatchedTranscriptReviewInput,
+  type DismissUnmatchedTranscriptReviewInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -24,6 +28,18 @@ export class CallCenterController {
   @RequirePermission(MEMBER_PERMISSIONS.membersRead, MEMBER_PERMISSIONS.taskAssign)
   overview() {
     return this.callCenter.overview();
+  }
+
+  @Post('transcript-reviews/:id/assign')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  assignTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(assignUnmatchedTranscriptReviewSchema)) body: AssignUnmatchedTranscriptReviewInput) {
+    return this.callCenter.assignTranscriptReview(id, body);
+  }
+
+  @Post('transcript-reviews/:id/dismiss')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  dismissTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(dismissUnmatchedTranscriptReviewSchema)) body: DismissUnmatchedTranscriptReviewInput) {
+    return this.callCenter.dismissTranscriptReview(id, body);
   }
 
   @Post('tasks/sync')
