@@ -67,6 +67,15 @@ export const releaseAssignedTranscriptReviewSchema = z.object({
 });
 export type ReleaseAssignedTranscriptReviewInput = z.infer<typeof releaseAssignedTranscriptReviewSchema>;
 
+export const transcriptReviewTaskStatusSchema = z.enum(['assigned', 'in_progress', 'customer_waiting', 'completed']);
+export type TranscriptReviewTaskStatus = z.infer<typeof transcriptReviewTaskStatusSchema>;
+
+export const updateAssignedTranscriptReviewStatusSchema = z.object({
+  status: transcriptReviewTaskStatusSchema,
+  comment: z.string().trim().max(2000).optional(),
+});
+export type UpdateAssignedTranscriptReviewStatusInput = z.infer<typeof updateAssignedTranscriptReviewStatusSchema>;
+
 export const dismissUnmatchedTranscriptReviewSchema = z.object({
   reason: z.string().trim().min(1).max(2000),
 });

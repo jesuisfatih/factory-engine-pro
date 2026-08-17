@@ -60,6 +60,7 @@ import type {
   AssignUnmatchedTranscriptReviewInput,
   DismissUnmatchedTranscriptReviewInput,
   UnmatchedTranscriptReviewActionResult,
+  UpdateAssignedTranscriptReviewStatusInput,
   CommissionProfileDto,
   CommissionRequestDto,
   CustomerAxisAssignmentsResponse,
@@ -872,6 +873,10 @@ export class ApiClient {
 
   callCenterReleaseTranscriptReview(id: string, input: import('@factory-engine-pro/contracts').ReleaseAssignedTranscriptReviewInput = {}) {
     return this.post<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/release`, input);
+  }
+
+  callCenterUpdateTranscriptReviewStatus(id: string, input: UpdateAssignedTranscriptReviewStatusInput) {
+    return this.patch<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/status`, input);
   }
 
   commissionProfiles() {

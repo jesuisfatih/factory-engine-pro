@@ -9,6 +9,7 @@ import {
   assignUnmatchedTranscriptReviewSchema,
   dismissUnmatchedTranscriptReviewSchema,
   releaseAssignedTranscriptReviewSchema,
+  updateAssignedTranscriptReviewStatusSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
   type CallCenterOverviewQuery,
@@ -19,6 +20,7 @@ import {
   type AssignUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
   type ReleaseAssignedTranscriptReviewInput,
+  type UpdateAssignedTranscriptReviewStatusInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -56,6 +58,12 @@ export class CallCenterController {
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   releaseTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(releaseAssignedTranscriptReviewSchema)) body: ReleaseAssignedTranscriptReviewInput) {
     return this.callCenter.releaseTranscriptReview(id, body);
+  }
+
+  @Patch('transcript-reviews/:id/status')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  updateTranscriptReviewStatus(@Param('id') id: string, @Body(new ZodValidationPipe(updateAssignedTranscriptReviewStatusSchema)) body: UpdateAssignedTranscriptReviewStatusInput) {
+    return this.callCenter.updateTranscriptReviewStatus(id, body);
   }
 
   @Post('tasks/sync')

@@ -14,7 +14,7 @@ import {
   StickyNote,
   Activity,
 } from 'lucide-react';
-import type { AssignedTranscriptReviewItem, CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
+import type { AssignedTranscriptReviewItem, CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer, TranscriptReviewTaskStatus, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { apiErrorMessage } from '@/lib/api';
@@ -27,6 +27,7 @@ import {
   replyCallCenterNote,
   reassignCallCenterTranscriptReview,
   releaseCallCenterTranscriptReview,
+  updateCallCenterTranscriptReviewStatus,
   saveCallCenterCustomerNote,
   sendCallCenterMessage,
   syncCallCenterTasks,
@@ -560,6 +561,25 @@ function NeedsReviewPanel({ data, items }: { data: CallCenterOverview; items: Un
 }
 
 const COMPLETED_REVIEW_STATUSES = new Set(['closed', 'resolved', 'completed', 'archived', 'cancelled']);
+const REVIEW_LIFECYCLE: Array<{ value: TranscriptReviewTaskStatus; label: string }> = [
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'customer_waiting', label: 'Customer waiting' },
+  { value: 'completed', label: 'Completed' },
+];
+
+function reviewLifecycleStatus(status: string): TranscriptReviewTaskStatus {
+  const normalized = status.toLowerCase();
+  if (COMPLETED_REVIEW_STATUSES.has(normalized)) return 'completed';
+  if (normalized === 'pending_resolve' || normalized === 'waiting_on_customer' || normalized === 'positive') return 'customer_waiting';
+  if (normalized === 'in_progress') return 'in_progress';
+  return 'assigned';
+}
+
+function reviewLifecycleLabel(status: string) {
+  const value = reviewLifecycleStatus(status);
+  return REVIEW_LIFECYCLE.find((item) => item.value === value)?.label ?? 'Assigned';
+}
 
 function isCompletedReview(item: AssignedTranscriptReviewItem) {
   return Boolean(item.completedAt) || COMPLETED_REVIEW_STATUSES.has(item.status.toLowerCase());
@@ -571,14 +591,20 @@ function ReviewAssignmentsPanel({ data, items, onOpenCustomer }: { data: CallCen
   const [selected, setSelected] = useState<AssignedTranscriptReviewItem | null>(null);
   const [targetMemberId, setTargetMemberId] = useState('');
   const [description, setDescription] = useState('');
+  const [taskStatus, setTaskStatus] = useState<TranscriptReviewTaskStatus>('assigned');
+  const [statusComment, setStatusComment] = useState('');
   const action = useMutation({
-    mutationFn: (mode: 'save' | 'release') => mode === 'save'
-      ? reassignCallCenterTranscriptReview(selected!.callEventId, { targetMemberId, description })
-      : releaseCallCenterTranscriptReview(selected!.callEventId, { reason: 'Returned to Needs review by an administrator' }),
+    mutationFn: (mode: 'save' | 'status' | 'release') => {
+      if (mode === 'save') return reassignCallCenterTranscriptReview(selected!.callEventId, { targetMemberId, description });
+      if (mode === 'status') return updateCallCenterTranscriptReviewStatus(selected!.callEventId, { status: taskStatus, comment: statusComment.trim() || undefined });
+      return releaseCallCenterTranscriptReview(selected!.callEventId, { reason: 'Returned to Needs review by an administrator' });
+    },
     onSuccess: async (_result, mode) => {
       setSelected(null);
       setTargetMemberId('');
       setDescription('');
+      setTaskStatus('assigned');
+      setStatusComment('');
       if (mode === 'release') setView('active');
       await qc.invalidateQueries({ queryKey: ['call-center'] });
     },
@@ -587,6 +613,8 @@ function ReviewAssignmentsPanel({ data, items, onOpenCustomer }: { data: CallCen
     setSelected(item);
     setTargetMemberId(item.assignedMemberId ?? data.members.find((member) => member.status === 'active')?.id ?? '');
     setDescription(item.description ?? '');
+    setTaskStatus(reviewLifecycleStatus(item.status));
+    setStatusComment('');
   };
   const active = items.filter((item) => !isCompletedReview(item));
   const completed = items.filter(isCompletedReview);
@@ -601,7 +629,7 @@ function ReviewAssignmentsPanel({ data, items, onOpenCustomer }: { data: CallCen
       {visible.map((item) => <article key={item.id} className="review-assignment-card">
         <div className="review-assignment-card-head">
           <div><strong>{item.customerName ?? item.customerPhone ?? item.title}</strong><span>{item.title}</span></div>
-          <span className={`review-status ${isCompletedReview(item) ? 'completed' : 'active'}`}>{titleizeStatus(item.status)}</span>
+          <span className={`review-status status-${reviewLifecycleStatus(item.status)}`}>{reviewLifecycleLabel(item.status)}</span>
         </div>
         {item.description ? <p>{item.description}</p> : null}
         {item.latestComment ? <div className="review-latest-comment"><strong>Latest staff update</strong><span>{item.latestComment}</span>{item.latestCommentAt ? <small>{new Date(item.latestCommentAt).toLocaleString()}</small> : null}</div> : null}
@@ -615,7 +643,7 @@ function ReviewAssignmentsPanel({ data, items, onOpenCustomer }: { data: CallCen
         </div>
       </article>)}
     </div>}
-    {selected ? <div className="dialog-overlay" onMouseDown={() => !action.isPending && setSelected(null)}><div className="dialog" role="dialog" aria-modal="true" aria-labelledby="admin-assignment-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="admin-assignment-title">Manage review assignment</h2><p><strong>{selected.customerName ?? selected.customerPhone ?? selected.title}</strong></p><label>Assigned staff member<select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>{data.members.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>What should they do?<textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} autoFocus /></label>{action.error ? <div className="state-error">{apiErrorMessage(action.error)}</div> : null}<div className="dialog-actions"><button className="btn primary" type="button" disabled={!targetMemberId || !description.trim() || action.isPending} onClick={() => action.mutate('save')}>{action.isPending ? 'Saving…' : 'Save assignment'}</button><button className="btn danger-outline" type="button" disabled={action.isPending} onClick={() => { if (window.confirm('Return this call to Needs review and remove the current staff assignment?')) action.mutate('release'); }}>Return to Needs review</button><button className="btn" type="button" disabled={action.isPending} onClick={() => setSelected(null)}>Cancel</button></div></div></div> : null}
+    {selected ? <div className="dialog-overlay" onMouseDown={() => !action.isPending && setSelected(null)}><div className="dialog" role="dialog" aria-modal="true" aria-labelledby="admin-assignment-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="admin-assignment-title">Manage review assignment</h2><p><strong>{selected.customerName ?? selected.customerPhone ?? selected.title}</strong></p><div className="review-lifecycle-track" aria-label="Task lifecycle">{REVIEW_LIFECYCLE.map((item, index) => { const currentIndex = REVIEW_LIFECYCLE.findIndex((candidate) => candidate.value === taskStatus); return <span key={item.value} className={index < currentIndex ? 'done' : index === currentIndex ? 'current' : ''}><i />{item.label}</span>; })}</div><label>Task status<select value={taskStatus} onChange={(event) => setTaskStatus(event.target.value as TranscriptReviewTaskStatus)}>{REVIEW_LIFECYCLE.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>Status comment (optional)<textarea rows={2} value={statusComment} onChange={(event) => setStatusComment(event.target.value)} placeholder="Add context for the staff member and task history…" /></label><button className="btn review-status-save" type="button" disabled={action.isPending || (taskStatus === reviewLifecycleStatus(selected.status) && !statusComment.trim())} onClick={() => action.mutate('status')}>{action.isPending ? 'Saving…' : 'Save task status'}</button><hr /><label>Assigned staff member<select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>{data.members.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>What should they do?<textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} /></label>{action.error ? <div className="state-error">{apiErrorMessage(action.error)}</div> : null}<div className="dialog-actions"><button className="btn primary" type="button" disabled={!targetMemberId || !description.trim() || action.isPending} onClick={() => action.mutate('save')}>{action.isPending ? 'Saving…' : 'Save assignment'}</button><button className="btn danger-outline" type="button" disabled={action.isPending} onClick={() => { if (window.confirm('Return this call to Needs review and remove the current staff assignment?')) action.mutate('release'); }}>Return to Needs review</button><button className="btn" type="button" disabled={action.isPending} onClick={() => setSelected(null)}>Cancel</button></div></div></div> : null}
   </section>;
 }
 

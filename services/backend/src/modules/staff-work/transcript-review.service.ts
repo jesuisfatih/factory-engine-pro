@@ -6,8 +6,10 @@ import {
   type AssignUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
   type ReleaseAssignedTranscriptReviewInput,
+  type TranscriptReviewTaskStatus,
   type UnmatchedTranscriptReviewActionResult,
   type UnmatchedTranscriptReviewItem,
+  type UpdateAssignedTranscriptReviewStatusInput,
 } from '@factory-engine-pro/contracts';
 import { currentModelResolverOutput } from '../ai/transcript-resolver-trust.js';
 import { CustomerContactResolverService } from '../../shared/customer-contact-resolver.service.js';
@@ -19,6 +21,12 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { StaffWorkService } from './staff-work.service.js';
 
 const UNMATCHED = ['no_matching_rule', 'no_action_unmatched'];
+const REVIEW_TASK_STATUS: Record<TranscriptReviewTaskStatus, { label: string; workState: string; queueLocation: string; status: string }> = {
+  assigned: { label: 'Assigned', workState: 'open', queueLocation: 'follow_up', status: 'open' },
+  in_progress: { label: 'In progress', workState: 'in_progress', queueLocation: 'follow_up', status: 'in_progress' },
+  customer_waiting: { label: 'Customer waiting', workState: 'pending_resolve', queueLocation: 'follow_up', status: 'pending_resolve' },
+  completed: { label: 'Completed', workState: 'closed', queueLocation: 'archive', status: 'closed' },
+};
 
 @Injectable()
 export class TranscriptReviewService {
@@ -209,24 +217,25 @@ export class TranscriptReviewService {
     const metadata = task.metadata && typeof task.metadata === 'object' && !Array.isArray(task.metadata)
       ? task.metadata as Record<string, unknown>
       : {};
-    await this.prisma.db.$transaction([
-      this.prisma.db.staffWorkItem.update({
+    await this.prisma.db.$transaction(async (tx) => {
+      const updatedTask = await tx.staffWorkItem.updateMany({
         where: { id: task.id },
         data: {
           assignedMemberId: target.id,
           description: input.description,
           metadata: { ...metadata, manualDescription: input.description } as Prisma.InputJsonValue,
         },
-      }),
-      this.prisma.db.transcriptReviewDecision.update({
-        where: { id: decision.id },
+      });
+      const updatedDecision = await tx.transcriptReviewDecision.updateMany({
+        where: { id: decision.id, status: 'assigned' },
         data: {
           reviewedByMemberId: actor.id,
           reviewedAt: new Date(),
           humanDescription: input.description,
         },
-      }),
-    ]);
+      });
+      if (updatedTask.count !== 1 || updatedDecision.count !== 1) throw new ConflictException('This review assignment changed while it was being saved');
+    });
     this.changed('reassign', callEventId, actor.id, task.id);
     return { ok: true, reviewId: decision.id, status: 'assigned', staffWorkItemId: task.id };
   }
@@ -235,8 +244,8 @@ export class TranscriptReviewService {
     const actor = await this.currentMember();
     const { decision, task } = await this.requireAssigned(callEventId);
     const now = new Date();
-    await this.prisma.db.$transaction([
-      this.prisma.db.staffWorkItem.update({
+    await this.prisma.db.$transaction(async (tx) => {
+      const updatedTask = await tx.staffWorkItem.updateMany({
         where: { id: task.id },
         data: {
           assignedMemberId: null,
@@ -248,9 +257,9 @@ export class TranscriptReviewService {
           archiveReason: input.reason?.trim() || 'Returned to transcript review pool',
           idempotencyKey: null,
         },
-      }),
-      this.prisma.db.transcriptReviewDecision.update({
-        where: { id: decision.id },
+      });
+      const updatedDecision = await tx.transcriptReviewDecision.updateMany({
+        where: { id: decision.id, status: 'assigned' },
         data: {
           status: 'pending_review',
           assignedStaffWorkItemId: null,
@@ -259,10 +268,47 @@ export class TranscriptReviewService {
           humanDescription: null,
           dismissalReason: null,
         },
-      }),
-    ]);
+      });
+      if (updatedTask.count !== 1 || updatedDecision.count !== 1) throw new ConflictException('This review assignment changed while it was being returned to the pool');
+    });
     this.changed('release', callEventId, actor.id, null);
     return { ok: true, reviewId: decision.id, status: 'pending_review', staffWorkItemId: null };
+  }
+
+  async updateAssignmentStatus(callEventId: string, input: UpdateAssignedTranscriptReviewStatusInput): Promise<UnmatchedTranscriptReviewActionResult> {
+    const actor = await this.currentMember();
+    const { decision, task } = await this.requireAssigned(callEventId);
+    const next = REVIEW_TASK_STATUS[input.status];
+    const now = new Date();
+    await this.staffWork.transition(task.id, {
+      memberId: actor.id,
+      toWorkState: next.workState,
+      toQueue: next.queueLocation,
+      reason: 'admin_transcript_review_status',
+      data: {
+        status: next.status,
+        ...(input.status === 'completed'
+          ? { closedAt: task.closedAt ?? now, archivedAt: now, archiveReason: 'review_follow_up_completed' }
+          : { closedAt: null, archivedAt: null, archiveReason: null }),
+      },
+    });
+    const comment = input.comment?.trim();
+    if (comment) {
+      await this.prisma.db.staffWorkComment.create({
+        data: {
+          id: prefixedId('swc'),
+          tenantId: this.tenantId(),
+          staffWorkItemId: task.id,
+          actorId: actor.id,
+          actorType: 'member',
+          body: `[Task status: ${next.label}] ${comment}`,
+          internal: true,
+          attachmentsJson: [{ kind: 'admin_review_status' }] as Prisma.InputJsonValue,
+        },
+      });
+    }
+    this.changed('status', callEventId, actor.id, task.id);
+    return { ok: true, reviewId: decision.id, status: 'assigned', staffWorkItemId: task.id };
   }
 
   private async requireAssigned(callEventId: string) {

@@ -132,6 +132,10 @@ export class CallCenterService {
     return this.transcriptReviews.releaseAssignment(callEventId, input);
   }
 
+  updateTranscriptReviewStatus(callEventId: string, input: import('@factory-engine-pro/contracts').UpdateAssignedTranscriptReviewStatusInput) {
+    return this.transcriptReviews.updateAssignmentStatus(callEventId, input);
+  }
+
   async customerDetail(id: string): Promise<CustomerDetailPanelDto> {
     return this.customers.detail(id);
   }

@@ -396,13 +396,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
-      {isPlaceholderData ? (
-        <div className="workspace-hydration" role="status">
-          <span className="workspace-hydration-spinner" aria-hidden="true" />
-          <span>Loading priority customers and review queue in the background…</span>
-        </div>
-      ) : null}
-
       <QueryState
         isLoading={isLoading}
         error={error ? new Error(friendlyError(error)) : null}
@@ -513,11 +506,18 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               </button>
               <span className="missed-v2-badge">{needsReview.length}</span>
             </div>
-            {activeSection === 'review' ? needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : <div className="review-card-list">{needsReview.map((item) => (
-                <button type="button" className="review-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
-                  <strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small>
+            {activeSection === 'review' ? <div className="review-pool-body">
+              {isPlaceholderData ? <div className="workspace-hydration review-queue-loading" role="status"><span className="workspace-hydration-spinner" aria-hidden="true" /><span><strong>Loading review queue…</strong><small>Priority customers and calls are being prepared in the background.</small></span></div> : null}
+              {!isPlaceholderData && needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : null}
+              {needsReview.length > 0 ? <div className="review-card-list">{needsReview.map((item, index) => (
+                <button type="button" className="review-card review-pool-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
+                  <span className="review-pool-card-head"><span className="review-pool-identity"><span className="review-pool-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>{initialsFor(item.customerName ?? item.phone ?? 'Unknown caller')}</span><span><strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><small>{item.phone && item.customerName ? item.phone : item.shopifyMatched ? 'Shopify customer matched' : 'Unmatched caller'}</small></span></span><span className="review-pool-status"><i />Unassigned</span></span>
+                  <span className="review-pool-summary">{personSafeText(item.summary)}</span>
+                  <span className="review-pool-chips">{item.mood ? <em>{personSafeText(item.mood)}</em> : null}<em>{item.direction}</em>{item.shopifyMatched ? <em>Shopify matched</em> : null}</span>
+                  <span className="review-pool-footer"><small><Clock size={12} />{new Date(item.occurredAt).toLocaleString()}</small><strong>Review task <span aria-hidden="true">→</span></strong></span>
                 </button>
               ))}</div> : null}
+            </div> : null}
           </section>}
 
           <section className="missed-v2 followup-v2" id="followup-list-section">
