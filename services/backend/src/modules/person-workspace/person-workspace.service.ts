@@ -645,7 +645,15 @@ export class PersonWorkspaceService {
           { OR: archiveDateScope },
           ...(end === null
             ? []
-            : [{ archivedAt: null }, { queueLocation: { not: 'archive' } }, { OR: [{ visibleAfter: null }, { visibleAfter: { lte: new Date() } }] }]),
+            : [
+                { archivedAt: null },
+                { queueLocation: { not: 'archive' } },
+                { OR: [
+                  { source: 'manual_transcript_review' },
+                  { visibleAfter: null },
+                  { visibleAfter: { lte: new Date() } },
+                ] },
+              ]),
         ],
         ...(end === null ? {} : { status: { notIn: Array.from(CLOSED) } }),
       },
@@ -3723,7 +3731,7 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
   if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
       analysisStatus: 'unavailable',
-      displayTitle: 'Review required',
+      displayTitle: card.transcriptReviewTask ? staffSafeDisplayText(card.title) : 'Review required',
       displayReason: '',
       displayConcern: '',
       displayOutcome: '',
