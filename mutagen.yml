@@ -15,8 +15,17 @@ sync:
         - .local
         - .tmp
         - "**/.tmp"
+        - tmp
+        - "**/tmp"
+        - .codex-deploy-*
+        - "*.tar"
+        - "*.tar.gz"
+        - "*.zip"
         - uploads
         - "**/uploads"
+        - docs/evidence
+        - apps/accounts/src/components/main.kcl
+        - extensions/customer-account-extension/manifest.json
         - .env
         - ".env.*"
         - docker-compose.yml
@@ -35,3 +44,23 @@ sync:
   factory-engine-pro-dtfbank:
     alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
     beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-dtfbank"
+
+  factory-engine-pro-eagledtfprint:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-eagledtfprint"
+
+  factory-engine-pro-eagledtfsupply:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-eagledtfsupply"
+
+  factory-engine-pro-fastdtftransfer:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-fastdtftransfer"
+
+  factory-engine-pro-fastdtfsupply:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-fastdtfsupply"
+
+  factory-engine-pro-dtfprintdepot:
+    alpha: "C:/Users/mhmmd/Desktop/factory-engine-pro"
+    beta: "root@144.202.125.169:/opt/apps/custom/factoryengine/factory-engine-pro-dtfprintdepot"
