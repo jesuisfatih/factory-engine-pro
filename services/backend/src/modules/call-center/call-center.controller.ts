@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import {
   callCenterCreateCustomerTaskSchema,
   callCenterReplyNoteSchema,
@@ -7,6 +7,7 @@ import {
   callCenterTransferTaskSchema,
   assignUnmatchedTranscriptReviewSchema,
   dismissUnmatchedTranscriptReviewSchema,
+  releaseAssignedTranscriptReviewSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
   type CallCenterReplyNoteInput,
@@ -15,6 +16,7 @@ import {
   type CallCenterTransferTaskInput,
   type AssignUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
+  type ReleaseAssignedTranscriptReviewInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -40,6 +42,18 @@ export class CallCenterController {
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
   dismissTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(dismissUnmatchedTranscriptReviewSchema)) body: DismissUnmatchedTranscriptReviewInput) {
     return this.callCenter.dismissTranscriptReview(id, body);
+  }
+
+  @Patch('transcript-reviews/:id/assignment')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  reassignTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(assignUnmatchedTranscriptReviewSchema)) body: AssignUnmatchedTranscriptReviewInput) {
+    return this.callCenter.reassignTranscriptReview(id, body);
+  }
+
+  @Post('transcript-reviews/:id/release')
+  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
+  releaseTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(releaseAssignedTranscriptReviewSchema)) body: ReleaseAssignedTranscriptReviewInput) {
+    return this.callCenter.releaseTranscriptReview(id, body);
   }
 
   @Post('tasks/sync')

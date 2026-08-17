@@ -523,6 +523,7 @@ export class PersonWorkspaceService {
     });
 
     const ownedSegmentByCustomer = this.highestOwnedSegmentByCustomer(segmentOwnerships, memberships);
+    const manualReviewTaskIds = new Set(dailyTaskRows.filter((row) => row.source === 'manual_transcript_review').map((row) => row.id));
     const allDailyCards = dailyTaskRows
         .filter((row) => this.isQueueVisible(row))
         .filter((row) => this.isDailyWorkflowTask(row))
@@ -533,7 +534,7 @@ export class PersonWorkspaceService {
             this.queueCard(row, member.id, config, repeatCounts.get(row.customerId ?? '') ?? 0, cardContext, ownedSegmentByCustomer.get(row.customerId ?? '') ?? null, callContext, cardStrategies, taskPinsByTarget.get(row.id) ?? null),
             contactByCustomer,
           ), contactStates))
-        .filter((card) => personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card)));
+        .filter((card) => manualReviewTaskIds.has(card.id) || personStrategyVisible(taskVisibilityStrategy, personCardStrategySignals(card)));
     const dailyFilterCounts = personDailyFilterCounts(allDailyCards);
     const selectedDailyCards = allDailyCards.filter((card) => personDailyFilterMatches(card, selectedFilter));
     const dailyCallList = (range === 'archive'
@@ -622,6 +623,7 @@ export class PersonWorkspaceService {
           { archivedAt: { not: null } },
         ]
       : [
+          { source: 'manual_transcript_review', archivedAt: null, queueLocation: { not: 'archive' } },
           { queueLocation: 'scheduled', visibleAfter: { gte: start, lt: end } },
           { queueLocation: { not: 'scheduled' }, sourceOccurredAt: { gte: start, lt: end } },
           { queueLocation: { not: 'scheduled' }, sourceOccurredAt: null, createdAt: { gte: start, lt: end } },

@@ -62,6 +62,11 @@ export const assignUnmatchedTranscriptReviewSchema = z.object({
 });
 export type AssignUnmatchedTranscriptReviewInput = z.infer<typeof assignUnmatchedTranscriptReviewSchema>;
 
+export const releaseAssignedTranscriptReviewSchema = z.object({
+  reason: z.string().trim().max(2000).optional(),
+});
+export type ReleaseAssignedTranscriptReviewInput = z.infer<typeof releaseAssignedTranscriptReviewSchema>;
+
 export const dismissUnmatchedTranscriptReviewSchema = z.object({
   reason: z.string().trim().min(1).max(2000),
 });
@@ -70,7 +75,7 @@ export type DismissUnmatchedTranscriptReviewInput = z.infer<typeof dismissUnmatc
 export const unmatchedTranscriptReviewActionResultSchema = z.object({
   ok: z.literal(true),
   reviewId: z.string(),
-  status: z.enum(['assigned', 'dismissed']),
+  status: z.enum(['pending_review', 'assigned', 'dismissed']),
   staffWorkItemId: z.string().nullable(),
 });
 export type UnmatchedTranscriptReviewActionResult = z.infer<typeof unmatchedTranscriptReviewActionResultSchema>;

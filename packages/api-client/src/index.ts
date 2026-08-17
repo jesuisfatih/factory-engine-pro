@@ -865,6 +865,14 @@ export class ApiClient {
     return this.post<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/dismiss`, input);
   }
 
+  callCenterReassignTranscriptReview(id: string, input: AssignUnmatchedTranscriptReviewInput) {
+    return this.patch<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/assignment`, input);
+  }
+
+  callCenterReleaseTranscriptReview(id: string, input: import('@factory-engine-pro/contracts').ReleaseAssignedTranscriptReviewInput = {}) {
+    return this.post<UnmatchedTranscriptReviewActionResult>(`/call-center/transcript-reviews/${encodeURIComponent(id)}/release`, input);
+  }
+
   commissionProfiles() {
     return this.get<CommissionProfileDto[]>('/commissions/profiles');
   }

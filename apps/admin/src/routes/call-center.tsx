@@ -25,6 +25,8 @@ import {
   fetchCallCenterCustomerDetail,
   fetchCallCenterOverview,
   replyCallCenterNote,
+  reassignCallCenterTranscriptReview,
+  releaseCallCenterTranscriptReview,
   saveCallCenterCustomerNote,
   sendCallCenterMessage,
   syncCallCenterTasks,
@@ -323,7 +325,7 @@ function KanbanTab({
     <>
       <div className="review-tracking-grid">
         <NeedsReviewPanel data={data} items={kanban.needsReview} />
-        <ReviewAssignmentsPanel items={kanban.assignedReviews} onOpenCustomer={onOpenCustomer} />
+        <ReviewAssignmentsPanel data={data} items={kanban.assignedReviews} onOpenCustomer={onOpenCustomer} />
       </div>
       <div className="orders-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
         <div className="orders-search" style={{ minWidth: 260, flex: 1 }}>
@@ -551,8 +553,29 @@ function isCompletedReview(item: AssignedTranscriptReviewItem) {
   return Boolean(item.completedAt) || COMPLETED_REVIEW_STATUSES.has(item.status.toLowerCase());
 }
 
-function ReviewAssignmentsPanel({ items, onOpenCustomer }: { items: AssignedTranscriptReviewItem[]; onOpenCustomer: (customerId: string) => void }) {
+function ReviewAssignmentsPanel({ data, items, onOpenCustomer }: { data: CallCenterOverview; items: AssignedTranscriptReviewItem[]; onOpenCustomer: (customerId: string) => void }) {
+  const qc = useQueryClient();
   const [view, setView] = useState<'active' | 'completed'>('active');
+  const [selected, setSelected] = useState<AssignedTranscriptReviewItem | null>(null);
+  const [targetMemberId, setTargetMemberId] = useState('');
+  const [description, setDescription] = useState('');
+  const action = useMutation({
+    mutationFn: (mode: 'save' | 'release') => mode === 'save'
+      ? reassignCallCenterTranscriptReview(selected!.callEventId, { targetMemberId, description })
+      : releaseCallCenterTranscriptReview(selected!.callEventId, { reason: 'Returned to Needs review by an administrator' }),
+    onSuccess: async (_result, mode) => {
+      setSelected(null);
+      setTargetMemberId('');
+      setDescription('');
+      if (mode === 'release') setView('active');
+      await qc.invalidateQueries({ queryKey: ['call-center'] });
+    },
+  });
+  const open = (item: AssignedTranscriptReviewItem) => {
+    setSelected(item);
+    setTargetMemberId(item.assignedMemberId ?? data.members.find((member) => member.status === 'active')?.id ?? '');
+    setDescription(item.description ?? '');
+  };
   const active = items.filter((item) => !isCompletedReview(item));
   const completed = items.filter(isCompletedReview);
   const visible = view === 'active' ? active : completed;
@@ -574,9 +597,13 @@ function ReviewAssignmentsPanel({ items, onOpenCustomer }: { items: AssignedTran
           <span>Assigned to <strong>{item.assignedMemberName}</strong> · {item.assignedMemberRole}</span>
           <span>{new Date(item.assignedAt).toLocaleString()} · {item.priority} priority</span>
         </div>
-        {item.customerId ? <button type="button" className="btn ghost review-open-customer" onClick={() => onOpenCustomer(item.customerId!)}>Open customer</button> : null}
+        <div className="review-assignment-actions">
+          {item.customerId ? <button type="button" className="btn ghost review-open-customer" onClick={() => onOpenCustomer(item.customerId!)}>Open customer</button> : null}
+          <button type="button" className="btn ghost" onClick={() => open(item)}><ArrowRightLeft size={13} /> Manage assignment</button>
+        </div>
       </article>)}
     </div>}
+    {selected ? <div className="dialog-overlay" onMouseDown={() => !action.isPending && setSelected(null)}><div className="dialog" role="dialog" aria-modal="true" aria-labelledby="admin-assignment-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="admin-assignment-title">Manage review assignment</h2><p><strong>{selected.customerName ?? selected.customerPhone ?? selected.title}</strong></p><label>Assigned staff member<select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>{data.members.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>What should they do?<textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} autoFocus /></label>{action.error ? <div className="state-error">{apiErrorMessage(action.error)}</div> : null}<div className="dialog-actions"><button className="btn primary" type="button" disabled={!targetMemberId || !description.trim() || action.isPending} onClick={() => action.mutate('save')}>{action.isPending ? 'Saving…' : 'Save assignment'}</button><button className="btn danger-outline" type="button" disabled={action.isPending} onClick={() => { if (window.confirm('Return this call to Needs review and remove the current staff assignment?')) action.mutate('release'); }}>Return to Needs review</button><button className="btn" type="button" disabled={action.isPending} onClick={() => setSelected(null)}>Cancel</button></div></div></div> : null}
   </section>;
 }
 

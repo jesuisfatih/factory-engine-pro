@@ -270,6 +270,8 @@ export async function createCallCenterCustomerTask(customerId: string, input: Ca
 }
 export const assignCallCenterTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) => adminApi.callCenterAssignTranscriptReview(id, input);
 export const dismissCallCenterTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) => adminApi.callCenterDismissTranscriptReview(id, input);
+export const reassignCallCenterTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) => adminApi.callCenterReassignTranscriptReview(id, input);
+export const releaseCallCenterTranscriptReview = (id: string, input: import('@factory-engine-pro/contracts').ReleaseAssignedTranscriptReviewInput = {}) => adminApi.callCenterReleaseTranscriptReview(id, input);
 
 export async function fetchTasks(surface: TaskSurface): Promise<TaskRow[]> {
   const response = await adminApi.supportRequests('?limit=100&surface=all') as { items?: unknown[] };

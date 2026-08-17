@@ -5,6 +5,7 @@ import {
   type AssignedTranscriptReviewItem,
   type AssignUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
+  type ReleaseAssignedTranscriptReviewInput,
   type UnmatchedTranscriptReviewActionResult,
   type UnmatchedTranscriptReviewItem,
 } from '@factory-engine-pro/contracts';
@@ -114,7 +115,6 @@ export class TranscriptReviewService {
       }),
       this.prisma.db.aircallCallEvent.findMany({
         where: { id: { in: decisions.map((row) => row.callEventId) } },
-        select: { id: true, contactPhoneE164: true, contactPhone: true },
       }),
     ]);
     const workItemById = new Map(workItems.map((row) => [row.id, row]));
@@ -123,13 +123,14 @@ export class TranscriptReviewService {
       const task = decision.assignedStaffWorkItemId ? workItemById.get(decision.assignedStaffWorkItemId) : null;
       if (!task) return [];
       const call = callById.get(decision.callEventId);
+      const resolver = call ? currentModelResolverOutput(call) : null;
       const member = task.assignedMember;
       return [{
         id: decision.id,
         callEventId: decision.callEventId,
         staffWorkItemId: task.id,
         customerId: task.customerId,
-        customerName: task.customer ? customerName(task.customer) : null,
+        customerName: task.customer ? customerName(task.customer) : resolver?.customer_match.name_hint ?? null,
         customerPhone: task.customer?.phone ?? call?.contactPhoneE164 ?? call?.contactPhone ?? null,
         title: task.title,
         description: decision.humanDescription ?? task.description,
@@ -198,6 +199,80 @@ export class TranscriptReviewService {
     });
     this.changed('dismiss', callEventId, actor.id, null);
     return { ok: true, reviewId: decision.id, status: 'dismissed', staffWorkItemId: null };
+  }
+
+  async reassign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput): Promise<UnmatchedTranscriptReviewActionResult> {
+    const actor = await this.currentMember();
+    const target = await this.prisma.db.member.findFirst({ where: { id: input.targetMemberId, status: 'active' } });
+    if (!target) throw new NotFoundException('Assignment target is not available');
+    const { decision, task } = await this.requireAssigned(callEventId);
+    const metadata = task.metadata && typeof task.metadata === 'object' && !Array.isArray(task.metadata)
+      ? task.metadata as Record<string, unknown>
+      : {};
+    await this.prisma.db.$transaction([
+      this.prisma.db.staffWorkItem.update({
+        where: { id: task.id },
+        data: {
+          assignedMemberId: target.id,
+          description: input.description,
+          metadata: { ...metadata, manualDescription: input.description } as Prisma.InputJsonValue,
+        },
+      }),
+      this.prisma.db.transcriptReviewDecision.update({
+        where: { id: decision.id },
+        data: {
+          reviewedByMemberId: actor.id,
+          reviewedAt: new Date(),
+          humanDescription: input.description,
+        },
+      }),
+    ]);
+    this.changed('reassign', callEventId, actor.id, task.id);
+    return { ok: true, reviewId: decision.id, status: 'assigned', staffWorkItemId: task.id };
+  }
+
+  async releaseAssignment(callEventId: string, input: ReleaseAssignedTranscriptReviewInput): Promise<UnmatchedTranscriptReviewActionResult> {
+    const actor = await this.currentMember();
+    const { decision, task } = await this.requireAssigned(callEventId);
+    const now = new Date();
+    await this.prisma.db.$transaction([
+      this.prisma.db.staffWorkItem.update({
+        where: { id: task.id },
+        data: {
+          assignedMemberId: null,
+          status: 'cancelled',
+          workState: 'closed',
+          closedAt: task.closedAt ?? now,
+          queueLocation: 'archive',
+          archivedAt: now,
+          archiveReason: input.reason?.trim() || 'Returned to transcript review pool',
+          idempotencyKey: null,
+        },
+      }),
+      this.prisma.db.transcriptReviewDecision.update({
+        where: { id: decision.id },
+        data: {
+          status: 'pending_review',
+          assignedStaffWorkItemId: null,
+          reviewedByMemberId: actor.id,
+          reviewedAt: now,
+          humanDescription: null,
+          dismissalReason: null,
+        },
+      }),
+    ]);
+    this.changed('release', callEventId, actor.id, null);
+    return { ok: true, reviewId: decision.id, status: 'pending_review', staffWorkItemId: null };
+  }
+
+  private async requireAssigned(callEventId: string) {
+    const decision = await this.prisma.db.transcriptReviewDecision.findFirst({
+      where: { callEventId, status: 'assigned', assignedStaffWorkItemId: { not: null } },
+    });
+    if (!decision?.assignedStaffWorkItemId) throw new ConflictException('This review is not currently assigned');
+    const task = await this.prisma.db.staffWorkItem.findFirst({ where: { id: decision.assignedStaffWorkItemId } });
+    if (!task) throw new NotFoundException('Assigned follow-up was not found');
+    return { decision, task };
   }
 
   private async requirePendingSource(callEventId: string) {

@@ -120,6 +120,14 @@ export class CallCenterService {
     return this.transcriptReviews.dismiss(callEventId, input);
   }
 
+  reassignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) {
+    return this.transcriptReviews.reassign(callEventId, input);
+  }
+
+  releaseTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').ReleaseAssignedTranscriptReviewInput) {
+    return this.transcriptReviews.releaseAssignment(callEventId, input);
+  }
+
   async customerDetail(id: string): Promise<CustomerDetailPanelDto> {
     return this.customers.detail(id);
   }
