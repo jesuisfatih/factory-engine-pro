@@ -148,7 +148,7 @@ function CallCenterView() {
         </div>
       )}
 
-      {query.isLoading && <StateBlock title="Loading Call Center" body="Reading live personnel tasks, calls, notes, messages, rule activity, and mail activity." />}
+      {query.isLoading && <CallCenterLoading />}
       {query.isError && (
         <StateBlock
           title="Call Center could not be loaded"
@@ -879,6 +879,16 @@ function PanelHead({ title, meta }: { title: string; meta: string }) {
 
 function EmptyLine({ children }: { children: string }) {
   return <div className="call-center-empty">{children}</div>;
+}
+
+function CallCenterLoading() {
+  return (
+    <div className="call-center-loading" role="status" aria-live="polite">
+      <div className="call-center-loading-title"><Loader2 size={20} className="spin" /><div><strong>Loading Call Center</strong><span>Preparing calls, follow-ups, and staff activity…</span></div></div>
+      <div className="call-center-loading-grid" aria-hidden="true">{Array.from({ length: 4 }, (_, index) => <div className="call-center-loading-card" key={index}><i /><i /><i /></div>)}</div>
+      <div className="call-center-loading-panel" aria-hidden="true"><i /><i /><i /></div>
+    </div>
+  );
 }
 
 function StateBlock({ title, body, action }: { title: string; body: string; action?: ReactNode }) {

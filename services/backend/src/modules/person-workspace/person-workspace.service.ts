@@ -697,6 +697,9 @@ export class PersonWorkspaceService {
   }
 
   private isDailyWorkflowTask(row: StaffWorkItemRow) {
+    if (row.source === 'manual_transcript_review') {
+      return Boolean(row.sourceCallId) && DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''));
+    }
     const metadata = this.record(row.metadata);
     const workflow = this.record(metadata.workflow);
     const trigger = String(workflow.trigger ?? '');
