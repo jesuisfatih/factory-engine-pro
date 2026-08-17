@@ -12,7 +12,17 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5_000, refetchOnWindowFocus: false } },
 });
 
-const router = createRouter({ routeTree, defaultPreload: 'intent' });
+function RoutePending() {
+  return <div className="route-pending" role="status" aria-live="polite"><span className="route-pending-spinner" aria-hidden="true" /><strong>Loading page</strong><span>Preparing live workspace data…</span></div>;
+}
+
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  defaultPendingComponent: RoutePending,
+  defaultPendingMs: 0,
+  defaultPendingMinMs: 250,
+});
 
 declare module '@tanstack/react-router' {
   interface Register { router: typeof router; }

@@ -1,4 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
@@ -15,6 +16,7 @@ import {
   hasAnyPermission,
 } from '@/lib/permission-groups';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
+import { fetchCallCenterOverview } from '@/lib/live-data';
 
 interface NavLeaf {
   to: string;
@@ -92,6 +94,7 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
 interface Props { collapsed: boolean; }
 
 export function Sidebar({ collapsed }: Props) {
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => ({ pathname: s.location.pathname, search: s.location.search as Record<string, unknown> }) });
   const principal = useCurrentPrincipal().data;
@@ -147,6 +150,12 @@ export function Sidebar({ collapsed }: Props) {
                   id={leaf.id}
                   data-i18n-key={leaf.i18nKey}
                   className={`nav-item${active ? ' active' : ''}`}
+                  onMouseEnter={() => {
+                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview'], queryFn: fetchCallCenterOverview, staleTime: 5_000 });
+                  }}
+                  onFocus={() => {
+                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview'], queryFn: fetchCallCenterOverview, staleTime: 5_000 });
+                  }}
                 >
                   <Icon size={16} className="ico" />
                   <span className="nav-label">{t(leaf.i18nKey)}</span>
