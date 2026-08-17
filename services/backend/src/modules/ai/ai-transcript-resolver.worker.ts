@@ -140,18 +140,22 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         });
         return { status: 'degraded_untrusted_stored_output', resolvedWithVersion: callEvent.resolvedWithVersion };
       }
-      const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+      const evaluations = await this.prisma.db.transcriptWorkflowEvaluation.findMany({
         where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+        select: { status: true },
       });
-      if (evaluationCount > 0 && !job.data?.forceWorkflowEvaluationRepair) {
-        return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion, evaluationCount };
+      const failedEvaluationCount = evaluations.filter((evaluation) => evaluation.status === 'failed').length;
+      const repairFailedEvaluations = failedEvaluationCount > 0;
+      const forceWorkflowEvaluationRepair = Boolean(job.data?.forceWorkflowEvaluationRepair) || repairFailedEvaluations;
+      if (evaluations.length > 0 && !forceWorkflowEvaluationRepair) {
+        return { status: 'skipped_already_resolved', resolvedWithVersion: callEvent.resolvedWithVersion, evaluationCount: evaluations.length };
       }
 
-      await this.fireDerivedWorkflowTriggers(
+      await this.runDerivedWorkflowTriggers(
         callEvent,
         storedOutput,
         callEvent.resolverModel!,
-        Boolean(job.data?.forceWorkflowEvaluationRepair),
+        forceWorkflowEvaluationRepair,
       );
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEvent.id },
@@ -172,7 +176,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         evaluations_created_or_updated: repairedEvaluationCount,
       });
       return {
-        status: job.data?.forceWorkflowEvaluationRepair
+        status: forceWorkflowEvaluationRepair
           ? 'repaired_workflow_evaluations'
           : 'repaired_missing_workflow_evaluations',
         resolvedWithVersion: callEvent.resolvedWithVersion,
@@ -266,9 +270,21 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         output_tokens: result.usage.outputTokens,
         repair_attempted: result.repaired,
       });
-      await this.fireDerivedWorkflowTriggers(callEvent, result.output, result.model, Boolean(job.data?.forceWorkflowEvaluationRepair));
+      await this.runDerivedWorkflowTriggers(callEvent, result.output, result.model, Boolean(job.data?.forceWorkflowEvaluationRepair));
       return { status: 'succeeded', resolvedWithVersion: result.output.resolved_with_version };
     } catch (error) {
+      if (error instanceof WorkflowEvaluationRetryableError) {
+        const message = messageOf(error).slice(0, 500);
+        this.logger.error('rules', 'transcript_workflow_retry_scheduled', 'Transcript resolution succeeded but workflow evaluation failed; model output was retained for a workflow-only retry', {
+          call_event_id: callEventId,
+          external_call_id: callEvent.externalCallId,
+          error: message,
+          target_version: targetVersion,
+          attempt: job.attemptsMade + 1,
+          configured_attempts: Math.max(1, Number(job.opts.attempts ?? 1)),
+        });
+        throw error;
+      }
       const message = messageOf(error).slice(0, 500);
       await this.prisma.db.aircallCallEvent.updateMany({
         where: { id: callEventId },
@@ -296,6 +312,20 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         throw error;
       }
       return { status: 'failed', error: message };
+    }
+  }
+
+  private async runDerivedWorkflowTriggers(
+    callEvent: { id: string; externalCallId: string; eventTimestamp: Date; contactPhoneE164?: string | null; contactEmail?: string | null },
+    output: TranscriptResolverOutput,
+    resolverModel: string,
+    forceWorkflowEvaluationRepair = false,
+  ) {
+    try {
+      await this.fireDerivedWorkflowTriggers(callEvent, output, resolverModel, forceWorkflowEvaluationRepair);
+    } catch (error) {
+      if (error instanceof WorkflowEvaluationRetryableError) throw error;
+      throw new WorkflowEvaluationRetryableError(`Workflow evaluation failed after transcript resolution: ${messageOf(error)}`);
     }
   }
 
@@ -350,6 +380,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
     const tenantId = this.tenantContext.require().tenantId;
     if (!tenantId) throw new Error('Tenant context is required for transcript workflow evaluation');
     const currentSignalIntents = signals.map((signal) => signal.intent);
+    const failures: Array<{ signal: string; error: string }> = [];
     for (const signal of signals) {
       const eventId = `${callEvent.id}:operational_signal:${signal.intent}`;
       let response: WorkflowTriggerFireResponse | null = null;
@@ -379,6 +410,7 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         reason = transcriptEvaluationReason(signal, response);
       } catch (error) {
         reason = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
+        failures.push({ signal: signal.intent, error: reason });
         this.logger.warn('rules', 'transcript_operational_signal_failed', 'Transcript operational signal could not be evaluated', {
           call_event_id: callEvent.id,
           external_call_id: callEvent.externalCallId,
@@ -464,6 +496,11 @@ export class AiTranscriptResolverWorker implements OnModuleInit, OnModuleDestroy
         resolverModel,
       },
     });
+    if (failures.length > 0) {
+      throw new WorkflowEvaluationRetryableError(
+        `Workflow evaluation failed for ${failures.map((failure) => failure.signal).join(', ')}: ${failures.map((failure) => failure.error).join('; ')}`,
+      );
+    }
   }
 
   private async resolveCustomerForCall(
@@ -567,6 +604,15 @@ function prepareResolverTranscript(transcript: string) {
 
 class ResolverInputReviewRequiredError extends Error {
   readonly code = 'resolver_input_review_required';
+}
+
+class WorkflowEvaluationRetryableError extends Error {
+  readonly code = 'workflow_evaluation_retryable';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorkflowEvaluationRetryableError';
+  }
 }
 
 function isRetryableResolverError(error: unknown) {

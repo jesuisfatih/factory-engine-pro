@@ -1,6 +1,49 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
 import { AircallIngestService } from './aircall-ingest.service.js';
+
+test('requeues a failed workflow evaluation as a workflow-only repair', async () => {
+  let removedExistingJob = false;
+  let queuedData: Record<string, unknown> = {};
+  const callEvent = {
+    id: 'acev_failed_workflow',
+    tenantId: 'ten_test',
+    externalCallId: 'call_failed_workflow',
+    transcriptRaw: 'Customer: Please call me back.',
+    resolverQueuedAt: new Date('2026-08-06T12:00:00.000Z'),
+    resolverQueueJobId: 'aircall-transcript-ten_test-call_failed_workflow-acev_failed_workflow',
+    resolverStatus: 'succeeded',
+    resolvedAt: new Date('2026-08-06T12:00:01.000Z'),
+    resolvedWithVersion: TRANSCRIPT_RESOLVER_SCHEMA_VERSION,
+  };
+  const queue = {
+    getJob: async () => ({
+      getState: async () => 'completed',
+      returnvalue: { status: 'succeeded' },
+      remove: async () => { removedExistingJob = true; },
+    }),
+    add: async (_name: string, data: Record<string, unknown>) => { queuedData = data; },
+  };
+  const service = new AircallIngestService({
+    db: {
+      aircallCallEvent: {
+        findFirst: async () => callEvent,
+        updateMany: async () => ({ count: 1 }),
+      },
+      transcriptWorkflowEvaluation: {
+        findMany: async () => [{ status: 'failed' }],
+      },
+    },
+  } as never, {} as never, {} as never, { log() {}, warn() {} } as never, {} as never, {} as never, {} as never, {} as never, null, queue as never);
+
+  const result = await service.enqueueTranscriptResolver(callEvent.id);
+
+  assert.equal(result.queued, true);
+  assert.equal(removedExistingJob, true);
+  assert.equal(queuedData.forceReprocess, false);
+  assert.equal(queuedData.forceWorkflowEvaluationRepair, true);
+});
 
 test('mirrors an Aircall event through a tenant-safe call lookup', async () => {
   let lookupWhere: Record<string, unknown> = {};

@@ -709,10 +709,12 @@ export class AircallIngestService {
       const currentVersion = callEvent.resolvedWithVersion ?? 0;
       const versionLabel = callEvent.resolvedWithVersion ? `v${callEvent.resolvedWithVersion}` : 'legacy';
       if (currentVersion >= targetVersion) {
-        const evaluationCount = await this.prisma.db.transcriptWorkflowEvaluation.count({
+        const evaluations = await this.prisma.db.transcriptWorkflowEvaluation.findMany({
           where: { tenantId: callEvent.tenantId, callEventId: callEvent.id },
+          select: { status: true },
         });
-        if (evaluationCount > 0 && !options.forceWorkflowEvaluationRepair) {
+        const hasFailedEvaluation = evaluations.some((evaluation) => evaluation.status === 'failed');
+        if (evaluations.length > 0 && !hasFailedEvaluation && !options.forceWorkflowEvaluationRepair) {
           return { queued: false, jobId: callEvent.resolverQueueJobId, skippedReason: `already_resolved_${versionLabel}` };
         }
         needsWorkflowEvaluationRepair = true;
@@ -763,7 +765,7 @@ export class AircallIngestService {
         callEventId: callEvent.id,
         externalCallId: callEvent.externalCallId,
         forceReprocess: Boolean(options.forceReprocess),
-        forceWorkflowEvaluationRepair: Boolean(options.forceWorkflowEvaluationRepair),
+        forceWorkflowEvaluationRepair: Boolean(options.forceWorkflowEvaluationRepair || needsWorkflowEvaluationRepair),
         targetVersion,
       },
       {
@@ -785,7 +787,7 @@ export class AircallIngestService {
       target_version: targetVersion,
       force_reprocess: Boolean(options.forceReprocess),
       workflow_evaluation_repair: needsWorkflowEvaluationRepair,
-      force_workflow_evaluation_repair: Boolean(options.forceWorkflowEvaluationRepair),
+      force_workflow_evaluation_repair: Boolean(options.forceWorkflowEvaluationRepair || needsWorkflowEvaluationRepair),
       resolver_version_repair: needsResolverVersionRepair,
       source: options.source ?? 'ingest',
     });

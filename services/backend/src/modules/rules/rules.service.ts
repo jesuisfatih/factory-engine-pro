@@ -989,34 +989,75 @@ export class RulesService {
       const taskIds: string[] = [];
       const scheduledActionIds: string[] = [];
       const actionTrace: WorkflowActionTrace[] = [];
-      for (const action of rule.definition.actions) {
-        const applied = await this.applyAction(action, {
-          eventId,
-          trigger: parsed.trigger,
-          source: parsed.source,
-          occurredAt: parsed.occurredAt ?? null,
-          params: parsed.params,
-          rule,
-          state,
-          conditionTrace,
-          whenTrace,
-          cooldown: cooldown.trace,
-          taskIds,
-          scheduledActionIds,
-        });
-        actionTrace.push(applied.trace);
-        if (applied.task) {
-          taskIds.push(applied.task.id);
-          tasks.push({
-            ruleId: rule.id,
-            ruleName: rule.name,
-            actionId: action.id,
-            action: action.action,
-            taskId: applied.task.id,
-            title: applied.task.title,
+      try {
+        for (const action of rule.definition.actions) {
+          const applied = await this.applyAction(action, {
+            eventId,
+            trigger: parsed.trigger,
+            source: parsed.source,
+            occurredAt: parsed.occurredAt ?? null,
+            params: parsed.params,
+            rule,
+            state,
+            conditionTrace,
+            whenTrace,
+            cooldown: cooldown.trace,
+            taskIds,
+            scheduledActionIds,
+          });
+          actionTrace.push(applied.trace);
+          if (applied.task) {
+            taskIds.push(applied.task.id);
+            tasks.push({
+              ruleId: rule.id,
+              ruleName: rule.name,
+              actionId: action.id,
+              action: action.action,
+              taskId: applied.task.id,
+              title: applied.task.title,
+            });
+          }
+          if (applied.scheduledAction) scheduledActionIds.push(applied.scheduledAction.id);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
+        try {
+          await this.repository.completeExecution(execution.id, {
+            status: 'failed',
+            taskIds,
+            result: {
+              ruleId: rule.id,
+              ruleName: rule.name,
+              status: 'failed',
+              executionMode: 'active',
+              error: message,
+              taskIds,
+              scheduledActionIds,
+              conditionTrace,
+              whenTrace,
+              actionTrace,
+            } as unknown as Prisma.InputJsonValue,
+          });
+        } catch (auditError) {
+          this.logger.error('rules', 'workflow_execution_failure_audit_failed', 'Workflow action failed and its execution audit could not be updated', {
+            event_id: eventId,
+            trigger: parsed.trigger,
+            rule_id: rule.id,
+            execution_id: execution.id,
+            action_error: message,
+            audit_error: auditError instanceof Error ? auditError.message : String(auditError),
           });
         }
-        if (applied.scheduledAction) scheduledActionIds.push(applied.scheduledAction.id);
+        this.logger.error('rules', 'workflow_action_failed', 'Workflow action failed; the execution remains eligible for bounded workflow repair', {
+          event_id: eventId,
+          trigger: parsed.trigger,
+          rule_id: rule.id,
+          execution_id: execution.id,
+          task_ids: taskIds,
+          scheduled_action_ids: scheduledActionIds,
+          error: message,
+        });
+        throw error;
       }
 
       const actionStatus = resultStatus(taskIds, actionTrace);

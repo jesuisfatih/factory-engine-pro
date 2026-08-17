@@ -180,11 +180,13 @@ export class StaffWorkService {
 
     const transactionResult = await this.prisma.db.$transaction(async (tx) => {
       for (const lockKey of lockKeys) {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+        await tx.$queryRaw<Array<{ lockAcquired: string | null }>>`
+          SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))::text AS "lockAcquired"
+        `;
       }
 
-      const replay = await tx.staffWorkOccurrence.findUnique({
-        where: { tenantId_sourceEventId: { tenantId, sourceEventId } },
+      const replay = await tx.staffWorkOccurrence.findFirst({
+        where: { tenantId, sourceEventId },
         select: { staffWorkItemId: true },
       });
       if (replay) return { id: replay.staffWorkItemId, outcome: 'replayed' as const };
@@ -307,7 +309,7 @@ export class StaffWorkService {
           where: { targetKind: 'staff_work_item', targetId: contactItem.id },
         });
         await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: contactItem.id } });
-        await tx.staffWorkItem.update({
+        const closedMergeItem = await tx.staffWorkItem.updateMany({
           where: { id: contactItem.id },
           data: {
             status: 'closed',
@@ -325,6 +327,9 @@ export class StaffWorkService {
             } as Prisma.InputJsonValue,
           },
         });
+        if (closedMergeItem.count !== 1) {
+          throw new Error(`Lifecycle merge source ${contactItem.id} could not be closed.`);
+        }
 
         mergedOccurrenceCount += Math.max(0, contactItem.occurrenceCount);
         mergedFirstSignalAt = earliestDate(mergedFirstSignalAt, contactItem.firstSignalAt);
@@ -356,6 +361,14 @@ export class StaffWorkService {
           latestSourceEventId: latest ? sourceEventId : asRecord(currentMetadata.lifecycle).latestSourceEventId ?? existing.sourceEventId,
           latestSourceCallId: latest ? input.sourceCallId ?? null : asRecord(currentMetadata.lifecycle).latestSourceCallId ?? existing.sourceCallId,
         };
+        const currentAssigneeMemberId = existing.assignedMemberId ?? mergedAssignedMemberId ?? null;
+        const assignedMemberId = latest
+          ? input.assignedMemberId ?? currentAssigneeMemberId
+          : currentAssigneeMemberId;
+        const continuationWatcherMemberIds = uniqueStrings([
+          ...watcherMemberIds,
+          ...(currentAssigneeMemberId && assignedMemberId !== currentAssigneeMemberId ? [currentAssigneeMemberId] : []),
+        ]).filter((memberId) => memberId !== assignedMemberId);
 
         await tx.staffWorkOccurrence.create({
           data: {
@@ -371,7 +384,7 @@ export class StaffWorkService {
             metadata: (input.occurrenceMetadata ?? {}) as Prisma.InputJsonValue,
           },
         });
-        await tx.staffWorkItem.update({
+        const continuedItem = await tx.staffWorkItem.updateMany({
           where: { id: existing.id },
           data: {
             customerId: input.customerId ?? existing.customerId,
@@ -380,7 +393,7 @@ export class StaffWorkService {
             occurrenceCount,
             firstSignalAt,
             lastSignalAt,
-            assignedMemberId: existing.assignedMemberId ?? mergedAssignedMemberId ?? input.assignedMemberId ?? null,
+            assignedMemberId,
             ...(latest ? {
               matchedRuleId: input.matchedRuleId ?? existing.matchedRuleId,
               source: input.source,
@@ -408,6 +421,9 @@ export class StaffWorkService {
             metadata: { ...currentMetadata, lifecycle: lifecycleMetadata } as Prisma.InputJsonValue,
           },
         });
+        if (continuedItem.count !== 1) {
+          throw new Error(`Lifecycle item ${existing.id} could not be continued.`);
+        }
         if (latest) {
           await tx.personDailyTaskOrder.deleteMany({ where: { staffWorkItemId: existing.id } });
         }
@@ -417,7 +433,7 @@ export class StaffWorkService {
             tenantId,
             staffWorkItemId: existing.id,
             customerId: input.customerId ?? existing.customerId,
-            memberId: existing.assignedMemberId ?? mergedAssignedMemberId ?? input.assignedMemberId ?? null,
+            memberId: assignedMemberId,
             fromWorkState: existing.workState,
             toWorkState: latest ? 'open' : existing.workState,
             fromQueue: existing.queueLocation,
@@ -433,7 +449,7 @@ export class StaffWorkService {
             } as Prisma.InputJsonValue,
           },
         });
-        await upsertParticipantsTx(tx, tenantId, existing.id, watcherMemberIds, 'watcher', 'workflow_continuation');
+        await upsertParticipantsTx(tx, tenantId, existing.id, continuationWatcherMemberIds, 'watcher', 'workflow_continuation');
         return { id: existing.id, outcome: 'continued' as const };
       }
 

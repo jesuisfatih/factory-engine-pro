@@ -202,6 +202,7 @@ interface LifecycleRow extends Record<string, unknown> {
   id: string;
   tenantId: string;
   customerId: string | null;
+  assignedMemberId: string | null;
   contactIdentityKey: string | null;
   contactIdentityAliases: string[];
   operationalIntent: string;
@@ -232,6 +233,7 @@ function lifecycleHarness() {
   const rows: LifecycleRow[] = [];
   const occurrences: LifecycleOccurrence[] = [];
   const pins: Array<Record<string, unknown>> = [];
+  const participants: Array<Record<string, unknown>> = [];
   let clearedCustomOrders = 0;
 
   const repository = {
@@ -267,9 +269,8 @@ function lifecycleHarness() {
   const tx = {
     $queryRaw: async () => [],
     staffWorkOccurrence: {
-      findUnique: async ({ where }: { where: { tenantId_sourceEventId: { tenantId: string; sourceEventId: string } } }) => {
-        const key = where.tenantId_sourceEventId;
-        return occurrences.find((occurrence) => occurrence.tenantId === key.tenantId && occurrence.sourceEventId === key.sourceEventId) ?? null;
+      findFirst: async ({ where }: { where: { tenantId: string; sourceEventId: string } }) => {
+        return occurrences.find((occurrence) => occurrence.tenantId === where.tenantId && occurrence.sourceEventId === where.sourceEventId) ?? null;
       },
       create: async ({ data }: { data: LifecycleOccurrence }) => {
         occurrences.push(data);
@@ -299,11 +300,11 @@ function lifecycleHarness() {
         rows.push(row);
         return row;
       },
-      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+      updateMany: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const row = rows.find((candidate) => candidate.id === where.id);
-        assert.ok(row);
+        if (!row) return { count: 0 };
         Object.assign(row, data, { updatedAt: new Date() });
-        return row;
+        return { count: 1 };
       },
     },
     personDailyTaskOrder: {
@@ -313,8 +314,20 @@ function lifecycleHarness() {
       },
     },
     staffWorkParticipant: {
-      findMany: async () => [],
-      upsert: async ({ create }: { create: Record<string, unknown> }) => create,
+      findMany: async ({ where }: { where: { staffWorkItemId: string } }) => participants.filter((row) => row.staffWorkItemId === where.staffWorkItemId),
+      upsert: async ({ where, create, update }: { where: { tenantId_staffWorkItemId_memberId_role: Record<string, string> }; create: Record<string, unknown>; update: Record<string, unknown> }) => {
+        const key = where.tenantId_staffWorkItemId_memberId_role;
+        const existing = participants.find((row) => row.tenantId === key.tenantId
+          && row.staffWorkItemId === key.staffWorkItemId
+          && row.memberId === key.memberId
+          && row.role === key.role);
+        if (existing) {
+          Object.assign(existing, update);
+          return existing;
+        }
+        participants.push(create);
+        return create;
+      },
     },
     staffWorkComment: { updateMany: async () => ({ count: 0 }) },
     customerCallOutcome: { updateMany: async () => ({ count: 0 }) },
@@ -368,6 +381,7 @@ function lifecycleHarness() {
     rows,
     occurrences,
     pins,
+    participants,
     clearedCustomOrders: () => clearedCustomOrders,
   };
 }
@@ -405,6 +419,22 @@ test('a later call continues the same active customer intent lifecycle', async (
   assert.equal(second.item.priority, 'low');
   assert.equal(harness.occurrences.length, 2);
   assert.equal(harness.clearedCustomOrders(), 1);
+});
+
+test('the latest matched rule assignment owns the continued lifecycle and the previous owner remains a watcher', async () => {
+  const harness = lifecycleHarness();
+  const first = await harness.service.continueOrCreate(lifecycleInput('event_1', {
+    assignedMemberId: 'tmbr_linda',
+  }));
+  const continued = await harness.service.continueOrCreate(lifecycleInput('event_2', {
+    assignedMemberId: 'tmbr_charlotte',
+  }));
+
+  assert.equal(continued.item.id, first.item.id);
+  assert.equal(continued.item.assignedMemberId, 'tmbr_charlotte');
+  assert.equal(harness.participants.some((row) => row.staffWorkItemId === first.item.id
+    && row.memberId === 'tmbr_linda'
+    && row.role === 'watcher'), true);
 });
 
 test('replaying the same call event does not create or count it twice', async () => {
