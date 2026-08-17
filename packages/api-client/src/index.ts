@@ -58,6 +58,7 @@ import type {
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
   AssignUnmatchedTranscriptReviewInput,
+  ClaimUnmatchedTranscriptReviewInput,
   DismissUnmatchedTranscriptReviewInput,
   UnmatchedTranscriptReviewActionResult,
   UpdateAssignedTranscriptReviewStatusInput,
@@ -925,7 +926,7 @@ export class ApiClient {
     return this.get(`/person/workspace/daily-operations${suffix}`);
   }
 
-  personAssignTranscriptReview(id: string, input: AssignUnmatchedTranscriptReviewInput) {
+  personAssignTranscriptReview(id: string, input: ClaimUnmatchedTranscriptReviewInput) {
     return this.post<UnmatchedTranscriptReviewActionResult>(`/person/workspace/transcript-reviews/${encodeURIComponent(id)}/assign`, input);
   }
 

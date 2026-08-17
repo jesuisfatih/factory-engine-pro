@@ -62,6 +62,12 @@ export const assignUnmatchedTranscriptReviewSchema = z.object({
 });
 export type AssignUnmatchedTranscriptReviewInput = z.infer<typeof assignUnmatchedTranscriptReviewSchema>;
 
+export const claimUnmatchedTranscriptReviewSchema = z.object({
+  targetMemberId: z.string().trim().min(1),
+  description: z.string().trim().max(2000).optional(),
+});
+export type ClaimUnmatchedTranscriptReviewInput = z.infer<typeof claimUnmatchedTranscriptReviewSchema>;
+
 export const releaseAssignedTranscriptReviewSchema = z.object({
   reason: z.string().trim().max(2000).optional(),
 });

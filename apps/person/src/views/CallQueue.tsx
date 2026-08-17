@@ -19,7 +19,7 @@ import { focusLabel, personSafeText } from '../lib/personTerminology';
 import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
-type WorkSection = 'missed' | 'risk' | 'review' | 'followup' | 'priority';
+type WorkSection = 'missed' | 'risk' | 'review' | 'mine' | 'followup' | 'priority';
 
 const DAILY_OUTCOME_FILTERS: Array<{ value: DailyOperationFilter; label: string }> = [
   { value: 'not_selected', label: 'Needs outcome' },
@@ -35,6 +35,13 @@ const DAILY_OUTCOME_FILTERS: Array<{ value: DailyOperationFilter; label: string 
   { value: 'do_not_call', label: 'Do not call' },
   { value: 'completed', label: 'Completed' },
 ];
+
+const REVIEW_TASK_STATUS: Record<CardData['columnId'], string> = {
+  unassigned: 'Assigned',
+  in_progress: 'In progress',
+  positive: 'Customer waiting',
+  closed: 'Completed',
+};
 
 export function CallQueueView({ range: initialRange = 'last7d', archive = false }: { range?: DailyOperationRange; archive?: boolean } = {}) {
   const qc = useQueryClient();
@@ -96,6 +103,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const frontendCustomization = data?.frontendCustomization ?? null;
   const summary = data?.summary;
   const needsReview = data?.needsReview ?? [];
+  const myReviewTasks = useMemo(() => daily.filter((card) => card.transcriptReviewTask), [daily]);
   const reviewAction = useMutation({
     mutationFn: (input: { mode: 'assign' | 'dismiss'; item: UnmatchedTranscriptReviewItem; text: string }) => input.mode === 'assign'
       ? assignTranscriptReview(input.item.id, { targetMemberId: summary!.viewer.id, description: input.text })
@@ -105,7 +113,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       setReviewDescription('');
       await qc.invalidateQueries({ queryKey: QK_BASE });
       if (input.mode === 'assign' && result.staffWorkItemId) {
-        setActiveSection('followup');
+        setActiveSection('mine');
         setSelectedContextTone('followup');
         setSelectedId(result.staffWorkItemId);
         try {
@@ -520,6 +528,24 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             </div> : null}
           </section>}
 
+          {myReviewTasks.length > 0 ? <section className="missed-v2 my-review-tasks" id="my-review-tasks-section" aria-labelledby="my-review-tasks-title">
+            <div className="missed-v2-head">
+              <span className="missed-v2-icon my-review-icon"><ListChecks size={15} /></span>
+              <button type="button" className="missed-v2-title section-toggle" aria-expanded={activeSection === 'mine'} onClick={() => toggleSection('mine')}>
+                <span className="section-toggle-copy"><h2 id="my-review-tasks-title">{archive ? 'Completed review tasks' : 'My review tasks'}</h2><p>{archive ? 'Review follow-ups you completed or archived.' : 'Calls you took from the Needs review pool.'}</p></span>
+                <ChevronDown size={18} className="section-toggle-chevron" />
+              </button>
+              <span className="missed-v2-badge my-review-badge">{myReviewTasks.length}</span>
+            </div>
+            {activeSection === 'mine' ? <div className="review-card-list my-review-card-list">{myReviewTasks.map((card, index) => (
+              <button type="button" className="review-card my-review-card" key={card.id} onClick={() => openTaskBrief(card.id, 'followup')}>
+                <span className="review-pool-card-head"><span className="review-pool-identity"><span className="review-pool-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>{initialsFor(card.displayTitle || card.title)}</span><span><strong>{personSafeText(card.displayTitle || card.title)}</strong><small>{personSafeText(card.phone || card.segment || 'Review follow-up')}</small></span></span><span className={`my-review-status status-${card.columnId}`}>{REVIEW_TASK_STATUS[card.columnId]}</span></span>
+                <span className="review-pool-summary">{personSafeText(card.displayReason || card.displayOutcome || card.summary)}</span>
+                <span className="review-pool-footer"><small><Clock size={12} />{card.createdAt ? new Date(card.createdAt).toLocaleString() : 'Assigned review task'}</small><strong>Open task <span aria-hidden="true">→</span></strong></span>
+              </button>
+            ))}</div> : null}
+          </section> : null}
+
           <section className="missed-v2 followup-v2" id="followup-list-section">
             <div className="missed-v2-head followup-head">
               <span className="missed-v2-icon followup-icon"><ListChecks size={15} /></span>
@@ -758,9 +784,9 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           <button type="button" className="dialog-close" aria-label="Close" onClick={() => setReviewItem(null)}><X size={18} /></button>
           <div className="review-modal-heading"><span>Unassigned team pool</span><h2 id="assign-review-title">Review this call</h2><p>Take ownership only when you are ready to handle the follow-up. The task will then move to your Follow-up list.</p></div>
           <div className="review-modal-summary"><strong>{reviewItem.customerName ?? reviewItem.phone ?? 'Unknown caller'}</strong><p>{reviewItem.summary}</p><dl><div><dt>Concern</dt><dd>{reviewItem.concern || 'Not captured'}</dd></div><div><dt>Suggested goal</dt><dd>{reviewItem.goal || 'Not captured'}</dd></div></dl>{reviewItem.excerpt ? <blockquote>{reviewItem.excerpt}</blockquote> : null}</div>
-          <label>Your task note<textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={3} placeholder="What will you do next?" autoFocus /></label>
+          <label>Task note <span className="optional-label">Optional</span><textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={3} placeholder="Add context if needed…" autoFocus /></label>
           {reviewAction.error ? <div className="ops-inline-error">{friendlyError(reviewAction.error)}</div> : null}
-          <div className="dialog-actions"><button type="button" className="btn primary" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>{reviewAction.isPending ? 'Taking task…' : `Take ownership as ${summary?.viewer.name ?? 'me'}`}</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
+          <div className="dialog-actions"><button type="button" className="btn primary" disabled={reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>{reviewAction.isPending ? 'Taking task…' : `Take ownership as ${summary?.viewer.name ?? 'me'}`}</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} title={!reviewDescription.trim() ? 'Add a reason before dismissing this call.' : undefined} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
         </section>
       </div>}
       <CustomerDetailPanel

@@ -4,6 +4,7 @@ import {
   operationalIntentSchema,
   type AssignedTranscriptReviewItem,
   type AssignUnmatchedTranscriptReviewInput,
+  type ClaimUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
   type ReleaseAssignedTranscriptReviewInput,
   type TranscriptReviewTaskStatus,
@@ -156,12 +157,16 @@ export class TranscriptReviewService {
     });
   }
 
-  async assign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput, selfOnly: boolean): Promise<UnmatchedTranscriptReviewActionResult> {
+  async assign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput | ClaimUnmatchedTranscriptReviewInput, selfOnly: boolean): Promise<UnmatchedTranscriptReviewActionResult> {
     const actor = await this.currentMember();
     if (selfOnly && input.targetMemberId !== actor.id) throw new NotFoundException('Assignment target is not available');
     const target = await this.prisma.db.member.findFirst({ where: { id: input.targetMemberId, status: 'active' } });
     if (!target) throw new NotFoundException('Assignment target is not available');
     const source = await this.requirePendingSource(callEventId);
+    const description = input.description?.trim()
+      || source.resolver.person_brief.next_action
+      || source.resolver.person_brief.call_goal
+      || 'Review this call and complete the required customer follow-up.';
     await this.claim(callEventId, source.evaluations.map((row) => row.id));
     const intent = source.evaluations.map((row) => operationalIntentSchema.safeParse(row.signal)).find((row) => row.success);
     const customer = await this.contacts.findCustomer({
@@ -182,8 +187,8 @@ export class TranscriptReviewService {
       sourceOccurredAt: source.call.eventTimestamp,
       operationalIntent: intent?.success ? intent.data : null,
       title: source.resolver.person_brief.call_goal || source.resolver.person_brief.why_calling || 'Customer follow-up',
-      description: input.description,
-      metadata: { reviewCallEventId: callEventId, manualDescription: input.description },
+      description,
+      metadata: { reviewCallEventId: callEventId, manualDescription: description },
       idempotencyKey,
       });
     } catch (error) {
@@ -192,7 +197,7 @@ export class TranscriptReviewService {
     }
     const decision = await this.finalize(callEventId, 'assigned', actor.id, source.evaluations.map((row) => row.id), {
       assignedStaffWorkItemId: task.id,
-      humanDescription: input.description,
+      humanDescription: description,
     });
     this.changed('assign', callEventId, actor.id, task.id);
     return { ok: true, reviewId: decision.id, status: 'assigned', staffWorkItemId: task.id };

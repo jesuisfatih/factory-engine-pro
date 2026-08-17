@@ -185,6 +185,7 @@ export const personQueueCardSchema = z.object({
   pinned: z.boolean(),
   pinnedAt: z.number().nullable(),
   source: personTaskSourceSchema,
+  transcriptReviewTask: z.boolean().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
   ordersCount: z.number().optional(),

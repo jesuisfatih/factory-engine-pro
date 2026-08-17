@@ -52,6 +52,7 @@ export interface Card {
   pinned: boolean;
   pinnedAt: number | null;
   source: TaskSource;
+  transcriptReviewTask?: boolean;
   createdAt?: string;
   occurrenceCount: number;
   firstSignalAt?: string | null;

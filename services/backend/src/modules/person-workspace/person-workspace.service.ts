@@ -606,7 +606,7 @@ export class PersonWorkspaceService {
     };
   }
 
-  assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) {
+  assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').ClaimUnmatchedTranscriptReviewInput) {
     return this.transcriptReviews.assign(callEventId, input, true);
   }
 
@@ -3075,6 +3075,7 @@ export class PersonWorkspaceService {
       pinned: pinnedAt !== null,
       pinnedAt,
       source,
+      transcriptReviewTask: row.source === 'manual_transcript_review',
       createdAt: workDisplayTimestamp(row).toISOString(),
       occurrenceCount: row.occurrenceCount,
       firstSignalAt: row.firstSignalAt?.toISOString() ?? null,

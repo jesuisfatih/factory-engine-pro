@@ -19,7 +19,7 @@ import {
   sendPersonMessageSchema,
   togglePersonQueuePinSchema,
   transferPersonTaskSchema,
-  assignUnmatchedTranscriptReviewSchema,
+  claimUnmatchedTranscriptReviewSchema,
   dismissUnmatchedTranscriptReviewSchema,
   type AircallDialInput,
   type CreatePersonRequestInput,
@@ -39,7 +39,7 @@ import {
   type SendPersonMessageInput,
   type TogglePersonQueuePinInput,
   type TransferPersonTaskInput,
-  type AssignUnmatchedTranscriptReviewInput,
+  type ClaimUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
@@ -72,7 +72,7 @@ export class PersonWorkspaceController {
 
   @Post('transcript-reviews/:id/assign')
   @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
-  assignTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(assignUnmatchedTranscriptReviewSchema)) body: AssignUnmatchedTranscriptReviewInput) {
+  assignTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(claimUnmatchedTranscriptReviewSchema)) body: ClaimUnmatchedTranscriptReviewInput) {
     return this.workspace.assignTranscriptReview(id, body);
   }
 
