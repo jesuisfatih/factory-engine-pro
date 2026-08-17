@@ -253,7 +253,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
 
   useEffect(() => {
     if (embedded) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && !outcomeRequired) onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -261,7 +261,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [embedded, onClose, outcomeRequired]);
+  }, [embedded, onClose]);
 
   const noteMutation = useMutation({
     mutationFn: () => saveTaskNote(card.id, { body: note }),
@@ -533,7 +533,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
               {liveCard.occurrenceCount > 1 ? <span><History size={11} /> {liveCard.occurrenceCount} related calls in this follow-up</span> : null}
             </div>
           </div>
-          <button type="button" className="close" onClick={onClose} aria-label="Close" disabled={outcomeRequired} title={outcomeRequired ? 'Save the call outcome before closing' : 'Close'}>
+          <button type="button" className="close" onClick={onClose} aria-label="Close" title="Close">
             <X size={16} />
           </button>
         </header>
@@ -777,7 +777,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   return (
     <div
       className="modal-backdrop"
-      onClick={(event) => { if (event.target === event.currentTarget && !outcomeRequired) onClose(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="task-brief-title"
