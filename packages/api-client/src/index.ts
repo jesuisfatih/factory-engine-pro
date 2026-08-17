@@ -906,6 +906,7 @@ export class ApiClient {
     if (input.range && input.range !== 'last7d') query.set('range', input.range);
     if (input.filter && input.filter !== 'all') query.set('filter', input.filter);
     if (input.sort && input.sort !== 'newest') query.set('sort', input.sort);
+    if (input.initial) query.set('initial', 'true');
     const suffix = query.size > 0 ? `?${query.toString()}` : '';
     return this.get(`/person/workspace/daily-operations${suffix}`);
   }

@@ -54,13 +54,28 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [archiveSort, setArchiveSort] = useState<DailyOperationSort>('newest');
   const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
   const [kanbanSegment, setKanbanSegment] = useState<string>('all');
-  const queryKey = [...QK_BASE, range, dailyFilter, archiveSort] as const;
-  const { data, isLoading, error, refetch, isFetching } = useQuery({
+  const [workspaceReady, setWorkspaceReady] = useState(archive);
+  const queryPhase = workspaceReady || archive ? 'full' : 'initial';
+  const queryKey = [...QK_BASE, range, dailyFilter, archiveSort, queryPhase] as const;
+  const { data, isLoading, error, refetch, isFetching, isPlaceholderData } = useQuery({
     queryKey,
-    queryFn: () => fetchDailyOperations({ range, filter: dailyFilter, sort: archiveSort }),
-    refetchInterval: archive ? false : 15000,
+    queryFn: () => fetchDailyOperations({
+      range,
+      filter: dailyFilter,
+      sort: archiveSort,
+      initial: !archive && !workspaceReady,
+    }),
+    placeholderData: (previous) => previous,
+    refetchInterval: archive || !workspaceReady ? false : 15000,
     refetchIntervalInBackground: false,
   });
+  useEffect(() => {
+    if (archive) {
+      setWorkspaceReady(true);
+      return;
+    }
+    if (!workspaceReady && data) setWorkspaceReady(true);
+  }, [archive, data, workspaceReady]);
   const syncTasks = useMutation({
     mutationFn: syncPersonTasks,
     onSuccess: async () => {
@@ -261,7 +276,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const selectedCard = daily.find((card) => card.id === selectedId)
     ?? pinned.find((card) => card.id === selectedId)
     ?? (deepLinkCard?.id === selectedId ? deepLinkCard : null);
-  const empty = !isLoading && (archive ? daily.length === 0 : daily.length === 0 && priority.length === 0 && pinned.length === 0);
+  const empty = !isLoading && !isPlaceholderData && (archive ? daily.length === 0 : daily.length === 0 && priority.length === 0 && pinned.length === 0);
   const priorityCustomerCount = groups.reduce((total, group) => total + group.totalCustomers, 0);
   const openRequestsCount = summary?.openRequestsCount ?? 0;
   const closeTaskModal = () => {
@@ -381,6 +396,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         <FrontendCustomizationSlotView customization={frontendCustomization} slot="kpi.after" context={{ summary }} />
       </div>
       {syncTasks.error ? <div className="ops-inline-error">{friendlyError(syncTasks.error)}</div> : null}
+      {isPlaceholderData ? (
+        <div className="workspace-hydration" role="status">
+          <span className="workspace-hydration-spinner" aria-hidden="true" />
+          <span>Loading priority customers and review queue in the background…</span>
+        </div>
+      ) : null}
 
       <QueryState
         isLoading={isLoading}

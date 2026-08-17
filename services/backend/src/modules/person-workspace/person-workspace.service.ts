@@ -347,14 +347,12 @@ export class PersonWorkspaceService {
     const range: PersonDailyOperationRange = query.range ?? 'last7d';
     const selectedFilter = query.filter ?? 'all';
     const archiveSort = query.sort ?? 'newest';
-    const assignments = await this.axisAssignments(member.id);
-    const visibleCustomerIds = Array.from(assignments.keys());
-    const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
-    const today = await this.businessClock.currentDay();
-    const dailyWindow = dailyWorkflowRange(range, today);
-    const needsReview = range === 'archive' ? [] : await this.transcriptReviews.list(100);
+    const initial = query.initial ?? false;
 
     const [
+      assignments,
+      today,
+      needsReview,
       config,
       rawSegmentOwnerships,
       frontendCustomization,
@@ -364,8 +362,11 @@ export class PersonWorkspaceService {
       nextActionStrategy,
       callBriefStrategy,
     ] = await Promise.all([
+      this.axisAssignments(member.id),
+      this.businessClock.currentDay(),
+      range === 'archive' || initial ? Promise.resolve([]) : this.transcriptReviews.list(100),
       this.urgencyConfig(),
-      this.prisma.db.segmentOwnership.findMany({
+      initial ? Promise.resolve([]) : this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
         include: { segment: true },
         orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
@@ -378,12 +379,21 @@ export class PersonWorkspaceService {
       this.rules.algorithmRuntimeDefinition('staff.customer_next_action'),
       this.rules.algorithmRuntimeDefinition('staff.call_brief_generation'),
     ]);
+    const visibleCustomerIds = Array.from(assignments.keys());
+    const assignmentAxes = Array.from(new Set(Array.from(assignments.values()).flatMap((axes) => Array.from(axes)))).sort();
+    const dailyWindow = dailyWorkflowRange(range, today);
     const cardStrategies = { nextAction: nextActionStrategy, callBrief: callBriefStrategy };
     const segmentOwnerships = rawSegmentOwnerships.filter((ownership) => isShopifyNativeSegment(ownership.segment));
     const ownedSegmentIds = segmentOwnerships.map((ownership) => ownership.segmentId);
 
-    const [memberships, dailyTaskRows, dailyTaskOrderRows]: [SegmentMembershipRow[], StaffWorkItemRow[], PersonDailyTaskOrderRow[]] = await Promise.all([
-      ownedSegmentIds.length > 0
+    const [memberships, dailyTaskRows, dailyTaskOrderRows, pinRows, requestRows]: [
+      SegmentMembershipRow[],
+      StaffWorkItemRow[],
+      PersonDailyTaskOrderRow[],
+      Awaited<ReturnType<typeof this.workspacePins.list>>,
+      Awaited<ReturnType<PersonWorkspaceService['personRequestRows']>>,
+    ] = await Promise.all([
+      !initial && ownedSegmentIds.length > 0
         ? this.prisma.db.segmentCustomerMembership.findMany({
           where: {
             segmentId: { in: ownedSegmentIds },
@@ -418,9 +428,10 @@ export class PersonWorkspaceService {
         },
         orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
       }),
+      this.workspacePins.list(member.id),
+      initial ? Promise.resolve([]) : this.personRequestRows(member.id, visibleCustomerIds),
     ]);
 
-    const pinRows = await this.workspacePins.list(member.id);
     const taskPinsByTarget = new Map(
       pinRows.filter((pin) => pin.targetKind === 'staff_work_item').map((pin) => [pin.targetId, pin] as const),
     );
@@ -428,36 +439,34 @@ export class PersonWorkspaceService {
       pinRows.filter((pin) => pin.targetKind === 'customer').map((pin) => [pin.targetId, pin] as const),
     );
     const pinnedCustomerIds = Array.from(customerPinsByTarget.keys());
-    const pinnedCustomerRows = pinnedCustomerIds.length > 0
-      ? await this.prisma.db.customer.findMany({
-        where: { id: { in: pinnedCustomerIds }, status: 'active' },
-        include: {
-          insight: true,
-          segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
-        },
-        take: 500,
-      })
-      : [];
-    const customerPinRows: CustomerPinRow[] = pinnedCustomerRows.flatMap((customer) => {
-      const pin = customerPinsByTarget.get(customer.id);
-      return pin ? [{ pin, customer }] : [];
-    });
-
-    const requestRows = await this.personRequestRows(member.id, visibleCustomerIds);
     const contextCustomerIds = uniqueStrings([
-      ...visibleCustomerIds,
+      ...(initial ? [] : visibleCustomerIds),
       ...memberships.map((membership) => membership.customerId),
       ...pinnedCustomerIds,
       ...requestRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
       ...dailyTaskRows.map((row) => row.customerId).filter((id): id is string => Boolean(id)),
     ]);
-    const [initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats, contactStates] = await Promise.all([
+    const [pinnedCustomerRows, initialRepeatCounts, initialCardContext, initialCallContext, todayAircallStats, contactStates] = await Promise.all([
+      pinnedCustomerIds.length > 0
+        ? this.prisma.db.customer.findMany({
+          where: { id: { in: pinnedCustomerIds }, status: 'active' },
+          include: {
+            insight: true,
+            segmentMemberships: { include: { segment: true }, orderBy: { matchedAt: 'desc' }, take: 3 },
+          },
+          take: 500,
+        })
+        : Promise.resolve([]),
       this.repeatCounts(contextCustomerIds),
       this.cardContext(contextCustomerIds),
       this.cardCallContext(dailyTaskRows),
       this.todayAircallStats(member, today.start, today.end),
       this.contactTimeline.latestForCustomers(contextCustomerIds),
     ]);
+    const customerPinRows: CustomerPinRow[] = pinnedCustomerRows.flatMap((customer) => {
+      const pin = customerPinsByTarget.get(customer.id);
+      return pin ? [{ pin, customer }] : [];
+    });
     const repeatCounts = initialRepeatCounts;
     const cardContext = initialCardContext;
     const callContext = initialCallContext;

@@ -415,6 +415,7 @@ export const personDailyOperationsQuerySchema = z.object({
   range: personDailyOperationRangeSchema.optional().default('last7d'),
   filter: personDailyOperationFilterSchema.optional().default('all'),
   sort: personDailyOperationSortSchema.optional().default('newest'),
+  initial: z.union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')]).optional(),
 });
 export type PersonDailyOperationsQuery = z.infer<typeof personDailyOperationsQuerySchema>;
 

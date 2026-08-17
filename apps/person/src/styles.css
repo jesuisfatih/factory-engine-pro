@@ -1445,6 +1445,8 @@ html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; col
 .state-loading-bars i:nth-child(2) { width: 82%; }
 .state-loading-bars i:nth-child(3) { width: 64%; }
 @keyframes workspace-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.workspace-hydration { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text-muted); font-size: 12px; }
+.workspace-hydration-spinner { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid var(--surface-3); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
 
 .request-grid {
   display: grid;
