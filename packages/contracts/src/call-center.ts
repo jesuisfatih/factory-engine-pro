@@ -34,6 +34,26 @@ export const unmatchedTranscriptReviewItemSchema = z.object({
 });
 export type UnmatchedTranscriptReviewItem = z.infer<typeof unmatchedTranscriptReviewItemSchema>;
 
+export const assignedTranscriptReviewItemSchema = z.object({
+  id: z.string(),
+  callEventId: z.string(),
+  staffWorkItemId: z.string(),
+  customerId: z.string().nullable(),
+  customerName: z.string().nullable(),
+  customerPhone: z.string().nullable(),
+  title: z.string(),
+  description: z.string().nullable(),
+  assignedMemberId: z.string().nullable(),
+  assignedMemberName: z.string(),
+  assignedMemberRole: z.string(),
+  status: z.string(),
+  priority: z.string(),
+  assignedAt: z.string(),
+  updatedAt: z.string(),
+  completedAt: z.string().nullable(),
+});
+export type AssignedTranscriptReviewItem = z.infer<typeof assignedTranscriptReviewItemSchema>;
+
 export const assignUnmatchedTranscriptReviewSchema = z.object({
   targetMemberId: z.string().trim().min(1),
   description: z.string().trim().min(1).max(2000),
@@ -246,6 +266,7 @@ export const callCenterOverviewSchema = z.object({
   preview: callCenterPreviewSchema,
   kanban: z.object({
     needsReview: z.array(unmatchedTranscriptReviewItemSchema),
+    assignedReviews: z.array(assignedTranscriptReviewItemSchema),
     dailyCallList: z.array(callCenterTaskSchema),
     priorityGroups: z.array(callCenterPriorityGroupSchema),
     pinBoard: z.array(callCenterPinSchema),

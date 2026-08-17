@@ -14,7 +14,7 @@ import {
   StickyNote,
   Activity,
 } from 'lucide-react';
-import type { CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
+import type { AssignedTranscriptReviewItem, CallCenterMember, CallCenterNote, CallCenterOverview, CallCenterPriorityCustomer, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel } from '@factory-engine-pro/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { apiErrorMessage } from '@/lib/api';
@@ -321,7 +321,10 @@ function KanbanTab({
 }) {
   return (
     <>
-      <NeedsReviewPanel data={data} items={kanban.needsReview} />
+      <div className="review-tracking-grid">
+        <NeedsReviewPanel data={data} items={kanban.needsReview} />
+        <ReviewAssignmentsPanel items={kanban.assignedReviews} onOpenCustomer={onOpenCustomer} />
+      </div>
       <div className="orders-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
         <div className="orders-search" style={{ minWidth: 260, flex: 1 }}>
           <input
@@ -539,6 +542,40 @@ function NeedsReviewPanel({ data, items }: { data: CallCenterOverview; items: Un
     <PanelHead title="Needs review" meta={`${items.length} calls`} />
     {items.length === 0 ? <EmptyLine>No calls need manual review.</EmptyLine> : <div className="review-card-list">{items.map((item) => <button key={item.id} type="button" className="call-center-task-card review-card" onClick={() => open(item)}><strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small></button>)}</div>}
     {selected ? <div className="dialog-overlay" onMouseDown={() => !action.isPending && setSelected(null)}><div className="dialog" role="dialog" aria-modal="true" aria-labelledby="admin-review-title" onMouseDown={(event) => event.stopPropagation()}><h2 id="admin-review-title">Assign follow-up</h2><p><strong>{selected.customerName ?? selected.phone}</strong></p><label>Staff member<select value={targetMemberId} onChange={(event) => setTargetMemberId(event.target.value)}>{data.members.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>What should they do?<textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} autoFocus /></label>{action.error ? <div className="state-error">{apiErrorMessage(action.error)}</div> : null}<div className="dialog-actions"><button className="btn primary" type="button" disabled={!targetMemberId || !description.trim() || action.isPending} onClick={() => action.mutate('assign')}>{action.isPending ? 'Saving…' : 'Assign follow-up'}</button><button className="btn" type="button" disabled={!description.trim() || action.isPending} onClick={() => action.mutate('dismiss')}>No follow-up needed</button></div><hr /><h3>Call summary</h3><p>{selected.summary}</p><p>{selected.concern}</p><p>{selected.goal}</p>{selected.excerpt ? <blockquote>{selected.excerpt}</blockquote> : null}</div></div> : null}
+  </section>;
+}
+
+const COMPLETED_REVIEW_STATUSES = new Set(['closed', 'resolved', 'completed', 'archived', 'cancelled']);
+
+function isCompletedReview(item: AssignedTranscriptReviewItem) {
+  return Boolean(item.completedAt) || COMPLETED_REVIEW_STATUSES.has(item.status.toLowerCase());
+}
+
+function ReviewAssignmentsPanel({ items, onOpenCustomer }: { items: AssignedTranscriptReviewItem[]; onOpenCustomer: (customerId: string) => void }) {
+  const [view, setView] = useState<'active' | 'completed'>('active');
+  const active = items.filter((item) => !isCompletedReview(item));
+  const completed = items.filter(isCompletedReview);
+  const visible = view === 'active' ? active : completed;
+  return <section className="call-center-panel review-assignments-panel">
+    <PanelHead title="Review assignments" meta={`${active.length} active · ${completed.length} completed`} />
+    <div className="review-assignment-tabs" role="tablist" aria-label="Review assignment status">
+      <button type="button" role="tab" aria-selected={view === 'active'} className={view === 'active' ? 'active' : ''} onClick={() => setView('active')}>Active <span>{active.length}</span></button>
+      <button type="button" role="tab" aria-selected={view === 'completed'} className={view === 'completed' ? 'active' : ''} onClick={() => setView('completed')}>Completed <span>{completed.length}</span></button>
+    </div>
+    {visible.length === 0 ? <EmptyLine>{view === 'active' ? 'No active review assignments.' : 'No completed review assignments.'}</EmptyLine> : <div className="review-assignment-list">
+      {visible.map((item) => <article key={item.id} className="review-assignment-card">
+        <div className="review-assignment-card-head">
+          <div><strong>{item.customerName ?? item.customerPhone ?? item.title}</strong><span>{item.title}</span></div>
+          <span className={`review-status ${isCompletedReview(item) ? 'completed' : 'active'}`}>{titleizeStatus(item.status)}</span>
+        </div>
+        {item.description ? <p>{item.description}</p> : null}
+        <div className="review-assignment-meta">
+          <span>Assigned to <strong>{item.assignedMemberName}</strong> · {item.assignedMemberRole}</span>
+          <span>{new Date(item.assignedAt).toLocaleString()} · {item.priority} priority</span>
+        </div>
+        {item.customerId ? <button type="button" className="btn ghost review-open-customer" onClick={() => onOpenCustomer(item.customerId!)}>Open customer</button> : null}
+      </article>)}
+    </div>}
   </section>;
 }
 
@@ -985,7 +1022,24 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
   ));
 
   const needsReview = data.kanban.needsReview.filter((item) => matchesText(normalized, [item.customerName, item.phone, item.summary, item.concern, item.goal]));
-  return { needsReview, dailyCallList, priorityGroups, pinBoard };
+  const assignedReviews = data.kanban.assignedReviews.filter((item) => (
+    (!hasMemberFilter || item.assignedMemberId === memberId)
+    && matchesText(normalized, [
+      item.customerName,
+      item.customerPhone,
+      item.title,
+      item.description,
+      item.assignedMemberName,
+      item.assignedMemberRole,
+      item.status,
+      item.priority,
+    ])
+  ));
+  return { needsReview, assignedReviews, dailyCallList, priorityGroups, pinBoard };
+}
+
+function titleizeStatus(value: string) {
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function groupActiveLabel(group: CallCenterOverview['kanban']['priorityGroups'][number]) {

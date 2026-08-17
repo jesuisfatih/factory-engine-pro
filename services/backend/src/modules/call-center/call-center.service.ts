@@ -71,6 +71,7 @@ export class CallCenterService {
       taskActivity,
       activeRuleFire,
       needsReview,
+      assignedReviews,
     ] = await Promise.all([
       this.dailyCallList(weekStart, memberById),
       this.priorityGroups(memberById),
@@ -84,6 +85,7 @@ export class CallCenterService {
       this.taskActivity(memberById),
       this.activeRuleFire(weekStart),
       this.transcriptReviews.list(100),
+      this.transcriptReviews.listAssigned(100),
     ]);
 
     return {
@@ -99,6 +101,7 @@ export class CallCenterService {
       },
       kanban: {
         needsReview,
+        assignedReviews,
         dailyCallList,
         priorityGroups,
         pinBoard,

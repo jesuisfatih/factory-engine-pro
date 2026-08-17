@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import {
   operationalIntentSchema,
+  type AssignedTranscriptReviewItem,
   type AssignUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
   type UnmatchedTranscriptReviewActionResult,
@@ -91,6 +92,52 @@ export class TranscriptReviewService {
         lastOrderSummary: recentOrder ? `${recentOrder.shopifyOrderNumber ?? 'Order'} · ${recentOrder.totalPrice} ${recentOrder.currency}` : null,
         lastCallSummary: previousCall ? `${previousCall.direction ?? 'Call'} · ${previousCall.eventTimestamp.toISOString()}` : null,
       };
+    });
+  }
+
+  async listAssigned(limit = 100): Promise<AssignedTranscriptReviewItem[]> {
+    const decisions = await this.prisma.db.transcriptReviewDecision.findMany({
+      where: { status: 'assigned', assignedStaffWorkItemId: { not: null } },
+      orderBy: [{ reviewedAt: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(Math.max(limit, 1), 200),
+    });
+    const workItemIds = decisions.flatMap((row) => row.assignedStaffWorkItemId ? [row.assignedStaffWorkItemId] : []);
+    if (workItemIds.length === 0) return [];
+    const [workItems, calls] = await Promise.all([
+      this.prisma.db.staffWorkItem.findMany({
+        where: { id: { in: workItemIds } },
+        include: { customer: true, assignedMember: { include: { roleAssignments: { include: { role: true } } } } },
+      }),
+      this.prisma.db.aircallCallEvent.findMany({
+        where: { id: { in: decisions.map((row) => row.callEventId) } },
+        select: { id: true, contactPhoneE164: true, contactPhone: true },
+      }),
+    ]);
+    const workItemById = new Map(workItems.map((row) => [row.id, row]));
+    const callById = new Map(calls.map((row) => [row.id, row]));
+    return decisions.flatMap((decision) => {
+      const task = decision.assignedStaffWorkItemId ? workItemById.get(decision.assignedStaffWorkItemId) : null;
+      if (!task) return [];
+      const call = callById.get(decision.callEventId);
+      const member = task.assignedMember;
+      return [{
+        id: decision.id,
+        callEventId: decision.callEventId,
+        staffWorkItemId: task.id,
+        customerId: task.customerId,
+        customerName: task.customer ? customerName(task.customer) : null,
+        customerPhone: task.customer?.phone ?? call?.contactPhoneE164 ?? call?.contactPhone ?? null,
+        title: task.title,
+        description: decision.humanDescription ?? task.description,
+        assignedMemberId: task.assignedMemberId,
+        assignedMemberName: member ? memberName(member) : 'Unassigned',
+        assignedMemberRole: member?.roleAssignments[0]?.role.name ?? 'Member',
+        status: task.workState !== 'open' ? task.workState : task.status,
+        priority: task.priority,
+        assignedAt: (decision.reviewedAt ?? decision.createdAt).toISOString(),
+        updatedAt: task.updatedAt.toISOString(),
+        completedAt: task.closedAt?.toISOString() ?? task.archivedAt?.toISOString() ?? null,
+      }];
     });
   }
 
@@ -195,6 +242,10 @@ export class TranscriptReviewService {
 
 function customerName(customer: { firstName: string | null; lastName: string | null; companyName: string | null; email: string | null }) {
   return [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim() || customer.companyName || customer.email || 'Customer';
+}
+
+function memberName(member: { firstName: string; lastName: string; email: string }) {
+  return `${member.firstName} ${member.lastName}`.trim() || member.email;
 }
 
 async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T) => Promise<R>): Promise<R[]> {
