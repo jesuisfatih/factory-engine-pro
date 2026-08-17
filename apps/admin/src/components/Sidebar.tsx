@@ -16,7 +16,7 @@ import {
   hasAnyPermission,
 } from '@/lib/permission-groups';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
-import { fetchCallCenterOverview } from '@/lib/live-data';
+import { fetchCallCenterOverviewPhase } from '@/lib/live-data';
 
 interface NavLeaf {
   to: string;
@@ -151,10 +151,10 @@ export function Sidebar({ collapsed }: Props) {
                   data-i18n-key={leaf.i18nKey}
                   className={`nav-item${active ? ' active' : ''}`}
                   onMouseEnter={() => {
-                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview'], queryFn: fetchCallCenterOverview, staleTime: 5_000 });
+                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview', 'initial'], queryFn: () => fetchCallCenterOverviewPhase({ initial: true }), staleTime: 15_000 });
                   }}
                   onFocus={() => {
-                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview'], queryFn: fetchCallCenterOverview, staleTime: 5_000 });
+                    if (leaf.to === '/call-center') void queryClient.prefetchQuery({ queryKey: ['call-center', 'overview', 'initial'], queryFn: () => fetchCallCenterOverviewPhase({ initial: true }), staleTime: 15_000 });
                   }}
                 >
                   <Icon size={16} className="ico" />

@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   callCenterCreateCustomerTaskSchema,
+  callCenterOverviewQuerySchema,
   callCenterReplyNoteSchema,
   callCenterSaveCustomerNoteSchema,
   callCenterSendMessageSchema,
@@ -10,6 +11,7 @@ import {
   releaseAssignedTranscriptReviewSchema,
   MEMBER_PERMISSIONS,
   type CallCenterCreateCustomerTaskInput,
+  type CallCenterOverviewQuery,
   type CallCenterReplyNoteInput,
   type CallCenterSaveCustomerNoteInput,
   type CallCenterSendMessageInput,
@@ -28,8 +30,8 @@ export class CallCenterController {
 
   @Get('overview')
   @RequirePermission(MEMBER_PERMISSIONS.membersRead, MEMBER_PERMISSIONS.taskAssign)
-  overview() {
-    return this.callCenter.overview();
+  overview(@Query(new ZodValidationPipe(callCenterOverviewQuerySchema)) query: CallCenterOverviewQuery) {
+    return this.callCenter.overview(query);
   }
 
   @Post('transcript-reviews/:id/assign')

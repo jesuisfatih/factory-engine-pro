@@ -9,6 +9,7 @@ import type {
   CallCenterMessage,
   CallCenterNote,
   CallCenterOverview,
+  CallCenterOverviewQuery,
   CallCenterPin,
   CallCenterPriorityGroup,
   CallCenterSaveCustomerNoteInput,
@@ -49,12 +50,15 @@ export class CallCenterService {
     private readonly transcriptReviews: TranscriptReviewService,
   ) {}
 
-  async overview(): Promise<CallCenterOverview> {
+  async overview(query: Partial<CallCenterOverviewQuery> = {}): Promise<CallCenterOverview> {
     const now = new Date();
-    const today = await this.businessClock.currentDay(now);
+    const initial = query.initial ?? false;
+    const [today, members] = await Promise.all([
+      this.businessClock.currentDay(now),
+      this.members(),
+    ]);
     const todayStart = today.start;
     const weekStart = daysAgo(now, 7);
-    const members = await this.members();
     const memberById = new Map(members.map((member) => [member.id, member]));
     const memberByAircallId = await this.memberAircallMap(memberById);
 
@@ -74,7 +78,7 @@ export class CallCenterService {
       assignedReviews,
     ] = await Promise.all([
       this.dailyCallList(weekStart, memberById),
-      this.priorityGroups(memberById),
+      initial ? Promise.resolve([]) : this.priorityGroups(memberById),
       this.pinBoard(memberById),
       this.calendar(memberById),
       this.notes(memberById),
@@ -84,7 +88,7 @@ export class CallCenterService {
       this.callStats(todayStart, memberByAircallId),
       this.taskActivity(memberById),
       this.activeRuleFire(weekStart),
-      this.transcriptReviews.list(100),
+      initial ? Promise.resolve([]) : this.transcriptReviews.list(100),
       this.transcriptReviews.listAssigned(100),
     ]);
 

@@ -825,8 +825,9 @@ export class ApiClient {
     return this.get(`/support/stats/overview${query}`);
   }
 
-  callCenterOverview() {
-    return this.get<CallCenterOverview>('/call-center/overview');
+  callCenterOverview(input: Partial<import('@factory-engine-pro/contracts').CallCenterOverviewQuery> = {}) {
+    const suffix = input.initial ? '?initial=true' : '';
+    return this.get<CallCenterOverview>(`/call-center/overview${suffix}`);
   }
 
   syncCallCenterTasks() {

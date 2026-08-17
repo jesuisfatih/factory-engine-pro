@@ -284,6 +284,11 @@ export const callCenterOverviewSchema = z.object({
 });
 export type CallCenterOverview = z.infer<typeof callCenterOverviewSchema>;
 
+export const callCenterOverviewQuerySchema = z.object({
+  initial: z.union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')]).optional(),
+});
+export type CallCenterOverviewQuery = z.infer<typeof callCenterOverviewQuerySchema>;
+
 export const callCenterSaveCustomerNoteSchema = z.object({
   body: z.string().trim().min(1).max(5000),
 });

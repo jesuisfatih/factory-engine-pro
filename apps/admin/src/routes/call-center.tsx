@@ -23,7 +23,7 @@ import {
   assignCallCenterTranscriptReview,
   dismissCallCenterTranscriptReview,
   fetchCallCenterCustomerDetail,
-  fetchCallCenterOverview,
+  fetchCallCenterOverviewPhase,
   replyCallCenterNote,
   reassignCallCenterTranscriptReview,
   releaseCallCenterTranscriptReview,
@@ -55,12 +55,18 @@ function CallCenterView() {
   const [transferTarget, setTransferTarget] = useState<TransferTarget | null>(null);
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [memberFilter, setMemberFilter] = useState('all');
+  const [overviewReady, setOverviewReady] = useState(false);
   const queryClient = useQueryClient();
+  const overviewPhase = overviewReady ? 'full' : 'initial';
   const query = useQuery({
-    queryKey: ['call-center', 'overview'],
-    queryFn: fetchCallCenterOverview,
-    refetchInterval: 30_000,
+    queryKey: ['call-center', 'overview', overviewPhase],
+    queryFn: () => fetchCallCenterOverviewPhase({ initial: !overviewReady }),
+    placeholderData: (previous) => previous,
+    refetchInterval: overviewReady ? 30_000 : false,
   });
+  useEffect(() => {
+    if (!overviewReady && query.data) setOverviewReady(true);
+  }, [overviewReady, query.data]);
   useEffect(() => subscribeCallCenterRealtime(() => {
     void queryClient.invalidateQueries({ queryKey: ['call-center'] });
     void queryClient.invalidateQueries({ queryKey: ['dashboard', 'call-center', 'overview'] });
@@ -149,9 +155,15 @@ function CallCenterView() {
           Synced {syncTasks.data.backfill.ingested} calls, queued {syncTasks.data.resolver.queued} resolver jobs at {new Date(syncTasks.data.syncedAt).toLocaleTimeString()}.
         </div>
       )}
+      {query.isPlaceholderData && (
+        <div className="call-center-hydration" role="status">
+          <Loader2 size={14} className="spin" />
+          Phone intelligence and priority customer context are loading in the background…
+        </div>
+      )}
 
       {query.isLoading && <CallCenterLoading />}
-      {query.isError && (
+      {query.isError && !data && (
         <StateBlock
           title="Call Center could not be loaded"
           body={apiErrorMessage(query.error)}

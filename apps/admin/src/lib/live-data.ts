@@ -241,6 +241,10 @@ export async function fetchCallCenterOverview(): Promise<CallCenterOverview> {
   return adminApi.callCenterOverview();
 }
 
+export async function fetchCallCenterOverviewPhase(input: Partial<import('@factory-engine-pro/contracts').CallCenterOverviewQuery>): Promise<CallCenterOverview> {
+  return adminApi.callCenterOverview(input);
+}
+
 export async function syncCallCenterTasks(): Promise<CallCenterSyncResult> {
   return adminApi.syncCallCenterTasks();
 }
