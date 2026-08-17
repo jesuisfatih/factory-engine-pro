@@ -44,25 +44,31 @@ export class TranscriptReviewService {
     const decided = new Set(decisions.filter((row) => row.status !== 'pending_review').map((row) => row.callEventId));
     const evaluationsByCall = new Map<string, typeof evaluations>();
     for (const row of evaluations) evaluationsByCall.set(row.callEventId, [...(evaluationsByCall.get(row.callEventId) ?? []), row]);
-    const result: UnmatchedTranscriptReviewItem[] = [];
-    for (const call of calls.sort((a, b) => b.eventTimestamp.getTime() - a.eventTimestamp.getTime())) {
-      if (decided.has(call.id)) continue;
-      const resolver = currentModelResolverOutput(call);
-      if (!resolver) continue;
+    const candidates = calls
+      .sort((a, b) => b.eventTimestamp.getTime() - a.eventTimestamp.getTime())
+      .flatMap((call) => {
+        if (decided.has(call.id)) return [];
+        const resolver = currentModelResolverOutput(call);
+        return resolver ? [{ call, resolver }] : [];
+      })
+      .slice(0, limit);
+    return mapWithConcurrency(candidates, 8, async ({ call, resolver }) => {
       const customer = await this.contacts.findCustomer({
         customerId: resolver.customer_match.customer_id,
         phone: resolver.customer_match.phone ?? call.contactPhoneE164 ?? call.contactPhone,
         email: call.contactEmail,
       });
-      const recentOrder = customer ? await this.prisma.db.commerceOrder.findFirst({
-        where: { customerId: customer.id }, orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
-      }) : null;
-      const previousCall = customer ? await this.prisma.db.aircallCallEvent.findFirst({
-        where: { id: { not: call.id }, OR: [{ contactPhoneE164: customer.phone }, { contactEmail: customer.email }] },
-        orderBy: { eventTimestamp: 'desc' },
-      }) : null;
+      const [recentOrder, previousCall] = customer ? await Promise.all([
+        this.prisma.db.commerceOrder.findFirst({
+          where: { customerId: customer.id }, orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
+        }),
+        this.prisma.db.aircallCallEvent.findFirst({
+          where: { id: { not: call.id }, OR: [{ contactPhoneE164: customer.phone }, { contactEmail: customer.email }] },
+          orderBy: { eventTimestamp: 'desc' },
+        }),
+      ]) : [null, null];
       const grouped = evaluationsByCall.get(call.id) ?? [];
-      result.push({
+      return {
         id: call.id,
         callEventId: call.id,
         phone: call.contactPhoneE164 ?? call.contactPhone ?? resolver.customer_match.phone,
@@ -84,10 +90,8 @@ export class TranscriptReviewService {
         shopifyMatched: Boolean(customer?.shopifyCustomerId),
         lastOrderSummary: recentOrder ? `${recentOrder.shopifyOrderNumber ?? 'Order'} · ${recentOrder.totalPrice} ${recentOrder.currency}` : null,
         lastCallSummary: previousCall ? `${previousCall.direction ?? 'Call'} · ${previousCall.eventTimestamp.toISOString()}` : null,
-      });
-      if (result.length >= limit) break;
-    }
-    return result;
+      };
+    });
   }
 
   async assign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput, selfOnly: boolean): Promise<UnmatchedTranscriptReviewActionResult> {
@@ -191,4 +195,16 @@ export class TranscriptReviewService {
 
 function customerName(customer: { firstName: string | null; lastName: string | null; companyName: string | null; email: string | null }) {
   return [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim() || customer.companyName || customer.email || 'Customer';
+}
+
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(items[index]!);
+    }
+  }));
+  return results;
 }
