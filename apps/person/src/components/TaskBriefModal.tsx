@@ -417,7 +417,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       </div>
       <label className="brief-lifecycle-field">
         <span className="lbl">Update status</span>
-        <select className="brief-edit" value={lifecycleColumn} onChange={(event) => setLifecycleColumn(event.target.value as ColumnId)} disabled={lifecycleMutation.isPending || outcomeRequired}>
+        <select className="brief-edit" value={lifecycleColumn} onChange={(event) => setLifecycleColumn(event.target.value as ColumnId)} disabled={lifecycleMutation.isPending}>
           {TASK_LIFECYCLE.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.help}</option>)}
         </select>
       </label>
@@ -430,8 +430,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
         disabled={lifecycleMutation.isPending}
       />
       <div className="brief-form-actions">
-        <span className={lifecycleMutation.isError ? 'danger-text' : ''}>{lifecycleMutation.isError ? friendlyError(lifecycleMutation.error) : outcomeRequired ? 'Save the required call outcome below before changing task status.' : 'Status changes and comments are visible to the admin.'}</span>
-        <button type="submit" className="btn primary" disabled={outcomeRequired || (lifecycleColumn === liveCard.columnId && !lifecycleComment.trim()) || lifecycleMutation.isPending}>
+        <span className={lifecycleMutation.isError ? 'danger-text' : ''}>{lifecycleMutation.isError ? friendlyError(lifecycleMutation.error) : 'Status changes and comments are visible to the admin.'}</span>
+        <button type="submit" className="btn primary" disabled={(lifecycleColumn === liveCard.columnId && !lifecycleComment.trim()) || lifecycleMutation.isPending}>
           {lifecycleMutation.isPending ? <Loader2 size={12} className="spin" /> : <CheckCircle2 size={12} />} {lifecycleMutation.isPending ? 'Saving' : 'Save update'}
         </button>
       </div>
@@ -504,11 +504,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       />
       <div className="brief-form-actions">
         <span className={outcomeMutation.isError ? 'danger-text' : ''}>
-          {outcomeMutation.isError ? friendlyError(outcomeMutation.error) : 'This result updates the follow-up list and customer history.'}
+          {outcomeMutation.isError ? friendlyError(outcomeMutation.error) : 'Use Save and close below to record this result in the follow-up list and customer history.'}
         </span>
-        <button type="submit" className="btn primary" disabled={disposition === 'not_selected' || outcomeMutation.isPending}>
-          <CheckCircle2 size={12} /> {outcomeMutation.isPending ? 'Saving' : 'Save outcome'}
-        </button>
       </div>
     </form>
   ) : null;
