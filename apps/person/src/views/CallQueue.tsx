@@ -19,7 +19,7 @@ import { focusLabel, personSafeText } from '../lib/personTerminology';
 import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
-type WorkSection = 'missed' | 'risk' | 'followup' | 'priority';
+type WorkSection = 'missed' | 'risk' | 'review' | 'followup' | 'priority';
 
 const DAILY_OUTCOME_FILTERS: Array<{ value: DailyOperationFilter; label: string }> = [
   { value: 'not_selected', label: 'Needs outcome' },
@@ -389,11 +389,12 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 </button>
                 <button
                   type="button"
-                  className="missed-v2-title"
+                  className="missed-v2-title section-toggle"
                   aria-expanded={activeSection === 'missed'}
                   onClick={() => toggleSection('missed')}
                 >
                   <h2>Missed work</h2>
+                  <ChevronDown size={18} className="section-toggle-chevron" />
                 </button>
                 <span className="missed-v2-badge">Not completed - {missedFollowUps.length}</span>
               </div>
@@ -435,6 +436,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 <span className="missed-v2-icon churn-v2-icon"><UserX size={15} /></span>
                 <h2>At-risk customers</h2>
                 <span className="missed-v2-badge churn-v2-badge">Needs care - {churnFollowUps.length}</span>
+                <ChevronDown size={18} className="section-toggle-chevron" />
               </button>
               {activeSection === 'risk' ? (
                 <div className="missed-v2-list">
@@ -469,14 +471,17 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
           {!archive && <section className="missed-v2 transcript-review-section" aria-labelledby="needs-review-title">
             <div className="missed-v2-head">
               <span className="missed-v2-icon"><ShieldAlert size={15} /></span>
-              <div className="missed-v2-title"><h2 id="needs-review-title">Needs review</h2><p>Review calls that do not have a follow-up yet.</p></div>
+              <button type="button" className="missed-v2-title section-toggle" aria-expanded={activeSection === 'review'} onClick={() => toggleSection('review')}>
+                <span className="section-toggle-copy"><h2 id="needs-review-title">Needs review</h2><p>Review calls that do not have a follow-up yet.</p></span>
+                <ChevronDown size={18} className="section-toggle-chevron" />
+              </button>
               <span className="missed-v2-badge">{needsReview.length}</span>
             </div>
-            {needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : <div className="review-card-list">{needsReview.map((item) => (
-              <button type="button" className="review-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
-                <strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small>
-              </button>
-            ))}</div>}
+            {activeSection === 'review' ? needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : <div className="review-card-list">{needsReview.map((item) => (
+                <button type="button" className="review-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
+                  <strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><span>{item.summary}</span><small>{new Date(item.occurredAt).toLocaleString()} · {item.direction} · {item.reason}</small>
+                </button>
+              ))}</div> : null}
           </section>}
 
           <section className="missed-v2 followup-v2" id="followup-list-section">
@@ -484,13 +489,16 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <span className="missed-v2-icon followup-icon"><ListChecks size={15} /></span>
               <button
                 type="button"
-                className="missed-v2-title"
+                className="missed-v2-title section-toggle"
                 aria-expanded={activeSection === 'followup'}
                 onClick={() => toggleSection('followup')}
               >
-                <h2>{archive ? 'Follow-up archive' : range === 'today' ? 'Follow-up list for today' : 'Follow-up list'}</h2>
-                <p className="followup-subtitle">{archive ? 'Archived follow-ups for this staff member.' : 'Customers you need to call back, based on recent conversations.'}</p>
-                <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
+                <span className="section-toggle-copy">
+                  <h2>{archive ? 'Follow-up archive' : range === 'today' ? 'Follow-up list for today' : 'Follow-up list'}</h2>
+                  <p className="followup-subtitle">{archive ? 'Archived follow-ups for this staff member.' : 'Customers you need to call back, based on recent conversations.'}</p>
+                  <FrontendCustomizationSlotView customization={frontendCustomization} slot="daily.header" context={{ summary }} />
+                </span>
+                <ChevronDown size={18} className="section-toggle-chevron" />
               </button>
               {!archive && activeSection === 'followup' ? (
                 <div className="daily-range-toggle" aria-label="Daily call list range">
@@ -596,13 +604,16 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
               <span className="missed-v2-icon kanban-icon"><Users size={15} /></span>
               <button
                 type="button"
-                className="missed-v2-title"
+                className="missed-v2-title section-toggle"
                 aria-expanded={activeSection === 'priority'}
                 onClick={() => toggleSection('priority')}
               >
-                <h2>Priority customers</h2>
-                <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
-                <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
+                <span className="section-toggle-copy">
+                  <h2>Priority customers</h2>
+                  <p className="followup-subtitle">Assigned customer lists for regular purchase and follow-up work.</p>
+                  <FrontendCustomizationSlotView customization={frontendCustomization} slot="priority.header" context={{ summary }} />
+                </span>
+                <ChevronDown size={18} className="section-toggle-chevron" />
               </button>
               <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} across {groups.length} customer list{groups.length === 1 ? '' : 's'}</span>
             </div>

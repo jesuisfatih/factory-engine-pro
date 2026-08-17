@@ -1542,6 +1542,28 @@ html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; col
 .missed-refresh:hover { background: rgba(245, 196, 81, .4); }
 .missed-refresh:disabled { opacity: .6; cursor: default; }
 .missed-v2-title { flex: 1 1 240px; background: none; border: none; padding: 0; cursor: pointer; text-align: left; min-width: 0; }
+.section-toggle { display: flex; align-items: center; gap: 12px; border-radius: 8px; color: var(--text); transition: color .15s ease, background .15s ease; }
+.section-toggle:hover { color: var(--accent); }
+.section-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.section-toggle-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.section-toggle-copy p { margin: 0; }
+.section-toggle-chevron { flex: 0 0 auto; color: currentColor; transition: transform .2s ease, color .15s ease; }
+.section-toggle[aria-expanded="true"] .section-toggle-chevron,
+.missed-v2-head[aria-expanded="true"] .section-toggle-chevron { transform: rotate(180deg); }
+.churn-v2-head .section-toggle-chevron { margin-left: 2px; }
+.missed-v2-list,
+.followup-body,
+.review-card-list { animation: section-reveal .18s ease-out; }
+@keyframes section-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-toggle-chevron { transition: none; }
+  .missed-v2-list,
+  .followup-body,
+  .review-card-list { animation: none; }
+}
 .missed-v2-title h2,
 .missed-v2-head h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
 .missed-v2-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; color: #92400e; background: rgba(245, 196, 81, .24); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
