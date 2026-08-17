@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, RefreshCw, Save } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, RefreshCw, Save, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   accountPortalExperienceSchema,
@@ -24,6 +24,13 @@ interface PortalTenantConfig {
   accountPortalExperience: AccountPortalExperience;
 }
 
+interface PortalCatalogCollection {
+  id: string;
+  title: string;
+  handle: string | null;
+  productCount: number;
+}
+
 export function CustomerPortalSettingsPage() {
   const qc = useQueryClient();
   const principal = useCurrentPrincipal().data;
@@ -33,6 +40,11 @@ export function CustomerPortalSettingsPage() {
   const config = useQuery({
     queryKey: tenantConfigQueryKey,
     queryFn: () => adminApi.tenantConfig() as Promise<PortalTenantConfig>,
+    retry: false,
+  });
+  const collections = useQuery({
+    queryKey: ['identity', 'tenant-config', 'catalog-collections'],
+    queryFn: () => adminApi.portalCatalogCollections() as Promise<PortalCatalogCollection[]>,
     retry: false,
   });
 
@@ -87,6 +99,38 @@ export function CustomerPortalSettingsPage() {
         </div>
       </div>
       {validationError ? <div className="error-state">{validationError}</div> : null}
+      <div className="section portal-catalog-settings">
+        <div className="portal-catalog-settings-copy">
+          <span className="portal-catalog-icon"><Sparkles size={17} /></span>
+          <div>
+            <h3>Featured product collection</h3>
+            <p>Choose the Shopify collection customers see first in Products. Every other synced collection remains available below it.</p>
+          </div>
+        </div>
+        <div className="field portal-featured-collection-field">
+          <label htmlFor="portal-featured-collection">Featured collection</label>
+          <select
+            id="portal-featured-collection"
+            value={experience.catalog.featuredCollectionId}
+            disabled={!canWrite || save.isPending || collections.isLoading}
+            onChange={(event) => setExperience({
+              ...experience,
+              catalog: { ...experience.catalog, featuredCollectionId: event.target.value },
+            })}
+          >
+            <option value="">No featured collection</option>
+            {(collections.data ?? []).map((collection) => (
+              <option key={collection.id} value={collection.id}>
+                {collection.title} ({collection.productCount} products)
+              </option>
+            ))}
+          </select>
+          {collections.isError ? <span className="portal-field-help error">Collections could not be loaded. Run a Shopify product sync and try again.</span> : null}
+          {!collections.isLoading && !collections.isError && (collections.data?.length ?? 0) === 0
+            ? <span className="portal-field-help">No Shopify collection data has been synced yet.</span>
+            : null}
+        </div>
+      </div>
       <div className="section portal-editor-shell">
         <AccountPortalExperienceEditor
           value={experience}

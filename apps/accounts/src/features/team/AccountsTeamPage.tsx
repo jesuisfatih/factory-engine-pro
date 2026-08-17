@@ -40,7 +40,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   [CUSTOMER_PERMISSIONS.ordersCreate]: 'Create account orders',
   [CUSTOMER_PERMISSIONS.ordersReorder]: 'Reorder previous items',
   [CUSTOMER_PERMISSIONS.invoicesRead]: 'View invoices and payments',
-  [CUSTOMER_PERMISSIONS.cartWrite]: 'Build and checkout reorder carts',
+  [CUSTOMER_PERMISSIONS.cartWrite]: 'Send eligible previous purchases to the Shopify cart',
   [CUSTOMER_PERMISSIONS.spendingLimitsWrite]: 'Manage spending limits',
 };
 

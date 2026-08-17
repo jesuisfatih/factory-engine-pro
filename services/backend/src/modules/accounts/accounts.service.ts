@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import type {
   AccountAddressInput,
   AccountAddressType,
@@ -21,6 +22,7 @@ import type {
   UpdateAccountPasswordInput,
   UpdateAccountProfileInput,
 } from '@factory-engine-pro/contracts';
+import { accountPortalExperienceSchema } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { parseDateOnlyAtEndOfDay } from '../../shared/date-only.js';
 import { AppLogger } from '../../shared/logger.service.js';
@@ -32,6 +34,7 @@ import { MailService } from '../mail/mail.service.js';
 import { algorithmScore, algorithmScoreBand, algorithmVisible } from '../rules/algorithm-runtime.js';
 import { RulesService } from '../rules/rules.service.js';
 import { AccountsCheckoutService, type AccountCheckoutAttempt } from './accounts-checkout.service.js';
+import { hashStorefrontReorderToken } from '../storefront/storefront-reorder.js';
 
 type CustomerUserRecord = Prisma.CustomerUserGetPayload<{
   include: { customer: true; roleAssignments: { include: { role: true } } };
@@ -632,35 +635,38 @@ export class AccountsService {
 
   async products() {
     const actor = await this.currentActor();
-    const products = await this.prisma.db.catalogProduct.findMany({
-      where: { status: 'active' },
-      include: { variants: true },
-      orderBy: { title: 'asc' },
-      take: 120,
-    });
-    const entries = products.flatMap((product, productIndex) => {
-      const variants = product.variants.length > 0 ? product.variants : [null];
-      return variants.map((variant, variantIndex) => {
-        const listPrice = money(variant?.compareAtPrice ?? variant?.price ?? 0);
-        const variantTitle = variant?.title && !['default title', 'default'].includes(variant.title.toLowerCase())
-          ? ` - ${variant.title}`
-          : '';
-        return {
-          id: variant?.id ?? product.id,
-          productId: product.id,
-          variantId: variant?.id ?? null,
-          variant: variant ? { ...variant, product } : null,
-          name: `${product.title}${variantTitle}`,
-          sku: variant?.sku ?? product.handle ?? product.shopifyProductId,
-          vendor: product.vendor ?? 'Catalog',
-          listPriceUsd: listPrice,
-          yourPriceUsd: money(variant?.price ?? 0),
-          inStock: variant?.availableForSale ?? true,
-          inventoryQuantity: variant?.inventoryQuantity ?? null,
-          imageUrl: firstImageUrl(product.images),
-          imageBg: swatch(productIndex + variantIndex),
-        };
-      });
+    const [products, tenantConfig] = await Promise.all([
+      this.prisma.db.catalogProduct.findMany({
+        where: { status: 'active' },
+        include: { variants: { orderBy: { position: 'asc' } } },
+        orderBy: { title: 'asc' },
+      }),
+      this.prisma.db.tenantConfig.findFirst({
+        select: { shopifyDomain: true, accountPortalExperience: true },
+      }),
+    ]);
+    const portalExperience = accountPortalExperience(tenantConfig?.accountPortalExperience);
+    const featuredCollectionId = portalExperience.catalog.featuredCollectionId || null;
+    const entries = products.map((product, productIndex) => {
+      const variant = product.variants.find((item) => item.availableForSale) ?? product.variants[0] ?? null;
+      const collections = catalogCollectionList(product.collections);
+      return {
+        id: product.id,
+        productId: product.id,
+        variantId: variant?.id ?? null,
+        variant: variant ? { ...variant, product } : null,
+        name: product.title,
+        sku: variant?.sku ?? product.handle ?? product.shopifyProductId,
+        vendor: product.vendor ?? 'Catalog',
+        listPriceUsd: money(variant?.compareAtPrice ?? variant?.price ?? 0),
+        yourPriceUsd: money(variant?.price ?? 0),
+        inStock: product.variants.length === 0 || product.variants.some((item) => item.availableForSale),
+        inventoryQuantity: product.variants.reduce<number | null>((total, item) => item.inventoryQuantity === null ? total : (total ?? 0) + item.inventoryQuantity, null),
+        imageUrl: firstImageUrl(product.images),
+        imageBg: swatch(productIndex),
+        storefrontUrl: shopifyProductUrl(tenantConfig?.shopifyDomain, product.handle),
+        collections,
+      };
     });
     const pricedInputs: Array<{ variant: AccountCartCatalogVariant; quantity: number }> = [];
     const priceIndexByEntry = new Map<number, number>();
@@ -670,7 +676,7 @@ export class AccountsService {
       pricedInputs.push({ variant: entry.variant, quantity: 1 });
     });
     const priced = await this.calculateAccountPrices(actor, pricedInputs);
-    return entries.map(({ variant, ...entry }, index) => {
+    const pricedEntries = entries.map(({ variant, ...entry }, index) => {
       if (!variant) return entry;
       const price = priced[priceIndexByEntry.get(index) ?? -1] ?? { finalPrice: entry.yourPriceUsd, discountAmount: 0, appliedRule: null, basePrice: entry.yourPriceUsd };
       return {
@@ -680,6 +686,32 @@ export class AccountsService {
         discountUsd: price.discountAmount,
       };
     });
+    const collectionMap = new Map<string, { id: string; title: string; handle: string | null; products: typeof pricedEntries }>();
+    for (const entry of pricedEntries) {
+      const memberships = entry.collections.length > 0
+        ? entry.collections
+        : [{ id: 'uncollected', title: 'Other products', handle: null }];
+      for (const collection of memberships) {
+        const current = collectionMap.get(collection.id);
+        if (current) current.products.push(entry);
+        else collectionMap.set(collection.id, { ...collection, products: [entry] });
+      }
+    }
+    const collections = [...collectionMap.values()].sort((left, right) => {
+      if (left.id === featuredCollectionId) return -1;
+      if (right.id === featuredCollectionId) return 1;
+      if (left.id === 'uncollected') return 1;
+      if (right.id === 'uncollected') return -1;
+      return left.title.localeCompare(right.title);
+    });
+    return {
+      featuredCollectionId,
+      productCount: pricedEntries.length,
+      collections: collections.map((collection) => ({
+        ...collection,
+        featured: collection.id === featuredCollectionId,
+      })),
+    };
   }
 
   async tracking() {
@@ -1422,21 +1454,18 @@ export class AccountsService {
     });
 
     const cartWithItems = await this.requireOwnedCart(actor, cart.id);
-    const checkout = await this.checkout.createDraftOrderCheckout(cartWithItems, actor);
-    const finalCart = await this.persistCheckoutAttempt(cartWithItems, checkout);
+    const finalCart = await this.prepareStorefrontCartHandoff(cartWithItems);
     await this.recordCartActivity(actor, finalCart, {
       action: finalCart.checkoutUrl ? 'cart.checkout_ready' : finalCart.status === 'unavailable' ? 'cart.checkout_unavailable' : 'cart.account_review_requested',
-      label: finalCart.checkoutUrl ? 'Checkout ready' : finalCart.status === 'unavailable' ? 'Checkout unavailable' : 'Account review requested',
+      label: finalCart.checkoutUrl ? 'Shopify cart ready' : finalCart.status === 'unavailable' ? 'Reorder unavailable' : 'Reorder needs review',
       detail: finalCart.checkoutUrl
-        ? 'Secure checkout was prepared for this reorder.'
+        ? 'A secure handoff to the Shopify storefront cart was prepared.'
         : finalCart.status === 'unavailable'
           ? 'No item in this order could be confirmed as reorderable.'
-          : 'Checkout could not be shown yet, so the reorder was saved for account review.',
+          : 'The Shopify storefront could not be prepared for this reorder.',
       metadata: {
-        executionMode: checkout.executionMode,
-        shopifyDraftOrderId: checkout.shopifyDraftOrderId ?? null,
-        shopifyDraftOrderName: checkout.shopifyDraftOrderName ?? null,
-        checkoutError: customerSafeCheckoutError(checkout.checkoutError),
+        executionMode: 'shopify_storefront_cart',
+        checkoutError: finalCart.checkoutError,
       },
     });
 
@@ -1445,9 +1474,9 @@ export class AccountsService {
       originOrderId: order.id,
       action: finalCart.checkoutUrl ? 'checkout' : finalCart.status === 'review_required' ? 'review_portal_cart' : 'unavailable',
       message: finalCart.checkoutUrl
-        ? `${reorderableItems.length} item(s) are ready for secure checkout.`
+        ? `${reorderableItems.length} item(s) are ready to add to your Shopify cart.${resolved.length > reorderableItems.length ? ` ${resolved.length - reorderableItems.length} unavailable item(s) were skipped.` : ''}`
         : finalCart.status === 'review_required'
-          ? `${reorderableItems.length} item(s) were saved for reorder review. Checkout will appear only after availability is confirmed.`
+          ? `${reorderableItems.length} item(s) were saved, but the Shopify cart handoff needs review.`
         : 'No item in this order could be confirmed as reorderable.',
       checkoutUrl: finalCart.checkoutUrl,
       checkoutError: finalCart.checkoutError,
@@ -1466,6 +1495,56 @@ export class AccountsService {
         eligibilityBand: entry.strategyBand?.label ?? null,
       })),
     };
+  }
+
+  private async prepareStorefrontCartHandoff(cart: AccountCartRecord) {
+    if (!cart.items.some((item) => item.reorderable)) return cart;
+    const config = await this.prisma.db.tenantConfig.findFirst({
+      select: { shopifyDomain: true },
+    });
+    const shop = normalizedShopDomain(config?.shopifyDomain);
+    if (!shop) {
+      await this.prisma.db.accountReorderCart.updateMany({
+        where: { id: cart.id },
+        data: {
+          status: 'review_required',
+          checkoutError: 'The Shopify storefront is not configured for this account.',
+        },
+      });
+      return this.requireCartById(cart.id);
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    const proxySubpath = (this.config.get<string>('SHOPIFY_APP_PROXY_SUBPATH')?.trim() || 'eagle').replace(/^\/+|\/+$/g, '');
+    const checkoutUrl = new URL(`https://${shop}/apps/${encodeURIComponent(proxySubpath)}/reorder`);
+    checkoutUrl.searchParams.set('cart', cart.id);
+    checkoutUrl.searchParams.set('token', token);
+    await this.prisma.db.accountReorderCart.updateMany({
+      where: { id: cart.id },
+      data: {
+        status: 'checkout_ready',
+        checkoutUrl: checkoutUrl.toString(),
+        checkoutError: null,
+        metadata: {
+          ...metadata(cart.metadata),
+          checkoutExecutionMode: 'shopify_storefront_cart',
+          storefrontTokenHash: hashStorefrontReorderToken(token),
+          storefrontTokenExpiresAt: expiresAt.toISOString(),
+          storefrontShop: shop,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return this.requireCartById(cart.id);
+  }
+
+  private async requireCartById(cartId: string) {
+    const cart = await this.prisma.db.accountReorderCart.findFirst({
+      where: { id: cartId },
+      include: accountCartInclude(),
+    });
+    if (!cart) throw new NotFoundException('Cart not found');
+    return cart;
   }
 
   private async persistCheckoutAttempt(cart: AccountCartRecord, checkout: AccountCheckoutAttempt) {
@@ -2145,6 +2224,35 @@ function publicDesignFile(file: ReturnType<typeof designFilesFromOrder>[number])
     url: file.url,
     sku: file.sku,
   };
+}
+
+function accountPortalExperience(value: unknown) {
+  const parsed = accountPortalExperienceSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  return parsed.success ? parsed.data : accountPortalExperienceSchema.parse({});
+}
+
+function catalogCollectionList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const record = objectRecord(entry);
+    const id = stringValue(record?.id);
+    const title = stringValue(record?.title);
+    const handle = stringValue(record?.handle);
+    return id && title ? [{ id, title, handle }] : [];
+  });
+}
+
+function shopifyProductUrl(shopifyDomain: string | null | undefined, handle: string | null) {
+  if (!handle) return null;
+  const domain = normalizedShopDomain(shopifyDomain);
+  if (!domain) return null;
+  return `https://${domain}/products/${encodeURIComponent(handle)}`;
+}
+
+function normalizedShopDomain(value: string | null | undefined) {
+  if (!value) return null;
+  const domain = value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  return domain || null;
 }
 
 function lineItemProperties(item: Record<string, unknown>) {

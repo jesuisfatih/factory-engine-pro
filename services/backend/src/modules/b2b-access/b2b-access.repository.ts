@@ -140,15 +140,18 @@ export class B2BAccessRepository {
     return this.findById(id);
   }
 
-  findCustomerByIdentity(email: string, shopifyCustomerId?: string | null) {
+  async findCustomerByIdentity(email: string, shopifyCustomerId?: string | null) {
     const tenantId = this.tenantId();
+    if (shopifyCustomerId) {
+      const byShopifyId = await this.prisma.db.customer.findFirst({
+        where: { tenantId, shopifyCustomerId },
+      });
+      if (byShopifyId) return byShopifyId;
+    }
     return this.prisma.db.customer.findFirst({
       where: {
         tenantId,
-        OR: [
-          ...(shopifyCustomerId ? [{ shopifyCustomerId }] : []),
-          { email: { equals: email, mode: 'insensitive' } },
-        ],
+        email: { equals: email, mode: 'insensitive' },
       },
     });
   }
@@ -159,6 +162,18 @@ export class B2BAccessRepository {
         tenantId: this.tenantId(),
         email: { equals: email, mode: 'insensitive' },
       },
+      include: { customer: true },
+    });
+  }
+
+  async relinkCustomerUser(customerUserId: string, customerId: string) {
+    await this.prisma.db.customerUser.updateMany({
+      where: { id: customerUserId },
+      data: { customerId },
+    });
+    return this.prisma.db.customerUser.findFirst({
+      where: { id: customerUserId },
+      include: { customer: true },
     });
   }
 
@@ -290,6 +305,7 @@ export class B2BAccessRepository {
       data: {
         customerId: input.customerId,
         customerUserId: input.customerUserId,
+        ...(input.shopifyCustomerId ? { shopifyCustomerId: input.shopifyCustomerId } : {}),
       },
     });
     const pickupOrders = await this.prisma.db.commercePickupOrder.updateMany({

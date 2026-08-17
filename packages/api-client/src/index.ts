@@ -445,6 +445,10 @@ export class ApiClient {
     return this.get('/identity/tenant-config');
   }
 
+  portalCatalogCollections() {
+    return this.get<Array<{ id: string; title: string; handle: string | null; productCount: number }>>('/identity/tenant-config/catalog-collections');
+  }
+
   workspaceBrand() {
     return this.get<{
       workspaceName: string | null;

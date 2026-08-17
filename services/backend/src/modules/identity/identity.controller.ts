@@ -132,6 +132,12 @@ export class IdentityController {
     return this.identity.getTenantConfig();
   }
 
+  @Get('tenant-config/catalog-collections')
+  @RequirePermission(MEMBER_PERMISSIONS.settingsRead)
+  portalCatalogCollections() {
+    return this.identity.listPortalCatalogCollections();
+  }
+
   @Public()
   @Get('workspace-brand')
   @Header('Cache-Control', 'no-store, max-age=0')

@@ -130,7 +130,7 @@ export class B2BAccessService {
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
     if (isTaxExemptionRenewal(request)) return this.approveTaxExemptionRenewal(request);
-    const existingUser = await this.repository.findCustomerUserByEmail(request.email);
+    let existingUser = await this.repository.findCustomerUserByEmail(request.email);
     const requestShopifyCustomerId = cleanOptionalString(request.shopifyCustomerId ?? undefined);
     const matchedCustomer = await this.repository.findCustomerByIdentity(request.email, requestShopifyCustomerId);
     const shopifyCustomerId = requestShopifyCustomerId ?? cleanOptionalString(matchedCustomer?.shopifyCustomerId ?? undefined);
@@ -147,7 +147,12 @@ export class B2BAccessService {
       throw new ConflictException('This application belongs to a different Shopify customer record.');
     }
     if (existingUser && existingUser.customerId !== customer.id) {
-      throw new ConflictException('This email is already linked to another portal customer.');
+      const existingShopifyCustomerId = cleanOptionalString(existingUser.customer.shopifyCustomerId ?? undefined);
+      if (existingShopifyCustomerId && existingShopifyCustomerId !== shopifyCustomerId) {
+        throw new ConflictException('This email is already linked to another Shopify customer.');
+      }
+      existingUser = await this.repository.relinkCustomerUser(existingUser.id, customer.id);
+      if (!existingUser) throw new ConflictException('The existing portal user could not be linked to this Shopify customer.');
     }
     await this.repository.updateCustomerFromB2BRequest(customer.id, {
       email: request.email,

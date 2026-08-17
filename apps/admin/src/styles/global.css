@@ -307,6 +307,14 @@ a { color: inherit; text-decoration: none; }
 .portal-save-status { display: flex; gap: 12px; align-items: center; }
 .portal-save-status > span { display: inline-flex; gap: 6px; align-items: center; color: var(--success); font-size: 11px; font-weight: 600; }
 .portal-editor-shell { padding: 18px; }
+.portal-catalog-settings { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface)); }
+.portal-catalog-settings-copy { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.portal-catalog-settings-copy h3 { margin: 0; font-size: 15px; }
+.portal-catalog-settings-copy p { margin: 5px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; max-width: 680px; }
+.portal-catalog-icon { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; color: var(--accent); background: color-mix(in srgb, var(--accent) 11%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border)); border-radius: 9px; }
+.portal-featured-collection-field { min-width: min(360px, 100%); margin: 0; }
+.portal-featured-collection-field select { width: 100%; }
+.portal-field-help.error { color: var(--danger); }
 .customer-portal-settings .portal-editor { margin-top: 0; padding-top: 0; border-top: 0; }
 .customer-portal-settings .portal-live-preview { max-height: calc(100vh - 210px); }
 .workspace-side-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -683,6 +691,7 @@ a { color: inherit; text-decoration: none; }
   .workspace-settings-menu-title { grid-column: 1 / -1; }
   .workspace-settings-menu button { grid-template-columns: 20px minmax(0, 1fr); }
   .portal-editor-grid { grid-template-columns: 1fr; }
+  .portal-catalog-settings { align-items: stretch; flex-direction: column; }
   .portal-live-preview { position: static; }
 }
 

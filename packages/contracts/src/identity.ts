@@ -567,6 +567,11 @@ export type AccountPortalPresentationMode = (typeof ACCOUNT_PORTAL_PRESENTATION_
 export const accountPortalExperienceSchema = z.object({
   version: z.literal(1).default(1),
   presentationMode: z.enum(ACCOUNT_PORTAL_PRESENTATION_MODES).default('mode3'),
+  catalog: z.object({
+    featuredCollectionId: z.string().trim().max(160).default(''),
+  }).strict().default({
+    featuredCollectionId: '',
+  }),
   theme: z.object({
     primaryColor: hexColorSchema.default('#081F6F'),
     accentColor: hexColorSchema.default('#2C63E8'),

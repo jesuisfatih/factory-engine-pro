@@ -14,6 +14,15 @@ export class StorefrontController {
     return response.redirect(302, target);
   }
 
+  @Get('reorder')
+  async reorder(@Query() query: StorefrontQuery, @Res() response: Response) {
+    const html = await this.storefront.reorderCartPage(query);
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.setHeader('Cache-Control', 'no-store, max-age=0');
+    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'self'");
+    return response.status(200).send(html);
+  }
+
   @Get('features/b2b-context')
   b2bContext(@Query() query: StorefrontQuery) {
     return this.storefront.b2bContext(query);
@@ -44,6 +53,12 @@ export interface StorefrontQuery {
   shopifyCustomerId?: string;
   return_to?: string;
   returnTo?: string;
+  cart?: string;
+  token?: string;
+  signature?: string;
+  timestamp?: string;
+  path_prefix?: string;
+  logged_in_customer_id?: string;
 }
 
 export interface StorefrontLinkCustomerBody {

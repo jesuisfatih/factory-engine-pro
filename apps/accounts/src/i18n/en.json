@@ -19,7 +19,7 @@
     "documents": "Documents",
     "orders": "Orders",
     "cart": "Cart",
-    "products": "Catalog",
+    "products": "Products",
     "reorder": "Reorder templates",
     "tracking": "Tracking",
     "pickup": "Pickup",
@@ -47,7 +47,7 @@
   },
   "home": {
     "title": "Account home",
-    "subtitle": "Orders, invoices, reorder options, and cart status for this buying account",
+    "subtitle": "Orders, invoices, products, and reorder options for this buying account",
     "next_step_label": "Next safe action"
   },
   "addresses": {
@@ -203,7 +203,7 @@
   },
   "reorder": {
     "title": "Reorder templates",
-    "subtitle": "Save your frequent baskets and reorder them in one click",
+    "subtitle": "Send previous order items back to your Shopify cart",
     "create": "New template",
     "kpi_templates": "Templates",
     "kpi_reorders": "Total reorders",
@@ -215,7 +215,7 @@
     "table_actions": "",
     "use_template": "Reorder",
     "delete_confirm": "Delete this template?",
-    "empty_state": "No templates yet — save a frequent basket to reorder it in one click."
+    "empty_state": "No reorderable orders are available yet."
   },
   "cart": {
     "title": "Cart",
@@ -324,8 +324,8 @@
     }
   },
   "products": {
-    "title": "Catalog",
-    "subtitle": "Browse the catalog with your B2B pricing applied",
+    "title": "Products",
+    "subtitle": "Browse Shopify products by collection with your B2B pricing applied",
     "kpi_total": "Products",
     "kpi_on_sale": "On sale",
     "kpi_avg_discount": "Avg discount",

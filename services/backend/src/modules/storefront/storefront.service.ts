@@ -1,9 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service.js';
+import { CryptoService } from '../../shared/crypto.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
 import type { StorefrontLinkCustomerBody, StorefrontQuery } from './storefront.controller.js';
+import {
+  hashStorefrontReorderToken,
+  renderStorefrontCartTransfer,
+  shopifyVariantNumericId,
+  storefrontLineProperties,
+  verifyShopifyAppProxySignature,
+} from './storefront-reorder.js';
 
 @Injectable()
 export class StorefrontService {
@@ -11,24 +19,83 @@ export class StorefrontService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly config: ConfigService,
+    private readonly crypto: CryptoService,
   ) {}
 
   async handoffUrl(query: StorefrontQuery) {
     const tenant = await this.resolveTenant(query);
     const accountsUrl = this.accountsUrl();
     const email = customerEmail(query);
+    const shopifyCustomerId = shopifyCustomerIdFrom(query);
     const params = new URLSearchParams();
     if (tenant.shop) params.set('shop', tenant.shop);
     if (email) params.set('email', email);
+    if (shopifyCustomerId) params.set('shopifyCustomerId', shopifyCustomerId);
     if (tenant.tenantId) params.set('tenantId', tenant.tenantId);
     params.set('sourceSurface', 'shopify-header-block');
     return `${accountsUrl}/login${params.toString() ? `?${params}` : ''}`;
+  }
+
+  async reorderCartPage(query: StorefrontQuery) {
+    const tenant = await this.resolveTenant(query);
+    if (!tenant.tenantId) throw new BadRequestException('This storefront is not connected to a workspace.');
+    const config = await this.prisma.tenantConfig.findFirst({
+      where: { tenantId: tenant.tenantId },
+      select: { shopifyApiSecretEncrypted: true },
+    });
+    const secret = this.crypto.decrypt(config?.shopifyApiSecretEncrypted)?.trim()
+      || this.config.get<string>('SHOPIFY_API_SECRET')?.trim()
+      || this.config.get<string>('SHOPIFY_CLIENT_SECRET')?.trim()
+      || '';
+    if (!verifyShopifyAppProxySignature(query as Record<string, unknown>, secret)) {
+      throw new UnauthorizedException('The Shopify cart handoff could not be verified.');
+    }
+
+    const cartId = textValue(query.cart);
+    const token = textValue(query.token);
+    if (!cartId || !token) throw new BadRequestException('The reorder link is incomplete.');
+    const cart = await this.prisma.accountReorderCart.findFirst({
+      where: { tenantId: tenant.tenantId, id: cartId },
+      include: { items: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!cart) throw new BadRequestException('This reorder is no longer available.');
+    const cartMetadata = jsonRecord(cart.metadata);
+    const tokenHash = textValue(cartMetadata.storefrontTokenHash);
+    const expiresAt = Date.parse(textValue(cartMetadata.storefrontTokenExpiresAt));
+    if (!tokenHash || hashStorefrontReorderToken(token) !== tokenHash || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      throw new UnauthorizedException('This reorder link has expired. Please create it again from your account.');
+    }
+
+    const items = cart.items.flatMap((item) => {
+      if (!item.reorderable) return [];
+      const id = shopifyVariantNumericId(item.shopifyVariantId);
+      if (!id) return [];
+      return [{
+        id,
+        quantity: Math.max(1, item.quantity),
+        properties: storefrontLineProperties(item.propertiesJson, item.designFilesJson),
+      }];
+    });
+    if (items.length === 0) throw new BadRequestException('No currently available Shopify items were found in this reorder.');
+    await this.prisma.accountReorderCart.updateMany({
+      where: { tenantId: tenant.tenantId, id: cart.id },
+      data: {
+        status: 'checkout_ready',
+        metadata: {
+          ...cartMetadata,
+          storefrontHandoffOpenedAt: new Date().toISOString(),
+          storefrontHandoffItemCount: items.length,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return renderStorefrontCartTransfer(items);
   }
 
   async b2bContext(query: StorefrontQuery) {
     const tenant = await this.resolveTenant(query);
     const accountsUrl = this.accountsUrl();
     const email = customerEmail(query);
+    const shopifyCustomerId = shopifyCustomerIdFrom(query);
     const requestParams = new URLSearchParams();
     const loginParams = new URLSearchParams();
     if (tenant.shop) {
@@ -38,6 +105,10 @@ export class StorefrontService {
     if (email) {
       requestParams.set('email', email);
       loginParams.set('email', email);
+    }
+    if (shopifyCustomerId) {
+      requestParams.set('shopifyCustomerId', shopifyCustomerId);
+      loginParams.set('shopifyCustomerId', shopifyCustomerId);
     }
     requestParams.set('sourceSurface', 'shopify-header-block');
     loginParams.set('sourceSurface', 'shopify-header-block');
@@ -286,6 +357,10 @@ function cleanShopDomain(value: string | null | undefined) {
 
 function textValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function jsonRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 function firstConfiguredUrl(values: Array<string | undefined>) {

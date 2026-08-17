@@ -178,6 +178,22 @@ export type BuyerProduct = {
   inventoryQuantity: number | null;
   imageUrl: string | null;
   imageBg: string;
+  storefrontUrl: string | null;
+  collections: Array<{ id: string; title: string; handle: string | null }>;
+};
+
+export type BuyerProductCollection = {
+  id: string;
+  title: string;
+  handle: string | null;
+  featured: boolean;
+  products: BuyerProduct[];
+};
+
+export type BuyerProductCatalog = {
+  featuredCollectionId: string | null;
+  productCount: number;
+  collections: BuyerProductCollection[];
 };
 
 export type TrackingOrder = {
@@ -372,7 +388,7 @@ export function fetchReorderTemplates() {
 }
 
 export function fetchBuyerProducts() {
-  return accountsApi.accountProducts() as Promise<BuyerProduct[]>;
+  return accountsApi.accountProducts() as Promise<BuyerProductCatalog>;
 }
 
 export function fetchTrackingOrders() {

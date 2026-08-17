@@ -13,6 +13,7 @@
 {
   "shop": {{ shop.permanent_domain | json }},
   "customerEmail": {% if customer %}{{ customer.email | json }}{% else %}""{% endif %},
+  "shopifyCustomerId": {% if customer %}{{ customer.id | json }}{% else %}""{% endif %},
   "accountsUrl": {{ fe_accounts_url | json }}
 }
 {%- endcapture -%}
@@ -44,7 +45,7 @@
     <a
       class="fe-b2b-access__button fe-b2b-access__button--login"
       data-role="login"
-      href="/apps/eagle/handoff?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&customer_email={{ customer.email | url_encode }}{% endif %}"
+      href="/apps/eagle/handoff?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&customer_email={{ customer.email | url_encode }}&shopify_customer_id={{ customer.id | url_encode }}{% endif %}"
       title="{% if customer %}Open B2B Portal{% else %}B2B Portal Login{% endif %}"
     >
       {% if block.settings.show_icon %}
@@ -62,7 +63,7 @@
     <a
       class="fe-b2b-access__button fe-b2b-access__button--register"
       data-role="register"
-      href="{{ fe_accounts_url }}/request-invitation?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&email={{ customer.email | url_encode }}{% endif %}&sourceSurface=shopify-header-block"
+      href="{{ fe_accounts_url }}/request-invitation?shop={{ shop.permanent_domain | url_encode }}{% if customer %}&email={{ customer.email | url_encode }}&shopifyCustomerId={{ customer.id | url_encode }}{% endif %}&sourceSurface=shopify-header-block"
       title="Apply for B2B access"
     >
       <span>{{ block.settings.register_text }}</span>
@@ -166,6 +167,7 @@
     var proxy = "/apps/eagle";
     var shop = String(cfg.shop || "");
     var customerEmail = String(cfg.customerEmail || "");
+    var shopifyCustomerId = String(cfg.shopifyCustomerId || "");
     var loginBtn = root.querySelector('[data-role="login"]');
     var registerBtn = root.querySelector('[data-role="register"]');
 
@@ -175,6 +177,7 @@
       var params = new URLSearchParams(parts[1] || "");
       if (shop && !params.get("shop")) params.set("shop", shop);
       if (customerEmail && !params.get("email")) params.set("email", customerEmail);
+      if (shopifyCustomerId && !params.get("shopifyCustomerId")) params.set("shopifyCustomerId", shopifyCustomerId);
       return parts[0] + "?" + params.toString();
     }
 
@@ -188,7 +191,9 @@
       }
     }
 
-    var query = "?shop=" + encodeURIComponent(shop) + (customerEmail ? "&email=" + encodeURIComponent(customerEmail) : "");
+    var query = "?shop=" + encodeURIComponent(shop)
+      + (customerEmail ? "&email=" + encodeURIComponent(customerEmail) : "")
+      + (shopifyCustomerId ? "&shopify_customer_id=" + encodeURIComponent(shopifyCustomerId) : "");
     fetch(proxy + "/features/b2b-context" + query, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(applyContext).catch(function () {});
   })();
 </script>

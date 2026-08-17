@@ -24,6 +24,12 @@ export interface ShopifyPage<T> {
   nextCursor: string | null;
 }
 
+export interface ShopifyProductCollection {
+  id: string;
+  title: string;
+  handle: string | null;
+}
+
 const SHOPIFY_GRAPHQL_MAX_ATTEMPTS = 7;
 const SHOPIFY_GRAPHQL_BASE_RETRY_MS = 750;
 const SHOPIFY_GRAPHQL_MAX_RETRY_MS = 30_000;
@@ -89,6 +95,42 @@ export class ShopifyClientService {
 
   products(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
     return this.getPage<Record<string, unknown>>(credentials, '/products.json', 'products', cursor, query);
+  }
+
+  async productCollections(credentials: ShopifyCredentials, productIds: string[]) {
+    const ids = [...new Set(productIds.filter((id) => /^\d+$/.test(id)))];
+    if (ids.length === 0) return new Map<string, ShopifyProductCollection[]>();
+    const data = await this.graphql<{
+      nodes?: Array<{
+        legacyResourceId?: string | number | null;
+        collections?: { nodes?: Array<{ id?: string; legacyResourceId?: string | number | null; title?: string; handle?: string | null }> };
+      } | null>;
+    }>(credentials, `
+      query FactoryEngineProductCollections($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on Product {
+            legacyResourceId
+            collections(first: 100) {
+              nodes { id legacyResourceId title handle }
+            }
+          }
+        }
+      }
+    `, { ids: ids.map((id) => `gid://shopify/Product/${id}`) });
+
+    const result = new Map<string, ShopifyProductCollection[]>();
+    for (const node of data.nodes ?? []) {
+      const productId = textId(node?.legacyResourceId);
+      if (!productId) continue;
+      const collections = (node?.collections?.nodes ?? []).flatMap((collection) => {
+        const id = textId(collection.legacyResourceId) ?? textId(collection.id);
+        const title = typeof collection.title === 'string' ? collection.title.trim() : '';
+        const handle = typeof collection.handle === 'string' && collection.handle.trim() ? collection.handle.trim() : null;
+        return id && title ? [{ id, title, handle }] : [];
+      });
+      result.set(productId, collections);
+    }
+    return result;
   }
 
   orders(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
@@ -241,6 +283,14 @@ function parseJson(text: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function textId(value: unknown) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const gidMatch = text.match(/\/(\d+)$/);
+  return gidMatch?.[1] ?? text;
 }
 
 function extractShopifyError(body: Record<string, unknown> | null) {

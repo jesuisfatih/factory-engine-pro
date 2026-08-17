@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,10 +18,9 @@ function ReorderNotice({ result }: { result: ReorderResult | null }) {
   const tone = result.action === 'checkout' ? 'success' : result.action === 'review_portal_cart' ? 'info' : 'danger';
   return (
     <div className={`portal-alert ${tone}`}>
-      <strong>{result.action === 'review_portal_cart' ? 'Account review cart saved' : result.action === 'checkout' ? 'Checkout ready' : 'Not reorderable'}</strong>
+      <strong>{result.action === 'review_portal_cart' ? 'Reorder needs review' : result.action === 'checkout' ? 'Shopify cart ready' : 'Not reorderable'}</strong>
       <span>{result.message}</span>
-      {result.checkoutUrl ? <a className="btn primary" href={result.checkoutUrl}>Proceed to checkout</a> : null}
-      {!result.checkoutUrl && result.action === 'review_portal_cart' ? <Link to="/cart" className="btn">Open cart</Link> : null}
+      {result.checkoutUrl ? <a className="btn primary" href={result.checkoutUrl}>Add to Shopify cart</a> : null}
     </div>
   );
 }
@@ -37,6 +36,7 @@ function ReorderView() {
     onSuccess: (next) => {
       setResult(next);
       invalidateCartViews(queryClient);
+      if (next.checkoutUrl && next.skippedCount === 0) window.location.assign(next.checkoutUrl);
     },
   });
 
@@ -104,7 +104,7 @@ function ReorderView() {
               <div>
                 <h3>{selected.name}</h3>
                 <div className="muted">
-                  Review the items before creating a reorder cart. Items that need review will not pretend checkout is ready.
+                  Reorder sends available variants and their original order properties to the Shopify cart.
                 </div>
               </div>
               <span className={`pill ${selected.canReorder ? 'success' : 'danger'}`}>
@@ -135,7 +135,7 @@ function ReorderView() {
                 disabled={!selected.canReorder || reorder.isPending}
                 onClick={() => reorder.mutate(selected.orderId)}
               >
-                <RotateCw size={13} /> {reorder.isPending ? 'Creating review cart...' : t('reorder.use_template')}
+                <RotateCw size={13} /> {reorder.isPending ? 'Preparing Shopify cart...' : t('reorder.use_template')}
               </button>
             </div>
           </section>

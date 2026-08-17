@@ -272,6 +272,16 @@ export class SyncService {
       let pages = 0;
       do {
         const page = await this.fetchPage(resource, credentials, cursor, job.since ?? null);
+        if (resource === 'products' && page.items.length > 0) {
+          const collectionMap = await this.shopify.productCollections(
+            credentials,
+            page.items.map((item) => stringId(item.id)).filter((id): id is string => Boolean(id)),
+          );
+          page.items = page.items.map((item) => ({
+            ...item,
+            collections: collectionMap.get(stringId(item.id) ?? '') ?? [],
+          }));
+        }
         await this.persistPage(resource, page.items);
         processed += page.items.length;
         pages += 1;
@@ -394,6 +404,7 @@ export class SyncService {
         syncedAt: new Date(),
       },
     });
+    await this.reconcileCustomerOrderOwnership(customer);
     await this.evaluateCustomerSegments(customer.id, 'shopify_customer_sync');
   }
 
@@ -413,7 +424,7 @@ export class SyncService {
         tags: tags(raw.tags),
         status: stringOrNull(raw.status) ?? 'active',
         images: jsonOrDbNull(raw.images),
-        collections: Prisma.JsonNull,
+        collections: jsonOrDbNull(raw.collections),
         rawData: raw as Prisma.InputJsonValue,
         syncedAt: new Date(),
       },
@@ -425,6 +436,7 @@ export class SyncService {
         tags: tags(raw.tags),
         status: stringOrNull(raw.status) ?? 'active',
         images: jsonOrDbNull(raw.images),
+        collections: jsonOrDbNull(raw.collections),
         rawData: raw as Prisma.InputJsonValue,
         syncedAt: new Date(),
       },
@@ -475,6 +487,10 @@ export class SyncService {
     const customer = objectOrNull(raw.customer);
     const shopifyCustomerId = stringId(customer?.id);
     const localCustomer = customer ? await this.ensureCustomerFromOrder(customer) : null;
+    const orderEmail = stringOrNull(raw.email) ?? stringOrNull(customer?.email);
+    const linkedCustomerUser = localCustomer
+      ? await this.primaryPortalUser(localCustomer.id, orderEmail)
+      : null;
     const lineItems = Array.isArray(raw.line_items) ? raw.line_items as Record<string, unknown>[] : [];
     const mappedLineItems = lineItems.map(mapLineItem);
     const designFiles = extractDesignFiles(mappedLineItems);
@@ -496,11 +512,12 @@ export class SyncService {
         id: prefixedId('ord'),
         tenantId: this.tenantId(),
         customerId: localCustomer?.id,
+        customerUserId: linkedCustomerUser?.id,
         shopifyOrderId,
         shopifyOrderNumber: stringOrNull(raw.order_number) ?? stringOrNull(raw.name)?.replace('#', '') ?? null,
         shopifyCustomerId,
         source: 'shopify',
-        email: stringOrNull(raw.email),
+        email: orderEmail,
         phone: stringOrNull(raw.phone),
         subtotal: numeric(raw.subtotal_price),
         totalDiscounts: numeric(raw.total_discounts),
@@ -531,9 +548,10 @@ export class SyncService {
       },
       update: {
         customerId: localCustomer?.id,
+        customerUserId: linkedCustomerUser?.id,
         shopifyOrderNumber: stringOrNull(raw.order_number) ?? stringOrNull(raw.name)?.replace('#', '') ?? null,
         shopifyCustomerId,
-        email: stringOrNull(raw.email),
+        email: orderEmail,
         phone: stringOrNull(raw.phone),
         subtotal: numeric(raw.subtotal_price),
         totalDiscounts: numeric(raw.total_discounts),
@@ -628,6 +646,60 @@ export class SyncService {
     });
     await this.evaluateCustomerSegments(created.id, 'shopify_order_customer_sync');
     return created;
+  }
+
+  private async primaryPortalUser(customerId: string, email?: string | null) {
+    if (email) {
+      const exact = await this.prisma.db.customerUser.findFirst({
+        where: { customerId, status: 'active', email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (exact) return exact;
+    }
+    return this.prisma.db.customerUser.findFirst({
+      where: { customerId, status: 'active' },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  private async reconcileCustomerOrderOwnership(customer: {
+    id: string;
+    shopifyCustomerId: string | null;
+    email: string | null;
+  }) {
+    const user = await this.primaryPortalUser(customer.id, customer.email);
+    const matchers: Prisma.CommerceOrderWhereInput[] = [];
+    if (customer.shopifyCustomerId) matchers.push({ shopifyCustomerId: customer.shopifyCustomerId });
+    if (customer.email) matchers.push({ email: { equals: customer.email, mode: 'insensitive' } });
+    if (matchers.length === 0) return;
+    const orders = await this.prisma.db.commerceOrder.findMany({
+      where: {
+        OR: matchers,
+        AND: [
+          { OR: [{ customerId: null }, { customerId: customer.id }] },
+          ...(user ? [{ OR: [{ customerUserId: null }, { customerUserId: user.id }] }] : []),
+        ],
+      },
+      select: { id: true },
+      take: 5000,
+    });
+    if (orders.length === 0) return;
+    const orderIds = orders.map((order) => order.id);
+    await this.prisma.db.commerceOrder.updateMany({
+      where: { id: { in: orderIds } },
+      data: {
+        customerId: customer.id,
+        ...(user ? { customerUserId: user.id } : {}),
+      },
+    });
+    await this.prisma.db.commercePickupOrder.updateMany({
+      where: { orderId: { in: orderIds } },
+      data: {
+        customerId: customer.id,
+        ...(user ? { customerUserId: user.id } : {}),
+      },
+    });
   }
 
   private async removeNonProductionShopifyCustomer(shopifyCustomerId: string, source: string) {

@@ -292,6 +292,23 @@ export class IdentityService {
     }
   }
 
+  async listPortalCatalogCollections() {
+    const products = await this.prisma.db.catalogProduct.findMany({
+      where: { status: 'active' },
+      select: { collections: true },
+      orderBy: { title: 'asc' },
+    });
+    const byId = new Map<string, { id: string; title: string; handle: string | null; productCount: number }>();
+    for (const product of products) {
+      for (const collection of catalogCollections(product.collections)) {
+        const current = byId.get(collection.id);
+        if (current) current.productCount += 1;
+        else byId.set(collection.id, { ...collection, productCount: 1 });
+      }
+    }
+    return [...byId.values()].sort((left, right) => left.title.localeCompare(right.title));
+  }
+
   async getTenantConfig() {
     const config = await this.prisma.db.tenantConfig.findFirst({});
     if (!config) {
@@ -508,6 +525,18 @@ function parseUrgencyScoringConfig(value: Prisma.JsonValue) {
 function parseAccountPortalExperience(value: Prisma.JsonValue | null | undefined) {
   const parsed = accountPortalExperienceSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
   return parsed.success ? parsed.data : accountPortalExperienceSchema.parse({});
+}
+
+function catalogCollections(value: Prisma.JsonValue | null | undefined) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, Prisma.JsonValue>;
+    const id = typeof record.id === 'string' ? record.id.trim() : '';
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const handle = typeof record.handle === 'string' && record.handle.trim() ? record.handle.trim() : null;
+    return id && title ? [{ id, title, handle }] : [];
+  });
 }
 
 function parseCompanyProfile(value: Prisma.JsonValue | null | undefined) {

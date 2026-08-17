@@ -25,7 +25,6 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     children: [
       { to: '/', matchPrefix: '/', i18nKey: 'nav.home', id: 'nav-home', icon: LayoutDashboard, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
       { to: '/orders', matchPrefix: '/orders', i18nKey: 'nav.orders', id: 'nav-orders', icon: ShoppingCart, permissions: [CUSTOMER_PERMISSIONS.ordersRead] },
-      { to: '/cart', matchPrefix: '/cart', i18nKey: 'nav.cart', id: 'nav-cart', icon: ShoppingCart, permissions: [CUSTOMER_PERMISSIONS.cartWrite] },
       { to: '/products', matchPrefix: '/products', i18nKey: 'nav.products', id: 'nav-products', icon: Tag, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
       { to: '/reorder', matchPrefix: '/reorder', i18nKey: 'nav.reorder', id: 'nav-reorder', icon: RotateCw, permissions: [CUSTOMER_PERMISSIONS.ordersReorder] },
     ],

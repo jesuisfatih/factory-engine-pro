@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,10 +38,9 @@ function ReorderNotice({ result }: { result: ReorderResult | null }) {
   const tone = result.action === 'checkout' ? 'success' : result.action === 'review_portal_cart' ? 'info' : 'danger';
   return (
     <div className={`portal-alert ${tone}`}>
-      <strong>{result.action === 'checkout' ? 'Checkout ready' : result.action === 'review_portal_cart' ? 'Account review cart saved' : 'Not reorderable'}</strong>
+      <strong>{result.action === 'checkout' ? 'Shopify cart ready' : result.action === 'review_portal_cart' ? 'Reorder needs review' : 'Not reorderable'}</strong>
       <span>{result.message}</span>
-      {result.checkoutUrl ? <a className="btn primary" href={result.checkoutUrl}>Proceed to checkout</a> : null}
-      {!result.checkoutUrl && result.action === 'review_portal_cart' ? <Link to="/cart" className="btn">Open cart</Link> : null}
+      {result.checkoutUrl ? <a className="btn primary" href={result.checkoutUrl}>Add to Shopify cart</a> : null}
     </div>
   );
 }
@@ -55,6 +54,7 @@ function OrderDetail({ orderId }: { orderId: string }) {
     onSuccess: (next) => {
       setResult(next);
       invalidateCartViews(queryClient);
+      if (next.checkoutUrl && next.skippedCount === 0) window.location.assign(next.checkoutUrl);
     },
   });
   const reorderOne = useMutation({
@@ -62,6 +62,7 @@ function OrderDetail({ orderId }: { orderId: string }) {
     onSuccess: (next) => {
       setResult(next);
       invalidateCartViews(queryClient);
+      if (next.checkoutUrl && next.skippedCount === 0) window.location.assign(next.checkoutUrl);
     },
   });
 

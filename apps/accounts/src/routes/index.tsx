@@ -1,16 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, CreditCard, FileText, RotateCw, ShoppingCart, Truck } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, CreditCard, Layers3, RotateCw, Truck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import {
-  fetchActiveCart,
   fetchBuyerOrders,
   fetchInvoices,
   fetchProfile,
   fetchReorderTemplates,
-  type BuyerCart,
   type BuyerInvoice,
   type BuyerOrder,
   type ReorderTemplate,
@@ -47,28 +45,6 @@ function PortalHomeEmpty({ title, body, to, cta }: { title: string; body: string
       <Link to={to} className="btn">{cta}</Link>
     </div>
   );
-}
-
-function cartHomeCopy(cart: BuyerCart) {
-  if (cart.checkoutAction === 'checkout' && cart.checkoutUrl) {
-    return {
-      label: 'Checkout ready',
-      action: 'Continue checkout',
-      body: 'Secure checkout is ready after availability and pricing review.',
-    };
-  }
-  if (cart.checkoutAction === 'unavailable' || cart.status === 'unavailable') {
-    return {
-      label: 'Not ready',
-      action: 'Open cart',
-      body: cart.checkoutError ?? 'No reorderable items are available in this cart.',
-    };
-  }
-  return {
-    label: 'Account review needed',
-    action: 'Review cart',
-    body: cart.checkoutError ?? 'Items are saved while availability and pricing are confirmed for your account.',
-  };
 }
 
 function OrderRow({ order }: { order: BuyerOrder }) {
@@ -120,34 +96,6 @@ function ReorderRow({ template }: { template: ReorderTemplate }) {
   );
 }
 
-function CartPanel({ cart }: { cart: BuyerCart | null | undefined }) {
-  if (!cart) {
-    return (
-      <PortalHomeEmpty
-        title="No active cart"
-        body="Create a reorder cart from a recent order or template when you are ready."
-        to="/reorder"
-        cta="Start reorder"
-      />
-    );
-  }
-
-  const copy = cartHomeCopy(cart);
-
-  return (
-    <div className={`portal-home-cart ${cart.checkoutAction === 'checkout' ? 'success' : 'warn'}`}>
-      <div>
-        <span>Active cart</span>
-        <strong>{cart.itemCount} items - {fmtMoney(cart.totalUsd)}</strong>
-        <small>{cart.originOrderNumber ? `From ${cart.originOrderNumber} - ${copy.label}` : copy.body}</small>
-      </div>
-      <Link to="/cart" className="btn primary">
-        <ShoppingCart size={13} /> {copy.action}
-      </Link>
-    </div>
-  );
-}
-
 function HomeView() {
   const { t } = useTranslation();
   const orders = useQuery({
@@ -162,10 +110,6 @@ function HomeView() {
     queryKey: ['home', 'reorder-templates'],
     queryFn: fetchReorderTemplates,
   });
-  const cart = useQuery({
-    queryKey: ['home', 'cart'],
-    queryFn: fetchActiveCart,
-  });
   const profile = useQuery({
     queryKey: ['home', 'profile'],
     queryFn: fetchProfile,
@@ -179,7 +123,7 @@ function HomeView() {
   const recentOrderTotal = orderRows.reduce((sum, order) => sum + order.totalUsd, 0);
   const outstanding = invoiceRows.reduce((sum, invoice) => sum + invoice.balanceUsd, 0);
 
-  const hasAnyError = orders.isError || invoices.isError || reorderTemplates.isError || cart.isError;
+  const hasAnyError = orders.isError || invoices.isError || reorderTemplates.isError;
 
   return (
     <>
@@ -202,19 +146,15 @@ function HomeView() {
           <h3>
             {unpaidInvoices.length > 0
               ? 'Review open invoices before the next reorder.'
-              : cart.data
-                ? cartHomeCopy(cart.data).body
-                : reorderReady > 0
+              : reorderReady > 0
                   ? 'Reorder from a recent approved basket.'
                   : 'Review recent orders and account activity.'}
           </h3>
-          <p>Orders, invoices, reorder options, and active cart state are pulled from your account data.</p>
+          <p>Orders, invoices, and reorder options stay connected to your Shopify customer account.</p>
         </div>
         <div className="portal-home-hero-actions">
           {unpaidInvoices.length > 0 ? (
             <Link to="/invoices" className="btn primary"><CreditCard size={13} /> Pay or review invoices</Link>
-          ) : cart.data ? (
-            <Link to="/cart" className="btn primary"><ShoppingCart size={13} /> Review active cart</Link>
           ) : (
             <Link to="/reorder" className="btn primary"><RotateCw size={13} /> Start reorder</Link>
           )}
@@ -226,7 +166,7 @@ function HomeView() {
         <PortalHomeMetric label="Recent orders" value={orders.data?.meta.count ?? 0} sub={`${fmtMoney(recentOrderTotal)} on this page`} />
         <PortalHomeMetric label="Open invoices" value={unpaidInvoices.length} sub={`${fmtMoney(outstanding)} visible balance`} />
         <PortalHomeMetric label="Reorder ready" value={reorderReady} sub="templates with available items" />
-        <PortalHomeMetric label="Cart state" value={cart.data?.itemCount ?? 0} sub={cart.data ? cartHomeCopy(cart.data).label : 'no active cart'} />
+        <PortalHomeMetric label="Account orders" value={profile.data?.ordersCount ?? 0} sub="linked from Shopify" />
       </div>
 
       {hasAnyError ? (
@@ -234,7 +174,6 @@ function HomeView() {
           {orders.isError ? <ErrorState title="Could not load recent orders" error={orders.error} retry={() => orders.refetch()} /> : null}
           {invoices.isError ? <ErrorState title="Could not load invoices" error={invoices.error} retry={() => invoices.refetch()} /> : null}
           {reorderTemplates.isError ? <ErrorState title="Could not load reorder options" error={reorderTemplates.error} retry={() => reorderTemplates.refetch()} /> : null}
-          {cart.isError ? <ErrorState title="Could not load active cart" error={cart.error} retry={() => cart.refetch()} /> : null}
         </div>
       ) : null}
 
@@ -293,15 +232,18 @@ function HomeView() {
         <section className="portal-home-panel">
           <header>
             <div>
-              <span>Cart or review request</span>
-              <strong>Checkout is shown only when it is actually ready</strong>
+              <span>Product collections</span>
+              <strong>Explore the catalog, then purchase in the Shopify store</strong>
             </div>
-            <Link to="/cart" className="btn">Open cart</Link>
+            <Link to="/products" className="btn">Browse products</Link>
           </header>
-          {cart.isLoading ? <div className="portal-home-loading">Loading active cart...</div> : <CartPanel cart={cart.data} />}
-          <div className="portal-home-note">
-            <FileText size={14} />
-            <span>Unavailable items stay in review state instead of pretending checkout succeeded.</span>
+          <div className="portal-home-feature-card">
+            <span className="portal-home-row-icon"><Layers3 size={16} /></span>
+            <div>
+              <strong>Collection-based catalog</strong>
+              <span>Open any product on the connected Shopify storefront to choose current options.</span>
+            </div>
+            <Link to="/products" className="btn"><ArrowUpRight size={12} /> View catalog</Link>
           </div>
         </section>
       </div>
