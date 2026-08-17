@@ -569,6 +569,7 @@ function ReviewAssignmentsPanel({ items, onOpenCustomer }: { items: AssignedTran
           <span className={`review-status ${isCompletedReview(item) ? 'completed' : 'active'}`}>{titleizeStatus(item.status)}</span>
         </div>
         {item.description ? <p>{item.description}</p> : null}
+        {item.latestComment ? <div className="review-latest-comment"><strong>Latest staff update</strong><span>{item.latestComment}</span>{item.latestCommentAt ? <small>{new Date(item.latestCommentAt).toLocaleString()}</small> : null}</div> : null}
         <div className="review-assignment-meta">
           <span>Assigned to <strong>{item.assignedMemberName}</strong> · {item.assignedMemberRole}</span>
           <span>{new Date(item.assignedAt).toLocaleString()} · {item.priority} priority</span>
@@ -1029,6 +1030,7 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
       item.customerPhone,
       item.title,
       item.description,
+      item.latestComment,
       item.assignedMemberName,
       item.assignedMemberRole,
       item.status,
@@ -1039,6 +1041,10 @@ function filterCallCenterKanban(data: CallCenterOverview, memberId: string, quer
 }
 
 function titleizeStatus(value: string) {
+  if (value === 'open' || value === 'assigned') return 'Assigned';
+  if (value === 'in_progress') return 'In progress';
+  if (value === 'pending_resolve' || value === 'waiting_on_customer') return 'Customer waiting';
+  if (COMPLETED_REVIEW_STATUSES.has(value.toLowerCase())) return 'Completed';
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 

@@ -85,7 +85,22 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     mutationFn: (input: { mode: 'assign' | 'dismiss'; item: UnmatchedTranscriptReviewItem; text: string }) => input.mode === 'assign'
       ? assignTranscriptReview(input.item.id, { targetMemberId: summary!.viewer.id, description: input.text })
       : dismissTranscriptReview(input.item.id, { reason: input.text }),
-    onSuccess: async () => { setReviewItem(null); setReviewDescription(''); await qc.invalidateQueries({ queryKey: QK_BASE }); },
+    onSuccess: async (result, input) => {
+      setReviewItem(null);
+      setReviewDescription('');
+      await qc.invalidateQueries({ queryKey: QK_BASE });
+      if (input.mode === 'assign' && result.staffWorkItemId) {
+        setActiveSection('followup');
+        setSelectedContextTone('followup');
+        setSelectedId(result.staffWorkItemId);
+        try {
+          const detail = await fetchTaskBrief(result.staffWorkItemId);
+          setDeepLinkCard(detail.card);
+        } catch (taskError) {
+          setDeepLinkError(friendlyError(taskError));
+        }
+      }
+    },
   });
   const filteredDaily = daily;
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
@@ -720,12 +735,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       {reviewItem && <div className="dialog-backdrop" role="presentation" onMouseDown={() => !reviewAction.isPending && setReviewItem(null)}>
         <section className="dialog-card transcript-review-modal" role="dialog" aria-modal="true" aria-labelledby="assign-review-title" onMouseDown={(event) => event.stopPropagation()}>
           <button type="button" className="dialog-close" aria-label="Close" onClick={() => setReviewItem(null)}><X size={18} /></button>
-          <h2 id="assign-review-title">Assign follow-up</h2><p><strong>{reviewItem.customerName ?? reviewItem.phone ?? 'Unknown caller'}</strong></p>
-          <label>Assigned to<input value={summary?.viewer.name ?? ''} disabled /></label>
-          <label>What should they do?<textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={4} autoFocus /></label>
+          <div className="review-modal-heading"><span>Unassigned team pool</span><h2 id="assign-review-title">Review this call</h2><p>Take ownership only when you are ready to handle the follow-up. The task will then move to your Follow-up list.</p></div>
+          <div className="review-modal-summary"><strong>{reviewItem.customerName ?? reviewItem.phone ?? 'Unknown caller'}</strong><p>{reviewItem.summary}</p><dl><div><dt>Concern</dt><dd>{reviewItem.concern || 'Not captured'}</dd></div><div><dt>Suggested goal</dt><dd>{reviewItem.goal || 'Not captured'}</dd></div></dl>{reviewItem.excerpt ? <blockquote>{reviewItem.excerpt}</blockquote> : null}</div>
+          <label>Your task note<textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={3} placeholder="What will you do next?" autoFocus /></label>
           {reviewAction.error ? <div className="ops-inline-error">{friendlyError(reviewAction.error)}</div> : null}
-          <div className="dialog-actions"><button type="button" className="btn" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>Assign follow-up</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
-          <hr /><h3>Call summary</h3><p>{reviewItem.summary}</p><p>{reviewItem.concern}</p><p>{reviewItem.goal}</p>{reviewItem.excerpt ? <blockquote>{reviewItem.excerpt}</blockquote> : null}
+          <div className="dialog-actions"><button type="button" className="btn primary" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>{reviewAction.isPending ? 'Taking task…' : `Take ownership as ${summary?.viewer.name ?? 'me'}`}</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
         </section>
       </div>}
       <CustomerDetailPanel

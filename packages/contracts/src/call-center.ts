@@ -43,6 +43,8 @@ export const assignedTranscriptReviewItemSchema = z.object({
   customerPhone: z.string().nullable(),
   title: z.string(),
   description: z.string().nullable(),
+  latestComment: z.string().nullable(),
+  latestCommentAt: z.string().nullable(),
   assignedMemberId: z.string().nullable(),
   assignedMemberName: z.string(),
   assignedMemberRole: z.string(),

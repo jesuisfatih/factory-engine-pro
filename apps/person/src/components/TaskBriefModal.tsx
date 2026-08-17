@@ -7,10 +7,10 @@ import {
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
   History, UserPlus,
 } from 'lucide-react';
-import { dialAircall, fetchTaskBrief, friendlyError, linkTaskCustomer, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
+import { dialAircall, fetchTaskBrief, friendlyError, linkTaskCustomer, moveCard, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
 import { FollowUpScheduler, initialFollowUpValue } from './FollowUpScheduler';
-import type { Card as CardData, TaskBriefDetail } from '../types';
+import type { Card as CardData, ColumnId, TaskBriefDetail } from '../types';
 import { humanize, personSafeText } from '../lib/personTerminology';
 
 interface Props {
@@ -50,6 +50,17 @@ const CALL_OUTCOMES: Array<{ value: Exclude<PersonCallDisposition, 'not_selected
   { value: 'do_not_call', label: 'Do not call' },
   { value: 'completed', label: 'Completed' },
 ];
+
+const TASK_LIFECYCLE: Array<{ value: ColumnId; label: string; help: string }> = [
+  { value: 'unassigned', label: 'Assigned', help: 'Ready for the assigned staff member.' },
+  { value: 'in_progress', label: 'In progress', help: 'The task is actively being handled.' },
+  { value: 'positive', label: 'Customer waiting', help: 'Waiting for information or action from the customer.' },
+  { value: 'closed', label: 'Completed', help: 'The requested follow-up is finished.' },
+];
+
+function lifecycleLabel(value: ColumnId) {
+  return TASK_LIFECYCLE.find((item) => item.value === value)?.label ?? 'Assigned';
+}
 
 function normalizeCallContextSectionOrder(sectionOrder: FrontendCustomizationModalSection[] | undefined) {
   if (!sectionOrder?.length) return sectionOrder;
@@ -190,6 +201,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const [upset, setUpset] = useState(initial.upset);
   const [goal, setGoal] = useState(initial.goal);
   const [note, setNote] = useState('');
+  const [lifecycleColumn, setLifecycleColumn] = useState<ColumnId>(liveCard.columnId);
+  const [lifecycleComment, setLifecycleComment] = useState('');
   const [scheduleAt, setScheduleAt] = useState(() => initialFollowUpValue());
   const [scheduleNote, setScheduleNote] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(isTaskCard ? card.id : null);
@@ -235,6 +248,10 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   }, [isTaskCard, liveCard.id, liveCard.outcomeRequired]);
 
   useEffect(() => {
+    setLifecycleColumn(liveCard.columnId);
+  }, [liveCard.columnId]);
+
+  useEffect(() => {
     if (embedded) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && !outcomeRequired) onClose(); };
     document.addEventListener('keydown', onKey);
@@ -253,6 +270,28 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
       queryClient.setQueryData(queryKey, next);
       queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] });
       queryClient.invalidateQueries({ queryKey: ['person', 'notes'] });
+    },
+  });
+
+  const lifecycleMutation = useMutation({
+    mutationFn: async () => {
+      if (lifecycleColumn !== liveCard.columnId) {
+        await moveCard({ id: card.id, columnId: lifecycleColumn, index: 0 });
+      }
+      if (lifecycleComment.trim()) {
+        await saveTaskNote(card.id, {
+          body: `[Task status: ${lifecycleLabel(lifecycleColumn)}] ${lifecycleComment.trim()}`,
+        });
+      }
+    },
+    onSuccess: async () => {
+      setLifecycleComment('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: ['person', 'daily-operations'] }),
+        queryClient.invalidateQueries({ queryKey: ['person', 'notes'] }),
+      ]);
+      if (lifecycleColumn === 'closed') onClose();
     },
   });
 
@@ -355,22 +394,66 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     },
   });
 
+  const lifecycleSection = isTaskCard ? (
+    <form
+      className="brief-block brief-lifecycle"
+      style={{ order: 65 }}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (lifecycleColumn === liveCard.columnId && !lifecycleComment.trim()) return;
+        lifecycleMutation.mutate();
+      }}
+    >
+      <div className="brief-block-head">
+        <span className="lbl">Task status</span>
+        <span className={`brief-status-pill status-${liveCard.columnId}`}>{lifecycleLabel(liveCard.columnId)}</span>
+      </div>
+      <div className="brief-lifecycle-track" aria-label="Task lifecycle">
+        {TASK_LIFECYCLE.map((item, index) => {
+          const currentIndex = TASK_LIFECYCLE.findIndex((candidate) => candidate.value === liveCard.columnId);
+          const state = index < currentIndex ? 'done' : index === currentIndex ? 'current' : '';
+          return <span key={item.value} className={state}><i />{item.label}</span>;
+        })}
+      </div>
+      <label className="brief-lifecycle-field">
+        <span className="lbl">Update status</span>
+        <select className="brief-edit" value={lifecycleColumn} onChange={(event) => setLifecycleColumn(event.target.value as ColumnId)} disabled={lifecycleMutation.isPending || outcomeRequired}>
+          {TASK_LIFECYCLE.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.help}</option>)}
+        </select>
+      </label>
+      <textarea
+        className="brief-edit"
+        rows={2}
+        value={lifecycleComment}
+        onChange={(event) => setLifecycleComment(event.target.value)}
+        placeholder="Optional update for the task history…"
+        disabled={lifecycleMutation.isPending}
+      />
+      <div className="brief-form-actions">
+        <span className={lifecycleMutation.isError ? 'danger-text' : ''}>{lifecycleMutation.isError ? friendlyError(lifecycleMutation.error) : outcomeRequired ? 'Save the required call outcome below before changing task status.' : 'Status changes and comments are visible to the admin.'}</span>
+        <button type="submit" className="btn primary" disabled={outcomeRequired || (lifecycleColumn === liveCard.columnId && !lifecycleComment.trim()) || lifecycleMutation.isPending}>
+          {lifecycleMutation.isPending ? <Loader2 size={12} className="spin" /> : <CheckCircle2 size={12} />} {lifecycleMutation.isPending ? 'Saving' : 'Save update'}
+        </button>
+      </div>
+    </form>
+  ) : null;
+
   const noteSection = isTaskCard && showField('noteForm') ? (
     <form className="brief-block" style={sectionStyle('noteForm', 82)} onSubmit={submitNote}>
       <div className="brief-block-head">
-        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Follow-up notes')}</span>
+        <span className="lbl">{frontendCopy(override, 'noteLabel', 'Task comments')}</span>
         {detail ? <span className="brief-count-pill">{detail.notes.length} saved</span> : null}
       </div>
       <textarea
         id="task-note-input"
         className="brief-edit"
         rows={3}
-        placeholder="Save a follow-up note to customer history..."
+        placeholder="Add a comment about this task..."
         value={note}
         onChange={(event) => setNote(event.target.value)}
       />
       <div className="brief-form-actions">
-        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Persisted to this customer follow-up thread.'}</span>
+        <span className={noteMutation.isError ? 'danger-text' : ''}>{noteMutation.isError ? friendlyError(noteMutation.error) : 'Saved to the task history and visible to the admin.'}</span>
         <button type="submit" className="btn primary" disabled={!note.trim() || noteMutation.isPending}>
           <StickyNote size={12} /> {noteMutation.isPending ? 'Saving' : 'Save note'}
         </button>
@@ -480,6 +563,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                 <span>This follow-up exists on the board, but the live detail endpoint returned no context payload.</span>
               </div>
             )}
+
+            {!taskBriefError ? lifecycleSection : null}
 
             {!taskBriefError && (
               <>

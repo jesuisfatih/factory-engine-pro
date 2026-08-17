@@ -870,6 +870,20 @@ button { font-family: inherit; }
 .brief-psych strong { color: var(--text); min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
 .brief-psych p { margin: 4px 0 0; color: var(--text-muted); line-height: 1.5; }
 .brief-count-pill { font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--surface-3); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+.brief-lifecycle { border-color: color-mix(in srgb, var(--accent) 32%, var(--border)); background: color-mix(in srgb, var(--accent) 4%, var(--surface-2)); }
+.brief-status-pill { padding: 4px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .35px; }
+.brief-status-pill.status-positive { background: var(--warn-soft); color: var(--warn); }
+.brief-status-pill.status-closed { background: var(--success-soft); color: var(--success); }
+.brief-lifecycle-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 3px 0 12px; }
+.brief-lifecycle-track span { position: relative; display: grid; justify-items: center; gap: 5px; color: var(--text-faint); font-size: 9px; font-weight: 700; text-align: center; }
+.brief-lifecycle-track span::before { content: ''; position: absolute; top: 5px; right: calc(50% + 6px); left: calc(-50% + 6px); height: 2px; background: var(--border); }
+.brief-lifecycle-track span:first-child::before { display: none; }
+.brief-lifecycle-track i { position: relative; z-index: 1; display: block; width: 12px; height: 12px; border: 2px solid var(--border-strong); border-radius: 50%; background: var(--surface); }
+.brief-lifecycle-track span.done,.brief-lifecycle-track span.current { color: var(--text); }
+.brief-lifecycle-track span.done::before,.brief-lifecycle-track span.current::before { background: var(--accent); }
+.brief-lifecycle-track span.done i { border-color: var(--accent); background: var(--accent); }
+.brief-lifecycle-track span.current i { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.brief-lifecycle-field { display: grid; gap: 6px; margin-bottom: 8px; }
 
 .brief-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .brief-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
@@ -2716,3 +2730,4 @@ html.dark .note-delete-confirm { border-color: #7F1D1D; background: #2A1518; col
   .customer-detail-order-properties > div { grid-template-columns: 1fr; gap: 2px; }
 }
 .review-card-list{display:grid;gap:10px;padding:12px}.review-card{display:grid;gap:6px;width:100%;padding:14px;text-align:left;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:inherit;cursor:pointer}.review-card:hover{border-color:var(--accent)}.review-card span,.review-card small{color:var(--text-muted)}.dialog-backdrop{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.68);backdrop-filter:blur(5px)}.dialog-card{isolation:isolate;position:relative;width:min(680px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow:auto;padding:24px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);box-shadow:0 28px 80px rgba(0,0,0,.42)}.dialog-card label{display:grid;gap:6px;margin:14px 0}.dialog-card input,.dialog-card textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:inherit}.dialog-close{position:absolute;top:12px;right:12px;border:0;background:transparent;color:inherit;cursor:pointer}.dialog-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.transcript-review-modal blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid var(--accent);color:var(--text-muted)}
+.review-modal-heading{display:grid;gap:7px;padding-right:32px}.review-modal-heading>span{justify-self:start;padding:4px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.review-modal-heading h2,.review-modal-heading p{margin:0}.review-modal-heading p{color:var(--text-muted);font-size:12px;line-height:1.5}.review-modal-summary{display:grid;gap:8px;margin-top:16px;padding:15px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}.review-modal-summary>strong{font-size:16px}.review-modal-summary>p{margin:0;color:var(--text);line-height:1.5}.review-modal-summary dl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}.review-modal-summary dl>div{display:grid;gap:3px;padding:9px;border-radius:8px;background:var(--surface)}.review-modal-summary dt{color:var(--text-faint);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}.review-modal-summary dd{margin:0;color:var(--text-muted);font-size:11px;line-height:1.4}@media(max-width:640px){.review-modal-summary dl{grid-template-columns:1fr}.dialog-actions .btn{width:100%;justify-content:center}}

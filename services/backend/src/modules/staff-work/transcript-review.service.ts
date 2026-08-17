@@ -106,7 +106,11 @@ export class TranscriptReviewService {
     const [workItems, calls] = await Promise.all([
       this.prisma.db.staffWorkItem.findMany({
         where: { id: { in: workItemIds } },
-        include: { customer: true, assignedMember: { include: { roleAssignments: { include: { role: true } } } } },
+        include: {
+          customer: true,
+          assignedMember: { include: { roleAssignments: { include: { role: true } } } },
+          comments: { orderBy: { createdAt: 'desc' }, take: 1 },
+        },
       }),
       this.prisma.db.aircallCallEvent.findMany({
         where: { id: { in: decisions.map((row) => row.callEventId) } },
@@ -129,6 +133,8 @@ export class TranscriptReviewService {
         customerPhone: task.customer?.phone ?? call?.contactPhoneE164 ?? call?.contactPhone ?? null,
         title: task.title,
         description: decision.humanDescription ?? task.description,
+        latestComment: task.comments[0]?.body ?? null,
+        latestCommentAt: task.comments[0]?.createdAt.toISOString() ?? null,
         assignedMemberId: task.assignedMemberId,
         assignedMemberName: member ? memberName(member) : 'Unassigned',
         assignedMemberRole: member?.roleAssignments[0]?.role.name ?? 'Member',
