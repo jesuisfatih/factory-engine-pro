@@ -20,7 +20,7 @@
     "orders": "Orders",
     "cart": "Cart",
     "products": "Products",
-    "reorder": "Reorder templates",
+    "reorder": "Saved Reorders",
     "tracking": "Tracking",
     "pickup": "Pickup",
     "invoices": "Invoices",
@@ -202,7 +202,7 @@
     "empty_state": "No orders yet. Use the catalog to place your first order."
   },
   "reorder": {
-    "title": "Reorder templates",
+    "title": "Saved Reorders",
     "subtitle": "Send previous order items back to your Shopify cart",
     "create": "New template",
     "kpi_templates": "Templates",

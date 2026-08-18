@@ -223,7 +223,7 @@ function HomeView() {
           {reorderTemplates.isLoading ? (
             <div className="portal-home-loading">Loading reorder options...</div>
           ) : reorderRows.length === 0 ? (
-            <PortalHomeEmpty title="No reorder templates" body="Reorder shortcuts appear after order line items can be matched safely." to="/orders" cta="Review orders" />
+            <PortalHomeEmpty title="No saved reorders" body="Reorder shortcuts appear after order line items can be matched safely." to="/orders" cta="Review orders" />
           ) : (
             <div className="portal-home-list">{reorderRows.map((template) => <ReorderRow key={template.id} template={template} />)}</div>
           )}
