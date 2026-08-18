@@ -8,7 +8,12 @@ import { TenantContextService } from '../../shared/tenant-context.js';
 import { MailService } from '../mail/mail.service.js';
 import { normalizeShopDomain } from '../sync/shopify-domain.js';
 import { SyncService } from '../sync/sync.service.js';
-import { safeShopifyWebhookHeaders, shopifyWebhookDedupeKey, verifyShopifyWebhookHmac } from './shopify-webhook.js';
+import {
+  safeShopifyWebhookHeaders,
+  shopifyWebhookDedupeKey,
+  shopifyWebhookSecretCiphertext,
+  verifyShopifyWebhookHmac,
+} from './shopify-webhook.js';
 
 type ShopifyWebhookTopic = 'orders/create' | 'orders/updated';
 
@@ -35,9 +40,9 @@ export class ShopifyWebhookIngestService {
 
     const config = await this.prisma.tenantConfig.findFirst({
       where: { shopifyDomain: { equals: shopDomain, mode: 'insensitive' } },
-      select: { tenantId: true, webhookHmacKeyEncrypted: true },
+      select: { tenantId: true, webhookHmacKeyEncrypted: true, shopifyApiSecretEncrypted: true },
     });
-    const secret = this.crypto.decrypt(config?.webhookHmacKeyEncrypted)?.trim();
+    const secret = this.crypto.decrypt(shopifyWebhookSecretCiphertext(config))?.trim();
     if (!config || !secret || !verifyShopifyWebhookHmac(input.rawBody, input.headers['x-shopify-hmac-sha256'], secret)) {
       this.logger.warn('shopify_webhook', 'signature_rejected', 'Shopify webhook signature verification failed.', {
         shop_domain: shopDomain,

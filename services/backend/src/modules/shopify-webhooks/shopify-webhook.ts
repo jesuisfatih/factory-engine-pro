@@ -8,6 +8,15 @@ export function verifyShopifyWebhookHmac(rawBody: string, signature: string | un
   return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
+export function shopifyWebhookSecretCiphertext(config: {
+  webhookHmacKeyEncrypted: string | null;
+  shopifyApiSecretEncrypted: string | null;
+} | null | undefined) {
+  return config?.webhookHmacKeyEncrypted?.trim()
+    || config?.shopifyApiSecretEncrypted?.trim()
+    || null;
+}
+
 export function shopifyWebhookDedupeKey(topic: string, rawBody: string, webhookId?: string | null) {
   const id = webhookId?.trim();
   return id

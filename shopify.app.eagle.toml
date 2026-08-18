@@ -13,15 +13,11 @@ api_version = "2025-10"
 
   [[webhooks.subscriptions]]
   topics = ["orders/create"]
-  uri = "https://api.eagledtfprint.com/api/v1/webhooks/orders/create"
+  uri = "https://api.eagledtfprint.com/api/v1/webhooks/shopify/orders/create"
 
   [[webhooks.subscriptions]]
-  topics = ["orders/paid"]
-  uri = "https://api.eagledtfprint.com/api/v1/webhooks/orders/paid"
-
-  [[webhooks.subscriptions]]
-  topics = ["customers/create"]
-  uri = "https://api.eagledtfprint.com/api/v1/webhooks/customers/create"
+  topics = ["orders/updated"]
+  uri = "https://api.eagledtfprint.com/api/v1/webhooks/shopify/orders/updated"
 
 [access_scopes]
 scopes = "read_all_orders,read_content,read_customers,read_inventory,read_orders,read_products,read_shipping,read_themes,write_content,write_customers,write_discounts,write_inventory,write_orders,write_price_rules,write_products,write_shipping,write_themes"

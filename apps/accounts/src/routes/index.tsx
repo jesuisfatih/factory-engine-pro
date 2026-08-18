@@ -101,6 +101,10 @@ function HomeView() {
   const orders = useQuery({
     queryKey: ['home', 'orders'],
     queryFn: () => fetchBuyerOrders({ status: 'all', limit: 3 }),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
   const invoices = useQuery({
     queryKey: ['home', 'invoices'],

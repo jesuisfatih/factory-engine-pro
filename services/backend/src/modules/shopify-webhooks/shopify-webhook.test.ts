@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { describe, it } from 'node:test';
-import { safeShopifyWebhookHeaders, shopifyWebhookDedupeKey, verifyShopifyWebhookHmac } from './shopify-webhook.js';
+import {
+  safeShopifyWebhookHeaders,
+  shopifyWebhookDedupeKey,
+  shopifyWebhookSecretCiphertext,
+  verifyShopifyWebhookHmac,
+} from './shopify-webhook.js';
 
 describe('Shopify webhook helper', () => {
   it('accepts only the exact HMAC signed payload', () => {
@@ -30,5 +35,20 @@ describe('Shopify webhook helper', () => {
       authorization: 'secret',
       cookie: 'session=secret',
     }), { 'x-shopify-topic': 'orders/create' });
+  });
+
+  it('prefers an explicit webhook secret and falls back to the Shopify app secret', () => {
+    assert.equal(shopifyWebhookSecretCiphertext({
+      webhookHmacKeyEncrypted: ' webhook-secret ',
+      shopifyApiSecretEncrypted: ' app-secret ',
+    }), 'webhook-secret');
+    assert.equal(shopifyWebhookSecretCiphertext({
+      webhookHmacKeyEncrypted: null,
+      shopifyApiSecretEncrypted: ' app-secret ',
+    }), 'app-secret');
+    assert.equal(shopifyWebhookSecretCiphertext({
+      webhookHmacKeyEncrypted: null,
+      shopifyApiSecretEncrypted: null,
+    }), null);
   });
 });

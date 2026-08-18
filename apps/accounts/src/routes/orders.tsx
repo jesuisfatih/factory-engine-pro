@@ -211,6 +211,8 @@ function OrdersView() {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
   const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates });
   const quickReorder = useMutation({
