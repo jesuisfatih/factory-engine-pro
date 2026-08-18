@@ -200,7 +200,7 @@ function OrdersView() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [quickResult, setQuickResult] = useState<ReorderResult | null>(null);
-  const { data: orderPage, isLoading, isError, error, refetch } = useQuery({
+  const { data: orderPage, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: [...QK, tab, search, limit, cursor],
     queryFn: () => fetchBuyerOrders({
       status: tab,
@@ -208,6 +208,9 @@ function OrdersView() {
       limit,
       cursor: cursor ?? undefined,
     }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
   const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates });
   const quickReorder = useMutation({
@@ -278,6 +281,15 @@ function OrdersView() {
             >
               <ArrowUpDown size={12} />
               {sort === 'date' ? t('orders.sort_by_date') : t('orders.sort_by_total')}
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              <RotateCw size={12} className={isFetching ? 'auth-spin' : undefined} />
+              {isFetching ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
 
