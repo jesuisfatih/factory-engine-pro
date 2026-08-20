@@ -19,8 +19,6 @@ import {
   sendPersonMessageSchema,
   togglePersonQueuePinSchema,
   transferPersonTaskSchema,
-  claimUnmatchedTranscriptReviewSchema,
-  dismissUnmatchedTranscriptReviewSchema,
   type AircallDialInput,
   type CreatePersonRequestInput,
   type MovePersonQueueCardInput,
@@ -39,8 +37,6 @@ import {
   type SendPersonMessageInput,
   type TogglePersonQueuePinInput,
   type TransferPersonTaskInput,
-  type ClaimUnmatchedTranscriptReviewInput,
-  type DismissUnmatchedTranscriptReviewInput,
 } from '@factory-engine-pro/contracts';
 import { RequirePermission } from '../../shared/permissions.decorator.js';
 import { ZodValidationPipe } from '../../shared/zod-validation.pipe.js';
@@ -68,18 +64,6 @@ export class PersonWorkspaceController {
     @Query(new ZodValidationPipe(personDailyOperationsQuerySchema)) query: PersonDailyOperationsQuery,
   ) {
     return this.workspace.dailyOperations(query);
-  }
-
-  @Post('transcript-reviews/:id/assign')
-  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
-  assignTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(claimUnmatchedTranscriptReviewSchema)) body: ClaimUnmatchedTranscriptReviewInput) {
-    return this.workspace.assignTranscriptReview(id, body);
-  }
-
-  @Post('transcript-reviews/:id/dismiss')
-  @RequirePermission(MEMBER_PERMISSIONS.taskAssign)
-  dismissTranscriptReview(@Param('id') id: string, @Body(new ZodValidationPipe(dismissUnmatchedTranscriptReviewSchema)) body: DismissUnmatchedTranscriptReviewInput) {
-    return this.workspace.dismissTranscriptReview(id, body);
   }
 
   @Get('frontend-customization')

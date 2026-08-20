@@ -4,7 +4,6 @@ import {
   operationalIntentSchema,
   type AssignedTranscriptReviewItem,
   type AssignUnmatchedTranscriptReviewInput,
-  type ClaimUnmatchedTranscriptReviewInput,
   type DismissUnmatchedTranscriptReviewInput,
   type ReleaseAssignedTranscriptReviewInput,
   type TranscriptReviewTaskStatus,
@@ -119,7 +118,21 @@ export class TranscriptReviewService {
         include: {
           customer: true,
           assignedMember: { include: { roleAssignments: { include: { role: true } } } },
-          comments: { orderBy: { createdAt: 'desc' }, take: 1 },
+          comments: {
+            include: { actor: { select: { firstName: true, lastName: true, email: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 12,
+          },
+          callOutcomes: {
+            include: { member: { select: { firstName: true, lastName: true, email: true } } },
+            orderBy: { selectedAt: 'desc' },
+            take: 12,
+          },
+          stateTransitions: {
+            include: { member: { select: { firstName: true, lastName: true, email: true } } },
+            orderBy: { happenedAt: 'desc' },
+            take: 12,
+          },
         },
       }),
       this.prisma.db.aircallCallEvent.findMany({
@@ -134,6 +147,33 @@ export class TranscriptReviewService {
       const call = callById.get(decision.callEventId);
       const resolver = call ? currentModelResolverOutput(call) : null;
       const member = task.assignedMember;
+      const latestOutcome = task.callOutcomes[0] ?? null;
+      const activity = [
+        ...task.stateTransitions.map((item) => ({
+          id: item.id,
+          kind: 'status' as const,
+          label: taskStateLabel(item.toWorkState),
+          note: transitionNote(item.reason),
+          actorName: item.member ? memberName(item.member) : null,
+          at: item.happenedAt.toISOString(),
+        })),
+        ...task.callOutcomes.map((item) => ({
+          id: item.id,
+          kind: 'outcome' as const,
+          label: callOutcomeLabel(item.disposition),
+          note: item.note,
+          actorName: memberName(item.member),
+          at: item.selectedAt.toISOString(),
+        })),
+        ...task.comments.map((item) => ({
+          id: item.id,
+          kind: 'comment' as const,
+          label: 'Comment',
+          note: item.body,
+          actorName: item.actor ? memberName(item.actor) : null,
+          at: item.createdAt.toISOString(),
+        })),
+      ].sort((left, right) => right.at.localeCompare(left.at)).slice(0, 20);
       return [{
         id: decision.id,
         callEventId: decision.callEventId,
@@ -153,20 +193,21 @@ export class TranscriptReviewService {
         assignedAt: (decision.reviewedAt ?? decision.createdAt).toISOString(),
         updatedAt: task.updatedAt.toISOString(),
         completedAt: task.closedAt?.toISOString() ?? task.archivedAt?.toISOString() ?? null,
+        latestOutcome: latestOutcome ? callOutcomeLabel(latestOutcome.disposition) : null,
+        latestOutcomeNote: latestOutcome?.note ?? null,
+        latestOutcomeAt: latestOutcome?.selectedAt.toISOString() ?? null,
+        nextFollowUpAt: task.queueLocation === 'scheduled' ? task.visibleAfter?.toISOString() ?? task.dueAt?.toISOString() ?? null : null,
+        activity,
       }];
     });
   }
 
-  async assign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput | ClaimUnmatchedTranscriptReviewInput, selfOnly: boolean): Promise<UnmatchedTranscriptReviewActionResult> {
+  async assign(callEventId: string, input: AssignUnmatchedTranscriptReviewInput): Promise<UnmatchedTranscriptReviewActionResult> {
     const actor = await this.currentMember();
-    if (selfOnly && input.targetMemberId !== actor.id) throw new NotFoundException('Assignment target is not available');
     const target = await this.prisma.db.member.findFirst({ where: { id: input.targetMemberId, status: 'active' } });
     if (!target) throw new NotFoundException('Assignment target is not available');
     const source = await this.requirePendingSource(callEventId);
-    const description = input.description?.trim()
-      || source.resolver.person_brief.next_action
-      || source.resolver.person_brief.call_goal
-      || 'Review this call and complete the required customer follow-up.';
+    const description = input.description.trim();
     await this.claim(callEventId, source.evaluations.map((row) => row.id));
     const intent = source.evaluations.map((row) => operationalIntentSchema.safeParse(row.signal)).find((row) => row.success);
     const customer = await this.contacts.findCustomer({
@@ -378,6 +419,31 @@ function customerName(customer: { firstName: string | null; lastName: string | n
 
 function memberName(member: { firstName: string; lastName: string; email: string }) {
   return `${member.firstName} ${member.lastName}`.trim() || member.email;
+}
+
+function callOutcomeLabel(value: string) {
+  const labels: Record<string, string> = {
+    customer_reached: 'Action needed',
+    no_answer: 'No answer',
+    voicemail: 'Voicemail left',
+    voicemail_unavailable: 'Voicemail unavailable',
+    wrong_number: 'Invalid number',
+    do_not_call: 'Do not call',
+    completed: 'Call completed',
+  };
+  return labels[value] ?? value.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+function taskStateLabel(value: string) {
+  if (value === 'in_progress') return 'In progress';
+  if (value === 'pending_resolve' || value === 'waiting_on_customer') return 'Customer waiting';
+  if (value === 'closed' || value === 'completed') return 'Completed';
+  return 'Assigned';
+}
+
+function transitionNote(reason: string) {
+  if (reason.startsWith('call_outcome:')) return `Call outcome: ${callOutcomeLabel(reason.slice('call_outcome:'.length))}`;
+  return reason.split('_').join(' ');
 }
 
 async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T) => Promise<R>): Promise<R[]> {

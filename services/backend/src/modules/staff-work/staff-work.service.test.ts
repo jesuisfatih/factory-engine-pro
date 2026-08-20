@@ -128,6 +128,16 @@ test('no answer schedules the same work item four tenant business days later', a
   assert.equal((captures.staffUpdate?.visibleAfter as Date).toISOString(), '2026-08-12T12:00:00.000Z');
 });
 
+test('voicemail unavailable keeps the task scheduled for another attempt', async () => {
+  const { service, captures } = harness();
+
+  const result = await service.recordOutcome('swi_1', 'tmbr_1', { disposition: 'voicemail_unavailable' });
+
+  assert.equal(result.queueLocation, 'scheduled');
+  assert.equal(result.visibleAfter, '2026-08-12T12:00:00.000Z');
+  assert.equal(captures.staffUpdate?.status, 'open');
+});
+
 test('completed archives the current work and creates one fifteen-day reappearance', async () => {
   const { service, captures } = harness();
 

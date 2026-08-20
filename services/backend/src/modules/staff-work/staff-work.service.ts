@@ -871,7 +871,7 @@ export class StaffWorkService {
   }
 
   private async outcomePlan(disposition: PersonCallDisposition, scheduledAt: string | undefined, now: Date) {
-    if (disposition === 'no_answer' || disposition === 'voicemail' || disposition === 'callback_requested' || disposition === 'follow_up_scheduled') {
+    if (disposition === 'no_answer' || disposition === 'voicemail' || disposition === 'voicemail_unavailable' || disposition === 'callback_requested' || disposition === 'follow_up_scheduled') {
       const configured = scheduledAt ? new Date(scheduledAt) : null;
       const calendar = await this.businessClock.calendar();
       const visibleAfter = configured && !Number.isNaN(configured.getTime()) && configured.getTime() > now.getTime()

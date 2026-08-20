@@ -53,6 +53,18 @@ export const assignedTranscriptReviewItemSchema = z.object({
   assignedAt: z.string(),
   updatedAt: z.string(),
   completedAt: z.string().nullable(),
+  latestOutcome: z.string().nullable(),
+  latestOutcomeNote: z.string().nullable(),
+  latestOutcomeAt: z.string().nullable(),
+  nextFollowUpAt: z.string().nullable(),
+  activity: z.array(z.object({
+    id: z.string(),
+    kind: z.enum(['status', 'outcome', 'comment']),
+    label: z.string(),
+    note: z.string().nullable(),
+    actorName: z.string().nullable(),
+    at: z.string(),
+  })),
 });
 export type AssignedTranscriptReviewItem = z.infer<typeof assignedTranscriptReviewItemSchema>;
 

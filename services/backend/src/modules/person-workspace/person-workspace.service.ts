@@ -67,7 +67,6 @@ import { CustomersService } from '../customers/customers.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { RulesService } from '../rules/rules.service.js';
 import { StaffWorkService } from '../staff-work/staff-work.service.js';
-import { TranscriptReviewService } from '../staff-work/transcript-review.service.js';
 import { priorityRankFromUrgency, UrgencyScoringService } from './urgency-scoring.service.js';
 import { PersonWorkspaceNoteService } from './person-workspace-note.service.js';
 import { PersonWorkspacePinService } from './person-workspace-pin.service.js';
@@ -256,6 +255,7 @@ interface OwnedSegmentContext {
 interface PersonPriorityCustomerContext {
   notesCount: number;
   openTasksCount: number;
+  hasCompletedTask: boolean;
   openRequestsCount: number;
   callsCount: number;
   latestNote: {
@@ -299,7 +299,6 @@ export class PersonWorkspaceService {
     private readonly mail: MailService,
     private readonly rules: RulesService,
     private readonly staffWork: StaffWorkService,
-    private readonly transcriptReviews: TranscriptReviewService,
     private readonly logger: AppLogger,
     private readonly realtime: RealtimeService,
     private readonly workspacePins: PersonWorkspacePinService,
@@ -364,7 +363,7 @@ export class PersonWorkspaceService {
     ] = await Promise.all([
       this.axisAssignments(member.id),
       this.businessClock.currentDay(),
-      range === 'archive' || initial ? Promise.resolve([]) : this.transcriptReviews.list(100),
+      Promise.resolve([]),
       this.urgencyConfig(),
       initial ? Promise.resolve([]) : this.prisma.db.segmentOwnership.findMany({
         where: { memberId: member.id },
@@ -498,10 +497,12 @@ export class PersonWorkspaceService {
     ]);
     const contactByCustomer = await this.contactResolver.resolveMany(contactSeeds);
     const selectedCustomers = uniqueCustomers(selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)));
-    const priorityCustomerContext = await this.priorityCustomerContext(selectedCustomers, contactByCustomer);
+    const priorityCustomerContext = await this.priorityCustomerContext(selectedCustomers, contactByCustomer, member.id);
 
     const segmentGroups = selectedMembershipGroups.map(({ ownership, segmentMemberships, selectedMemberships }) => {
-      const items = selectedMemberships.map((membership) => this.withContactState(this.dailyCallItem(
+      const visibleMemberships = selectedMemberships.filter((membership) => priorityCustomerVisible(priorityCustomerContext.get(membership.customerId)));
+      const visibleSegmentMemberships = segmentMemberships.filter((membership) => priorityCustomerVisible(priorityCustomerContext.get(membership.customerId)));
+      const items = visibleMemberships.map((membership) => this.withContactState(this.dailyCallItem(
           membership,
           ownership,
           assignments,
@@ -517,7 +518,7 @@ export class PersonWorkspaceService {
         segmentColor: ownership.segment.color,
         priority: ownership.priority,
         dailyCap: ownership.dailyCap,
-        totalCustomers: segmentMemberships.length,
+        totalCustomers: visibleSegmentMemberships.length,
         items,
       };
     });
@@ -604,14 +605,6 @@ export class PersonWorkspaceService {
       segmentGroups,
       frontendCustomization,
     };
-  }
-
-  assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').ClaimUnmatchedTranscriptReviewInput) {
-    return this.transcriptReviews.assign(callEventId, input, true);
-  }
-
-  dismissTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) {
-    return this.transcriptReviews.dismiss(callEventId, input);
   }
 
   private async dailyWorkflowRows(member: { id: string; aircallUserId?: string | null }, start: Date, end: Date | null) {
@@ -2538,6 +2531,7 @@ export class PersonWorkspaceService {
   private async priorityCustomerContext(
     customers: Array<{ id: string; email: string | null; phone: string | null }>,
     contacts: Map<string, ResolvedCustomerContact>,
+    memberId: string,
   ): Promise<Map<string, PersonPriorityCustomerContext>> {
     const ids = uniqueStrings(customers.map((customer) => customer.id));
     const result = new Map(ids.map((id) => [id, emptyPersonPriorityCustomerContext()] as const));
@@ -2559,7 +2553,7 @@ export class PersonWorkspaceService {
 
     const [workRows, serviceRows, customerNoteRows, workspaceNoteRows, noteRows, commentRows, staffCommentRows, orderRows, callRows] = await Promise.all([
       this.prisma.db.staffWorkItem.findMany({
-        where: { customerId: { in: ids }, status: { notIn: Array.from(CLOSED) } },
+        where: { customerId: { in: ids }, assignedMemberId: memberId },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(Math.max(ids.length * 20, 200), 3000),
       }),
@@ -2641,8 +2635,9 @@ export class PersonWorkspaceService {
     for (const row of workRows) {
       if (!row.customerId) continue;
       const context = result.get(row.customerId);
-      if (!context || CLOSED.has(row.status)) continue;
-      context.openTasksCount += 1;
+      if (!context) continue;
+      if (isActivePriorityWork(row)) context.openTasksCount += 1;
+      else if (isCompletedPriorityWork(row)) context.hasCompletedTask = true;
     }
 
     for (const row of serviceRows) {
@@ -3731,12 +3726,12 @@ export function personCardDisplay(card: PersonQueueCardWithoutDisplay): PersonQu
   if (card.kind === 'task' && card.source === 'call_analysis' && (!card.resolverOutput || !card.aiBrief || card.aiBrief.modelUsed === 'unavailable')) {
     return {
       analysisStatus: 'unavailable',
-      displayTitle: card.transcriptReviewTask ? staffSafeDisplayText(card.title) : 'Review required',
+      displayTitle: staffSafeDisplayText(card.title),
       displayReason: '',
       displayConcern: '',
       displayOutcome: '',
       displayActions: [],
-      displayBadges: [{ label: 'Review required', tone: 'warning' }],
+      displayBadges: [{ label: 'Call details unavailable', tone: 'info' }],
       displayCustomerSummary: staffCustomerSummary(card),
       displayCommerceSnapshot: staffCommerceSnapshot(card),
       displayCallSnapshot: staffCallSnapshot(card),
@@ -3979,12 +3974,27 @@ function emptyPersonPriorityCustomerContext(): PersonPriorityCustomerContext {
   return {
     notesCount: 0,
     openTasksCount: 0,
+    hasCompletedTask: false,
     openRequestsCount: 0,
     callsCount: 0,
     latestNote: null,
     latestOrder: null,
     latestCall: null,
   };
+}
+
+function priorityCustomerVisible(context: PersonPriorityCustomerContext | undefined) {
+  return !context?.hasCompletedTask || context.openTasksCount > 0;
+}
+
+function isActivePriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null }) {
+  return !CLOSED.has(row.status) && row.status !== 'cancelled' && row.queueLocation !== 'archive' && row.archivedAt === null;
+}
+
+function isCompletedPriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null; archiveReason: string | null }) {
+  if (row.status === 'cancelled') return false;
+  if (row.archiveReason === 'review_follow_up_completed' || row.archiveReason === 'queue_closed') return true;
+  return row.status === 'closed' || row.status === 'resolved' || (row.queueLocation === 'archive' && row.archivedAt !== null);
 }
 
 function priorityCustomerReason(segmentName: string, context: PersonPriorityCustomerContext, repeatCount: number) {
@@ -4534,6 +4544,7 @@ const DAILY_OUTCOME_FILTERS = [
   'customer_reached',
   'no_answer',
   'voicemail',
+  'voicemail_unavailable',
   'callback_requested',
   'follow_up_scheduled',
   'quote_sent',
@@ -4549,6 +4560,10 @@ function personDailyFilterCounts(cards: PersonQueueCardDto[]) {
     all: cards.length,
     urgent: cards.filter((card) => card.urgencyScore >= 8).length,
     at_risk: cards.filter((card) => card.customerRisk === 'at_risk' || card.customerRisk === 'lost').length,
+    task_assigned: cards.filter((card) => card.columnId === 'unassigned').length,
+    task_in_progress: cards.filter((card) => card.columnId === 'in_progress').length,
+    task_customer_waiting: cards.filter((card) => card.columnId === 'positive').length,
+    task_completed: cards.filter((card) => card.columnId === 'closed').length,
   };
   for (const disposition of DAILY_OUTCOME_FILTERS) {
     counts[disposition] = cards.filter((card) => personDailyFilterMatches(card, disposition)).length;
@@ -4560,6 +4575,10 @@ function personDailyFilterMatches(card: PersonQueueCardDto, filter: PersonDailyO
   if (filter === 'all') return true;
   if (filter === 'urgent') return card.urgencyScore >= 8;
   if (filter === 'at_risk') return card.customerRisk === 'at_risk' || card.customerRisk === 'lost';
+  if (filter === 'task_assigned') return card.columnId === 'unassigned';
+  if (filter === 'task_in_progress') return card.columnId === 'in_progress';
+  if (filter === 'task_customer_waiting') return card.columnId === 'positive';
+  if (filter === 'task_completed') return card.columnId === 'closed';
   const disposition = card.currentDisposition ?? (card.outcomeRequired ? 'not_selected' : null);
   return disposition === filter;
 }

@@ -112,8 +112,8 @@ test('failed call analysis exposes an explicit unavailable state without invente
   assert.equal(display.displayConcern, '');
   assert.equal(display.displayOutcome, '');
   assert.deepEqual(display.displayActions, []);
-  assert.equal(display.displayTitle, 'Review required');
-  assert.deepEqual(display.displayBadges, [{ label: 'Review required', tone: 'warning' }]);
+  assert.equal(display.displayTitle, 'Call follow-up');
+  assert.deepEqual(display.displayBadges, [{ label: 'Call details unavailable', tone: 'info' }]);
 });
 
 test('manual text containing intent keywords is not converted into a generated playbook', () => {

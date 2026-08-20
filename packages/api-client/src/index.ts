@@ -58,7 +58,6 @@ import type {
   CallCenterSyncResult,
   CallCenterTransferTaskInput,
   AssignUnmatchedTranscriptReviewInput,
-  ClaimUnmatchedTranscriptReviewInput,
   DismissUnmatchedTranscriptReviewInput,
   UnmatchedTranscriptReviewActionResult,
   UpdateAssignedTranscriptReviewStatusInput,
@@ -928,14 +927,6 @@ export class ApiClient {
     if (input.initial) query.set('initial', 'true');
     const suffix = query.size > 0 ? `?${query.toString()}` : '';
     return this.get(`/person/workspace/daily-operations${suffix}`);
-  }
-
-  personAssignTranscriptReview(id: string, input: ClaimUnmatchedTranscriptReviewInput) {
-    return this.post<UnmatchedTranscriptReviewActionResult>(`/person/workspace/transcript-reviews/${encodeURIComponent(id)}/assign`, input);
-  }
-
-  personDismissTranscriptReview(id: string, input: DismissUnmatchedTranscriptReviewInput) {
-    return this.post<UnmatchedTranscriptReviewActionResult>(`/person/workspace/transcript-reviews/${encodeURIComponent(id)}/dismiss`, input);
   }
 
   personFrontendCustomization() {

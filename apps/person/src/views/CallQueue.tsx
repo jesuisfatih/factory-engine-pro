@@ -3,11 +3,11 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FrontendCustomizationRuntimeDto, UnmatchedTranscriptReviewItem } from '@factory-engine-pro/contracts';
+import type { FrontendCustomizationRuntimeDto } from '@factory-engine-pro/contracts';
 import { CustomerDetailPanel, CustomerInternalNoteComposer } from '@factory-engine-pro/ui';
 import type { CustomerDetailMainInfo, CustomerDetailPanelCustomization } from '@factory-engine-pro/ui';
 import { ChevronDown, Clock, GripVertical, ListChecks, Phone, PhoneIncoming, PhoneOutgoing, Pin, RotateCcw, ShieldAlert, ShoppingBag, StickyNote, Users, UserX, X } from 'lucide-react';
-import { assignTranscriptReview, dismissTranscriptReview, dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
+import { dialAircall, fetchCustomerDetail, fetchDailyOperations, fetchTaskBrief, friendlyError, reorderDailyCalls, saveCustomerNote, syncPersonTasks, toggleCustomerPin, togglePin } from '../api/live';
 import type { Card as CardData, DailyCallItem, DailyOperationFilter, DailyOperationRange, DailyOperationSort, DailyOperations, SegmentDailyGroup } from '../types';
 import { Card } from '../components/Card';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, FrontendCustomizationSlotView } from '../components/FrontendCustomization';
@@ -19,21 +19,24 @@ import { focusLabel, personSafeText } from '../lib/personTerminology';
 import { subscribePersonWorkspaceRealtime } from '../lib/realtime';
 
 const QK_BASE = ['person', 'daily-operations'] as const;
-type WorkSection = 'missed' | 'risk' | 'review' | 'mine' | 'followup' | 'priority';
+type WorkSection = 'missed' | 'risk' | 'mine' | 'followup' | 'priority';
 
 const DAILY_OUTCOME_FILTERS: Array<{ value: DailyOperationFilter; label: string }> = [
   { value: 'not_selected', label: 'Needs outcome' },
-  { value: 'customer_reached', label: 'Customer reached' },
+  { value: 'customer_reached', label: 'Action needed' },
   { value: 'no_answer', label: 'No answer' },
-  { value: 'voicemail', label: 'Voicemail' },
-  { value: 'callback_requested', label: 'Callback requested' },
-  { value: 'follow_up_scheduled', label: 'Follow-up scheduled' },
-  { value: 'quote_sent', label: 'Quote sent' },
-  { value: 'order_placed', label: 'Order placed' },
-  { value: 'not_interested', label: 'Not interested' },
-  { value: 'wrong_number', label: 'Wrong number' },
+  { value: 'voicemail', label: 'Voicemail left' },
+  { value: 'voicemail_unavailable', label: 'Voicemail unavailable' },
+  { value: 'wrong_number', label: 'Invalid number' },
   { value: 'do_not_call', label: 'Do not call' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'completed', label: 'Call completed' },
+];
+
+const DAILY_STATUS_FILTERS: Array<{ value: DailyOperationFilter; label: string }> = [
+  { value: 'task_assigned', label: 'Assigned' },
+  { value: 'task_in_progress', label: 'In progress' },
+  { value: 'task_customer_waiting', label: 'Customer waiting' },
+  { value: 'task_completed', label: 'Completed' },
 ];
 
 const REVIEW_TASK_STATUS: Record<CardData['columnId'], string> = {
@@ -55,8 +58,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteCustomer, setNoteCustomer] = useState<DailyCallItem | null>(null);
   const [noteBody, setNoteBody] = useState('');
-  const [reviewItem, setReviewItem] = useState<UnmatchedTranscriptReviewItem | null>(null);
-  const [reviewDescription, setReviewDescription] = useState('');
   const [dailyFilter, setDailyFilter] = useState<DailyOperationFilter>('all');
   const [archiveSort, setArchiveSort] = useState<DailyOperationSort>('newest');
   const [activeSection, setActiveSection] = useState<WorkSection | null>('followup');
@@ -102,29 +103,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
   const groups = data?.segmentGroups ?? [];
   const frontendCustomization = data?.frontendCustomization ?? null;
   const summary = data?.summary;
-  const needsReview = data?.needsReview ?? [];
   const myReviewTasks = useMemo(() => daily.filter((card) => card.transcriptReviewTask), [daily]);
-  const reviewAction = useMutation({
-    mutationFn: (input: { mode: 'assign' | 'dismiss'; item: UnmatchedTranscriptReviewItem; text: string }) => input.mode === 'assign'
-      ? assignTranscriptReview(input.item.id, { targetMemberId: summary!.viewer.id, description: input.text })
-      : dismissTranscriptReview(input.item.id, { reason: input.text }),
-    onSuccess: async (result, input) => {
-      setReviewItem(null);
-      setReviewDescription('');
-      await qc.invalidateQueries({ queryKey: QK_BASE });
-      if (input.mode === 'assign' && result.staffWorkItemId) {
-        setActiveSection('mine');
-        setSelectedContextTone('followup');
-        setSelectedId(result.staffWorkItemId);
-        try {
-          const detail = await fetchTaskBrief(result.staffWorkItemId);
-          setDeepLinkCard(detail.card);
-        } catch (taskError) {
-          setDeepLinkError(friendlyError(taskError));
-        }
-      }
-    },
-  });
   const filteredDaily = daily;
   const missedFollowUps = useMemo(() => daily.filter((card) => card.unreached || Boolean(card.missedNote)), [daily]);
   const churnFollowUps = useMemo(() => daily.filter((card) => Boolean(card.customerRiskNote) || card.customerRisk === 'lost' || card.customerRisk === 'at_risk'), [daily]);
@@ -505,34 +484,11 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             </section>
           ) : null}
 
-          {!archive && <section className="missed-v2 transcript-review-section" aria-labelledby="needs-review-title">
-            <div className="missed-v2-head">
-              <span className="missed-v2-icon"><ShieldAlert size={15} /></span>
-              <button type="button" className="missed-v2-title section-toggle" aria-expanded={activeSection === 'review'} onClick={() => toggleSection('review')}>
-                <span className="section-toggle-copy"><h2 id="needs-review-title">Needs review</h2><p>Review calls that do not have a follow-up yet.</p></span>
-                <ChevronDown size={18} className="section-toggle-chevron" />
-              </button>
-              <span className="missed-v2-badge">{needsReview.length}</span>
-            </div>
-            {activeSection === 'review' ? <div className="review-pool-body">
-              {isPlaceholderData ? <div className="workspace-hydration review-queue-loading" role="status"><span className="workspace-hydration-spinner" aria-hidden="true" /><span><strong>Loading review queue…</strong><small>Priority customers and calls are being prepared in the background.</small></span></div> : null}
-              {!isPlaceholderData && needsReview.length === 0 ? <div className="ops-empty">No calls need manual review.</div> : null}
-              {needsReview.length > 0 ? <div className="review-card-list">{needsReview.map((item, index) => (
-                <button type="button" className="review-card review-pool-card" key={item.id} onClick={() => { setReviewItem(item); setReviewDescription(''); }}>
-                  <span className="review-pool-card-head"><span className="review-pool-identity"><span className="review-pool-avatar" style={{ background: MISSED_AVATAR_COLORS[index % MISSED_AVATAR_COLORS.length] }}>{initialsFor(item.customerName ?? item.phone ?? 'Unknown caller')}</span><span><strong>{item.customerName ?? item.phone ?? 'Unknown caller'}</strong><small>{item.phone && item.customerName ? item.phone : item.shopifyMatched ? 'Shopify customer matched' : 'Unmatched caller'}</small></span></span><span className="review-pool-status"><i />Unassigned</span></span>
-                  <span className="review-pool-summary">{personSafeText(item.summary)}</span>
-                  <span className="review-pool-chips">{item.mood ? <em>{personSafeText(item.mood)}</em> : null}<em>{item.direction}</em>{item.shopifyMatched ? <em>Shopify matched</em> : null}</span>
-                  <span className="review-pool-footer"><small><Clock size={12} />{new Date(item.occurredAt).toLocaleString()}</small><strong>Review task <span aria-hidden="true">→</span></strong></span>
-                </button>
-              ))}</div> : null}
-            </div> : null}
-          </section>}
-
           {myReviewTasks.length > 0 ? <section className="missed-v2 my-review-tasks" id="my-review-tasks-section" aria-labelledby="my-review-tasks-title">
             <div className="missed-v2-head">
               <span className="missed-v2-icon my-review-icon"><ListChecks size={15} /></span>
               <button type="button" className="missed-v2-title section-toggle" aria-expanded={activeSection === 'mine'} onClick={() => toggleSection('mine')}>
-                <span className="section-toggle-copy"><h2 id="my-review-tasks-title">{archive ? 'Completed review tasks' : 'My review tasks'}</h2><p>{archive ? 'Review follow-ups you completed or archived.' : 'Calls you took from the Needs review pool.'}</p></span>
+                <span className="section-toggle-copy"><h2 id="my-review-tasks-title">{archive ? 'Completed review tasks' : 'My review tasks'}</h2><p>{archive ? 'Review follow-ups you completed or archived.' : 'Calls assigned to you by an administrator.'}</p></span>
                 <ChevronDown size={18} className="section-toggle-chevron" />
               </button>
               <span className="missed-v2-badge my-review-badge">{myReviewTasks.length}</span>
@@ -573,28 +529,31 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
             {activeSection === 'followup' ? (
               <div className="followup-body">
                 <div className="daily-list-toolbar">
-                  {!archive ? (
-                    <div className="daily-filter-group" aria-label="Follow-up focus filters">
-                      <span className="daily-filter-label">Focus</span>
+                  <div className="daily-filter-group" aria-label="Follow-up task status filters">
+                      <span className="daily-filter-label">Status</span>
                       <div className="filter-chips" role="group">
-                        {([
-                          { id: 'all', label: 'All', count: summary?.dailyFilterCounts.all ?? 0 },
-                          { id: 'urgent', label: 'Urgent', count: urgentCount },
-                          { id: 'at_risk', label: 'At risk', count: summary?.dailyFilterCounts.at_risk ?? 0 },
-                        ] as const).map((filter) => (
+                        {([{ value: 'all' as const, label: 'All' }, ...DAILY_STATUS_FILTERS]).map((filter) => (
                           <button
-                            key={filter.id}
+                            key={filter.value}
                             type="button"
-                            className={`filter-chip${dailyFilter === filter.id ? ' active' : ''}`}
-                            aria-pressed={dailyFilter === filter.id}
-                            onClick={() => setDailyFilter(filter.id)}
+                            className={`filter-chip${dailyFilter === filter.value ? ' active' : ''}`}
+                            aria-pressed={dailyFilter === filter.value}
+                            onClick={() => setDailyFilter(filter.value)}
                           >
-                            {filter.label} <span>{filter.count}</span>
+                            {filter.label} <span>{summary?.dailyFilterCounts[filter.value] ?? 0}</span>
                           </button>
                         ))}
                       </div>
                     </div>
-                  ) : null}
+                  {!archive ? <div className="daily-filter-group" aria-label="Follow-up priority filters">
+                    <span className="daily-filter-label">Priority</span>
+                    <div className="filter-chips" role="group">
+                      {([
+                        { value: 'urgent' as const, label: 'Urgent', count: urgentCount },
+                        { value: 'at_risk' as const, label: 'At risk', count: summary?.dailyFilterCounts.at_risk ?? 0 },
+                      ]).map((filter) => <button key={filter.value} type="button" className={`filter-chip${dailyFilter === filter.value ? ' active' : ''}`} aria-pressed={dailyFilter === filter.value} onClick={() => setDailyFilter(filter.value)}>{filter.label} <span>{filter.count}</span></button>)}
+                    </div>
+                  </div> : null}
                   <div className="daily-filter-group daily-outcome-group" aria-label="Follow-up outcome filters">
                     <span className="daily-filter-label">Outcome</span>
                     <div className="filter-chips outcome-filter-chips" role="group">
@@ -779,16 +738,6 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
       </QueryState>
 
       {selectedCard && <TaskBriefModal card={selectedCard} customization={frontendCustomization} summary={summary} contextTone={selectedContextTone} onClose={closeTaskModal} />}
-      {reviewItem && <div className="dialog-backdrop" role="presentation" onMouseDown={() => !reviewAction.isPending && setReviewItem(null)}>
-        <section className="dialog-card transcript-review-modal" role="dialog" aria-modal="true" aria-labelledby="assign-review-title" onMouseDown={(event) => event.stopPropagation()}>
-          <button type="button" className="dialog-close" aria-label="Close" onClick={() => setReviewItem(null)}><X size={18} /></button>
-          <div className="review-modal-heading"><span>Unassigned team pool</span><h2 id="assign-review-title">Review this call</h2><p>Take ownership only when you are ready to handle the follow-up. The task will then move to your Follow-up list.</p></div>
-          <div className="review-modal-summary"><strong>{reviewItem.customerName ?? reviewItem.phone ?? 'Unknown caller'}</strong><p>{reviewItem.summary}</p><dl><div><dt>Concern</dt><dd>{reviewItem.concern || 'Not captured'}</dd></div><div><dt>Suggested goal</dt><dd>{reviewItem.goal || 'Not captured'}</dd></div></dl>{reviewItem.excerpt ? <blockquote>{reviewItem.excerpt}</blockquote> : null}</div>
-          <label>Task note <span className="optional-label">Optional</span><textarea value={reviewDescription} onChange={(event) => setReviewDescription(event.target.value)} rows={3} placeholder="Add context if needed…" autoFocus /></label>
-          {reviewAction.error ? <div className="ops-inline-error">{friendlyError(reviewAction.error)}</div> : null}
-          <div className="dialog-actions"><button type="button" className="btn primary" disabled={reviewAction.isPending} onClick={() => reviewAction.mutate({ mode: 'assign', item: reviewItem, text: reviewDescription })}>{reviewAction.isPending ? 'Taking task…' : `Take ownership as ${summary?.viewer.name ?? 'me'}`}</button><button type="button" className="btn ghost" disabled={!reviewDescription.trim() || reviewAction.isPending} title={!reviewDescription.trim() ? 'Add a reason before dismissing this call.' : undefined} onClick={() => reviewAction.mutate({ mode: 'dismiss', item: reviewItem, text: reviewDescription })}>No follow-up needed</button></div>
-        </section>
-      </div>}
       <CustomerDetailPanel
         open={Boolean(detailCustomerId)}
         detail={customerDetailQuery.data}

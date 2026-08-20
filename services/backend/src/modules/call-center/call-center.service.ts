@@ -117,7 +117,7 @@ export class CallCenterService {
   }
 
   assignTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').AssignUnmatchedTranscriptReviewInput) {
-    return this.transcriptReviews.assign(callEventId, input, false);
+    return this.transcriptReviews.assign(callEventId, input);
   }
 
   dismissTranscriptReview(callEventId: string, input: import('@factory-engine-pro/contracts').DismissUnmatchedTranscriptReviewInput) {
@@ -626,8 +626,9 @@ export class CallCenterService {
           take: ownership.dailyCap ?? 25,
         }),
       ]);
-      const contextByCustomerId = await this.priorityCustomerContext(memberships.map((membership) => membership.customer), memberById);
-      const customers = memberships.map((membership) => {
+      const contextByCustomerId = await this.priorityCustomerContext(memberships.map((membership) => membership.customer), memberById, ownership.memberId);
+      const visibleMemberships = memberships.filter((membership) => priorityCustomerVisible(contextByCustomerId.get(membership.customerId)));
+      const customers = visibleMemberships.map((membership) => {
         const context = contextByCustomerId.get(membership.customerId) ?? emptyPriorityCustomerContext();
         const urgencyScore = priorityScore(ownership, membership, context);
         return {
@@ -664,7 +665,7 @@ export class CallCenterService {
         ownerMemberId: member.id,
         ownerName: member.name,
         ownerRole: member.role,
-        customerCount: count,
+        customerCount: Math.min(count, visibleMemberships.length),
         customers,
       });
     }
@@ -674,6 +675,7 @@ export class CallCenterService {
   private async priorityCustomerContext(
     customers: Array<{ id: string; email: string | null; phone: string | null }>,
     memberById: Map<string, CallCenterMember>,
+    ownerMemberId: string,
   ): Promise<Map<string, PriorityCustomerContext>> {
     const ids = uniqueStrings(customers.map((customer) => customer.id));
     if (ids.length === 0) return new Map();
@@ -690,12 +692,18 @@ export class CallCenterService {
     const phones = [...phoneToCustomerId.keys()];
 
     const [
+      staffWorkRows,
       serviceRows,
       noteRows,
       commentRows,
       orderRows,
       callRows,
     ] = await Promise.all([
+      this.prisma.db.staffWorkItem.findMany({
+        where: { customerId: { in: ids }, assignedMemberId: ownerMemberId },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: Math.min(Math.max(ids.length * 20, 200), 3000),
+      }),
       this.prisma.db.serviceRequest.findMany({
         where: { customerId: { in: ids } },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -738,6 +746,13 @@ export class CallCenterService {
     ]);
 
     const result = new Map(ids.map((id) => [id, emptyPriorityCustomerContext()] as const));
+    for (const row of staffWorkRows) {
+      if (!row.customerId) continue;
+      const context = result.get(row.customerId);
+      if (!context) continue;
+      if (isActivePriorityWork(row)) context.openTasksCount += 1;
+      else if (isCompletedPriorityWork(row)) context.hasCompletedTask = true;
+    }
     for (const row of serviceRows) {
       if (!row.customerId) continue;
       const context = result.get(row.customerId);
@@ -1109,6 +1124,7 @@ interface PriorityCustomerContext {
   activeAt: string | null;
   notesCount: number;
   openTasksCount: number;
+  hasCompletedTask: boolean;
   openRequestsCount: number;
   callsCount: number;
   latestNote: {
@@ -1241,12 +1257,27 @@ function emptyPriorityCustomerContext(): PriorityCustomerContext {
     activeAt: null,
     notesCount: 0,
     openTasksCount: 0,
+    hasCompletedTask: false,
     openRequestsCount: 0,
     callsCount: 0,
     latestNote: null,
     latestOrder: null,
     latestCall: null,
   };
+}
+
+function priorityCustomerVisible(context: PriorityCustomerContext | undefined) {
+  return !context?.hasCompletedTask || context.openTasksCount > 0;
+}
+
+function isActivePriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null }) {
+  return !CLOSED.has(row.status) && row.status !== 'cancelled' && row.queueLocation !== 'archive' && row.archivedAt === null;
+}
+
+function isCompletedPriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null; archiveReason: string | null }) {
+  if (row.status === 'cancelled') return false;
+  if (row.archiveReason === 'review_follow_up_completed' || row.archiveReason === 'queue_closed') return true;
+  return row.status === 'closed' || row.status === 'resolved' || (row.queueLocation === 'archive' && row.archivedAt !== null);
 }
 
 function setActivePriorityMember(context: PriorityCustomerContext, member: CallCenterMember | null, at: Date) {

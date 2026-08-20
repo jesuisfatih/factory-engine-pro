@@ -38,17 +38,13 @@ const CALL_CONTEXT_SECTION_ORDER = [
 ] as const satisfies readonly FrontendCustomizationModalSection[];
 
 const CALL_OUTCOMES: Array<{ value: Exclude<PersonCallDisposition, 'not_selected'>; label: string }> = [
-  { value: 'customer_reached', label: 'Customer reached - follow-up remains open' },
+  { value: 'customer_reached', label: 'Action needed' },
   { value: 'no_answer', label: 'No answer' },
   { value: 'voicemail', label: 'Voicemail left' },
-  { value: 'callback_requested', label: 'Customer requested a callback' },
-  { value: 'follow_up_scheduled', label: 'Follow-up scheduled' },
-  { value: 'quote_sent', label: 'Quote sent' },
-  { value: 'order_placed', label: 'Order placed' },
-  { value: 'not_interested', label: 'Not interested' },
-  { value: 'wrong_number', label: 'Wrong number' },
+  { value: 'voicemail_unavailable', label: 'Voicemail unavailable' },
+  { value: 'wrong_number', label: 'Invalid number' },
   { value: 'do_not_call', label: 'Do not call' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'completed', label: 'Call completed' },
 ];
 
 const TASK_LIFECYCLE: Array<{ value: ColumnId; label: string; help: string }> = [
@@ -338,7 +334,10 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
     },
   });
 
-  const outcomeNeedsSchedule = disposition === 'callback_requested' || disposition === 'follow_up_scheduled';
+  const outcomeNeedsSchedule = disposition === 'customer_reached'
+    || disposition === 'no_answer'
+    || disposition === 'voicemail'
+    || disposition === 'voicemail_unavailable';
   const outcomeMutation = useMutation({
     mutationFn: () => recordTaskOutcome(activeTaskId!, {
       disposition,
@@ -569,8 +568,8 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                   <>
                     <div className="brief-state" style={sectionStyle('reasonField', 10)}>
                       <AlertTriangle size={16} />
-                      <strong>Review required</strong>
-                      <span>No model-generated call plan is available. A manager must review or retry the analysis before outreach.</span>
+                      <strong>Call details unavailable</strong>
+                      <span>No model-generated call plan is available. Use the assigned task instructions and available call details for this follow-up.</span>
                     </div>
                     {showField('callExcerpt') ? (
                       <div className="brief-block" style={sectionStyle('callExcerpt', 80)}>

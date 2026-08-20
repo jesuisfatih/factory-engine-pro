@@ -62,11 +62,11 @@ export function Card({ card, onTogglePin, onArchive, onOpen, onCall, callDisable
   const analysisUnavailable = card.analysisStatus === 'unavailable';
   const primaryBadge = card.displayBadges[0];
   const actionLabel = analysisUnavailable
-    ? 'Review required'
+    ? 'Call details unavailable'
     : personSafeText(primaryBadge?.label);
   const actionTone = displayToneClass(analysisUnavailable ? 'warning' : primaryBadge?.tone);
   const briefLine = analysisUnavailable
-    ? 'Conversation analysis is unavailable. Manager review or retry is required before outreach.'
+    ? 'Conversation analysis is unavailable. Use the assigned task instructions and available call details.'
     : frontendCopy(
         override,
         'requiredAction',
