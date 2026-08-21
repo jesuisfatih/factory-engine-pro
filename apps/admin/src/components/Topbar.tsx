@@ -17,7 +17,8 @@ export function Topbar({ titleI18nKey, onToggleSidebar }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
-  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, theme === 'dark' ? 'dark' : 'light');
+  const brandLogo = brandQuery.data?.brandAssets.squareLogoUrl?.trim()
+    || resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, theme === 'dark' ? 'dark' : 'light');
   const roleLabel = adminRoleLabel(principal);
 
   return (

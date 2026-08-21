@@ -72,7 +72,8 @@ export function Sidebar({ collapsed }: Props) {
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
-  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
+  const brandLogo = brandQuery.data?.brandAssets.squareLogoUrl?.trim()
+    || resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
   const roleLabel = customerRoleLabel(principal);
   const permissions = new Set(principal?.permissions ?? []);
   const logout = () => {

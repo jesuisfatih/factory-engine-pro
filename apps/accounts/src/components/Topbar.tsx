@@ -17,7 +17,8 @@ export function Topbar({ titleI18nKey, onToggleSidebar, orderHistoryMode = false
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
-  const brandLogo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
+  const brandLogo = brandQuery.data?.brandAssets.squareLogoUrl?.trim()
+    || resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
   return (
     <header className="topbar" data-i18n-section="topbar">
       <button id="btn-toggle-sidebar" type="button" className="toggle" onClick={onToggleSidebar}>

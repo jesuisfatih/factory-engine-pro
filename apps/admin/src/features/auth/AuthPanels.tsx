@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound } from 'lucide-react';
-import { memberSurfaceFromPermissions } from '@factory-engine-pro/contracts';
+import { memberSurfaceFromPermissions, resolveBrandLogoUrl } from '@factory-engine-pro/contracts';
 import { adminApi, adminTokenStore, apiErrorMessage, handOffToPerson } from '@/lib/api';
 import { AuthAlert, AuthForm, AuthSubmit, PasswordInput, SuccessPanel, isEmail } from '@/components/auth/AuthShell';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
@@ -189,9 +189,11 @@ function Brand({ muted }: { muted: string }) {
   const brandQuery = useWorkspaceBrand();
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
+  const logo = brandQuery.data?.brandAssets.squareLogoUrl?.trim()
+    || resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, 'light');
   return (
     <div className="auth-brand">
-      {brandQuery.data?.brandLogo ? <img className="ws-logo" src={brandQuery.data.brandLogo} alt="" style={{ width: 40, height: 40 }} /> : <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>{badge}</div>}
+      {logo ? <img className="ws-logo" src={logo} alt="" style={{ width: 40, height: 40 }} /> : <div className="ws-badge" style={{ width: 40, height: 40, fontSize: 14 }}>{badge}</div>}
       <div>
         <div className="name">{name}</div>
         <div className="muted">{muted}</div>

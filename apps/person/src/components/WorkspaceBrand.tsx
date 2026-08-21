@@ -18,7 +18,8 @@ export function WorkspaceBrand({
   const name = workspaceName(brandQuery.data?.workspaceName);
   const badge = workspaceBadge(brandQuery.data?.brandBadge, name);
   const isSidebarBrand = className.split(/\s+/).includes('workspace');
-  const logo = resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, isSidebarBrand ? 'dark' : 'light');
+  const logo = brandQuery.data?.brandAssets.squareLogoUrl?.trim()
+    || resolveBrandLogoUrl(brandQuery.data?.brandAssets, brandQuery.data?.brandLogo, isSidebarBrand ? 'dark' : 'light');
 
   return (
     <div className={className}>
