@@ -35,7 +35,7 @@ export class ShopifySyncStateService {
   async getAllStates() {
     await Promise.all(SHOPIFY_SYNC_RESOURCES.map((resource) => this.getState(resource)));
     return this.prisma.db.shopifySyncState.findMany({
-      where: {},
+      where: { resource: { in: SHOPIFY_SYNC_RESOURCES } },
       orderBy: { resource: 'asc' },
     });
   }

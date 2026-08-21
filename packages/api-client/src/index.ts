@@ -510,6 +510,10 @@ export class ApiClient {
     return this.get(`/accounts/orders${queryString(input)}`);
   }
 
+  accountAbandonedCheckouts() {
+    return this.get('/accounts/abandoned-checkouts');
+  }
+
   accountOrder(id: string) {
     return this.get(`/accounts/orders/${encodeURIComponent(id)}`);
   }

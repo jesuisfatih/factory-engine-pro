@@ -1281,6 +1281,33 @@ a { color: inherit; text-decoration: none; }
   gap: 14px; align-items: flex-start;
 }
 .orders-grid.orders-grid-history { grid-template-columns: minmax(0, 1fr); }
+.abandoned-checkout-shelf {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface));
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .06);
+}
+.abandoned-checkout-heading { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.abandoned-checkout-heading h2 { margin: 2px 0 4px; color: var(--text); font-size: 17px; }
+.abandoned-checkout-heading span { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+.abandoned-checkout-heading p { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.abandoned-checkout-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; color: #fff; border-radius: 11px; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 68%, #172554)); }
+.abandoned-checkout-loading { display: flex; align-items: center; gap: 8px; min-height: 70px; padding: 14px; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 84%, transparent); font-size: 11px; }
+.abandoned-checkout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.abandoned-checkout-card { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.abandoned-checkout-card-top, .abandoned-checkout-card-bottom, .abandoned-checkout-items > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.abandoned-checkout-card-top > div { display: grid; gap: 4px; }
+.abandoned-checkout-card-top strong { color: var(--text); font-size: 13px; }
+.abandoned-checkout-card-top span { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 10px; }
+.abandoned-checkout-card-top > b { color: var(--text); font-size: 15px; white-space: nowrap; }
+.abandoned-checkout-items { display: grid; gap: 7px; margin: 12px 0; padding: 11px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.abandoned-checkout-items > div { color: var(--text-muted); font-size: 10px; }
+.abandoned-checkout-items > div span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.abandoned-checkout-items > div strong, .abandoned-checkout-items > div b { color: var(--text); }
+.abandoned-checkout-items small, .abandoned-checkout-card-bottom > span { color: var(--text-faint); font-size: 9px; }
+.abandoned-checkout-card-bottom .btn { white-space: nowrap; }
 .buyer-orders-list { display: flex; flex-direction: column; gap: 8px; }
 .buyer-order {
   background: var(--surface); border: 1px solid var(--border);
@@ -3025,6 +3052,7 @@ a { color: inherit; text-decoration: none; }
   .pickup-card-body { grid-template-columns: 1fr; }
   .pickup-timeline { grid-template-columns: repeat(3, 1fr); }
   .order-detail-grid, .order-address-grid { grid-template-columns: 1fr; }
+  .abandoned-checkout-grid { grid-template-columns: 1fr; }
   .invoice-history-grid { grid-template-columns: 1fr; }
   .invite-shell { grid-template-columns: 1fr; }
   .auth-page { padding: var(--portal-mobile-page-padding, 16px); }
@@ -3044,6 +3072,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 620px) {
+  .abandoned-checkout-shelf { padding: 14px; }
+  .abandoned-checkout-card-top, .abandoned-checkout-card-bottom { align-items: flex-start; flex-direction: column; }
+  .abandoned-checkout-card-bottom .btn { width: 100%; justify-content: center; }
   .catalog-overview { padding: 18px; }
   .catalog-overview-stats { grid-template-columns: 1fr 1fr; }
   .catalog-overview-stats div:nth-child(2) { border-right: 0; }

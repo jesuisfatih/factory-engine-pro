@@ -2,17 +2,19 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpDown, ChevronDown, ChevronUp, FileText, RotateCw, Search } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, Clock3, CreditCard, FileText, RotateCw, Search, ShoppingBag } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 import { ErrorState } from '@/components/QueryState';
 import {
   fetchBuyerOrder,
+  fetchBuyerAbandonedCheckouts,
   fetchBuyerOrders,
   fetchReorderTemplates,
   reorderLineItem,
   reorderOrder,
   type BuyerOrder,
+  type BuyerAbandonedCheckout,
   type BuyerOrderDetail,
   type OrderStatusValue,
   type ReorderResult,
@@ -20,6 +22,7 @@ import {
 
 const QK = ['orders'] as const;
 const QK_TEMPLATES = ['reorder-templates'] as const;
+const QK_ABANDONED = ['abandoned-checkouts'] as const;
 
 const STATUS_TONE: Record<OrderStatusValue, string> = {
   pending: 'warn',
@@ -32,6 +35,55 @@ const TABS: ('all' | OrderStatusValue)[] = ['all', 'pending', 'paid', 'fulfilled
 
 function fmtMoney(value: number) {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+}
+
+function fmtCurrency(value: number, currency: string) {
+  try {
+    return value.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 });
+  } catch {
+    return `${currency} ${value.toFixed(2)}`;
+  }
+}
+
+function AbandonedCheckoutShelf({ rows, loading }: { rows: BuyerAbandonedCheckout[]; loading: boolean }) {
+  if (!loading && rows.length === 0) return null;
+  return (
+    <section className="abandoned-checkout-shelf" aria-label="Unfinished checkouts">
+      <div className="abandoned-checkout-heading">
+        <div className="abandoned-checkout-icon"><ShoppingBag size={17} /></div>
+        <div>
+          <span>Unfinished checkout</span>
+          <h2>Continue where you left off</h2>
+          <p>Your saved checkout is secured by Shopify. Review the items here, then continue to payment.</p>
+        </div>
+      </div>
+      {loading ? <div className="abandoned-checkout-loading"><RotateCw size={14} className="auth-spin" /> Checking saved checkouts...</div> : (
+        <div className="abandoned-checkout-grid">
+          {rows.map((checkout) => (
+            <article className="abandoned-checkout-card" key={checkout.id}>
+              <div className="abandoned-checkout-card-top">
+                <div><strong>{checkout.name}</strong><span><Clock3 size={12} /> Updated {new Date(checkout.updatedAt).toLocaleString('en-US')}</span></div>
+                <b>{fmtCurrency(checkout.total, checkout.currency)}</b>
+              </div>
+              <div className="abandoned-checkout-items">
+                {checkout.items.slice(0, 3).map((item) => (
+                  <div key={item.id}>
+                    <span><strong>{item.quantity}×</strong> {item.title}{item.variantTitle ? ` — ${item.variantTitle}` : ''}</span>
+                    <b>{fmtCurrency(item.lineTotal, checkout.currency)}</b>
+                  </div>
+                ))}
+                {checkout.items.length > 3 ? <small>+{checkout.items.length - 3} more item{checkout.items.length - 3 === 1 ? '' : 's'}</small> : null}
+              </div>
+              <div className="abandoned-checkout-card-bottom">
+                <span>{checkout.itemCount} item{checkout.itemCount === 1 ? '' : 's'} saved</span>
+                <a className="btn primary" href={checkout.recoveryUrl}><CreditCard size={13} /> Continue to Shopify payment</a>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function ReorderNotice({ result }: { result: ReorderResult | null }) {
@@ -217,6 +269,16 @@ function OrdersView() {
     refetchIntervalInBackground: false,
   });
   const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates, enabled: !orderHistoryMode });
+  const abandoned = useQuery({
+    queryKey: QK_ABANDONED,
+    queryFn: fetchBuyerAbandonedCheckouts,
+    enabled: orderHistoryMode,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
   const quickReorder = useMutation({
     mutationFn: (orderId: string) => reorderOrder(orderId),
     onSuccess: (next) => {
@@ -251,6 +313,8 @@ function OrdersView() {
   return (
     <>
       <PageHeader titleI18nKey="orders.title" subtitleI18nKey="orders.subtitle" />
+
+      {orderHistoryMode ? <AbandonedCheckoutShelf rows={abandoned.data ?? []} loading={abandoned.isLoading} /> : null}
 
       <div className="kpis" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 14 }}>
         <div className="kpi"><div className="label">{t('orders.kpi_count')}</div><div className="val">{total}</div><div className="sub">matching orders</div></div>

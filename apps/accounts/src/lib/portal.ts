@@ -75,6 +75,28 @@ export type BuyerOrderDetail = Omit<BuyerOrder, 'items'> & {
   pickup: { id: string; status: string; qrPayload: string; shelfCode: string | null } | null;
 };
 
+export type BuyerAbandonedCheckout = {
+  id: string;
+  name: string;
+  currency: string;
+  subtotal: number;
+  total: number;
+  discounts: number;
+  itemCount: number;
+  recoveryUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    title: string;
+    variantTitle: string | null;
+    sku: string | null;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }>;
+};
+
 export type PortalAddressDisplay = {
   name: string | null;
   company: string | null;
@@ -346,6 +368,10 @@ export function deleteAccountAddress(idOrType: string) {
 
 export function fetchBuyerOrders(query: Partial<AccountOrderListQuery> = {}) {
   return accountsApi.accountOrders(query) as Promise<BuyerPage<BuyerOrder>>;
+}
+
+export function fetchBuyerAbandonedCheckouts() {
+  return accountsApi.accountAbandonedCheckouts() as Promise<BuyerAbandonedCheckout[]>;
 }
 
 export function fetchBuyerOrder(id: string) {

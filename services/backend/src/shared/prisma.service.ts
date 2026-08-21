@@ -25,6 +25,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'AccountReorderCart',
   'AccountReorderCartItem',
   'AccountReorderCartActivity',
+  'AccountAbandonedCheckout',
   'CommerceActivityLog',
   'CustomerInsight',
   'CustomerList',

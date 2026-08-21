@@ -108,6 +108,12 @@ export class AccountsController {
     return this.accounts.orders(query);
   }
 
+  @Get('abandoned-checkouts')
+  @RequirePermission(CUSTOMER_PERMISSIONS.ordersRead)
+  abandonedCheckouts() {
+    return this.accounts.abandonedCheckouts();
+  }
+
   @Get('orders/:orderId')
   @RequirePermission(CUSTOMER_PERMISSIONS.ordersRead)
   order(@Param('orderId') orderId: string) {

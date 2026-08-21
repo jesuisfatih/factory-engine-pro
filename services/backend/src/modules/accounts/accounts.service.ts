@@ -26,6 +26,7 @@ import { accountPortalExperienceSchema } from '@factory-engine-pro/contracts';
 import { prefixedId } from '../../shared/id.js';
 import { parseDateOnlyAtEndOfDay } from '../../shared/date-only.js';
 import { AppLogger } from '../../shared/logger.service.js';
+import { CryptoService } from '../../shared/crypto.service.js';
 import { PasswordService } from '../../shared/password.service.js';
 import { PrismaService } from '../../shared/prisma.service.js';
 import { TenantContextService } from '../../shared/tenant-context.js';
@@ -126,6 +127,7 @@ export class AccountsService {
     private readonly rules: RulesService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly crypto: CryptoService,
   ) {}
 
   async profile() {
@@ -318,6 +320,42 @@ export class AccountsService {
       data: page.rows.map((order) => this.buyerOrder(order, actor)),
       meta: page.meta,
     };
+  }
+
+  async abandonedCheckouts() {
+    const actor = await this.currentActor();
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
+      select: { accountPortalExperience: true },
+    });
+    if (accountPortalExperience(tenantConfig?.accountPortalExperience).portalMode !== 'order_history') return [];
+    const rows = await this.prisma.db.accountAbandonedCheckout.findMany({
+      where: {
+        customerId: actor.customerId,
+        status: 'open',
+        completedAt: null,
+        closedAt: null,
+      },
+      orderBy: { providerUpdatedAt: 'desc' },
+      take: 50,
+    });
+    return rows.flatMap((checkout) => {
+      const recoveryUrl = decryptRecoveryUrl(this.crypto, checkout.recoveryUrlEncrypted);
+      if (!recoveryUrl) return [];
+      const items = abandonedCheckoutItems(checkout.lineItems);
+      return [{
+        id: checkout.id,
+        name: checkout.name ?? `Checkout ${checkout.shopifyCheckoutId}`,
+        currency: checkout.currency,
+        subtotal: money(checkout.subtotal),
+        total: money(checkout.totalPrice),
+        discounts: money(checkout.totalDiscounts),
+        itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        items,
+        recoveryUrl,
+        createdAt: checkout.providerCreatedAt.toISOString(),
+        updatedAt: checkout.providerUpdatedAt.toISOString(),
+      }];
+    });
   }
 
   async orderDetail(orderId: string) {
@@ -2230,6 +2268,35 @@ function publicDesignFile(file: ReturnType<typeof designFilesFromOrder>[number])
 function accountPortalExperience(value: unknown) {
   const parsed = accountPortalExperienceSchema.safeParse(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
   return parsed.success ? parsed.data : accountPortalExperienceSchema.parse({});
+}
+
+function decryptRecoveryUrl(crypto: CryptoService, encrypted: string | null) {
+  if (!encrypted) return null;
+  try {
+    const value = crypto.decrypt(encrypted);
+    if (!value) return null;
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function abandonedCheckoutItems(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry, index) => {
+    const item = objectRecord(entry);
+    if (!item) return [];
+    return [{
+      id: stringValue(item.id) ?? `line-${index + 1}`,
+      title: stringValue(item.title) ?? 'Item',
+      variantTitle: stringValue(item.variantTitle),
+      sku: stringValue(item.sku),
+      quantity: Math.max(1, Number.parseInt(String(item.quantity ?? '1'), 10) || 1),
+      unitPrice: money(item.unitPrice),
+      lineTotal: money(item.lineTotal),
+    }];
+  });
 }
 
 function catalogCollectionList(value: unknown) {

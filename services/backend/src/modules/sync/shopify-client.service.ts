@@ -153,6 +153,16 @@ export class ShopifyClientService {
     );
   }
 
+  abandonedCheckouts(credentials: ShopifyCredentials, cursor?: string | null, query: Record<string, string> = {}) {
+    return this.getPage<Record<string, unknown>>(
+      credentials,
+      '/checkouts.json',
+      'checkouts',
+      cursor,
+      cursor ? {} : { status: 'open', ...query },
+    );
+  }
+
   async shop(credentials: ShopifyCredentials) {
     const url = this.adminUrl(credentials, '/shop.json');
     const response = await fetch(url, {

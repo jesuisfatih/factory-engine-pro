@@ -580,6 +580,18 @@ export class SyncService {
       },
     });
 
+    const sourceCheckoutId = stringId(raw.checkout_id);
+    if (sourceCheckoutId) {
+      await this.prisma.db.accountAbandonedCheckout.updateMany({
+        where: { shopifyCheckoutId: sourceCheckoutId, status: 'open' },
+        data: {
+          status: 'completed',
+          completedAt: dateOrNull(raw.processed_at) ?? new Date(),
+          recoveryUrlEncrypted: null,
+        },
+      });
+    }
+
     if (fulfillment.mode === 'pickup') {
       await this.prisma.db.commercePickupOrder.upsert({
         where: { orderId: order.id },

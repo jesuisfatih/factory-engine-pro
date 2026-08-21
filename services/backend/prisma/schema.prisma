@@ -75,6 +75,7 @@ model Tenant {
   accountReorderCarts     AccountReorderCart[]
   accountReorderCartItems AccountReorderCartItem[]
   accountReorderCartActivities AccountReorderCartActivity[]
+  accountAbandonedCheckouts AccountAbandonedCheckout[]
   commerceActivityLogs    CommerceActivityLog[]
   customerInsights        CustomerInsight[]
   customerLists           CustomerList[]
@@ -354,6 +355,7 @@ model Customer {
   accountInvoices AccountInvoice[]
   accountReorderCarts AccountReorderCart[]
   accountReorderCartActivities AccountReorderCartActivity[]
+  abandonedCheckouts AccountAbandonedCheckout[]
   activityLogs  CommerceActivityLog[]
   insight       CustomerInsight?
   listItems     CustomerListItem[]
@@ -1076,6 +1078,39 @@ model AccountReorderCartActivity {
   @@index([tenantId, action])
   @@index([tenantId, createdAt])
   @@map("account_reorder_cart_activities")
+}
+
+model AccountAbandonedCheckout {
+  id                   String    @id
+  tenantId             String    @map("tenant_id")
+  customerId           String?   @map("customer_id")
+  shopifyCheckoutId    String    @map("shopify_checkout_id")
+  shopifyCustomerId    String?   @map("shopify_customer_id")
+  name                 String?
+  email                String?
+  status               String    @default("open")
+  currency             String    @default("USD")
+  subtotal              Decimal   @default(0) @db.Decimal(12, 2)
+  totalPrice            Decimal   @default(0) @map("total_price") @db.Decimal(12, 2)
+  totalDiscounts        Decimal   @default(0) @map("total_discounts") @db.Decimal(12, 2)
+  lineItems             Json      @default("[]") @map("line_items")
+  recoveryUrlEncrypted  String?   @map("recovery_url_encrypted")
+  providerCreatedAt     DateTime  @map("provider_created_at")
+  providerUpdatedAt     DateTime  @map("provider_updated_at")
+  completedAt           DateTime? @map("completed_at")
+  closedAt              DateTime? @map("closed_at")
+  syncedAt              DateTime  @default(now()) @map("synced_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, shopifyCheckoutId])
+  @@index([tenantId, customerId, status, providerUpdatedAt])
+  @@index([tenantId, shopifyCustomerId, status])
+  @@index([tenantId, email, status])
+  @@map("account_abandoned_checkouts")
 }
 
 model CommerceActivityLog {

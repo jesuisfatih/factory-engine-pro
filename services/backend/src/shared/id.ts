@@ -22,6 +22,7 @@ export type IdPrefix =
   | 'arc'
   | 'arci'
   | 'arca'
+  | 'acout'
   | 'cins'
   | 'clst'
   | 'clit'
