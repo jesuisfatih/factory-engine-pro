@@ -187,6 +187,7 @@ export type BuyerProductCollection = {
   title: string;
   handle: string | null;
   featured: boolean;
+  storefrontUrl: string | null;
   products: BuyerProduct[];
 };
 

@@ -1,9 +1,10 @@
 import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { accountsTokenStore, readSession } from '@/lib/api';
 import { accountRouteAccess, useCurrentPrincipal } from '@/lib/current-principal';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 
 const TITLE_BY_PATH: Array<{ test: RegExp; key: string }> = [
   { test: /^\/$/, key: 'nav.home' },
@@ -26,6 +27,8 @@ const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/register
 
 function RootLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const orderHistoryMode = useOrderHistoryPortalMode();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => window.localStorage.getItem('accounts-theme') === 'dark' ? 'dark' : 'light');
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const titleKey = useMemo(() => {
     for (const item of TITLE_BY_PATH) if (item.test.test(pathname)) return item.key;
@@ -35,6 +38,12 @@ function RootLayout() {
   const isAuth = AUTH_ROUTES.some((prefix) => pathname.startsWith(prefix));
   const hasSession = Boolean(readSession()?.accessToken);
   const principalQuery = useCurrentPrincipal();
+
+  useEffect(() => {
+    if (!orderHistoryMode) return;
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('accounts-theme', theme);
+  }, [orderHistoryMode, theme]);
 
   if (isAuth) {
     if (hasSession) {
@@ -68,12 +77,23 @@ function RootLayout() {
   }
 
   const access = accountRouteAccess(pathname, principalQuery.data);
+  const blockedOrderHistoryRoute = orderHistoryMode && ['/cart', '/reorder', '/pickup'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (blockedOrderHistoryRoute) {
+    window.location.replace(pathname.startsWith('/pickup') ? '/tracking' : '/orders');
+    return null;
+  }
 
   return (
-    <div className={`layout${collapsed ? ' collapsed' : ''}`}>
+    <div className={`layout${collapsed ? ' collapsed' : ''}${orderHistoryMode ? ' portal-order-history' : ''}`}>
       <Sidebar collapsed={collapsed} />
       <div className="main">
-        <Topbar titleI18nKey={titleKey} onToggleSidebar={() => setCollapsed((current) => !current)} />
+        <Topbar
+          titleI18nKey={titleKey}
+          onToggleSidebar={() => setCollapsed((current) => !current)}
+          orderHistoryMode={orderHistoryMode}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+        />
         <div className="content">
           {access.allowed ? <Outlet /> : (
             <div className="preview-empty">

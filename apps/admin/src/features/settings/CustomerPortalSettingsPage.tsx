@@ -108,6 +108,20 @@ export function CustomerPortalSettingsPage() {
           </div>
         </div>
         <div className="field portal-featured-collection-field">
+          <label htmlFor="portal-mode">Signed-in portal mode</label>
+          <select
+            id="portal-mode"
+            value={experience.portalMode}
+            disabled={!canWrite || save.isPending}
+            onChange={(event) => setExperience({
+              ...experience,
+              portalMode: event.target.value as AccountPortalExperience['portalMode'],
+            })}
+          >
+            <option value="standard">Standard buyer portal</option>
+            <option value="order_history">Order history + Shopify checkout</option>
+          </select>
+          <span className="portal-field-help">Order history mode removes the portal cart and templates, merges pickup into tracking, and sends purchases to Shopify.</span>
           <label htmlFor="portal-featured-collection">Featured collection</label>
           <select
             id="portal-featured-collection"

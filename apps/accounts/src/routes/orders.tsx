@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, ChevronDown, ChevronUp, FileText, RotateCw, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 import { ErrorState } from '@/components/QueryState';
 import {
   fetchBuyerOrder,
@@ -192,6 +193,7 @@ function OrderRow({ order, expanded, onToggle }: { order: BuyerOrder; expanded: 
 
 function OrdersView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'all' | OrderStatusValue>('all');
   const [sort, setSort] = useState<'date' | 'total'>('date');
@@ -214,7 +216,7 @@ function OrdersView() {
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
-  const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates });
+  const { data: templates = [] } = useQuery({ queryKey: QK_TEMPLATES, queryFn: fetchReorderTemplates, enabled: !orderHistoryMode });
   const quickReorder = useMutation({
     mutationFn: (orderId: string) => reorderOrder(orderId),
     onSuccess: (next) => {
@@ -257,7 +259,7 @@ function OrdersView() {
         <div className="kpi"><div className="label">{t('orders.kpi_pending')}</div><div className="val">{pending}</div><div className="sub">visible page</div></div>
       </div>
 
-      <div className="orders-grid">
+      <div className={`orders-grid${orderHistoryMode ? ' orders-grid-history' : ''}`}>
         <div>
           <div className="orders-toolbar">
             <div className="tabs" role="tablist" style={{ flex: 1 }}>
@@ -358,7 +360,7 @@ function OrdersView() {
           )}
         </div>
 
-        <aside className="orders-side">
+        {!orderHistoryMode ? <aside className="orders-side">
           <div className="section" style={{ padding: 16 }}>
             <h3 style={{ marginTop: 0, fontSize: 13 }}>{t('orders.side_quick_reorder')}</h3>
             <ReorderNotice result={quickResult} />
@@ -392,7 +394,7 @@ function OrdersView() {
             <div className="orders-summary-row"><span>Visible page value</span><strong>{fmtMoney(totalSpent)}</strong></div>
             <div className="orders-summary-row"><span>Matching records</span><strong>{total}</strong></div>
           </div>
-        </aside>
+        </aside> : null}
       </div>
     </>
   );

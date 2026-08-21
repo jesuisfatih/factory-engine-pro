@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
-import { fetchTrackingOrders, type TrackingOrder } from '@/lib/portal';
+import { fetchPickups, fetchTrackingOrders, type PickupOrder, type TrackingOrder } from '@/lib/portal';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 
 const QK = ['tracking'] as const;
 
@@ -21,7 +22,9 @@ const STATUS_TONE: Record<TrackingOrder['status'], string> = {
 
 function TrackingView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const { data: orders = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchTrackingOrders });
+  const pickups = useQuery({ queryKey: ['tracking', 'pickup'], queryFn: fetchPickups, enabled: orderHistoryMode });
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -148,8 +151,25 @@ function TrackingView() {
           )}
         </main>
       </div>
+      {orderHistoryMode ? <PickupTrackingSection orders={pickups.data ?? []} loading={pickups.isLoading} error={pickups.isError ? pickups.error : null} retry={() => pickups.refetch()} /> : null}
     </>
   );
+}
+
+function PickupTrackingSection({ orders, loading, error, retry }: { orders: PickupOrder[]; loading: boolean; error: unknown; retry: () => unknown }) {
+  return <section className="pickup-tracking-section" aria-labelledby="pickup-tracking-title">
+    <header><div><span>Local pickup</span><h2 id="pickup-tracking-title">Pickup order tracking</h2><p>Pickup orders are tracked here together with shipped orders.</p></div><span className="pill accent">{orders.length} orders</span></header>
+    {error ? <ErrorState title="Could not load pickup tracking" error={error} retry={retry} /> : loading ? <div className="portal-home-loading">Loading pickup orders...</div> : orders.length === 0 ? <div className="muted pickup-tracking-empty">No pickup orders are currently linked to this account.</div> : <div className="pickup-tracking-grid">
+      {orders.map((order) => {
+        const completed = order.steps.filter((step) => step.done).length;
+        return <article key={order.id} className="pickup-tracking-card">
+          <div className="pickup-tracking-card-head"><div><strong>{order.orderNumber}</strong><span>{order.placedAt}</span></div><span className={`pill ${order.status === 'ready_for_pickup' ? 'success' : order.status === 'in_production' ? 'warn' : ''}`}>{order.status.replaceAll('_', ' ')}</span></div>
+          <div className="pickup-progress"><div className="pickup-progress-bar"><div style={{ width: `${order.steps.length ? (completed / order.steps.length) * 100 : 0}%` }} /></div><span className="muted">{completed} of {order.steps.length} steps complete</span></div>
+          <div className="pickup-tracking-meta"><span><MapPin size={12} /> {order.shelfCode ? `Shelf ${order.shelfCode}` : 'Pickup location pending'}</span>{order.pickupBy ? <span><CheckCircle2 size={12} /> {order.pickupBy}</span> : null}</div>
+        </article>;
+      })}
+    </div>}
+  </section>;
 }
 
 export const Route = createFileRoute('/tracking')({ component: TrackingView });

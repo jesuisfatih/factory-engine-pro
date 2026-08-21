@@ -567,6 +567,7 @@ export type AccountPortalPresentationMode = (typeof ACCOUNT_PORTAL_PRESENTATION_
 export const accountPortalExperienceSchema = z.object({
   version: z.literal(1).default(1),
   presentationMode: z.enum(ACCOUNT_PORTAL_PRESENTATION_MODES).default('mode3'),
+  portalMode: z.enum(['standard', 'order_history']).default('standard'),
   catalog: z.object({
     featuredCollectionId: z.string().trim().max(160).default(''),
   }).strict().default({

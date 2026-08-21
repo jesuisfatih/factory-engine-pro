@@ -6,6 +6,7 @@ import { ArrowUpRight, Grid3x3, Layers3, List as ListIcon, Search, Sparkles, X }
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import { fetchBuyerProducts, uniqueVendors, type BuyerProduct, type BuyerProductCollection } from '@/lib/portal';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 
 const QK = ['products'] as const;
 
@@ -23,6 +24,7 @@ function discountPct(product: BuyerProduct) {
 
 function ProductsView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const { data, isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchBuyerProducts });
   const [search, setSearch] = useState('');
   const [vendor, setVendor] = useState('');
@@ -70,6 +72,10 @@ function ProductsView() {
     setSort('default');
   };
   const hasFilters = Boolean(search || vendor || collectionId || discountedOnly || sort !== 'default');
+
+  if (orderHistoryMode) {
+    return <StoreCollectionDirectory collections={collections} productCount={data?.productCount ?? uniqueProducts.length} loading={isLoading} error={isError ? error : null} retry={() => refetch()} />;
+  }
 
   return (
     <>
@@ -135,6 +141,38 @@ function ProductsView() {
       )}
     </>
   );
+}
+
+function StoreCollectionDirectory({ collections, productCount, loading, error, retry }: {
+  collections: BuyerProductCollection[];
+  productCount: number;
+  loading: boolean;
+  error: unknown;
+  retry: () => unknown;
+}) {
+  return <>
+    <PageHeader titleI18nKey="products.title" subtitleI18nKey="products.subtitle" />
+    <section className="catalog-overview collection-directory-hero" aria-label="Shopify collection directory">
+      <div className="catalog-overview-copy">
+        <span className="catalog-overview-icon"><Layers3 size={20} /></span>
+        <div><span className="catalog-eyebrow">Eagle Shopify collections</span><h2>Choose a collection, then shop on Eagle DTF Print</h2><p>This portal is your product directory. Product options, cart and payment are completed securely in the Shopify store.</p></div>
+      </div>
+      <div className="catalog-overview-stats"><div><strong>{collections.length}</strong><span>Collections</span></div><div><strong>{productCount}</strong><span>Products</span></div></div>
+    </section>
+    {error ? <ErrorState title="Could not load collections" error={error} retry={retry} /> : loading ? <div className="catalog-loading" role="status"><span className="catalog-loading-ring" /><div><strong>Loading Shopify collections</strong><span>Preparing the latest Eagle storefront categories.</span></div></div> : collections.length === 0 ? <div className="section catalog-empty">No Shopify collections are available yet.</div> : <div className="collection-directory-grid">
+      {collections.map((collection) => <article key={collection.id} className={`collection-directory-card${collection.featured ? ' featured' : ''}`}>
+        <div className="collection-directory-preview">
+          {collection.products.slice(0, 3).map((product) => product.imageUrl ? <img key={product.id} src={product.imageUrl} alt="" loading="lazy" /> : <span key={product.id} style={{ background: product.imageBg }} />)}
+        </div>
+        <div className="collection-directory-copy">
+          <span className="catalog-collection-kicker">{collection.featured ? <><Sparkles size={12} /> Featured collection</> : 'Shopify collection'}</span>
+          <h2>{collection.title}</h2>
+          <p>{collection.products.length} products available to view on the Eagle storefront.</p>
+          {collection.storefrontUrl ? <a className="btn primary" href={collection.storefrontUrl} target="_blank" rel="noreferrer">Open collection in store <ArrowUpRight size={13} /></a> : <span className="catalog-store-link disabled">Store collection link unavailable</span>}
+        </div>
+      </article>)}
+    </div>}
+  </>;
 }
 
 function CollectionSection({ collection, view }: { collection: BuyerProductCollection; view: ViewMode }) {

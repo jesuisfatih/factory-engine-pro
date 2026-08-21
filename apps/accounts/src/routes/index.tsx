@@ -4,6 +4,7 @@ import { AlertCircle, ArrowUpRight, CreditCard, Layers3, RotateCw, Truck } from 
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 import {
   fetchBuyerOrders,
   fetchInvoices,
@@ -98,6 +99,7 @@ function ReorderRow({ template }: { template: ReorderTemplate }) {
 
 function HomeView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const orders = useQuery({
     queryKey: ['home', 'orders'],
     queryFn: () => fetchBuyerOrders({ status: 'all', limit: 3 }),
@@ -113,6 +115,7 @@ function HomeView() {
   const reorderTemplates = useQuery({
     queryKey: ['home', 'reorder-templates'],
     queryFn: fetchReorderTemplates,
+    enabled: !orderHistoryMode,
   });
   const profile = useQuery({
     queryKey: ['home', 'profile'],
@@ -127,7 +130,7 @@ function HomeView() {
   const recentOrderTotal = orderRows.reduce((sum, order) => sum + order.totalUsd, 0);
   const outstanding = invoiceRows.reduce((sum, invoice) => sum + invoice.balanceUsd, 0);
 
-  const hasAnyError = orders.isError || invoices.isError || reorderTemplates.isError;
+  const hasAnyError = orders.isError || invoices.isError || (!orderHistoryMode && reorderTemplates.isError);
 
   return (
     <>
@@ -140,7 +143,7 @@ function HomeView() {
             <strong>{profile.data.taxExemption.purchasingRestricted ? 'Tax-exempt purchasing is paused' : 'Certificate renewal needed'}</strong>
             <span>{profile.data.taxExemption.warningMessage} Expiration date: {fmtDate(profile.data.taxExemption.expiresAt)}.</span>
           </div>
-          <Link to="/profile" className="btn">Update account documents</Link>
+          <Link to={orderHistoryMode ? '/documents' : '/profile'} className="btn">Update account documents</Link>
         </div>
       ) : null}
 
@@ -150,26 +153,26 @@ function HomeView() {
           <h3>
             {unpaidInvoices.length > 0
               ? 'Review open invoices before the next reorder.'
-              : reorderReady > 0
+              : !orderHistoryMode && reorderReady > 0
                   ? 'Reorder from a recent approved basket.'
-                  : 'Review recent orders and account activity.'}
+                  : 'Review current and previous Shopify orders.'}
           </h3>
           <p>Orders, invoices, and reorder options stay connected to your Shopify customer account.</p>
         </div>
         <div className="portal-home-hero-actions">
           {unpaidInvoices.length > 0 ? (
             <Link to="/invoices" className="btn primary"><CreditCard size={13} /> Pay or review invoices</Link>
-          ) : (
+          ) : !orderHistoryMode ? (
             <Link to="/reorder" className="btn primary"><RotateCw size={13} /> Start reorder</Link>
-          )}
+          ) : <Link to="/orders" className="btn primary"><RotateCw size={13} /> Reorder from order history</Link>}
           <Link to="/orders" className="btn">Open orders</Link>
         </div>
       </div>
 
-      <div className="kpis four">
+      <div className={`kpis ${orderHistoryMode ? 'three' : 'four'}`}>
         <PortalHomeMetric label="Recent orders" value={orders.data?.meta.count ?? 0} sub={`${fmtMoney(recentOrderTotal)} on this page`} />
         <PortalHomeMetric label="Open invoices" value={unpaidInvoices.length} sub={`${fmtMoney(outstanding)} visible balance`} />
-        <PortalHomeMetric label="Reorder ready" value={reorderReady} sub="templates with available items" />
+        {!orderHistoryMode ? <PortalHomeMetric label="Reorder ready" value={reorderReady} sub="templates with available items" /> : null}
         <PortalHomeMetric label="Account orders" value={profile.data?.ordersCount ?? 0} sub="linked from Shopify" />
       </div>
 
@@ -177,7 +180,7 @@ function HomeView() {
         <div className="portal-home-errors">
           {orders.isError ? <ErrorState title="Could not load recent orders" error={orders.error} retry={() => orders.refetch()} /> : null}
           {invoices.isError ? <ErrorState title="Could not load invoices" error={invoices.error} retry={() => invoices.refetch()} /> : null}
-          {reorderTemplates.isError ? <ErrorState title="Could not load reorder options" error={reorderTemplates.error} retry={() => reorderTemplates.refetch()} /> : null}
+          {!orderHistoryMode && reorderTemplates.isError ? <ErrorState title="Could not load reorder options" error={reorderTemplates.error} retry={() => reorderTemplates.refetch()} /> : null}
         </div>
       ) : null}
 
@@ -216,7 +219,7 @@ function HomeView() {
           )}
         </section>
 
-        <section className="portal-home-panel">
+        {!orderHistoryMode ? <section className="portal-home-panel">
           <header>
             <div>
               <span>Reorder options</span>
@@ -231,7 +234,7 @@ function HomeView() {
           ) : (
             <div className="portal-home-list">{reorderRows.map((template) => <ReorderRow key={template.id} template={template} />)}</div>
           )}
-        </section>
+        </section> : null}
 
         <section className="portal-home-panel">
           <header>

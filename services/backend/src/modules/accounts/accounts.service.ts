@@ -710,6 +710,7 @@ export class AccountsService {
       collections: collections.map((collection) => ({
         ...collection,
         featured: collection.id === featuredCollectionId,
+        storefrontUrl: shopifyCollectionUrl(tenantConfig?.shopifyDomain, collection.handle),
       })),
     };
   }
@@ -2247,6 +2248,13 @@ function shopifyProductUrl(shopifyDomain: string | null | undefined, handle: str
   const domain = normalizedShopDomain(shopifyDomain);
   if (!domain) return null;
   return `https://${domain}/products/${encodeURIComponent(handle)}`;
+}
+
+function shopifyCollectionUrl(shopifyDomain: string | null | undefined, handle: string | null) {
+  if (!handle) return null;
+  const domain = normalizedShopDomain(shopifyDomain);
+  if (!domain) return null;
+  return `https://${domain}/collections/${encodeURIComponent(handle)}`;
 }
 
 function normalizedShopDomain(value: string | null | undefined) {

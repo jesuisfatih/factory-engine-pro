@@ -14,6 +14,10 @@ export function useWorkspaceBrand() {
   });
 }
 
+export function useOrderHistoryPortalMode() {
+  return useWorkspaceBrand().data?.accountPortalExperience.portalMode === 'order_history';
+}
+
 export function workspaceName(value: string | null | undefined) {
   return value?.trim() || import.meta.env.VITE_WORKSPACE_NAME || 'Workspace';
 }

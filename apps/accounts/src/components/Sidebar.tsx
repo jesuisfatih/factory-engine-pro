@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { accountsTokenStore } from '@/lib/api';
 import { customerRoleLabel, principalInitials, useCurrentPrincipal } from '@/lib/current-principal';
-import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
+import { useOrderHistoryPortalMode, useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 
 interface NavLeaf {
   to: string;
@@ -40,13 +40,14 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
     groupKey: 'nav.group_billing',
     children: [
       { to: '/invoices', matchPrefix: '/invoices', i18nKey: 'nav.invoices', id: 'nav-invoices', icon: FileSpreadsheet, permissions: [CUSTOMER_PERMISSIONS.invoicesRead] },
-      { to: '/documents', matchPrefix: '/documents', i18nKey: 'nav.documents', id: 'nav-documents', icon: FolderArchive, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
+      { to: '/documents', matchPrefix: '/documents', i18nKey: 'nav.documents', id: 'nav-documents-billing', icon: FolderArchive, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
     ],
   },
   {
     groupKey: 'nav.group_account',
     children: [
       { to: '/profile', matchPrefix: '/profile', i18nKey: 'nav.profile', id: 'nav-profile', icon: UserCircle, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
+      { to: '/documents', matchPrefix: '/documents', i18nKey: 'nav.documents', id: 'nav-documents', icon: FolderArchive, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
       { to: '/addresses', matchPrefix: '/addresses', i18nKey: 'nav.addresses', id: 'nav-addresses', icon: MapPin, permissions: [CUSTOMER_PERMISSIONS.accountRead] },
       { to: '/team', matchPrefix: '/team', i18nKey: 'nav.team', id: 'nav-team', icon: Users2, permissions: [CUSTOMER_PERMISSIONS.subUsersRead] },
     ],
@@ -67,6 +68,7 @@ export function Sidebar({ collapsed }: Props) {
   const { t } = useTranslation();
   const router = useRouterState({ select: (s) => s.location.pathname });
   const principal = useCurrentPrincipal().data;
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const brandQuery = useWorkspaceBrand();
   const brandName = workspaceName(brandQuery.data?.workspaceName);
   const brandBadge = workspaceBadge(brandQuery.data?.brandBadge, brandName);
@@ -90,7 +92,11 @@ export function Sidebar({ collapsed }: Props) {
 
       <div className="nav-list">
         {NAV.map((section) => {
-          const visibleChildren = section.children.filter((leaf) => !leaf.permissions?.length || leaf.permissions.every((permission) => permissions.has(permission)));
+          const visibleChildren = section.children
+            .filter((leaf) => orderHistoryMode
+              ? leaf.id !== 'nav-reorder' && leaf.id !== 'nav-pickup' && leaf.id !== 'nav-documents-billing'
+              : leaf.id !== 'nav-documents')
+            .filter((leaf) => !leaf.permissions?.length || leaf.permissions.every((permission) => permissions.has(permission)));
           if (visibleChildren.length === 0) return null;
           return (
           <div key={section.groupKey}>
@@ -124,9 +130,9 @@ export function Sidebar({ collapsed }: Props) {
           <div className="name">{principal?.email ?? 'No active session'}</div>
           <div className="role">{roleLabel}</div>
         </div>
-        <button id="btn-logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
+        {!orderHistoryMode ? <button id="btn-logout" type="button" className="logout" title={t('common.logout')} onClick={logout}>
           <LogOut size={14} />
-        </button>
+        </button> : null}
       </div>
       {collapsed ? null : null}
     </aside>

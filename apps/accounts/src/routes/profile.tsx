@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import { apiErrorMessage } from '@/lib/api';
 import { fetchProfile, saveProfile, submitTaxExemptionRenewal, updateAccountPassword, type BuyerProfile } from '@/lib/portal';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 
 const QK = ['profile'] as const;
 
@@ -27,6 +28,7 @@ function fmtDate(value: string | null | undefined) {
 
 function ProfileView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const qc = useQueryClient();
   const { data: profile, isLoading, isError, error, refetch } = useQuery({ queryKey: QK, queryFn: fetchProfile });
   const [tab, setTab] = useState<TabKey>('profile');
@@ -110,7 +112,7 @@ function ProfileView() {
 
         <main className="profile-main">
           <div className="tabs" role="tablist">
-            {(['profile', 'security', 'tax'] as TabKey[]).map((value) => (
+            {(['profile', 'security', ...(orderHistoryMode ? [] : ['tax'])] as TabKey[]).map((value) => (
               <button
                 key={value}
                 type="button"

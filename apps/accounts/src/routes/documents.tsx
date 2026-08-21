@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ExternalLink, FileImage, FileText, FileType2, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { TaxCertificateDocumentsPanel } from '@/components/TaxCertificateDocumentsPanel';
 import { ErrorState } from '@/components/QueryState';
 import { downloadDocument, fetchDocuments, type BuyerDocument, type DocumentCategory } from '@/lib/portal';
+import { useOrderHistoryPortalMode } from '@/lib/workspace-brand';
 
 type TabKey = 'all' | DocumentCategory;
 
@@ -46,6 +48,7 @@ function fmtSize(bytes: number | null) {
 
 function DocumentsView() {
   const { t } = useTranslation();
+  const orderHistoryMode = useOrderHistoryPortalMode();
   const [tab, setTab] = useState<TabKey>('all');
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(10);
@@ -63,6 +66,8 @@ function DocumentsView() {
   return (
     <>
       <PageHeader titleI18nKey="documents.title" subtitleI18nKey="documents.subtitle" />
+
+      {orderHistoryMode ? <TaxCertificateDocumentsPanel /> : null}
 
       <div className="kpi-grid four">
         <div className="kpi"><div className="label">Files</div><div className="val">{total}</div><div className="sub">matching records</div></div>
