@@ -471,9 +471,9 @@ export class PersonWorkspaceService {
     const callContext = initialCallContext;
     const customerPinsByCustomer = customerPinsByTarget;
     const membershipsBySegment = groupBy(memberships, (row) => row.segmentId);
-    const selectedMembershipGroups = segmentOwnerships.map((ownership) => {
+    const orderedMembershipGroups = segmentOwnerships.map((ownership) => {
       const segmentMemberships = membershipsBySegment.get(ownership.segmentId) ?? [];
-      const selectedMemberships = segmentMemberships
+      const orderedMemberships = segmentMemberships
         .map((membership) => ({
           membership,
           preview: this.dailyCallItem(
@@ -486,22 +486,26 @@ export class PersonWorkspaceService {
           ),
         }))
         .sort((left, right) => sortDaily(left.preview, right.preview))
-        .slice(0, ownership.dailyCap ?? 100)
         .map((entry) => entry.membership);
-      return { ownership, segmentMemberships, selectedMemberships };
+      return { ownership, segmentMemberships, orderedMemberships };
     });
     const contactSeeds = uniqueCustomers([
-      ...selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)),
+      ...orderedMembershipGroups.flatMap((group) => group.orderedMemberships.map((membership) => membership.customer)),
       ...dailyTaskRows.flatMap((row) => row.customer ? [row.customer] : []),
       ...customerPinRows.map((row) => row.customer),
     ]);
     const contactByCustomer = await this.contactResolver.resolveMany(contactSeeds);
-    const selectedCustomers = uniqueCustomers(selectedMembershipGroups.flatMap((group) => group.selectedMemberships.map((membership) => membership.customer)));
-    const priorityCustomerContext = await this.priorityCustomerContext(selectedCustomers, contactByCustomer, member.id);
+    const priorityCustomers = uniqueCustomers(orderedMembershipGroups.flatMap((group) => group.orderedMemberships.map((membership) => membership.customer)));
+    const priorityCustomerContext = await this.priorityCustomerContext(priorityCustomers, contactByCustomer, member.id);
 
-    const segmentGroups = selectedMembershipGroups.map(({ ownership, segmentMemberships, selectedMemberships }) => {
-      const visibleMemberships = selectedMemberships.filter((membership) => priorityCustomerVisible(priorityCustomerContext.get(membership.customerId)));
+    const segmentGroups = orderedMembershipGroups.map(({ ownership, segmentMemberships, orderedMemberships }) => {
       const visibleSegmentMemberships = segmentMemberships.filter((membership) => priorityCustomerVisible(priorityCustomerContext.get(membership.customerId)));
+      // Apply the daily cap after completed/in-progress customers have left the
+      // priority pool. Otherwise a completed customer inside the first N rows
+      // consumes a slot forever and the next customer is never promoted.
+      const visibleMemberships = orderedMemberships
+        .filter((membership) => priorityCustomerVisible(priorityCustomerContext.get(membership.customerId)))
+        .slice(0, ownership.dailyCap ?? 100);
       const items = visibleMemberships.map((membership) => this.withContactState(this.dailyCallItem(
           membership,
           ownership,
@@ -1420,6 +1424,7 @@ export class PersonWorkspaceService {
       activityLogs,
       relatedRequests,
       aircallRows,
+      outcomeRows,
       callContext,
       cardStrategies,
     ] = await Promise.all([
@@ -1455,6 +1460,14 @@ export class PersonWorkspaceService {
             take: 8,
           })
         : Promise.resolve([]),
+      this.prisma.db.customerCallOutcome.findMany({
+        where: customerId ? { customerId } : { staffWorkItemId: row.id },
+        include: {
+          member: { select: { firstName: true, lastName: true, email: true } },
+        },
+        orderBy: [{ selectedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+      }),
       this.cardCallContext([row]),
       this.personCardStrategies(),
     ]);
@@ -1488,6 +1501,15 @@ export class PersonWorkspaceService {
         actorType: comment.actorType,
         createdAt: comment.createdAt.toISOString(),
       })).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+      outcomeHistory: outcomeRows.map((outcome) => ({
+        id: outcome.id,
+        disposition: outcome.disposition as PersonTaskBriefDetail['outcomeHistory'][number]['disposition'],
+        note: outcome.note,
+        memberName: memberDisplayName(outcome.member),
+        resultingWorkState: outcome.resultingWorkState,
+        resultingQueue: outcome.resultingQueue,
+        selectedAt: outcome.selectedAt.toISOString(),
+      })),
       callSummary: latestCallSummary(aircallRows),
       customerDetailUrl: customerId ? `/staff/customers?customerId=${encodeURIComponent(customerId)}` : null,
     };
@@ -3984,11 +4006,25 @@ function emptyPersonPriorityCustomerContext(): PersonPriorityCustomerContext {
 }
 
 function priorityCustomerVisible(context: PersonPriorityCustomerContext | undefined) {
-  return !context?.hasCompletedTask || context.openTasksCount > 0;
+  // Priority is the prospecting pool, not a second copy of Follow-up list.
+  // Once a call creates active work, the customer moves to Follow-up and the
+  // next eligible segment customer can occupy the daily slot.
+  return !context || priorityCustomerShouldAppear(context.openTasksCount, context.hasCompletedTask);
 }
 
-function isActivePriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null }) {
+export function priorityCustomerShouldAppear(openTasksCount: number, hasCompletedTask: boolean) {
+  return openTasksCount === 0 && !hasCompletedTask;
+}
+
+function isActivePriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null; visibleAfter?: Date | null }) {
+  // Future rule-driven reappearance is not current work. Treating it as active
+  // kept completed customers pinned in Priority customers until the future date.
+  if (!futureScheduledPriorityWorkIsCurrent(row.visibleAfter)) return false;
   return !CLOSED.has(row.status) && row.status !== 'cancelled' && row.queueLocation !== 'archive' && row.archivedAt === null;
+}
+
+export function futureScheduledPriorityWorkIsCurrent(visibleAfter: Date | null | undefined, now = new Date()) {
+  return !visibleAfter || visibleAfter.getTime() <= now.getTime();
 }
 
 function isCompletedPriorityWork(row: { status: string; queueLocation: string; archivedAt: Date | null; archiveReason: string | null }) {

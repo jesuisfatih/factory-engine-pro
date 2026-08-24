@@ -233,6 +233,22 @@ export const personTaskNoteSchema = z.object({
 });
 export type PersonTaskNote = z.infer<typeof personTaskNoteSchema>;
 
+export const personCallOutcomeHistoryEntrySchema = z.object({
+  id: z.string(),
+  disposition: z.enum([
+    'not_selected', 'customer_reached', 'no_answer', 'voicemail',
+    'voicemail_unavailable', 'callback_requested', 'follow_up_scheduled',
+    'quote_sent', 'order_placed', 'not_interested', 'wrong_number',
+    'do_not_call', 'completed',
+  ]),
+  note: z.string().nullable(),
+  memberName: z.string(),
+  resultingWorkState: z.string(),
+  resultingQueue: z.string(),
+  selectedAt: z.string(),
+});
+export type PersonCallOutcomeHistoryEntry = z.infer<typeof personCallOutcomeHistoryEntrySchema>;
+
 export const personTaskShopifyCustomerSchema = z.object({
   customerId: z.string().nullable(),
   shopifyCustomerId: z.string().nullable(),
@@ -263,6 +279,7 @@ export const personTaskBriefDetailSchema = z.object({
   timeline: z.array(personTaskTimelineEntrySchema),
   performance30d: personPerformance30dSchema,
   notes: z.array(personTaskNoteSchema),
+  outcomeHistory: z.array(personCallOutcomeHistoryEntrySchema),
   callSummary: personCallSummarySchema.nullable(),
   customerDetailUrl: z.string().nullable(),
 });

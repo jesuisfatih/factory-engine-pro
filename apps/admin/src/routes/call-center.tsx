@@ -34,6 +34,7 @@ import {
   transferCallCenterTask,
 } from '@/lib/live-data';
 import { subscribeCallCenterRealtime } from '@/lib/realtime';
+import { dtfBankRoutineCallCenterDeactivated } from '@/lib/dtfbank-operations-policy';
 
 type TabId = 'kanban' | 'calendar' | 'notes' | 'messages';
 type NoteTarget = { customerId: string; customerName: string };
@@ -50,6 +51,25 @@ const TABS: Array<{ id: TabId; label: string }> = [
 ];
 
 function CallCenterView() {
+  if (dtfBankRoutineCallCenterDeactivated()) return <DtfBankCallAutomationStatus />;
+  return <ActiveCallCenterView />;
+}
+
+function DtfBankCallAutomationStatus() {
+  return (
+    <>
+      <PageHeader titleI18nKey="call_center.title" subtitleI18nKey="call_center.subtitle" />
+      <div className="section call-center-deactivated">
+        <h3><span>Rule-driven call workflow is active</span><span className="meta">routine Call Center view deactivated</span></h3>
+        <p>Calls that match an active rule are assigned automatically to the staff member who made or answered the call.</p>
+        <p>Staff complete the work from Follow-up list by saving an outcome, task status and notes. Completed work moves to Daily archive.</p>
+        <p>Unmatched transcript records are retained safely as automation exceptions. Deactivating this page does not delete calls, transcripts or rule audit history.</p>
+      </div>
+    </>
+  );
+}
+
+function ActiveCallCenterView() {
   const [tab, setTab] = useState<TabId>('kanban');
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null);
   const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null);

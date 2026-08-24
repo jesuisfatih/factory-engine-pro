@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Kpi } from '@/components/Kpi';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { subscribeCallCenterRealtime } from '@/lib/realtime';
+import { dtfBankRoutineCallCenterDeactivated } from '@/lib/dtfbank-operations-policy';
 
 interface OrderStats {
   count: number;
@@ -86,6 +87,7 @@ interface TrendPoint {
 function DashboardView() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const routineCallCenterDeactivated = dtfBankRoutineCallCenterDeactivated();
   const orderStats = useQuery<OrderStats>({
     queryKey: ['dashboard', 'orders', 'stats'],
     queryFn: () => adminApi.orderStats() as Promise<OrderStats>,
@@ -117,6 +119,7 @@ function DashboardView() {
   const callCenter = useQuery<CallCenterOverview>({
     queryKey: ['dashboard', 'call-center', 'overview'],
     queryFn: () => adminApi.callCenterOverview(),
+    enabled: !routineCallCenterDeactivated,
     refetchInterval: 30_000,
   });
 
@@ -167,7 +170,7 @@ function DashboardView() {
         </div>
       )}
 
-      <div className="section" id="section-call-center-preview" style={{ marginBottom: 16 }}>
+      {!routineCallCenterDeactivated && <div className="section" id="section-call-center-preview" style={{ marginBottom: 16 }}>
         <h3>
           <span>Call Center preview</span>
           <span className="meta">combined staff kanban</span>
@@ -220,7 +223,18 @@ function DashboardView() {
             />
           </div>
         )}
-      </div>
+      </div>}
+
+      {routineCallCenterDeactivated && (
+        <div className="section" id="section-call-automation-status" style={{ marginBottom: 16 }}>
+          <h3><span>Call automation</span><span className="meta">rule-driven workflow</span></h3>
+          <div className="call-center-preview-card">
+            <strong>Active</strong>
+            <p>Matched calls are assigned automatically to the staff member who handled the call.</p>
+            <p>Unmatched transcripts remain retained as automation exceptions; no records are deleted.</p>
+          </div>
+        </div>
+      )}
 
       <div className="section" id="section-active-rule-stats" style={{ marginBottom: 16 }}>
         <h3>

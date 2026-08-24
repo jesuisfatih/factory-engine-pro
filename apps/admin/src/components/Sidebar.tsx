@@ -17,6 +17,7 @@ import {
 } from '@/lib/permission-groups';
 import { useWorkspaceBrand, workspaceBadge, workspaceName } from '@/lib/workspace-brand';
 import { fetchCallCenterOverviewPhase } from '@/lib/live-data';
+import { dtfBankRoutineCallCenterDeactivated } from '@/lib/dtfbank-operations-policy';
 
 interface NavLeaf {
   to: string;
@@ -107,9 +108,10 @@ export function Sidebar({ collapsed }: Props) {
     || resolveBrandLogoUrl(brandAssets, brandQuery.data?.brandLogo, 'dark');
   const permissions = new Set(principal?.permissions ?? []);
   const can = (permission?: string | readonly string[]) => hasAnyPermission(permissions, permission);
+  const hideRoutineCallCenter = dtfBankRoutineCallCenterDeactivated();
   const sections = NAV.map((section) => ({
     ...section,
-    children: section.children.filter((leaf) => can(leaf.permission)),
+    children: section.children.filter((leaf) => can(leaf.permission) && !(hideRoutineCallCenter && leaf.to === '/call-center')),
   })).filter((section) => section.children.length > 0);
   const roleLabel = adminRoleLabel(principal);
   const logout = async () => {

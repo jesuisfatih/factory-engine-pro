@@ -636,7 +636,7 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
                 </span>
                 <ChevronDown size={18} className="section-toggle-chevron" />
               </button>
-              <span className="missed-v2-badge kanban-badge">Assigned - {groups.reduce((total, group) => total + group.totalCustomers, 0)} across {groups.length} customer list{groups.length === 1 ? '' : 's'}</span>
+              <span className="missed-v2-badge kanban-badge">Remaining - {groups.reduce((total, group) => total + group.totalCustomers, 0)} across {groups.length} customer list{groups.length === 1 ? '' : 's'}</span>
             </div>
             {activeSection === 'priority' ? <div className="followup-body">
               {(() => {
@@ -1036,7 +1036,7 @@ function PrioritySegmentGroup({
         <span className="segment-group-title">{listLabel ?? displayName}</span>
         {listLabel ? <span className="segment-group-subname">{displayName}</span> : null}
         <span className="segment-group-priority">P{group.priority}</span>
-        <span className="segment-group-meta">{group.items.length}/{cap} today - {group.totalCustomers} total</span>
+        <span className="segment-group-meta">{group.items.length} ready today - {group.totalCustomers} remaining</span>
       </button>
       <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: groupSummary }} />
       {!collapsed && (

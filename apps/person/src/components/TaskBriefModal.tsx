@@ -6,6 +6,7 @@ import {
   Pencil, RotateCcw, ShoppingBag,
   Activity, CalendarClock, StickyNote, Loader2, AlertTriangle,
   History, UserPlus,
+  LifeBuoy,
 } from 'lucide-react';
 import { dialAircall, fetchTaskBrief, friendlyError, linkTaskCustomer, moveCard, recordTaskOutcome, saveTaskNote, scheduleTaskFollowUp } from '../api/live';
 import { frontendCopy, frontendElementClassName, frontendElementOverride, frontendFieldVisible, frontendModalSectionStyle, FrontendCustomizationSlotView } from './FrontendCustomization';
@@ -82,6 +83,10 @@ function normalizeCallContextSectionOrder(sectionOrder: FrontendCustomizationMod
 function labelize(value: string | null | undefined) {
   if (!value) return 'Not captured';
   return humanize(value);
+}
+
+function outcomeLabel(value: PersonCallDisposition) {
+  return CALL_OUTCOMES.find((item) => item.value === value)?.label ?? labelize(value);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -472,6 +477,27 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
   const followUpNotesSection = followUpNotesContent ? (
     <div style={sectionStyle('noteForm', 82)}>{followUpNotesContent}</div>
   ) : noteSection;
+  const outcomeHistorySection = detail ? (
+    <section className="brief-block brief-outcome-history" style={{ order: 83 }}>
+      <div className="brief-block-head">
+        <span className="lbl">Outcome history</span>
+        <span className="brief-count-pill">{detail.outcomeHistory.length} saved</span>
+      </div>
+      {detail.outcomeHistory.length ? (
+        <div className="brief-mini-list">
+          {detail.outcomeHistory.map((item) => (
+            <div key={item.id} className="brief-note-row brief-outcome-history-row">
+              <span>{fmtDate(item.selectedAt)} · {item.memberName}</span>
+              <strong>{outcomeLabel(item.disposition)}</strong>
+              {item.note ? <p>{personSafeText(item.note)}</p> : <p className="brief-val-muted">No outcome note was added.</p>}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="brief-val brief-val-muted">No saved outcomes for this customer yet.</div>
+      )}
+    </section>
+  ) : null;
   const outcomePanel = outcomeRequired && activeTaskId ? (
     <form className="brief-block brief-outcome" style={{ order: 70 }} onSubmit={submitOutcome}>
       <div className="brief-block-head">
@@ -583,6 +609,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     ) : null}
                     {outcomePanel}
                     {followUpNotesSection}
+                    {outcomeHistorySection}
                   </>
                 ) : hasBrief ? (
                   <>
@@ -613,6 +640,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     ) : null}
                     {outcomePanel}
                     {followUpNotesSection}
+                    {outcomeHistorySection}
                   </>
                 ) : (
                   <>
@@ -624,6 +652,7 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
                     </div>
                     {outcomePanel}
                     {followUpNotesSection}
+                    {outcomeHistorySection}
                   </>
                 )}
 
@@ -755,6 +784,17 @@ export function TaskBriefContent({ card, customization, summary, contextTone = '
           </button>
           <button type="button" className="btn" onClick={callCustomer} disabled={!liveCard.phone || dialCustomer.isPending}>
             <Phone size={13} /> {dialCustomer.isPending ? 'Calling' : frontendCopy(override, 'callNowButton', 'Call now')}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              onClose();
+              window.history.pushState(null, '', '/staff/requests');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            <LifeBuoy size={13} /> Open case
           </button>
           <button
             type="button"
