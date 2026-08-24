@@ -13,6 +13,49 @@ const QK = ['products'] as const;
 type SortKey = 'default' | 'price_asc' | 'price_desc' | 'discount';
 type ViewMode = 'grid' | 'list';
 
+const EAGLE_COLLECTION_DIRECTORY = [
+  {
+    handle: 'dtf-transfers-1',
+    title: 'DTF Transfers',
+    href: 'https://eagledtfprint.com/collections/dtf-transfers-1',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Dtf-Transfer.jpg?v=1775493196&width=800',
+  },
+  {
+    handle: 'uv-dtf-transfers',
+    title: 'UV DTF Stickers',
+    href: 'https://eagledtfprint.com/collections/uv-dtf-transfers',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Uv-Dtf-Sticker.jpg?v=1775493197&width=800',
+  },
+  {
+    handle: 'dtf-specials',
+    title: 'Special DTF Transfers',
+    href: 'https://eagledtfprint.com/collections/dtf-specials',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Special-Dtf-Transfers.jpg?v=1775493197&width=800',
+  },
+  {
+    handle: 'dtf-transfer-supplies',
+    title: 'DTF Supplies',
+    href: 'https://eagledtfprint.com/collections/dtf-transfer-supplies',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Dtf-Supplies.jpg?v=1775493195&width=800',
+  },
+  {
+    handle: 'equipments',
+    title: 'DTF Equipment',
+    href: 'https://eagledtfprint.com/collections/equipments',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Dtf-Equipment.jpg?v=1775493195&width=800',
+  },
+  {
+    handle: 'blank-apparel',
+    title: 'Blank Apparel',
+    href: 'https://eagledtfprint.com/collections/blank-apparel',
+    imageUrl: 'https://eagledtfprint.com/cdn/shop/files/Blank-Apparel.jpg?v=1775493192&width=800',
+  },
+] as const;
+
+function isEagleAccountsHost() {
+  return typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'accounts.eagledtfprint.com';
+}
+
 function fmtMoney(value: number) {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 }
@@ -72,6 +115,10 @@ function ProductsView() {
     setSort('default');
   };
   const hasFilters = Boolean(search || vendor || collectionId || discountedOnly || sort !== 'default');
+
+  if (orderHistoryMode && isEagleAccountsHost()) {
+    return <EagleCollectionDirectory collections={collections} />;
+  }
 
   if (orderHistoryMode) {
     return <StoreCollectionDirectory collections={collections} productCount={data?.productCount ?? uniqueProducts.length} loading={isLoading} error={isError ? error : null} retry={() => refetch()} />;
@@ -141,6 +188,51 @@ function ProductsView() {
       )}
     </>
   );
+}
+
+function EagleCollectionDirectory({ collections }: { collections: BuyerProductCollection[] }) {
+  const productCountByHandle = new Map(
+    collections
+      .filter((collection) => collection.handle)
+      .map((collection) => [collection.handle, collection.products.length]),
+  );
+
+  return <>
+    <PageHeader titleI18nKey="products.title" subtitleI18nKey="products.subtitle" />
+    <section className="eagle-collection-hero" aria-labelledby="eagle-collection-title">
+      <div>
+        <span className="catalog-eyebrow">Shop Eagle DTF Print</span>
+        <h2 id="eagle-collection-title">Explore our main collections</h2>
+        <p>Choose a category to view products, options and checkout securely in the Eagle DTF Print store.</p>
+      </div>
+      <span className="eagle-collection-total">6 categories</span>
+    </section>
+    <div className="eagle-collection-grid" aria-label="Eagle DTF Print product categories">
+      {EAGLE_COLLECTION_DIRECTORY.map((collection) => {
+        const productCount = productCountByHandle.get(collection.handle);
+        return <a
+          key={collection.handle}
+          className="eagle-collection-card"
+          href={collection.href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Shop ${collection.title} on Eagle DTF Print`}
+        >
+          <img src={collection.imageUrl} alt="" loading="lazy" />
+          <span className="eagle-collection-card-shade" aria-hidden="true" />
+          <span className="eagle-collection-card-copy">
+            <small>Shop collection</small>
+            <strong>{collection.title}</strong>
+            <span className="eagle-collection-card-meta">
+              <i aria-hidden="true" />
+              {productCount === undefined ? 'Explore collection' : `${productCount} ${productCount === 1 ? 'item' : 'items'}`}
+            </span>
+          </span>
+          <span className="eagle-collection-card-action" aria-hidden="true"><ArrowUpRight size={18} /></span>
+        </a>;
+      })}
+    </div>
+  </>;
 }
 
 function StoreCollectionDirectory({ collections, productCount, loading, error, retry }: {
