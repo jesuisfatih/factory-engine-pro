@@ -112,6 +112,10 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
     if (!detailCustomerId) return null;
     return [...daily, ...priority, ...pinned].find((card) => card.customerId === detailCustomerId) ?? null;
   }, [detailCustomerId, daily, pinned, priority]);
+  const detailIsPriorityCustomer = useMemo(() => {
+    if (!detailCustomerId) return false;
+    return groups.some((group) => group.items.some((item) => item.customerId === detailCustomerId));
+  }, [detailCustomerId, groups]);
   const customerDetailMain = useMemo(() => {
     if (!detailCustomerId) return undefined;
     const item = groups.flatMap((group) => group.items).find((candidate) => candidate.customerId === detailCustomerId);
@@ -745,7 +749,16 @@ export function CallQueueView({ range: initialRange = 'last7d', archive = false 
         error={customerDetailQuery.error ? friendlyError(customerDetailQuery.error) : null}
         onRetry={() => customerDetailQuery.refetch()}
         onClose={() => setDetailCustomerId(null)}
-        onCallCustomer={(phone, customerId) => dialCustomer.mutate({ phone, customerId, source: 'customer_detail' })}
+        onCallCustomer={(phone, customerId) => dialCustomer.mutate({
+          phone,
+          customerId,
+          idempotencyKey: detailIsPriorityCustomer ? personActionId('priority-dial') : undefined,
+          source: detailIsPriorityCustomer ? 'priority_board' : 'customer_detail',
+        }, {
+          onSuccess: (result) => {
+            if (result.staffWorkItemId) openTaskBrief(result.staffWorkItemId, 'priority');
+          },
+        })}
         isCallingCustomer={dialCustomer.isPending}
         callMessage={dialCustomer.data?.message ?? (dialCustomer.error ? friendlyError(dialCustomer.error) : null)}
         staffTerminology
@@ -1021,6 +1034,7 @@ function PrioritySegmentGroup({
   callDisabled: boolean;
 }) {
   const cap = group.dailyCap ?? group.totalCustomers;
+  const queuedNext = Math.max(0, group.totalCustomers - group.items.length);
   const displayName = staffSegmentLabel(group.segmentName, (group as unknown as { displayName?: string }).displayName);
   const groupSummary = {
     ...(typeof summary === 'object' && summary && !Array.isArray(summary) ? summary as Record<string, unknown> : {}),
@@ -1036,7 +1050,7 @@ function PrioritySegmentGroup({
         <span className="segment-group-title">{listLabel ?? displayName}</span>
         {listLabel ? <span className="segment-group-subname">{displayName}</span> : null}
         <span className="segment-group-priority">P{group.priority}</span>
-        <span className="segment-group-meta">{group.items.length} ready today - {group.totalCustomers} remaining</span>
+        <span className="segment-group-meta">{group.items.length} ready today - {queuedNext} queued next - {group.totalCustomers} total remaining</span>
       </button>
       <FrontendCustomizationSlotView customization={customization} slot="priority.group.header" context={{ summary: groupSummary }} />
       {!collapsed && (

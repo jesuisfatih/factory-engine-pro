@@ -627,6 +627,7 @@ export class PersonWorkspaceService {
         ];
     const workflowScope: Prisma.StaffWorkItemWhereInput = {
       OR: [
+        { source: 'priority_call' },
         { sourceCallId: { not: null } },
         { sourceEmailId: { not: null } },
         { matchedRuleId: { not: null } },
@@ -713,6 +714,9 @@ export class PersonWorkspaceService {
   }
 
   private isDailyWorkflowTask(row: StaffWorkItemRow) {
+    if (row.source === 'priority_call') {
+      return DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''));
+    }
     if (row.source === 'manual_transcript_review') {
       return Boolean(row.sourceCallId) && DAILY_WORKFLOW_AXES.has(String(row.axis ?? ''));
     }
@@ -4435,7 +4439,8 @@ function taskSource(row: { source: string; sourceCallId?: string | null; sourceE
   if (metadata.category === 'admin_order_transfer') return 'admin_transfer';
   if (metadata.aiSource === 'segment') return 'segment_priority';
   if (metadata.aiSource === 'stale') return 'stale_follow_up';
-  if (metadata.aiSource === 'transcript'
+  if (row.source === 'priority_call'
+    || metadata.aiSource === 'transcript'
     || row.source === 'call'
     || row.sourceCallId
     || row.sourceEmailId
