@@ -127,6 +127,10 @@ export const Route = createRootRoute({
       throw redirect({ to: '/dashboard' });
     }
 
+    if (hasSession && (location.pathname === '/admin' || location.pathname === '/admin/')) {
+      throw redirect({ to: '/dashboard' });
+    }
+
     const permission = requiredPermission(location.pathname);
     if (hasSession && !authRoute && !hasAnyPermission(session?.principal.permissions ?? [], permission)) {
       throw redirect({ to: '/dashboard' });
