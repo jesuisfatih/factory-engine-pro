@@ -2528,6 +2528,40 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   gap: 8px;
   flex-shrink: 0;
 }
+.customer-detail-header-actions .customer-detail-action {
+  --customer-action-color: var(--accent);
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--customer-action-color) 24%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--customer-action-color) 7%, var(--surface));
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.customer-detail-header-actions .customer-detail-action svg { color: var(--customer-action-color); flex: 0 0 auto; }
+.customer-detail-header-actions .customer-detail-action:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--customer-action-color) 48%, var(--border));
+  background: color-mix(in srgb, var(--customer-action-color) 12%, var(--surface));
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--customer-action-color) 13%, transparent);
+}
+.customer-detail-header-actions .customer-detail-action:focus-visible { outline: 3px solid color-mix(in srgb, var(--customer-action-color) 22%, transparent); outline-offset: 2px; }
+.customer-detail-header-actions .customer-detail-action:disabled { opacity: .48; cursor: not-allowed; transform: none; box-shadow: none; }
+.customer-detail-header-actions .customer-detail-action-call { --customer-action-color: #0f8a66; }
+.customer-detail-header-actions .customer-detail-action-copy { --customer-action-color: #2563eb; }
+.customer-detail-header-actions .customer-detail-action-email { --customer-action-color: #4f46e5; }
+.customer-detail-header-actions .customer-detail-action-shopify { --customer-action-color: #16803c; }
 .customer-detail-title { min-width: 0; }
 .customer-detail-call-status {
   padding: 8px 20px;
@@ -2643,6 +2677,8 @@ button.role-card { text-align: left; font-family: inherit; color: inherit; }
   .customer-detail-backdrop { padding: 0; }
   .customer-detail-panel { width: 100vw; height: 100vh; border-radius: 0; }
   .customer-detail-summary, .customer-detail-grid { grid-template-columns: 1fr; }
+  .customer-detail-header-actions .customer-detail-action { width: 36px; padding: 0; }
+  .customer-detail-header-actions .customer-detail-action span { display: none; }
   .customer-detail-owner-editor label { grid-template-columns: 1fr; }
 }
 

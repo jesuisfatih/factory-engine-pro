@@ -168,39 +168,39 @@ export function CustomerDetailPanel({
               onCallCustomer ? (
                 <button
                   type="button"
-                  className="btn ghost"
+                  className="btn ghost customer-detail-action customer-detail-action-call"
                   aria-label={contactPhone ? `Call ${contactPhone}` : 'No callable phone found'}
                   title={contactPhone ? `Call ${contactPhoneDisplay}` : 'No callable phone found'}
                   disabled={isCallingCustomer || !contactPhone || !detail}
                   onClick={() => contactPhone && detail && onCallCustomer(contactPhone, detail.customer.id)}
                 >
-                  <Phone size={14} /> {isCallingCustomer ? 'Calling' : 'Call'}
+                  <Phone size={15} /> <span>{isCallingCustomer ? 'Calling' : 'Call'}</span>
                 </button>
               ) : contactPhone ? (
-                <a className="btn ghost" href={`tel:${cleanPhone(contactPhone)}`} aria-label={`Call ${contactPhone}`}>
-                  <Phone size={14} /> Call
+                <a className="btn ghost customer-detail-action customer-detail-action-call" href={`tel:${cleanPhone(contactPhone)}`} aria-label={`Call ${contactPhone}`}>
+                  <Phone size={15} /> <span>Call</span>
                 </a>
-              ) : <button type="button" className="btn ghost" disabled title="No callable phone found"><Phone size={14} /> Call</button>
+              ) : <button type="button" className="btn ghost customer-detail-action customer-detail-action-call" disabled title="No callable phone found"><Phone size={15} /> <span>Call</span></button>
             ) : null}
             {showPhone && contactPhone ? (
               <button
                 type="button"
-                className="btn ghost"
+                className="btn ghost customer-detail-action customer-detail-action-copy"
                 title={`Copy ${contactPhoneDisplay}`}
                 aria-label={`Copy ${contactPhone}`}
                 onClick={() => void navigator.clipboard.writeText(contactPhone)}
               >
-                <Copy size={14} /> Copy
+                <Copy size={15} /> <span>Copy</span>
               </button>
             ) : null}
             {detail?.customer.email ? (
-              <a className="btn ghost" href={`mailto:${detail.customer.email}`} aria-label={`Email ${detail.customer.email}`}>
-                <Mail size={14} /> Email
+              <a className="btn ghost customer-detail-action customer-detail-action-email" href={`mailto:${detail.customer.email}`} aria-label={`Email ${detail.customer.email}`}>
+                <Mail size={15} /> <span>Email</span>
               </a>
             ) : null}
             {shopifyAdminCustomerUrl ? (
-              <a className="btn ghost" href={shopifyAdminCustomerUrl} target="_blank" rel="noreferrer" aria-label="Open customer in Shopify">
-                <ExternalLink size={14} /> Shopify
+              <a className="btn ghost customer-detail-action customer-detail-action-shopify" href={shopifyAdminCustomerUrl} target="_blank" rel="noreferrer" aria-label="Open customer in Shopify">
+                <ExternalLink size={15} /> <span>Shopify</span>
               </a>
             ) : null}
             <button type="button" className="customer-detail-icon-btn" onClick={onClose} aria-label="Close customer detail">
