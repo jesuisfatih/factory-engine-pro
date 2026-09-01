@@ -47,6 +47,8 @@ import type {
   AuthSession,
   BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
+  BillingSession,
+  BillingSummary,
   CalculatePricesInput,
   CallCenterActionResult,
   CallCenterCreateCustomerTaskInput,
@@ -442,6 +444,22 @@ export class ApiClient {
 
   tenantConfig() {
     return this.get('/identity/tenant-config');
+  }
+
+  billingSummary() {
+    return this.get<BillingSummary>('/billing');
+  }
+
+  createBillingCheckout() {
+    return this.post<BillingSession>('/billing/checkout', {});
+  }
+
+  createBillingPortal() {
+    return this.post<BillingSession>('/billing/portal', {});
+  }
+
+  syncBillingSubscription() {
+    return this.post<BillingSummary>('/billing/sync', {});
   }
 
   portalCatalogCollections() {

@@ -52,153 +52,203 @@ model Tenant {
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
 
-  config                  TenantConfig?
-  members                 Member[]
-  memberRoles             MemberRole[]
-  memberRoleAssignments   MemberRoleAssignment[]
-  customers               Customer[]
-  transcriptReviewDecisions TranscriptReviewDecision[]
-  customerUsers           CustomerUser[]
-  subUsers                SubUser[]
-  customerRoles           CustomerRole[]
-  customerUserRoleAssignments CustomerUserRoleAssignment[]
-  subUserRoleAssignments  SubUserRoleAssignment[]
-  authTokens              AuthToken[]
-  authAuditLogs           AuthAuditLog[]
-  catalogProducts         CatalogProduct[]
-  catalogVariants         CatalogVariant[]
-  commerceOrders          CommerceOrder[]
-  commercePickupOrders    CommercePickupOrder[]
-  accountInvoices         AccountInvoice[]
-  accountInvoicePayments  AccountInvoicePayment[]
-  accountInvoiceActivities AccountInvoiceActivity[]
-  accountReorderCarts     AccountReorderCart[]
-  accountReorderCartItems AccountReorderCartItem[]
-  accountReorderCartActivities AccountReorderCartActivity[]
-  accountAbandonedCheckouts AccountAbandonedCheckout[]
-  commerceActivityLogs    CommerceActivityLog[]
-  customerInsights        CustomerInsight[]
-  customerLists           CustomerList[]
-  customerListItems       CustomerListItem[]
-  customerAssignments     CustomerAssignment[]
-  customerAssignmentAudits CustomerAssignmentAudit[]
-  pricingRules            PricingRule[]
-  segments                Segment[]
-  segmentOwnerships       SegmentOwnership[]
-  segmentCustomerMemberships SegmentCustomerMembership[]
-  shopifyCustomerSegments ShopifyCustomerSegment[]
+  config                        TenantConfig?
+  billingSubscription           TenantBillingSubscription?
+  stripeBillingWebhookInbox     StripeBillingWebhookInbox[]
+  members                       Member[]
+  memberRoles                   MemberRole[]
+  memberRoleAssignments         MemberRoleAssignment[]
+  customers                     Customer[]
+  transcriptReviewDecisions     TranscriptReviewDecision[]
+  customerUsers                 CustomerUser[]
+  subUsers                      SubUser[]
+  customerRoles                 CustomerRole[]
+  customerUserRoleAssignments   CustomerUserRoleAssignment[]
+  subUserRoleAssignments        SubUserRoleAssignment[]
+  authTokens                    AuthToken[]
+  authAuditLogs                 AuthAuditLog[]
+  catalogProducts               CatalogProduct[]
+  catalogVariants               CatalogVariant[]
+  commerceOrders                CommerceOrder[]
+  commercePickupOrders          CommercePickupOrder[]
+  accountInvoices               AccountInvoice[]
+  accountInvoicePayments        AccountInvoicePayment[]
+  accountInvoiceActivities      AccountInvoiceActivity[]
+  accountReorderCarts           AccountReorderCart[]
+  accountReorderCartItems       AccountReorderCartItem[]
+  accountReorderCartActivities  AccountReorderCartActivity[]
+  accountAbandonedCheckouts     AccountAbandonedCheckout[]
+  commerceActivityLogs          CommerceActivityLog[]
+  customerInsights              CustomerInsight[]
+  customerLists                 CustomerList[]
+  customerListItems             CustomerListItem[]
+  customerAssignments           CustomerAssignment[]
+  customerAssignmentAudits      CustomerAssignmentAudit[]
+  pricingRules                  PricingRule[]
+  segments                      Segment[]
+  segmentOwnerships             SegmentOwnership[]
+  segmentCustomerMemberships    SegmentCustomerMembership[]
+  shopifyCustomerSegments       ShopifyCustomerSegment[]
   shopifyCustomerSegmentMembers ShopifyCustomerSegmentMember[]
-  segmentCustomerAssignments SegmentCustomerAssignment[]
-  serviceRequests         ServiceRequest[]
-  serviceRequestComments  ServiceRequestComment[]
-  b2bAccessRequests       B2BAccessRequest[]
-  b2bAccessRequestFiles   B2BAccessRequestFile[]
-  customerTaxExemptions   CustomerTaxExemption[]
-  customerInternalNotes   CustomerInternalNote[]
-  personWorkspacePins     PersonWorkspacePin[]
-  personWorkspaceNotes    PersonWorkspaceNote[]
-  personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
-  customerContactActivities CustomerContactActivity[]
-  customerContactPoints     CustomerContactPoint[]
-  customerContactPolicies   CustomerContactPolicy[]
-  customerCallOutcomes      CustomerCallOutcome[]
-  workItemStateTransitions  WorkItemStateTransition[]
-  businessCalendars         BusinessCalendar[]
-  mailDeliveries          MailDelivery[]
-  mailIdempotencyKeys     MailIdempotencyKey[]
-  emailTemplates          EmailTemplate[]
-  emailTemplateVersions   EmailTemplateVersion[]
-  emailTemplateBindings   EmailTemplateBinding[]
-  mailTemplateApprovals   MailTemplateApproval[]
-  mailTemplatePreviewProfiles MailTemplatePreviewProfile[]
-  mailTemplateSnippets    MailTemplateSnippet[]
-  mailTemplateBlocks      MailTemplateBlock[]
-  mailContacts            MailContact[]
-  mailContactIdentities   MailContactIdentity[]
-  mailConsentStates       MailConsentState[]
-  mailAudiences           MailAudience[]
-  mailAudienceSnapshots   MailAudienceSnapshot[]
-  mailAudienceSnapshotMembers MailAudienceSnapshotMember[]
-  mailCampaigns           MailCampaign[]
-  mailFlows               MailFlow[]
-  mailFlowVersions        MailFlowVersion[]
-  mailFlowNodes           MailFlowNode[]
-  mailFlowRuns            MailFlowRun[]
-  mailFlowEnrollments     MailFlowEnrollment[]
-  mailFlowActionLogs      MailFlowActionLog[]
-  mailFlowIdempotencyKeys MailFlowIdempotencyKey[]
-  mailFlowWebhookDestinations MailFlowWebhookDestination[]
-  mailMarketingEvents     MailMarketingEvent[]
-  mailMarketingSettings   MailMarketingSetting?
-  mailCenterSettings      MailCenterSetting?
-  mailSuppressions        MailSuppression[]
-  mailDlq                 MailDlq[]
-  mailSettingsAuditLogs   MailSettingsAuditLog[]
-  mailProviderEvents      MailProviderEvent[]
-  aircallUsers            AircallUser[]
-  aircallMemberMaps       AircallMemberMap[]
-  aircallNumbers          AircallNumber[]
-  aircallWebhookConfig    AircallWebhookConfig?
-  aircallWebhookInbox     AircallWebhookInbox[]
-  shopifyWebhookInboxes   ShopifyWebhookInbox[]
-  aircallCallEvents       AircallCallEvent[]
-  calls                   Call[]
-  callEvents              CallEvent[]
-  aircallSyncStates       AircallSyncState[]
-  shopifySyncStates       ShopifySyncState[]
-  syncLogs                SyncLog[]
-  workflowRules           WorkflowRule[]
-  workflowMcpDrafts       WorkflowMcpDraft[]
-  workflowScheduledActions WorkflowScheduledAction[]
-  frontendCustomizations  FrontendCustomization[]
-  workflowRuleExecutions  WorkflowRuleExecution[]
+  segmentCustomerAssignments    SegmentCustomerAssignment[]
+  serviceRequests               ServiceRequest[]
+  serviceRequestComments        ServiceRequestComment[]
+  b2bAccessRequests             B2BAccessRequest[]
+  b2bAccessRequestFiles         B2BAccessRequestFile[]
+  customerTaxExemptions         CustomerTaxExemption[]
+  customerInternalNotes         CustomerInternalNote[]
+  personWorkspacePins           PersonWorkspacePin[]
+  personWorkspaceNotes          PersonWorkspaceNote[]
+  personWorkspaceNoteReplies    PersonWorkspaceNoteReply[]
+  customerContactActivities     CustomerContactActivity[]
+  customerContactPoints         CustomerContactPoint[]
+  customerContactPolicies       CustomerContactPolicy[]
+  customerCallOutcomes          CustomerCallOutcome[]
+  workItemStateTransitions      WorkItemStateTransition[]
+  businessCalendars             BusinessCalendar[]
+  mailDeliveries                MailDelivery[]
+  mailIdempotencyKeys           MailIdempotencyKey[]
+  emailTemplates                EmailTemplate[]
+  emailTemplateVersions         EmailTemplateVersion[]
+  emailTemplateBindings         EmailTemplateBinding[]
+  mailTemplateApprovals         MailTemplateApproval[]
+  mailTemplatePreviewProfiles   MailTemplatePreviewProfile[]
+  mailTemplateSnippets          MailTemplateSnippet[]
+  mailTemplateBlocks            MailTemplateBlock[]
+  mailContacts                  MailContact[]
+  mailContactIdentities         MailContactIdentity[]
+  mailConsentStates             MailConsentState[]
+  mailAudiences                 MailAudience[]
+  mailAudienceSnapshots         MailAudienceSnapshot[]
+  mailAudienceSnapshotMembers   MailAudienceSnapshotMember[]
+  mailCampaigns                 MailCampaign[]
+  mailFlows                     MailFlow[]
+  mailFlowVersions              MailFlowVersion[]
+  mailFlowNodes                 MailFlowNode[]
+  mailFlowRuns                  MailFlowRun[]
+  mailFlowEnrollments           MailFlowEnrollment[]
+  mailFlowActionLogs            MailFlowActionLog[]
+  mailFlowIdempotencyKeys       MailFlowIdempotencyKey[]
+  mailFlowWebhookDestinations   MailFlowWebhookDestination[]
+  mailMarketingEvents           MailMarketingEvent[]
+  mailMarketingSettings         MailMarketingSetting?
+  mailCenterSettings            MailCenterSetting?
+  mailSuppressions              MailSuppression[]
+  mailDlq                       MailDlq[]
+  mailSettingsAuditLogs         MailSettingsAuditLog[]
+  mailProviderEvents            MailProviderEvent[]
+  aircallUsers                  AircallUser[]
+  aircallMemberMaps             AircallMemberMap[]
+  aircallNumbers                AircallNumber[]
+  aircallWebhookConfig          AircallWebhookConfig?
+  aircallWebhookInbox           AircallWebhookInbox[]
+  shopifyWebhookInboxes         ShopifyWebhookInbox[]
+  aircallCallEvents             AircallCallEvent[]
+  calls                         Call[]
+  callEvents                    CallEvent[]
+  aircallSyncStates             AircallSyncState[]
+  shopifySyncStates             ShopifySyncState[]
+  syncLogs                      SyncLog[]
+  workflowRules                 WorkflowRule[]
+  workflowMcpDrafts             WorkflowMcpDraft[]
+  workflowScheduledActions      WorkflowScheduledAction[]
+  frontendCustomizations        FrontendCustomization[]
+  workflowRuleExecutions        WorkflowRuleExecution[]
   transcriptWorkflowEvaluations TranscriptWorkflowEvaluation[]
-  workflowRuleCooldowns   WorkflowRuleCooldown[]
-  workflowRuleVersions    WorkflowRuleVersion[]
-  workflowRuleBackfillReports WorkflowRuleBackfillReport[]
-  algorithmStrategies     AlgorithmStrategy[]
-  algorithmStrategyVersions AlgorithmStrategyVersion[]
-  algorithmStrategySimulations AlgorithmStrategySimulation[]
-  taskParticipants        TaskParticipant[]
-  staffWorkItems          StaffWorkItem[]
-  staffWorkOccurrences    StaffWorkOccurrence[]
-  staffWorkComments       StaffWorkComment[]
-  staffWorkParticipants   StaffWorkParticipant[]
-  personDailyCallOrders   PersonDailyCallOrder[]
-  personDailyTaskOrders   PersonDailyTaskOrder[]
-  commissionProfiles      CommissionProfile[]
-  commissionRequests      CommissionRequest[]
+  workflowRuleCooldowns         WorkflowRuleCooldown[]
+  workflowRuleVersions          WorkflowRuleVersion[]
+  workflowRuleBackfillReports   WorkflowRuleBackfillReport[]
+  algorithmStrategies           AlgorithmStrategy[]
+  algorithmStrategyVersions     AlgorithmStrategyVersion[]
+  algorithmStrategySimulations  AlgorithmStrategySimulation[]
+  taskParticipants              TaskParticipant[]
+  staffWorkItems                StaffWorkItem[]
+  staffWorkOccurrences          StaffWorkOccurrence[]
+  staffWorkComments             StaffWorkComment[]
+  staffWorkParticipants         StaffWorkParticipant[]
+  personDailyCallOrders         PersonDailyCallOrder[]
+  personDailyTaskOrders         PersonDailyTaskOrder[]
+  commissionProfiles            CommissionProfile[]
+  commissionRequests            CommissionRequest[]
 
   @@map("tenants")
 }
 
 model TenantConfig {
-  id                         String   @id
-  tenantId                   String   @unique @map("tenant_id")
-  workspaceName              String?  @map("workspace_name")
-  brandBadge                 String?  @map("brand_badge")
-  brandLogo                  String?  @map("brand_logo")
-  companyProfile             Json     @default("{}") @map("company_profile")
-  brandAssets                Json     @default("{}") @map("brand_assets")
-  accountPortalExperience    Json     @default("{}") @map("account_portal_experience")
-  urgencyScoringConfig       Json     @default("{}") @map("urgency_scoring_config")
-  shopifyDomain              String?  @map("shopify_domain")
-  shopifyAdminTokenEncrypted String?  @map("shopify_admin_token_encrypted")
-  shopifyApiKeyEncrypted     String?  @map("shopify_api_key_encrypted")
-  shopifyApiSecretEncrypted  String?  @map("shopify_api_secret_encrypted")
-  webhookHmacKeyEncrypted    String?  @map("webhook_hmac_key_encrypted")
-  aircallApiIdEncrypted      String?  @map("aircall_api_id_encrypted")
-  aircallApiTokenEncrypted   String?  @map("aircall_api_token_encrypted")
-  aircallWebhookSecretEncrypted String? @map("aircall_webhook_secret_encrypted")
-  anthropicApiKeyEncrypted   String?  @map("anthropic_api_key_encrypted")
-  resendApiKeyEncrypted      String?  @map("resend_api_key_encrypted")
-  resendWebhookSecretEncrypted String? @map("resend_webhook_secret_encrypted")
-  createdAt                  DateTime @default(now()) @map("created_at")
-  updatedAt                  DateTime @updatedAt @map("updated_at")
+  id                            String   @id
+  tenantId                      String   @unique @map("tenant_id")
+  workspaceName                 String?  @map("workspace_name")
+  brandBadge                    String?  @map("brand_badge")
+  brandLogo                     String?  @map("brand_logo")
+  companyProfile                Json     @default("{}") @map("company_profile")
+  brandAssets                   Json     @default("{}") @map("brand_assets")
+  accountPortalExperience       Json     @default("{}") @map("account_portal_experience")
+  urgencyScoringConfig          Json     @default("{}") @map("urgency_scoring_config")
+  shopifyDomain                 String?  @map("shopify_domain")
+  shopifyAdminTokenEncrypted    String?  @map("shopify_admin_token_encrypted")
+  shopifyApiKeyEncrypted        String?  @map("shopify_api_key_encrypted")
+  shopifyApiSecretEncrypted     String?  @map("shopify_api_secret_encrypted")
+  webhookHmacKeyEncrypted       String?  @map("webhook_hmac_key_encrypted")
+  aircallApiIdEncrypted         String?  @map("aircall_api_id_encrypted")
+  aircallApiTokenEncrypted      String?  @map("aircall_api_token_encrypted")
+  aircallWebhookSecretEncrypted String?  @map("aircall_webhook_secret_encrypted")
+  anthropicApiKeyEncrypted      String?  @map("anthropic_api_key_encrypted")
+  resendApiKeyEncrypted         String?  @map("resend_api_key_encrypted")
+  resendWebhookSecretEncrypted  String?  @map("resend_webhook_secret_encrypted")
+  createdAt                     DateTime @default(now()) @map("created_at")
+  updatedAt                     DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_configs")
+}
+
+model TenantBillingSubscription {
+  id                   String    @id
+  tenantId             String    @unique @map("tenant_id")
+  stripeCustomerId     String?   @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  stripePriceId        String?   @map("stripe_price_id")
+  planCode             String    @map("plan_code")
+  amountCents          Int       @map("amount_cents")
+  currency             String    @default("usd")
+  billingInterval      String    @default("month") @map("billing_interval")
+  status               String    @default("unconfigured")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  lastInvoiceId        String?   @map("last_invoice_id")
+  lastInvoiceStatus    String?   @map("last_invoice_status")
+  lastPaymentFailedAt  DateTime? @map("last_payment_failed_at")
+  graceEndsAt          DateTime? @map("grace_ends_at")
+  enforcementEnabled   Boolean   @default(false) @map("enforcement_enabled")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("tenant_billing_subscriptions")
+}
+
+model StripeBillingWebhookInbox {
+  id            String    @id
+  tenantId      String    @map("tenant_id")
+  stripeEventId String    @map("stripe_event_id")
+  eventType     String    @map("event_type")
+  livemode      Boolean   @default(false)
+  status        String    @default("received")
+  payload       Json
+  errorMessage  String?   @map("error_message")
+  receivedAt    DateTime  @default(now()) @map("received_at")
+  processedAt   DateTime? @map("processed_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, stripeEventId])
+  @@index([tenantId, status, receivedAt])
+  @@map("stripe_billing_webhook_inbox")
 }
 
 model ShopifyWebhookInbox {
@@ -226,59 +276,59 @@ model ShopifyWebhookInbox {
 }
 
 model Member {
-  id                  String          @id
-  tenantId            String          @map("tenant_id")
-  email               String
-  firstName           String          @map("first_name")
-  lastName            String          @map("last_name")
-  phone               String?
-  jobTitle            String?         @map("job_title")
-  avatarUrl           String?         @map("avatar_url")
-  timezone            String?
-  passwordHash        String?         @map("password_hash")
-  status              PrincipalStatus @default(invited)
-  lastLoginAt         DateTime?       @map("last_login_at")
-  invitationAcceptedAt DateTime?      @map("invitation_accepted_at")
-  aircallUserId       String?         @map("aircall_user_id")
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
+  id                   String          @id
+  tenantId             String          @map("tenant_id")
+  email                String
+  firstName            String          @map("first_name")
+  lastName             String          @map("last_name")
+  phone                String?
+  jobTitle             String?         @map("job_title")
+  avatarUrl            String?         @map("avatar_url")
+  timezone             String?
+  passwordHash         String?         @map("password_hash")
+  status               PrincipalStatus @default(invited)
+  lastLoginAt          DateTime?       @map("last_login_at")
+  invitationAcceptedAt DateTime?       @map("invitation_accepted_at")
+  aircallUserId        String?         @map("aircall_user_id")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
 
-  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  roleAssignments MemberRoleAssignment[]
-  segmentOwnerships SegmentOwnership[]
-  customerAssignments CustomerAssignment[] @relation("CustomerAssignmentMember")
-  approvedCustomerAssignments CustomerAssignment[] @relation("CustomerAssignmentApprover")
-  previousCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditPreviousMember")
-  newCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditNewMember")
-  actorCustomerAssignmentAudits CustomerAssignmentAudit[] @relation("CustomerAssignmentAuditActor")
-  assignedServiceRequests ServiceRequest[]
-  taskParticipants TaskParticipant[]
-  assignedStaffWorkItems StaffWorkItem[] @relation("StaffWorkItemAssignee")
-  staffWorkParticipants StaffWorkParticipant[]
-  staffWorkComments StaffWorkComment[] @relation("StaffWorkCommentActor")
-  aircallMemberMaps AircallMemberMap[]
-  workflowRuleVersions WorkflowRuleVersion[]
-  workflowRuleBackfillReports WorkflowRuleBackfillReport[]
-  workflowScheduledActions WorkflowScheduledAction[]
-  frontendCustomizations FrontendCustomization[]
-  algorithmStrategies AlgorithmStrategy[]
-  algorithmStrategyVersions AlgorithmStrategyVersion[]
-  algorithmStrategySimulations AlgorithmStrategySimulation[]
-  createdMailCampaigns MailCampaign[] @relation("MailCampaignCreator")
-  approvedMailCampaigns MailCampaign[] @relation("MailCampaignApprover")
-  dailyCallOrders PersonDailyCallOrder[]
-  dailyTaskOrders PersonDailyTaskOrder[]
-  commissionRequests CommissionRequest[] @relation("CommissionRequestRequester")
-  reviewedCommissionRequests CommissionRequest[] @relation("CommissionRequestReviewer")
-  customerInternalNotes CustomerInternalNote[] @relation("CustomerInternalNoteAuthor")
-  personWorkspacePins PersonWorkspacePin[]
-  personWorkspaceNotes PersonWorkspaceNote[] @relation("PersonWorkspaceNoteAuthor")
-  deletedPersonWorkspaceNotes PersonWorkspaceNote[] @relation("PersonWorkspaceNoteDeletedBy")
-  personWorkspaceNoteReplies PersonWorkspaceNoteReply[]
-  customerContactActivities CustomerContactActivity[]
-  customerCallOutcomes CustomerCallOutcome[]
-  workItemStateTransitions WorkItemStateTransition[]
-  customerContactPolicies CustomerContactPolicy[] @relation("CustomerContactPolicySetter")
+  tenant                           Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roleAssignments                  MemberRoleAssignment[]
+  segmentOwnerships                SegmentOwnership[]
+  customerAssignments              CustomerAssignment[]          @relation("CustomerAssignmentMember")
+  approvedCustomerAssignments      CustomerAssignment[]          @relation("CustomerAssignmentApprover")
+  previousCustomerAssignmentAudits CustomerAssignmentAudit[]     @relation("CustomerAssignmentAuditPreviousMember")
+  newCustomerAssignmentAudits      CustomerAssignmentAudit[]     @relation("CustomerAssignmentAuditNewMember")
+  actorCustomerAssignmentAudits    CustomerAssignmentAudit[]     @relation("CustomerAssignmentAuditActor")
+  assignedServiceRequests          ServiceRequest[]
+  taskParticipants                 TaskParticipant[]
+  assignedStaffWorkItems           StaffWorkItem[]               @relation("StaffWorkItemAssignee")
+  staffWorkParticipants            StaffWorkParticipant[]
+  staffWorkComments                StaffWorkComment[]            @relation("StaffWorkCommentActor")
+  aircallMemberMaps                AircallMemberMap[]
+  workflowRuleVersions             WorkflowRuleVersion[]
+  workflowRuleBackfillReports      WorkflowRuleBackfillReport[]
+  workflowScheduledActions         WorkflowScheduledAction[]
+  frontendCustomizations           FrontendCustomization[]
+  algorithmStrategies              AlgorithmStrategy[]
+  algorithmStrategyVersions        AlgorithmStrategyVersion[]
+  algorithmStrategySimulations     AlgorithmStrategySimulation[]
+  createdMailCampaigns             MailCampaign[]                @relation("MailCampaignCreator")
+  approvedMailCampaigns            MailCampaign[]                @relation("MailCampaignApprover")
+  dailyCallOrders                  PersonDailyCallOrder[]
+  dailyTaskOrders                  PersonDailyTaskOrder[]
+  commissionRequests               CommissionRequest[]           @relation("CommissionRequestRequester")
+  reviewedCommissionRequests       CommissionRequest[]           @relation("CommissionRequestReviewer")
+  customerInternalNotes            CustomerInternalNote[]        @relation("CustomerInternalNoteAuthor")
+  personWorkspacePins              PersonWorkspacePin[]
+  personWorkspaceNotes             PersonWorkspaceNote[]         @relation("PersonWorkspaceNoteAuthor")
+  deletedPersonWorkspaceNotes      PersonWorkspaceNote[]         @relation("PersonWorkspaceNoteDeletedBy")
+  personWorkspaceNoteReplies       PersonWorkspaceNoteReply[]
+  customerContactActivities        CustomerContactActivity[]
+  customerCallOutcomes             CustomerCallOutcome[]
+  workItemStateTransitions         WorkItemStateTransition[]
+  customerContactPolicies          CustomerContactPolicy[]       @relation("CustomerContactPolicySetter")
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -323,62 +373,62 @@ model MemberRoleAssignment {
 }
 
 model Customer {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  shopifyCustomerId String?  @map("shopify_customer_id")
-  companyName       String   @map("company_name")
-  legalName         String?  @map("legal_name")
-  firstName         String?  @map("first_name")
-  lastName          String?  @map("last_name")
-  taxId             String?  @map("tax_id")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  shopifyCustomerId String?   @map("shopify_customer_id")
+  companyName       String    @map("company_name")
+  legalName         String?   @map("legal_name")
+  firstName         String?   @map("first_name")
+  lastName          String?   @map("last_name")
+  taxId             String?   @map("tax_id")
   email             String?
   phone             String?
-  billingAddress    Json?    @map("billing_address")
-  shippingAddress   Json?    @map("shipping_address")
-  tags              String[] @default([])
+  billingAddress    Json?     @map("billing_address")
+  shippingAddress   Json?     @map("shipping_address")
+  tags              String[]  @default([])
   note              String?
-  totalSpent        Decimal  @default(0) @map("total_spent") @db.Decimal(12, 2)
-  ordersCount       Int      @default(0) @map("orders_count")
+  totalSpent        Decimal   @default(0) @map("total_spent") @db.Decimal(12, 2)
+  ordersCount       Int       @default(0) @map("orders_count")
   lastOrderAt       DateTime? @map("last_order_at")
-  averageOrderValue Decimal  @default(0) @map("average_order_value") @db.Decimal(12, 2)
-  rawData           Json?    @map("raw_data")
+  averageOrderValue Decimal   @default(0) @map("average_order_value") @db.Decimal(12, 2)
+  rawData           Json?     @map("raw_data")
   syncedAt          DateTime? @map("synced_at")
-  status            String   @default("active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  status            String    @default("active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customerUsers CustomerUser[]
-  subUsers      SubUser[]
-  orders        CommerceOrder[]
-  pickupOrders  CommercePickupOrder[]
-  accountInvoices AccountInvoice[]
-  accountReorderCarts AccountReorderCart[]
+  tenant                       Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUsers                CustomerUser[]
+  subUsers                     SubUser[]
+  orders                       CommerceOrder[]
+  pickupOrders                 CommercePickupOrder[]
+  accountInvoices              AccountInvoice[]
+  accountReorderCarts          AccountReorderCart[]
   accountReorderCartActivities AccountReorderCartActivity[]
-  abandonedCheckouts AccountAbandonedCheckout[]
-  activityLogs  CommerceActivityLog[]
-  insight       CustomerInsight?
-  listItems     CustomerListItem[]
-  assignments   CustomerAssignment[]
-  assignmentAudits CustomerAssignmentAudit[]
-  pricingRules  PricingRule[]
-  segmentMemberships SegmentCustomerMembership[]
-  segmentAssignments SegmentCustomerAssignment[]
-  serviceRequests ServiceRequest[]
-  staffWorkItems StaffWorkItem[]
-  workflowRuleCooldowns WorkflowRuleCooldown[]
-  workflowScheduledActions WorkflowScheduledAction[]
-  dailyCallOrders PersonDailyCallOrder[]
-  commissionRequests CommissionRequest[]
-  taxExemption CustomerTaxExemption?
-  internalNotes CustomerInternalNote[]
-  personWorkspaceNotes PersonWorkspaceNote[]
-  contactActivities CustomerContactActivity[]
-  contactPoints CustomerContactPoint[]
-  contactPolicies CustomerContactPolicy[]
-  callOutcomes CustomerCallOutcome[]
-  workItemStateTransitions WorkItemStateTransition[]
-  staffWorkOccurrences StaffWorkOccurrence[]
+  abandonedCheckouts           AccountAbandonedCheckout[]
+  activityLogs                 CommerceActivityLog[]
+  insight                      CustomerInsight?
+  listItems                    CustomerListItem[]
+  assignments                  CustomerAssignment[]
+  assignmentAudits             CustomerAssignmentAudit[]
+  pricingRules                 PricingRule[]
+  segmentMemberships           SegmentCustomerMembership[]
+  segmentAssignments           SegmentCustomerAssignment[]
+  serviceRequests              ServiceRequest[]
+  staffWorkItems               StaffWorkItem[]
+  workflowRuleCooldowns        WorkflowRuleCooldown[]
+  workflowScheduledActions     WorkflowScheduledAction[]
+  dailyCallOrders              PersonDailyCallOrder[]
+  commissionRequests           CommissionRequest[]
+  taxExemption                 CustomerTaxExemption?
+  internalNotes                CustomerInternalNote[]
+  personWorkspaceNotes         PersonWorkspaceNote[]
+  contactActivities            CustomerContactActivity[]
+  contactPoints                CustomerContactPoint[]
+  contactPolicies              CustomerContactPolicy[]
+  callOutcomes                 CustomerCallOutcome[]
+  workItemStateTransitions     WorkItemStateTransition[]
+  staffWorkOccurrences         StaffWorkOccurrence[]
 
   @@unique([tenantId, shopifyCustomerId])
   @@index([tenantId, status])
@@ -388,20 +438,20 @@ model Customer {
 }
 
 model CustomerInternalNote {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  customerId     String   @map("customer_id")
-  authorMemberId String?  @map("author_member_id")
-  body           String
-  source         String   @default("person_workspace")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-  deletedByMemberId String? @map("deleted_by_member_id")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  customerId        String    @map("customer_id")
+  authorMemberId    String?   @map("author_member_id")
+  body              String
+  source            String    @default("person_workspace")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  deletedByMemberId String?   @map("deleted_by_member_id")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  author Member? @relation("CustomerInternalNoteAuthor", fields: [authorMemberId], references: [id], onDelete: SetNull)
+  author   Member?  @relation("CustomerInternalNoteAuthor", fields: [authorMemberId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, customerId, createdAt])
   @@index([tenantId, authorMemberId, createdAt])
@@ -442,13 +492,13 @@ model PersonWorkspaceNote {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  author Member @relation("PersonWorkspaceNoteAuthor", fields: [authorMemberId], references: [id], onDelete: Cascade)
-  deletedBy Member? @relation("PersonWorkspaceNoteDeletedBy", fields: [deletedByMemberId], references: [id], onDelete: SetNull)
-  customer Customer? @relation(fields: [linkedCustomerId], references: [id], onDelete: SetNull)
-  serviceRequest ServiceRequest? @relation(fields: [linkedServiceRequestId], references: [id], onDelete: SetNull)
-  staffWorkItem StaffWorkItem? @relation(fields: [linkedStaffWorkItemId], references: [id], onDelete: SetNull)
-  replies PersonWorkspaceNoteReply[]
+  tenant         Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author         Member                     @relation("PersonWorkspaceNoteAuthor", fields: [authorMemberId], references: [id], onDelete: Cascade)
+  deletedBy      Member?                    @relation("PersonWorkspaceNoteDeletedBy", fields: [deletedByMemberId], references: [id], onDelete: SetNull)
+  customer       Customer?                  @relation(fields: [linkedCustomerId], references: [id], onDelete: SetNull)
+  serviceRequest ServiceRequest?            @relation(fields: [linkedServiceRequestId], references: [id], onDelete: SetNull)
+  staffWorkItem  StaffWorkItem?             @relation(fields: [linkedStaffWorkItemId], references: [id], onDelete: SetNull)
+  replies        PersonWorkspaceNoteReply[]
 
   @@index([tenantId, kind, updatedAt])
   @@index([tenantId, authorMemberId, updatedAt])
@@ -467,9 +517,9 @@ model PersonWorkspaceNoteReply {
   body           String
   createdAt      DateTime @default(now()) @map("created_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  note PersonWorkspaceNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  author Member @relation(fields: [authorMemberId], references: [id], onDelete: Cascade)
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  note   PersonWorkspaceNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author Member              @relation(fields: [authorMemberId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, noteId, createdAt])
   @@index([tenantId, authorMemberId, createdAt])
@@ -494,9 +544,9 @@ model CustomerContactActivity {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  member   Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, externalCallId])
   @@index([tenantId, customerId, startedAt])
@@ -524,8 +574,8 @@ model CustomerContactPoint {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
   outcomes CustomerCallOutcome[]
 
   @@unique([tenantId, customerId, type, normalizedValue, source])
@@ -556,16 +606,16 @@ model CustomerContactPolicy {
 }
 
 model BusinessCalendar {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  name           String   @default("default")
-  timezone       String
-  weeklyHours    Json     @default("{}") @map("weekly_hours")
-  holidays       Json     @default("[]")
-  repeatPolicy   Json     @default("{}") @map("repeat_policy")
-  isDefault      Boolean  @default(true) @map("is_default")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  name         String   @default("default")
+  timezone     String
+  weeklyHours  Json     @default("{}") @map("weekly_hours")
+  holidays     Json     @default("[]")
+  repeatPolicy Json     @default("{}") @map("repeat_policy")
+  isDefault    Boolean  @default(true) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -575,18 +625,18 @@ model BusinessCalendar {
 }
 
 model CustomerAssignment {
-  id                 String   @id
-  tenantId           String   @map("tenant_id")
-  customerId         String   @map("customer_id")
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  customerId         String    @map("customer_id")
   axis               String
-  memberId           String   @map("member_id")
-  isPrimary          Boolean  @default(true) @map("is_primary")
-  source             String   @default("admin_transfer")
+  memberId           String    @map("member_id")
+  isPrimary          Boolean   @default(true) @map("is_primary")
+  source             String    @default("admin_transfer")
   reason             String?
-  approvedByMemberId String?  @map("approved_by_member_id")
+  approvedByMemberId String?   @map("approved_by_member_id")
   approvedAt         DateTime? @map("approved_at")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -626,20 +676,20 @@ model CustomerAssignmentAudit {
 }
 
 model CustomerUser {
-  id            String          @id
-  tenantId      String          @map("tenant_id")
-  customerId    String          @map("customer_id")
-  email         String
-  firstName     String          @map("first_name")
-  lastName      String          @map("last_name")
-  phone         String?
-  passwordHash  String?         @map("password_hash")
-  status        PrincipalStatus @default(invited)
-  spendingLimitCents Int?       @map("spending_limit_cents")
-  spendingUsedCents  Int        @default(0) @map("spending_used_cents")
-  lastLoginAt   DateTime?       @map("last_login_at")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  id                 String          @id
+  tenantId           String          @map("tenant_id")
+  customerId         String          @map("customer_id")
+  email              String
+  firstName          String          @map("first_name")
+  lastName           String          @map("last_name")
+  phone              String?
+  passwordHash       String?         @map("password_hash")
+  status             PrincipalStatus @default(invited)
+  spendingLimitCents Int?            @map("spending_limit_cents")
+  spendingUsedCents  Int             @default(0) @map("spending_used_cents")
+  lastLoginAt        DateTime?       @map("last_login_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
 
   tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer        Customer                     @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -657,20 +707,20 @@ model CustomerUser {
 }
 
 model SubUser {
-  id            String          @id
-  tenantId      String          @map("tenant_id")
-  customerId    String          @map("customer_id")
-  parentUserId  String          @map("parent_user_id")
-  email         String
-  firstName     String          @map("first_name")
-  lastName      String          @map("last_name")
-  phone         String?
-  passwordHash  String?         @map("password_hash")
-  status        PrincipalStatus @default(invited)
-  spendingLimitCents Int?       @map("spending_limit_cents")
-  spendingUsedCents  Int        @default(0) @map("spending_used_cents")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  id                 String          @id
+  tenantId           String          @map("tenant_id")
+  customerId         String          @map("customer_id")
+  parentUserId       String          @map("parent_user_id")
+  email              String
+  firstName          String          @map("first_name")
+  lastName           String          @map("last_name")
+  phone              String?
+  passwordHash       String?         @map("password_hash")
+  status             PrincipalStatus @default(invited)
+  spendingLimitCents Int?            @map("spending_limit_cents")
+  spendingUsedCents  Int             @default(0) @map("spending_used_cents")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
 
   tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer        Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -834,53 +884,53 @@ model CatalogVariant {
 }
 
 model CommerceOrder {
-  id                  String   @id
-  tenantId            String   @map("tenant_id")
-  customerId          String?  @map("customer_id")
-  customerUserId      String?  @map("customer_user_id")
-  shopifyOrderId      String?  @map("shopify_order_id")
-  shopifyOrderNumber  String?  @map("shopify_order_number")
-  shopifyCustomerId   String?  @map("shopify_customer_id")
-  source              String   @default("shopify")
-  idempotencyKey      String?  @map("idempotency_key")
+  id                  String    @id
+  tenantId            String    @map("tenant_id")
+  customerId          String?   @map("customer_id")
+  customerUserId      String?   @map("customer_user_id")
+  shopifyOrderId      String?   @map("shopify_order_id")
+  shopifyOrderNumber  String?   @map("shopify_order_number")
+  shopifyCustomerId   String?   @map("shopify_customer_id")
+  source              String    @default("shopify")
+  idempotencyKey      String?   @map("idempotency_key")
   email               String?
   phone               String?
-  subtotal            Decimal  @default(0) @db.Decimal(12, 2)
-  totalDiscounts      Decimal  @default(0) @map("total_discounts") @db.Decimal(12, 2)
-  totalTax            Decimal  @default(0) @map("total_tax") @db.Decimal(12, 2)
-  totalPrice          Decimal  @default(0) @map("total_price") @db.Decimal(12, 2)
-  totalShipping       Decimal  @default(0) @map("total_shipping") @db.Decimal(12, 2)
-  totalRefunded       Decimal  @default(0) @map("total_refunded") @db.Decimal(12, 2)
-  currency            String   @default("USD")
-  financialStatus     String?  @map("financial_status")
-  fulfillmentStatus   String?  @map("fulfillment_status")
-  fulfillmentMode     String   @default("unknown") @map("fulfillment_mode")
+  subtotal            Decimal   @default(0) @db.Decimal(12, 2)
+  totalDiscounts      Decimal   @default(0) @map("total_discounts") @db.Decimal(12, 2)
+  totalTax            Decimal   @default(0) @map("total_tax") @db.Decimal(12, 2)
+  totalPrice          Decimal   @default(0) @map("total_price") @db.Decimal(12, 2)
+  totalShipping       Decimal   @default(0) @map("total_shipping") @db.Decimal(12, 2)
+  totalRefunded       Decimal   @default(0) @map("total_refunded") @db.Decimal(12, 2)
+  currency            String    @default("USD")
+  financialStatus     String?   @map("financial_status")
+  fulfillmentStatus   String?   @map("fulfillment_status")
+  fulfillmentMode     String    @default("unknown") @map("fulfillment_mode")
   notes               String?
-  tags                String[] @default([])
-  riskLevel           String?  @map("risk_level")
-  lineItems           Json     @default("[]") @map("line_items")
-  shippingAddress     Json?    @map("shipping_address")
-  billingAddress      Json?    @map("billing_address")
-  discountCodes       Json?    @map("discount_codes")
-  fulfillments        Json?    @map("fulfillments")
-  refunds             Json?    @map("refunds")
-  designFiles         Json     @default("[]") @map("design_files")
-  fulfillmentEvidence Json?    @map("fulfillment_evidence")
-  rawData             Json?    @map("raw_data")
+  tags                String[]  @default([])
+  riskLevel           String?   @map("risk_level")
+  lineItems           Json      @default("[]") @map("line_items")
+  shippingAddress     Json?     @map("shipping_address")
+  billingAddress      Json?     @map("billing_address")
+  discountCodes       Json?     @map("discount_codes")
+  fulfillments        Json?     @map("fulfillments")
+  refunds             Json?     @map("refunds")
+  designFiles         Json      @default("[]") @map("design_files")
+  fulfillmentEvidence Json?     @map("fulfillment_evidence")
+  rawData             Json?     @map("raw_data")
   processedAt         DateTime? @map("processed_at")
   cancelledAt         DateTime? @map("cancelled_at")
   closedAt            DateTime? @map("closed_at")
-  syncedAt            DateTime @default(now()) @map("synced_at")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  syncedAt            DateTime  @default(now()) @map("synced_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer     Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerUser CustomerUser?          @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
-  pickupOrder  CommercePickupOrder?
-  accountInvoices AccountInvoice[]
-  reorderCarts AccountReorderCart[]
-  reorderCartItems AccountReorderCartItem[]
+  tenant             Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer           Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerUser       CustomerUser?            @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
+  pickupOrder        CommercePickupOrder?
+  accountInvoices    AccountInvoice[]
+  reorderCarts       AccountReorderCart[]
+  reorderCartItems   AccountReorderCartItem[]
   commissionRequests CommissionRequest[]
 
   @@unique([tenantId, shopifyOrderId])
@@ -894,21 +944,21 @@ model CommerceOrder {
 }
 
 model CommercePickupOrder {
-  id              String   @id
-  tenantId        String   @map("tenant_id")
-  orderId         String   @unique @map("order_id")
-  customerId      String?  @map("customer_id")
-  customerUserId  String?  @map("customer_user_id")
-  status          String   @default("pending")
-  qrCode          String?  @map("qr_code")
-  orderNumber     String?  @map("order_number")
-  customerName    String?  @map("customer_name")
-  customerEmail   String?  @map("customer_email")
-  pickupAt        DateTime? @map("pickup_at")
-  designFiles     Json     @default("[]") @map("design_files")
-  metadata        Json     @default("{}")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String    @id
+  tenantId       String    @map("tenant_id")
+  orderId        String    @unique @map("order_id")
+  customerId     String?   @map("customer_id")
+  customerUserId String?   @map("customer_user_id")
+  status         String    @default("pending")
+  qrCode         String?   @map("qr_code")
+  orderNumber    String?   @map("order_number")
+  customerName   String?   @map("customer_name")
+  customerEmail  String?   @map("customer_email")
+  pickupAt       DateTime? @map("pickup_at")
+  designFiles    Json      @default("[]") @map("design_files")
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order        CommerceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -922,34 +972,34 @@ model CommercePickupOrder {
 }
 
 model AccountInvoice {
-  id                  String   @id
-  tenantId            String   @map("tenant_id")
-  customerId          String   @map("customer_id")
-  orderId             String?  @map("order_id")
-  shopifyCustomerId   String?  @map("shopify_customer_id")
-  invoiceNumber       String   @map("invoice_number")
-  status              String   @default("unpaid")
-  issuedAt            DateTime @default(now()) @map("issued_at")
-  dueAt               DateTime? @map("due_at")
-  subtotal            Decimal  @default(0) @db.Decimal(12, 2)
-  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
-  shippingAmount      Decimal  @default(0) @map("shipping_amount") @db.Decimal(12, 2)
-  taxAmount           Decimal  @default(0) @map("tax_amount") @db.Decimal(12, 2)
-  totalAmount         Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
-  amountPaid          Decimal  @default(0) @map("amount_paid") @db.Decimal(12, 2)
-  currency            String   @default("USD")
-  fileUrl             String?  @map("file_url")
-  externalPaymentUrl  String?  @map("external_payment_url")
-  notes               String?
-  lineItems           Json     @default("[]") @map("line_items")
-  metadata            Json     @default("{}")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  customerId         String    @map("customer_id")
+  orderId            String?   @map("order_id")
+  shopifyCustomerId  String?   @map("shopify_customer_id")
+  invoiceNumber      String    @map("invoice_number")
+  status             String    @default("unpaid")
+  issuedAt           DateTime  @default(now()) @map("issued_at")
+  dueAt              DateTime? @map("due_at")
+  subtotal           Decimal   @default(0) @db.Decimal(12, 2)
+  discountAmount     Decimal   @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  shippingAmount     Decimal   @default(0) @map("shipping_amount") @db.Decimal(12, 2)
+  taxAmount          Decimal   @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  totalAmount        Decimal   @default(0) @map("total_amount") @db.Decimal(12, 2)
+  amountPaid         Decimal   @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  currency           String    @default("USD")
+  fileUrl            String?   @map("file_url")
+  externalPaymentUrl String?   @map("external_payment_url")
+  notes              String?
+  lineItems          Json      @default("[]") @map("line_items")
+  metadata           Json      @default("{}")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  order    CommerceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  payments AccountInvoicePayment[]
+  tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer   Customer                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order      CommerceOrder?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payments   AccountInvoicePayment[]
   activities AccountInvoiceActivity[]
 
   @@unique([tenantId, invoiceNumber])
@@ -960,15 +1010,15 @@ model AccountInvoice {
 }
 
 model AccountInvoicePayment {
-  id          String   @id
-  tenantId    String   @map("tenant_id")
-  invoiceId   String   @map("invoice_id")
-  amount      Decimal  @db.Decimal(12, 2)
-  method      String   @default("manual")
-  note        String?
-  recordedByMemberId String? @map("recorded_by_member_id")
-  recordedAt  DateTime @default(now()) @map("recorded_at")
-  metadata    Json     @default("{}")
+  id                 String   @id
+  tenantId           String   @map("tenant_id")
+  invoiceId          String   @map("invoice_id")
+  amount             Decimal  @db.Decimal(12, 2)
+  method             String   @default("manual")
+  note               String?
+  recordedByMemberId String?  @map("recorded_by_member_id")
+  recordedAt         DateTime @default(now()) @map("recorded_at")
+  metadata           Json     @default("{}")
 
   tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice AccountInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -979,13 +1029,13 @@ model AccountInvoicePayment {
 }
 
 model AccountInvoiceActivity {
-  id          String   @id
-  tenantId    String   @map("tenant_id")
-  invoiceId   String   @map("invoice_id")
-  action      String
-  actorMemberId String? @map("actor_member_id")
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  invoiceId     String   @map("invoice_id")
+  action        String
+  actorMemberId String?  @map("actor_member_id")
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice AccountInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -997,24 +1047,24 @@ model AccountInvoiceActivity {
 }
 
 model AccountReorderCart {
-  id              String   @id
-  tenantId        String   @map("tenant_id")
-  customerId      String   @map("customer_id")
-  sourceOrderId   String?  @map("source_order_id")
-  status          String   @default("review_required")
-  currency        String   @default("USD")
-  subtotal        Decimal  @default(0) @db.Decimal(12, 2)
-  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
-  itemCount       Int      @default(0) @map("item_count")
-  checkoutUrl     String?  @map("checkout_url")
-  checkoutError   String?  @map("checkout_error")
-  metadata        Json     @default("{}")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  customerId    String   @map("customer_id")
+  sourceOrderId String?  @map("source_order_id")
+  status        String   @default("review_required")
+  currency      String   @default("USD")
+  subtotal      Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
+  itemCount     Int      @default(0) @map("item_count")
+  checkoutUrl   String?  @map("checkout_url")
+  checkoutError String?  @map("checkout_error")
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant      Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer    Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  sourceOrder CommerceOrder?            @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer                     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sourceOrder CommerceOrder?               @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
   items       AccountReorderCartItem[]
   activities  AccountReorderCartActivity[]
 
@@ -1046,9 +1096,9 @@ model AccountReorderCartItem {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cart        AccountReorderCart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  sourceOrder CommerceOrder?      @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cart        AccountReorderCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  sourceOrder CommerceOrder?     @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, cartId])
   @@index([tenantId, sourceOrderId])
@@ -1057,17 +1107,17 @@ model AccountReorderCartItem {
 }
 
 model AccountReorderCartActivity {
-  id        String   @id
-  tenantId  String   @map("tenant_id")
-  cartId    String   @map("cart_id")
-  customerId String  @map("customer_id")
-  action    String
-  label     String
-  detail    String?
-  actorType String   @default("customer") @map("actor_type")
-  actorId   String?  @map("actor_id")
-  metadata  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  cartId     String   @map("cart_id")
+  customerId String   @map("customer_id")
+  action     String
+  label      String
+  detail     String?
+  actorType  String   @default("customer") @map("actor_type")
+  actorId    String?  @map("actor_id")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cart     AccountReorderCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -1090,18 +1140,18 @@ model AccountAbandonedCheckout {
   email                String?
   status               String    @default("open")
   currency             String    @default("USD")
-  subtotal              Decimal   @default(0) @db.Decimal(12, 2)
-  totalPrice            Decimal   @default(0) @map("total_price") @db.Decimal(12, 2)
-  totalDiscounts        Decimal   @default(0) @map("total_discounts") @db.Decimal(12, 2)
-  lineItems             Json      @default("[]") @map("line_items")
-  recoveryUrlEncrypted  String?   @map("recovery_url_encrypted")
-  providerCreatedAt     DateTime  @map("provider_created_at")
-  providerUpdatedAt     DateTime  @map("provider_updated_at")
-  completedAt           DateTime? @map("completed_at")
-  closedAt              DateTime? @map("closed_at")
-  syncedAt              DateTime  @default(now()) @map("synced_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  subtotal             Decimal   @default(0) @db.Decimal(12, 2)
+  totalPrice           Decimal   @default(0) @map("total_price") @db.Decimal(12, 2)
+  totalDiscounts       Decimal   @default(0) @map("total_discounts") @db.Decimal(12, 2)
+  lineItems            Json      @default("[]") @map("line_items")
+  recoveryUrlEncrypted String?   @map("recovery_url_encrypted")
+  providerCreatedAt    DateTime  @map("provider_created_at")
+  providerUpdatedAt    DateTime  @map("provider_updated_at")
+  completedAt          DateTime? @map("completed_at")
+  closedAt             DateTime? @map("closed_at")
+  syncedAt             DateTime  @default(now()) @map("synced_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -1139,34 +1189,34 @@ model CommerceActivityLog {
 }
 
 model CustomerInsight {
-  id                    String   @id
-  tenantId              String   @map("tenant_id")
-  customerId            String   @unique @map("customer_id")
-  clvScore              Int      @default(0) @map("clv_score")
-  projectedClv          Decimal  @default(0) @map("projected_clv") @db.Decimal(12, 2)
-  clvTier               String   @default("new") @map("clv_tier")
-  rfmRecency            Int      @default(0) @map("rfm_recency")
-  rfmFrequency          Int      @default(0) @map("rfm_frequency")
-  rfmMonetary           Int      @default(0) @map("rfm_monetary")
-  rfmSegment            String   @default("new") @map("rfm_segment")
-  healthScore           Int      @default(0) @map("health_score")
-  churnRisk             String   @default("unknown") @map("churn_risk")
-  daysSinceLastOrder    Int?     @map("days_since_last_order")
-  avgDaysBetweenOrders  Decimal? @map("avg_days_between_orders") @db.Decimal(12, 2)
-  purchaseFrequency     Decimal? @map("purchase_frequency") @db.Decimal(12, 2)
-  preferredCategories   String[] @default([]) @map("preferred_categories")
-  preferredVendors      String[] @default([]) @map("preferred_vendors")
-  avgOrderValue         Decimal  @default(0) @map("avg_order_value") @db.Decimal(12, 2)
-  maxOrderValue         Decimal  @default(0) @map("max_order_value") @db.Decimal(12, 2)
-  orderTrend            String   @default("stable") @map("order_trend")
-  firstOrderAt          DateTime? @map("first_order_at")
-  lastOrderAt           DateTime? @map("last_order_at")
-  customerSince         DateTime? @map("customer_since")
-  isReturning           Boolean  @default(false) @map("is_returning")
-  deepMetrics           Json     @default("{}") @map("deep_metrics")
-  calculatedAt          DateTime @default(now()) @map("calculated_at")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                   String    @id
+  tenantId             String    @map("tenant_id")
+  customerId           String    @unique @map("customer_id")
+  clvScore             Int       @default(0) @map("clv_score")
+  projectedClv         Decimal   @default(0) @map("projected_clv") @db.Decimal(12, 2)
+  clvTier              String    @default("new") @map("clv_tier")
+  rfmRecency           Int       @default(0) @map("rfm_recency")
+  rfmFrequency         Int       @default(0) @map("rfm_frequency")
+  rfmMonetary          Int       @default(0) @map("rfm_monetary")
+  rfmSegment           String    @default("new") @map("rfm_segment")
+  healthScore          Int       @default(0) @map("health_score")
+  churnRisk            String    @default("unknown") @map("churn_risk")
+  daysSinceLastOrder   Int?      @map("days_since_last_order")
+  avgDaysBetweenOrders Decimal?  @map("avg_days_between_orders") @db.Decimal(12, 2)
+  purchaseFrequency    Decimal?  @map("purchase_frequency") @db.Decimal(12, 2)
+  preferredCategories  String[]  @default([]) @map("preferred_categories")
+  preferredVendors     String[]  @default([]) @map("preferred_vendors")
+  avgOrderValue        Decimal   @default(0) @map("avg_order_value") @db.Decimal(12, 2)
+  maxOrderValue        Decimal   @default(0) @map("max_order_value") @db.Decimal(12, 2)
+  orderTrend           String    @default("stable") @map("order_trend")
+  firstOrderAt         DateTime? @map("first_order_at")
+  lastOrderAt          DateTime? @map("last_order_at")
+  customerSince        DateTime? @map("customer_since")
+  isReturning          Boolean   @default(false) @map("is_returning")
+  deepMetrics          Json      @default("{}") @map("deep_metrics")
+  calculatedAt         DateTime  @default(now()) @map("calculated_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -1215,40 +1265,40 @@ model CustomerListItem {
 }
 
 model PricingRule {
-  id                    String   @id
-  tenantId              String   @map("tenant_id")
-  name                  String
-  description           String?
-  targetType            String   @default("all") @map("target_type")
-  targetCustomerId      String?  @map("target_customer_id")
-  targetCustomerUserId  String?  @map("target_customer_user_id")
-  targetCustomerGroup   String?  @map("target_customer_group")
-  targetShopifyCustomerId String? @map("target_shopify_customer_id")
-  targetTags            String[] @default([]) @map("target_tags")
-  scopeType             String   @default("all") @map("scope_type")
-  scopeProductIds       String[] @default([]) @map("scope_product_ids")
-  scopeCollectionIds    String[] @default([]) @map("scope_collection_ids")
-  scopeTags             String[] @default([]) @map("scope_tags")
-  scopeVariantIds       String[] @default([]) @map("scope_variant_ids")
-  discountType          String   @map("discount_type")
-  discountValue         Decimal? @map("discount_value") @db.Decimal(12, 2)
-  discountPercentage    Decimal? @map("discount_percentage") @db.Decimal(6, 3)
-  qtyBreaks             Json     @default("[]") @map("qty_breaks")
-  minCartAmount         Decimal? @map("min_cart_amount") @db.Decimal(12, 2)
-  discountPolicy        String   @default("best") @map("discount_policy")
-  priority              Int      @default(0)
-  isActive              Boolean  @default(true) @map("is_active")
-  validFrom             DateTime? @map("valid_from")
-  validUntil            DateTime? @map("valid_until")
-  shopifyDiscountCode   String?  @map("shopify_discount_code")
-  shopifyDiscountId     String?  @map("shopify_discount_id")
-  executionMode         String   @default("draft_order") @map("execution_mode")
-  shopifySyncState      String   @default("not_applicable") @map("shopify_sync_state")
-  shopifySyncError      String?  @map("shopify_sync_error")
-  shopifySyncedAt       DateTime? @map("shopify_synced_at")
-  shopifySyncAttempts   Int      @default(0) @map("shopify_sync_attempts")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                      String    @id
+  tenantId                String    @map("tenant_id")
+  name                    String
+  description             String?
+  targetType              String    @default("all") @map("target_type")
+  targetCustomerId        String?   @map("target_customer_id")
+  targetCustomerUserId    String?   @map("target_customer_user_id")
+  targetCustomerGroup     String?   @map("target_customer_group")
+  targetShopifyCustomerId String?   @map("target_shopify_customer_id")
+  targetTags              String[]  @default([]) @map("target_tags")
+  scopeType               String    @default("all") @map("scope_type")
+  scopeProductIds         String[]  @default([]) @map("scope_product_ids")
+  scopeCollectionIds      String[]  @default([]) @map("scope_collection_ids")
+  scopeTags               String[]  @default([]) @map("scope_tags")
+  scopeVariantIds         String[]  @default([]) @map("scope_variant_ids")
+  discountType            String    @map("discount_type")
+  discountValue           Decimal?  @map("discount_value") @db.Decimal(12, 2)
+  discountPercentage      Decimal?  @map("discount_percentage") @db.Decimal(6, 3)
+  qtyBreaks               Json      @default("[]") @map("qty_breaks")
+  minCartAmount           Decimal?  @map("min_cart_amount") @db.Decimal(12, 2)
+  discountPolicy          String    @default("best") @map("discount_policy")
+  priority                Int       @default(0)
+  isActive                Boolean   @default(true) @map("is_active")
+  validFrom               DateTime? @map("valid_from")
+  validUntil              DateTime? @map("valid_until")
+  shopifyDiscountCode     String?   @map("shopify_discount_code")
+  shopifyDiscountId       String?   @map("shopify_discount_id")
+  executionMode           String    @default("draft_order") @map("execution_mode")
+  shopifySyncState        String    @default("not_applicable") @map("shopify_sync_state")
+  shopifySyncError        String?   @map("shopify_sync_error")
+  shopifySyncedAt         DateTime? @map("shopify_synced_at")
+  shopifySyncAttempts     Int       @default(0) @map("shopify_sync_attempts")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   targetCustomer     Customer?     @relation(fields: [targetCustomerId], references: [id], onDelete: SetNull)
@@ -1262,30 +1312,30 @@ model PricingRule {
 }
 
 model Segment {
-  id              String   @id
-  tenantId        String   @map("tenant_id")
+  id              String    @id
+  tenantId        String    @map("tenant_id")
   name            String
   description     String?
-  color           String   @default("#2f80ed")
-  priority        Int      @default(0)
-  priorityGlobal  Int      @default(0) @map("priority_global")
-  audienceType    String   @default("customer") @map("audience_type")
-  lifecycleStage  String?  @map("lifecycle_stage")
-  conditions      Json     @default("[]")
-  rules           Json     @default("{}")
-  rulesHash       String?  @map("rules_hash")
-  matchMode       String   @default("all") @map("match_mode")
-  customerCount   Int      @default(0) @map("customer_count")
+  color           String    @default("#2f80ed")
+  priority        Int       @default(0)
+  priorityGlobal  Int       @default(0) @map("priority_global")
+  audienceType    String    @default("customer") @map("audience_type")
+  lifecycleStage  String?   @map("lifecycle_stage")
+  conditions      Json      @default("[]")
+  rules           Json      @default("{}")
+  rulesHash       String?   @map("rules_hash")
+  matchMode       String    @default("all") @map("match_mode")
+  customerCount   Int       @default(0) @map("customer_count")
   lastEvaluatedAt DateTime? @map("last_evaluated_at")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant      Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  memberships SegmentCustomerMembership[]
-  ownerships  SegmentOwnership[]
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships         SegmentCustomerMembership[]
+  ownerships          SegmentOwnership[]
   customerAssignments SegmentCustomerAssignment[]
-  dailyCallOrders PersonDailyCallOrder[]
+  dailyCallOrders     PersonDailyCallOrder[]
 
   @@index([tenantId, isActive])
   @@index([tenantId, priority])
@@ -1364,15 +1414,15 @@ model PersonDailyCallOrder {
 }
 
 model PersonDailyTaskOrder {
-  id               String    @id
-  tenantId         String    @map("tenant_id")
-  memberId         String    @map("member_id")
-  serviceRequestId String?   @map("service_request_id")
-  staffWorkItemId  String?   @map("staff_work_item_id")
-  workDate         DateTime  @map("work_date") @db.Date
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  memberId         String   @map("member_id")
+  serviceRequestId String?  @map("service_request_id")
+  staffWorkItemId  String?  @map("staff_work_item_id")
+  workDate         DateTime @map("work_date") @db.Date
   position         Int
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   member         Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -1406,21 +1456,21 @@ model CommissionProfile {
 }
 
 model CommissionRequest {
-  id                 String   @id
-  tenantId           String   @map("tenant_id")
-  requesterMemberId  String   @map("requester_member_id")
-  customerId         String   @map("customer_id")
-  orderId            String?  @map("order_id")
-  productReference   String   @map("product_reference")
-  saleReference      String   @map("sale_reference")
-  percent            Decimal  @db.Decimal(5, 2)
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  requesterMemberId  String    @map("requester_member_id")
+  customerId         String    @map("customer_id")
+  orderId            String?   @map("order_id")
+  productReference   String    @map("product_reference")
+  saleReference      String    @map("sale_reference")
+  percent            Decimal   @db.Decimal(5, 2)
   note               String?
-  status             String   @default("pending_admin_approval")
-  reviewedByMemberId String?  @map("reviewed_by_member_id")
+  status             String    @default("pending_admin_approval")
+  reviewedByMemberId String?   @map("reviewed_by_member_id")
   reviewedAt         DateTime? @map("reviewed_at")
-  reviewNote         String?  @map("review_note")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  reviewNote         String?   @map("review_note")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   requester Member         @relation("CommissionRequestRequester", fields: [requesterMemberId], references: [id], onDelete: Restrict)
@@ -1507,42 +1557,42 @@ model SegmentCustomerAssignment {
 }
 
 model ServiceRequest {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
-  customerId       String?  @map("customer_id")
-  customerUserId   String?  @map("customer_user_id")
-  assignedMemberId String?  @map("assigned_member_id")
-  axis             String?
-  matchedRuleId    String?  @map("matched_rule_id")
-  source           String   @default("manual")
-  surface          String   @default("internal")
-  sourceCallId     String?  @map("source_call_id")
-  sourceEmailId    String?  @map("source_email_id")
-  sourceFormId     String?  @map("source_form_id")
-  title            String
-  description      String?
-  status           String   @default("open")
-  priority         String   @default("medium")
-  createdByActorId String?  @map("created_by_actor_id")
-  dueAt            DateTime? @map("due_at")
-  closedAt         DateTime? @map("closed_at")
-  resolutionCode   String?  @map("resolution_code")
-  resolutionNote   String?  @map("resolution_note")
-  metadata         Json     @default("{}")
-  conditionTrace   Json     @default("[]") @map("condition_trace")
-  taskStateSnapshot Json    @default("{}") @map("task_state_snapshot")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  customerId        String?   @map("customer_id")
+  customerUserId    String?   @map("customer_user_id")
+  assignedMemberId  String?   @map("assigned_member_id")
+  axis              String?
+  matchedRuleId     String?   @map("matched_rule_id")
+  source            String    @default("manual")
+  surface           String    @default("internal")
+  sourceCallId      String?   @map("source_call_id")
+  sourceEmailId     String?   @map("source_email_id")
+  sourceFormId      String?   @map("source_form_id")
+  title             String
+  description       String?
+  status            String    @default("open")
+  priority          String    @default("medium")
+  createdByActorId  String?   @map("created_by_actor_id")
+  dueAt             DateTime? @map("due_at")
+  closedAt          DateTime? @map("closed_at")
+  resolutionCode    String?   @map("resolution_code")
+  resolutionNote    String?   @map("resolution_note")
+  metadata          Json      @default("{}")
+  conditionTrace    Json      @default("[]") @map("condition_trace")
+  taskStateSnapshot Json      @default("{}") @map("task_state_snapshot")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer     Customer?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerUser CustomerUser?           @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
-  assignedMember Member?               @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
-  comments     ServiceRequestComment[]
-  participants TaskParticipant[]
-  dailyTaskOrders PersonDailyTaskOrder[]
+  tenant                               Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer                             Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerUser                         CustomerUser?             @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
+  assignedMember                       Member?                   @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  comments                             ServiceRequestComment[]
+  participants                         TaskParticipant[]
+  dailyTaskOrders                      PersonDailyTaskOrder[]
   materializedWorkflowScheduledActions WorkflowScheduledAction[]
-  personWorkspaceNotes PersonWorkspaceNote[]
+  personWorkspaceNotes                 PersonWorkspaceNote[]
 
   @@index([tenantId, customerId])
   @@index([tenantId, customerUserId])
@@ -1557,58 +1607,58 @@ model ServiceRequest {
 }
 
 model StaffWorkItem {
-  id                 String    @id
-  tenantId           String    @map("tenant_id")
-  customerId         String?   @map("customer_id")
-  assignedMemberId   String?   @map("assigned_member_id")
-  axis               String
-  matchedRuleId      String?   @map("matched_rule_id")
-  source             String    @default("workflow")
-  surface            String    @default("staff")
-  sourceCallId       String?   @map("source_call_id")
-  sourceEmailId      String?   @map("source_email_id")
-  sourceEventId      String?   @map("source_event_id")
-  sourceOccurredAt   DateTime? @map("source_occurred_at")
-  operationalIntent  String?   @map("operational_intent")
-  contactIdentityKey String?   @map("contact_identity_key")
-  contactIdentityAliases String[] @default([]) @map("contact_identity_aliases")
-  occurrenceCount    Int       @default(0) @map("occurrence_count")
-  firstSignalAt      DateTime? @map("first_signal_at")
-  lastSignalAt       DateTime? @map("last_signal_at")
-  title              String
-  description        String?
-  status             String    @default("open")
-  priority           String    @default("medium")
-  createdByActorId   String?   @map("created_by_actor_id")
-  dueAt              DateTime? @map("due_at")
-  closedAt           DateTime? @map("closed_at")
-  resolutionCode     String?   @map("resolution_code")
-  resolutionNote     String?   @map("resolution_note")
-  metadata           Json      @default("{}")
-  conditionTrace     Json      @default("[]") @map("condition_trace")
-  taskStateSnapshot  Json      @default("{}") @map("task_state_snapshot")
-  workState          String    @default("open") @map("work_state")
-  queueLocation      String    @default("follow_up") @map("queue_location")
-  visibleAfter       DateTime? @map("visible_after")
-  archivedAt         DateTime? @map("archived_at")
-  archiveReason      String?   @map("archive_reason")
-  currentDisposition String?   @map("current_disposition")
-  currentOutcomeId   String?   @map("current_outcome_id")
-  idempotencyKey     String?   @map("idempotency_key")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                     String    @id
+  tenantId               String    @map("tenant_id")
+  customerId             String?   @map("customer_id")
+  assignedMemberId       String?   @map("assigned_member_id")
+  axis                   String
+  matchedRuleId          String?   @map("matched_rule_id")
+  source                 String    @default("workflow")
+  surface                String    @default("staff")
+  sourceCallId           String?   @map("source_call_id")
+  sourceEmailId          String?   @map("source_email_id")
+  sourceEventId          String?   @map("source_event_id")
+  sourceOccurredAt       DateTime? @map("source_occurred_at")
+  operationalIntent      String?   @map("operational_intent")
+  contactIdentityKey     String?   @map("contact_identity_key")
+  contactIdentityAliases String[]  @default([]) @map("contact_identity_aliases")
+  occurrenceCount        Int       @default(0) @map("occurrence_count")
+  firstSignalAt          DateTime? @map("first_signal_at")
+  lastSignalAt           DateTime? @map("last_signal_at")
+  title                  String
+  description            String?
+  status                 String    @default("open")
+  priority               String    @default("medium")
+  createdByActorId       String?   @map("created_by_actor_id")
+  dueAt                  DateTime? @map("due_at")
+  closedAt               DateTime? @map("closed_at")
+  resolutionCode         String?   @map("resolution_code")
+  resolutionNote         String?   @map("resolution_note")
+  metadata               Json      @default("{}")
+  conditionTrace         Json      @default("[]") @map("condition_trace")
+  taskStateSnapshot      Json      @default("{}") @map("task_state_snapshot")
+  workState              String    @default("open") @map("work_state")
+  queueLocation          String    @default("follow_up") @map("queue_location")
+  visibleAfter           DateTime? @map("visible_after")
+  archivedAt             DateTime? @map("archived_at")
+  archiveReason          String?   @map("archive_reason")
+  currentDisposition     String?   @map("current_disposition")
+  currentOutcomeId       String?   @map("current_outcome_id")
+  idempotencyKey         String?   @map("idempotency_key")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  assignedMember Member?  @relation("StaffWorkItemAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
-  comments       StaffWorkComment[]
-  participants   StaffWorkParticipant[]
-  dailyTaskOrders PersonDailyTaskOrder[]
+  tenant                               Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer                             Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedMember                       Member?                   @relation("StaffWorkItemAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  comments                             StaffWorkComment[]
+  participants                         StaffWorkParticipant[]
+  dailyTaskOrders                      PersonDailyTaskOrder[]
   materializedWorkflowScheduledActions WorkflowScheduledAction[]
-  personWorkspaceNotes PersonWorkspaceNote[]
-  callOutcomes   CustomerCallOutcome[]
-  stateTransitions WorkItemStateTransition[]
-  occurrences    StaffWorkOccurrence[]
+  personWorkspaceNotes                 PersonWorkspaceNote[]
+  callOutcomes                         CustomerCallOutcome[]
+  stateTransitions                     WorkItemStateTransition[]
+  occurrences                          StaffWorkOccurrence[]
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, customerId])
@@ -1690,59 +1740,59 @@ model StaffWorkComment {
 }
 
 model CustomerCallOutcome {
-  id                 String    @id
-  tenantId           String    @map("tenant_id")
-  idempotencyKey     String?   @map("idempotency_key")
-  staffWorkItemId    String    @map("staff_work_item_id")
-  customerId         String?   @map("customer_id")
-  memberId           String    @map("member_id")
-  contactPointId     String?   @map("contact_point_id")
-  externalCallId     String?   @map("external_call_id")
-  providerResult     String?   @map("provider_result")
-  resolverSuggestion String?   @map("resolver_suggestion")
+  id                 String   @id
+  tenantId           String   @map("tenant_id")
+  idempotencyKey     String?  @map("idempotency_key")
+  staffWorkItemId    String   @map("staff_work_item_id")
+  customerId         String?  @map("customer_id")
+  memberId           String   @map("member_id")
+  contactPointId     String?  @map("contact_point_id")
+  externalCallId     String?  @map("external_call_id")
+  providerResult     String?  @map("provider_result")
+  resolverSuggestion String?  @map("resolver_suggestion")
   disposition        String
   note               String?
-  resultingWorkState String    @map("resulting_work_state")
-  resultingQueue     String    @map("resulting_queue")
-  source             String    @default("staff")
-  metadata           Json      @default("{}")
-  selectedAt         DateTime  @default(now()) @map("selected_at")
-  createdAt          DateTime  @default(now()) @map("created_at")
+  resultingWorkState String   @map("resulting_work_state")
+  resultingQueue     String   @map("resulting_queue")
+  source             String   @default("staff")
+  metadata           Json     @default("{}")
+  selectedAt         DateTime @default(now()) @map("selected_at")
+  createdAt          DateTime @default(now()) @map("created_at")
 
-  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  staffWorkItem  StaffWorkItem         @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
-  customer       Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  member         Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  contactPoint   CustomerContactPoint? @relation(fields: [contactPointId], references: [id], onDelete: SetNull)
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem         @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  customer      Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  member        Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  contactPoint  CustomerContactPoint? @relation(fields: [contactPointId], references: [id], onDelete: SetNull)
 
+  @@unique([tenantId, memberId, idempotencyKey])
   @@index([tenantId, staffWorkItemId, selectedAt])
   @@index([tenantId, customerId, selectedAt])
   @@index([tenantId, memberId, disposition, selectedAt])
   @@index([tenantId, externalCallId])
-  @@unique([tenantId, memberId, idempotencyKey])
   @@map("customer_call_outcomes")
 }
 
 model WorkItemStateTransition {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
-  staffWorkItemId  String   @map("staff_work_item_id")
-  customerId       String?  @map("customer_id")
-  memberId         String?  @map("member_id")
-  fromWorkState    String?  @map("from_work_state")
-  toWorkState      String   @map("to_work_state")
-  fromQueue        String?  @map("from_queue")
-  toQueue          String   @map("to_queue")
-  reason           String
-  outcomeId        String?  @map("outcome_id")
-  metadata         Json     @default("{}")
-  happenedAt       DateTime @default(now()) @map("happened_at")
-  createdAt        DateTime @default(now()) @map("created_at")
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  staffWorkItemId String   @map("staff_work_item_id")
+  customerId      String?  @map("customer_id")
+  memberId        String?  @map("member_id")
+  fromWorkState   String?  @map("from_work_state")
+  toWorkState     String   @map("to_work_state")
+  fromQueue       String?  @map("from_queue")
+  toQueue         String   @map("to_queue")
+  reason          String
+  outcomeId       String?  @map("outcome_id")
+  metadata        Json     @default("{}")
+  happenedAt      DateTime @default(now()) @map("happened_at")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  staffWorkItem  StaffWorkItem  @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
-  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  member         Member?        @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffWorkItem StaffWorkItem @relation(fields: [staffWorkItemId], references: [id], onDelete: Cascade)
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  member        Member?       @relation(fields: [memberId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, staffWorkItemId, happenedAt])
   @@index([tenantId, memberId, happenedAt])
@@ -1789,29 +1839,29 @@ model ServiceRequestComment {
 }
 
 model B2BAccessRequest {
-  id                     String   @id
-  tenantId               String   @map("tenant_id")
-  status                 String   @default("pending")
-  email                  String
-  firstName              String   @map("first_name")
-  lastName               String   @map("last_name")
-  phone                  String?
-  companyName            String   @map("company_name")
-  legalName              String   @map("legal_name")
-  website                String?
-  industry               String?
-  estimatedMonthlyVolume String?  @map("estimated_monthly_volume")
+  id                      String    @id
+  tenantId                String    @map("tenant_id")
+  status                  String    @default("pending")
+  email                   String
+  firstName               String    @map("first_name")
+  lastName                String    @map("last_name")
+  phone                   String?
+  companyName             String    @map("company_name")
+  legalName               String    @map("legal_name")
+  website                 String?
+  industry                String?
+  estimatedMonthlyVolume  String?   @map("estimated_monthly_volume")
   taxCertificateExpiresAt DateTime? @map("tax_certificate_expires_at")
-  message                String?
-  passwordHash           String   @map("password_hash")
-  shopifyCustomerId      String?  @map("shopify_customer_id")
-  submittedAt            DateTime @default(now()) @map("submitted_at")
-  reviewedAt             DateTime? @map("reviewed_at")
-  reviewedByMemberId     String?  @map("reviewed_by_member_id")
-  reviewNotes            String?  @map("review_notes")
-  resolvedCustomerId     String?  @map("resolved_customer_id")
-  resolvedCustomerUserId String?  @map("resolved_customer_user_id")
-  metadata               Json     @default("{}")
+  message                 String?
+  passwordHash            String    @map("password_hash")
+  shopifyCustomerId       String?   @map("shopify_customer_id")
+  submittedAt             DateTime  @default(now()) @map("submitted_at")
+  reviewedAt              DateTime? @map("reviewed_at")
+  reviewedByMemberId      String?   @map("reviewed_by_member_id")
+  reviewNotes             String?   @map("review_notes")
+  resolvedCustomerId      String?   @map("resolved_customer_id")
+  resolvedCustomerUserId  String?   @map("resolved_customer_user_id")
+  metadata                Json      @default("{}")
 
   tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   files  B2BAccessRequestFile[]
@@ -1822,20 +1872,20 @@ model B2BAccessRequest {
 }
 
 model CustomerTaxExemption {
-  id                         String   @id
-  tenantId                   String   @map("tenant_id")
-  customerId                 String   @unique @map("customer_id")
-  sourceRequestId            String?  @map("source_request_id")
-  certificateFileId          String?  @map("certificate_file_id")
-  status                     String   @default("active")
-  expiresAt                  DateTime @map("expires_at")
+  id                         String    @id
+  tenantId                   String    @map("tenant_id")
+  customerId                 String    @unique @map("customer_id")
+  sourceRequestId            String?   @map("source_request_id")
+  certificateFileId          String?   @map("certificate_file_id")
+  status                     String    @default("active")
+  expiresAt                  DateTime  @map("expires_at")
   warningSentAt              DateTime? @map("warning_sent_at")
-  warningDeliveryId          String?  @map("warning_delivery_id")
+  warningDeliveryId          String?   @map("warning_delivery_id")
   expiredAt                  DateTime? @map("expired_at")
   shopifyTaxExemptDisabledAt DateTime? @map("shopify_tax_exempt_disabled_at")
-  shopifySyncError           String?  @map("shopify_sync_error")
-  createdAt                  DateTime @default(now()) @map("created_at")
-  updatedAt                  DateTime @updatedAt @map("updated_at")
+  shopifySyncError           String?   @map("shopify_sync_error")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -1898,21 +1948,21 @@ model MailDelivery {
 }
 
 model MailProviderEvent {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  provider          String   @default("resend")
-  providerEventId   String   @map("provider_event_id")
-  providerMessageId String?  @map("provider_message_id")
-  deliveryId        String?  @map("delivery_id")
-  eventType         String   @map("event_type")
-  recipientEmail    String?  @map("recipient_email")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  provider          String    @default("resend")
+  providerEventId   String    @map("provider_event_id")
+  providerMessageId String?   @map("provider_message_id")
+  deliveryId        String?   @map("delivery_id")
+  eventType         String    @map("event_type")
+  recipientEmail    String?   @map("recipient_email")
   subject           String?
-  payload           Json     @default("{}")
-  headers           Json     @default("{}")
+  payload           Json      @default("{}")
+  headers           Json      @default("{}")
   occurredAt        DateTime? @map("occurred_at")
-  receivedAt        DateTime @default(now()) @map("received_at")
+  receivedAt        DateTime  @default(now()) @map("received_at")
   processedAt       DateTime? @map("processed_at")
-  ignoredReason     String?  @map("ignored_reason")
+  ignoredReason     String?   @map("ignored_reason")
 
   tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   delivery MailDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
@@ -1942,27 +1992,27 @@ model MailIdempotencyKey {
 }
 
 model EmailTemplate {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  slug           String
-  name           String
-  description    String?
-  eventKey       String   @map("event_key")
-  templateType   String   @default("transactional") @map("template_type")
-  folderKey      String   @default("general") @map("folder_key")
-  subject        String
-  html           String
-  text           String?
-  status         String   @default("draft")
-  approvalState  String   @default("draft") @map("approval_state")
-  variables      Json     @default("[]")
-  metadata       Json     @default("{}")
-  isArchived     Boolean  @default(false) @map("is_archived")
-  archivedAt     DateTime? @map("archived_at")
-  publishedVersionId String? @unique @map("published_version_id")
-  publishedAt    DateTime? @map("published_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  slug               String
+  name               String
+  description        String?
+  eventKey           String    @map("event_key")
+  templateType       String    @default("transactional") @map("template_type")
+  folderKey          String    @default("general") @map("folder_key")
+  subject            String
+  html               String
+  text               String?
+  status             String    @default("draft")
+  approvalState      String    @default("draft") @map("approval_state")
+  variables          Json      @default("[]")
+  metadata           Json      @default("{}")
+  isArchived         Boolean   @default(false) @map("is_archived")
+  archivedAt         DateTime? @map("archived_at")
+  publishedVersionId String?   @unique @map("published_version_id")
+  publishedAt        DateTime? @map("published_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   versions         EmailTemplateVersion[]       @relation("EmailTemplateVersions")
@@ -1971,7 +2021,7 @@ model EmailTemplate {
   approvals        MailTemplateApproval[]
   previewProfiles  MailTemplatePreviewProfile[]
   campaigns        MailCampaign[]
-  mailDeliveries   MailDelivery[]              @relation("MailDeliveryTemplate")
+  mailDeliveries   MailDelivery[]               @relation("MailDeliveryTemplate")
 
   @@unique([tenantId, slug])
   @@index([tenantId, eventKey, status])
@@ -1980,33 +2030,33 @@ model EmailTemplate {
 }
 
 model EmailTemplateVersion {
-  id            String   @id
-  tenantId      String   @map("tenant_id")
-  templateId    String   @map("template_id")
-  versionNumber Int      @map("version_number")
+  id            String    @id
+  tenantId      String    @map("tenant_id")
+  templateId    String    @map("template_id")
+  versionNumber Int       @map("version_number")
   subject       String
-  previewText   String?  @map("preview_text")
+  previewText   String?   @map("preview_text")
   html          String
   css           String?
   text          String?
-  status        String   @default("draft")
-  approvalState String   @default("draft") @map("approval_state")
-  variables     Json     @default("[]")
-  metadata      Json     @default("{}")
-  renderMode    String   @default("code") @map("render_mode")
-  lintSummary   Json?    @map("lint_summary")
-  spamScore     Float?   @map("spam_score")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  status        String    @default("draft")
+  approvalState String    @default("draft") @map("approval_state")
+  variables     Json      @default("[]")
+  metadata      Json      @default("{}")
+  renderMode    String    @default("code") @map("render_mode")
+  lintSummary   Json?     @map("lint_summary")
+  spamScore     Float?    @map("spam_score")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   publishedAt   DateTime? @map("published_at")
 
-  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  template      EmailTemplate          @relation("EmailTemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
-  publishedBy   EmailTemplate?         @relation("EmailTemplatePublishedVersion")
-  bindings      EmailTemplateBinding[]
-  approvals     MailTemplateApproval[]
-  mailDeliveries MailDelivery[]          @relation("MailDeliveryTemplateVersion")
-  campaigns     MailCampaign[]          @relation("MailCampaignTemplateVersion")
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template       EmailTemplate          @relation("EmailTemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+  publishedBy    EmailTemplate?         @relation("EmailTemplatePublishedVersion")
+  bindings       EmailTemplateBinding[]
+  approvals      MailTemplateApproval[]
+  mailDeliveries MailDelivery[]         @relation("MailDeliveryTemplateVersion")
+  campaigns      MailCampaign[]         @relation("MailCampaignTemplateVersion")
 
   @@unique([tenantId, templateId, versionNumber])
   @@index([tenantId, templateId, createdAt])
@@ -2121,25 +2171,25 @@ model MailTemplateBlock {
 }
 
 model MailContact {
-  id              String   @id
-  tenantId        String   @map("tenant_id")
-  customerId      String?  @map("customer_id")
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  customerId      String?   @map("customer_id")
   email           String
-  normalizedEmail String   @map("normalized_email")
+  normalizedEmail String    @map("normalized_email")
   name            String?
   phone           String?
-  tags            Json     @default("[]")
-  buyerIntent     String?  @map("buyer_intent")
-  lifecycleStage  String?  @map("lifecycle_stage")
-  isSendable      Boolean  @default(true) @map("is_sendable")
+  tags            Json      @default("[]")
+  buyerIntent     String?   @map("buyer_intent")
+  lifecycleStage  String?   @map("lifecycle_stage")
+  isSendable      Boolean   @default(true) @map("is_sendable")
   lastActivityAt  DateTime? @map("last_activity_at")
-  metadata        Json     @default("{}")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   suppressions    MailSuppression[]
-  identities       MailContactIdentity[]
+  identities      MailContactIdentity[]
   consentStates   MailConsentState[]
   snapshotMembers MailAudienceSnapshotMember[]
   flowEnrollments MailFlowEnrollment[]
@@ -2235,20 +2285,20 @@ model MailConsentState {
 }
 
 model MailAudience {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
+  id               String    @id
+  tenantId         String    @map("tenant_id")
   slug             String
   name             String
   description      String?
-  filters          Json     @default("{}")
-  contactCount     Int      @default(0) @map("contact_count")
-  isArchived       Boolean  @default(false) @map("is_archived")
+  filters          Json      @default("{}")
+  contactCount     Int       @default(0) @map("contact_count")
+  isArchived       Boolean   @default(false) @map("is_archived")
   lastCalculatedAt DateTime? @map("last_calculated_at")
-  metadata         Json     @default("{}")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   snapshots MailAudienceSnapshot[]
   campaigns MailCampaign[]
 
@@ -2271,7 +2321,7 @@ model MailAudienceSnapshot {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   tenant    Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  audience  MailAudience?                 @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  audience  MailAudience?                @relation(fields: [audienceId], references: [id], onDelete: SetNull)
   members   MailAudienceSnapshotMember[]
   campaigns MailCampaign[]
 
@@ -2281,19 +2331,19 @@ model MailAudienceSnapshot {
 }
 
 model MailAudienceSnapshotMember {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  snapshotId        String   @map("snapshot_id")
-  contactId         String   @map("contact_id")
-  customerId        String?  @map("customer_id")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  snapshotId        String    @map("snapshot_id")
+  contactId         String    @map("contact_id")
+  customerId        String?   @map("customer_id")
   email             String
-  consentState      String   @default("unknown") @map("consent_state")
-  suppressionReason String?  @map("suppression_reason")
-  isSendable        Boolean  @default(false) @map("is_sendable")
-  buyerIntent       String?  @map("buyer_intent")
+  consentState      String    @default("unknown") @map("consent_state")
+  suppressionReason String?   @map("suppression_reason")
+  isSendable        Boolean   @default(false) @map("is_sendable")
+  buyerIntent       String?   @map("buyer_intent")
   lastActivityAt    DateTime? @map("last_activity_at")
-  metadata          Json     @default("{}")
-  createdAt         DateTime @default(now()) @map("created_at")
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
   tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   snapshot MailAudienceSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
@@ -2306,43 +2356,43 @@ model MailAudienceSnapshotMember {
 }
 
 model MailCampaign {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  name           String
-  description    String?
-  status         String   @default("draft")
-  audienceId     String?  @map("audience_id")
-  snapshotId     String?  @map("snapshot_id")
-  templateId     String?  @map("template_id")
-  templateVersionId String? @map("template_version_id")
-  subjectOverride String? @map("subject_override")
-  senderName     String?  @map("sender_name")
-  replyTo        String?  @map("reply_to")
-  scheduledAt    DateTime? @map("scheduled_at")
-  queuedAt       DateTime? @map("queued_at")
-  sentAt         DateTime? @map("sent_at")
-  pausedAt       DateTime? @map("paused_at")
-  approvedAt     DateTime? @map("approved_at")
-  createdByMemberId String? @map("created_by_member_id")
-  approvedByMemberId String? @map("approved_by_member_id")
-  completedAt    DateTime? @map("completed_at")
-  recipientCount Int      @default(0) @map("recipient_count")
-  queuedCount    Int      @default(0) @map("queued_count")
-  sentCount      Int      @default(0) @map("sent_count")
-  failedCount    Int      @default(0) @map("failed_count")
-  skippedCount   Int      @default(0) @map("skipped_count")
-  suppressedCount Int     @default(0) @map("suppressed_count")
-  metadata       Json     @default("{}")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  name               String
+  description        String?
+  status             String    @default("draft")
+  audienceId         String?   @map("audience_id")
+  snapshotId         String?   @map("snapshot_id")
+  templateId         String?   @map("template_id")
+  templateVersionId  String?   @map("template_version_id")
+  subjectOverride    String?   @map("subject_override")
+  senderName         String?   @map("sender_name")
+  replyTo            String?   @map("reply_to")
+  scheduledAt        DateTime? @map("scheduled_at")
+  queuedAt           DateTime? @map("queued_at")
+  sentAt             DateTime? @map("sent_at")
+  pausedAt           DateTime? @map("paused_at")
+  approvedAt         DateTime? @map("approved_at")
+  createdByMemberId  String?   @map("created_by_member_id")
+  approvedByMemberId String?   @map("approved_by_member_id")
+  completedAt        DateTime? @map("completed_at")
+  recipientCount     Int       @default(0) @map("recipient_count")
+  queuedCount        Int       @default(0) @map("queued_count")
+  sentCount          Int       @default(0) @map("sent_count")
+  failedCount        Int       @default(0) @map("failed_count")
+  skippedCount       Int       @default(0) @map("skipped_count")
+  suppressedCount    Int       @default(0) @map("suppressed_count")
+  metadata           Json      @default("{}")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  audience MailAudience?         @relation(fields: [audienceId], references: [id], onDelete: SetNull)
-  snapshot MailAudienceSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
-  template EmailTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  templateVersion EmailTemplateVersion? @relation("MailCampaignTemplateVersion", fields: [templateVersionId], references: [id], onDelete: SetNull)
-  createdByMember Member?        @relation("MailCampaignCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
-  approvedByMember Member?       @relation("MailCampaignApprover", fields: [approvedByMemberId], references: [id], onDelete: SetNull)
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  audience         MailAudience?         @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  snapshot         MailAudienceSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  template         EmailTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateVersion  EmailTemplateVersion? @relation("MailCampaignTemplateVersion", fields: [templateVersionId], references: [id], onDelete: SetNull)
+  createdByMember  Member?               @relation("MailCampaignCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  approvedByMember Member?               @relation("MailCampaignApprover", fields: [approvedByMemberId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status, updatedAt])
   @@index([tenantId, audienceId])
@@ -2354,25 +2404,25 @@ model MailCampaign {
 }
 
 model MailFlow {
-  id          String   @id
-  tenantId    String   @map("tenant_id")
-  slug        String
-  name        String
-  triggerType String   @map("trigger_type")
-  status      String   @default("draft")
-  graph       Json     @default("{}")
-  metadata    Json     @default("{}")
-  activeVersionId String? @unique @map("active_version_id")
-  publishedAt DateTime? @map("published_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  slug            String
+  name            String
+  triggerType     String    @map("trigger_type")
+  status          String    @default("draft")
+  graph           Json      @default("{}")
+  metadata        Json      @default("{}")
+  activeVersionId String?   @unique @map("active_version_id")
+  publishedAt     DateTime? @map("published_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  activeVersion MailFlowVersion?    @relation("MailFlowActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
-  versions      MailFlowVersion[]   @relation("MailFlowVersions")
-  runs          MailFlowRun[]
-  enrollments   MailFlowEnrollment[]
-  actionLogs    MailFlowActionLog[]
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activeVersion   MailFlowVersion?         @relation("MailFlowActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  versions        MailFlowVersion[]        @relation("MailFlowVersions")
+  runs            MailFlowRun[]
+  enrollments     MailFlowEnrollment[]
+  actionLogs      MailFlowActionLog[]
   idempotencyKeys MailFlowIdempotencyKey[]
 
   @@unique([tenantId, slug])
@@ -2382,25 +2432,25 @@ model MailFlow {
 }
 
 model MailFlowVersion {
-  id            String   @id
-  tenantId      String   @map("tenant_id")
-  flowId        String   @map("flow_id")
-  versionNumber Int      @map("version_number")
-  status        String   @default("draft")
-  triggerType   String   @map("trigger_type")
-  graph         Json     @default("{}")
-  summary       Json     @default("{}")
+  id            String    @id
+  tenantId      String    @map("tenant_id")
+  flowId        String    @map("flow_id")
+  versionNumber Int       @map("version_number")
+  status        String    @default("draft")
+  triggerType   String    @map("trigger_type")
+  graph         Json      @default("{}")
+  summary       Json      @default("{}")
   publishedAt   DateTime? @map("published_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  flow           MailFlow            @relation("MailFlowVersions", fields: [flowId], references: [id], onDelete: Cascade)
-  activeForFlows MailFlow[]          @relation("MailFlowActiveVersion")
-  nodes          MailFlowNode[]
-  runs           MailFlowRun[]
-  enrollments    MailFlowEnrollment[]
-  actionLogs     MailFlowActionLog[]
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow            MailFlow                 @relation("MailFlowVersions", fields: [flowId], references: [id], onDelete: Cascade)
+  activeForFlows  MailFlow[]               @relation("MailFlowActiveVersion")
+  nodes           MailFlowNode[]
+  runs            MailFlowRun[]
+  enrollments     MailFlowEnrollment[]
+  actionLogs      MailFlowActionLog[]
   idempotencyKeys MailFlowIdempotencyKey[]
 
   @@unique([tenantId, flowId, versionNumber])
@@ -2457,27 +2507,27 @@ model MailFlowWebhookDestination {
 }
 
 model MailFlowRun {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
-  flowId           String   @map("flow_id")
-  flowVersionId    String?  @map("flow_version_id")
-  triggerType      String   @map("trigger_type")
-  triggerEventType String?  @map("trigger_event_type")
-  status           String   @default("recorded")
-  enrollmentCount  Int      @default(0) @map("enrollment_count")
-  completedCount   Int      @default(0) @map("completed_count")
-  failedCount      Int      @default(0) @map("failed_count")
+  id               String    @id
+  tenantId         String    @map("tenant_id")
+  flowId           String    @map("flow_id")
+  flowVersionId    String?   @map("flow_version_id")
+  triggerType      String    @map("trigger_type")
+  triggerEventType String?   @map("trigger_event_type")
+  status           String    @default("recorded")
+  enrollmentCount  Int       @default(0) @map("enrollment_count")
+  completedCount   Int       @default(0) @map("completed_count")
+  failedCount      Int       @default(0) @map("failed_count")
   startedAt        DateTime? @map("started_at")
   endedAt          DateTime? @map("ended_at")
-  metadata         Json     @default("{}")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  flow         MailFlow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowVersion  MailFlowVersion?       @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
-  enrollments  MailFlowEnrollment[]
-  actionLogs   MailFlowActionLog[]
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow        MailFlow             @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion MailFlowVersion?     @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+  enrollments MailFlowEnrollment[]
+  actionLogs  MailFlowActionLog[]
 
   @@index([tenantId, flowId, createdAt])
   @@index([tenantId, status, createdAt])
@@ -2485,29 +2535,29 @@ model MailFlowRun {
 }
 
 model MailFlowEnrollment {
-  id            String   @id
-  tenantId      String   @map("tenant_id")
-  flowId        String   @map("flow_id")
-  flowVersionId String?  @map("flow_version_id")
-  flowRunId     String   @map("flow_run_id")
-  contactId     String?  @map("contact_id")
-  customerId    String?  @map("customer_id")
-  email         String?
-  currentNodeKey String? @map("current_node_key")
-  status        String   @default("recorded")
-  eventPayload  Json     @default("{}") @map("event_payload")
-  lastError     String?  @map("last_error")
-  nextRunAt     DateTime? @map("next_run_at")
-  completedAt   DateTime? @map("completed_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String    @id
+  tenantId       String    @map("tenant_id")
+  flowId         String    @map("flow_id")
+  flowVersionId  String?   @map("flow_version_id")
+  flowRunId      String    @map("flow_run_id")
+  contactId      String?   @map("contact_id")
+  customerId     String?   @map("customer_id")
+  email          String?
+  currentNodeKey String?   @map("current_node_key")
+  status         String    @default("recorded")
+  eventPayload   Json      @default("{}") @map("event_payload")
+  lastError      String?   @map("last_error")
+  nextRunAt      DateTime? @map("next_run_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  flow         MailFlow         @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowVersion  MailFlowVersion? @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
-  flowRun      MailFlowRun      @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
-  contact      MailContact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  actionLogs   MailFlowActionLog[]
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow        MailFlow            @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowVersion MailFlowVersion?    @relation(fields: [flowVersionId], references: [id], onDelete: SetNull)
+  flowRun     MailFlowRun         @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+  contact     MailContact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  actionLogs  MailFlowActionLog[]
 
   @@index([tenantId, flowId, status])
   @@index([tenantId, flowRunId])
@@ -2516,19 +2566,19 @@ model MailFlowEnrollment {
 }
 
 model MailFlowActionLog {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  flowId         String   @map("flow_id")
-  flowVersionId  String?  @map("flow_version_id")
-  flowRunId      String?  @map("flow_run_id")
-  enrollmentId   String?  @map("enrollment_id")
-  contactId      String?  @map("contact_id")
-  actionType     String   @map("action_type")
-  nodeKey        String?  @map("node_key")
-  status         String   @default("recorded")
-  message        String?
-  payload        Json     @default("{}")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id            String   @id
+  tenantId      String   @map("tenant_id")
+  flowId        String   @map("flow_id")
+  flowVersionId String?  @map("flow_version_id")
+  flowRunId     String?  @map("flow_run_id")
+  enrollmentId  String?  @map("enrollment_id")
+  contactId     String?  @map("contact_id")
+  actionType    String   @map("action_type")
+  nodeKey       String?  @map("node_key")
+  status        String   @default("recorded")
+  message       String?
+  payload       Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   flow        MailFlow            @relation(fields: [flowId], references: [id], onDelete: Cascade)
@@ -2635,17 +2685,17 @@ model MailSettingsAuditLog {
 }
 
 model MailDlq {
-  id             String   @id
-  tenantId       String   @map("tenant_id")
-  eventKey       String   @map("event_key")
-  recipientEmail String   @map("recipient_email")
-  status         String   @default("pending")
+  id             String    @id
+  tenantId       String    @map("tenant_id")
+  eventKey       String    @map("event_key")
+  recipientEmail String    @map("recipient_email")
+  status         String    @default("pending")
   provider       String?
-  errorMessage   String?  @map("error_message")
-  lastDeliveryId String?  @map("last_delivery_id")
-  payload        Json     @default("{}")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  errorMessage   String?   @map("error_message")
+  lastDeliveryId String?   @map("last_delivery_id")
+  payload        Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
   resolvedAt     DateTime? @map("resolved_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2770,50 +2820,50 @@ model AircallWebhookInbox {
 }
 
 model AircallCallEvent {
-  id                String    @id
-  tenantId          String    @map("tenant_id")
-  externalCallId    String    @map("external_call_id")
-  eventType         String    @map("event_type")
-  eventTimestamp    DateTime  @map("event_timestamp")
-  direction         String?
-  status            String?
-  durationSeconds   Int?      @map("duration_seconds")
-  numberId          String?   @map("number_id")
-  aircallUserId     String?   @map("aircall_user_id")
-  contactPhone      String?   @map("contact_phone")
-  contactPhoneE164  String?   @map("contact_phone_e164")
-  contactEmail      String?   @map("contact_email")
-  recordingUrl      String?   @map("recording_url") @db.Text
-  voicemailUrl      String?   @map("voicemail_url") @db.Text
-  transcriptRaw     String?   @map("transcript_raw") @db.Text
-  transcriptVersion Int       @default(0) @map("transcript_version")
-  transcriptSource  String?   @map("transcript_source")
-  transcriptPulledAt DateTime? @map("transcript_pulled_at")
-  resolverQueuedAt  DateTime? @map("resolver_queued_at")
-  resolverQueueJobId String?  @map("resolver_queue_job_id")
-  resolverStatus    String?   @map("resolver_status")
-  resolverStartedAt DateTime? @map("resolver_started_at")
-  resolverOutput    Json?     @map("resolver_output")
-  resolverError     String?   @map("resolver_error") @db.Text
-  resolverModel     String?   @map("resolver_model")
-  resolverPromptKey String?   @map("resolver_prompt_key")
-  resolverInputHash String?   @map("resolver_input_hash")
-  resolverAttemptCount Int    @default(0) @map("resolver_attempt_count")
-  resolverInputTokens Int?    @map("resolver_input_tokens")
-  resolverOutputTokens Int?   @map("resolver_output_tokens")
-  resolverCostMicros Int?     @map("resolver_cost_micros")
-  resolverRepairAttempted Boolean @default(false) @map("resolver_repair_attempted")
-  resolverFailureKind String? @map("resolver_failure_kind")
-  resolverNextRetryAt DateTime? @map("resolver_next_retry_at")
-  resolverLatencyMs Int?      @map("resolver_latency_ms")
-  resolvedAt        DateTime? @map("resolved_at")
-  resolvedWithVersion Int?    @map("resolved_with_version")
-  tags              Json      @default("[]")
-  comments          Json      @default("[]")
-  rawPayload        Json      @map("raw_payload")
-  receivedAt        DateTime  @default(now()) @map("received_at")
-  processedAt       DateTime? @map("processed_at")
-  processingError   String?   @map("processing_error") @db.Text
+  id                      String    @id
+  tenantId                String    @map("tenant_id")
+  externalCallId          String    @map("external_call_id")
+  eventType               String    @map("event_type")
+  eventTimestamp          DateTime  @map("event_timestamp")
+  direction               String?
+  status                  String?
+  durationSeconds         Int?      @map("duration_seconds")
+  numberId                String?   @map("number_id")
+  aircallUserId           String?   @map("aircall_user_id")
+  contactPhone            String?   @map("contact_phone")
+  contactPhoneE164        String?   @map("contact_phone_e164")
+  contactEmail            String?   @map("contact_email")
+  recordingUrl            String?   @map("recording_url") @db.Text
+  voicemailUrl            String?   @map("voicemail_url") @db.Text
+  transcriptRaw           String?   @map("transcript_raw") @db.Text
+  transcriptVersion       Int       @default(0) @map("transcript_version")
+  transcriptSource        String?   @map("transcript_source")
+  transcriptPulledAt      DateTime? @map("transcript_pulled_at")
+  resolverQueuedAt        DateTime? @map("resolver_queued_at")
+  resolverQueueJobId      String?   @map("resolver_queue_job_id")
+  resolverStatus          String?   @map("resolver_status")
+  resolverStartedAt       DateTime? @map("resolver_started_at")
+  resolverOutput          Json?     @map("resolver_output")
+  resolverError           String?   @map("resolver_error") @db.Text
+  resolverModel           String?   @map("resolver_model")
+  resolverPromptKey       String?   @map("resolver_prompt_key")
+  resolverInputHash       String?   @map("resolver_input_hash")
+  resolverAttemptCount    Int       @default(0) @map("resolver_attempt_count")
+  resolverInputTokens     Int?      @map("resolver_input_tokens")
+  resolverOutputTokens    Int?      @map("resolver_output_tokens")
+  resolverCostMicros      Int?      @map("resolver_cost_micros")
+  resolverRepairAttempted Boolean   @default(false) @map("resolver_repair_attempted")
+  resolverFailureKind     String?   @map("resolver_failure_kind")
+  resolverNextRetryAt     DateTime? @map("resolver_next_retry_at")
+  resolverLatencyMs       Int?      @map("resolver_latency_ms")
+  resolvedAt              DateTime? @map("resolved_at")
+  resolvedWithVersion     Int?      @map("resolved_with_version")
+  tags                    Json      @default("[]")
+  comments                Json      @default("[]")
+  rawPayload              Json      @map("raw_payload")
+  receivedAt              DateTime  @default(now()) @map("received_at")
+  processedAt             DateTime? @map("processed_at")
+  processingError         String?   @map("processing_error") @db.Text
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -2832,29 +2882,29 @@ model AircallCallEvent {
 }
 
 model Call {
-  id                String    @id
-  tenantId          String    @map("tenant_id")
-  aircallCallId     String?   @map("aircall_call_id")
-  customerId        String?   @map("customer_id")
-  customerUserId    String?   @map("customer_user_id")
-  currentOperatorId String?   @map("current_operator_id")
-  direction         String?
-  status            String    @default("open")
-  callerNumber      String?   @map("caller_number")
-  callerNumberE164  String?   @map("caller_number_e164")
-  callerEmail       String?   @map("caller_email")
-  startedAt         DateTime? @map("started_at")
-  answeredAt        DateTime? @map("answered_at")
-  endedAt           DateTime? @map("ended_at")
-  durationSeconds   Int?      @map("duration_seconds")
-  missedAt          DateTime? @map("missed_at")
-  callbackResolvedAt DateTime? @map("callback_resolved_at")
-  reconciliationStatus String? @map("reconciliation_status")
-  ringGroupUserIds  Json      @default("[]") @map("ring_group_user_ids")
-  transcriptRaw     String?   @map("transcript_raw") @db.Text
-  rawPayload        Json?     @map("raw_payload")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                   String    @id
+  tenantId             String    @map("tenant_id")
+  aircallCallId        String?   @map("aircall_call_id")
+  customerId           String?   @map("customer_id")
+  customerUserId       String?   @map("customer_user_id")
+  currentOperatorId    String?   @map("current_operator_id")
+  direction            String?
+  status               String    @default("open")
+  callerNumber         String?   @map("caller_number")
+  callerNumberE164     String?   @map("caller_number_e164")
+  callerEmail          String?   @map("caller_email")
+  startedAt            DateTime? @map("started_at")
+  answeredAt           DateTime? @map("answered_at")
+  endedAt              DateTime? @map("ended_at")
+  durationSeconds      Int?      @map("duration_seconds")
+  missedAt             DateTime? @map("missed_at")
+  callbackResolvedAt   DateTime? @map("callback_resolved_at")
+  reconciliationStatus String?   @map("reconciliation_status")
+  ringGroupUserIds     Json      @default("[]") @map("ring_group_user_ids")
+  transcriptRaw        String?   @map("transcript_raw") @db.Text
+  rawPayload           Json?     @map("raw_payload")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   events CallEvent[]
@@ -2894,14 +2944,14 @@ model CallEvent {
 }
 
 model AircallSyncState {
-  id           String   @id
-  tenantId     String   @map("tenant_id")
+  id           String    @id
+  tenantId     String    @map("tenant_id")
   resource     String
   cursor       String?
-  metadata     Json     @default("{}")
+  metadata     Json      @default("{}")
   lastSyncedAt DateTime? @map("last_synced_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -2911,26 +2961,26 @@ model AircallSyncState {
 }
 
 model ShopifySyncState {
-  id                   String   @id
-  tenantId             String   @map("tenant_id")
-  resource             String
-  status               String   @default("idle")
-  isLocked             Boolean  @default(false) @map("is_locked")
-  lockedAt             DateTime? @map("locked_at")
-  lockExpiresAt        DateTime? @map("lock_expires_at")
-  heartbeatAt          DateTime? @map("heartbeat_at")
-  currentSyncLogId     String?  @map("current_sync_log_id")
-  lastCursor           String?  @map("last_cursor") @db.Text
-  lastStartedAt        DateTime? @map("last_started_at")
-  lastCompletedAt      DateTime? @map("last_completed_at")
-  lastFailedAt         DateTime? @map("last_failed_at")
-  totalRecordsSynced   Int      @default(0) @map("total_records_synced")
-  lastRunRecords       Int      @default(0) @map("last_run_records")
-  consecutiveFailures  Int      @default(0) @map("consecutive_failures")
-  lastError            String?  @map("last_error") @db.Text
-  metadata             Json     @default("{}")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                  String    @id
+  tenantId            String    @map("tenant_id")
+  resource            String
+  status              String    @default("idle")
+  isLocked            Boolean   @default(false) @map("is_locked")
+  lockedAt            DateTime? @map("locked_at")
+  lockExpiresAt       DateTime? @map("lock_expires_at")
+  heartbeatAt         DateTime? @map("heartbeat_at")
+  currentSyncLogId    String?   @map("current_sync_log_id")
+  lastCursor          String?   @map("last_cursor") @db.Text
+  lastStartedAt       DateTime? @map("last_started_at")
+  lastCompletedAt     DateTime? @map("last_completed_at")
+  lastFailedAt        DateTime? @map("last_failed_at")
+  totalRecordsSynced  Int       @default(0) @map("total_records_synced")
+  lastRunRecords      Int       @default(0) @map("last_run_records")
+  consecutiveFailures Int       @default(0) @map("consecutive_failures")
+  lastError           String?   @map("last_error") @db.Text
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -2971,11 +3021,11 @@ model WorkflowRule {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  executions WorkflowRuleExecution[]
-  cooldowns  WorkflowRuleCooldown[]
-  versions   WorkflowRuleVersion[]
-  backfillReports WorkflowRuleBackfillReport[]
+  tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions       WorkflowRuleExecution[]
+  cooldowns        WorkflowRuleCooldown[]
+  versions         WorkflowRuleVersion[]
+  backfillReports  WorkflowRuleBackfillReport[]
   scheduledActions WorkflowScheduledAction[]
 
   @@index([tenantId, status])
@@ -3049,18 +3099,18 @@ model WorkflowMcpDraft {
 }
 
 model FrontendCustomization {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  surfaceId         String   @map("surface_id")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  surfaceId         String    @map("surface_id")
   name              String
-  status            String   @default("draft")
+  status            String    @default("draft")
   definition        Json
   reason            String?
-  warnings          String[] @default([])
-  createdByMemberId String?  @map("created_by_member_id")
+  warnings          String[]  @default([])
+  createdByMemberId String?   @map("created_by_member_id")
   activatedAt       DateTime? @map("activated_at")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   creator Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
@@ -3081,9 +3131,9 @@ model WorkflowRuleVersion {
   editedAt         DateTime @default(now()) @map("edited_at")
   comment          String?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rule   WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  editor Member? @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
+  editor Member?      @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, ruleId, versionNo])
   @@index([tenantId, ruleId, editedAt])
@@ -3092,28 +3142,28 @@ model WorkflowRuleVersion {
 }
 
 model WorkflowRuleBackfillReport {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  ruleId            String   @map("rule_id")
-  ruleName          String   @map("rule_name")
-  trigger           String
-  recentDays        Int      @map("recent_days")
-  status            String   @default("completed")
-  windowStart       DateTime @map("window_start")
-  windowEnd         DateTime @map("window_end")
-  evaluatedEvents   Int      @default(0) @map("evaluated_events")
-  matchedEvents     Int      @default(0) @map("matched_events")
-  skippedEvents     Int      @default(0) @map("skipped_events")
-  wouldCreateTasks  Int      @default(0) @map("would_create_tasks")
-  actualTasksCreated Int     @default(0) @map("actual_tasks_created")
-  result            Json     @default("{}")
-  createdByMemberId String?  @map("created_by_member_id")
-  createdAt         DateTime @default(now()) @map("created_at")
-  finishedAt        DateTime? @map("finished_at")
+  id                 String    @id
+  tenantId           String    @map("tenant_id")
+  ruleId             String    @map("rule_id")
+  ruleName           String    @map("rule_name")
+  trigger            String
+  recentDays         Int       @map("recent_days")
+  status             String    @default("completed")
+  windowStart        DateTime  @map("window_start")
+  windowEnd          DateTime  @map("window_end")
+  evaluatedEvents    Int       @default(0) @map("evaluated_events")
+  matchedEvents      Int       @default(0) @map("matched_events")
+  skippedEvents      Int       @default(0) @map("skipped_events")
+  wouldCreateTasks   Int       @default(0) @map("would_create_tasks")
+  actualTasksCreated Int       @default(0) @map("actual_tasks_created")
+  result             Json      @default("{}")
+  createdByMemberId  String?   @map("created_by_member_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  finishedAt         DateTime? @map("finished_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  rule   WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  creator Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule    WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  creator Member?      @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, ruleId, createdAt])
   @@index([tenantId, status])
@@ -3122,21 +3172,21 @@ model WorkflowRuleBackfillReport {
 }
 
 model AlgorithmStrategy {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  surfaceId         String   @map("surface_id")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  surfaceId         String    @map("surface_id")
   name              String
-  status            String   @default("draft")
+  status            String    @default("draft")
   definition        Json
   reason            String?
-  warnings          String[] @default([])
-  createdByMemberId String?  @map("created_by_member_id")
+  warnings          String[]  @default([])
+  createdByMemberId String?   @map("created_by_member_id")
   activatedAt       DateTime? @map("activated_at")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator     Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  tenant      Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     Member?                       @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
   versions    AlgorithmStrategyVersion[]
   simulations AlgorithmStrategySimulation[]
 
@@ -3157,9 +3207,9 @@ model AlgorithmStrategyVersion {
   editedAt         DateTime @default(now()) @map("edited_at")
   comment          String?
 
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   strategy AlgorithmStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  editor   Member? @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
+  editor   Member?           @relation(fields: [editedByMemberId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, strategyId, versionNo])
   @@index([tenantId, surfaceId, editedAt])
@@ -3168,22 +3218,22 @@ model AlgorithmStrategyVersion {
 }
 
 model AlgorithmStrategySimulation {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  strategyId        String?  @map("strategy_id")
-  surfaceId         String   @map("surface_id")
-  status            String   @default("passed")
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  strategyId        String?   @map("strategy_id")
+  surfaceId         String    @map("surface_id")
+  status            String    @default("passed")
   windowStart       DateTime? @map("window_start")
   windowEnd         DateTime? @map("window_end")
-  sampleSize        Int      @default(0) @map("sample_size")
-  result            Json     @default("{}")
-  createdByMemberId String?  @map("created_by_member_id")
-  createdAt         DateTime @default(now()) @map("created_at")
+  sampleSize        Int       @default(0) @map("sample_size")
+  result            Json      @default("{}")
+  createdByMemberId String?   @map("created_by_member_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
   finishedAt        DateTime? @map("finished_at")
 
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   strategy AlgorithmStrategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
-  creator  Member? @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  creator  Member?            @relation(fields: [createdByMemberId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, surfaceId, createdAt])
   @@index([tenantId, strategyId])
@@ -3203,7 +3253,7 @@ model WorkflowRuleExecution {
   firstSeenAt DateTime @default(now()) @map("first_seen_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rule   WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, eventId, ruleId])
@@ -3213,27 +3263,27 @@ model WorkflowRuleExecution {
 }
 
 model TranscriptWorkflowEvaluation {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  callEventId       String   @map("call_event_id")
-  externalCallId    String?  @map("external_call_id")
-  eventId           String   @map("event_id")
-  trigger           String
-  signal            String
-  actionRequired    Boolean  @default(false) @map("action_required")
-  recommendedAxis   String?  @map("recommended_axis")
-  status            String
-  reason            String?
-  evaluatedRules    Int      @default(0) @map("evaluated_rules")
-  matchedRules      Int      @default(0) @map("matched_rules")
-  tasksCreated      Int      @default(0) @map("tasks_created")
-  taskIds           String[] @default([]) @map("task_ids")
-  source            String   @default("transcript-operational-signal")
-  resolverVersion   Int?     @map("resolver_version")
-  resolverModel     String?  @map("resolver_model")
-  result            Json     @default("{}")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  callEventId     String   @map("call_event_id")
+  externalCallId  String?  @map("external_call_id")
+  eventId         String   @map("event_id")
+  trigger         String
+  signal          String
+  actionRequired  Boolean  @default(false) @map("action_required")
+  recommendedAxis String?  @map("recommended_axis")
+  status          String
+  reason          String?
+  evaluatedRules  Int      @default(0) @map("evaluated_rules")
+  matchedRules    Int      @default(0) @map("matched_rules")
+  tasksCreated    Int      @default(0) @map("tasks_created")
+  taskIds         String[] @default([]) @map("task_ids")
+  source          String   @default("transcript-operational-signal")
+  resolverVersion Int?     @map("resolver_version")
+  resolverModel   String?  @map("resolver_model")
+  result          Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -3246,18 +3296,18 @@ model TranscriptWorkflowEvaluation {
 }
 
 model TranscriptReviewDecision {
-  id                    String    @id
-  tenantId              String    @map("tenant_id")
-  callEventId           String    @map("call_event_id")
-  evaluationIds         String[]  @default([]) @map("evaluation_ids")
-  status                String    @default("pending_review")
-  assignedStaffWorkItemId String? @map("assigned_staff_work_item_id")
-  reviewedByMemberId    String?   @map("reviewed_by_member_id")
-  reviewedAt            DateTime? @map("reviewed_at")
-  humanDescription      String?   @map("human_description") @db.Text
-  dismissalReason       String?   @map("dismissal_reason") @db.Text
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                      String    @id
+  tenantId                String    @map("tenant_id")
+  callEventId             String    @map("call_event_id")
+  evaluationIds           String[]  @default([]) @map("evaluation_ids")
+  status                  String    @default("pending_review")
+  assignedStaffWorkItemId String?   @map("assigned_staff_work_item_id")
+  reviewedByMemberId      String?   @map("reviewed_by_member_id")
+  reviewedAt              DateTime? @map("reviewed_at")
+  humanDescription        String?   @map("human_description") @db.Text
+  dismissalReason         String?   @map("dismissal_reason") @db.Text
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

@@ -12,6 +12,7 @@
     "test:shopify-webhook": "tsx --test src/modules/shopify-webhooks/shopify-webhook.test.ts",
     "test:storefront-reorder": "tsx --test src/modules/storefront/storefront-reorder.test.ts",
     "test:abandoned-checkout": "tsx --test src/modules/sync/shopify-abandoned-checkout.service.test.ts src/modules/accounts/accounts-abandoned-checkout.test.ts",
+    "test:billing": "tsx --test src/modules/billing/stripe-signature.test.ts src/modules/billing/billing-policy.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "node scripts/guard-database-url.mjs && prisma migrate dev",
     "prisma:deploy": "node scripts/guard-database-url.mjs && prisma migrate deploy"

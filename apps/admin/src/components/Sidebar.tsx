@@ -2,7 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign,
+  LayoutDashboard, Users, Settings as SettingsIcon, Tag, ClipboardList, LogOut, LifeBuoy, DollarSign, CreditCard,
   ShoppingCart, UserSquare2, Workflow, KeyRound, FileCheck2,
   FileText, Mail,
 } from 'lucide-react';
@@ -87,7 +87,8 @@ const NAV: { groupKey: string; children: NavLeaf[] }[] = [
   {
     groupKey: 'nav.group_system',
     children: [
-      { to: '/settings/workspace', matchPrefix: '/settings', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read' },
+      { to: '/settings/workspace', matchPrefix: '/settings/workspace', i18nKey: 'nav.workspace_settings', id: 'nav-workspace', icon: SettingsIcon, permission: 'settings.read', exact: true },
+      { to: '/settings/billing', matchPrefix: '/settings/billing', i18nKey: 'nav.billing', id: 'nav-billing', icon: CreditCard, permission: 'settings.read', exact: true },
     ],
   },
 ];

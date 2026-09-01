@@ -114,7 +114,9 @@ export type IdPrefix =
   | 'wrbf'
   | 'astrat'
   | 'astrv'
-  | 'asim';
+  | 'asim'
+  | 'tbsub'
+  | 'sbwin';
 
 export function prefixedId(prefix: IdPrefix) {
   return `${prefix}_${createId()}`;

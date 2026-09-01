@@ -4,6 +4,8 @@ import { TenantContextService } from './tenant-context.js';
 
 const TENANT_SCOPED_MODELS = new Set([
   'TenantConfig',
+  'TenantBillingSubscription',
+  'StripeBillingWebhookInbox',
   'Member',
   'MemberRole',
   'MemberRoleAssignment',

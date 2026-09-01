@@ -30,6 +30,7 @@
     "mail_templates": "Mail Templates",
     "mail_marketing": "Mail Marketing",
     "workspace_settings": "Workspace",
+    "billing": "Billing",
     "aircall_settings": "Aircall",
     "resolver_settings_legacy": "Resolver keys",
     "shopify_settings": "Shopify",
@@ -535,6 +536,7 @@
     "subtitle": "API keys, integrations, and provider configuration",
     "tabs": {
       "workspace": "Workspace",
+      "billing": "Billing",
       "customer_portal": "Customer portal",
       "aircall": "Aircall",
       "shopify": "Shopify",

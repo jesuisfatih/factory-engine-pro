@@ -8,6 +8,8 @@ import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BackfillModule } from './modules/backfill/backfill.module.js';
 import { B2BAccessModule } from './modules/b2b-access/b2b-access.module.js';
+import { BillingModule } from './modules/billing/billing.module.js';
+import { BillingAccessGuard } from './modules/billing/billing-access.guard.js';
 import { CallCenterModule } from './modules/call-center/call-center.module.js';
 import { CommissionsModule } from './modules/commissions/commissions.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
@@ -54,6 +56,7 @@ import { HealthController } from './health.controller.js';
     SegmentsModule,
     SupportModule,
     B2BAccessModule,
+    BillingModule,
     CallCenterModule,
     CommissionsModule,
     SyncModule,
@@ -72,6 +75,10 @@ import { HealthController } from './health.controller.js';
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: BillingAccessGuard,
     },
     {
       provide: APP_FILTER,
