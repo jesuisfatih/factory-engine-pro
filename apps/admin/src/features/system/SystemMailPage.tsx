@@ -123,6 +123,7 @@ export function SystemMailPage() {
   const [pageSize, setPageSize] = useState<(typeof DELIVERY_PAGE_SIZES)[number]>(10);
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [contentOpen, setContentOpen] = useState(false);
   const [form, setForm] = useState({ to: '', subject: '' });
   const [settingsForm, setSettingsForm] = useState({ postmarkServerToken: '', postmarkWebhookSecret: '' });
   const [suppressionForm, setSuppressionForm] = useState({
@@ -215,6 +216,10 @@ export function SystemMailPage() {
   useEffect(() => {
     if (!selectedId && rows[0]) setSelectedId(rows[0].id);
   }, [rows, selectedId]);
+
+  useEffect(() => {
+    setContentOpen(false);
+  }, [selectedId]);
 
   const summary = useMemo(() => {
     const result = rows.reduce(
@@ -1044,7 +1049,40 @@ export function SystemMailPage() {
                   <p style={{ margin: 0, color: 'var(--text)', fontSize: 12, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
                     {messagePreview(selected)}
                   </p>
+                  <button type="button" className="btn" style={{ marginTop: 10 }} onClick={() => setContentOpen(true)} disabled={!selected.html && !selected.text}>
+                    <Mail size={14} /> View rendered email
+                  </button>
                 </div>
+                {contentOpen && (
+                  <div className="dialog-overlay" onMouseDown={() => setContentOpen(false)}>
+                    <div
+                      className="dialog"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Rendered email content"
+                      onMouseDown={(event) => event.stopPropagation()}
+                      style={{ width: 'min(760px, 94vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+                    >
+                      <h2 style={{ marginBottom: 4 }}>{selected.subject}</h2>
+                      <p className="muted" style={{ margin: '0 0 10px', fontSize: 12 }}>
+                        {selected.recipientEmail} · {selected.provider ?? '-'} · {fmtDate(selected.sentAt ?? selected.createdAt)}
+                      </p>
+                      {selected.html ? (
+                        <iframe
+                          title="Email content"
+                          sandbox=""
+                          srcDoc={selected.html}
+                          style={{ flex: 1, minHeight: '55vh', width: '100%', border: '1px solid var(--border)', borderRadius: 8, background: '#fff' }}
+                        />
+                      ) : (
+                        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: 12 }}>{selected.text}</pre>
+                      )}
+                      <div className="dialog-actions" style={{ marginTop: 12 }}>
+                        <button type="button" className="btn" onClick={() => setContentOpen(false)}>Close</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="modal-section" style={{ marginTop: 14 }}>
                   <h3>{t('system_mail.detail_metadata')}</h3>
                   <pre style={{ margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: 11, color: 'var(--text-muted)' }}>
