@@ -970,6 +970,10 @@ export class MailService {
       : settings.providerMode === 'test'
         ? 'Provider mode is test-only. Only explicit System Mail test messages can contact recipients.'
         : 'Provider mode is disabled. Delivery records are proof-only and no customer email is sent.';
+    const providerName = await this.resolveMailProviderName();
+    if (providerName === 'postmark') {
+      return this.postmarkHealth(startedAt, providerModeReason);
+    }
     const credentials = await this.resolveResendApiKeyWithSource();
     const operational = await this.mailOperationalHealth();
     const checkedAt = new Date().toISOString();
@@ -2219,6 +2223,91 @@ export class MailService {
 
   private postmarkBaseUrl() {
     return this.config.get<string>('POSTMARK_API_BASE_URL')?.trim().replace(/\/+$/, '') || POSTMARK_API_BASE;
+  }
+
+  private async postmarkHealth(startedAt: number, providerModeReason: string | null): Promise<MailProviderHealthResponse> {
+    const operational = await this.mailOperationalHealth();
+    const credentials = await this.resolvePostmarkServerTokenWithSource();
+    const checkedAt = new Date().toISOString();
+    if (!credentials.key) {
+      return {
+        provider: 'postmark',
+        credentialRequired: true,
+        configured: false,
+        reachable: false,
+        status: 'missing_credentials',
+        source: 'none',
+        latencyMs: null,
+        checkedAt,
+        providerStatus: null,
+        domainCount: null,
+        error: 'Postmark server token is not configured for this tenant.',
+        disabledReason: providerModeReason ?? 'Provider token is missing. Delivery records can still be recorded as disabled proof, but customer email is not sent.',
+        ...operational,
+      };
+    }
+    try {
+      const response = await fetch(`${this.postmarkBaseUrl()}/server`, {
+        headers: { 'X-Postmark-Server-Token': credentials.key, accept: 'application/json' },
+      });
+      const latencyMs = Date.now() - startedAt;
+      const text = await response.text();
+      const body = parseJson(text);
+      if (response.ok) {
+        return {
+          provider: 'postmark',
+          credentialRequired: false,
+          configured: true,
+          reachable: true,
+          status: 'ok',
+          source: credentials.source,
+          latencyMs,
+          checkedAt: new Date().toISOString(),
+          providerStatus: response.status,
+          domainCount: null,
+          error: null,
+          disabledReason: providerModeReason,
+          ...operational,
+        };
+      }
+      const status = response.status === 401 || response.status === 403 || response.status === 422 ? 'invalid_credentials' : 'provider_error';
+      const bodyRecord = asRecord(body);
+      const message = (typeof bodyRecord.Message === 'string' ? bodyRecord.Message : null) ?? `Postmark health check failed with HTTP ${response.status}.`;
+      this.logger.warn('mail', 'health_failed', 'Postmark health check failed', { status_code: response.status, source: credentials.source, provider_status: status });
+      return {
+        provider: 'postmark',
+        credentialRequired: false,
+        configured: true,
+        reachable: true,
+        status,
+        source: credentials.source,
+        latencyMs,
+        checkedAt: new Date().toISOString(),
+        providerStatus: response.status,
+        domainCount: null,
+        error: message,
+        disabledReason: message,
+        ...operational,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn('mail', 'health_network_failed', 'Postmark health check could not reach provider', { error: message });
+      return {
+        provider: 'postmark',
+        credentialRequired: false,
+        configured: true,
+        reachable: false,
+        status: 'network_error',
+        source: credentials.source,
+        latencyMs: Date.now() - startedAt,
+        checkedAt: new Date().toISOString(),
+        providerStatus: null,
+        domainCount: null,
+        error: message,
+        disabledReason: message,
+        ...operational,
+      };
+    }
   }
 
   private async writeSettingsAudit(before: MailCenterSettings, after: MailCenterSettings, changedBy: string) {

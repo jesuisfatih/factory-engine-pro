@@ -124,7 +124,7 @@ export function SystemMailPage() {
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState({ to: '', subject: '' });
-  const [settingsForm, setSettingsForm] = useState({ resendApiKey: '', resendWebhookSecret: '', mailProvider: '', postmarkServerToken: '', postmarkWebhookSecret: '' });
+  const [settingsForm, setSettingsForm] = useState({ postmarkServerToken: '', postmarkWebhookSecret: '' });
   const [suppressionForm, setSuppressionForm] = useState({
     email: '',
     scope: 'global',
@@ -241,16 +241,13 @@ export function SystemMailPage() {
 
   const saveSettings = useMutation({
     mutationFn: () => {
-      const payload: { resendApiKey?: string; resendWebhookSecret?: string; mailProvider?: 'resend' | 'postmark'; postmarkServerToken?: string; postmarkWebhookSecret?: string } = {};
-      if (settingsForm.resendApiKey.trim()) payload.resendApiKey = settingsForm.resendApiKey.trim();
-      if (settingsForm.resendWebhookSecret.trim()) payload.resendWebhookSecret = settingsForm.resendWebhookSecret.trim();
-      if (settingsForm.mailProvider === 'resend' || settingsForm.mailProvider === 'postmark') payload.mailProvider = settingsForm.mailProvider;
+      const payload: { mailProvider: 'postmark'; postmarkServerToken?: string; postmarkWebhookSecret?: string } = { mailProvider: 'postmark' };
       if (settingsForm.postmarkServerToken.trim()) payload.postmarkServerToken = settingsForm.postmarkServerToken.trim();
       if (settingsForm.postmarkWebhookSecret.trim()) payload.postmarkWebhookSecret = settingsForm.postmarkWebhookSecret.trim();
       return adminApi.updateTenantConfig(payload);
     },
     onSuccess: async () => {
-      setSettingsForm({ resendApiKey: '', resendWebhookSecret: '', mailProvider: '', postmarkServerToken: '', postmarkWebhookSecret: '' });
+      setSettingsForm({ postmarkServerToken: '', postmarkWebhookSecret: '' });
       toast.success(t('system_mail.settings_saved'));
       await Promise.all([
         qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY }),
@@ -384,21 +381,15 @@ export function SystemMailPage() {
   const submitSettings = (event: React.FormEvent) => {
     event.preventDefault();
     setSettingsValidationError(null);
-    const apiKey = settingsForm.resendApiKey.trim();
-    const webhookSecret = settingsForm.resendWebhookSecret.trim();
     const postmarkToken = settingsForm.postmarkServerToken.trim();
     const postmarkSecret = settingsForm.postmarkWebhookSecret.trim();
-    const providerChanged = settingsForm.mailProvider === 'resend' || settingsForm.mailProvider === 'postmark';
-    if (!apiKey && !webhookSecret && !postmarkToken && !postmarkSecret && !providerChanged) {
-      setSettingsValidationError(t('system_mail.provider_secret_required'));
+    const alreadyConfigured = Boolean(tenantConfig.data?.hasPostmarkServerToken);
+    if (!postmarkToken && !postmarkSecret && !alreadyConfigured) {
+      setSettingsValidationError('Enter the Postmark server token (and webhook secret) before saving.');
       return;
     }
-    if (apiKey && apiKey.length < 12) {
-      setSettingsValidationError(t('system_mail.resend_key_invalid'));
-      return;
-    }
-    if (webhookSecret && !webhookSecret.startsWith('whsec_')) {
-      setSettingsValidationError(t('system_mail.resend_webhook_secret_invalid'));
+    if (postmarkToken && postmarkToken.length < 12) {
+      setSettingsValidationError('The Postmark server token looks too short.');
       return;
     }
     saveSettings.mutate();
@@ -549,7 +540,7 @@ export function SystemMailPage() {
               <StateBlock
                 title={t('system_mail.health_missing_title')}
                 body={t('system_mail.health_missing_body')}
-                action={<button type="button" className="btn primary" onClick={() => document.getElementById('field-resend-api-key')?.focus()}>{t('system_mail.health_missing_cta')}</button>}
+                action={<button type="button" className="btn primary" onClick={() => document.getElementById('field-postmark-server-token')?.focus()}>{t('system_mail.health_missing_cta')}</button>}
               />
             )}
             {providerHealth.isSuccess && !providerHealth.data.credentialRequired && (
@@ -561,7 +552,7 @@ export function SystemMailPage() {
                 ) : (
                   <div className="error-state">{providerHealth.data.error ?? t(`system_mail.health_status_${providerHealth.data.status}`)}</div>
                 )}
-                <DetailLine label={t('system_mail.health_provider')} value="Resend" />
+                <DetailLine label={t('system_mail.health_provider')} value={tenantConfig.data?.mailProvider === 'postmark' ? 'Postmark' : 'Resend'} />
                 <DetailLine label={t('system_mail.health_source')} value={t(`system_mail.health_source_${providerHealth.data.source}`)} />
                 <DetailLine label={t('system_mail.health_provider_status')} value={providerHealth.data.providerStatus === null ? '-' : String(providerHealth.data.providerStatus)} />
                 <DetailLine label={t('system_mail.health_reachable')} value={providerHealth.data.reachable ? t('common.yes') : t('common.no')} />
@@ -611,9 +602,9 @@ export function SystemMailPage() {
               <span className="meta">{providerEvents.data?.meta.count ?? 0} stored</span>
             </h3>
             <p className="muted" style={{ marginTop: -4, marginBottom: 12, fontSize: 12 }}>
-              Resend webhooks are counted only when the signed provider event is stored for this tenant.
+              Provider webhooks are counted only when the verified provider event is stored for this tenant.
             </p>
-            {providerEvents.isLoading && <StateBlock title="Loading provider events" body="Reading stored Resend webhook proof from the API." />}
+            {providerEvents.isLoading && <StateBlock title="Loading provider events" body="Reading stored provider webhook proof from the API." />}
             {providerEvents.isError && (
               <StateBlock
                 title="Could not load provider webhook proof"
@@ -624,7 +615,7 @@ export function SystemMailPage() {
             {providerEvents.isSuccess && providerEvents.data.data.length === 0 && (
               <StateBlock
                 title="No provider webhook proof yet"
-                body="No signed Resend webhook event has been stored for this tenant. Live provider verification is not complete until at least one row appears here."
+                body="No verified provider webhook event has been stored for this tenant yet. Live provider verification is not complete until at least one row appears here."
               />
             )}
             {providerEvents.isSuccess && providerEvents.data.data.length > 0 && (
@@ -640,60 +631,19 @@ export function SystemMailPage() {
             <h3>
               <span>{t('system_mail.settings_title')}</span>
               <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
-                <span className={`pill ${tenantConfig.data?.hasResendApiKey ? 'success' : 'warn'}`}>
-                  {tenantConfig.data?.hasResendApiKey ? t('system_mail.resend_key_saved') : t('system_mail.resend_key_missing')}
+                <span className={`pill ${tenantConfig.data?.mailProvider === 'postmark' ? 'success' : 'warn'}`}>
+                  {tenantConfig.data?.mailProvider === 'postmark' ? 'Provider: Postmark' : 'Provider not set'}
                 </span>
-                <span className={`pill ${tenantConfig.data?.hasResendWebhookSecret ? 'success' : 'warn'}`}>
-                  {tenantConfig.data?.hasResendWebhookSecret ? t('system_mail.resend_webhook_secret_saved') : t('system_mail.resend_webhook_secret_missing')}
+                <span className={`pill ${tenantConfig.data?.hasPostmarkServerToken ? 'success' : 'warn'}`}>
+                  {tenantConfig.data?.hasPostmarkServerToken ? 'Server token saved' : 'Server token missing'}
+                </span>
+                <span className={`pill ${tenantConfig.data?.hasPostmarkWebhookSecret ? 'success' : 'warn'}`}>
+                  {tenantConfig.data?.hasPostmarkWebhookSecret ? 'Webhook secret saved' : 'Webhook secret missing'}
                 </span>
               </span>
             </h3>
             {settingsValidationError && <div className="error-state">{settingsValidationError}</div>}
             {tenantConfig.isError && <div className="error-state">{apiErrorMessage(tenantConfig.error)}</div>}
-            <div className="field">
-              <label htmlFor="field-resend-api-key">{t('system_mail.field_resend_api_key')}</label>
-              <div className="auth-password-wrap">
-                <KeyRound className="auth-input-icon" size={14} />
-                <input
-                  id="field-resend-api-key"
-                  type="password"
-                  value={settingsForm.resendApiKey}
-                  onChange={(event) => setSettingsForm((current) => ({ ...current, resendApiKey: event.target.value }))}
-                  placeholder={t('system_mail.placeholder_resend_api_key')}
-                  disabled={!canMailSettingsWrite || saveSettings.isPending}
-                />
-              </div>
-              <span className="hint">{t('system_mail.resend_key_hint')}</span>
-            </div>
-            <div className="field">
-              <label htmlFor="field-resend-webhook-secret">{t('system_mail.field_resend_webhook_secret')}</label>
-              <div className="auth-password-wrap">
-                <KeyRound className="auth-input-icon" size={14} />
-                <input
-                  id="field-resend-webhook-secret"
-                  type="password"
-                  value={settingsForm.resendWebhookSecret}
-                  onChange={(event) => setSettingsForm((current) => ({ ...current, resendWebhookSecret: event.target.value }))}
-                  placeholder={t('system_mail.placeholder_resend_webhook_secret')}
-                  disabled={!canMailSettingsWrite || saveSettings.isPending}
-                />
-              </div>
-              <span className="hint">{t('system_mail.resend_webhook_secret_hint')}</span>
-            </div>
-            <div className="field">
-              <label htmlFor="field-mail-provider">Mail provider</label>
-              <select
-                id="field-mail-provider"
-                value={settingsForm.mailProvider || (tenantConfig.data?.mailProvider ?? '')}
-                onChange={(event) => setSettingsForm((current) => ({ ...current, mailProvider: event.target.value }))}
-                disabled={!canMailSettingsWrite || saveSettings.isPending}
-              >
-                <option value="">Default (environment)</option>
-                <option value="resend">Resend</option>
-                <option value="postmark">Postmark</option>
-              </select>
-              <span className="hint">Which provider this workspace sends through. Postmark requires a saved server token below.</span>
-            </div>
             <div className="field">
               <label htmlFor="field-postmark-server-token">Postmark server token</label>
               <div className="auth-password-wrap">
