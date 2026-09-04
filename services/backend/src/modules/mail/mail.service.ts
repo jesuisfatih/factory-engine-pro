@@ -2079,7 +2079,8 @@ export class MailService {
     const existing = await this.repository.findById(deliveryId);
     if (!existing) throw new NotFoundException('Mail delivery not found');
     if (existing.status === 'sent') return existing;
-    if (existing.status === 'queued_disabled') return existing;
+    // queued_disabled rows are NOT returned early: a manual retry after send
+    // controls were enabled must re-evaluate the decision and deliver them.
 
     const sendDecision = await this.evaluateDeliverySendDecision(existing);
     if (!sendDecision.allowed) {
