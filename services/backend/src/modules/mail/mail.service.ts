@@ -797,13 +797,31 @@ export class MailService {
 
   async sendTest(to: string, subject: string) {
     const brand = await this.resolveBrandName();
+    const rendered = await this.renderTransactionalEventTemplate({
+      eventKey: 'system.test',
+      variables: {
+        brand,
+        brand_name: brand,
+        email: to,
+        recipientName: to,
+        recipient_name: to,
+        subject,
+      },
+      fallback: {
+        subject,
+        html: `<p>This is a Factory Engine Pro transactional mail test for <strong>${escapeHtml(brand)}</strong>.</p>`,
+        text: `This is a Factory Engine Pro transactional mail test for ${brand}.`,
+      },
+    });
     return this.sendTransactional({
       eventKey: 'system.test',
       to,
-      subject,
-      html: `<p>This is a Factory Engine Pro transactional mail test for <strong>${escapeHtml(brand)}</strong>.</p>`,
-      text: `This is a Factory Engine Pro transactional mail test for ${brand}.`,
-      metadata: { source: 'mail_center_test' },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      templateId: rendered.templateId,
+      templateVersionId: rendered.templateVersionId,
+      metadata: { source: 'mail_center_test', templateSource: rendered.templateSource },
     });
   }
 
