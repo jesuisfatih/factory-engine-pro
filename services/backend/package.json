@@ -9,6 +9,7 @@
     "start": "node dist/services/backend/src/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:resend-webhook": "tsx --test src/modules/mail/resend-webhook.test.ts",
+    "test:postmark-webhook": "tsx --test src/modules/mail/postmark.test.ts",
     "test:shopify-webhook": "tsx --test src/modules/shopify-webhooks/shopify-webhook.test.ts",
     "test:storefront-reorder": "tsx --test src/modules/storefront/storefront-reorder.test.ts",
     "test:abandoned-checkout": "tsx --test src/modules/sync/shopify-abandoned-checkout.service.test.ts src/modules/accounts/accounts-abandoned-checkout.test.ts",

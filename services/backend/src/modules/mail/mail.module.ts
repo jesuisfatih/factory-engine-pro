@@ -12,11 +12,11 @@ import { MailMarketingService } from './mail-marketing.service.js';
 import { MailOutboundWorker } from './mail-outbound.worker.js';
 import { MailRepository } from './mail.repository.js';
 import { MailService } from './mail.service.js';
-import { MailWebhookController } from './mail-webhook.controller.js';
+import { MailWebhookController, PostmarkWebhookController } from './mail-webhook.controller.js';
 
 @Module({
   imports: [forwardRef(() => RulesModule)],
-  controllers: [MailController, EmailTemplatesController, MailMarketingController, MailWebhookController],
+  controllers: [MailController, EmailTemplatesController, MailMarketingController, MailWebhookController, PostmarkWebhookController],
   providers: [
     EmailTemplatesRepository,
     EmailTemplatesService,

@@ -48,6 +48,9 @@ type MailDeliveryPage = MailDeliveryLogResponse<MailDelivery>;
 interface TenantConfigResponse {
   hasResendApiKey: boolean;
   hasResendWebhookSecret: boolean;
+  mailProvider?: 'resend' | 'postmark' | null;
+  hasPostmarkServerToken?: boolean;
+  hasPostmarkWebhookSecret?: boolean;
 }
 
 interface MailSuppressionRow {
@@ -121,7 +124,7 @@ export function SystemMailPage() {
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState({ to: '', subject: '' });
-  const [settingsForm, setSettingsForm] = useState({ resendApiKey: '', resendWebhookSecret: '' });
+  const [settingsForm, setSettingsForm] = useState({ resendApiKey: '', resendWebhookSecret: '', mailProvider: '', postmarkServerToken: '', postmarkWebhookSecret: '' });
   const [suppressionForm, setSuppressionForm] = useState({
     email: '',
     scope: 'global',
@@ -238,13 +241,16 @@ export function SystemMailPage() {
 
   const saveSettings = useMutation({
     mutationFn: () => {
-      const payload: { resendApiKey?: string; resendWebhookSecret?: string } = {};
+      const payload: { resendApiKey?: string; resendWebhookSecret?: string; mailProvider?: 'resend' | 'postmark'; postmarkServerToken?: string; postmarkWebhookSecret?: string } = {};
       if (settingsForm.resendApiKey.trim()) payload.resendApiKey = settingsForm.resendApiKey.trim();
       if (settingsForm.resendWebhookSecret.trim()) payload.resendWebhookSecret = settingsForm.resendWebhookSecret.trim();
+      if (settingsForm.mailProvider === 'resend' || settingsForm.mailProvider === 'postmark') payload.mailProvider = settingsForm.mailProvider;
+      if (settingsForm.postmarkServerToken.trim()) payload.postmarkServerToken = settingsForm.postmarkServerToken.trim();
+      if (settingsForm.postmarkWebhookSecret.trim()) payload.postmarkWebhookSecret = settingsForm.postmarkWebhookSecret.trim();
       return adminApi.updateTenantConfig(payload);
     },
     onSuccess: async () => {
-      setSettingsForm({ resendApiKey: '', resendWebhookSecret: '' });
+      setSettingsForm({ resendApiKey: '', resendWebhookSecret: '', mailProvider: '', postmarkServerToken: '', postmarkWebhookSecret: '' });
       toast.success(t('system_mail.settings_saved'));
       await Promise.all([
         qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY }),
@@ -380,7 +386,10 @@ export function SystemMailPage() {
     setSettingsValidationError(null);
     const apiKey = settingsForm.resendApiKey.trim();
     const webhookSecret = settingsForm.resendWebhookSecret.trim();
-    if (!apiKey && !webhookSecret) {
+    const postmarkToken = settingsForm.postmarkServerToken.trim();
+    const postmarkSecret = settingsForm.postmarkWebhookSecret.trim();
+    const providerChanged = settingsForm.mailProvider === 'resend' || settingsForm.mailProvider === 'postmark';
+    if (!apiKey && !webhookSecret && !postmarkToken && !postmarkSecret && !providerChanged) {
       setSettingsValidationError(t('system_mail.provider_secret_required'));
       return;
     }
@@ -670,6 +679,50 @@ export function SystemMailPage() {
                 />
               </div>
               <span className="hint">{t('system_mail.resend_webhook_secret_hint')}</span>
+            </div>
+            <div className="field">
+              <label htmlFor="field-mail-provider">Mail provider</label>
+              <select
+                id="field-mail-provider"
+                value={settingsForm.mailProvider || (tenantConfig.data?.mailProvider ?? '')}
+                onChange={(event) => setSettingsForm((current) => ({ ...current, mailProvider: event.target.value }))}
+                disabled={!canMailSettingsWrite || saveSettings.isPending}
+              >
+                <option value="">Default (environment)</option>
+                <option value="resend">Resend</option>
+                <option value="postmark">Postmark</option>
+              </select>
+              <span className="hint">Which provider this workspace sends through. Postmark requires a saved server token below.</span>
+            </div>
+            <div className="field">
+              <label htmlFor="field-postmark-server-token">Postmark server token</label>
+              <div className="auth-password-wrap">
+                <KeyRound className="auth-input-icon" size={14} />
+                <input
+                  id="field-postmark-server-token"
+                  type="password"
+                  value={settingsForm.postmarkServerToken}
+                  onChange={(event) => setSettingsForm((current) => ({ ...current, postmarkServerToken: event.target.value }))}
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  disabled={!canMailSettingsWrite || saveSettings.isPending}
+                />
+              </div>
+              <span className="hint">{tenantConfig.data?.hasPostmarkServerToken ? 'A Postmark server token is saved for this workspace.' : 'No Postmark server token saved yet.'}</span>
+            </div>
+            <div className="field">
+              <label htmlFor="field-postmark-webhook-secret">Postmark webhook secret</label>
+              <div className="auth-password-wrap">
+                <KeyRound className="auth-input-icon" size={14} />
+                <input
+                  id="field-postmark-webhook-secret"
+                  type="password"
+                  value={settingsForm.postmarkWebhookSecret}
+                  onChange={(event) => setSettingsForm((current) => ({ ...current, postmarkWebhookSecret: event.target.value }))}
+                  placeholder="shared secret for webhook basic auth"
+                  disabled={!canMailSettingsWrite || saveSettings.isPending}
+                />
+              </div>
+              <span className="hint">{tenantConfig.data?.hasPostmarkWebhookSecret ? 'A Postmark webhook secret is saved. Use it as the Basic auth password on the Postmark webhook.' : 'Set a shared secret, then configure the Postmark webhook with username "factory-engine" and this secret as password.'}</span>
             </div>
             <button type="submit" className="btn" disabled={!canMailSettingsWrite || saveSettings.isPending}>
               <Save size={14} /> {saveSettings.isPending ? t('system_mail.saving_settings') : t('system_mail.save_settings')}

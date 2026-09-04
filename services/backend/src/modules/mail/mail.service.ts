@@ -34,6 +34,13 @@ import {
   verifyResendSvixSignature,
   type ResendWebhookEvent,
 } from './resend-webhook.js';
+import {
+  POSTMARK_API_BASE,
+  buildPostmarkSendBody,
+  parsePostmarkWebhookEvent,
+  postmarkFailureMessage,
+  verifyPostmarkBasicAuth,
+} from './postmark.js';
 
 export const MAIL_OUTBOUND_JOB = 'mail.deliver';
 
@@ -886,6 +893,72 @@ export class MailService {
         deliveryId: delivery?.id ?? null,
         eventType: event.type,
       };
+    });
+  }
+
+  async receivePostmarkWebhook(input: { tenantSlug: string; rawBody: string; headers: Record<string, string> }) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug: input.tenantSlug },
+      include: { config: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found for this Postmark webhook.');
+
+    const webhookSecret = this.resolvePostmarkWebhookSecret(tenant.config?.postmarkWebhookSecretEncrypted);
+    if (!webhookSecret) throw new BadRequestException('Postmark webhook secret is not configured for this tenant.');
+    verifyPostmarkBasicAuth(input.headers, webhookSecret);
+
+    const event = parsePostmarkWebhookEvent(input.rawBody);
+    const providerEventId = event.providerEventId;
+    const requestId = this.tenantContext.get()?.requestId ?? `postmark-webhook-${providerEventId}`;
+
+    return this.tenantContext.run({ requestId, tenantId: tenant.id, permissions: [] }, async () => {
+      const tenantId = tenant.id;
+      const duplicate = await this.prisma.db.mailProviderEvent.findFirst({
+        where: { tenantId, provider: 'postmark', providerEventId },
+      });
+      if (duplicate) {
+        return { accepted: true, status: 'duplicate', eventId: duplicate.id, deliveryId: duplicate.deliveryId, eventType: duplicate.eventType };
+      }
+
+      const delivery = await this.resolveProviderWebhookDelivery(event, 'postmark');
+      const ignoredReason = delivery ? null : 'delivery_not_matched';
+      let stored: { id: string; deliveryId: string | null; eventType: string };
+      try {
+        stored = await this.prisma.db.mailProviderEvent.create({
+          data: {
+            id: prefixedId('mpev'),
+            tenantId,
+            provider: 'postmark',
+            providerEventId,
+            providerMessageId: event.providerMessageId,
+            deliveryId: delivery?.id ?? null,
+            eventType: event.type,
+            recipientEmail: event.recipientEmail,
+            subject: event.subject,
+            payload: event.payload as Prisma.InputJsonValue,
+            headers: {} as Prisma.InputJsonValue,
+            occurredAt: event.occurredAt,
+            ignoredReason,
+          },
+        });
+      } catch (error) {
+        if (!isUniqueConstraint(error)) throw error;
+        const racedDuplicate = await this.prisma.db.mailProviderEvent.findFirst({ where: { tenantId, provider: 'postmark', providerEventId } });
+        if (!racedDuplicate) throw error;
+        return { accepted: true, status: 'duplicate', eventId: racedDuplicate.id, deliveryId: racedDuplicate.deliveryId, eventType: racedDuplicate.eventType };
+      }
+
+      await this.applyResendProviderEvent(event, delivery, 'postmark');
+      await this.prisma.db.mailProviderEvent.updateMany({ where: { tenantId, id: stored.id }, data: { processedAt: new Date() } });
+
+      this.logger.log('mail', 'postmark_webhook_processed', 'Postmark provider event processed', {
+        mail_provider_event_id: stored.id,
+        mail_delivery_id: delivery?.id ?? null,
+        event_type: event.type,
+        ignored_reason: ignoredReason,
+      });
+
+      return { accepted: true, status: ignoredReason ? 'stored_unmatched' : 'processed', eventId: stored.id, deliveryId: delivery?.id ?? null, eventType: event.type };
     });
   }
 
@@ -2027,6 +2100,10 @@ export class MailService {
     const delivery = await this.repository.markSending(deliveryId);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
 
+    if ((await this.resolveMailProviderName()) === 'postmark') {
+      return this.deliverViaPostmark(delivery);
+    }
+
     const apiKey = await this.resolveResendApiKey();
     if (!apiKey) {
       this.logger.warn('mail', 'resend_missing', 'RESEND_API_KEY is not configured; delivery skipped', { mail_delivery_id: delivery.id });
@@ -2086,6 +2163,62 @@ export class MailService {
       categoryB2b: row.categoryB2b,
       categoryMarketing: row.categoryMarketing,
     });
+  }
+
+  private async deliverViaPostmark(delivery: NonNullable<Awaited<ReturnType<MailService['repository']['findById']>>>) {
+    const { key: serverToken } = await this.resolvePostmarkServerTokenWithSource();
+    if (!serverToken) {
+      this.logger.warn('mail', 'postmark_missing', 'Postmark server token is not configured; delivery skipped', { mail_delivery_id: delivery.id });
+      return this.repository.markSkipped(delivery.id, 'Postmark server token is not configured');
+    }
+    try {
+      const transport = deliveryTransport(delivery.metadata);
+      const from = await this.resolveFromAddress(transport.fromName);
+      const response = await fetch(`${this.postmarkBaseUrl()}/email`, {
+        method: 'POST',
+        headers: {
+          'X-Postmark-Server-Token': serverToken,
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(buildPostmarkSendBody({
+          from,
+          to: delivery.recipientEmail,
+          subject: delivery.subject,
+          html: delivery.html,
+          text: delivery.text ?? undefined,
+          replyTo: transport.replyTo ?? undefined,
+          tag: delivery.eventKey,
+          metadata: {
+            delivery_id: delivery.id,
+            tenant_id: delivery.tenantId,
+            category: delivery.category,
+            event_key: delivery.eventKey,
+          },
+        })),
+      });
+      const payload = await response.json().catch(() => null) as { MessageID?: string; ErrorCode?: number; Message?: string } | null;
+      if (!response.ok || (payload?.ErrorCode ?? 0) !== 0) {
+        throw new Error(payload?.Message ?? `Postmark failed with ${response.status}`);
+      }
+      this.logger.log('mail', 'sent', 'Transactional email sent', {
+        mail_delivery_id: delivery.id,
+        event_key: delivery.eventKey,
+        provider_message_id: payload?.MessageID,
+        provider: 'postmark',
+      });
+      return this.repository.markSent(delivery.id, 'postmark', payload?.MessageID ?? null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.repository.markFailed(delivery.id, message);
+      await this.recordDlq(delivery.id, message);
+      this.logger.error('mail', 'send_failed', message, { mail_delivery_id: delivery.id, event_key: delivery.eventKey, provider: 'postmark' });
+      throw error;
+    }
+  }
+
+  private postmarkBaseUrl() {
+    return this.config.get<string>('POSTMARK_API_BASE_URL')?.trim().replace(/\/+$/, '') || POSTMARK_API_BASE;
   }
 
   private async writeSettingsAudit(before: MailCenterSettings, after: MailCenterSettings, changedBy: string) {
@@ -2183,16 +2316,50 @@ export class MailService {
     return this.config.get<string>('RESEND_WEBHOOK_SECRET')?.trim() || null;
   }
 
+  private async resolveMailProviderName(): Promise<'resend' | 'postmark'> {
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
+      where: { tenantId: this.tenantId() },
+      select: { mailProvider: true },
+    });
+    const configured = tenantConfig?.mailProvider?.trim().toLowerCase();
+    if (configured === 'postmark' || configured === 'resend') return configured;
+    const envProvider = this.config.get<string>('MAIL_PROVIDER')?.trim().toLowerCase();
+    return envProvider === 'postmark' ? 'postmark' : 'resend';
+  }
+
+  private async resolvePostmarkServerTokenWithSource(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
+      where: { tenantId: this.tenantId() },
+      select: { postmarkServerTokenEncrypted: true },
+    });
+    const tenantKey = this.crypto.decrypt(tenantConfig?.postmarkServerTokenEncrypted)?.trim();
+    if (tenantKey) return { key: tenantKey, source: 'tenant_config' };
+    const envKey = this.config.get<string>('POSTMARK_SERVER_TOKEN')?.trim();
+    if (envKey) return { key: envKey, source: 'env' };
+    return { key: null, source: 'none' };
+  }
+
+  private resolvePostmarkWebhookSecret(encryptedTenantSecret: string | null | undefined) {
+    const tenantSecret = this.crypto.decrypt(encryptedTenantSecret)?.trim();
+    if (tenantSecret) return tenantSecret;
+    return this.config.get<string>('POSTMARK_WEBHOOK_SECRET')?.trim() || null;
+  }
+
   private async resolveResendWebhookDelivery(event: ResendWebhookEvent) {
+    return this.resolveProviderWebhookDelivery(event, 'resend');
+  }
+
+  private async resolveProviderWebhookDelivery(event: ResendWebhookEvent, provider: 'resend' | 'postmark') {
     const tenantId = this.tenantId();
-    const taggedDeliveryId = textValue(asRecord(event.data.tags).delivery_id);
+    const metadataRecord = provider === 'postmark' ? asRecord(event.data.Metadata) : asRecord(event.data.tags);
+    const taggedDeliveryId = textValue(metadataRecord.delivery_id);
     if (taggedDeliveryId) {
       const tagged = await this.prisma.db.mailDelivery.findFirst({ where: { tenantId, id: taggedDeliveryId } });
       if (tagged) return tagged;
     }
     if (event.providerMessageId) {
       return this.prisma.db.mailDelivery.findFirst({
-        where: { tenantId, provider: 'resend', providerMessageId: event.providerMessageId },
+        where: { tenantId, provider, providerMessageId: event.providerMessageId },
       });
     }
     return null;
@@ -2201,6 +2368,7 @@ export class MailService {
   private async applyResendProviderEvent(
     event: ResendWebhookEvent,
     delivery: Awaited<ReturnType<MailService['resolveResendWebhookDelivery']>>,
+    provider: 'resend' | 'postmark' = 'resend',
   ) {
     if (delivery) {
       const currentMetadata = asRecord(delivery.metadata);
@@ -2210,7 +2378,7 @@ export class MailService {
       const happenedAt = event.occurredAt ?? new Date();
       const nextProviderEvents: Record<string, unknown> = {
         ...providerEvents,
-        provider: 'resend',
+        provider,
         lastEventType: event.type,
         lastEventAt: happenedAt.toISOString(),
         counts: { ...counts, [event.type]: currentCount + 1 },
@@ -2226,7 +2394,7 @@ export class MailService {
       };
       if (event.type === 'email.delivered' || event.type === 'email.sent') {
         data.status = 'sent';
-        data.provider = 'resend';
+        data.provider = provider;
         data.sentAt = delivery.sentAt ?? happenedAt;
         data.errorMessage = null;
       }

@@ -20,6 +20,23 @@ export class MailWebhookController {
   }
 }
 
+@Controller('webhooks/postmark')
+export class PostmarkWebhookController {
+  constructor(private readonly mail: MailService) {}
+
+  @Public()
+  @Post(':tenantSlug')
+  @HttpCode(200)
+  receive(@Param('tenantSlug') tenantSlug: string, @Req() request: RawBodyRequest<Request>) {
+    const rawBody = request.rawBody?.toString('utf8');
+    return this.mail.receivePostmarkWebhook({
+      tenantSlug,
+      rawBody: rawBody ?? JSON.stringify(request.body ?? {}),
+      headers: normalizeHeaders(request.headers),
+    });
+  }
+}
+
 function normalizeHeaders(headers: Request['headers']) {
   return Object.fromEntries(
     Object.entries(headers).map(([key, value]) => [key.toLowerCase(), Array.isArray(value) ? value.join(',') : value ?? '']),

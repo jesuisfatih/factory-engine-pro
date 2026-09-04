@@ -707,6 +707,9 @@ export const tenantConfigSchema = z.object({
   anthropicApiKey: z.string().optional(),
   resendApiKey: z.string().optional(),
   resendWebhookSecret: z.string().optional(),
+  mailProvider: z.enum(['resend', 'postmark']).optional(),
+  postmarkServerToken: z.string().optional(),
+  postmarkWebhookSecret: z.string().optional(),
 });
 export type TenantConfigInput = z.infer<typeof tenantConfigSchema>;
 

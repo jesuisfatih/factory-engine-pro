@@ -331,6 +331,9 @@ export class IdentityService {
         hasAnthropicApiKey: false,
         hasResendApiKey: false,
         hasResendWebhookSecret: false,
+        mailProvider: null,
+        hasPostmarkServerToken: false,
+        hasPostmarkWebhookSecret: false,
       };
     }
     return {
@@ -352,6 +355,9 @@ export class IdentityService {
       hasAnthropicApiKey: Boolean(config.anthropicApiKeyEncrypted),
       hasResendApiKey: Boolean(config.resendApiKeyEncrypted),
       hasResendWebhookSecret: Boolean(config.resendWebhookSecretEncrypted),
+      mailProvider: config.mailProvider ?? null,
+      hasPostmarkServerToken: Boolean(config.postmarkServerTokenEncrypted),
+      hasPostmarkWebhookSecret: Boolean(config.postmarkWebhookSecretEncrypted),
     };
   }
 
@@ -399,6 +405,9 @@ export class IdentityService {
       anthropicApiKeyEncrypted: this.crypto.encrypt(input.anthropicApiKey),
       resendApiKeyEncrypted: this.crypto.encrypt(input.resendApiKey),
       resendWebhookSecretEncrypted: this.crypto.encrypt(input.resendWebhookSecret),
+      mailProvider: input.mailProvider,
+      postmarkServerTokenEncrypted: this.crypto.encrypt(input.postmarkServerToken),
+      postmarkWebhookSecretEncrypted: this.crypto.encrypt(input.postmarkWebhookSecret),
     };
     if (existing) {
       await this.prisma.db.tenantConfig.updateMany({ where: { id: existing.id }, data: stripUndefined(data) });

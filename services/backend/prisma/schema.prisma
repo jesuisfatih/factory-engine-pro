@@ -195,6 +195,9 @@ model TenantConfig {
   anthropicApiKeyEncrypted      String?  @map("anthropic_api_key_encrypted")
   resendApiKeyEncrypted         String?  @map("resend_api_key_encrypted")
   resendWebhookSecretEncrypted  String?  @map("resend_webhook_secret_encrypted")
+  mailProvider                  String?  @map("mail_provider")
+  postmarkServerTokenEncrypted  String?  @map("postmark_server_token_encrypted")
+  postmarkWebhookSecretEncrypted String? @map("postmark_webhook_secret_encrypted")
   createdAt                     DateTime @default(now()) @map("created_at")
   updatedAt                     DateTime @updatedAt @map("updated_at")
 
