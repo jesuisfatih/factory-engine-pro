@@ -226,6 +226,8 @@ interface LifecycleRow extends Record<string, unknown> {
   sourceEventId: string | null;
   sourceCallId: string | null;
   sourceOccurredAt: Date | null;
+  currentDisposition?: string | null;
+  currentOutcomeId?: string | null;
   title: string;
   metadata: Record<string, unknown>;
   updatedAt: Date;
@@ -429,6 +431,21 @@ test('a later call continues the same active customer intent lifecycle', async (
   assert.equal(second.item.priority, 'low');
   assert.equal(harness.occurrences.length, 2);
   assert.equal(harness.clearedCustomOrders(), 1);
+});
+
+test('a later call clears the current outcome pointer while preserving the outcome history rows', async () => {
+  const harness = lifecycleHarness();
+  const first = await harness.service.continueOrCreate(lifecycleInput('event_1'));
+  const row = harness.rows.find((candidate) => candidate.id === first.item.id);
+  assert.ok(row);
+  row.currentDisposition = 'completed';
+  row.currentOutcomeId = 'cco_previous';
+
+  const second = await harness.service.continueOrCreate(lifecycleInput('event_2'));
+
+  assert.equal(second.outcome, 'continued');
+  assert.equal(row.currentDisposition, 'not_selected');
+  assert.equal(row.currentOutcomeId, null);
 });
 
 test('the latest matched rule assignment owns the continued lifecycle and the previous owner remains a watcher', async () => {

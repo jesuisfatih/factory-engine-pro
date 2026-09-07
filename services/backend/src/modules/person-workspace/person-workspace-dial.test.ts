@@ -80,3 +80,77 @@ test('an accepted priority call creates one outcome-required staff work item', a
   assert.equal(recordedOutcome[0]?.disposition, 'not_selected');
   assert.equal(recordedOutcome[0]?.idempotencyKey, 'dial-outcome:priority-call-request-1');
 });
+
+test('a successful telephone fallback still moves a priority customer into follow-up', async () => {
+  const createdWork: Array<Record<string, unknown>> = [];
+  const recordedOutcome: Array<Record<string, unknown>> = [];
+  const service = new PersonWorkspaceService(
+    {
+      db: {
+        customer: {
+          findFirst: async () => ({
+            id: 'cust_priority',
+            companyName: 'Acme Prints',
+            firstName: null,
+            lastName: null,
+            email: 'buyer@example.com',
+          }),
+        },
+      },
+    } as never,
+    { require: () => ({ tenantId: 'ten_test' }) } as never,
+    {} as never,
+    { capturePhonePoints: async () => undefined } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {
+      dialForMember: async () => ({
+        ok: true,
+        mode: 'tel_link',
+        phone: '+1 (312) 555-0100',
+        normalizedPhone: '+13125550100',
+        aircallUserId: null,
+        message: 'Telephone app opened.',
+        telHref: 'tel:+13125550100',
+        providerStatus: null,
+      }),
+    } as never,
+    {} as never,
+    {} as never,
+    {
+      assertProactiveDialAllowed: async () => undefined,
+      create: async (input: Record<string, unknown>) => {
+        createdWork.push(input);
+        return { id: 'swi_priority_fallback' };
+      },
+      recordOutcome: async (id: string, memberId: string, input: Record<string, unknown>) => {
+        recordedOutcome.push({ id, memberId, ...input });
+        return { id: 'cco_priority_fallback' };
+      },
+    } as never,
+    { log: () => undefined } as never,
+    { emitTenantInvalidate: () => undefined } as never,
+    {} as never,
+    {} as never,
+    { recordDial: async () => ({ id: 'contact_dial_fallback' }) } as never,
+  );
+  const privateService = service as unknown as {
+    currentMember: () => Promise<{ id: string }>;
+    assertCustomerInWorkspace: () => Promise<void>;
+  };
+  privateService.currentMember = async () => ({ id: 'tmbr_staff' });
+  privateService.assertCustomerInWorkspace = async () => undefined;
+
+  const result = await service.dialCustomer({
+    phone: '+1 (312) 555-0100',
+    customerId: 'cust_priority',
+    source: 'priority_board',
+    idempotencyKey: 'priority-call-fallback-1',
+  });
+
+  assert.equal(result.staffWorkItemId, 'swi_priority_fallback');
+  assert.equal(createdWork[0]?.source, 'priority_call');
+  assert.equal(recordedOutcome[0]?.providerResult, 'tel_link');
+  assert.equal(recordedOutcome[0]?.disposition, 'not_selected');
+});

@@ -1055,7 +1055,7 @@ export class PersonWorkspaceService {
       dialActivityId = activity.id;
     }
     let staffWorkItemId = existingTask?.id ?? null;
-    if (result.ok && result.mode === 'aircall_dial') {
+    if (result.ok) {
       if (!staffWorkItemId && input.source === 'priority_board' && input.customerId) {
         const customer = await this.prisma.db.customer.findFirst({ where: { id: input.customerId } });
         if (!customer) throw new NotFoundException('Customer not found.');
@@ -1427,6 +1427,7 @@ export class PersonWorkspaceService {
       recentOrders,
       activityLogs,
       relatedRequests,
+      customerInternalNotes,
       aircallRows,
       outcomeRows,
       callContext,
@@ -1455,6 +1456,13 @@ export class PersonWorkspaceService {
             include: { comments: { orderBy: { createdAt: 'desc' }, take: 3 } },
             orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
             take: 30,
+          })
+        : Promise.resolve([]),
+      customerId
+        ? this.prisma.db.customerInternalNote.findMany({
+            where: { customerId, deletedAt: null },
+            orderBy: [{ createdAt: 'desc' }],
+            take: 50,
           })
         : Promise.resolve([]),
       aircallScopes.length > 0
@@ -1499,12 +1507,20 @@ export class PersonWorkspaceService {
       recentOrders: orders,
       timeline: taskTimeline(row, recentOrders, aircallRows, activityLogs, relatedRequests),
       performance30d,
-      notes: row.comments.map((comment) => ({
-        id: comment.id,
-        body: comment.body,
-        actorType: comment.actorType,
-        createdAt: comment.createdAt.toISOString(),
-      })).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+      notes: [
+        ...row.comments.map((comment) => ({
+          id: comment.id,
+          body: comment.body,
+          actorType: comment.actorType,
+          createdAt: comment.createdAt.toISOString(),
+        })),
+        ...customerInternalNotes.map((note) => ({
+          id: note.id,
+          body: note.body,
+          actorType: 'customer_internal_note',
+          createdAt: note.createdAt.toISOString(),
+        })),
+      ].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
       outcomeHistory: outcomeRows.map((outcome) => ({
         id: outcome.id,
         disposition: outcome.disposition as PersonTaskBriefDetail['outcomeHistory'][number]['disposition'],

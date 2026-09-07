@@ -415,6 +415,7 @@ export class StaffWorkService {
               resolutionCode: null,
               resolutionNote: null,
               currentDisposition: 'not_selected',
+              currentOutcomeId: null,
               conditionTrace: (input.conditionTrace ?? []) as Prisma.InputJsonValue,
               taskStateSnapshot: (input.taskStateSnapshot ?? {}) as Prisma.InputJsonValue,
             } : {}),
