@@ -1,0 +1,105 @@
+.tax-review-card {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--success) 5%, var(--surface));
+}
+
+.tax-review-heading,
+.tax-sync-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.tax-review-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.tax-review-heading span,
+.tax-choice small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tax-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.tax-choice:hover,
+.tax-choice.selected {
+  border-color: color-mix(in srgb, var(--success) 62%, var(--border));
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.tax-choice input {
+  margin-top: 2px;
+  accent-color: var(--success);
+}
+
+.tax-choice span {
+  display: grid;
+  gap: 2px;
+}
+
+.tax-state-field {
+  margin: 2px 0 0 26px;
+}
+
+.tax-review-warning {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--warning, #9a6700);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tax-sync-status {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tax-sync-status.synced {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: color-mix(in srgb, var(--success) 6%, var(--surface));
+}
+
+.tax-sync-status.failed {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+
+.tax-sync-error {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  color: var(--danger);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .tax-state-field {
+    margin-left: 0;
+  }
+}

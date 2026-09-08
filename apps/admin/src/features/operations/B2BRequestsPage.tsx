@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Download, FileCheck2, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-react';
+import type { ApproveB2BAccessInput } from '@factory-engine-pro/contracts';
+import { AlertTriangle, CheckCircle2, Download, FileCheck2, RefreshCw, RotateCw, Search, ShieldCheck, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,8 +8,10 @@ import { toast } from 'sonner';
 import { PageHeader } from '@/components/PageHeader';
 import { adminApi, apiErrorMessage } from '@/lib/api';
 import { useCan } from '@/lib/permissions';
+import './B2BRequestsPage.css';
 
 type B2BStatus = 'pending' | 'approved' | 'rejected';
+type TaxExemptionMode = 'none' | 'general' | 'state_reseller';
 
 interface B2BFile {
   id: string;
@@ -39,6 +42,16 @@ interface B2BRequest {
   files: B2BFile[];
   metadata: Record<string, unknown>;
   decisionDelivery: DecisionDelivery | null;
+  taxSync: TaxSync;
+}
+
+interface TaxSync {
+  status: 'not_requested' | 'synced' | 'failed';
+  mode: 'general' | 'state_reseller' | null;
+  jurisdictions: string[];
+  shopifyExemptions: string[];
+  error: string | null;
+  updatedAt: string | null;
 }
 
 interface DecisionDelivery {
@@ -62,6 +75,8 @@ interface ApproveResult {
     deliveryId: string;
   } | null;
   decisionDelivery: DecisionDelivery | null;
+  taxDecisionDelivery?: DecisionDelivery | null;
+  taxSync?: TaxSync;
 }
 
 interface RejectResult {
@@ -79,6 +94,8 @@ export function B2BRequestsPage() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [taxExemptionMode, setTaxExemptionMode] = useState<TaxExemptionMode>('none');
+  const [taxState, setTaxState] = useState<UsStateCode | ''>('');
   const [lastDecision, setLastDecision] = useState<ApproveResult | RejectResult | null>(null);
   const requests = useQuery({ queryKey: [...QK, status], queryFn: () => adminApi.b2bAccessRequests(`?status=${status}`) as Promise<B2BRequest[]> });
   const detail = useQuery({
@@ -101,13 +118,30 @@ export function B2BRequestsPage() {
   const selected = detail.data ?? rows.find((row) => row.id === selectedId) ?? null;
   useEffect(() => {
     setReviewNotes(selected?.reviewNotes ?? '');
+    const savedMode = selected?.metadata?.taxExemptionMode;
+    setTaxExemptionMode(savedMode === 'general' || savedMode === 'state_reseller' ? savedMode : 'none');
+    const savedStates = Array.isArray(selected?.metadata?.taxExemptionJurisdictions)
+      ? selected.metadata.taxExemptionJurisdictions.filter((item): item is string => typeof item === 'string')
+      : [];
+    setTaxState(isUsStateCode(savedStates[0]) ? savedStates[0] : '');
     setLastDecision(null);
   }, [selected?.id]);
 
   const approve = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error('Select an application first');
-      return adminApi.approveB2BAccessRequest(selected.id) as Promise<ApproveResult>;
+      const taxRequest = isTaxRequest(selected);
+      if (taxRequest && taxExemptionMode === 'none') throw new Error('Choose the approved tax exemption type.');
+      if (taxExemptionMode === 'state_reseller' && !taxState) throw new Error('Choose the reseller certificate state.');
+      let input: ApproveB2BAccessInput;
+      if (!taxRequest || taxExemptionMode === 'none') {
+        input = { reviewNotes: reviewNotes || undefined, taxExemptionMode: 'none' };
+      } else if (taxExemptionMode === 'state_reseller' && taxState) {
+        input = { reviewNotes: reviewNotes || undefined, taxExemptionMode: 'state_reseller', taxExemptionJurisdictions: [taxState] };
+      } else {
+        input = { reviewNotes: reviewNotes || undefined, taxExemptionMode: 'general' };
+      }
+      return adminApi.approveB2BAccessRequest(selected.id, input) as Promise<ApproveResult>;
     },
     onSuccess: (result) => {
       setLastDecision(result);
@@ -115,6 +149,19 @@ export function B2BRequestsPage() {
       invalidateB2B(qc);
     },
     onError: (error) => toast.error(t('b2b_access.approve_failed'), { description: apiErrorMessage(error) }),
+  });
+
+  const retryTaxSync = useMutation({
+    mutationFn: async () => {
+      if (!selected) throw new Error('Select an application first');
+      return adminApi.retryB2BTaxSync(selected.id);
+    },
+    onSuccess: () => {
+      toast.success('Shopify tax sync completed');
+      invalidateB2B(qc);
+      detail.refetch();
+    },
+    onError: (error) => toast.error('Shopify tax sync failed', { description: apiErrorMessage(error) }),
   });
 
   const reject = useMutation({
@@ -254,6 +301,9 @@ export function B2BRequestsPage() {
                     request={selected}
                     decision={lastDecision}
                     reviewNotes={reviewNotes}
+                    canRetryTaxSync={canWrite}
+                    retryingTaxSync={retryTaxSync.isPending}
+                    onRetryTaxSync={() => retryTaxSync.mutate()}
                   />
                 )}
 
@@ -264,8 +314,52 @@ export function B2BRequestsPage() {
                       <label>{t('b2b_access.review_notes')}</label>
                       <textarea rows={3} value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} />
                     </div>
+                    {isTaxRequest(selected) && (
+                      <div className="tax-review-card">
+                        <div className="tax-review-heading">
+                          <ShieldCheck size={17} />
+                          <div>
+                            <strong>Approved tax treatment</strong>
+                            <span>Select exactly what the uploaded document authorizes.</span>
+                          </div>
+                        </div>
+                        <label className={`tax-choice ${taxExemptionMode === 'general' ? 'selected' : ''}`}>
+                          <input
+                            type="radio"
+                            name="tax-exemption-mode"
+                            checked={taxExemptionMode === 'general'}
+                            onChange={() => { setTaxExemptionMode('general'); setTaxState(''); }}
+                          />
+                          <span><strong>General tax exemption</strong><small>Shopify will treat this customer as generally tax exempt.</small></span>
+                        </label>
+                        <label className={`tax-choice ${taxExemptionMode === 'state_reseller' ? 'selected' : ''}`}>
+                          <input
+                            type="radio"
+                            name="tax-exemption-mode"
+                            checked={taxExemptionMode === 'state_reseller'}
+                            onChange={() => setTaxExemptionMode('state_reseller')}
+                          />
+                          <span><strong>State reseller certificate</strong><small>Only the selected state reseller exemption will be added in Shopify.</small></span>
+                        </label>
+                        {taxExemptionMode === 'state_reseller' && (
+                          <div className="field tax-state-field">
+                            <label htmlFor="tax-reseller-state">Certificate state</label>
+                            <select id="tax-reseller-state" value={taxState} onChange={(event) => setTaxState(event.target.value as UsStateCode | '')}>
+                              <option value="">Select a state</option>
+                              {US_STATES.map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}
+                            </select>
+                          </div>
+                        )}
+                        <div className="tax-review-warning"><AlertTriangle size={14} /> Verify the certificate before approval. This selection updates the matched Shopify customer.</div>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button type="button" className="btn primary" disabled={approve.isPending} onClick={() => approve.mutate()}>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        disabled={approve.isPending || (isTaxRequest(selected) && (taxExemptionMode === 'none' || (taxExemptionMode === 'state_reseller' && !taxState)))}
+                        onClick={() => approve.mutate()}
+                      >
                         <CheckCircle2 size={13} /> {t('b2b_access.approve')}
                       </button>
                       <button type="button" className="btn danger-outline" disabled={reject.isPending} onClick={() => reject.mutate()}>
@@ -287,15 +381,22 @@ function DecisionOutcome({
   request,
   decision,
   reviewNotes,
+  canRetryTaxSync,
+  retryingTaxSync,
+  onRetryTaxSync,
 }: {
   request: B2BRequest;
   decision: ApproveResult | RejectResult | null;
   reviewNotes: string;
+  canRetryTaxSync: boolean;
+  retryingTaxSync: boolean;
+  onRetryTaxSync: () => void;
 }) {
   const approvedDecision = decision && 'customerId' in decision ? decision : null;
   const delivery = decision?.decisionDelivery ?? request.decisionDelivery;
   const customerId = approvedDecision?.customerId ?? request.resolvedCustomerId;
   const customerUserId = approvedDecision?.customerUserId ?? request.resolvedCustomerUserId;
+  const taxSync = approvedDecision?.taxSync ?? request.taxSync;
   const tone = request.status === 'rejected' ? 'var(--danger)' : 'var(--success)';
   return (
     <div className="modal-section" style={{ marginTop: 14, borderColor: tone }}>
@@ -316,6 +417,23 @@ function DecisionOutcome({
       {request.status === 'rejected' ? (
         <DetailLine label="Customer message" value={(request.reviewNotes ?? reviewNotes) || 'Application could not be approved at this time.'} />
       ) : null}
+      {taxSync?.status !== 'not_requested' ? (
+        <div className={`tax-sync-status ${taxSync.status}`}>
+          <div className="tax-sync-title">
+            {taxSync.status === 'synced' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+            <strong>{taxSync.status === 'synced' ? 'Shopify tax status synchronized' : 'Shopify tax sync needs attention'}</strong>
+          </div>
+          <DetailLine label="Tax treatment" value={taxSync.mode === 'state_reseller' ? `State reseller — ${taxSync.jurisdictions.join(', ')}` : 'General tax exemption'} />
+          {taxSync.shopifyExemptions.length ? <DetailLine label="Shopify exemption" value={taxSync.shopifyExemptions.join(', ')} /> : null}
+          {taxSync.updatedAt ? <DetailLine label="Last sync attempt" value={fmtDate(taxSync.updatedAt)} /> : null}
+          {taxSync.error ? <div className="tax-sync-error">{taxSync.error}</div> : null}
+          {taxSync.status === 'failed' && canRetryTaxSync ? (
+            <button type="button" className="btn" disabled={retryingTaxSync} onClick={onRetryTaxSync}>
+              <RotateCw size={13} className={retryingTaxSync ? 'spin' : ''} /> Retry Shopify sync
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {delivery ? (
         <>
           <DetailLine label="Decision email" value={`${delivery.status} / ${delivery.recipientEmail}`} />
@@ -330,6 +448,24 @@ function DecisionOutcome({
       )}
     </div>
   );
+}
+
+const US_STATES = [
+  ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'],
+  ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DC', 'District of Columbia'], ['DE', 'Delaware'], ['FL', 'Florida'], ['GA', 'Georgia'],
+  ['HI', 'Hawaii'], ['ID', 'Idaho'], ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'],
+  ['KS', 'Kansas'], ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'],
+  ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'], ['MO', 'Missouri'],
+  ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'], ['NH', 'New Hampshire'], ['NJ', 'New Jersey'],
+  ['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'], ['ND', 'North Dakota'], ['OH', 'Ohio'],
+  ['OK', 'Oklahoma'], ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'], ['SC', 'South Carolina'],
+  ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'], ['VT', 'Vermont'],
+  ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'], ['WI', 'Wisconsin'], ['WY', 'Wyoming'],
+] as const;
+type UsStateCode = (typeof US_STATES)[number][0];
+
+function isUsStateCode(value: unknown): value is UsStateCode {
+  return typeof value === 'string' && US_STATES.some(([code]) => code === value);
 }
 
 function invalidateB2B(qc: ReturnType<typeof useQueryClient>) {
@@ -375,6 +511,14 @@ function requestTypeLabel(request: B2BRequest) {
   if (handle === 'tax-exempt-renewal') return 'Tax certificate renewal';
   if (request.taxCertificateExpiresAt || request.files.length > 0) return 'B2B access + tax exemption';
   return 'B2B access';
+}
+
+function isTaxRequest(request: B2BRequest) {
+  const handle = typeof request.metadata?.formHandle === 'string' ? request.metadata.formHandle : '';
+  return handle === 'tax-exempt-for-businesses'
+    || handle === 'tax-exempt-renewal'
+    || Boolean(request.taxCertificateExpiresAt)
+    || request.files.length > 0;
 }
 
 function fmtDate(value: string | null) {

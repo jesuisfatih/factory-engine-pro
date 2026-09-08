@@ -1996,6 +1996,7 @@ export class MailService {
     reviewNotes?: string | null;
     actionUrl?: string | null;
     expiresAt?: string | null;
+    taxExemptionSummary?: string | null;
   }) {
     const brand = await this.resolveBrandName();
     const fallback = taxExemptFallback(input, brand);
@@ -2015,6 +2016,7 @@ export class MailService {
         admin_url: input.actionUrl ?? '',
         action_url: input.actionUrl ?? '',
         expires_at: input.expiresAt ?? '',
+        tax_exemption_summary: input.taxExemptionSummary ?? '',
       },
       fallback,
     });
@@ -2032,6 +2034,7 @@ export class MailService {
         requestId: input.requestId,
         companyName: input.companyName,
         expiresAt: input.expiresAt ?? null,
+        taxExemptionSummary: input.taxExemptionSummary ?? null,
         templateSource: rendered.templateSource,
       },
     });
@@ -2836,6 +2839,7 @@ function taxExemptFallback(input: {
   reviewNotes?: string | null;
   actionUrl?: string | null;
   expiresAt?: string | null;
+  taxExemptionSummary?: string | null;
 }, brand: string) {
   const states: Record<TaxExemptEventKey, { subject: string; body: string }> = {
     'tax_exempt.request_received.user': {
@@ -2848,7 +2852,7 @@ function taxExemptFallback(input: {
     },
     'tax_exempt.request_approved.user': {
       subject: `${brand} tax exemption request approved`,
-      body: `The tax exemption request for ${input.companyName} was approved.`,
+      body: `The tax exemption request for ${input.companyName} was approved.${input.taxExemptionSummary ? ` Approved status: ${input.taxExemptionSummary}.` : ''}`,
     },
     'tax_exempt.request_rejected.user': {
       subject: `Update on your ${brand} tax exemption request`,

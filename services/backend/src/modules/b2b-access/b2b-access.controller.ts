@@ -2,11 +2,13 @@ import { Body, Controller, Get, Param, Post, Query, Res, UploadedFile, UseInterc
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import {
+  approveB2BAccessSchema,
   b2bAccessQuerySchema,
   createB2BAccessRequestSchema,
   MEMBER_PERMISSIONS,
   rejectB2BAccessSchema,
   type B2BAccessQuery,
+  type ApproveB2BAccessInput,
   type CreateB2BAccessRequestInput,
   type RejectB2BAccessInput,
 } from '@factory-engine-pro/contracts';
@@ -49,8 +51,17 @@ export class B2BAccessController {
 
   @Post(':id/approve')
   @RequirePermission(MEMBER_PERMISSIONS.b2bAccessWrite)
-  approve(@Param('id') id: string) {
-    return this.service.approve(id);
+  approve(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(approveB2BAccessSchema)) body: ApproveB2BAccessInput,
+  ) {
+    return this.service.approve(id, body);
+  }
+
+  @Post(':id/tax-sync/retry')
+  @RequirePermission(MEMBER_PERMISSIONS.b2bAccessWrite)
+  retryTaxSync(@Param('id') id: string) {
+    return this.service.retryTaxSync(id);
   }
 
   @Post(':id/reject')

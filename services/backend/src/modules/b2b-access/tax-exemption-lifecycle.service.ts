@@ -10,6 +10,17 @@ import { ShopifyClientService } from '../sync/shopify-client.service.js';
 
 const WARNING_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
+export type TaxExemptionMode = 'general' | 'state_reseller';
+
+export interface TaxExemptionSyncResult {
+  status: 'synced' | 'failed';
+  mode: TaxExemptionMode;
+  jurisdictions: string[];
+  shopifyExemptions: string[];
+  error: string | null;
+  updatedAt: string;
+}
+
 @Injectable()
 export class TaxExemptionLifecycleService {
   constructor(
@@ -25,11 +36,23 @@ export class TaxExemptionLifecycleService {
     requestId: string;
     expiresAt: Date;
     certificateFileId?: string | null;
+    mode: TaxExemptionMode;
+    jurisdictions?: string[];
   }) {
     const customer = await this.prisma.db.customer.findFirst({ where: { id: input.customerId } });
     if (!customer) throw new Error('Approved B2B customer was not found');
 
-    const rawData = mergeRawData(customer.rawData, { tax_exempt: true, taxExemptionExpiresAt: input.expiresAt.toISOString() });
+    const jurisdictions = input.mode === 'state_reseller'
+      ? normalizeStates(input.jurisdictions ?? [])
+      : [];
+    const shopifyExemptions = shopifyResellerExemptionsForStates(jurisdictions);
+    const rawData = mergeRawData(customer.rawData, {
+      tax_exempt: true,
+      taxExemptionMode: input.mode,
+      taxExemptionJurisdictions: jurisdictions,
+      shopifyTaxExemptions: shopifyExemptions,
+      taxExemptionExpiresAt: input.expiresAt.toISOString(),
+    });
     await this.prisma.db.customer.updateMany({
       where: { id: customer.id },
       data: {
@@ -62,17 +85,58 @@ export class TaxExemptionLifecycleService {
       },
     });
 
-    const shopifySyncError = await this.syncShopifyTaxExempt(customer.shopifyCustomerId, true);
+    const shopifySyncError = await this.syncShopifyTaxExemption(customer.shopifyCustomerId, {
+      enabled: true,
+      mode: input.mode,
+      shopifyExemptions,
+    });
+    await this.prisma.db.customerTaxExemption.updateMany({
+      where: { customerId: customer.id },
+      data: {
+        status: shopifySyncError ? 'sync_failed' : 'active',
+        shopifySyncError,
+      },
+    });
     if (shopifySyncError) {
-      await this.prisma.db.customerTaxExemption.updateMany({
-        where: { customerId: customer.id },
-        data: { shopifySyncError },
-      });
       this.logger.warn('b2b_access', 'tax_exemption_shopify_enable_failed', shopifySyncError, {
         customer_id: customer.id,
         request_id: input.requestId,
       });
     }
+    return this.syncResult(input.mode, jurisdictions, shopifyExemptions, shopifySyncError);
+  }
+
+  async retryForApprovedRequest(input: {
+    customerId: string;
+    requestId: string;
+  }) {
+    const customer = await this.prisma.db.customer.findFirst({ where: { id: input.customerId } });
+    if (!customer) throw new Error('Approved B2B customer was not found');
+    const settings = taxSettingsFromRawData(customer.rawData);
+    if (!settings) throw new Error('Tax exemption settings are missing for this approved request.');
+    const shopifySyncError = await this.syncShopifyTaxExemption(customer.shopifyCustomerId, {
+      enabled: true,
+      mode: settings.mode,
+      shopifyExemptions: settings.shopifyExemptions,
+    });
+    await this.prisma.db.customerTaxExemption.updateMany({
+      where: { customerId: customer.id, sourceRequestId: input.requestId },
+      data: {
+        status: shopifySyncError ? 'sync_failed' : 'active',
+        shopifySyncError,
+      },
+    });
+    this.logger.log('b2b_access', 'tax_exemption_shopify_retry', 'Shopify tax exemption sync retried', {
+      customer_id: customer.id,
+      request_id: input.requestId,
+      status: shopifySyncError ? 'failed' : 'synced',
+    });
+    return this.syncResult(
+      settings.mode,
+      settings.jurisdictions,
+      settings.shopifyExemptions,
+      shopifySyncError,
+    );
   }
 
   async sweep() {
@@ -153,7 +217,16 @@ export class TaxExemptionLifecycleService {
       },
     });
 
-    const shopifySyncError = await this.syncShopifyTaxExempt(customer.shopifyCustomerId, false);
+    const settings = taxSettingsFromRawData(customer.rawData) ?? {
+      mode: 'general' as const,
+      jurisdictions: [],
+      shopifyExemptions: [],
+    };
+    const shopifySyncError = await this.syncShopifyTaxExemption(customer.shopifyCustomerId, {
+      enabled: false,
+      mode: settings.mode,
+      shopifyExemptions: settings.shopifyExemptions,
+    });
     const recipient = primaryRecipient(customer);
     if (recipient) {
       await this.mail.sendTaxExemptEvent({
@@ -179,14 +252,33 @@ export class TaxExemptionLifecycleService {
     return { shopifySyncError };
   }
 
-  private async syncShopifyTaxExempt(shopifyCustomerId: string | null, taxExempt: boolean) {
-    if (!shopifyCustomerId) return null;
+  private async syncShopifyTaxExemption(
+    shopifyCustomerId: string | null,
+    input: { enabled: boolean; mode: TaxExemptionMode; shopifyExemptions: string[] },
+  ) {
+    if (!shopifyCustomerId) return 'This portal customer is not linked to a Shopify customer.';
     const credentials = await this.shopify.resolveCredentials();
     if (!credentials) return 'Shopify credentials are not configured for this tenant.';
     const id = shopifyCustomerId.startsWith('gid://')
       ? shopifyCustomerId
       : `gid://shopify/Customer/${shopifyCustomerId}`;
     try {
+      if (input.mode === 'state_reseller') {
+        if (input.shopifyExemptions.length === 0) return 'At least one reseller jurisdiction is required.';
+        const mutation = input.enabled ? 'customerAddTaxExemptions' : 'customerRemoveTaxExemptions';
+        const response = await this.shopify.graphql<Record<string, {
+          userErrors?: Array<{ field?: string[]; message: string }>;
+        }>>(credentials, `
+          mutation UpdateCustomerTaxExemptions($customerId: ID!, $taxExemptions: [TaxExemption!]!) {
+            ${mutation}(customerId: $customerId, taxExemptions: $taxExemptions) {
+              customer { id taxExempt taxExemptions }
+              userErrors { field message }
+            }
+          }
+        `, { customerId: id, taxExemptions: input.shopifyExemptions });
+        const errors = response[mutation]?.userErrors ?? [];
+        return errors.length ? errors.map((error) => error.message).join('; ') : null;
+      }
       const response = await this.shopify.graphql<{
         customerUpdate?: { userErrors?: Array<{ field?: string[]; message: string }> };
       }>(credentials, `
@@ -196,12 +288,28 @@ export class TaxExemptionLifecycleService {
             userErrors { field message }
           }
         }
-      `, { input: { id, taxExempt } });
+      `, { input: { id, taxExempt: input.enabled } });
       const errors = response.customerUpdate?.userErrors ?? [];
       return errors.length ? errors.map((error) => error.message).join('; ') : null;
     } catch (error) {
       return error instanceof Error ? error.message : String(error);
     }
+  }
+
+  private syncResult(
+    mode: TaxExemptionMode,
+    jurisdictions: string[],
+    shopifyExemptions: string[],
+    error: string | null,
+  ): TaxExemptionSyncResult {
+    return {
+      status: error ? 'failed' : 'synced',
+      mode,
+      jurisdictions,
+      shopifyExemptions,
+      error,
+      updatedAt: new Date().toISOString(),
+    };
   }
 }
 
@@ -238,6 +346,31 @@ function mergeRawData(value: Prisma.JsonValue | null, patch: Record<string, Pris
     ? value as Prisma.JsonObject
     : {};
   return { ...current, ...patch } as Prisma.InputJsonValue;
+}
+
+export function shopifyResellerExemptionsForStates(states: string[]) {
+  return normalizeStates(states).map((state) => `US_${state}_RESELLER_EXEMPTION`);
+}
+
+function normalizeStates(states: string[]) {
+  return [...new Set(states.map((state) => state.trim().toUpperCase()).filter(Boolean))].sort();
+}
+
+function taxSettingsFromRawData(value: Prisma.JsonValue | null): {
+  mode: TaxExemptionMode;
+  jurisdictions: string[];
+  shopifyExemptions: string[];
+} | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const mode = value.taxExemptionMode === 'state_reseller' ? 'state_reseller' : value.taxExemptionMode === 'general' ? 'general' : null;
+  if (!mode) return null;
+  const jurisdictions = Array.isArray(value.taxExemptionJurisdictions)
+    ? normalizeStates(value.taxExemptionJurisdictions.filter((item): item is string => typeof item === 'string'))
+    : [];
+  const shopifyExemptions = Array.isArray(value.shopifyTaxExemptions)
+    ? value.shopifyTaxExemptions.filter((item): item is string => typeof item === 'string')
+    : shopifyResellerExemptionsForStates(jurisdictions);
+  return { mode, jurisdictions, shopifyExemptions };
 }
 
 function accountsUrl(path: string) {

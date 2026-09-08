@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import {
   accountPortalExperienceSchema,
   type AccountPortalRequestField,
+  type ApproveB2BAccessInput,
   type CreateB2BAccessRequestInput,
   type RejectB2BAccessInput,
 } from '@factory-engine-pro/contracts';
@@ -125,11 +126,13 @@ export class B2BAccessService {
     return this.present(request);
   }
 
-  async approve(id: string) {
+  async approve(id: string, input: ApproveB2BAccessInput) {
     const request = await this.repository.findById(id);
     if (!request) throw new NotFoundException('B2B access request not found');
     if (request.status !== 'pending') throw new BadRequestException(`Request is already ${request.status}`);
-    if (isTaxExemptionRenewal(request)) return this.approveTaxExemptionRenewal(request);
+    const taxRequest = isTaxExemptRequest(request);
+    validateTaxApproval(request, input, taxRequest);
+    if (isTaxExemptionRenewal(request)) return this.approveTaxExemptionRenewal(request, input);
     let existingUser = await this.repository.findCustomerUserByEmail(request.email);
     const requestShopifyCustomerId = cleanOptionalString(request.shopifyCustomerId ?? undefined);
     const matchedCustomer = await this.repository.findCustomerByIdentity(request.email, requestShopifyCustomerId);
@@ -185,18 +188,25 @@ export class B2BAccessService {
       status: 'approved',
       reviewedAt: new Date(),
       reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
+      reviewNotes: input.reviewNotes ?? null,
       resolvedCustomerId: customer.id,
       resolvedCustomerUserId: user.id,
+      metadata: mergeMetadata(request.metadata, {
+        taxExemptionMode: input.taxExemptionMode,
+        taxExemptionJurisdictions: input.taxExemptionJurisdictions ?? [],
+      }),
       ...(shopifyCustomerId ? { shopifyCustomerId } : {}),
     });
-    if (request.taxCertificateExpiresAt) {
-      await this.taxExemptionLifecycle.activateForApprovedRequest({
+    const taxSync = taxRequest && request.taxCertificateExpiresAt && input.taxExemptionMode !== 'none'
+      ? await this.taxExemptionLifecycle.activateForApprovedRequest({
         customerId: customer.id,
         requestId: request.id,
         expiresAt: request.taxCertificateExpiresAt,
         certificateFileId: request.files[0]?.id ?? null,
-      });
-    }
+        mode: input.taxExemptionMode,
+        jurisdictions: input.taxExemptionJurisdictions,
+      })
+      : null;
     const delivery = await this.mail.sendB2BApplicationApproved({
       to: user.email,
       recipientName: `${user.firstName} ${user.lastName}`.trim(),
@@ -216,6 +226,7 @@ export class B2BAccessService {
         requestId: request.id,
         applicantEmail: request.email,
         expiresAt: request.taxCertificateExpiresAt ? formatDateOnly(request.taxCertificateExpiresAt) : null,
+        taxExemptionSummary: taxExemptionSummary(input),
         actionUrl: `${(process.env.ACCOUNTS_URL ?? '').replace(/\/+$/, '')}/login`,
       })
       : null;
@@ -234,6 +245,22 @@ export class B2BAccessService {
       invitation: null,
       decisionDelivery: this.presentDecisionDelivery(delivery),
       taxDecisionDelivery: taxDecisionDelivery ? this.presentDecisionDelivery(taxDecisionDelivery) : null,
+      taxSync: taxSync ?? notRequestedTaxSync(),
+    };
+  }
+
+  async retryTaxSync(id: string) {
+    const request = await this.repository.findById(id);
+    if (!request) throw new NotFoundException('B2B access request not found');
+    if (request.status !== 'approved' || !request.resolvedCustomerId || !isTaxExemptRequest(request)) {
+      throw new BadRequestException('Only an approved tax exemption request can be synchronized.');
+    }
+    return {
+      success: true,
+      taxSync: await this.taxExemptionLifecycle.retryForApprovedRequest({
+        customerId: request.resolvedCustomerId,
+        requestId: request.id,
+      }),
     };
   }
 
@@ -295,10 +322,14 @@ export class B2BAccessService {
 
   private async present(request: any) {
     const { passwordHash: _passwordHash, ...safe } = request;
-    const decisionDelivery = await this.repository.findLatestDecisionDelivery(request.id);
+    const [decisionDelivery, taxExemption] = await Promise.all([
+      this.repository.findLatestDecisionDelivery(request.id),
+      request.resolvedCustomerId ? this.repository.findTaxExemption(request.resolvedCustomerId) : null,
+    ]);
     return {
       ...safe,
       decisionDelivery: decisionDelivery ? this.presentDecisionDelivery(decisionDelivery) : null,
+      taxSync: taxExemption ? presentTaxSync(taxExemption) : notRequestedTaxSync(),
     };
   }
 
@@ -344,23 +375,33 @@ export class B2BAccessService {
     this.tenantContext.set({ tenantId: config.tenantId });
   }
 
-  private async approveTaxExemptionRenewal(request: B2BAccessRequestWithFiles) {
+  private async approveTaxExemptionRenewal(request: B2BAccessRequestWithFiles, input: ApproveB2BAccessInput) {
     if (!request.resolvedCustomerId || !request.taxCertificateExpiresAt || !request.files[0]) {
       throw new BadRequestException('This certificate renewal is missing its customer, expiration date, or file.');
     }
     const customer = await this.prisma.db.customer.findFirst({ where: { id: request.resolvedCustomerId } });
     if (!customer) throw new NotFoundException('Certificate renewal customer was not found');
 
-    await this.taxExemptionLifecycle.activateForApprovedRequest({
+    if (input.taxExemptionMode === 'none') {
+      throw new BadRequestException('Choose the approved tax exemption type before approving this renewal.');
+    }
+    const taxSync = await this.taxExemptionLifecycle.activateForApprovedRequest({
       customerId: customer.id,
       requestId: request.id,
       expiresAt: request.taxCertificateExpiresAt,
       certificateFileId: request.files[0].id,
+      mode: input.taxExemptionMode,
+      jurisdictions: input.taxExemptionJurisdictions,
     });
     await this.repository.update(request.id, {
       status: 'approved',
       reviewedAt: new Date(),
       reviewedByMemberId: this.tenantContext.get()?.principalId ?? null,
+      reviewNotes: input.reviewNotes ?? null,
+      metadata: mergeMetadata(request.metadata, {
+        taxExemptionMode: input.taxExemptionMode,
+        taxExemptionJurisdictions: input.taxExemptionJurisdictions ?? [],
+      }),
     });
     const delivery = await this.mail.sendTaxExemptEvent({
       eventKey: 'tax_exempt.request_approved.user',
@@ -371,6 +412,7 @@ export class B2BAccessService {
       requestId: request.id,
       applicantEmail: request.email,
       expiresAt: formatDateOnly(request.taxCertificateExpiresAt),
+      taxExemptionSummary: taxExemptionSummary(input),
       actionUrl: `${(process.env.ACCOUNTS_URL ?? '').replace(/\/+$/, '')}/profile`,
     });
     this.logger.log('b2b_access', 'tax_exemption_renewal.approve', 'Tax exemption renewal approved', {
@@ -385,6 +427,7 @@ export class B2BAccessService {
       invitation: null,
       decisionDelivery: this.presentDecisionDelivery(delivery),
       taxDecisionDelivery: this.presentDecisionDelivery(delivery),
+      taxSync,
     };
   }
 
@@ -520,6 +563,75 @@ export class B2BAccessService {
 
 function cleanMetadata(metadata: Record<string, unknown>) {
     return Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '')) as unknown as Prisma.InputJsonValue;
+}
+
+function mergeMetadata(value: unknown, patch: Record<string, unknown>) {
+  const current = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return cleanMetadata({ ...current, ...patch });
+}
+
+function validateTaxApproval(
+  request: { taxCertificateExpiresAt?: Date | null },
+  input: ApproveB2BAccessInput,
+  taxRequest: boolean,
+) {
+  if (!taxRequest && input.taxExemptionMode !== 'none') {
+    throw new BadRequestException('Tax exemption options can only be used for a certificate request.');
+  }
+  if (!taxRequest) return;
+  if (input.taxExemptionMode === 'none') {
+    throw new BadRequestException('Choose the approved tax exemption type before approving this request.');
+  }
+  if (!request.taxCertificateExpiresAt) {
+    throw new BadRequestException('A valid certificate expiration date is required before tax exemption approval.');
+  }
+}
+
+function taxExemptionSummary(input: ApproveB2BAccessInput) {
+  if (input.taxExemptionMode === 'general') return 'General tax exemption';
+  if (input.taxExemptionMode === 'state_reseller') {
+    return `Reseller exemption for ${input.taxExemptionJurisdictions.join(', ')}`;
+  }
+  return 'No tax exemption requested';
+}
+
+function notRequestedTaxSync() {
+  return {
+    status: 'not_requested' as const,
+    mode: null,
+    jurisdictions: [] as string[],
+    shopifyExemptions: [] as string[],
+    error: null,
+    updatedAt: null,
+  };
+}
+
+function presentTaxSync(record: {
+  status: string;
+  shopifySyncError: string | null;
+  updatedAt: Date;
+  customer: { rawData: Prisma.JsonValue | null };
+}) {
+  const raw = record.customer.rawData && typeof record.customer.rawData === 'object' && !Array.isArray(record.customer.rawData)
+    ? record.customer.rawData as Record<string, unknown>
+    : {};
+  const mode = raw.taxExemptionMode === 'state_reseller' ? 'state_reseller' as const : 'general' as const;
+  const jurisdictions = Array.isArray(raw.taxExemptionJurisdictions)
+    ? raw.taxExemptionJurisdictions.filter((item): item is string => typeof item === 'string')
+    : [];
+  const shopifyExemptions = Array.isArray(raw.shopifyTaxExemptions)
+    ? raw.shopifyTaxExemptions.filter((item): item is string => typeof item === 'string')
+    : [];
+  return {
+    status: record.shopifySyncError || record.status === 'sync_failed' ? 'failed' as const : 'synced' as const,
+    mode,
+    jurisdictions,
+    shopifyExemptions,
+    error: record.shopifySyncError,
+    updatedAt: record.updatedAt.toISOString(),
+  };
 }
 
 function isTaxExemptRequest(request: { metadata: unknown; taxCertificateExpiresAt?: Date | null; files?: unknown[] }) {

@@ -44,6 +44,7 @@ import type {
   AircallWorkflowRepairResponse,
   AssignDefaultCustomerAxisInput,
   AssignDefaultCustomerAxisResponse,
+  ApproveB2BAccessInput,
   AuthSession,
   BootstrapWorkflowDefaultsResponse,
   BootstrapTenantInput,
@@ -1173,8 +1174,12 @@ export class ApiClient {
     return this.post<{ success: true; message: string; requestId: string }>('/b2b-access', input, false);
   }
 
-  approveB2BAccessRequest(id: string) {
-    return this.post<ApproveB2BAccessResponse>(`/b2b-access/${id}/approve`, {});
+  approveB2BAccessRequest(id: string, input: ApproveB2BAccessInput) {
+    return this.post<ApproveB2BAccessResponse>(`/b2b-access/${id}/approve`, input);
+  }
+
+  retryB2BTaxSync(id: string) {
+    return this.post<{ success: true; taxSync: ApproveB2BAccessResponse['taxSync'] }>(`/b2b-access/${id}/tax-sync/retry`, {});
   }
 
   rejectB2BAccessRequest(id: string, input: RejectB2BAccessInput) {

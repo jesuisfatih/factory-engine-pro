@@ -82,6 +82,13 @@ export class B2BAccessRepository {
     });
   }
 
+  findTaxExemption(customerId: string) {
+    return this.prisma.db.customerTaxExemption.findFirst({
+      where: { customerId },
+      include: { customer: { select: { rawData: true } } },
+    });
+  }
+
   findLatestDecisionDelivery(requestId: string) {
     return this.prisma.db.mailDelivery.findFirst({
       where: {

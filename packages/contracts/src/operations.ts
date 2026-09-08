@@ -277,6 +277,34 @@ export const b2bAccessQuerySchema = z.object({
 });
 export type B2BAccessQuery = z.infer<typeof b2bAccessQuerySchema>;
 
+export const usResellerStateSchema = z.enum([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+]);
+export type UsResellerState = z.infer<typeof usResellerStateSchema>;
+
+export const approveB2BAccessSchema = z.discriminatedUnion('taxExemptionMode', [
+  z.object({
+    reviewNotes: z.string().trim().max(2000).optional(),
+    taxExemptionMode: z.literal('none'),
+    taxExemptionJurisdictions: z.array(usResellerStateSchema).max(0).optional(),
+  }),
+  z.object({
+    reviewNotes: z.string().trim().max(2000).optional(),
+    taxExemptionMode: z.literal('general'),
+    taxExemptionJurisdictions: z.array(usResellerStateSchema).max(0).optional(),
+  }),
+  z.object({
+    reviewNotes: z.string().trim().max(2000).optional(),
+    taxExemptionMode: z.literal('state_reseller'),
+    taxExemptionJurisdictions: z.array(usResellerStateSchema).min(1).max(10),
+  }),
+]);
+export type ApproveB2BAccessInput = z.infer<typeof approveB2BAccessSchema>;
+
 export const rejectB2BAccessSchema = z.object({
   reviewNotes: z.string().trim().max(2000).optional(),
 });
@@ -304,6 +332,15 @@ export const approveB2BAccessResponseSchema = z.object({
     deliveryId: z.string(),
   }).nullable(),
   decisionDelivery: b2bAccessDecisionDeliverySchema.nullable(),
+  taxDecisionDelivery: b2bAccessDecisionDeliverySchema.nullable().optional(),
+  taxSync: z.object({
+    status: z.enum(['not_requested', 'synced', 'failed']),
+    mode: z.enum(['general', 'state_reseller']).nullable(),
+    jurisdictions: z.array(usResellerStateSchema),
+    shopifyExemptions: z.array(z.string()),
+    error: z.string().nullable(),
+    updatedAt: z.string().datetime().nullable(),
+  }).optional(),
 });
 export type ApproveB2BAccessResponse = z.infer<typeof approveB2BAccessResponseSchema>;
 
