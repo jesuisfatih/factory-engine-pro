@@ -62,6 +62,7 @@ interface PricingDraft {
   targetValue: string;
   scopeType: ScopeType;
   scopeValue: string;
+  scopeCollectionIds: string[];
   discountType: DiscountType;
   discountValue: number;
   qtyBreaks: QtyBreak[];
@@ -71,6 +72,21 @@ interface PricingDraft {
   validFrom: string;
   validUntil: string;
   executionMode: PricingExecutionMode;
+}
+
+interface PricingCustomerOption {
+  id: string;
+  name: string;
+  companyName: string | null;
+  email: string | null;
+  shopifyCustomerId: string | null;
+}
+
+interface PricingCollectionOption {
+  id: string;
+  title: string;
+  handle: string | null;
+  productCount: number;
 }
 
 const QK = ['commerce', 'pricing-rules'] as const;
@@ -85,6 +101,7 @@ export function PricingPage() {
   const canWrite = useCan('pricing.write');
   const [editing, setEditing] = useState<PricingDraft | null>(null);
   const rules = useQuery({ queryKey: QK, queryFn: fetchPricingRules });
+  const collections = useQuery({ queryKey: ['commerce', 'pricing-collection-options'], queryFn: fetchPricingCollections });
 
   const remove = useMutation({
     mutationFn: (id: string) => adminApi.deletePricingRule(id),
@@ -166,7 +183,7 @@ export function PricingPage() {
                   </td>
                   <td>
                     <span className="pill">{t(`pricing.scope_types.${rule.scopeType}`)}</span>
-                    <div className="muted" style={{ marginTop: 4 }}>{scopeValue(rule) || '—'}</div>
+                    <div className="muted" style={{ marginTop: 4 }}>{scopeLabel(rule, collections.data ?? []) || '—'}</div>
                   </td>
                   <td>
                     <strong>{discountLabel(rule)}</strong>
@@ -210,8 +227,27 @@ function PricingRuleEditor({ open, draft, onClose }: { open: boolean; draft: Pri
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [current, setCurrent] = useState(draft);
+  const [customerSearch, setCustomerSearch] = useState('');
   const isCreate = !draft.id;
-  useEffect(() => setCurrent(draft), [draft]);
+  useEffect(() => {
+    setCurrent(draft);
+    setCustomerSearch('');
+  }, [draft]);
+  const customers = useQuery({
+    queryKey: ['commerce', 'pricing-customer-options', customerSearch, current.targetValue],
+    queryFn: () => fetchPricingCustomers(customerSearch, current.targetValue),
+    enabled: open && current.targetType === 'customer',
+  });
+  const collections = useQuery({
+    queryKey: ['commerce', 'pricing-collection-options'],
+    queryFn: fetchPricingCollections,
+    enabled: open && current.scopeType === 'collections',
+  });
+  const canSubmit = Boolean(
+    current.name.trim()
+    && (current.targetType !== 'customer' || current.targetValue)
+    && (current.scopeType !== 'collections' || current.scopeCollectionIds.length > 0),
+  );
 
   const save = useMutation({
     mutationFn: () => isCreate
@@ -251,17 +287,70 @@ function PricingRuleEditor({ open, draft, onClose }: { open: boolean; draft: Pri
                 </select>
               </Field>
               <Field label={t('pricing.modal.field_target_value')} id="pricing-target-value">
-                <input id="pricing-target-value" value={current.targetValue} disabled={['all', 'anonymous', 'buyer_intent'].includes(current.targetType)} onChange={(event) => setCurrent({ ...current, targetValue: event.target.value })} placeholder={targetPlaceholder(current.targetType)} />
+                {current.targetType === 'customer' ? (
+                  <div className="pricing-reference-picker">
+                    <input
+                      id="pricing-target-value"
+                      type="search"
+                      value={customerSearch}
+                      onChange={(event) => setCustomerSearch(event.target.value)}
+                      placeholder="Search by company or customer email"
+                      autoComplete="off"
+                    />
+                    <select
+                      aria-label="Select customer"
+                      value={current.targetValue}
+                      onChange={(event) => setCurrent({ ...current, targetValue: event.target.value })}
+                      disabled={customers.isLoading || customers.isError}
+                    >
+                      <option value="">{customers.isLoading ? 'Loading customers…' : 'Select a customer'}</option>
+                      {(customers.data ?? []).map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name}{customer.email && customer.email !== customer.name ? ` — ${customer.email}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {customers.isError && <div className="field-help error">{apiErrorMessage(customers.error)}</div>}
+                  </div>
+                ) : (
+                  <input id="pricing-target-value" value={current.targetValue} disabled={['all', 'anonymous', 'buyer_intent'].includes(current.targetType)} onChange={(event) => setCurrent({ ...current, targetValue: event.target.value })} placeholder={targetPlaceholder(current.targetType)} />
+                )}
               </Field>
             </div>
             <div className="field-row">
               <Field label={t('pricing.modal.field_scope_type')} id="pricing-scope-type">
-                <select id="pricing-scope-type" value={current.scopeType} onChange={(event) => setCurrent({ ...current, scopeType: event.target.value as ScopeType, scopeValue: '' })}>
+                <select id="pricing-scope-type" value={current.scopeType} onChange={(event) => setCurrent({ ...current, scopeType: event.target.value as ScopeType, scopeValue: '', scopeCollectionIds: [] })}>
                   {SCOPE_TYPES.map((type) => <option key={type} value={type}>{t(`pricing.scope_types.${type}`)}</option>)}
                 </select>
               </Field>
               <Field label={t('pricing.modal.field_scope_value')} id="pricing-scope-value">
-                <input id="pricing-scope-value" value={current.scopeValue} disabled={current.scopeType === 'all'} onChange={(event) => setCurrent({ ...current, scopeValue: event.target.value })} placeholder={t('pricing.modal.comma_placeholder')} />
+                {current.scopeType === 'collections' ? (
+                  <div id="pricing-scope-value" className="pricing-collection-picker">
+                    {collections.isLoading && <div className="muted">Loading Shopify collections…</div>}
+                    {collections.isError && <div className="field-help error">{apiErrorMessage(collections.error)}</div>}
+                    {collections.isSuccess && collections.data.length === 0 && <div className="muted">No synced Shopify collections are available.</div>}
+                    {(collections.data ?? []).map((collection) => {
+                      const checked = current.scopeCollectionIds.includes(collection.id);
+                      return (
+                        <label key={collection.id} className={`pricing-collection-option${checked ? ' selected' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setCurrent({
+                              ...current,
+                              scopeCollectionIds: checked
+                                ? current.scopeCollectionIds.filter((id) => id !== collection.id)
+                                : [...current.scopeCollectionIds, collection.id],
+                            })}
+                          />
+                          <span><strong>{collection.title}</strong><small>{collection.productCount} products</small></span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <input id="pricing-scope-value" value={current.scopeValue} disabled={current.scopeType === 'all'} onChange={(event) => setCurrent({ ...current, scopeValue: event.target.value })} placeholder={t('pricing.modal.comma_placeholder')} />
+                )}
               </Field>
             </div>
           </section>
@@ -329,7 +418,7 @@ function PricingRuleEditor({ open, draft, onClose }: { open: boolean; draft: Pri
       </form>
       <footer className="modal-foot">
         <button type="button" className="btn ghost" onClick={onClose}>{t('pricing.modal.cancel')}</button>
-        <button type="submit" form="form-pricing-rule" className="save-btn" disabled={!current.name.trim() || save.isPending}>
+        <button type="submit" form="form-pricing-rule" className="save-btn" disabled={!canSubmit || save.isPending}>
           <Save size={14} /> {save.isPending ? t('common.loading') : t('pricing.modal.save')}
         </button>
       </footer>
@@ -339,6 +428,14 @@ function PricingRuleEditor({ open, draft, onClose }: { open: boolean; draft: Pri
 
 function fetchPricingRules() {
   return adminApi.pricingRules('?limit=100') as Promise<PricingRuleListResponse>;
+}
+
+function fetchPricingCustomers(search: string, selectedId: string) {
+  return adminApi.pricingCustomerOptions(search, selectedId) as Promise<PricingCustomerOption[]>;
+}
+
+function fetchPricingCollections() {
+  return adminApi.pricingCollectionOptions() as Promise<PricingCollectionOption[]>;
 }
 
 function StateBlock({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
@@ -363,6 +460,7 @@ function emptyDraft(): PricingDraft {
     targetValue: '',
     scopeType: 'all',
     scopeValue: '',
+    scopeCollectionIds: [],
     discountType: 'percentage',
     discountValue: 10,
     qtyBreaks: [],
@@ -381,9 +479,10 @@ function draftFromRule(rule: PricingRuleRow): PricingDraft {
     name: rule.name,
     description: rule.description ?? '',
     targetType: rule.targetType === 'customer_group' ? 'customer_role' : rule.targetType,
-    targetValue: targetValue(rule),
+    targetValue: targetDraftValue(rule),
     scopeType: rule.scopeType,
     scopeValue: scopeValue(rule),
+    scopeCollectionIds: rule.scopeCollectionIds ?? [],
     discountType: rule.discountType,
     discountValue: rule.discountType === 'percentage' ? rule.discountPercentage : rule.discountValue,
     qtyBreaks: rule.qtyBreaks ?? [],
@@ -438,7 +537,7 @@ function targetPayload(draft: PricingDraft) {
 function scopePayload(draft: PricingDraft) {
   if (draft.scopeType === 'products') return { scopeProductIds: splitCsv(draft.scopeValue) };
   if (draft.scopeType === 'variants') return { scopeVariantIds: splitCsv(draft.scopeValue) };
-  if (draft.scopeType === 'collections') return { scopeCollectionIds: splitCsv(draft.scopeValue) };
+  if (draft.scopeType === 'collections') return { scopeCollectionIds: draft.scopeCollectionIds };
   if (draft.scopeType === 'tags') return { scopeTags: splitCsv(draft.scopeValue) };
   return {};
 }
@@ -460,12 +559,23 @@ function targetValue(rule: PricingRuleRow) {
   return '';
 }
 
+function targetDraftValue(rule: PricingRuleRow) {
+  if (rule.targetType === 'customer') return rule.targetCustomerId ?? '';
+  return targetValue(rule);
+}
+
 function scopeValue(rule: PricingRuleRow) {
   if (rule.scopeType === 'products') return (rule.scopeProductIds ?? []).join(', ');
   if (rule.scopeType === 'variants') return (rule.scopeVariantIds ?? []).join(', ');
   if (rule.scopeType === 'collections') return (rule.scopeCollectionIds ?? []).join(', ');
   if (rule.scopeType === 'tags') return rule.scopeTags.join(', ');
   return '';
+}
+
+function scopeLabel(rule: PricingRuleRow, collections: PricingCollectionOption[]) {
+  if (rule.scopeType !== 'collections') return scopeValue(rule);
+  const titles = new Map(collections.map((collection) => [collection.id, collection.title]));
+  return (rule.scopeCollectionIds ?? []).map((id) => titles.get(id) ?? id).join(', ');
 }
 
 function discountLabel(rule: PricingRuleRow) {

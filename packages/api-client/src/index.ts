@@ -761,6 +761,24 @@ export class ApiClient {
     return this.get(`/pricing/rules/${id}`);
   }
 
+  pricingCustomerOptions(search = '', selectedId = '') {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    if (selectedId.trim()) params.set('selectedId', selectedId.trim());
+    const query = params.toString();
+    return this.get<Array<{
+      id: string;
+      name: string;
+      companyName: string | null;
+      email: string | null;
+      shopifyCustomerId: string | null;
+    }>>(`/pricing/options/customers${query ? `?${query}` : ''}`);
+  }
+
+  pricingCollectionOptions() {
+    return this.get<Array<{ id: string; title: string; handle: string | null; productCount: number }>>('/pricing/options/collections');
+  }
+
   createPricingRule(input: CreatePricingRuleInput) {
     return this.post('/pricing/rules', input);
   }

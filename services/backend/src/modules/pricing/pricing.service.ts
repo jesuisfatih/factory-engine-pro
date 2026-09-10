@@ -45,7 +45,7 @@ export class PricingService {
   async listRules(query: PricingRulesQuery) {
     const rules = await this.repository.list(this.whereFromQuery(query), query.limit);
     return {
-      data: rules.map((rule) => this.mapRule(rule)),
+      data: rules.map((rule) => this.mapRule(rule, true)),
       meta: { count: rules.length, limit: query.limit },
     };
   }
@@ -55,6 +55,7 @@ export class PricingService {
   }
 
   async createRule(input: CreatePricingRuleInput) {
+    await this.validateRuleReferences(input);
     const executionMode = this.classifyExecutionMode(input.executionMode, input);
     const syncState = this.initialSyncState(executionMode, input.isActive);
     const rule = await this.repository.create({
@@ -70,6 +71,13 @@ export class PricingService {
 
   async updateRule(id: string, input: UpdatePricingRuleInput) {
     const existing = await this.repository.getRequired(id);
+    await this.validateRuleReferences({
+      targetType: input.targetType ?? existing.targetType,
+      targetCustomerId: input.targetCustomerId !== undefined ? input.targetCustomerId : existing.targetCustomerId ?? undefined,
+      targetCustomerUserId: input.targetCustomerUserId !== undefined ? input.targetCustomerUserId : existing.targetCustomerUserId ?? undefined,
+      scopeType: input.scopeType ?? existing.scopeType,
+      scopeCollectionIds: input.scopeCollectionIds ?? existing.scopeCollectionIds,
+    });
     const executionMode = this.classifyExecutionMode(input.executionMode ?? existing.executionMode, {
       discountType: input.discountType ?? existing.discountType,
       targetType: input.targetType ?? existing.targetType,
@@ -78,6 +86,7 @@ export class PricingService {
     });
     const rule = await this.repository.update(id, {
       ...this.toUpdateData(input),
+      ...this.referenceCleanup(input),
       executionMode,
       shopifySyncState: this.initialSyncState(executionMode, input.isActive ?? existing.isActive),
       shopifySyncError: null,
@@ -132,6 +141,72 @@ export class PricingService {
         warning: `Shopify discount catalog could not be loaded: ${message}`,
       };
     }
+  }
+
+  async listCustomerOptions(search?: string, selectedId?: string) {
+    const normalizedSearch = String(search ?? '').trim().slice(0, 100);
+    const customers = await this.prisma.db.customer.findMany({
+      where: normalizedSearch ? {
+        OR: [
+          { companyName: { contains: normalizedSearch, mode: 'insensitive' } },
+          { legalName: { contains: normalizedSearch, mode: 'insensitive' } },
+          { firstName: { contains: normalizedSearch, mode: 'insensitive' } },
+          { lastName: { contains: normalizedSearch, mode: 'insensitive' } },
+          { email: { contains: normalizedSearch, mode: 'insensitive' } },
+          { shopifyCustomerId: { contains: normalizedSearch, mode: 'insensitive' } },
+        ],
+      } : {},
+      select: {
+        id: true,
+        companyName: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        shopifyCustomerId: true,
+      },
+      orderBy: [{ companyName: 'asc' }, { email: 'asc' }],
+      take: 50,
+    });
+    const selected = selectedId && !customers.some((customer) => customer.id === selectedId)
+      ? await this.prisma.db.customer.findFirst({
+        where: { id: selectedId },
+        select: {
+          id: true,
+          companyName: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          shopifyCustomerId: true,
+        },
+      })
+      : null;
+    return [...(selected ? [selected] : []), ...customers].map((customer) => ({
+      id: customer.id,
+      name: customer.companyName
+        || [customer.firstName, customer.lastName].filter(Boolean).join(' ')
+        || customer.email
+        || customer.id,
+      companyName: customer.companyName,
+      email: customer.email,
+      shopifyCustomerId: customer.shopifyCustomerId,
+    }));
+  }
+
+  async listCollectionOptions() {
+    const products = await this.prisma.db.catalogProduct.findMany({
+      where: { status: 'active' },
+      select: { collections: true },
+      orderBy: { title: 'asc' },
+    });
+    const byId = new Map<string, { id: string; title: string; handle: string | null; productCount: number }>();
+    for (const product of products) {
+      for (const collection of catalogCollections(product.collections)) {
+        const current = byId.get(collection.id);
+        if (current) current.productCount += 1;
+        else byId.set(collection.id, { ...collection, productCount: 1 });
+      }
+    }
+    return [...byId.values()].sort((left, right) => left.title.localeCompare(right.title));
   }
 
   async processSyncJob(ruleId: string) {
@@ -306,11 +381,11 @@ export class PricingService {
     };
   }
 
-  private toUpdateData(input: UpdatePricingRuleInput): Prisma.PricingRuleUpdateManyMutationInput {
+  private toUpdateData(input: UpdatePricingRuleInput): Prisma.PricingRuleUncheckedUpdateManyInput {
     return this.sharedData(input);
   }
 
-  private sharedData(input: Partial<CreatePricingRuleInput>): Prisma.PricingRuleUpdateManyMutationInput {
+  private sharedData(input: Partial<CreatePricingRuleInput>): Prisma.PricingRuleUncheckedUpdateManyInput {
     return {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
@@ -336,6 +411,59 @@ export class PricingService {
       ...(input.validFrom !== undefined && { validFrom: input.validFrom ? new Date(input.validFrom) : null }),
       ...(input.validUntil !== undefined && { validUntil: input.validUntil ? new Date(input.validUntil) : null }),
     };
+  }
+
+  private referenceCleanup(input: UpdatePricingRuleInput): Prisma.PricingRuleUncheckedUpdateManyInput {
+    const data: Prisma.PricingRuleUncheckedUpdateManyInput = {};
+    if (input.targetType !== undefined) {
+      if (input.targetType !== 'customer') data.targetCustomerId = null;
+      if (input.targetType !== 'customer_user') data.targetCustomerUserId = null;
+      if (!['customer_group', 'customer_role', 'segment'].includes(input.targetType)) data.targetCustomerGroup = null;
+      if (input.targetType !== 'customer_tag') data.targetTags = [];
+    }
+    if (input.scopeType !== undefined) {
+      if (input.scopeType !== 'products') data.scopeProductIds = [];
+      if (input.scopeType !== 'collections') data.scopeCollectionIds = [];
+      if (input.scopeType !== 'tags') data.scopeTags = [];
+      if (input.scopeType !== 'variants') data.scopeVariantIds = [];
+    }
+    return data;
+  }
+
+  private async validateRuleReferences(input: {
+    targetType: string;
+    targetCustomerId?: string;
+    targetCustomerUserId?: string;
+    scopeType: string;
+    scopeCollectionIds?: string[];
+  }) {
+    if (input.targetType === 'customer') {
+      if (!input.targetCustomerId) throw new BadRequestException('Select a customer for this pricing rule.');
+      const customer = await this.prisma.db.customer.findFirst({
+        where: { id: input.targetCustomerId },
+        select: { id: true },
+      });
+      if (!customer) throw new BadRequestException('The selected customer is not available in this workspace.');
+    }
+    if (input.targetType === 'customer_user') {
+      if (!input.targetCustomerUserId) throw new BadRequestException('Select a customer user for this pricing rule.');
+      const customerUser = await this.prisma.db.customerUser.findFirst({
+        where: { id: input.targetCustomerUserId },
+        select: { id: true },
+      });
+      if (!customerUser) throw new BadRequestException('The selected customer user is not available in this workspace.');
+    }
+    if (input.scopeType !== 'collections') return;
+    const selectedIds = input.scopeCollectionIds ?? [];
+    if (selectedIds.length === 0) throw new BadRequestException('Select at least one Shopify collection.');
+    const products = await this.prisma.db.catalogProduct.findMany({
+      where: { status: 'active' },
+      select: { collections: true },
+    });
+    const validIds = new Set(products.flatMap((product) => catalogCollections(product.collections).map((collection) => collection.id)));
+    if (selectedIds.some((id) => !validIds.has(id))) {
+      throw new BadRequestException('One or more selected collections are not available in the current Shopify catalog.');
+    }
   }
 
   private ruleConfig(rule: PricingRuleWithRelations) {
@@ -440,4 +568,16 @@ function money(value: unknown) {
 
 function discountIdFromResult(result: { id?: string; discountId?: string } | null) {
   return result?.id ?? result?.discountId ?? null;
+}
+
+function catalogCollections(value: Prisma.JsonValue | null | undefined) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, Prisma.JsonValue>;
+    const id = typeof record.id === 'string' ? record.id.trim() : '';
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const handle = typeof record.handle === 'string' && record.handle.trim() ? record.handle.trim() : null;
+    return id && title ? [{ id, title, handle }] : [];
+  });
 }

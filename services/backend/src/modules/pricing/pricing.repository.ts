@@ -51,7 +51,7 @@ export class PricingRepository {
     });
   }
 
-  async update(id: string, data: Prisma.PricingRuleUpdateManyMutationInput) {
+  async update(id: string, data: Prisma.PricingRuleUncheckedUpdateManyInput) {
     await this.prisma.db.pricingRule.updateMany({ where: { id }, data });
     return this.getRequired(id);
   }
@@ -60,7 +60,7 @@ export class PricingRepository {
     return this.prisma.db.pricingRule.deleteMany({ where: { id } });
   }
 
-  setSyncState(id: string, data: Prisma.PricingRuleUpdateManyMutationInput) {
+  setSyncState(id: string, data: Prisma.PricingRuleUncheckedUpdateManyInput) {
     return this.prisma.db.pricingRule.updateMany({ where: { id }, data });
   }
 

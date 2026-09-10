@@ -38,6 +38,21 @@ export class PricingController {
     return this.pricing.listShopifyDiscounts();
   }
 
+  @Get('options/customers')
+  @RequirePermission(MEMBER_PERMISSIONS.pricingRead)
+  customerOptions(
+    @Query('search') search?: string,
+    @Query('selectedId') selectedId?: string,
+  ) {
+    return this.pricing.listCustomerOptions(search, selectedId);
+  }
+
+  @Get('options/collections')
+  @RequirePermission(MEMBER_PERMISSIONS.pricingRead)
+  collectionOptions() {
+    return this.pricing.listCollectionOptions();
+  }
+
   @Get('rules/:id')
   @RequirePermission(MEMBER_PERMISSIONS.pricingRead)
   getRule(@Param('id') id: string) {

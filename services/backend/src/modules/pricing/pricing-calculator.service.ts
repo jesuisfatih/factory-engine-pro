@@ -57,6 +57,7 @@ export class PricingCalculatorService {
 
     const items = await Promise.all(input.items.map(async (item) => {
       const variant = await this.resolveVariant(item.variantId, item.shopifyVariantId, item.sku);
+      const product = variant?.product ?? await this.resolveProduct(item.productId, item.shopifyProductId);
       const basePrice = item.basePrice ?? money(variant?.price);
       const context: PricingTargetContext = {
         customerId: input.customerId,
@@ -66,15 +67,16 @@ export class PricingCalculatorService {
         customerSegmentKeys,
         cartTotal,
       };
-      const productTags = [...item.tags, ...(variant?.product.tags ?? [])];
+      const productTags = [...item.tags, ...(product?.tags ?? [])];
       const applicable = rules
         .filter((rule) => targetApplies(rule, context))
         .filter((rule) => scopeApplies(rule, {
           variantId: item.variantId ?? variant?.id ?? null,
           shopifyVariantId: item.shopifyVariantId ?? variant?.shopifyVariantId ?? null,
-          productId: item.productId ?? variant?.productId ?? null,
-          shopifyProductId: item.shopifyProductId ?? variant?.product.shopifyProductId ?? null,
+          productId: item.productId ?? variant?.productId ?? product?.id ?? null,
+          shopifyProductId: item.shopifyProductId ?? product?.shopifyProductId ?? null,
           tags: productTags,
+          collectionIds: catalogCollectionIdentifiers(product?.collections),
         }))
         .filter((rule) => rule.minCartAmount === null || context.cartTotal >= money(rule.minCartAmount));
       const best = applicable
@@ -110,6 +112,12 @@ export class PricingCalculatorService {
     if (sku) {
       return this.prisma.db.catalogVariant.findFirst({ where: { sku }, include: { product: true } });
     }
+    return null;
+  }
+
+  private resolveProduct(productId?: string, shopifyProductId?: string) {
+    if (productId) return this.prisma.db.catalogProduct.findFirst({ where: { id: productId } });
+    if (shopifyProductId) return this.prisma.db.catalogProduct.findFirst({ where: { shopifyProductId } });
     return null;
   }
 }
@@ -191,6 +199,7 @@ function scopeApplies(
     productId: string | null;
     shopifyProductId: string | null;
     tags: string[];
+    collectionIds: string[];
   },
 ) {
   if (rule.scopeType === 'all') return true;
@@ -210,8 +219,35 @@ function scopeApplies(
     const tags = product.tags.map((tag) => tag.toLowerCase());
     return rule.scopeTags.some((tag) => tags.includes(tag.toLowerCase()));
   }
-  if (rule.scopeType === 'collections') return rule.scopeCollectionIds.length > 0;
+  if (rule.scopeType === 'collections') {
+    return identifiersOverlap(rule.scopeCollectionIds, product.collectionIds);
+  }
   return false;
+}
+
+export function catalogCollectionIdentifiers(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return uniqueKeys(value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    return [identifier(record.id), identifier(record.legacyResourceId)].flatMap((id) => id ? identifierForms(id) : []);
+  }));
+}
+
+export function identifiersOverlap(left: string[], right: string[]) {
+  const available = new Set(right.flatMap(identifierForms).map(normalizeKey).filter(Boolean));
+  return left.some((value) => identifierForms(value).some((form) => available.has(normalizeKey(form))));
+}
+
+function identifier(value: unknown) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
+function identifierForms(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return [];
+  const legacy = normalized.match(/\/(\d+)$/)?.[1];
+  return legacy ? [normalized, legacy] : [normalized];
 }
 
 function applyRule(rule: PricingRuleWithRelations, basePrice: number, quantity: number) {
