@@ -162,8 +162,8 @@ const DEFAULT_SYSTEM_MAIL_SUBCATEGORIES = {
   'identity.customer_invitation': true,
   'identity.password_reset': true,
   'b2b_access.approved': true,
-  'orders.order_confirmation.user': true,
-  'orders.order_shipped.user': true,
+  'orders.order_confirmation.user': false,
+  'orders.order_shipped.user': false,
 };
 const DEFAULT_B2B_MAIL_SUBCATEGORIES = {
   'b2b.application_received.internal': true,
