@@ -318,7 +318,7 @@ export class BillingService {
 export function planForTenant(slug: string) {
   return slug === 'dtfbank'
     ? { code: 'dtfbank_249_monthly', name: 'DTFBank Backpanel', amountCents: 24_900, currency: 'usd' as const, interval: 'month' as const, taxIncluded: true as const }
-    : { code: 'factory_engine_149_monthly', name: 'Factory Engine Backpanel', amountCents: 14_900, currency: 'usd' as const, interval: 'month' as const, taxIncluded: true as const };
+    : { code: 'factory_engine_199_monthly', name: 'Factory Engine Backpanel', amountCents: 19_900, currency: 'usd' as const, interval: 'month' as const, taxIncluded: true as const };
 }
 
 function normalizeStatus(value: string | null | undefined): BillingSubscriptionStatus {

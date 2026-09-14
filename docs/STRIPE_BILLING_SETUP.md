@@ -5,14 +5,14 @@ Factory Engine uses one monthly Stripe subscription per tenant. The admin surfac
 ## Plans
 
 - DTFBank: **$249 USD / month**, tax included.
-- DTF Print Depot, Eagle DTF Print, Eagle DTF Supply, Fast DTF Supply, Fast DTF Transfer: **$149 USD / month**, tax included.
+- All other tenants, including future tenants: **$199 USD / month**, tax included.
 - No trial.
 - Payment failure grace period: 7 days.
 - Customer cancellation is disabled in the Stripe Customer Portal configuration.
 
 ## Stripe Dashboard preparation
 
-1. Create one recurring monthly Price for `$249 USD` and one for `$149 USD`.
+1. Use the existing recurring monthly Price for `$249 USD` and the new one for `$199 USD`.
 2. Treat the displayed amount as tax-inclusive. If Stripe Tax is enabled on the account, set each Price tax behavior to **Inclusive**.
 3. In **Settings → Billing → Customer portal**, enable payment-method updates and invoice history, and disable subscription cancellation.
 4. Create a webhook endpoint for each tenant using the endpoint shown on that tenant's Billing page.
@@ -37,6 +37,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 ```
 
 DTFBank reads `STRIPE_PRICE_DTFBANK`; the other tenants read `STRIPE_PRICE_STANDARD`. The unused price variable may remain empty in a tenant container.
+For each new tenant, configure `STRIPE_PRICE_STANDARD` with the active, tax-inclusive $199/month Price ID before enabling checkout.
 
 ## Safety interlock
 
