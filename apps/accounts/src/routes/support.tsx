@@ -272,7 +272,7 @@ function SupportView() {
               <input id="ticket-subject" value={form.subject} onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))} required />
             </div>
 
-            <div className="field-row">
+            <div className="field-row" style={EAGLE_ORDER_SUPPORT && form.orderRelated ? { gridTemplateColumns: '1fr' } : undefined}>
               <div className="field">
                 <label htmlFor="ticket-priority">{t('support.field_priority')}</label>
                 <select id="ticket-priority" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as TicketPriority }))}>
@@ -281,16 +281,18 @@ function SupportView() {
                   ))}
                 </select>
               </div>
-              <div className="field">
-                <label htmlFor="ticket-related">{t('support.field_related')}</label>
-                <input id="ticket-related" value={form.relatedTo} onChange={(event) => setForm((current) => ({ ...current, relatedTo: event.target.value }))} placeholder="Order #48201 / Invoice INV-2030" />
-              </div>
+              {(!EAGLE_ORDER_SUPPORT || !form.orderRelated) && (
+                <div className="field">
+                  <label htmlFor="ticket-related">{t(EAGLE_ORDER_SUPPORT ? 'support.field_related_eagle' : 'support.field_related')}</label>
+                  <input id="ticket-related" value={form.relatedTo} onChange={(event) => setForm((current) => ({ ...current, relatedTo: event.target.value }))} placeholder={EAGLE_ORDER_SUPPORT ? 'Quote Q-2030 / Invoice INV-2030' : 'Order #48201 / Invoice INV-2030'} />
+                </div>
+              )}
             </div>
 
             {EAGLE_ORDER_SUPPORT && (
               <div className="field">
                 <label className="support-order-check">
-                  <input type="checkbox" checked={form.orderRelated} onChange={(event) => setForm((current) => ({ ...current, orderRelated: event.target.checked, orderNumber: event.target.checked ? current.orderNumber : '' }))} />
+                  <input type="checkbox" checked={form.orderRelated} onChange={(event) => setForm((current) => ({ ...current, orderRelated: event.target.checked, orderNumber: event.target.checked ? current.orderNumber : '', relatedTo: event.target.checked ? '' : current.relatedTo }))} />
                   {t('support.order_related')}
                 </label>
                 {form.orderRelated && (

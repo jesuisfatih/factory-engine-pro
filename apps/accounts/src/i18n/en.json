@@ -102,6 +102,7 @@
     "field_subject": "Subject",
     "field_priority": "Priority",
     "field_related": "Related order or quote",
+    "field_related_eagle": "Related quote or invoice (optional)",
     "order_related": "This request is about an order",
     "order_number": "Order number",
     "order_number_help": "Choose a recent order or enter its number manually if it is not listed.",
