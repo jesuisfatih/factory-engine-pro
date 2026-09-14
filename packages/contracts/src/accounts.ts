@@ -40,6 +40,12 @@ export const createAccountSupportTicketSchema = z.object({
   category: z.enum(['billing', 'shipping', 'product', 'account', 'other']).default('other'),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
   relatedTo: z.string().trim().max(240).optional(),
+  orderRelated: z.boolean().optional(),
+  orderNumber: z.string().trim().max(80).optional(),
+}).superRefine((input, ctx) => {
+  if (input.orderRelated && !input.orderNumber) {
+    ctx.addIssue({ code: 'custom', path: ['orderNumber'], message: 'Order number is required for an order-related request' });
+  }
 });
 export type CreateAccountSupportTicketInput = z.infer<typeof createAccountSupportTicketSchema>;
 

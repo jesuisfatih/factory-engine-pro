@@ -11,11 +11,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/QueryState';
 import { apiErrorMessage } from '@/lib/api';
 import {
-  fetchSupportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, reopenSupportTicket,
+  fetchSupportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, reopenSupportTicket, fetchBuyerOrders,
   type SupportTicket, type TicketStatus, type TicketPriority, type TicketCategory,
 } from '@/lib/portal';
 
 const QK_TICKETS = ['support', 'tickets'] as const;
+const EAGLE_ORDER_SUPPORT = import.meta.env.VITE_TENANT_ID === 'ten_eagledtfprint';
 
 const STATUS_TONE: Record<TicketStatus, string> = {
   open: 'info', in_progress: 'warn', resolved: 'success', closed: '',
@@ -61,7 +62,7 @@ function TicketRow({
             <div className="name">{ticket.subject}</div>
             <div className="muted">
               {ticket.ticketNumber} · {t(`support.categories.${ticket.category}`)}
-              {ticket.relatedTo && <> · {ticket.relatedTo}</>}
+              {ticket.orderNumber ? <> · {t('support.order_number')}: {ticket.orderNumber}</> : ticket.relatedTo && <> · {ticket.relatedTo}</>}
             </div>
           </div>
         </div>
@@ -147,6 +148,7 @@ function SupportView() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: tickets = [], isLoading, isError, error, refetch } = useQuery({ queryKey: QK_TICKETS, queryFn: fetchSupportTickets });
+  const recentOrders = useQuery({ queryKey: ['support', 'recent-orders'], queryFn: () => fetchBuyerOrders({ limit: 50 }), enabled: EAGLE_ORDER_SUPPORT });
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TicketStatus>('all');
@@ -157,6 +159,8 @@ function SupportView() {
     subject: '',
     priority: 'normal' as TicketPriority,
     relatedTo: '',
+    orderRelated: false,
+    orderNumber: '',
     description: '',
   });
 
@@ -165,7 +169,7 @@ function SupportView() {
     onSuccess: () => {
       toast.success('Service request submitted', { description: form.subject });
       qc.invalidateQueries({ queryKey: QK_TICKETS });
-      setForm({ category: 'shipping', subject: '', priority: 'normal', relatedTo: '', description: '' });
+      setForm({ category: 'shipping', subject: '', priority: 'normal', relatedTo: '', orderRelated: false, orderNumber: '', description: '' });
     },
     onError: (error) => toast.error('Submit failed', { description: apiErrorMessage(error) }),
   });
@@ -202,7 +206,7 @@ function SupportView() {
     .filter((ticket) => {
       const text = search.toLowerCase().trim();
       if (!text) return true;
-      return ticket.subject.toLowerCase().includes(text) || ticket.ticketNumber.toLowerCase().includes(text);
+      return ticket.subject.toLowerCase().includes(text) || ticket.ticketNumber.toLowerCase().includes(text) || ticket.orderNumber?.toLowerCase().includes(text);
     });
 
   const open = tickets.filter((t) => t.status === 'open').length;
@@ -283,6 +287,25 @@ function SupportView() {
               </div>
             </div>
 
+            {EAGLE_ORDER_SUPPORT && (
+              <div className="field">
+                <label className="support-order-check">
+                  <input type="checkbox" checked={form.orderRelated} onChange={(event) => setForm((current) => ({ ...current, orderRelated: event.target.checked, orderNumber: event.target.checked ? current.orderNumber : '' }))} />
+                  {t('support.order_related')}
+                </label>
+                {form.orderRelated && (
+                  <>
+                    <label htmlFor="ticket-order-number">{t('support.order_number')}</label>
+                    <input id="ticket-order-number" value={form.orderNumber} onChange={(event) => setForm((current) => ({ ...current, orderNumber: event.target.value }))} list="support-recent-orders" placeholder="#12345" maxLength={80} required />
+                    <datalist id="support-recent-orders">
+                      {(recentOrders.data?.data ?? []).map((order) => <option key={order.id} value={order.orderNumber} />)}
+                    </datalist>
+                    <small className="muted">{t('support.order_number_help')}</small>
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="field">
               <label htmlFor="ticket-message">{t('support.field_message')}</label>
               <textarea id="ticket-message" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={5} required />
@@ -291,7 +314,7 @@ function SupportView() {
             <button
               type="submit"
               className="save-btn"
-              disabled={!form.subject.trim() || !form.description.trim() || create.isPending}
+              disabled={!form.subject.trim() || !form.description.trim() || (EAGLE_ORDER_SUPPORT && form.orderRelated && !form.orderNumber.trim()) || create.isPending}
               style={{ width: '100%', justifyContent: 'center' }}
             >
               <Send size={13} /> {t('support.submit')}

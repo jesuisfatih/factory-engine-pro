@@ -1175,6 +1175,25 @@ export class AccountsService {
 
   async createSupportTicket(input: CreateAccountSupportTicketInput) {
     const actor = await this.currentActor();
+    const eagleOrderNumber = this.tenantId() === 'ten_eagledtfprint' && input.orderRelated
+      ? input.orderNumber?.trim() ?? ''
+      : '';
+    if (this.tenantId() === 'ten_eagledtfprint' && input.orderRelated && !eagleOrderNumber) {
+      throw new BadRequestException('Order number is required for an order-related request');
+    }
+    const orderNumberCandidates = eagleOrderNumber
+      ? Array.from(new Set([eagleOrderNumber, eagleOrderNumber.startsWith('#') ? eagleOrderNumber.slice(1) : `#${eagleOrderNumber}`]))
+      : [];
+    const matchedOrder = eagleOrderNumber
+      ? await this.prisma.db.commerceOrder.findFirst({
+          where: {
+            tenantId: this.tenantId(),
+            customerId: actor.customerId,
+            OR: [{ shopifyOrderNumber: { in: orderNumberCandidates } }, { id: eagleOrderNumber }],
+          },
+          select: { id: true, shopifyOrderNumber: true },
+        })
+      : null;
     const ticketNumber = `SR-${Date.now().toString(36).toUpperCase()}`;
     const ticket = await this.prisma.db.serviceRequest.create({
       data: {
@@ -1192,6 +1211,10 @@ export class AccountsService {
           category: input.category,
           ticketNumber,
           ...(input.relatedTo ? { relatedTo: input.relatedTo } : {}),
+          ...(eagleOrderNumber ? {
+            orderNumber: matchedOrder?.shopifyOrderNumber ?? eagleOrderNumber,
+            ...(matchedOrder ? { orderId: matchedOrder.id } : {}),
+          } : {}),
         },
       },
     });
@@ -1895,6 +1918,8 @@ export class AccountsService {
       category: supportCategory(metadata(ticket.metadata).category),
       priority: supportPriority(ticket.priority),
       relatedTo: stringValue(metadata(ticket.metadata).relatedTo),
+      orderNumber: stringValue(metadata(ticket.metadata).orderNumber),
+      orderId: stringValue(metadata(ticket.metadata).orderId),
       status: supportStatus(ticket.status),
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: isoDate(ticket.updatedAt),

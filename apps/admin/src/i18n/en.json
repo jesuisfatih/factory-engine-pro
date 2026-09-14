@@ -1155,6 +1155,7 @@
     "no_selection_title": "Select a service request",
     "no_selection_body": "Choose a row to see SLA, comments, and allowed actions.",
     "detail_customer": "Customer",
+    "detail_order_number": "Order number",
     "detail_surface": "Surface",
     "detail_axis": "Axis",
     "detail_matched_rule": "Matched rule",

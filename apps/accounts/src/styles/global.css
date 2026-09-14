@@ -717,6 +717,13 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex; align-items: center; gap: 6px; color: var(--text);
 }
 .support-form > .muted { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+.field .support-order-check {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text); font-size: 12px; text-transform: none; letter-spacing: normal; cursor: pointer;
+}
+.field .support-order-check input[type="checkbox"] {
+  width: 16px; height: 16px; padding: 0; margin: 0; accent-color: var(--accent);
+}
 .support-cat-grid {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 6px; margin-top: 6px;

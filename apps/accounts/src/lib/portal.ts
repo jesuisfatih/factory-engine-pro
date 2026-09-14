@@ -307,6 +307,8 @@ export type SupportTicket = {
   category: TicketCategory;
   priority: TicketPriority;
   relatedTo: string | null;
+  orderNumber: string | null;
+  orderId: string | null;
   status: TicketStatus;
   createdAt: string;
   updatedAt: string;
@@ -491,6 +493,8 @@ export function createSupportTicket(input: {
   subject: string;
   priority: TicketPriority;
   relatedTo: string;
+  orderRelated: boolean;
+  orderNumber: string;
   description: string;
 }) {
   const payload: CreateAccountSupportTicketInput = {
@@ -499,6 +503,7 @@ export function createSupportTicket(input: {
     priority: input.priority,
     description: input.description,
     ...(input.relatedTo.trim() ? { relatedTo: input.relatedTo.trim() } : {}),
+    ...(input.orderRelated ? { orderRelated: true, orderNumber: input.orderNumber.trim() } : {}),
   };
   return accountsApi.createAccountSupportTicket(payload) as Promise<SupportTicket>;
 }

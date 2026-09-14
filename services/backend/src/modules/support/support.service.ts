@@ -357,6 +357,7 @@ export class SupportService {
         { customer: { companyName: { contains: q, mode: 'insensitive' } } },
         { customer: { email: { contains: q, mode: 'insensitive' } } },
         { customerUser: { email: { contains: q, mode: 'insensitive' } } },
+        { metadata: { path: ['orderNumber'], string_contains: q, mode: 'insensitive' } },
       ];
     }
     return where;
@@ -457,6 +458,8 @@ export class SupportService {
       subject: row.title,
       summary: row.description,
       category: String(metadata.category || 'other'),
+      orderNumber: stringValue(metadata.orderNumber),
+      orderId: stringValue(metadata.orderId),
       customer: row.customer ? { id: row.customer.id, companyName: row.customer.companyName, name: row.customer.companyName, email: row.customer.email } : null,
       company: row.customer ? { id: row.customer.id, name: row.customer.companyName, email: row.customer.email } : null,
       companyUser: row.customerUser ? { id: row.customerUser.id, email: row.customerUser.email, firstName: row.customerUser.firstName, lastName: row.customerUser.lastName } : null,

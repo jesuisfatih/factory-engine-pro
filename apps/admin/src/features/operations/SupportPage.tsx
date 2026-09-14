@@ -48,6 +48,8 @@ interface SupportRow {
   title: string;
   description: string | null;
   category: string;
+  orderNumber: string | null;
+  orderId: string | null;
   source: string;
   surface: ServiceRequestSurface;
   status: ServiceRequestStatus;
@@ -276,7 +278,7 @@ export function SupportPage() {
                 {rows.map((row) => (
                   <tr key={row.id} id={`support-row-${row.id}`} onClick={() => setSelectedId(row.id)} style={{ cursor: 'pointer' }}>
                     <td><span className="pill accent" style={{ fontFamily: 'monospace' }}>{row.ticketNumber}</span></td>
-                    <td><div className="name">{row.title}</div><div className="muted">{label(row.category)} / {label(row.source)} / {row.axis ? label(row.axis) : t('support.no_axis')}</div></td>
+                    <td><div className="name">{row.title}</div><div className="muted">{label(row.category)} / {label(row.source)} / {row.axis ? label(row.axis) : t('support.no_axis')}{row.orderNumber ? ` · ${t('support.detail_order_number')}: ${row.orderNumber}` : ''}</div></td>
                     <td>{row.customer?.companyName ?? <span className="muted">{t('support.no_customer')}</span>}</td>
                     <td><span className={`sr-status-pill ${statusClass(row.status)}`}>{label(row.status)}</span></td>
                     <td><span className={`pill ${priorityTone(row.priority)}`}>{label(row.priority)}</span></td>
@@ -300,6 +302,11 @@ export function SupportPage() {
                 <p className="muted" style={{ lineHeight: 1.5 }}>{selected.description || t('support.no_description')}</p>
                 <div className="row-stack">
                   <DetailLine label={t('support.detail_customer')} value={selected.customer?.companyName ?? t('support.no_customer')} />
+                  {selected.orderNumber && (
+                    <DetailLine label={t('support.detail_order_number')} value={selected.orderId
+                      ? <a href={`/orders?orderId=${encodeURIComponent(selected.orderId)}`}>{selected.orderNumber}</a>
+                      : selected.orderNumber} />
+                  )}
                   <DetailLine label={t('support.detail_surface')} value={label(selected.surface)} />
                   <DetailLine label={t('support.detail_axis')} value={selected.axis ? label(selected.axis) : t('support.no_axis')} />
                   <DetailLine label={t('support.detail_matched_rule')} value={selected.matchedRuleId ?? t('support.no_matched_rule')} />
@@ -520,7 +527,7 @@ function Select({ label: selectLabel, value, onChange, options }: { label: strin
   );
 }
 
-function DetailLine({ label: lineLabel, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+function DetailLine({ label: lineLabel, value, danger = false }: { label: string; value: ReactNode; danger?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
       <span className="muted">{lineLabel}</span>

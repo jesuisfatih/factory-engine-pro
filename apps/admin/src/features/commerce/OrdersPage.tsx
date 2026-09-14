@@ -197,7 +197,7 @@ export function OrdersPage() {
   const [surface, setSurface] = useState<OrderSurface>('all');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_ORDER_FILTERS);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('orderId'));
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const query = useMemo(() => orderQuery(surface, search, filters), [surface, search, filters]);
   const orders = useQuery({ queryKey: ['commerce', 'orders', query], queryFn: () => fetchOrders(query) });
