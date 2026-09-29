@@ -1,7 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TRANSCRIPT_RESOLVER_SCHEMA_VERSION } from '@factory-engine-pro/contracts';
-import { AircallIngestService } from './aircall-ingest.service.js';
+import { AircallIngestService, isOperatorOwnershipEvent } from './aircall-ingest.service.js';
+
+test('only handled call events can change the current operator', () => {
+  assert.equal(isOperatorOwnershipEvent('call.ringing_on_agent', { direction: 'inbound' }), false);
+  assert.equal(isOperatorOwnershipEvent('call.agent_declined', { direction: 'inbound' }), false);
+  assert.equal(isOperatorOwnershipEvent('call.missed', { direction: 'inbound' }), false);
+  assert.equal(isOperatorOwnershipEvent('call.answered', { direction: 'inbound' }), true);
+  assert.equal(isOperatorOwnershipEvent('call.transferred', { direction: 'inbound' }), true);
+  assert.equal(isOperatorOwnershipEvent('call.created', { direction: 'outbound' }), true);
+  assert.equal(isOperatorOwnershipEvent('call.created', { direction: 'inbound' }), false);
+  assert.equal(isOperatorOwnershipEvent('call.ended', { direction: 'inbound' }, new Date()), true);
+  assert.equal(isOperatorOwnershipEvent('call.ended', {
+    direction: 'inbound',
+    missed_call_reason: 'users_did_not_answer',
+  }), false);
+});
 
 test('requeues a failed workflow evaluation as a workflow-only repair', async () => {
   let removedExistingJob = false;

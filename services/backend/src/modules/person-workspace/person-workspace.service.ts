@@ -2027,7 +2027,7 @@ export class PersonWorkspaceService {
 
   async calendar() {
     const member = await this.currentMember();
-    const [requests, calls, mail] = await Promise.all([
+    const [requests, ownedCalls, mail] = await Promise.all([
       this.prisma.db.staffWorkItem.findMany({
         where: {
           status: { notIn: Array.from(CLOSED) },
@@ -2037,9 +2037,35 @@ export class PersonWorkspaceService {
         orderBy: [{ updatedAt: 'desc' }],
         take: 150,
       }),
-      this.prisma.db.aircallCallEvent.findMany({ orderBy: { eventTimestamp: 'desc' }, take: 25 }),
+      this.prisma.db.call.findMany({
+        where: {
+          currentOperatorId: member.id,
+          aircallCallId: { not: null },
+          OR: [
+            { direction: 'outbound' },
+            { answeredAt: { not: null } },
+          ],
+        },
+        select: { aircallCallId: true },
+        orderBy: [{ startedAt: 'desc' }, { updatedAt: 'desc' }],
+        take: 100,
+      }),
       this.prisma.db.mailDelivery.findMany({ where: { status: 'failed' }, orderBy: { updatedAt: 'desc' }, take: 15 }),
     ]);
+    const ownedCallIds = uniqueStrings(ownedCalls.map((call) => call.aircallCallId));
+    const callEvents = ownedCallIds.length > 0
+      ? await this.prisma.db.aircallCallEvent.findMany({
+          where: {
+            externalCallId: { in: ownedCallIds },
+            eventType: {
+              in: ['call.ended', 'call.hungup', 'call.answered', 'call.connected', 'call.transferred', 'call.created'],
+            },
+          },
+          orderBy: { eventTimestamp: 'desc' },
+          take: 500,
+        })
+      : [];
+    const calls = personCalendarCallEvents(callEvents, 25);
     const callContext = await this.cardCallContext(requests);
     return [
       ...requests.filter((row) => this.isQueueVisible(row)).slice(0, 50).map((row) => this.calendarFromRequest(row, callContext)),
@@ -4538,6 +4564,18 @@ function calendarDisplayFromCall(row: {
     displayActions: cleanedActions(personBrief.suggested_actions),
     callExcerpt: staffDisplayText(personBrief.transcript_snippet || row.transcriptRaw?.slice(0, 240)),
   };
+}
+
+export function personCalendarCallEvents<T extends { externalCallId: string }>(rows: T[], limit = 25) {
+  const seen = new Set<string>();
+  const calls: T[] = [];
+  for (const row of rows) {
+    if (seen.has(row.externalCallId)) continue;
+    seen.add(row.externalCallId);
+    calls.push(row);
+    if (calls.length >= limit) break;
+  }
+  return calls;
 }
 
 function currentResolverOutput(row: {

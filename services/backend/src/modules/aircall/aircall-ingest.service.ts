@@ -315,7 +315,10 @@ export class AircallIngestService {
       ? 'closed'
       : stringOrNull(data.status) ?? 'open';
     const aircallUserId = nestedString(data, 'user.id') ?? stringOrNull(data.user_id);
-    const currentOperatorId = await this.resolveMappedMemberId(tenantId, aircallUserId);
+    const ownsCall = isOperatorOwnershipEvent(eventType, data, existing?.answeredAt ?? null);
+    const currentOperatorId = ownsCall
+      ? await this.resolveMappedMemberId(tenantId, aircallUserId)
+      : null;
     const answeredAt = dateFromUnknown(data.answered_at ?? data.answeredAt);
     const durationSeconds = numberOrNull(data.duration);
     const answered = Boolean(
@@ -954,6 +957,25 @@ function isAnsweredCallEvent(eventType: string, data: Record<string, unknown>) {
     || status === 'answered'
     || status === 'connected'
     || Boolean(dateFromUnknown(data.answered_at ?? data.answeredAt));
+}
+
+export function isOperatorOwnershipEvent(
+  eventType: string,
+  data: Record<string, unknown>,
+  existingAnsweredAt: Date | null = null,
+) {
+  const event = eventType.trim().toLowerCase().replace(/^aircall\./, '');
+  const direction = (stringOrNull(data.direction) ?? '').toLowerCase();
+  if (isMissedCallEvent(event, data)) return false;
+  if (event === 'call.ringing_on_agent' || event === 'call.agent_declined') return false;
+  if (event === 'call.answered' || event === 'call.connected' || event === 'call.transferred') return true;
+  if (event === 'call.created') return direction === 'outbound';
+  if (event === 'call.ended' || event === 'call.hungup') {
+    return direction === 'outbound'
+      || Boolean(existingAnsweredAt)
+      || isAnsweredCallEvent(event, data);
+  }
+  return false;
 }
 
 function extractRingGroupUserIds(data: Record<string, unknown>) {
