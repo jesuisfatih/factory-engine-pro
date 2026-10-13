@@ -334,6 +334,10 @@ export class IdentityService {
         mailProvider: null,
         hasPostmarkServerToken: false,
         hasPostmarkWebhookSecret: false,
+        hasGoogleWorkspaceClientId: false,
+        hasGoogleWorkspaceClientSecret: false,
+        hasGoogleWorkspaceRefreshToken: false,
+        googleWorkspaceSenderEmail: null,
       };
     }
     return {
@@ -358,6 +362,10 @@ export class IdentityService {
       mailProvider: config.mailProvider ?? null,
       hasPostmarkServerToken: Boolean(config.postmarkServerTokenEncrypted),
       hasPostmarkWebhookSecret: Boolean(config.postmarkWebhookSecretEncrypted),
+      hasGoogleWorkspaceClientId: Boolean(config.googleWorkspaceClientIdEncrypted),
+      hasGoogleWorkspaceClientSecret: Boolean(config.googleWorkspaceClientSecretEncrypted),
+      hasGoogleWorkspaceRefreshToken: Boolean(config.googleWorkspaceRefreshTokenEncrypted),
+      googleWorkspaceSenderEmail: config.googleWorkspaceSenderEmail ?? null,
     };
   }
 
@@ -403,11 +411,21 @@ export class IdentityService {
       aircallApiTokenEncrypted: this.crypto.encrypt(input.aircallApiToken),
       aircallWebhookSecretEncrypted: this.crypto.encrypt(input.aircallWebhookSecret),
       anthropicApiKeyEncrypted: this.crypto.encrypt(input.anthropicApiKey),
-      resendApiKeyEncrypted: this.crypto.encrypt(input.resendApiKey),
-      resendWebhookSecretEncrypted: this.crypto.encrypt(input.resendWebhookSecret),
+      resendApiKeyEncrypted: input.resendApiKey === undefined ? undefined : this.crypto.encrypt(input.resendApiKey),
+      resendWebhookSecretEncrypted: input.resendWebhookSecret === undefined ? undefined : this.crypto.encrypt(input.resendWebhookSecret),
       mailProvider: input.mailProvider,
-      postmarkServerTokenEncrypted: this.crypto.encrypt(input.postmarkServerToken),
-      postmarkWebhookSecretEncrypted: this.crypto.encrypt(input.postmarkWebhookSecret),
+      postmarkServerTokenEncrypted: input.postmarkServerToken === undefined ? undefined : this.crypto.encrypt(input.postmarkServerToken),
+      postmarkWebhookSecretEncrypted: input.postmarkWebhookSecret === undefined ? undefined : this.crypto.encrypt(input.postmarkWebhookSecret),
+      googleWorkspaceClientIdEncrypted: input.googleWorkspaceClientId === undefined
+        ? undefined
+        : this.crypto.encrypt(input.googleWorkspaceClientId),
+      googleWorkspaceClientSecretEncrypted: input.googleWorkspaceClientSecret === undefined
+        ? undefined
+        : this.crypto.encrypt(input.googleWorkspaceClientSecret),
+      googleWorkspaceRefreshTokenEncrypted: input.googleWorkspaceRefreshToken === undefined
+        ? undefined
+        : this.crypto.encrypt(input.googleWorkspaceRefreshToken),
+      googleWorkspaceSenderEmail: input.googleWorkspaceSenderEmail,
     };
     if (existing) {
       await this.prisma.db.tenantConfig.updateMany({ where: { id: existing.id }, data: stripUndefined(data) });

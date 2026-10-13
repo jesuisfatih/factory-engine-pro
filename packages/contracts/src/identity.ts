@@ -707,9 +707,13 @@ export const tenantConfigSchema = z.object({
   anthropicApiKey: z.string().optional(),
   resendApiKey: z.string().optional(),
   resendWebhookSecret: z.string().optional(),
-  mailProvider: z.enum(['resend', 'postmark']).optional(),
+  mailProvider: z.enum(['resend', 'postmark', 'google_workspace']).optional(),
   postmarkServerToken: z.string().optional(),
   postmarkWebhookSecret: z.string().optional(),
+  googleWorkspaceClientId: z.string().optional(),
+  googleWorkspaceClientSecret: z.string().optional(),
+  googleWorkspaceRefreshToken: z.string().optional(),
+  googleWorkspaceSenderEmail: emailSchema.optional(),
 });
 export type TenantConfigInput = z.infer<typeof tenantConfigSchema>;
 

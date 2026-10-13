@@ -14,9 +14,10 @@ import {
   type MailProviderEventLogResponse,
   type MailProviderHealthResponse,
   type SendTestMailInput,
+  type TenantConfigInput,
 } from '@factory-engine-pro/contracts';
 import { PageHeader } from '@/components/PageHeader';
-import { adminApi, apiErrorMessage } from '@/lib/api';
+import { ADMIN_TENANT_ID, adminApi, apiErrorMessage } from '@/lib/api';
 import { useCurrentPrincipal } from '@/lib/current-principal';
 import { useCan } from '@/lib/permissions';
 
@@ -48,9 +49,13 @@ type MailDeliveryPage = MailDeliveryLogResponse<MailDelivery>;
 interface TenantConfigResponse {
   hasResendApiKey: boolean;
   hasResendWebhookSecret: boolean;
-  mailProvider?: 'resend' | 'postmark' | null;
+  mailProvider?: 'resend' | 'postmark' | 'google_workspace' | null;
   hasPostmarkServerToken?: boolean;
   hasPostmarkWebhookSecret?: boolean;
+  hasGoogleWorkspaceClientId?: boolean;
+  hasGoogleWorkspaceClientSecret?: boolean;
+  hasGoogleWorkspaceRefreshToken?: boolean;
+  googleWorkspaceSenderEmail?: string | null;
 }
 
 interface MailSuppressionRow {
@@ -108,6 +113,7 @@ const SETTINGS_QUERY_KEY = ['system-mail', 'settings'] as const;
 const SETTINGS_AUDIT_QUERY_KEY = ['system-mail', 'settings-audit'] as const;
 const STATUS_FILTERS: StatusFilter[] = ['all', 'queued', 'queued_disabled', 'sending', 'sent', 'failed', 'skipped'];
 const DELIVERY_PAGE_SIZES = [10, 50, 100, 150] as const;
+const GOOGLE_WORKSPACE_PROVIDER_ENABLED = ADMIN_TENANT_ID === 'ten_dtfbank';
 
 export function SystemMailPage() {
   const { t } = useTranslation();
@@ -124,8 +130,19 @@ export function SystemMailPage() {
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contentOpen, setContentOpen] = useState(false);
+  const [providerSettingsOpen, setProviderSettingsOpen] = useState(false);
   const [form, setForm] = useState({ to: '', subject: '' });
-  const [settingsForm, setSettingsForm] = useState({ postmarkServerToken: '', postmarkWebhookSecret: '' });
+  const [settingsForm, setSettingsForm] = useState({
+    provider: 'postmark' as 'resend' | 'postmark' | 'google_workspace',
+    resendApiKey: '',
+    resendWebhookSecret: '',
+    postmarkServerToken: '',
+    postmarkWebhookSecret: '',
+    googleWorkspaceClientId: '',
+    googleWorkspaceClientSecret: '',
+    googleWorkspaceRefreshToken: '',
+    googleWorkspaceSenderEmail: '',
+  });
   const [suppressionForm, setSuppressionForm] = useState({
     email: '',
     scope: 'global',
@@ -171,6 +188,15 @@ export function SystemMailPage() {
     queryFn: () => adminApi.tenantConfig() as Promise<TenantConfigResponse>,
     retry: false,
   });
+  useEffect(() => {
+    if (!tenantConfig.data) return;
+    const provider = tenantConfig.data.mailProvider ?? 'postmark';
+    setSettingsForm((current) => ({
+      ...current,
+      provider,
+      googleWorkspaceSenderEmail: current.googleWorkspaceSenderEmail || tenantConfig.data?.googleWorkspaceSenderEmail || '',
+    }));
+  }, [tenantConfig.data]);
   const providerHealth = useQuery({
     queryKey: MAIL_HEALTH_QUERY_KEY,
     queryFn: () => adminApi.mailHealth() as Promise<MailProviderHealthResponse>,
@@ -246,13 +272,32 @@ export function SystemMailPage() {
 
   const saveSettings = useMutation({
     mutationFn: () => {
-      const payload: { mailProvider: 'postmark'; postmarkServerToken?: string; postmarkWebhookSecret?: string } = { mailProvider: 'postmark' };
-      if (settingsForm.postmarkServerToken.trim()) payload.postmarkServerToken = settingsForm.postmarkServerToken.trim();
-      if (settingsForm.postmarkWebhookSecret.trim()) payload.postmarkWebhookSecret = settingsForm.postmarkWebhookSecret.trim();
+      const payload: TenantConfigInput = { mailProvider: settingsForm.provider };
+      if (settingsForm.provider === 'resend') {
+        if (settingsForm.resendApiKey.trim()) payload.resendApiKey = settingsForm.resendApiKey.trim();
+        if (settingsForm.resendWebhookSecret.trim()) payload.resendWebhookSecret = settingsForm.resendWebhookSecret.trim();
+      } else if (settingsForm.provider === 'postmark') {
+        if (settingsForm.postmarkServerToken.trim()) payload.postmarkServerToken = settingsForm.postmarkServerToken.trim();
+        if (settingsForm.postmarkWebhookSecret.trim()) payload.postmarkWebhookSecret = settingsForm.postmarkWebhookSecret.trim();
+      } else {
+        if (settingsForm.googleWorkspaceClientId.trim()) payload.googleWorkspaceClientId = settingsForm.googleWorkspaceClientId.trim();
+        if (settingsForm.googleWorkspaceClientSecret.trim()) payload.googleWorkspaceClientSecret = settingsForm.googleWorkspaceClientSecret.trim();
+        if (settingsForm.googleWorkspaceRefreshToken.trim()) payload.googleWorkspaceRefreshToken = settingsForm.googleWorkspaceRefreshToken.trim();
+        payload.googleWorkspaceSenderEmail = settingsForm.googleWorkspaceSenderEmail.trim();
+      }
       return adminApi.updateTenantConfig(payload);
     },
     onSuccess: async () => {
-      setSettingsForm({ postmarkServerToken: '', postmarkWebhookSecret: '' });
+      setSettingsForm((current) => ({
+        ...current,
+        resendApiKey: '',
+        resendWebhookSecret: '',
+        postmarkServerToken: '',
+        postmarkWebhookSecret: '',
+        googleWorkspaceClientId: '',
+        googleWorkspaceClientSecret: '',
+        googleWorkspaceRefreshToken: '',
+      }));
       toast.success(t('system_mail.settings_saved'));
       await Promise.all([
         qc.invalidateQueries({ queryKey: TENANT_CONFIG_QUERY_KEY }),
@@ -386,16 +431,43 @@ export function SystemMailPage() {
   const submitSettings = (event: React.FormEvent) => {
     event.preventDefault();
     setSettingsValidationError(null);
-    const postmarkToken = settingsForm.postmarkServerToken.trim();
-    const postmarkSecret = settingsForm.postmarkWebhookSecret.trim();
-    const alreadyConfigured = Boolean(tenantConfig.data?.hasPostmarkServerToken);
-    if (!postmarkToken && !postmarkSecret && !alreadyConfigured) {
-      setSettingsValidationError('Enter the Postmark server token (and webhook secret) before saving.');
-      return;
-    }
-    if (postmarkToken && postmarkToken.length < 12) {
-      setSettingsValidationError('The Postmark server token looks too short.');
-      return;
+    if (settingsForm.provider === 'resend') {
+      const apiKey = settingsForm.resendApiKey.trim();
+      if (!apiKey && !tenantConfig.data?.hasResendApiKey) {
+        setSettingsValidationError('Enter the Resend API key before saving.');
+        return;
+      }
+    } else if (settingsForm.provider === 'postmark') {
+      const postmarkToken = settingsForm.postmarkServerToken.trim();
+      const postmarkSecret = settingsForm.postmarkWebhookSecret.trim();
+      const alreadyConfigured = Boolean(tenantConfig.data?.hasPostmarkServerToken);
+      if (!postmarkToken && !postmarkSecret && !alreadyConfigured) {
+        setSettingsValidationError('Enter the Postmark server token (and webhook secret) before saving.');
+        return;
+      }
+      if (postmarkToken && postmarkToken.length < 12) {
+        setSettingsValidationError('The Postmark server token looks too short.');
+        return;
+      }
+    } else {
+      const hasStoredCredentials = Boolean(
+        tenantConfig.data?.hasGoogleWorkspaceClientId
+        && tenantConfig.data?.hasGoogleWorkspaceClientSecret
+        && tenantConfig.data?.hasGoogleWorkspaceRefreshToken,
+      );
+      const enteredCredentials = [
+        settingsForm.googleWorkspaceClientId,
+        settingsForm.googleWorkspaceClientSecret,
+        settingsForm.googleWorkspaceRefreshToken,
+      ].every((value) => value.trim().length > 0);
+      if (!hasStoredCredentials && !enteredCredentials) {
+        setSettingsValidationError('Enter the Google OAuth client ID, client secret, and refresh token.');
+        return;
+      }
+      if (!/^\S+@\S+\.\S+$/.test(settingsForm.googleWorkspaceSenderEmail.trim())) {
+        setSettingsValidationError('Enter the Google Workspace mailbox that will send panel email.');
+        return;
+      }
     }
     saveSettings.mutate();
   };
@@ -442,9 +514,14 @@ export function SystemMailPage() {
         titleI18nKey="system_mail.title"
         subtitleI18nKey="system_mail.subtitle"
         actions={(
-          <button type="button" className="btn" onClick={() => { deliveries.refetch(); providerHealth.refetch(); providerEvents.refetch(); if (selectedId) detail.refetch(); }}>
-            <RefreshCw size={14} /> {t('common.refresh')}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn" onClick={() => setProviderSettingsOpen(true)}>
+              <SlidersHorizontal size={14} /> Mail provider settings
+            </button>
+            <button type="button" className="btn" onClick={() => { deliveries.refetch(); providerHealth.refetch(); providerEvents.refetch(); if (selectedId) detail.refetch(); }}>
+              <RefreshCw size={14} /> {t('common.refresh')}
+            </button>
+          </div>
         )}
       />
 
@@ -545,7 +622,7 @@ export function SystemMailPage() {
               <StateBlock
                 title={t('system_mail.health_missing_title')}
                 body={t('system_mail.health_missing_body')}
-                action={<button type="button" className="btn primary" onClick={() => document.getElementById('field-postmark-server-token')?.focus()}>{t('system_mail.health_missing_cta')}</button>}
+                action={<button type="button" className="btn primary" onClick={() => { setProviderSettingsOpen(true); window.setTimeout(() => document.getElementById(providerCredentialFieldId(settingsForm.provider))?.focus(), 0); }}>{t('system_mail.health_missing_cta')}</button>}
               />
             )}
             {providerHealth.isSuccess && !providerHealth.data.credentialRequired && (
@@ -557,7 +634,7 @@ export function SystemMailPage() {
                 ) : (
                   <div className="error-state">{providerHealth.data.error ?? t(`system_mail.health_status_${providerHealth.data.status}`)}</div>
                 )}
-                <DetailLine label={t('system_mail.health_provider')} value={tenantConfig.data?.mailProvider === 'postmark' ? 'Postmark' : 'Resend'} />
+                <DetailLine label={t('system_mail.health_provider')} value={providerLabel(providerHealth.data.provider)} />
                 <DetailLine label={t('system_mail.health_source')} value={t(`system_mail.health_source_${providerHealth.data.source}`)} />
                 <DetailLine label={t('system_mail.health_provider_status')} value={providerHealth.data.providerStatus === null ? '-' : String(providerHealth.data.providerStatus)} />
                 <DetailLine label={t('system_mail.health_reachable')} value={providerHealth.data.reachable ? t('common.yes') : t('common.no')} />
@@ -632,57 +709,85 @@ export function SystemMailPage() {
             )}
           </section>
 
-          <form className="section" onSubmit={submitSettings}>
+          {providerSettingsOpen && (
+            <div className="dialog-overlay" onMouseDown={() => setProviderSettingsOpen(false)}>
+              <form
+                className="dialog"
+                onSubmit={submitSettings}
+                onMouseDown={(event) => event.stopPropagation()}
+                style={{ width: 'min(720px, 94vw)', maxHeight: '90vh', overflowY: 'auto' }}
+              >
             <h3>
               <span>{t('system_mail.settings_title')}</span>
               <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
-                <span className={`pill ${tenantConfig.data?.mailProvider === 'postmark' ? 'success' : 'warn'}`}>
-                  {tenantConfig.data?.mailProvider === 'postmark' ? 'Provider: Postmark' : 'Provider not set'}
-                </span>
-                <span className={`pill ${tenantConfig.data?.hasPostmarkServerToken ? 'success' : 'warn'}`}>
-                  {tenantConfig.data?.hasPostmarkServerToken ? 'Server token saved' : 'Server token missing'}
-                </span>
-                <span className={`pill ${tenantConfig.data?.hasPostmarkWebhookSecret ? 'success' : 'warn'}`}>
-                  {tenantConfig.data?.hasPostmarkWebhookSecret ? 'Webhook secret saved' : 'Webhook secret missing'}
-                </span>
+                <span className={`pill ${tenantConfig.data?.mailProvider ? 'success' : 'warn'}`}>Provider: {providerLabel(tenantConfig.data?.mailProvider)}</span>
               </span>
             </h3>
             {settingsValidationError && <div className="error-state">{settingsValidationError}</div>}
             {tenantConfig.isError && <div className="error-state">{apiErrorMessage(tenantConfig.error)}</div>}
-            <div className="field">
-              <label htmlFor="field-postmark-server-token">Postmark server token</label>
-              <div className="auth-password-wrap">
-                <KeyRound className="auth-input-icon" size={14} />
-                <input
-                  id="field-postmark-server-token"
-                  type="password"
-                  value={settingsForm.postmarkServerToken}
-                  onChange={(event) => setSettingsForm((current) => ({ ...current, postmarkServerToken: event.target.value }))}
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  disabled={!canMailSettingsWrite || saveSettings.isPending}
-                />
+            {providerHealth.data && (
+              <div className="modal-section" style={{ padding: 12, marginBottom: 12 }}>
+                <DetailLine label="Selected provider" value={providerLabel(providerHealth.data.provider)} />
+                <DetailLine label="Connection" value={providerHealth.data.status === 'ok' ? 'Verified' : providerHealth.data.status.replaceAll('_', ' ')} />
+                {providerHealth.data.error ? <div className="hint" style={{ color: 'var(--danger)', marginTop: 8 }}>{providerHealth.data.error}</div> : null}
               </div>
-              <span className="hint">{tenantConfig.data?.hasPostmarkServerToken ? 'A Postmark server token is saved for this workspace.' : 'No Postmark server token saved yet.'}</span>
-            </div>
+            )}
             <div className="field">
-              <label htmlFor="field-postmark-webhook-secret">Postmark webhook secret</label>
-              <div className="auth-password-wrap">
-                <KeyRound className="auth-input-icon" size={14} />
-                <input
-                  id="field-postmark-webhook-secret"
-                  type="password"
-                  value={settingsForm.postmarkWebhookSecret}
-                  onChange={(event) => setSettingsForm((current) => ({ ...current, postmarkWebhookSecret: event.target.value }))}
-                  placeholder="shared secret for webhook basic auth"
-                  disabled={!canMailSettingsWrite || saveSettings.isPending}
-                />
-              </div>
-              <span className="hint">{tenantConfig.data?.hasPostmarkWebhookSecret ? 'A Postmark webhook secret is saved. Use it as the Basic auth password on the Postmark webhook.' : 'Set a shared secret, then configure the Postmark webhook with username "factory-engine" and this secret as password.'}</span>
+              <label htmlFor="field-mail-provider">Delivery provider</label>
+              <select
+                id="field-mail-provider"
+                value={settingsForm.provider}
+                onChange={(event) => setSettingsForm((current) => ({ ...current, provider: event.target.value as typeof current.provider }))}
+                disabled={!canMailSettingsWrite || saveSettings.isPending}
+              >
+                <option value="resend">Resend</option>
+                <option value="postmark">Postmark</option>
+                {GOOGLE_WORKSPACE_PROVIDER_ENABLED && <option value="google_workspace">Google Workspace (Gmail API)</option>}
+              </select>
+              <span className="hint">Provider selection is isolated to this workspace. Other tenants keep their current provider.</span>
             </div>
-            <button type="submit" className="btn" disabled={!canMailSettingsWrite || saveSettings.isPending}>
-              <Save size={14} /> {saveSettings.isPending ? t('system_mail.saving_settings') : t('system_mail.save_settings')}
-            </button>
-          </form>
+            {settingsForm.provider === 'resend' ? (
+              <>
+                <SecretField id="field-resend-api-key" label="Resend API key" value={settingsForm.resendApiKey} onChange={(value) => setSettingsForm((current) => ({ ...current, resendApiKey: value }))} placeholder="re_..." disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasResendApiKey ? 'A Resend API key is saved for this workspace.' : 'No Resend API key saved yet.'} />
+                <SecretField id="field-resend-webhook-secret" label="Resend webhook signing secret" value={settingsForm.resendWebhookSecret} onChange={(value) => setSettingsForm((current) => ({ ...current, resendWebhookSecret: value }))} placeholder="whsec_..." disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasResendWebhookSecret ? 'A Resend webhook secret is saved.' : 'No Resend webhook secret saved yet.'} />
+              </>
+            ) : settingsForm.provider === 'postmark' ? (
+              <>
+                <SecretField id="field-postmark-server-token" label="Postmark server token" value={settingsForm.postmarkServerToken} onChange={(value) => setSettingsForm((current) => ({ ...current, postmarkServerToken: value }))} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasPostmarkServerToken ? 'A Postmark server token is saved for this workspace.' : 'No Postmark server token saved yet.'} />
+                <SecretField id="field-postmark-webhook-secret" label="Postmark webhook secret" value={settingsForm.postmarkWebhookSecret} onChange={(value) => setSettingsForm((current) => ({ ...current, postmarkWebhookSecret: value }))} placeholder="shared secret for webhook basic auth" disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasPostmarkWebhookSecret ? 'A Postmark webhook secret is saved.' : 'Configure the Postmark webhook with username "factory-engine" and this password.'} />
+              </>
+            ) : (
+              <>
+                <div className="modal-section" style={{ padding: 12 }}>
+                  <div>Google credentials are encrypted at rest. Use only the <strong>gmail.send</strong> OAuth scope; mailbox reading access is not required.</div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                    <a href="https://developers.google.com/workspace/gmail/api/quickstart/web" target="_blank" rel="noreferrer">Official Gmail API setup</a>
+                    <a href="https://developers.google.com/identity/protocols/oauth2/web-server#offline" target="_blank" rel="noreferrer">Official offline OAuth guide</a>
+                    <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noreferrer">Enable Gmail API</a>
+                  </div>
+                </div>
+                <SecretField id="field-google-client-id" label="Google OAuth client ID" value={settingsForm.googleWorkspaceClientId} onChange={(value) => setSettingsForm((current) => ({ ...current, googleWorkspaceClientId: value }))} placeholder="...apps.googleusercontent.com" disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasGoogleWorkspaceClientId ? 'Client ID saved.' : 'Client ID missing.'} />
+                <SecretField id="field-google-client-secret" label="Google OAuth client secret" value={settingsForm.googleWorkspaceClientSecret} onChange={(value) => setSettingsForm((current) => ({ ...current, googleWorkspaceClientSecret: value }))} placeholder="GOCSPX-..." disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasGoogleWorkspaceClientSecret ? 'Client secret saved.' : 'Client secret missing.'} />
+                <SecretField id="field-google-refresh-token" label="Google OAuth refresh token" value={settingsForm.googleWorkspaceRefreshToken} onChange={(value) => setSettingsForm((current) => ({ ...current, googleWorkspaceRefreshToken: value }))} placeholder="1//..." disabled={!canMailSettingsWrite || saveSettings.isPending} hint={tenantConfig.data?.hasGoogleWorkspaceRefreshToken ? 'Refresh token saved.' : 'Refresh token missing.'} />
+                <div className="field">
+                  <label htmlFor="field-google-sender-email">Workspace sender mailbox</label>
+                  <input id="field-google-sender-email" type="email" value={settingsForm.googleWorkspaceSenderEmail} onChange={(event) => setSettingsForm((current) => ({ ...current, googleWorkspaceSenderEmail: event.target.value }))} placeholder="support@dtfbank.com" disabled={!canMailSettingsWrite || saveSettings.isPending} />
+                  <span className="hint">This mailbox must own the refresh token, or be an approved Gmail send-as alias.</span>
+                </div>
+              </>
+            )}
+                <div className="dialog-actions" style={{ marginTop: 16 }}>
+                  <button type="button" className="btn" onClick={() => setProviderSettingsOpen(false)}>Close</button>
+                  <button type="button" className="btn" onClick={() => providerHealth.refetch()} disabled={providerHealth.isFetching}>
+                    <RefreshCw size={14} /> {providerHealth.isFetching ? 'Verifying…' : 'Verify connection'}
+                  </button>
+                  <button type="submit" className="btn primary" disabled={!canMailSettingsWrite || saveSettings.isPending}>
+                    <Save size={14} /> {saveSettings.isPending ? t('system_mail.saving_settings') : t('system_mail.save_settings')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1098,6 +1203,27 @@ export function SystemMailPage() {
   );
 }
 
+function SecretField({ id, label, value, onChange, placeholder, disabled, hint }: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  disabled: boolean;
+  hint: string;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <div className="auth-password-wrap">
+        <KeyRound className="auth-input-icon" size={14} />
+        <input id={id} type="password" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} disabled={disabled} autoComplete="off" />
+      </div>
+      <span className="hint">{hint}</span>
+    </div>
+  );
+}
+
 function Kpi({ label, value, tone, icon }: { label: string; value: number; tone: string; icon: ReactNode }) {
   return (
     <div className={`sr-kpi ${tone}`}>
@@ -1165,6 +1291,19 @@ function healthTone(status: MailProviderHealthResponse['status']) {
   if (status === 'missing_credentials') return 'warn';
   if (status === 'network_error') return 'warn';
   return 'danger';
+}
+
+function providerLabel(provider: TenantConfigResponse['mailProvider']) {
+  if (provider === 'google_workspace') return 'Google Workspace';
+  if (provider === 'postmark') return 'Postmark';
+  if (provider === 'resend') return 'Resend';
+  return 'Not set';
+}
+
+function providerCredentialFieldId(provider: 'resend' | 'postmark' | 'google_workspace') {
+  if (provider === 'google_workspace') return 'field-google-client-id';
+  if (provider === 'resend') return 'field-resend-api-key';
+  return 'field-postmark-server-token';
 }
 
 function providerModeLabel(mode: MailCenterSettings['providerMode']) {

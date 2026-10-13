@@ -6,7 +6,7 @@ const mailReferenceIdSchema = z.string().trim().min(1).max(160);
 export const mailDeliveryStatusSchema = z.enum(['draft', 'queued', 'queued_disabled', 'sending', 'sent', 'failed', 'skipped']);
 
 export const mailProviderHealthResponseSchema = z.object({
-  provider: z.enum(['resend', 'postmark']),
+  provider: z.enum(['resend', 'postmark', 'google_workspace']),
   credentialRequired: z.boolean(),
   configured: z.boolean(),
   reachable: z.boolean(),

@@ -198,6 +198,10 @@ model TenantConfig {
   mailProvider                  String?  @map("mail_provider")
   postmarkServerTokenEncrypted  String?  @map("postmark_server_token_encrypted")
   postmarkWebhookSecretEncrypted String? @map("postmark_webhook_secret_encrypted")
+  googleWorkspaceClientIdEncrypted String? @map("google_workspace_client_id_encrypted")
+  googleWorkspaceClientSecretEncrypted String? @map("google_workspace_client_secret_encrypted")
+  googleWorkspaceRefreshTokenEncrypted String? @map("google_workspace_refresh_token_encrypted")
+  googleWorkspaceSenderEmail    String?  @map("google_workspace_sender_email")
   createdAt                     DateTime @default(now()) @map("created_at")
   updatedAt                     DateTime @updatedAt @map("updated_at")
 

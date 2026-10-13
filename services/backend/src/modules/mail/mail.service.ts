@@ -41,6 +41,13 @@ import {
   postmarkFailureMessage,
   verifyPostmarkBasicAuth,
 } from './postmark.js';
+import {
+  GMAIL_API_BASE,
+  GOOGLE_OAUTH_TOKEN_URL,
+  buildGoogleWorkspaceRawMessage,
+  googleOAuthRefreshBody,
+  type GoogleWorkspaceCredentials,
+} from './google-workspace.js';
 
 export const MAIL_OUTBOUND_JOB = 'mail.deliver';
 
@@ -989,6 +996,9 @@ export class MailService {
         ? 'Provider mode is test-only. Only explicit System Mail test messages can contact recipients.'
         : 'Provider mode is disabled. Delivery records are proof-only and no customer email is sent.';
     const providerName = await this.resolveMailProviderName();
+    if (providerName === 'google_workspace') {
+      return this.googleWorkspaceHealth(startedAt, providerModeReason);
+    }
     if (providerName === 'postmark') {
       return this.postmarkHealth(startedAt, providerModeReason);
     }
@@ -2126,7 +2136,11 @@ export class MailService {
     const delivery = await this.repository.markSending(deliveryId);
     if (!delivery) throw new NotFoundException('Mail delivery not found');
 
-    if ((await this.resolveMailProviderName()) === 'postmark') {
+    const providerName = await this.resolveMailProviderName();
+    if (providerName === 'google_workspace') {
+      return this.deliverViaGoogleWorkspace(delivery);
+    }
+    if (providerName === 'postmark') {
       return this.deliverViaPostmark(delivery);
     }
 
@@ -2245,6 +2259,147 @@ export class MailService {
 
   private postmarkBaseUrl() {
     return this.config.get<string>('POSTMARK_API_BASE_URL')?.trim().replace(/\/+$/, '') || POSTMARK_API_BASE;
+  }
+
+  private async deliverViaGoogleWorkspace(delivery: NonNullable<Awaited<ReturnType<MailService['repository']['findById']>>>) {
+    const resolved = await this.resolveGoogleWorkspaceCredentialsWithSource();
+    if (!resolved.credentials) {
+      const reason = `Google Workspace credentials are incomplete: ${resolved.missing.join(', ') || 'configuration missing'}`;
+      this.logger.warn('mail', 'google_workspace_missing', reason, { mail_delivery_id: delivery.id });
+      return this.repository.markSkipped(delivery.id, reason);
+    }
+    try {
+      const accessToken = await this.refreshGoogleWorkspaceAccessToken(resolved.credentials);
+      const transport = deliveryTransport(delivery.metadata);
+      const fromName = transport.fromName?.trim() || await this.resolveBrandName();
+      const raw = buildGoogleWorkspaceRawMessage({
+        fromName,
+        senderEmail: resolved.credentials.senderEmail,
+        to: delivery.recipientEmail,
+        subject: delivery.subject,
+        html: delivery.html,
+        text: delivery.text,
+        replyTo: transport.replyTo,
+      });
+      const response = await fetch(`${this.googleWorkspaceApiBaseUrl()}/users/me/messages/send`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ raw }),
+      });
+      const payload = await response.json().catch(() => null) as { id?: string; error?: { message?: string } } | null;
+      if (!response.ok) {
+        throw new Error(payload?.error?.message ?? `Google Workspace Gmail API failed with ${response.status}`);
+      }
+      this.logger.log('mail', 'sent', 'Transactional email sent', {
+        mail_delivery_id: delivery.id,
+        event_key: delivery.eventKey,
+        provider_message_id: payload?.id,
+        provider: 'google_workspace',
+      });
+      return this.repository.markSent(delivery.id, 'google_workspace', payload?.id ?? null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.repository.markFailed(delivery.id, message);
+      await this.recordDlq(delivery.id, message);
+      this.logger.error('mail', 'send_failed', message, {
+        mail_delivery_id: delivery.id,
+        event_key: delivery.eventKey,
+        provider: 'google_workspace',
+      });
+      throw error;
+    }
+  }
+
+  private async googleWorkspaceHealth(startedAt: number, providerModeReason: string | null): Promise<MailProviderHealthResponse> {
+    const operational = await this.mailOperationalHealth();
+    const resolved = await this.resolveGoogleWorkspaceCredentialsWithSource();
+    const checkedAt = new Date().toISOString();
+    if (!resolved.credentials) {
+      return {
+        provider: 'google_workspace',
+        credentialRequired: true,
+        configured: false,
+        reachable: false,
+        status: 'missing_credentials',
+        source: resolved.source,
+        latencyMs: null,
+        checkedAt,
+        providerStatus: null,
+        domainCount: null,
+        error: `Google Workspace credentials are incomplete: ${resolved.missing.join(', ')}`,
+        disabledReason: providerModeReason ?? 'Google Workspace OAuth credentials must be completed before delivery is enabled.',
+        ...operational,
+      };
+    }
+    try {
+      await this.refreshGoogleWorkspaceAccessToken(resolved.credentials);
+      return {
+        provider: 'google_workspace',
+        credentialRequired: false,
+        configured: true,
+        reachable: true,
+        status: 'ok',
+        source: resolved.source,
+        latencyMs: Date.now() - startedAt,
+        checkedAt: new Date().toISOString(),
+        providerStatus: 200,
+        domainCount: null,
+        error: null,
+        disabledReason: providerModeReason,
+        ...operational,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const providerStatus = googleProviderErrorStatus(error);
+      return {
+        provider: 'google_workspace',
+        credentialRequired: false,
+        configured: true,
+        reachable: providerStatus !== null,
+        status: providerStatus === 400 || providerStatus === 401 || providerStatus === 403
+          ? 'invalid_credentials'
+          : providerStatus === null ? 'network_error' : 'provider_error',
+        source: resolved.source,
+        latencyMs: Date.now() - startedAt,
+        checkedAt: new Date().toISOString(),
+        providerStatus,
+        domainCount: null,
+        error: message.slice(0, 300),
+        disabledReason: message.slice(0, 300),
+        ...operational,
+      };
+    }
+  }
+
+  private async refreshGoogleWorkspaceAccessToken(credentials: GoogleWorkspaceCredentials) {
+    const response = await fetch(this.googleWorkspaceTokenUrl(), {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+      body: googleOAuthRefreshBody(credentials),
+    });
+    const payload = await response.json().catch(() => null) as {
+      access_token?: string;
+      error?: string;
+      error_description?: string;
+    } | null;
+    if (!response.ok || !payload?.access_token) {
+      const error = new Error(payload?.error_description ?? payload?.error ?? `Google OAuth token refresh failed with ${response.status}`);
+      Object.assign(error, { providerStatus: response.status });
+      throw error;
+    }
+    return payload.access_token;
+  }
+
+  private googleWorkspaceTokenUrl() {
+    return this.config.get<string>('GOOGLE_OAUTH_TOKEN_URL')?.trim() || GOOGLE_OAUTH_TOKEN_URL;
+  }
+
+  private googleWorkspaceApiBaseUrl() {
+    return this.config.get<string>('GMAIL_API_BASE_URL')?.trim().replace(/\/+$/, '') || GMAIL_API_BASE;
   }
 
   private async postmarkHealth(startedAt: number, providerModeReason: string | null): Promise<MailProviderHealthResponse> {
@@ -2427,15 +2582,53 @@ export class MailService {
     return this.config.get<string>('RESEND_WEBHOOK_SECRET')?.trim() || null;
   }
 
-  private async resolveMailProviderName(): Promise<'resend' | 'postmark'> {
+  private async resolveMailProviderName(): Promise<'resend' | 'postmark' | 'google_workspace'> {
     const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
       where: { tenantId: this.tenantId() },
       select: { mailProvider: true },
     });
     const configured = tenantConfig?.mailProvider?.trim().toLowerCase();
-    if (configured === 'postmark' || configured === 'resend') return configured;
+    if (configured === 'postmark' || configured === 'resend' || configured === 'google_workspace') return configured;
     const envProvider = this.config.get<string>('MAIL_PROVIDER')?.trim().toLowerCase();
+    if (envProvider === 'google_workspace') return 'google_workspace';
     return envProvider === 'postmark' ? 'postmark' : 'resend';
+  }
+
+  private async resolveGoogleWorkspaceCredentialsWithSource(): Promise<{
+    credentials: GoogleWorkspaceCredentials | null;
+    source: 'tenant_config' | 'env' | 'none';
+    missing: string[];
+  }> {
+    const tenantConfig = await this.prisma.db.tenantConfig.findFirst({
+      where: { tenantId: this.tenantId() },
+      select: {
+        googleWorkspaceClientIdEncrypted: true,
+        googleWorkspaceClientSecretEncrypted: true,
+        googleWorkspaceRefreshTokenEncrypted: true,
+        googleWorkspaceSenderEmail: true,
+      },
+    });
+    const tenantValues = {
+      clientId: this.crypto.decrypt(tenantConfig?.googleWorkspaceClientIdEncrypted)?.trim() || '',
+      clientSecret: this.crypto.decrypt(tenantConfig?.googleWorkspaceClientSecretEncrypted)?.trim() || '',
+      refreshToken: this.crypto.decrypt(tenantConfig?.googleWorkspaceRefreshTokenEncrypted)?.trim() || '',
+      senderEmail: tenantConfig?.googleWorkspaceSenderEmail?.trim() || '',
+    };
+    if (Object.values(tenantValues).every(Boolean)) {
+      return { credentials: tenantValues, source: 'tenant_config', missing: [] };
+    }
+    const envValues = {
+      clientId: this.config.get<string>('GOOGLE_WORKSPACE_CLIENT_ID')?.trim() || '',
+      clientSecret: this.config.get<string>('GOOGLE_WORKSPACE_CLIENT_SECRET')?.trim() || '',
+      refreshToken: this.config.get<string>('GOOGLE_WORKSPACE_REFRESH_TOKEN')?.trim() || '',
+      senderEmail: this.config.get<string>('GOOGLE_WORKSPACE_SENDER_EMAIL')?.trim() || '',
+    };
+    if (Object.values(envValues).every(Boolean)) {
+      return { credentials: envValues, source: 'env', missing: [] };
+    }
+    const values = Object.values(tenantValues).some(Boolean) ? tenantValues : envValues;
+    const missing = Object.entries(values).filter(([, value]) => !value).map(([key]) => key);
+    return { credentials: null, source: 'none', missing };
   }
 
   private async resolvePostmarkServerTokenWithSource(): Promise<{ key: string | null; source: 'tenant_config' | 'env' | 'none' }> {
@@ -2625,6 +2818,12 @@ function providerMessage(body: { error?: { message?: unknown }; message?: unknow
   if (typeof body?.error?.message === 'string' && body.error.message.trim()) return body.error.message.slice(0, 300);
   if (typeof body?.name === 'string' && body.name.trim()) return body.name.slice(0, 300);
   return fallback.trim().slice(0, 300) || null;
+}
+
+function googleProviderErrorStatus(error: unknown) {
+  if (!error || typeof error !== 'object') return null;
+  const status = (error as { providerStatus?: unknown }).providerStatus;
+  return typeof status === 'number' && Number.isInteger(status) ? status : null;
 }
 
 function providerTimestampField(eventType: string) {
